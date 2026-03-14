@@ -1,0 +1,1714 @@
+// Smart Ride - Multi-Service Mobility Platform Database Schema
+// PostgreSQL Production Schema
+// Supports: Ride Transport, Food Delivery, Shopping, Item Delivery, Smart Health
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER MANAGEMENT
+// ============================================
+
+// Base User model - handles Clients and Admins
+model User {
+  id            String      @id @default(cuid())
+  email         String      @unique
+  phone         String?     @unique
+  passwordHash  String?     // For custom JWT authentication
+  name          String
+  role          UserRole    @default(CLIENT)
+  status        UserStatus  @default(ACTIVE)
+  authProvider  String?     // google, facebook, phone, email
+  avatarUrl     String?
+  
+  // Refresh token for JWT
+  refreshToken  String?
+  refreshTokenExpiresAt DateTime?
+  
+  // Timestamps
+  lastLoginAt   DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  // Relations
+  rider         Rider?
+  orders        Order[]
+  tasks         Task[]
+  payments      Payment[]
+  ratingsGiven  Rating[]    @relation("RatingFromUser")
+  ratingsReceived Rating[]  @relation("RatingToUser")
+  notifications Notification[]
+  auditLogs     AuditLog[]  @relation("UserAuditLogs")
+  cashCollections CashCollection[]
+  sosAlerts     SOSAlert[]  @relation("UserSOSAlerts")
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+  @@index([status])
+}
+
+enum UserRole {
+  CLIENT
+  RIDER
+  MERCHANT
+  PHARMACIST
+  ADMIN
+  SUPER_ADMIN
+  OPERATIONS_ADMIN
+  COMPLIANCE_ADMIN
+  FINANCE_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  BANNED
+}
+
+// ============================================
+// RIDER MANAGEMENT
+// ============================================
+
+// Rider model - Service providers
+model Rider {
+  id                    String        @id @default(cuid())
+  userId                String        @unique
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Personal Information
+  fullName              String
+  physicalAddress       String
+  phone                 String        @unique
+  email                 String?
+  
+  // Verification Documents
+  facePhotoUrl          String?
+  nationalIdFrontUrl    String?
+  nationalIdBackUrl     String?
+  driverLicenseUrl      String?
+  
+  // Role and Capabilities
+  riderRole             RiderRole
+  vehicleType           VehicleType?  // Required for BODA and CAR roles
+  
+  // Verification Status
+  status                RiderStatus   @default(PENDING_APPROVAL)
+  verificationNotes     String?
+  verifiedAt            DateTime?
+  verifiedBy            String?       // Admin user ID
+  
+  // Equipment Issued
+  hasReflectorVest      Boolean       @default(false)
+  hasHelmet             Boolean       @default(false)
+  hasInsulatedBox       Boolean       @default(false)
+  
+  // Operational Data
+  isOnline              Boolean       @default(false)
+  currentLatitude       Float?
+  currentLongitude      Float?
+  lastLocationUpdate    DateTime?
+  rating                Float         @default(5.0)
+  totalTrips            Int           @default(0)
+  completedTrips        Int           @default(0)
+  cancelledTrips        Int           @default(0)
+  
+  // Heartbeat & Connection Monitoring
+  lastHeartbeatAt       DateTime?
+  connectionStatus      ConnectionStatus @default(ACTIVE)
+  lastKnownLatitude     Float?
+  lastKnownLongitude    Float?
+  lastKnownSpeed        Float?
+  lastKnownBattery      Int?
+  lastKnownHeading      Float?
+  currentTaskId         String?
+  
+  // Financial Data
+  totalEarnings         Float         @default(0)
+  walletBalance         Float         @default(0)
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  // Relations
+  vehicle               Vehicle?
+  tasks                 Task[]
+  riderPayouts          RiderPayout[]
+  auditLogs             AuditLog[]    @relation("RiderAuditLogs")
+  heartbeatLogs         HeartbeatLog[]
+  cashCollections       CashCollection[]
+  sosAlerts             SOSAlert[]    @relation("RiderSOSAlerts")
+
+  @@index([riderRole])
+  @@index([status])
+  @@index([isOnline])
+  @@index([currentLatitude, currentLongitude]) // Geospatial index
+}
+
+enum RiderRole {
+  SMART_BODA_RIDER      // Motorcycle passenger transport + item delivery
+  SMART_CAR_DRIVER      // Car passenger transport + item delivery
+  DELIVERY_PERSONNEL    // Food, shopping, item delivery only
+}
+
+enum VehicleType {
+  BODA                  // Motorcycle
+  CAR                   // Car
+  BICYCLE               // Bicycle (for delivery personnel)
+  SCOOTER               // Scooter
+}
+
+enum RiderStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUSPENDED
+  INACTIVE
+}
+
+// Vehicle information for riders
+model Vehicle {
+  id                    String        @id @default(cuid())
+  riderId               String        @unique
+  rider                 Rider         @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  
+  make                  String
+  model                 String
+  year                  Int?
+  color                 String
+  plateNumber           String        @unique
+  registrationDocUrl    String?
+  insuranceDocUrl       String?
+  inspectionDocUrl      String?
+  
+  isActive              Boolean       @default(true)
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([plateNumber])
+}
+
+// ============================================
+// MERCHANT MANAGEMENT
+// ============================================
+
+// Merchant model - Restaurants and Shops
+model Merchant {
+  id                    String          @id @default(cuid())
+  name                  String
+  type                  MerchantType
+  description           String?
+  
+  // Contact Information
+  phone                 String
+  email                 String?
+  
+  // Location
+  address               String
+  latitude              Float?
+  longitude             Float?
+  city                  String?
+  
+  // Operational Settings
+  isOpen                Boolean         @default(false)
+  openingTime           String?
+  closingTime           String?
+  averagePrepTime       Int             @default(15) // minutes
+  
+  // Financial
+  commissionRate        Float           @default(0.15) // 15% platform commission
+  bankAccountName       String?
+  bankAccountNumber     String?
+  bankName              String?
+  
+  // Verification
+  status                MerchantStatus  @default(PENDING_APPROVAL)
+  verifiedAt            DateTime?
+  verifiedBy            String?
+  
+  // Documents
+  logoUrl               String?
+  coverImageUrl         String?
+  businessLicenseUrl    String?
+  
+  // Stats
+  totalOrders           Int             @default(0)
+  rating                Float           @default(5.0)
+  
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  
+  // Relations
+  menuItems             MenuItem[]
+  orders                Order[]
+  kots                  KOT[]
+  auditLogs             AuditLog[]      @relation("MerchantAuditLogs")
+  pharmacy              Pharmacy?
+  
+  @@index([type])
+  @@index([status])
+  @@index([isOpen])
+  @@index([latitude, longitude]) // Geospatial index
+}
+
+enum MerchantType {
+  RESTAURANT
+  SUPERMARKET
+  RETAIL_STORE
+  PHARMACY
+  GROCERY
+}
+
+enum MerchantStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUSPENDED
+  INACTIVE
+}
+
+// Menu items for merchants
+model MenuItem {
+  id                    String        @id @default(cuid())
+  merchantId            String
+  merchant              Merchant      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  
+  name                  String
+  description           String?
+  price                 Float
+  imageUrl              String?
+  category              String?
+  isAvailable           Boolean       @default(true)
+  preparationTime       Int?          // minutes
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  // Relations
+  orderItems            OrderItem[]
+  
+  @@index([merchantId])
+  @@index([category])
+}
+
+// ============================================
+// ORDER MANAGEMENT
+// ============================================
+
+// Order model - For Food Delivery and Shopping
+model Order {
+  id                    String        @id @default(cuid())
+  orderNumber           String        @unique
+  
+  // Participants
+  clientId              String
+  client                User          @relation(fields: [clientId], references: [id])
+  merchantId            String?
+  merchant              Merchant?     @relation(fields: [merchantId], references: [id])
+  
+  // Order Type
+  orderType             OrderType
+  
+  // Pricing
+  subtotal              Float
+  deliveryFee           Float
+  serviceFee            Float?
+  discount              Float?
+  totalAmount           Float
+  
+  // Payment
+  paymentMethod         PaymentMethod
+  paymentStatus         PaymentStatus @default(PENDING)
+  paymentReference      String?
+  
+  // Order State
+  status                OrderStatus   @default(ORDER_CREATED)
+  
+  // Location
+  deliveryAddress       String
+  deliveryLatitude      Float?
+  deliveryLongitude     Float?
+  deliveryInstructions  String?
+  
+  // Contact
+  recipientName         String?
+  recipientPhone        String?
+  
+  // Timestamps
+  confirmedAt           DateTime?
+  acceptedAt            DateTime?
+  preparingAt           DateTime?
+  readyAt               DateTime?
+  pickedUpAt            DateTime?
+  deliveredAt           DateTime?
+  cancelledAt           DateTime?
+  cancellationReason    String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  // Relations
+  items                 OrderItem[]
+  task                  Task?
+  kot                   KOT?
+  auditLogs             AuditLog[]    @relation("OrderAuditLogs")
+  
+  @@index([clientId])
+  @@index([merchantId])
+  @@index([status])
+  @@index([orderType])
+  @@index([createdAt])
+}
+
+enum OrderType {
+  FOOD_DELIVERY
+  SHOPPING
+}
+
+enum OrderStatus {
+  ORDER_CREATED
+  PAYMENT_CONFIRMED
+  MERCHANT_ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  PICKED_UP
+  DELIVERED
+  CANCELLED
+  REJECTED
+}
+
+// Order items
+model OrderItem {
+  id                    String        @id @default(cuid())
+  orderId               String
+  order                 Order         @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  menuItemId            String?
+  menuItem              MenuItem?     @relation(fields: [menuItemId], references: [id])
+  
+  itemName              String
+  itemDescription       String?
+  quantity              Int
+  unitPrice             Float
+  totalPrice            Float
+  specialInstructions   String?
+  
+  createdAt             DateTime      @default(now())
+  
+  @@index([orderId])
+}
+
+enum PaymentMethod {
+  CASH
+  MTN_MOMO
+  AIRTEL_MONEY
+  VISA
+  MASTERCARD
+  CREDIT_CARD
+  DEBIT_CARD
+  WALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+// Kitchen Order Ticket
+model KOT {
+  id                    String        @id @default(cuid())
+  kotNumber             String        @unique
+  orderId               String        @unique
+  order                 Order         @relation(fields: [orderId], references: [id])
+  merchantId            String
+  merchant              Merchant      @relation(fields: [merchantId], references: [id])
+  
+  // KOT Details
+  status                KOTStatus     @default(GENERATED)
+  items                 String        // JSON string of items
+  specialInstructions   String?
+  estimatedPrepTime     Int?          // minutes
+  
+  // Timestamps
+  printedAt             DateTime?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([merchantId])
+  @@index([status])
+}
+
+enum KOTStatus {
+  GENERATED
+  PRINTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// ============================================
+// TASK MANAGEMENT (RIDE & DELIVERY)
+// ============================================
+
+// Task model - Unified model for all service types
+model Task {
+  id                    String        @id @default(cuid())
+  taskNumber            String        @unique
+  
+  // Task Type
+  taskType              TaskType
+  
+  // Participants
+  clientId              String
+  client                User          @relation(fields: [clientId], references: [id])
+  riderId               String?
+  rider                 Rider?        @relation(fields: [riderId], references: [id])
+  orderId               String?       @unique  // For food/shopping orders
+  order                 Order?        @relation(fields: [orderId], references: [id])
+  healthOrderId         String?       @unique  // For Smart Health orders
+  healthOrder           HealthOrder?  @relation(fields: [healthOrderId], references: [id])
+  
+  // Task State - Strict Lifecycle
+  status                TaskStatus    @default(CREATED)
+  
+  // Location - Pickup
+  pickupAddress         String
+  pickupLatitude        Float?
+  pickupLongitude       Float?
+  pickupContactName     String?
+  pickupContactPhone    String?
+  
+  // Location - Dropoff
+  dropoffAddress        String
+  dropoffLatitude       Float?
+  dropoffLongitude      Float?
+  dropoffContactName    String?
+  dropoffContactPhone   String?
+  
+  // Route Information
+  distanceKm            Float?
+  estimatedDuration     Int?          // minutes
+  actualDuration        Int?          // minutes
+  
+  // Pricing
+  baseFare              Float
+  distanceFare          Float?
+  timeFare              Float?
+  deliveryFee           Float?
+  serviceFee            Float?
+  discount              Float?
+  totalAmount           Float
+  platformCommission    Float?
+  riderEarnings         Float?
+  
+  // Payment
+  paymentMethod         PaymentMethod
+  paymentStatus         PaymentStatus @default(PENDING)
+  
+  // Passenger Details (for ride services)
+  passengerCount        Int?
+  passengerNames        String?       // JSON array
+  
+  // Item Details (for item delivery)
+  itemDescription       String?
+  itemWeight            Float?
+  itemValue             Float?
+  
+  // Cancellation
+  cancellationReason    String?
+  cancellationCode      String?
+  cancelledBy           String?
+  
+  // Timestamps - Task Lifecycle
+  matchingStartedAt     DateTime?
+  assignedAt            DateTime?
+  acceptedAt            DateTime?
+  arrivedAtPickupAt     DateTime?
+  pickedUpAt            DateTime?
+  inProgressAt          DateTime?
+  deliveringAt          DateTime?
+  completedAt           DateTime?
+  cancelledAt           DateTime?
+  
+  // Heartbeat Tracking
+  lastHeartbeatAt       DateTime?
+  lastKnownLatitude     Float?
+  lastKnownLongitude    Float?
+  connectionStatus      ConnectionStatus?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  // Relations
+  payment               Payment?
+  rating                Rating?
+  auditLogs             AuditLog[]    @relation("TaskAuditLogs")
+  heartbeatLogs         HeartbeatLog[]
+  sosAlerts             SOSAlert[]    @relation("TaskSOSAlerts")
+  
+  @@index([taskType])
+  @@index([status])
+  @@index([clientId])
+  @@index([riderId])
+  @@index([createdAt])
+  @@index([pickupLatitude, pickupLongitude])
+  @@index([dropoffLatitude, dropoffLongitude])
+}
+
+enum TaskType {
+  SMART_BODA_RIDE       // Motorcycle passenger transport
+  SMART_CAR_RIDE        // Car passenger transport
+  FOOD_DELIVERY         // Food delivery from restaurants
+  SHOPPING              // Shopping/supermarket delivery
+  ITEM_DELIVERY         // Parcel/package delivery
+  SMART_HEALTH_DELIVERY // Smart Health pharmacy delivery
+}
+
+enum TaskStatus {
+  CREATED
+  MATCHING
+  ASSIGNED
+  ACCEPTED
+  ARRIVED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+// ============================================
+// PAYMENT MANAGEMENT
+// ============================================
+
+// Payment model
+model Payment {
+  id                    String        @id @default(cuid())
+  paymentReference      String        @unique
+  taskId                String?       @unique
+  task                  Task?         @relation(fields: [taskId], references: [id])
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id])
+  
+  // Payment Details
+  amount                Float
+  currency              String        @default("UGX")
+  paymentMethod         PaymentMethod
+  status                PaymentStatus @default(PENDING)
+  
+  // Transaction Details
+  transactionId         String?       // From payment provider
+  providerResponse      String?       // JSON response from provider
+  failureReason         String?
+  
+  // For Mobile Money
+  phoneNumber           String?
+  momoTransactionId     String?
+  
+  // For Cards
+  cardLastFour          String?
+  cardBrand             String?
+  
+  // Timestamps
+  processedAt           DateTime?
+  refundedAt            DateTime?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([userId])
+  @@index([status])
+  @@index([paymentMethod])
+  @@index([createdAt])
+}
+
+// Rider Payout model
+model RiderPayout {
+  id                    String        @id @default(cuid())
+  riderId               String
+  rider                 Rider         @relation(fields: [riderId], references: [id])
+  
+  // Payout Details
+  amount                Float
+  currency              String        @default("UGX")
+  status                PayoutStatus  @default(PENDING)
+  
+  // Reference
+  periodStart           DateTime
+  periodEnd             DateTime
+  taskCount             Int
+  
+  // Transaction Details
+  transactionId         String?
+  paymentMethod         String?
+  phoneNumber           String?
+  processedAt           DateTime?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([riderId])
+  @@index([status])
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// Cash Collection - For COD payments collected by riders
+model CashCollection {
+  id                    String        @id @default(cuid())
+  
+  // References
+  riderId               String
+  rider                 Rider         @relation(fields: [riderId], references: [id])
+  userId                String?       // Admin who collected
+  user                  User?         @relation(fields: [userId], references: [id])
+  taskId                String?
+  
+  // Collection Details
+  amount                Float
+  currency              String        @default("UGX")
+  collectionType        CollectionType
+  
+  // Status
+  status                CollectionStatus @default(PENDING)
+  
+  // Timestamps
+  collectedAt           DateTime?
+  depositedAt           DateTime?
+  
+  // Notes
+  notes                 String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([riderId])
+  @@index([status])
+  @@index([collectionType])
+}
+
+enum CollectionType {
+  COD_PAYMENT           // Cash on delivery collected
+  DEPOSIT               // Rider depositing cash to company
+  ADJUSTMENT            // Manual adjustment
+}
+
+enum CollectionStatus {
+  PENDING
+  COLLECTED
+  DEPOSITED
+  VERIFIED
+}
+
+// Finance Log - For tracking all financial transactions
+model FinanceLog {
+  id                    String        @id @default(cuid())
+  
+  // Transaction Info
+  transactionType       TransactionType
+  referenceId           String        // Task ID, Order ID, or Payout ID
+  amount                Float
+  currency              String        @default("UGX")
+  
+  // Parties
+  clientId              String?
+  riderId               String?
+  merchantId            String?
+  
+  // Breakdown
+  platformCommission    Float?
+  riderEarnings         Float?
+  merchantEarnings      Float?
+  
+  // Status
+  status                String
+  
+  // Metadata
+  description           String?
+  metadata              String?       // JSON for additional data
+  
+  createdAt             DateTime      @default(now())
+  
+  @@index([transactionType])
+  @@index([referenceId])
+  @@index([createdAt])
+}
+
+enum TransactionType {
+  RIDE_PAYMENT
+  FOOD_ORDER_PAYMENT
+  SHOPPING_ORDER_PAYMENT
+  ITEM_DELIVERY_PAYMENT
+  HEALTH_ORDER_PAYMENT
+  RIDER_PAYOUT
+  MERCHANT_PAYOUT
+  PLATFORM_COMMISSION
+  REFUND
+  CASH_COLLECTION
+}
+
+// ============================================
+// RATING & FEEDBACK
+// ============================================
+
+model Rating {
+  id                    String        @id @default(cuid())
+  taskId                String        @unique
+  task                  Task          @relation(fields: [taskId], references: [id])
+  
+  // From/To
+  fromUserId            String
+  fromUser              User          @relation("RatingFromUser", fields: [fromUserId], references: [id])
+  toUserId              String?
+  toUser                User?         @relation("RatingToUser", fields: [toUserId], references: [id])
+  toRiderId             String?
+  
+  // Rating
+  score                 Int           // 1-5
+  comment               String?
+  
+  // Categories (optional detailed ratings)
+  punctualityScore      Int?
+  professionalismScore  Int?
+  vehicleConditionScore Int?
+  
+  createdAt             DateTime      @default(now())
+  
+  @@index([fromUserId])
+  @@index([toUserId])
+}
+
+// ============================================
+// AUDIT & NOTIFICATIONS
+// ============================================
+
+model AuditLog {
+  id                    String        @id @default(cuid())
+  
+  // Actor
+  actorId               String?
+  actorType             ActorType
+  userId                String?
+  user                  User?         @relation("UserAuditLogs", fields: [userId], references: [id])
+  riderId               String?
+  rider                 Rider?        @relation("RiderAuditLogs", fields: [riderId], references: [id])
+  merchantId            String?
+  merchant              Merchant?     @relation("MerchantAuditLogs", fields: [merchantId], references: [id])
+  
+  // Action
+  action                String
+  entityType            String
+  entityId              String
+  orderId               String?
+  order                 Order?        @relation("OrderAuditLogs", fields: [orderId], references: [id])
+  taskId                String?
+  task                  Task?         @relation("TaskAuditLogs", fields: [taskId], references: [id])
+  healthOrderId         String?
+  healthOrder           HealthOrder?  @relation("HealthOrderAuditLogs", fields: [healthOrderId], references: [id])
+  
+  // Details
+  description           String?
+  oldValues             String?       // JSON
+  newValues             String?       // JSON
+  ipAddress             String?
+  userAgent             String?
+  
+  createdAt             DateTime      @default(now())
+  
+  @@index([action])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+enum ActorType {
+  SYSTEM
+  USER
+  RIDER
+  MERCHANT
+  ADMIN
+  PHARMACY_STAFF
+}
+
+model Notification {
+  id                    String        @id @default(cuid())
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Notification Details
+  title                 String
+  message               String
+  type                  NotificationType
+  referenceId           String?
+  referenceType         String?
+  
+  // Status
+  isRead                Boolean       @default(false)
+  readAt                DateTime?
+  
+  createdAt             DateTime      @default(now())
+  
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+enum NotificationType {
+  TASK_UPDATE
+  ORDER_UPDATE
+  HEALTH_ORDER_UPDATE
+  PAYMENT
+  PROMOTION
+  SYSTEM
+  VERIFICATION
+  PRESCRIPTION_UPDATE
+  SOS_ALERT
+}
+
+// ============================================
+// SOS & EMERGENCY SYSTEM
+// ============================================
+
+model SOSAlert {
+  id                    String        @id @default(cuid())
+  alertNumber           String        @unique
+  
+  // References
+  userId                String?
+  user                  User?         @relation("UserSOSAlerts", fields: [userId], references: [id])
+  riderId               String?
+  rider                 Rider?        @relation("RiderSOSAlerts", fields: [riderId], references: [id])
+  taskId                String?
+  task                  Task?         @relation("TaskSOSAlerts", fields: [taskId], references: [id])
+  
+  // Alert Details
+  userType              String        // CLIENT, RIDER
+  userName              String
+  userPhone             String
+  riderName             String?
+  riderPhone            String?
+  vehicleInfo           String?
+  taskNumber            String?
+  taskType              String?
+  
+  // Location
+  latitude              Float
+  longitude             Float
+  locationAddress       String?
+  
+  // Status
+  status                SOSStatus     @default(ACTIVE)
+  
+  // Response
+  acknowledgedAt        DateTime?
+  acknowledgedBy        String?
+  resolvedAt            DateTime?
+  resolvedBy            String?
+  resolutionNotes       String?
+  
+  // Actions Taken (JSON)
+  actionsTaken          String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum SOSStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+  FALSE_ALARM
+}
+
+// ============================================
+// SYSTEM CONFIGURATION
+// ============================================
+
+model SystemConfig {
+  id                    String        @id @default(cuid())
+  key                   String        @unique
+  value                 String
+  description           String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+// SLA Configuration
+model SLAConfig {
+  id                    String        @id @default(cuid())
+  serviceType           String
+  state                 String
+  slaMinutes            Int
+  description           String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@unique([serviceType, state])
+}
+
+// Pricing Configuration
+model PricingConfig {
+  id                    String        @id @default(cuid())
+  serviceType           String        @unique
+  
+  // Base pricing
+  baseFare              Float
+  perKmRate             Float
+  perMinuteRate         Float?
+  
+  // Minimum/Maximum
+  minimumFare           Float
+  maximumFare           Float?
+  
+  // Platform commission
+  platformCommissionPercent Float?
+  
+  // Additional fees
+  serviceFeePercent     Float?
+  nightSurchargePercent Float?
+  peakSurchargePercent  Float?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+}
+
+// ============================================
+// HEARTBEAT & CONNECTION MONITORING
+// ============================================
+
+// Connection Status Enum
+enum ConnectionStatus {
+  ACTIVE          // Heartbeats received within threshold
+  UNSTABLE        // No heartbeat for 30+ seconds
+  DISCONNECTED    // No heartbeat for 60+ seconds
+}
+
+// Heartbeat Log - Records all heartbeat events
+model HeartbeatLog {
+  id                    String        @id @default(cuid())
+  
+  // References
+  riderId               String
+  rider                 Rider         @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  taskId                String?
+  task                  Task?         @relation(fields: [taskId], references: [id])
+  
+  // Location Data
+  latitude              Float
+  longitude             Float
+  speed                 Float?        // km/h
+  heading               Float?        // degrees
+  accuracy              Float?        // meters
+  
+  // Device Status
+  batteryLevel          Int?          // percentage 0-100
+  isCharging            Boolean?
+  networkType           String?       // wifi, cellular, none
+  
+  // Connection State
+  connectionStatus      ConnectionStatus @default(ACTIVE)
+  
+  // Metadata
+  metadata              String?       // JSON for additional data
+  
+  createdAt             DateTime      @default(now())
+  
+  @@index([riderId])
+  @@index([taskId])
+  @@index([createdAt])
+  @@index([connectionStatus])
+}
+
+// Connection Alert - For admin notifications
+model ConnectionAlert {
+  id                    String        @id @default(cuid())
+  
+  // References
+  riderId               String
+  taskId                String?
+  
+  // Alert Details
+  alertType             AlertType
+  severity              AlertSeverity
+  message               String
+  
+  // Status
+  isAcknowledged        Boolean       @default(false)
+  acknowledgedAt        DateTime?
+  acknowledgedBy        String?       // Admin user ID
+  
+  // Resolution
+  isResolved            Boolean       @default(false)
+  resolvedAt            DateTime?
+  resolutionNotes       String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([riderId])
+  @@index([taskId])
+  @@index([isAcknowledged])
+  @@index([createdAt])
+}
+
+enum AlertType {
+  CONNECTION_UNSTABLE
+  CONNECTION_LOST
+  LONG_DISCONNECT
+  BATTERY_LOW
+  GPS_UNRELIABLE
+  TASK_TIMEOUT
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// ============================================
+// SMART HEALTH - PHARMACY DELIVERY SERVICE
+// ============================================
+
+// Health Order model - For Smart Health pharmacy deliveries
+model HealthOrder {
+  id                    String            @id @default(cuid())
+  orderNumber           String            @unique
+  
+  // Participants
+  clientId              String
+  providerId            String?           // Links to HealthProvider
+  provider              HealthProvider?   @relation(fields: [providerId], references: [id])
+  pharmacyId            String?           // Legacy - for backward compatibility
+  pharmacy              Pharmacy?         @relation(fields: [pharmacyId], references: [id])
+  
+  // Order Type
+  orderType             HealthOrderType
+  
+  // Prescription (for prescription orders)
+  prescriptionId        String?
+  prescription          Prescription?     @relation(fields: [prescriptionId], references: [id])
+  
+  // Pricing
+  subtotal              Float
+  deliveryFee           Float
+  serviceFee            Float?
+  discount              Float?
+  totalAmount           Float
+  
+  // Payment
+  paymentMethod         PaymentMethod
+  paymentStatus         PaymentStatus     @default(PENDING)
+  paymentReference      String?
+  
+  // Order State
+  status                HealthOrderStatus @default(ORDER_PLACED)
+  
+  // Location
+  deliveryAddress       String
+  deliveryLatitude      Float?
+  deliveryLongitude     Float?
+  deliveryInstructions  String?
+  
+  // Contact
+  recipientName         String?
+  recipientPhone        String?
+  
+  // Handling Instructions
+  isFragile             Boolean           @default(false)
+  isTemperatureSensitive Boolean          @default(false)
+  handlingInstructions  String?
+  
+  // Timestamps
+  placedAt              DateTime          @default(now())
+  reviewedAt            DateTime?
+  verifiedAt            DateTime?
+  preparingAt           DateTime?
+  readyAt               DateTime?
+  pickedUpAt            DateTime?
+  deliveredAt           DateTime?
+  cancelledAt           DateTime?
+  cancellationReason    String?
+  
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  
+  // Relations
+  items                 HealthOrderItem[]
+  pot                   PharmacyOrderTicket?
+  task                  Task?
+  prescriptionAccessLogs PrescriptionAccessLog[]
+  auditLogs             AuditLog[]        @relation("HealthOrderAuditLogs")
+  
+  @@index([clientId])
+  @@index([pharmacyId])
+  @@index([status])
+  @@index([orderType])
+  @@index([createdAt])
+}
+
+enum HealthOrderType {
+  PRESCRIPTION_MEDICINE   // Requires prescription verification
+  OVER_THE_COUNTER        // No prescription needed
+}
+
+enum HealthOrderStatus {
+  ORDER_PLACED            // Order created, awaiting pharmacy review
+  PHARMACY_REVIEW         // Pharmacy is reviewing prescription
+  PRESCRIPTION_VERIFIED   // Prescription approved
+  PREPARING_ORDER         // Pharmacy preparing medicines
+  READY_FOR_PICKUP        // Order ready for rider pickup
+  RIDER_ASSIGNED          // Rider assigned to delivery
+  OUT_FOR_DELIVERY        // Rider picked up and delivering
+  DELIVERED               // Successfully delivered
+  CANCELLED               // Order cancelled
+  REJECTED                // Pharmacy rejected order
+}
+
+// Health Order Items
+model HealthOrderItem {
+  id                    String        @id @default(cuid())
+  healthOrderId         String
+  healthOrder           HealthOrder   @relation(fields: [healthOrderId], references: [id], onDelete: Cascade)
+  medicineCatalogId     String?
+  medicineCatalog       MedicineCatalog? @relation(fields: [medicineCatalogId], references: [id])
+  
+  medicineName          String
+  medicineDescription   String?
+  quantity              Int
+  unitPrice             Float
+  totalPrice            Float
+  dosageInstructions    String?
+  specialInstructions   String?
+  
+  createdAt             DateTime      @default(now())
+  
+  @@index([healthOrderId])
+  @@index([medicineCatalogId])
+}
+
+// Prescription model - For prescription medicine orders
+model Prescription {
+  id                    String        @id @default(cuid())
+  prescriptionNumber    String        @unique
+  
+  // Owner
+  clientId              String
+  
+  // Prescription Details
+  imageUrl              String        // Encrypted storage path
+  imageHash             String?       // For integrity verification
+  doctorName            String?
+  doctorLicense         String?
+  clinicName            String?
+  prescriptionDate      DateTime?
+  expiryDate            DateTime?
+  
+  // Verification
+  status                PrescriptionStatus @default(PENDING)
+  verifiedBy            String?       // Pharmacy staff ID
+  verifiedAt            DateTime?
+  verificationNotes     String?
+  rejectionReason       String?
+  
+  // Medicines on prescription
+  medicines             String?       // JSON array of prescribed medicines
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  // Relations
+  healthOrders          HealthOrder[]
+  accessLogs            PrescriptionAccessLog[]
+  
+  @@index([clientId])
+  @@index([status])
+}
+
+enum PrescriptionStatus {
+  PENDING                // Uploaded, awaiting verification
+  VERIFIED               // Verified by pharmacy
+  REJECTED               // Rejected by pharmacy
+  EXPIRED                // Prescription has expired
+}
+
+// Health Provider model - For pharmacies, drug shops, clinics, and doctors
+model HealthProvider {
+  id                    String              @id @default(cuid())
+  
+  // Account Link
+  userId                String?             @unique  // Link to User model (provider account)
+  
+  // Basic Information
+  businessName          String              // Business / Facility Name
+  providerType          HealthProviderType  // Type of health provider
+  
+  // License & Certification
+  licenseNumber         String              // Certificate / License Number
+  licenseDocumentUrl    String?             // Uploaded license document
+  licenseExpiryDate     DateTime?
+  issuingAuthority      String?             // NDA, Medical Council, etc.
+  
+  // Owner / Manager Information
+  ownerFullName         String              // Full Owner or Manager Name
+  ownerPhone            String              // Business Phone Number
+  ownerEmail            String?             // Email Address
+  ownerNIN              String?             // National ID Number
+  
+  // Location Details
+  address               String              // Business Address
+  city                  String?
+  district              String?
+  latitude              Float?
+  longitude             Float?
+  serviceRadius         Int                 @default(10) // km - delivery coverage area
+  
+  // Facility Media
+  facilityPhotoUrl      String?             // Photo of Facility
+  interiorPhotoUrl      String?             // Interior photo
+  additionalPhotos      String?             // JSON array of additional photo URLs
+  
+  // Supporting Documents
+  additionalDocuments   String?             // JSON array of document URLs
+  
+  // Operating Hours
+  operatingHours        String?             // JSON: {monday: {open: "08:00", close: "20:00"}, ...}
+  isOpenNow             Boolean             @default(false)
+  is24Hours             Boolean             @default(false)
+  
+  // Capabilities
+  supportsPrescription  Boolean             @default(true)
+  supportsOTC           Boolean             @default(true)
+  supportsDelivery      Boolean             @default(true)
+  supportsPickup        Boolean             @default(true)
+  offersConsultation    Boolean             @default(false)
+  
+  // Verification Status
+  verificationStatus    VerificationStatus  @default(PENDING)
+  verificationNotes     String?             // Admin notes during verification
+  verifiedAt            DateTime?
+  verifiedBy            String?             // Admin user ID
+  rejectionReason       String?
+  
+  // Compliance Flags
+  complianceScore       Int                 @default(100) // 0-100
+  hasComplianceIssues   Boolean             @default(false)
+  lastComplianceCheck   DateTime?
+  
+  // Stats
+  totalOrders           Int                 @default(0)
+  totalPrescriptionsProcessed Int           @default(0)
+  completedOrders       Int                 @default(0)
+  cancelledOrders       Int                 @default(0)
+  rating                Float               @default(5.0)
+  totalReviews          Int                 @default(0)
+  
+  // Financial
+  totalEarnings         Float               @default(0)
+  pendingPayout         Float               @default(0)
+  commissionRate        Float               @default(0.10) // 10% platform commission
+  
+  // Emergency Contact
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  
+  // Bank Details for Payouts
+  bankName              String?
+  bankAccountName       String?
+  bankAccountNumber     String?
+  mobileMoneyNumber     String?
+  mobileMoneyProvider   String?             // MTN, AIRTEL
+  
+  // Flags
+  isFlagged             Boolean             @default(false)
+  flagReason            String?
+  flaggedAt             DateTime?
+  flaggedBy             String?
+  
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  // Relations
+  medicineCatalog       MedicineCatalog[]
+  healthOrders          HealthOrder[]
+  providerOrders        ProviderOrder[]
+  documents             ProviderDocument[]
+  
+  @@index([providerType])
+  @@index([verificationStatus])
+  @@index([city])
+  @@index([district])
+  @@index([isOpenNow])
+  @@index([latitude, longitude])
+}
+
+enum HealthProviderType {
+  PHARMACY               // Licensed pharmacy
+  DRUG_SHOP              // Licensed drug shop
+  CLINIC                 // Medical clinic
+  PRIVATE_DOCTOR         // Private practicing doctor
+}
+
+enum VerificationStatus {
+  PENDING               // Registration submitted, pending review
+  DOCUMENTS_REQUESTED   // Admin requested additional documents
+  UNDER_REVIEW          // Being reviewed by admin
+  APPROVED              // Verified and operational
+  REJECTED              // Registration rejected
+  SUSPENDED             // Temporarily suspended
+  DEACTIVATED           // Permanently deactivated
+}
+
+// Provider Document - Supporting documents uploaded by providers
+model ProviderDocument {
+  id                    String        @id @default(cuid())
+  providerId            String
+  provider              HealthProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  
+  // Document Details
+  documentType          String        // LICENSE, PERMIT, REGISTRATION, NDA_CERTIFICATE, etc.
+  documentName          String
+  documentUrl           String
+  documentSize          Int?          // bytes
+  
+  // Verification
+  isVerified            Boolean       @default(false)
+  verifiedBy            String?
+  verifiedAt            DateTime?
+  verificationNotes     String?
+  
+  // Metadata
+  uploadedAt            DateTime      @default(now())
+  
+  @@index([providerId])
+  @@index([documentType])
+}
+
+// Provider Order - Order assigned to health provider
+model ProviderOrder {
+  id                    String              @id @default(cuid())
+  orderNumber           String              @unique
+  
+  // Provider
+  providerId            String
+  provider              HealthProvider      @relation(fields: [providerId], references: [id])
+  
+  // Customer
+  customerId            String
+  customerName          String?
+  customerPhone         String?
+  
+  // Order Type
+  orderType             HealthOrderType
+  
+  // Prescription (if applicable)
+  prescriptionId        String?
+  prescriptionVerified  Boolean             @default(false)
+  prescriptionVerifiedBy String?
+  prescriptionVerifiedAt DateTime?
+  prescriptionRejectedReason String?
+  
+  // Items (JSON)
+  items                 String              // JSON array of {medicineId, name, quantity, price}
+  
+  // Pricing
+  subtotal              Float
+  deliveryFee           Float
+  serviceFee            Float               @default(0)
+  discount              Float               @default(0)
+  totalAmount           Float
+  providerEarnings      Float
+  
+  // Status
+  status                ProviderOrderStatus @default(ORDER_RECEIVED)
+  
+  // Timeline
+  receivedAt            DateTime            @default(now())
+  acceptedAt            DateTime?
+  preparingAt           DateTime?
+  readyAt               DateTime?
+  pickedUpAt            DateTime?
+  deliveredAt           DateTime?
+  cancelledAt           DateTime?
+  cancellationReason    String?
+  
+  // Delivery
+  deliveryAddress       String
+  deliveryLatitude      Float?
+  deliveryLongitude     Float?
+  deliveryInstructions  String?
+  
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  
+  @@index([providerId])
+  @@index([status])
+  @@index([customerId])
+}
+
+enum ProviderOrderStatus {
+  ORDER_RECEIVED
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REJECTED
+}
+
+// Pharmacy model - Legacy support
+model Pharmacy {
+  id                    String        @id @default(cuid())
+  merchantId            String        @unique
+  merchant              Merchant      @relation(fields: [merchantId], references: [id])
+  
+  pharmacyLicense       String
+  pharmacyLicenseUrl    String?
+  pharmacistInCharge    String
+  pharmacistLicense     String
+  operatingHours        String?
+  supportsPrescription  Boolean       @default(true)
+  supportsOTC           Boolean       @default(true)
+  deliveryRadius        Float         @default(10.0) // km
+  
+  status                PharmacyStatus @default(PENDING_APPROVAL)
+  isOpen                Boolean       @default(false)
+  
+  totalOrders           Int           @default(0)
+  rating                Float         @default(5.0)
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  // Relations
+  medicineCatalog       MedicineCatalog[]
+  healthOrders          HealthOrder[]
+  
+  @@index([status])
+  @@index([isOpen])
+}
+
+enum PharmacyStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+// Medicine Catalog
+model MedicineCatalog {
+  id                    String        @id @default(cuid())
+  
+  // Provider reference (new)
+  providerId            String?
+  provider              HealthProvider? @relation(fields: [providerId], references: [id])
+  
+  // Pharmacy reference (legacy)
+  pharmacyId            String?
+  pharmacy              Pharmacy?     @relation(fields: [pharmacyId], references: [id])
+  
+  // Medicine Details
+  name                  String
+  genericName           String?
+  description           String?
+  category              MedicineCategory
+  manufacturer          String?
+  price                 Float
+  isAvailable           Boolean       @default(true)
+  stockQuantity         Int?
+  requiresPrescription  Boolean       @default(false)
+  
+  // Storage & Handling
+  storageCondition      String?
+  handlingInstructions  String?
+  
+  // Media
+  imageUrl              String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  // Relations
+  healthOrderItems      HealthOrderItem[]
+  
+  @@index([providerId])
+  @@index([pharmacyId])
+  @@index([category])
+  @@index([isAvailable])
+}
+
+enum MedicineCategory {
+  PAINKILLERS
+  ANTIBIOTICS
+  VITAMINS
+  COLD_FLU
+  DIGESTIVE
+  CARDIOVASCULAR
+  DIABETES
+  HYGIENE
+  FIRST_AID
+  MOTHER_BABY
+  OTHER
+}
+
+// Pharmacy Order Ticket (POT)
+model PharmacyOrderTicket {
+  id                    String        @id @default(cuid())
+  potNumber             String        @unique
+  healthOrderId         String        @unique
+  healthOrder           HealthOrder   @relation(fields: [healthOrderId], references: [id])
+  
+  // POT Details
+  items                 String        // JSON string of items
+  prescriptionRef       String?
+  preparationNotes      String?
+  
+  // Status
+  status                POTStatus     @default(GENERATED)
+  
+  // Flags
+  hasFragileItems       Boolean       @default(false)
+  hasTemperatureSensitive Boolean     @default(false)
+  
+  // Timing
+  estimatedPrepTime     Int           @default(15) // minutes
+  
+  // Timestamps
+  startedAt             DateTime?
+  completedAt           DateTime?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([status])
+}
+
+enum POTStatus {
+  GENERATED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Prescription Access Log - For HIPAA compliance
+model PrescriptionAccessLog {
+  id                    String        @id @default(cuid())
+  prescriptionId        String
+  prescription          Prescription  @relation(fields: [prescriptionId], references: [id])
+  
+  accessedBy            String        // User/Staff ID
+  accessedByType        String        // PHARMACY_STAFF, ADMIN, CLIENT
+  healthOrderId         String?
+  healthOrder           HealthOrder?  @relation(fields: [healthOrderId], references: [id])
+  
+  action                String        // VIEW, VERIFY, REJECT, DOWNLOAD
+  ipAddress             String?
+  userAgent             String?
+  
+  createdAt             DateTime      @default(now())
+  
+  @@index([prescriptionId])
+  @@index([accessedBy])
+  @@index([createdAt])
+}
+
+// ============================================
+// FRAUD DETECTION & RISK SCORING
+// ============================================
+
+model FraudAlert {
+  id                    String        @id @default(cuid())
+  
+  // Reference
+  userId                String?
+  riderId               String?
+  taskId                String?
+  orderId               String?
+  
+  // Alert Details
+  alertType             FraudAlertType
+  riskScore             Int           // 0-100
+  severity              AlertSeverity
+  description           String
+  
+  // Indicators (JSON)
+  indicators            String?
+  
+  // Status
+  status                FraudAlertStatus @default(OPEN)
+  
+  // Resolution
+  reviewedBy            String?
+  reviewedAt            DateTime?
+  resolution            String?
+  resolutionNotes       String?
+  
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+  
+  @@index([userId])
+  @@index([riderId])
+  @@index([alertType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum FraudAlertType {
+  SUSPICIOUS_LOCATION
+  RAPID_TASKS
+  PAYMENT_ANOMALY
+  ACCOUNT_TAKEOVER
+  COLLUSION
+  FAKE_ORDER
+  LOCATION_SPOOFING
+  MULTIPLE_ACCOUNTS
+  UNUSUAL_PATTERN
+}
+
+enum FraudAlertStatus {
+  OPEN
+  UNDER_REVIEW
+  CONFIRMED
+  FALSE_POSITIVE
+  RESOLVED
+}
+
+// ============================================
+// API RATE LIMITING
+// ============================================
+
+model ApiRateLimit {
+  id                    String        @id @default(cuid())
+  identifier            String        @unique // IP or user ID
+  endpoint              String
+  requestCount          Int           @default(1)
+  windowStart           DateTime      @default(now())
+  
+  @@index([identifier])
+  @@index([windowStart])
+}

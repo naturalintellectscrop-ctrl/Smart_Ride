@@ -1,0 +1,12 @@
+{
+  "name": "smart-ride-heartbeat-monitor",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun --hot index.ts"
+  },
+  "dependencies": {
+    "socket.io": "^4.7.2",
+    "@prisma/client": "^6.19.2"
+  }
+}
