@@ -35,7 +35,7 @@ function AdminPageContent() {
     return null; // Will redirect to login
   }
 
-  return <AdminDashboard user={{ id: 'admin', name: 'Admin' }} />;
+  return <AdminDashboard user={{ id: 'admin', name: 'Admin', role: 'ADMIN' }} />;
 }
 
 export default function AdminPage() {
