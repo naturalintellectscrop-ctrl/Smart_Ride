@@ -972,4 +972,221 @@ Real-time monitoring dashboard:
 
 ---
 
-*Last Updated: Phase 12 - Dispatch & Matching Engine*
+*Last Updated: Phase 13 - Firebase Authentication & Verification System*
+
+---
+
+## Phase 13: Firebase Authentication & Verification System
+
+### 13.1 Firebase Project Setup
+**Files**: 
+- `src/lib/firebase/firebase-service.ts` - Firebase configuration and auth services
+- `.env` - Firebase environment variables
+
+Created new Firebase project (smart-ride-774e7) with:
+- **Google Sign-In** - OAuth popup authentication
+- **Phone Authentication** - SMS OTP verification (6-digit code)
+- **Push Notifications** - FCM with VAPID key
+
+**Environment Variables**:
+```
+NEXT_PUBLIC_FIREBASE_API_KEY=AIzaSyDSpbC4ejGRoD7OQlThlOTa46UMUCmySOI
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=smart-ride-774e7.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=smart-ride-774e7
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=smart-ride-774e7.firebasestorage.app
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=531949209415
+NEXT_PUBLIC_FIREBASE_APP_ID=1:531949209415:web:ba92abd602d0b02007ae62
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=G-LW7ZC0J2F5
+NEXT_PUBLIC_FIREBASE_VAPID_KEY=BMQLKZeEt_5imurS4T3joJYFE-qXCNGf7TE49bLBTe6g5hx1lmqOGG1n5W30NtGswBS-HxaIOQDwNNRbkfygcA4
+```
+
+### 13.2 Phone Authentication Implementation
+**File**: `src/lib/firebase/firebase-service.ts`
+
+Firebase Phone Auth functions:
+- `initRecaptchaVerifier()` - Initialize invisible reCAPTCHA
+- `sendPhoneVerificationCode()` - Send SMS OTP to phone number
+- `verifyPhoneCode()` - Verify 6-digit code entered by user
+- `verifyPhoneCodeWithId()` - Alternative verification with verification ID
+
+**Phone Auth Flow**:
+1. User enters phone number (+256 XXX XXX XXX)
+2. reCAPTCHA verification (invisible)
+3. Firebase sends 6-digit OTP via SMS
+4. User enters code
+5. Firebase verifies and returns user with ID token
+
+**Error Handling**:
+- `auth/invalid-phone-number` - Invalid phone format
+- `auth/too-many-requests` - Rate limiting
+- `auth/quota-exceeded` - SMS quota exceeded
+- `auth/captcha-check-failed` - reCAPTCHA failure
+- `auth/invalid-verification-code` - Wrong OTP
+- `auth/code-expired` - Expired OTP
+- `auth/billing-not-enabled` - **Requires Blaze plan (paid)**
+
+### 13.3 Mobile Auth Screen Update
+**File**: `src/components/smart-ride/onboarding/mobile-auth-screen.tsx`
+
+Updated to use real Firebase authentication:
+- Phone number input with +256 prefix
+- OTP input with 6-digit InputOTP component
+- Resend OTP with 60-second cooldown
+- Google Sign-In button
+- Real-time error display
+- Loading states for all operations
+
+**Auth Success Handler**:
+```typescript
+const handleAuthSuccess = (userData: { 
+  phone?: string; 
+  name: string; 
+  email?: string; 
+  photoURL?: string; 
+  uid?: string; 
+  idToken?: string 
+}) => {
+  // Create user with Firebase UID
+  // Redirect to role selection
+};
+```
+
+### 13.4 Verification System for All Roles
+**File**: `src/components/smart-ride/types.ts`
+
+Added verification status types:
+```typescript
+type RiderVerificationStatus = 'PENDING_REGISTRATION' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+type MerchantVerificationStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+type HealthProviderVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED' | 'DOCUMENTS_REQUESTED';
+```
+
+**User Interface Extended**:
+- `merchantStatus` - Merchant verification status
+- `providerStatus` - Health provider verification status
+- `businessName` - Business name for merchants/providers
+- `businessType` - RESTAURANT, PHARMACY, SUPERMARKET, RETAIL_STORE
+- `providerType` - PHARMACY, CLINIC, HOSPITAL, LABORATORY
+
+### 13.5 User Context Updates
+**File**: `src/components/smart-ride/context/user-context.tsx`
+
+Added new functions:
+- `setMerchantStatus()` - Update merchant verification status
+- `setProviderStatus()` - Update health provider verification status
+
+**Improved Onboarding Step Logic**:
+```typescript
+const getOnboardingStep = (user: User | null): OnboardingStep => {
+  if (!user) return 'welcome';
+  if (!user.role) return 'role-selection';
+  
+  if (user.role === 'RIDER') {
+    if (!user.riderRoleType) return 'rider-role-selection';
+    if (user.verificationStatus !== 'APPROVED') return 'pending-approval';
+    return 'dashboard';
+  }
+  
+  if (user.role === 'MERCHANT') {
+    if (user.merchantStatus !== 'APPROVED') return 'pending-approval';
+    return 'dashboard';
+  }
+  
+  if (user.role === 'PHARMACIST') {
+    if (user.providerStatus !== 'APPROVED') return 'pending-approval';
+    return 'dashboard';
+  }
+  
+  return 'dashboard';
+};
+```
+
+**LocalStorage Validation**:
+- Invalid user data is now automatically cleared
+- Prevents corrupted state from causing routing issues
+
+### 13.6 Pending Approval Component Update
+**File**: `src/components/smart-ride/onboarding/pending-approval.tsx`
+
+Updated to handle all user types:
+- Riders: Document verification, physical inspection, equipment issuance
+- Merchants: Business verification, location inspection
+- Health Providers: License verification, facility inspection
+
+**Features**:
+- Role-specific progress steps
+- Status-specific messaging (PENDING, REJECTED, SUSPENDED, DOCUMENTS_REQUESTED)
+- Sign out button
+- Contact support integration
+
+### 13.7 Smart Ride App Updates
+**File**: `src/components/smart-ride/smart-ride-app.tsx`
+
+**Role Selection Flow**:
+- CLIENT → Goes directly to dashboard
+- RIDER → Rider role selection → Registration → Pending approval
+- MERCHANT → Set status to PENDING_APPROVAL → Pending approval screen
+- PHARMACIST → Set status to PENDING → Pending approval screen
+
+### 13.8 Build Fixes
+
+**Missing Packages**:
+- Added `bcryptjs` and `jsonwebtoken` for auth
+- Added `@types/bcryptjs` and `@types/jsonwebtoken`
+
+**Import Fixes**:
+- Fixed ProductModal import path (`../../../shared/product-modal`)
+- Fixed AdminDashboard import
+
+**Client Component Fixes**:
+- Added `'use client'` to offline page
+
+### 13.9 Important Notes
+
+**Phone Authentication Billing**:
+⚠️ Firebase Phone Authentication requires a **Blaze (paid) plan**. The free Spark plan does not support phone auth.
+
+To enable:
+1. Go to Firebase Console → Billing
+2. Upgrade to Blaze plan (pay-as-you-go)
+3. Phone auth will work automatically
+
+**Firebase Console Setup Required**:
+1. Enable Google Sign-In in Authentication → Sign-in method
+2. Enable Phone in Authentication → Sign-in method
+3. Add authorized domain: `smart-ride-zeta.vercel.app`
+4. Configure Web Push certificates for notifications
+
+**Vercel Environment Variables Required**:
+All Firebase config variables must be added to Vercel environment variables for production deployment.
+
+---
+
+## Active Development Areas
+
+### Recently Completed
+1. ✅ Firebase Authentication (Google Sign-In)
+2. ✅ Phone Authentication (SMS OTP) - Requires Blaze plan
+3. ✅ Verification system for all roles (Rider, Merchant, Health Provider)
+4. ✅ Pending approval screen for all user types
+5. ✅ LocalStorage validation and cleanup
+6. ✅ Build error fixes
+
+### Current State
+- Complete authentication flow with Firebase
+- Role-based verification system
+- Unified pending approval for all business roles
+- Production-ready for Vercel deployment
+
+---
+
+## Notes for Future Development
+
+1. **Upgrade Firebase Plan**: Switch to Blaze for phone auth
+2. **SOS Safety System**: Implement global SOS button across all screens
+3. **Real-time Updates**: Add WebSocket for live updates
+4. **Map Integration**: Implement actual map components (Google Maps/Mapbox)
+5. **Payment Gateway**: Integrate mobile money APIs (MTN, Airtel)
+6. **Push Notifications**: Implement notification system
+7. **Testing**: Add unit and integration tests
+8. **Documentation**: API documentation with OpenAPI/Swagger
