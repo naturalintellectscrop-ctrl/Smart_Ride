@@ -8,7 +8,7 @@
 import React, { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAdmin, AdminProvider } from '@/lib/context/admin-context';
-import { AdminDashboardContent } from '@/components/smart-ride/dashboards/admin-dashboard';
+import { AdminDashboard } from '@/components/smart-ride/dashboards/admin-dashboard';
 
 function AdminPageContent() {
   const { isAuthenticated, isLoading } = useAdmin();
@@ -35,7 +35,7 @@ function AdminPageContent() {
     return null; // Will redirect to login
   }
 
-  return <AdminDashboardContent />;
+  return <AdminDashboard user={{ id: 'admin', name: 'Admin' }} />;
 }
 
 export default function AdminPage() {

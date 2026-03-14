@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode, useMemo } from 'react';
-import { User, UserRole, OnboardingStep, RiderRoleType, RiderVerificationStatus } from '../types';
+import { User, UserRole, OnboardingStep, RiderRoleType, RiderVerificationStatus, MerchantVerificationStatus, HealthProviderVerificationStatus } from '../types';
 
 interface UserContextType {
   user: User | null;
@@ -17,6 +17,8 @@ interface UserContextType {
   switchRole: (role: UserRole) => void;
   setRiderRoleType: (roleType: RiderRoleType) => void;
   setVerificationStatus: (status: RiderVerificationStatus) => void;
+  setMerchantStatus: (status: MerchantVerificationStatus) => void;
+  setProviderStatus: (status: HealthProviderVerificationStatus) => void;
   completeRiderRegistration: (data: Partial<User>) => void;
 }
 
@@ -29,8 +31,19 @@ const getInitialUser = (): User | null => {
   if (typeof window === 'undefined') return null;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    
+    // Validate that the stored user has required fields
+    if (!parsed || !parsed.id || !parsed.name) {
+      // Invalid data, clear it
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    
+    return parsed;
   } catch {
+    localStorage.removeItem(STORAGE_KEY);
     return null;
   }
 };
@@ -39,10 +52,39 @@ const getInitialUser = (): User | null => {
 const getOnboardingStep = (user: User | null): OnboardingStep => {
   if (!user) return 'welcome';
   if (!user.role) return 'role-selection';
-  // If rider hasn't selected their role type yet
-  if (user.role === 'RIDER' && !user.riderRoleType) return 'rider-role-selection';
-  // If rider is pending approval
-  if (user.role === 'RIDER' && user.verificationStatus === 'PENDING_APPROVAL') return 'pending-approval';
+  
+  // Rider flow
+  if (user.role === 'RIDER') {
+    if (!user.riderRoleType) return 'rider-role-selection';
+    if (user.verificationStatus === 'PENDING_APPROVAL') return 'pending-approval';
+    if (user.verificationStatus === 'PENDING_REGISTRATION') return 'rider-registration';
+    if (user.verificationStatus !== 'APPROVED') return 'pending-approval';
+    return 'dashboard';
+  }
+  
+  // Merchant flow - check verification status
+  if (user.role === 'MERCHANT') {
+    if (!user.merchantStatus || user.merchantStatus === 'PENDING_APPROVAL') {
+      return 'pending-approval';
+    }
+    if (user.merchantStatus === 'REJECTED' || user.merchantStatus === 'SUSPENDED') {
+      return 'pending-approval';
+    }
+    return 'dashboard';
+  }
+  
+  // Health Provider / Pharmacist flow - check verification status
+  if (user.role === 'PHARMACIST') {
+    if (!user.providerStatus || user.providerStatus === 'PENDING') {
+      return 'pending-approval';
+    }
+    if (user.providerStatus === 'REJECTED' || user.providerStatus === 'SUSPENDED') {
+      return 'pending-approval';
+    }
+    return 'dashboard';
+  }
+  
+  // Client - goes directly to dashboard
   return 'dashboard';
 };
 
@@ -53,7 +95,7 @@ interface UserProviderProps {
 export function UserProvider({ children }: UserProviderProps) {
   // Use lazy initialization for both state values to avoid cascading renders
   const [user, setUserState] = useState<User | null>(getInitialUser);
-  const [isLoading, setIsLoading] = useState(false); // No longer need loading state with lazy init
+  const [isLoading, setIsLoading] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>(() => 
     getOnboardingStep(getInitialUser())
   );
@@ -84,7 +126,7 @@ export function UserProvider({ children }: UserProviderProps) {
     setUserState(prev => {
       if (!prev) return prev;
       const updated = { ...prev, role, isNewUser: false };
-      setOnboardingStep('dashboard');
+      setOnboardingStep(getOnboardingStep(updated));
       return updated;
     });
   }, []);
@@ -98,18 +140,17 @@ export function UserProvider({ children }: UserProviderProps) {
   const switchRole = useCallback((newRole: UserRole) => {
     setUserState(prev => {
       if (!prev) return prev;
-      // Reset rider-specific fields when switching away from rider
-      if (prev.role === 'RIDER' && newRole !== 'RIDER') {
-        return { 
-          ...prev, 
-          role: newRole,
-          riderRoleType: undefined,
-          verificationStatus: undefined,
-          vehicleType: undefined,
-          documents: undefined,
-        };
-      }
-      return { ...prev, role: newRole };
+      // Reset role-specific fields when switching roles
+      return { 
+        ...prev, 
+        role: newRole,
+        riderRoleType: undefined,
+        verificationStatus: undefined,
+        merchantStatus: undefined,
+        providerStatus: undefined,
+        vehicleType: undefined,
+        documents: undefined,
+      };
     });
   }, []);
 
@@ -124,16 +165,37 @@ export function UserProvider({ children }: UserProviderProps) {
   const setVerificationStatus = useCallback((status: RiderVerificationStatus) => {
     setUserState(prev => {
       if (!prev) return prev;
-      return { ...prev, verificationStatus: status };
+      const updated = { ...prev, verificationStatus: status };
+      setOnboardingStep(getOnboardingStep(updated));
+      return updated;
+    });
+  }, []);
+
+  const setMerchantStatus = useCallback((status: MerchantVerificationStatus) => {
+    setUserState(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, merchantStatus: status };
+      setOnboardingStep(getOnboardingStep(updated));
+      return updated;
+    });
+  }, []);
+
+  const setProviderStatus = useCallback((status: HealthProviderVerificationStatus) => {
+    setUserState(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev, providerStatus: status };
+      setOnboardingStep(getOnboardingStep(updated));
+      return updated;
     });
   }, []);
 
   const completeRiderRegistration = useCallback((data: Partial<User>) => {
     setUserState(prev => {
       if (!prev) return prev;
-      return { ...prev, ...data, isNewUser: false };
+      const updated = { ...prev, ...data, verificationStatus: 'PENDING_APPROVAL' as RiderVerificationStatus };
+      setOnboardingStep('pending-approval');
+      return updated;
     });
-    setOnboardingStep('pending-approval');
   }, []);
 
   const value: UserContextType = useMemo(() => ({
@@ -150,8 +212,10 @@ export function UserProvider({ children }: UserProviderProps) {
     switchRole,
     setRiderRoleType,
     setVerificationStatus,
+    setMerchantStatus,
+    setProviderStatus,
     completeRiderRegistration,
-  }), [user, isLoading, onboardingStep, setUser, updateUser, setRole, logout, switchRole, setRiderRoleType, setVerificationStatus, completeRiderRegistration]);
+  }), [user, isLoading, onboardingStep, setUser, updateUser, setRole, logout, switchRole, setRiderRoleType, setVerificationStatus, setMerchantStatus, setProviderStatus, completeRiderRegistration]);
 
   return (
     <UserContext.Provider value={value}>

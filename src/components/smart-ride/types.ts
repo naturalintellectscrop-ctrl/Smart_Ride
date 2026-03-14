@@ -6,6 +6,12 @@ export type RiderRoleType = 'SMART_BODA' | 'SMART_CAR' | 'DELIVERY_PERSONNEL';
 // Rider verification status
 export type RiderVerificationStatus = 'PENDING_REGISTRATION' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
 
+// Merchant verification status
+export type MerchantVerificationStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
+
+// Health Provider verification status
+export type HealthProviderVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED' | 'DOCUMENTS_REQUESTED';
+
 // Task states
 export type TaskState = 
   | 'CREATED'
@@ -50,7 +56,7 @@ export type VehicleType = 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER';
 // Payment methods
 export type PaymentMethod = 'CASH' | 'MTN_MONEY' | 'AIRTEL_MONEY' | 'VISA' | 'MASTERCARD' | 'CREDIT_CARD';
 
-export type OnboardingStep = 'welcome' | 'auth' | 'role-selection' | 'rider-role-selection' | 'rider-registration' | 'pending-approval' | 'dashboard';
+export type OnboardingStep = 'welcome' | 'auth' | 'role-selection' | 'rider-role-selection' | 'rider-registration' | 'merchant-registration' | 'health-provider-registration' | 'pending-approval' | 'dashboard';
 
 export interface User {
   id: string;
@@ -78,6 +84,13 @@ export interface User {
   };
   rating?: number;
   totalTrips?: number;
+  // Merchant-specific fields
+  merchantStatus?: MerchantVerificationStatus;
+  businessName?: string;
+  businessType?: 'RESTAURANT' | 'PHARMACY' | 'SUPERMARKET' | 'RETAIL_STORE';
+  // Health Provider-specific fields
+  providerStatus?: HealthProviderVerificationStatus;
+  providerType?: 'PHARMACY' | 'CLINIC' | 'HOSPITAL' | 'LABORATORY';
 }
 
 export interface AuthService {

@@ -67,11 +67,13 @@ export function SmartRideApp() {
   };
 
   // Handle auth success (PHONE NUMBER AUTH ONLY)
-  const handleAuthSuccess = (userData: { phone: string; name: string }) => {
+  const handleAuthSuccess = (userData: { phone?: string; name: string; email?: string; photoURL?: string; uid?: string; idToken?: string }) => {
     const newUser: User = {
-      id: `user_${Date.now()}`,
+      id: userData.uid || `user_${Date.now()}`,
       phone: userData.phone,
+      email: userData.email,
       name: userData.name,
+      avatarUrl: userData.photoURL,
       role: null,
       isNewUser: true,
     };
@@ -96,8 +98,18 @@ export function SmartRideApp() {
       // For riders, go to rider role selection first
       setRole(role);
       setOnboardingStep('rider-role-selection');
+    } else if (role === 'MERCHANT') {
+      // For merchants, set status to pending and show pending approval
+      setRole(role);
+      updateUser({ merchantStatus: 'PENDING_APPROVAL' });
+      setOnboardingStep('pending-approval');
+    } else if (role === 'PHARMACIST') {
+      // For pharmacists/health providers, set status to pending
+      setRole(role);
+      updateUser({ providerStatus: 'PENDING' });
+      setOnboardingStep('pending-approval');
     } else {
-      // For other roles, go directly to dashboard
+      // For clients, go directly to dashboard
       setRole(role);
       setOnboardingStep('dashboard');
     }
@@ -197,9 +209,24 @@ export function SmartRideApp() {
             }
             return <RiderDashboard user={user} />;
           case 'MERCHANT':
+            // Check if merchant is approved
+            if (user.merchantStatus !== 'APPROVED') {
+              return (
+                <PendingApproval 
+                  user={user}
+                />
+              );
+            }
             return <MerchantDashboard user={user} />;
           case 'PHARMACIST':
-          case 'HEALTH_PROVIDER':
+            // Check if health provider is approved
+            if (user.providerStatus !== 'APPROVED') {
+              return (
+                <PendingApproval 
+                  user={user}
+                />
+              );
+            }
             return <PharmacistDashboard user={user} />;
           default:
             // Admin roles should never reach here in mobile app
