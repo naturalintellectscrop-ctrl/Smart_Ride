@@ -2,7 +2,7 @@
  * Smart Ride Mobile Authentication Screen
  * 
  * Authentication options:
- * - Phone number with OTP (primary)
+ * - Phone number with OTP (primary) - Firebase Phone Auth
  * - Google Sign-In (optional)
  * 
  * Both methods are secure and user-friendly.
@@ -10,17 +10,17 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
 import { 
   ArrowLeft, 
-  Phone, 
   Loader2,
   ShieldCheck,
-  Smartphone
+  Smartphone,
+  AlertCircle,
+  Phone as PhoneIcon
 } from 'lucide-react';
 import { 
   InputOTP, 
@@ -30,12 +30,21 @@ import {
 import { 
   signInWithGoogle, 
   handleGoogleRedirectResult,
-  GoogleSignInResult 
+  sendPhoneVerificationCode,
+  verifyPhoneCode,
+  initRecaptchaVerifier,
+  GoogleSignInResult,
+  PhoneSignInResult,
+  PhoneVerifyResult
 } from '@/lib/firebase/firebase-service';
+import { 
+  ConfirmationResult,
+  ApplicationVerifier 
+} from 'firebase/auth';
 
 interface MobileAuthScreenProps {
   onBack: () => void;
-  onAuthSuccess: (userData: { phone?: string; name: string; email?: string; photoURL?: string }) => void;
+  onAuthSuccess: (userData: { phone?: string; name: string; email?: string; photoURL?: string; uid?: string; idToken?: string }) => void;
 }
 
 type AuthStep = 'phone' | 'otp' | 'success';
@@ -52,6 +61,21 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [resendTimer, setResendTimer] = useState(0);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const recaptchaVerifierRef = useRef<ApplicationVerifier | null>(null);
+  const recaptchaButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Timer for resend OTP
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   // Handle Google redirect result on mount
   useEffect(() => {
@@ -63,12 +87,21 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
           email: result.user.email,
           photoURL: result.user.photoURL,
           phone: result.user.phoneNumber,
+          uid: result.user.uid,
+          idToken: result.user.idToken,
         });
       }
     };
 
     checkRedirectResult();
   }, [onAuthSuccess]);
+
+  // Initialize reCAPTCHA verifier when component mounts
+  useEffect(() => {
+    if (recaptchaButtonRef.current && !recaptchaVerifierRef.current) {
+      recaptchaVerifierRef.current = initRecaptchaVerifier('recaptcha-button');
+    }
+  }, []);
 
   const handlePhoneSubmit = async () => {
     if (phone.length < 9) {
@@ -78,12 +111,82 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
     
     setError('');
     setIsLoading(true);
+
+    try {
+      // Initialize reCAPTCHA if not already done
+      if (!recaptchaVerifierRef.current && recaptchaButtonRef.current) {
+        recaptchaVerifierRef.current = initRecaptchaVerifier('recaptcha-button');
+      }
+
+      if (!recaptchaVerifierRef.current) {
+        setError('Unable to initialize verification. Please refresh and try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Format phone number with country code
+      const fullPhoneNumber = `+256${phone}`;
+      
+      // Send verification code via Firebase
+      const result: PhoneSignInResult = await sendPhoneVerificationCode(
+        fullPhoneNumber,
+        recaptchaVerifierRef.current
+      );
+
+      if (result.success && result.confirmationResult) {
+        setConfirmationResult(result.confirmationResult);
+        setAuthStep('otp');
+        setResendTimer(60); // 60 second cooldown
+      } else {
+        setError(result.error || 'Unable to send verification code');
+        // Reset reCAPTCHA on failure
+        recaptchaVerifierRef.current = null;
+      }
+    } catch (err) {
+      console.error('Phone submit error:', err);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendTimer > 0) return;
     
-    // Simulate OTP sending
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsLoading(false);
-    setAuthStep('otp');
+    setError('');
+    setIsLoading(true);
+
+    try {
+      // Reset reCAPTCHA
+      recaptchaVerifierRef.current = null;
+      if (recaptchaButtonRef.current) {
+        recaptchaVerifierRef.current = initRecaptchaVerifier('recaptcha-button');
+      }
+
+      if (!recaptchaVerifierRef.current) {
+        setError('Unable to initialize verification. Please try again.');
+        setIsLoading(false);
+        return;
+      }
+
+      const fullPhoneNumber = `+256${phone}`;
+      const result: PhoneSignInResult = await sendPhoneVerificationCode(
+        fullPhoneNumber,
+        recaptchaVerifierRef.current
+      );
+
+      if (result.success && result.confirmationResult) {
+        setConfirmationResult(result.confirmationResult);
+        setResendTimer(60);
+        setError('');
+      } else {
+        setError(result.error || 'Failed to resend code');
+      }
+    } catch (err) {
+      setError('Failed to resend code. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleOtpSubmit = async () => {
@@ -92,22 +195,37 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
       return;
     }
     
+    if (!confirmationResult) {
+      setError('Verification session expired. Please go back and try again.');
+      return;
+    }
+    
     setError('');
     setIsLoading(true);
-    
-    // Simulate OTP verification
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsLoading(false);
-    setAuthStep('success');
-    
-    // Auto-proceed after success animation
-    setTimeout(() => {
-      onAuthSuccess({ 
-        phone: `+256${phone}`, 
-        name: `User ${phone.slice(-4)}` 
-      });
-    }, 1000);
+
+    try {
+      const result: PhoneVerifyResult = await verifyPhoneCode(confirmationResult, otp);
+
+      if (result.success && result.user) {
+        setAuthStep('success');
+        
+        // Auto-proceed after success animation
+        setTimeout(() => {
+          onAuthSuccess({ 
+            phone: result.user!.phoneNumber, 
+            name: `User ${phone.slice(-4)}`,
+            uid: result.user!.uid,
+            idToken: result.user!.idToken,
+          });
+        }, 1000);
+      } else {
+        setError(result.error || 'Invalid verification code');
+      }
+    } catch (err) {
+      setError('Failed to verify code. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -125,6 +243,8 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
             email: result.user!.email,
             photoURL: result.user!.photoURL,
             phone: result.user!.phoneNumber,
+            uid: result.user!.uid,
+            idToken: result.user!.idToken,
           });
         }, 1000);
       } else if (result.error) {
@@ -139,12 +259,20 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
 
   return (
     <div className="min-h-screen bg-[#0D0D12] max-w-md mx-auto">
+      {/* Hidden reCAPTCHA button */}
+      <button 
+        ref={recaptchaButtonRef} 
+        id="recaptcha-button"
+        className="hidden"
+        aria-hidden="true"
+      />
+      
       {/* Header */}
       <div className="px-4 py-4 flex items-center border-b border-white/5">
         <Button 
           variant="ghost" 
           size="icon"
-          onClick={onBack}
+          onClick={() => authStep === 'otp' ? setAuthStep('phone') : onBack()}
           className="mr-2 text-gray-400 hover:text-white hover:bg-white/5"
         >
           <ArrowLeft className="h-5 w-5" />
@@ -169,7 +297,7 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
                 Welcome to Smart Ride
               </h2>
               <p className="text-gray-400 text-sm">
-                Sign in to continue
+                Sign in with your phone number
               </p>
             </div>
 
@@ -189,7 +317,10 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
               </div>
               
               {error && (
-                <p className="text-red-400 text-sm text-center">{error}</p>
+                <div className="flex items-center gap-2 text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
               )}
 
               <Button 
@@ -252,13 +383,6 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
               {' '}and{' '}
               <span className="text-[#00FF88]">Privacy Policy</span>
             </p>
-
-            {/* App Store Badge */}
-            <div className="mt-8 text-center">
-              <p className="text-xs text-gray-600">
-                Available on Google Play Store
-              </p>
-            </div>
           </>
         )}
 
@@ -272,7 +396,7 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
                 Verify your number
               </h2>
               <p className="text-gray-400 text-sm">
-                Enter the code sent to +256 {phone}
+                Enter the 6-digit code sent to +256 {phone}
               </p>
             </div>
 
@@ -284,18 +408,21 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
                   onChange={setOtp}
                 >
                   <InputOTPGroup className="gap-2">
-                    <InputOTPSlot index={0} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white" />
-                    <InputOTPSlot index={1} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white" />
-                    <InputOTPSlot index={2} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white" />
-                    <InputOTPSlot index={3} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white" />
-                    <InputOTPSlot index={4} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white" />
-                    <InputOTPSlot index={5} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white" />
+                    <InputOTPSlot index={0} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
+                    <InputOTPSlot index={1} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
+                    <InputOTPSlot index={2} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
+                    <InputOTPSlot index={3} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
+                    <InputOTPSlot index={4} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
+                    <InputOTPSlot index={5} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
                   </InputOTPGroup>
                 </InputOTP>
               </div>
 
               {error && (
-                <p className="text-red-400 text-sm text-center">{error}</p>
+                <div className="flex items-center gap-2 text-red-400 text-sm bg-red-400/10 p-3 rounded-lg justify-center">
+                  <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                  <span>{error}</span>
+                </div>
               )}
 
               <Button 
@@ -311,15 +438,21 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
                 )}
               </Button>
 
-              <p className="text-center text-sm text-gray-400">
-                Didn't receive code?{' '}
-                <button 
-                  onClick={() => setAuthStep('phone')}
-                  className="text-[#00FF88] font-medium"
-                >
-                  Resend
-                </button>
-              </p>
+              <div className="text-center">
+                {resendTimer > 0 ? (
+                  <p className="text-sm text-gray-500">
+                    Resend code in {resendTimer}s
+                  </p>
+                ) : (
+                  <button 
+                    onClick={handleResendOtp}
+                    disabled={isLoading}
+                    className="text-[#00FF88] font-medium text-sm"
+                  >
+                    Resend Code
+                  </button>
+                )}
+              </div>
             </div>
           </>
         )}
