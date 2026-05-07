@@ -1,0 +1,3 @@
+{
+  "buildCommand": "DATABASE_URL=\"file:./prisma/dev.db\" prisma generate && next build"
+}
