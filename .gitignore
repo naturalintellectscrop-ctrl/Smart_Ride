@@ -52,3 +52,16 @@ prompt
 server.log
 # Skills directory
 /skills/
+# Expo
+.expo/
+android/
+ios/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# Metro
+.metro-health-check*
