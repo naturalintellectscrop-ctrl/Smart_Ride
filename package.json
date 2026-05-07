@@ -9,7 +9,7 @@
     "web": "expo start --web",
     "dev": "next dev -p 3000",
     "build": "next build",
-    "postinstall": "prisma generate",
+    "postinstall": "DATABASE_URL=\"file:./prisma/dev.db\" prisma generate || echo 'Prisma generate skipped'",
     "lint": "eslint ."
   },
   "dependencies": {
