@@ -1,48 +1,22 @@
 {
   "expo": {
     "name": "Smart Ride",
-    "slug": "smartride-app",
+    "slug": "smartride",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "scheme": "smartride",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "cover",
       "backgroundColor": "#0B1220"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
     "ios": {
-      "supportsTablet": false,
       "bundleIdentifier": "ug.smartride.app"
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0B1220"
-      },
       "package": "ug.smartride.app"
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-router"
-    ],
-    "experiments": {
-      "typedRoutes": true
-    },
-    "extra": {
-      "router": {
-        "origin": false,
-        "appDir": "app"
-      },
-      "apiBaseUrl": "https://smartrideug.vercel.app/api"
-    }
+    ]
   }
 }
