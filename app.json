@@ -1,0 +1,88 @@
+{
+  "expo": {
+    "name": "Smart Ride",
+    "slug": "smartride-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "smartride",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0B1220"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "ug.smartride.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Smart Ride needs your location to provide ride services and track deliveries.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Smart Ride needs your location to provide ride services and track deliveries.",
+        "NSCameraUsageDescription": "Smart Ride needs camera access to verify your identity and documents.",
+        "NSPhotoLibraryUsageDescription": "Smart Ride needs photo library access to upload documents."
+      },
+      "config": {
+        "googleMapsApiKey": ""
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B1220"
+      },
+      "package": "ug.smartride.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-location",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#10B981",
+          "sounds": []
+        }
+      ],
+      "expo-font",
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar"
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false,
+        "appDir": "app"
+      },
+      "apiBaseUrl": "https://smartrideug.vercel.app/api",
+      "mapboxAccessToken": ""
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    }
+  }
+}
