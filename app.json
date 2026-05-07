@@ -28,6 +28,9 @@
       "router": {
         "origin": false,
         "appDir": "app"
+      },
+      "eas": {
+        "projectId": "96fc7339-6554-4017-a800-64119cbbf150"
       }
     }
   }
