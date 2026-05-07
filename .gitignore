@@ -65,3 +65,4 @@ ios/
 
 # Metro
 .metro-health-check*
+dist/
