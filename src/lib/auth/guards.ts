@@ -11,10 +11,13 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyAccessToken, extractTokenFromHeader, JWTPayload, isAdmin, hasRole } from './jwt';
+import { verifyAccessToken, extractTokenFromHeader, JWTPayload, isAdmin as isAdminCheck, hasRole } from './jwt';
 import { UserRole } from '@prisma/client';
 import { db } from '@/lib/db';
 import crypto from 'crypto';
+
+// Re-export isAdmin for convenience
+export { isAdmin } from './jwt';
 
 // ============================================================================
 // Types
@@ -108,7 +111,7 @@ export function requireAdmin(req: NextRequest): AuthResult {
     return authResult;
   }
   
-  if (!isAdmin(authResult.user!.role)) {
+  if (!isAdminCheck(authResult.user!.role)) {
     return {
       success: false,
       error: 'Admin access required',
@@ -184,7 +187,7 @@ export async function verifyResourceOwnership(
   const currentUserId = authResult.user!.userId;
   
   // Admin bypass (if allowed)
-  if (allowAdmin && isAdmin(authResult.user!.role)) {
+  if (allowAdmin && isAdminCheck(authResult.user!.role)) {
     return authResult;
   }
   
