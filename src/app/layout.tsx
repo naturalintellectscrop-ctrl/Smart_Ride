@@ -16,8 +16,8 @@ export const viewport: Viewport = {
   userScalable: false,
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#1F4E79" },
-    { media: "(prefers-color-scheme: dark)", color: "#1F4E79" },
+    { media: "(prefers-color-scheme: light)", color: "#00FF88" },
+    { media: "(prefers-color-scheme: dark)", color: "#0D0D12" },
   ],
 };
 
@@ -49,15 +49,14 @@ export const metadata: Metadata = {
   // Icons
   icons: {
     icon: [
-      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+      { url: "/favicon.jpg", sizes: "any", type: "image/jpeg" },
+      { url: "/smartride-logo.jpeg", sizes: "1024x1024", type: "image/jpeg" },
     ],
     apple: [
-      { url: "/icons/icon-152x152.png", sizes: "152x152", type: "image/png" },
-      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/smartride-logo.jpeg", sizes: "1024x1024", type: "image/jpeg" },
     ],
     other: [
-      { rel: "mask-icon", url: "/icons/icon-512x512.png", color: "#1F4E79" },
+      { rel: "mask-icon", url: "/smartride-logo.jpeg", color: "#00FF88" },
     ],
   },
   
@@ -78,9 +77,9 @@ export const metadata: Metadata = {
     description: "Uganda's premier mobility platform for rides, food delivery, shopping, and more.",
     images: [
       {
-        url: "/icons/og-image.png",
-        width: 1200,
-        height: 630,
+        url: "/smartride-logo.jpeg",
+        width: 1024,
+        height: 1024,
         alt: "Smart Ride Uganda",
       },
     ],
@@ -91,7 +90,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Smart Ride - Multi-Service Mobility Platform",
     description: "Uganda's premier mobility platform for rides, food delivery, shopping, and more.",
-    images: ["/icons/og-image.png"],
+    images: ["/smartride-logo.jpeg"],
   },
   
   // Additional PWA
@@ -125,11 +124,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Smart Ride" />
         <meta name="application-name" content="Smart Ride" />
-        <meta name="msapplication-TileColor" content="#1F4E79" />
+        <meta name="msapplication-TileColor" content="#00FF88" />
         <meta name="msapplication-tap-highlight" content="no" />
+        <meta name="msapplication-TileImage" content="/smartride-logo.jpeg" />
         
         {/* iOS Splash Screens */}
-        <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png" />
+        <link rel="apple-touch-startup-image" href="/smartride-logo.jpeg" />
+        <link rel="apple-touch-icon" href="/smartride-logo.jpeg" />
         
         {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://api.mapbox.com" />
