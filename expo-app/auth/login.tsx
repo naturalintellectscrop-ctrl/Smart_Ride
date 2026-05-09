@@ -1,10 +1,10 @@
 // ============================================
 // SMART RIDE MOBILE - LOGIN SCREEN
 // ============================================
-// Simplified version - Plain StyleSheet (no NativeWind)
+// Full authentication with email/password and Google Sign-In
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -15,13 +15,16 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { GoogleSignin, statusCodes, User as GoogleUser } from '@react-native-google-signin/google-signin';
+import { loginWithEmail, isAuthenticated } from '../services/auth';
 
 const COLORS = {
-  primary: '#00FF88',
+  primary: '#10B981',
   primaryDark: '#059669',
-  background: '#0D0D12',
+  background: '#0B1220',
   backgroundElevated: '#1A1A24',
   backgroundSurface: '#252530',
   text: '#FFFFFF',
@@ -29,7 +32,17 @@ const COLORS = {
   textMuted: 'rgba(255, 255, 255, 0.5)',
   border: 'rgba(255, 255, 255, 0.08)',
   error: '#EF4444',
+  googleBlue: '#4285F4',
 };
+
+// Configure Google Sign-In
+GoogleSignin.configure({
+  webClientId: '531949209415-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com', // Replace with your actual web client ID
+  iosClientId: '531949209415-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com', // Replace with your iOS client ID
+  offlineAccess: true,
+  hostedDomain: '',
+  forceCodeForRefreshToken: true,
+});
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,8 +50,21 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if already authenticated
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const authenticated = await isAuthenticated();
+    if (authenticated) {
+      router.replace('/(tabs)');
+    }
+  };
 
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -53,12 +79,71 @@ export default function LoginScreen() {
     setIsLoading(true);
     setError(null);
 
-    // Simulate login - replace with actual API call
-    setTimeout(() => {
+    try {
+      const result = await loginWithEmail({
+        email: email.trim().toLowerCase(),
+        password,
+        deviceType: Platform.OS === 'ios' ? 'ios' : 'android',
+      });
+
+      if (result.success) {
+        router.replace('/(tabs)');
+      } else {
+        setError(result.error || 'Login failed');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to login. Please try again.');
+    } finally {
       setIsLoading(false);
-      // For now, just navigate to tabs
-      router.replace('/(tabs)');
-    }, 1500);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError(null);
+
+    try {
+      // Check if device supports Google Play Services
+      await GoogleSignin.hasPlayServices();
+      
+      // Sign in
+      const userInfo = await GoogleSignin.signIn();
+      
+      if (userInfo.data?.idToken) {
+        // Send ID token to backend
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/google`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ idToken: userInfo.data.idToken }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          router.replace('/(tabs)');
+        } else {
+          setError(result.error || 'Google login failed');
+        }
+      } else {
+        setError('Failed to get Google ID token');
+      }
+    } catch (err: any) {
+      console.error('Google Sign-In error:', err);
+      
+      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
+        // User cancelled the sign-in flow
+      } else if (err.code === statusCodes.IN_PROGRESS) {
+        setError('Sign in is already in progress');
+      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setError('Google Play Services not available');
+      } else {
+        setError('Google Sign-In failed. Please try again.');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -103,6 +188,7 @@ export default function LoginScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!isLoading && !googleLoading}
             />
           </View>
 
@@ -118,6 +204,7 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                editable={!isLoading && !googleLoading}
               />
               <TouchableOpacity 
                 onPress={() => setShowPassword(!showPassword)}
@@ -137,7 +224,7 @@ export default function LoginScreen() {
           <TouchableOpacity 
             style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
             onPress={handleLogin}
-            disabled={isLoading}
+            disabled={isLoading || googleLoading}
           >
             {isLoading ? (
               <ActivityIndicator color={COLORS.background} />
@@ -149,22 +236,48 @@ export default function LoginScreen() {
 
         {/* Social Login */}
         <View style={styles.socialContainer}>
-          <Text style={styles.socialText}>Or continue with</Text>
-          <View style={styles.socialButtons}>
-            <TouchableOpacity 
-              style={styles.socialButton}
-              onPress={() => router.push('/auth/phone-login')}
-            >
-              <Text style={styles.socialIcon}>📱</Text>
-              <Text style={styles.socialLabel}>Phone</Text>
-            </TouchableOpacity>
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>Or continue with</Text>
+            <View style={styles.divider} />
           </View>
+
+          {/* Google Sign-In Button */}
+          <TouchableOpacity 
+            style={styles.googleButton}
+            onPress={handleGoogleSignIn}
+            disabled={isLoading || googleLoading}
+          >
+            {googleLoading ? (
+              <ActivityIndicator color={COLORS.text} />
+            ) : (
+              <>
+                <View style={styles.googleIconContainer}>
+                  <Text style={styles.googleIcon}>G</Text>
+                </View>
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Phone Login */}
+          <TouchableOpacity 
+            style={styles.phoneButton}
+            onPress={() => router.push('/auth/phone-login')}
+            disabled={isLoading || googleLoading}
+          >
+            <Text style={styles.phoneIcon}>📱</Text>
+            <Text style={styles.phoneButtonText}>Continue with Phone</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Sign Up Link */}
         <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => router.push('/auth/register')}>
+          <TouchableOpacity 
+            onPress={() => router.push('/auth/register')}
+            disabled={isLoading || googleLoading}
+          >
             <Text style={styles.signUpLink}>Sign Up</Text>
           </TouchableOpacity>
         </View>
@@ -294,33 +407,71 @@ const styles = StyleSheet.create({
   },
   socialContainer: {
     marginTop: 32,
-    alignItems: 'center',
+    paddingHorizontal: 24,
   },
-  socialText: {
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
     color: COLORS.textMuted,
-    marginBottom: 16,
+    marginHorizontal: 16,
+    fontSize: 14,
   },
-  socialButtons: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  socialButton: {
+  googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: COLORS.backgroundElevated,
     borderRadius: 12,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 12,
+  },
+  googleIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.googleBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  googleIcon: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  googleButtonText: {
+    color: COLORS.text,
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  phoneButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 12,
+    paddingVertical: 14,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  socialIcon: {
+  phoneIcon: {
     fontSize: 18,
-    marginRight: 8,
+    marginRight: 12,
   },
-  socialLabel: {
+  phoneButtonText: {
     color: COLORS.text,
-    fontWeight: '500',
+    fontWeight: '600',
+    fontSize: 16,
   },
   signUpContainer: {
     flexDirection: 'row',

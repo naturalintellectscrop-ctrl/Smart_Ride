@@ -12,17 +12,27 @@
       "backgroundColor": "#0B1220"
     },
     "ios": {
-      "bundleIdentifier": "ug.smartride.app"
+      "bundleIdentifier": "ug.smartride.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["com.googleusercontent.apps.531949209415-xxxxxxxxxxxxxxxxxxxxxxxxx"]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0B1220"
       },
-      "package": "ug.smartride.app"
+      "package": "ug.smartride.app",
+      "googleServicesFile": "./google-services.json"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "router": {

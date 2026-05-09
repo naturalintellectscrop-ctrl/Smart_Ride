@@ -1,10 +1,10 @@
 // ============================================
 // SMART RIDE MOBILE - REGISTER SCREEN
 // ============================================
-// Simplified version - Plain StyleSheet (no NativeWind)
+// Full registration with email/password and Google Sign-In
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -15,13 +15,16 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { registerUser, isAuthenticated } from '../services/auth';
 
 const COLORS = {
-  primary: '#00FF88',
+  primary: '#10B981',
   primaryDark: '#059669',
-  background: '#0D0D12',
+  background: '#0B1220',
   backgroundElevated: '#1A1A24',
   backgroundSurface: '#252530',
   text: '#FFFFFF',
@@ -29,6 +32,7 @@ const COLORS = {
   textMuted: 'rgba(255, 255, 255, 0.5)',
   border: 'rgba(255, 255, 255, 0.08)',
   error: '#EF4444',
+  googleBlue: '#4285F4',
 };
 
 export default function RegisterScreen() {
@@ -40,8 +44,21 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Check if already authenticated
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const authenticated = await isAuthenticated();
+    if (authenticated) {
+      router.replace('/(tabs)');
+    }
+  };
 
   const validateForm = () => {
     if (!name.trim()) {
@@ -50,6 +67,11 @@ export default function RegisterScreen() {
     }
     if (!email.trim()) {
       setError('Please enter your email');
+      return false;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email');
       return false;
     }
     if (!phone.trim()) {
@@ -73,12 +95,71 @@ export default function RegisterScreen() {
     setIsLoading(true);
     setError(null);
 
-    // Simulate registration - replace with actual API call
-    setTimeout(() => {
+    try {
+      // Format phone number with country code
+      const formattedPhone = phone.startsWith('+') ? phone : `+256${phone.replace(/^0+/, '')}`;
+      
+      const result = await registerUser({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        phone: formattedPhone,
+        password,
+      });
+
+      if (result.success) {
+        router.replace('/(tabs)');
+      } else {
+        setError(result.error || 'Registration failed');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Failed to register. Please try again.');
+    } finally {
       setIsLoading(false);
-      // For now, just navigate to tabs
-      router.replace('/(tabs)');
-    }, 1500);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError(null);
+
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      
+      if (userInfo.data?.idToken) {
+        const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/google`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ idToken: userInfo.data.idToken }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          router.replace('/(tabs)');
+        } else {
+          setError(result.error || 'Google login failed');
+        }
+      } else {
+        setError('Failed to get Google ID token');
+      }
+    } catch (err: any) {
+      console.error('Google Sign-In error:', err);
+      
+      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
+        // User cancelled
+      } else if (err.code === statusCodes.IN_PROGRESS) {
+        setError('Sign in is already in progress');
+      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setError('Google Play Services not available');
+      } else {
+        setError('Google Sign-In failed. Please try again.');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
   };
 
   return (
@@ -120,6 +201,7 @@ export default function RegisterScreen() {
               placeholderTextColor={COLORS.textMuted}
               value={name}
               onChangeText={setName}
+              editable={!isLoading && !googleLoading}
             />
           </View>
 
@@ -135,6 +217,7 @@ export default function RegisterScreen() {
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
+              editable={!isLoading && !googleLoading}
             />
           </View>
 
@@ -150,6 +233,7 @@ export default function RegisterScreen() {
                 value={phone}
                 onChangeText={setPhone}
                 keyboardType="phone-pad"
+                editable={!isLoading && !googleLoading}
               />
             </View>
           </View>
@@ -166,6 +250,7 @@ export default function RegisterScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
+                editable={!isLoading && !googleLoading}
               />
               <TouchableOpacity 
                 onPress={() => setShowPassword(!showPassword)}
@@ -187,6 +272,7 @@ export default function RegisterScreen() {
               onChangeText={setConfirmPassword}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
+              editable={!isLoading && !googleLoading}
             />
           </View>
 
@@ -194,7 +280,7 @@ export default function RegisterScreen() {
           <TouchableOpacity 
             style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
             onPress={handleRegister}
-            disabled={isLoading}
+            disabled={isLoading || googleLoading}
           >
             {isLoading ? (
               <ActivityIndicator color={COLORS.background} />
@@ -207,14 +293,44 @@ export default function RegisterScreen() {
           <Text style={styles.termsText}>
             By creating an account, you agree to our Terms of Service and Privacy Policy
           </Text>
+        </View>
 
-          {/* Sign In Link */}
-          <View style={styles.signInContainer}>
-            <Text style={styles.signInText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/auth/login')}>
-              <Text style={styles.signInLink}>Sign In</Text>
-            </TouchableOpacity>
+        {/* Social Login */}
+        <View style={styles.socialContainer}>
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>Or sign up with</Text>
+            <View style={styles.divider} />
           </View>
+
+          {/* Google Sign-In Button */}
+          <TouchableOpacity 
+            style={styles.googleButton}
+            onPress={handleGoogleSignIn}
+            disabled={isLoading || googleLoading}
+          >
+            {googleLoading ? (
+              <ActivityIndicator color={COLORS.text} />
+            ) : (
+              <>
+                <View style={styles.googleIconContainer}>
+                  <Text style={styles.googleIcon}>G</Text>
+                </View>
+                <Text style={styles.googleButtonText}>Continue with Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Sign In Link */}
+        <View style={styles.signInContainer}>
+          <Text style={styles.signInText}>Already have an account? </Text>
+          <TouchableOpacity 
+            onPress={() => router.push('/auth/login')}
+            disabled={isLoading || googleLoading}
+          >
+            <Text style={styles.signInLink}>Sign In</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -357,6 +473,54 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 12,
     paddingHorizontal: 16,
+  },
+  socialContainer: {
+    marginTop: 24,
+    paddingHorizontal: 24,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    color: COLORS.textMuted,
+    marginHorizontal: 16,
+    fontSize: 14,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  googleIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: COLORS.googleBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  googleIcon: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  googleButtonText: {
+    color: COLORS.text,
+    fontWeight: '600',
+    fontSize: 16,
   },
   signInContainer: {
     flexDirection: 'row',
