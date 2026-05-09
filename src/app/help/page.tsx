@@ -3,281 +3,398 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 
-export default function HelpPage() {
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
+// ============================================
+// SMART RIDE - HELP PAGE
+// ============================================
 
-  const faqs = [
-    {
-      question: "How do I book a ride?",
-      answer: "Open the Smart Ride app, select your pickup location on the map, choose your destination, and select your preferred ride type (Smart Boda or Smart Car). Confirm your booking and a nearby rider will be assigned to you."
-    },
-    {
-      question: "What payment methods are accepted?",
-      answer: "Smart Ride accepts MTN Mobile Money, Airtel Money, and cash payments. You can add your preferred payment method in the app settings for faster checkout."
-    },
-    {
-      question: "How do I become a driver or rider?",
-      answer: "Download the Smart Ride app and select 'Become a Rider' during registration. You'll need to provide your personal details, vehicle information, and valid documents (National ID, driving license). Our team will review your application and approve it within 24-48 hours."
-    },
-    {
-      question: "How do I track my order or ride?",
-      answer: "Once your booking is confirmed, you'll see a live map showing your rider's location. You can track their progress in real-time until they reach your pickup location and throughout your journey."
-    },
-    {
-      question: "What if I left something in the vehicle?",
-      answer: "Go to your trip history in the app, select the specific trip, and use the 'Contact Rider' option. You can also contact our support team through the app or call our helpline."
-    },
-    {
-      question: "How do I report an issue with my trip?",
-      answer: "Open the app, go to 'Trip History', select the trip, and tap 'Report Issue'. Choose the appropriate category and describe your concern. Our support team will investigate and respond within 24 hours."
-    },
-    {
-      question: "Can I schedule a ride in advance?",
-      answer: "Yes! When booking a ride, tap on 'Schedule for Later' and select your preferred date and time. We'll automatically match you with a rider at your scheduled time."
-    },
-    {
-      question: "How do refunds work?",
-      answer: "If you were charged incorrectly or your trip was cancelled, you can request a refund through the app. Go to 'Trip History', select the trip, and tap 'Request Refund'. Refunds are typically processed within 3-5 business days."
-    },
-    {
-      question: "Is Smart Ride available in my area?",
-      answer: "Smart Ride currently operates in Kampala and surrounding areas, with expansion to other cities planned. Check the app to see if service is available in your location."
-    },
-    {
-      question: "How do I become a merchant partner?",
-      answer: "If you're a restaurant, grocery store, or pharmacy interested in partnering with Smart Ride, contact us at partners@smartride.ug or fill out the contact form on this website. Our partnerships team will reach out to discuss opportunities."
-    }
-  ];
+interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+const faqData: FAQItem[] = [
+  {
+    question: "How do I book a ride on Smart Ride?",
+    answer: "Open the Smart Ride app, enter your destination in the search bar, select your preferred ride type (Boda Boda or Car), and tap 'Request'. A nearby driver will be matched to you within minutes."
+  },
+  {
+    question: "What payment methods are accepted?",
+    answer: "Smart Ride accepts MTN Mobile Money, Airtel Money, and cash payments. You can add your preferred payment method in the app settings for a seamless experience."
+  },
+  {
+    question: "How do I track my ride?",
+    answer: "Once a driver is assigned, you'll see their location on the map in real-time. You can also see their name, photo, vehicle details, and contact them directly through the app."
+  },
+  {
+    question: "Can I schedule a ride in advance?",
+    answer: "Yes! You can schedule rides up to 7 days in advance. Simply tap the clock icon when booking and select your preferred pickup date and time."
+  },
+  {
+    question: "How do I cancel a ride?",
+    answer: "You can cancel a ride by tapping 'Cancel Ride' in the app. Note that cancellation fees may apply if the driver is already on their way to your pickup location."
+  },
+  {
+    question: "What is Smart Food?",
+    answer: "Smart Food is our food delivery service that lets you order from hundreds of local restaurants. Browse menus, place your order, and track delivery in real-time."
+  },
+  {
+    question: "How do I become a driver partner?",
+    answer: "Download the Smart Ride Driver app from the Play Store, create an account, submit your documents (ID, license, vehicle registration), and once verified, you can start accepting ride requests and earning."
+  },
+  {
+    question: "Is my personal information secure?",
+    answer: "Yes, we take data security seriously. All personal information is encrypted and stored securely. We never share your data with third parties without your consent."
+  },
+  {
+    question: "What should I do if I left something in a ride?",
+    answer: "Go to 'Your Rides' in the app, select the specific trip, and tap 'I lost an item'. You can contact the driver directly or report it to our support team for assistance."
+  },
+  {
+    question: "How do I contact customer support?",
+    answer: "You can reach our support team through the app by going to Help > Contact Support, or email us at support@smartride.ug. We're available 24/7 to assist you."
+  },
+];
+
+function FAQAccordion({ item, isOpen, onClick }: { item: FAQItem; isOpen: boolean; onClick: () => void }) {
+  return (
+    <div className="border-b border-white/5 last:border-0">
+      <button
+        onClick={onClick}
+        className="w-full py-5 flex items-center justify-between text-left"
+      >
+        <span className="text-white font-medium pr-8">{item.question}</span>
+        <svg 
+          className={`w-5 h-5 text-[#00FF88] transition-transform duration-300 flex-shrink-0 ${isOpen ? 'rotate-180' : ''}`} 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div 
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-96 pb-5' : 'max-h-0'}`}
+      >
+        <p className="text-white/60 leading-relaxed">
+          {item.answer}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default function HelpPage() {
+  const [openFAQ, setOpenFAQ] = useState<number | null>(0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
-      {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-slate-900/90 backdrop-blur-md border-b border-slate-700/50">
+    <div className="min-h-screen bg-[#0D0D12] font-['Inter',sans-serif]">
+      
+      {/* ============================================ */}
+      {/* NAVIGATION */}
+      {/* ============================================ */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D12]/90 backdrop-blur-md border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-lg flex items-center justify-center">
-                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            <Link href="/" className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-[#00FF88] to-[#00FFF3] rounded-xl flex items-center justify-center shadow-lg shadow-[#00FF88]/20">
+                <svg className="w-6 h-6 text-[#0D0D12]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
               </div>
-              <span className="text-xl font-bold text-white">Smart Ride</span>
+              <span className="text-xl font-bold text-white tracking-tight">Smart Ride</span>
             </Link>
+            
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/about" className="text-slate-300 hover:text-white transition-colors">About</Link>
-              <Link href="/help" className="text-white transition-colors">Help</Link>
-              <Link href="/contact" className="text-slate-300 hover:text-white transition-colors">Contact</Link>
+              <Link href="/about" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">About</Link>
+              <Link href="/help" className="text-[#00FF88] text-sm font-medium">Help</Link>
+              <Link href="/contact" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">Contact</Link>
+              <Link href="/blog" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">Blog</Link>
             </div>
-            <div className="flex items-center gap-3">
-              <Link href="/admin/login" className="text-slate-300 hover:text-white transition-colors text-sm">
-                Admin
-              </Link>
-              <a 
-                href="https://play.google.com/store" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-4 py-2 rounded-lg font-medium text-sm hover:from-emerald-600 hover:to-cyan-600 transition-all shadow-lg shadow-emerald-500/25"
-              >
-                Get the App
-              </a>
-            </div>
+            
+            <a 
+              href="https://play.google.com/store" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-gradient-to-r from-[#00FF88] to-[#00FFF3] text-[#0D0D12] px-5 py-2.5 rounded-xl font-semibold text-sm hover:shadow-lg hover:shadow-[#00FF88]/30 transition-all duration-300 hover:scale-105"
+            >
+              Get the App
+            </a>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl sm:text-5xl font-bold text-white mb-6">
-            Help <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Center</span>
-          </h1>
-          <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-            Find answers to common questions or reach out to our support team for assistance.
-          </p>
-        </div>
-      </section>
-
-      {/* Quick Links */}
-      <section className="py-8 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <a href="#faqs" className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 hover:border-emerald-500/50 transition-all text-center">
-              <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <span className="text-white font-medium">FAQs</span>
-            </a>
-            <Link href="/contact" className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 hover:border-emerald-500/50 transition-all text-center">
-              <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <span className="text-white font-medium">Contact Us</span>
-            </Link>
-            <a href="#safety" className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 hover:border-emerald-500/50 transition-all text-center">
-              <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <span className="text-white font-medium">Safety</span>
-            </a>
-            <a href="#payments" className="bg-slate-800/50 rounded-xl p-4 border border-slate-700/50 hover:border-emerald-500/50 transition-all text-center">
-              <div className="w-10 h-10 bg-emerald-500/20 rounded-lg flex items-center justify-center mx-auto mb-2">
-                <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                </svg>
-              </div>
-              <span className="text-white font-medium">Payments</span>
-            </a>
+      {/* ============================================ */}
+      {/* HERO SECTION */}
+      {/* ============================================ */}
+      <section className="relative pt-32 pb-16 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        {/* Background Glow */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00FF88] rounded-full blur-[128px] opacity-10" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00FFF3] rounded-full blur-[128px] opacity-10" />
+        
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="text-center mb-12">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white leading-tight mb-4">
+              How Can We{' '}
+              <span 
+                className="bg-clip-text text-transparent"
+                style={{
+                  backgroundImage: 'linear-gradient(135deg, #00FF88 0%, #00FFF3 100%)',
+                }}
+              >
+                Help?
+              </span>
+            </h1>
+            <p className="text-white/60 text-lg max-w-2xl mx-auto">
+              Find answers to common questions or get in touch with our support team.
+            </p>
           </div>
         </div>
       </section>
 
-      {/* FAQs Section */}
-      <section id="faqs" className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-8">Frequently Asked Questions</h2>
-          <div className="space-y-4">
-            {faqs.map((faq, index) => (
-              <div 
-                key={index}
-                className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden"
-              >
-                <button
-                  onClick={() => setOpenFaq(openFaq === index ? null : index)}
-                  className="w-full px-6 py-4 text-left flex items-center justify-between"
-                >
-                  <span className="font-medium text-white">{faq.question}</span>
-                  <svg 
-                    className={`w-5 h-5 text-slate-400 transition-transform ${openFaq === index ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {openFaq === index && (
-                  <div className="px-6 pb-4">
-                    <p className="text-slate-400">{faq.answer}</p>
-                  </div>
-                )}
+      {/* ============================================ */}
+      {/* QUICK HELP CARDS */}
+      {/* ============================================ */}
+      <section className="py-8 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 hover:border-[#00FF88]/30 transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="w-12 h-12 bg-[#00FF88]/10 rounded-xl flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-[#00FF88]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
+              <h3 className="text-white font-semibold mb-1">Getting Started</h3>
+              <p className="text-white/50 text-sm">Learn the basics of using Smart Ride</p>
+            </div>
+            
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 hover:border-[#F59E0B]/30 transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="w-12 h-12 bg-[#F59E0B]/10 rounded-xl flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-[#F59E0B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <h3 className="text-white font-semibold mb-1">Payments</h3>
+              <p className="text-white/50 text-sm">Payment methods and billing</p>
+            </div>
+            
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 hover:border-[#3B82F6]/30 transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="w-12 h-12 bg-[#3B82F6]/10 rounded-xl flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-[#3B82F6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <h3 className="text-white font-semibold mb-1">Safety</h3>
+              <p className="text-white/50 text-sm">Your safety is our priority</p>
+            </div>
+            
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 hover:border-[#8B5CF6]/30 transition-all duration-300 hover:-translate-y-1 cursor-pointer">
+              <div className="w-12 h-12 bg-[#8B5CF6]/10 rounded-xl flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-[#8B5CF6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+              </div>
+              <h3 className="text-white font-semibold mb-1">For Drivers</h3>
+              <p className="text-white/50 text-sm">Driver partner resources</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================ */}
+      {/* FAQ SECTION */}
+      {/* ============================================ */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-8 text-center">
+            Frequently Asked Questions
+          </h2>
+          
+          <div className="bg-[#1A1A1F] rounded-2xl border border-white/5 px-6">
+            {faqData.map((item, index) => (
+              <FAQAccordion
+                key={index}
+                item={item}
+                isOpen={openFAQ === index}
+                onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
+              />
             ))}
           </div>
         </div>
       </section>
 
-      {/* Safety Section */}
-      <section id="safety" className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-800/30">
+      {/* ============================================ */}
+      {/* SAFETY INFO */}
+      {/* ============================================ */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0A0A0F]">
         <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">Safety Features</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-8 text-center">
+            Your Safety Matters
+          </h2>
+          
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
-              <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 hover:-translate-y-1 transition-all duration-300">
+              <div className="w-14 h-14 bg-[#00FF88]/10 rounded-xl flex items-center justify-center mb-4">
+                <svg className="w-7 h-7 text-[#00FF88]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-white mb-2">Verified Drivers</h3>
+              <p className="text-white/60 text-sm">
+                All our drivers undergo thorough background checks and verification before joining our platform.
+              </p>
+            </div>
+            
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 hover:-translate-y-1 transition-all duration-300">
+              <div className="w-14 h-14 bg-[#00FF88]/10 rounded-xl flex items-center justify-center mb-4">
+                <svg className="w-7 h-7 text-[#00FF88]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Live Location Sharing</h3>
-              <p className="text-slate-400 text-sm">Share your trip details and live location with friends and family for added security during your ride.</p>
+              <h3 className="text-lg font-bold text-white mb-2">Live Tracking</h3>
+              <p className="text-white/60 text-sm">
+                Share your trip with loved ones in real-time. They can see your location until you arrive safely.
+              </p>
             </div>
-            <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
-              <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 hover:-translate-y-1 transition-all duration-300">
+              <div className="w-14 h-14 bg-[#00FF88]/10 rounded-xl flex items-center justify-center mb-4">
+                <svg className="w-7 h-7 text-[#00FF88]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">SOS Button</h3>
-              <p className="text-slate-400 text-sm">In case of emergency, use the in-app SOS button to instantly alert our support team and local authorities.</p>
+              <h3 className="text-lg font-bold text-white mb-2">24/7 Support</h3>
+              <p className="text-white/60 text-sm">
+                Our support team is available around the clock to assist with any issues or emergencies.
+              </p>
             </div>
-            <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
-              <div className="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mb-4">
-                <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+          </div>
+        </div>
+      </section>
+
+      {/* ============================================ */}
+      {/* PAYMENT INFO */}
+      {/* ============================================ */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-8 text-center">
+            Payment Options
+          </h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-3xl mx-auto">
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-[#FFCC00]/20 hover:border-[#FFCC00]/40 transition-all duration-300 text-center">
+              <div className="w-16 h-16 bg-[#FFCC00] rounded-xl flex items-center justify-center mx-auto mb-4">
+                <span className="text-[#0D0D12] font-bold text-lg">MTN</span>
+              </div>
+              <h3 className="text-white font-semibold mb-1">MTN MoMo</h3>
+              <p className="text-white/50 text-sm">Pay directly from your MTN Mobile Money account</p>
+            </div>
+            
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-[#ED1C24]/20 hover:border-[#ED1C24]/40 transition-all duration-300 text-center">
+              <div className="w-16 h-16 bg-[#ED1C24] rounded-xl flex items-center justify-center mx-auto mb-4">
+                <span className="text-white font-bold text-xl">A</span>
+              </div>
+              <h3 className="text-white font-semibold mb-1">Airtel Money</h3>
+              <p className="text-white/50 text-sm">Use your Airtel Money wallet for seamless payments</p>
+            </div>
+            
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-[#00FF88]/20 hover:border-[#00FF88]/40 transition-all duration-300 text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-[#00FF88] to-[#00FFF3] rounded-xl flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-[#0D0D12]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">Verified Drivers</h3>
-              <p className="text-slate-400 text-sm">All our drivers undergo thorough background checks and document verification before being approved on our platform.</p>
+              <h3 className="text-white font-semibold mb-1">Cash</h3>
+              <p className="text-white/50 text-sm">Pay with cash directly to your driver</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Payments Section */}
-      <section id="payments" className="py-16 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <h2 className="text-3xl font-bold text-white text-center mb-12">Payment Support</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
-              <h3 className="text-lg font-semibold text-white mb-4">MTN Mobile Money</h3>
-              <ul className="space-y-2 text-slate-400 text-sm">
-                <li>• Pay directly from your MTN MoMo wallet</li>
-                <li>• Instant payment confirmation</li>
-                <li>• View transaction history in the app</li>
-                <li>• Contact MTN: *165# or 100</li>
-              </ul>
-            </div>
-            <div className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50">
-              <h3 className="text-lg font-semibold text-white mb-4">Airtel Money</h3>
-              <ul className="space-y-2 text-slate-400 text-sm">
-                <li>• Pay directly from your Airtel Money wallet</li>
-                <li>• Instant payment confirmation</li>
-                <li>• View transaction history in the app</li>
-                <li>• Contact Airtel: *185# or 100</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Still Need Help */}
-      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-slate-800/30">
+      {/* ============================================ */}
+      {/* CONTACT CTA */}
+      {/* ============================================ */}
+      <section className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0A0A0F]">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl font-bold text-white mb-4">Still Need Help?</h2>
-          <p className="text-slate-400 mb-8">Our support team is available 24/7 to assist you with any questions or issues.</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-4">
+            Still need help?
+          </h2>
+          <p className="text-white/60 mb-8">
+            Our support team is available 24/7 to assist you with any questions or concerns.
+          </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link 
-              href="/contact"
-              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white px-8 py-4 rounded-xl font-semibold hover:from-emerald-600 hover:to-cyan-600 transition-all shadow-lg shadow-emerald-500/30"
+              href="/contact" 
+              className="inline-flex items-center justify-center gap-2 bg-gradient-to-r from-[#00FF88] to-[#00FFF3] text-[#0D0D12] px-8 py-4 rounded-xl font-semibold hover:shadow-xl hover:shadow-[#00FF88]/30 transition-all duration-300 hover:scale-105"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
               Contact Support
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
             </Link>
             <a 
-              href="tel:+256700123456"
-              className="inline-flex items-center justify-center gap-2 bg-slate-700/50 border border-slate-600 text-white px-8 py-4 rounded-xl font-semibold hover:bg-slate-700 transition-all"
+              href="mailto:support@smartride.ug"
+              className="inline-flex items-center justify-center gap-2 bg-transparent border-2 border-white/30 text-white px-8 py-4 rounded-xl font-semibold hover:bg-white/5 transition-all duration-300"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-              Call Us
+              Email Us
             </a>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-4 sm:px-6 lg:px-8 bg-slate-900 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-              </svg>
+      {/* ============================================ */}
+      {/* FOOTER */}
+      {/* ============================================ */}
+      <footer className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0A0A0F] border-t border-white/5">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <div className="col-span-1 md:col-span-2">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 bg-gradient-to-br from-[#00FF88] to-[#00FFF3] rounded-xl flex items-center justify-center shadow-lg shadow-[#00FF88]/20">
+                  <svg className="w-6 h-6 text-[#0D0D12]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                </div>
+                <span className="text-xl font-bold text-white">Smart Ride</span>
+              </div>
+              <p className="text-white/50 max-w-md mb-6 leading-relaxed">
+                Uganda's premier mobility platform. Connecting riders, drivers, and businesses for seamless transportation and delivery services.
+              </p>
             </div>
-            <span className="text-xl font-bold text-white">Smart Ride</span>
+            
+            <div>
+              <h4 className="text-white font-semibold mb-6">Quick Links</h4>
+              <ul className="space-y-4">
+                <li><Link href="/about" className="text-white/50 hover:text-[#00FF88] transition-colors duration-200">About Us</Link></li>
+                <li><Link href="/help" className="text-white/50 hover:text-[#00FF88] transition-colors duration-200">Help Center</Link></li>
+                <li><Link href="/contact" className="text-white/50 hover:text-[#00FF88] transition-colors duration-200">Contact</Link></li>
+                <li><Link href="/blog" className="text-white/50 hover:text-[#00FF88] transition-colors duration-200">Blog</Link></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h4 className="text-white font-semibold mb-6">Contact</h4>
+              <ul className="space-y-4">
+                <li className="text-white/50">
+                  <span className="text-white">Email:</span>{' '}
+                  <a href="mailto:support@smartride.ug" className="hover:text-[#00FF88] transition-colors duration-200">support@smartride.ug</a>
+                </li>
+                <li className="text-white/50">
+                  <span className="text-white">Phone:</span>{' '}
+                  <a href="tel:+256700123456" className="hover:text-[#00FF88] transition-colors duration-200">+256 700 123 456</a>
+                </li>
+                <li className="text-white/50">
+                  <span className="text-white">Location:</span> Kampala, Uganda
+                </li>
+              </ul>
+            </div>
           </div>
-          <p className="text-slate-500 text-sm">
-            &copy; {new Date().getFullYear()} Smart Ride Uganda. All rights reserved.
-          </p>
+          
+          <div className="border-t border-white/5 pt-8">
+            <p className="text-white/30 text-sm text-center">
+              © {new Date().getFullYear()} Smart Ride Uganda. All rights reserved.
+            </p>
+          </div>
         </div>
       </footer>
     </div>
