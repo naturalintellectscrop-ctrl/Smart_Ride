@@ -2,6 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import Logo from '@/components/Logo';
 
 // ============================================
 // SMART RIDE - PREMIUM LANDING PAGE
@@ -24,14 +26,7 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#00FF88] to-[#00FFF3] rounded-xl flex items-center justify-center shadow-lg shadow-[#00FF88]/20">
-                <svg className="w-6 h-6 text-[#0D0D12]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-white tracking-tight">Smart Ride</span>
-            </div>
+            <Logo />
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
@@ -140,10 +135,15 @@ export default function LandingPage() {
                 <div className="relative bg-[#1A1A1F] rounded-[32px] p-3 border border-white/10 shadow-2xl">
                   <div className="w-72 sm:w-80 h-[500px] sm:h-[560px] bg-gradient-to-b from-[#1A1A1F] to-[#0D0D12] rounded-[24px] flex flex-col items-center justify-center overflow-hidden">
                     {/* App Logo */}
-                    <div className="w-24 h-24 bg-gradient-to-br from-[#00FF88] to-[#00FFF3] rounded-3xl flex items-center justify-center shadow-lg shadow-[#00FF88]/30 mb-6">
-                      <svg className="w-12 h-12 text-[#0D0D12]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                      </svg>
+                    <div className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-lg shadow-[#00FF88]/30 mb-6 overflow-hidden">
+                      <Image
+                        src="/smartride-logo.jpeg"
+                        alt="Smart Ride Logo"
+                        width={96}
+                        height={96}
+                        className="object-cover w-full h-full"
+                        priority
+                      />
                     </div>
                     <h3 className="text-white font-bold text-2xl mb-2">Smart Ride</h3>
                     <p className="text-white/50 text-sm mb-8">Uganda's #1 Mobility App</p>
@@ -570,15 +570,8 @@ export default function LandingPage() {
             
             {/* Brand */}
             <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#00FF88] to-[#00FFF3] rounded-xl flex items-center justify-center shadow-lg shadow-[#00FF88]/20">
-                  <svg className="w-6 h-6 text-[#0D0D12]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <span className="text-xl font-bold text-white">Smart Ride</span>
-              </div>
-              <p className="text-white/50 max-w-md mb-6 leading-relaxed">
+              <Logo />
+              <p className="text-white/50 max-w-md mb-6 leading-relaxed mt-6">
                 Uganda's premier mobility platform. Connecting riders, drivers, and businesses for seamless transportation and delivery services.
               </p>
               

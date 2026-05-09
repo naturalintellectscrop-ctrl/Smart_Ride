@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 
 // ============================================
 // SMART RIDE - HELP PAGE
@@ -95,14 +96,7 @@ export default function HelpPage() {
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D12]/90 backdrop-blur-md border-b border-white/5">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-[#00FF88] to-[#00FFF3] rounded-xl flex items-center justify-center shadow-lg shadow-[#00FF88]/20">
-                <svg className="w-6 h-6 text-[#0D0D12]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold text-white tracking-tight">Smart Ride</span>
-            </Link>
+            <Logo />
             
             <div className="hidden md:flex items-center gap-8">
               <Link href="/about" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">About</Link>
@@ -349,15 +343,8 @@ export default function HelpPage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
             <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-[#00FF88] to-[#00FFF3] rounded-xl flex items-center justify-center shadow-lg shadow-[#00FF88]/20">
-                  <svg className="w-6 h-6 text-[#0D0D12]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                  </svg>
-                </div>
-                <span className="text-xl font-bold text-white">Smart Ride</span>
-              </div>
-              <p className="text-white/50 max-w-md mb-6 leading-relaxed">
+              <Logo />
+              <p className="text-white/50 max-w-md mb-6 leading-relaxed mt-6">
                 Uganda's premier mobility platform. Connecting riders, drivers, and businesses for seamless transportation and delivery services.
               </p>
             </div>

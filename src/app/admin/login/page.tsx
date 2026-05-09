@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import Image from 'next/image';
 import { 
   Shield, 
   Mail, 
@@ -78,8 +79,15 @@ export default function AdminLoginPage() {
       <div className="w-full max-w-md">
         {/* Logo and Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mb-4 shadow-lg">
-            <Shield className="h-8 w-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4 shadow-lg overflow-hidden">
+            <Image
+              src="/smartride-logo.jpeg"
+              alt="Smart Ride Logo"
+              width={64}
+              height={64}
+              className="object-cover w-full h-full"
+              priority
+            />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">
             {ADMIN_DASHBOARD_CONFIG.loginTitle}
