@@ -1,0 +1,108 @@
+name: Build Android APK (Local)
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type (preview, production)'
+        required: false
+        default: 'preview'
+        type: choice
+        options:
+          - preview
+          - production
+
+jobs:
+  build:
+    name: Build Android APK Locally
+    runs-on: ubuntu-latest
+    # Increase timeout for large builds
+    timeout-minutes: 120
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Clear all caches
+        run: |
+          rm -rf node_modules
+          rm -rf node_modules/.cache
+          rm -rf .expo
+          rm -rf $TMPDIR/metro-*
+          rm -rf $TMPDIR/haste-map-*
+          rm -rf $TMPDIR/react-*
+          rm -rf android/.gradle
+          rm -rf android/build
+          rm -rf android/app/build
+        continue-on-error: true
+
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Prebuild native projects
+        run: |
+          export JAVA_TOOL_OPTIONS="-Xmx6g"
+          npx expo prebuild --platform android --clean
+        env:
+          NODE_OPTIONS: "--max-old-space-size=8192"
+
+      - name: Build APK locally
+        run: |
+          BUILD_TYPE="${{ github.event.inputs.build_type || 'preview' }}"
+          echo "Building with profile: $BUILD_TYPE"
+          export NODE_OPTIONS="--max-old-space-size=8192"
+          export JAVA_TOOL_OPTIONS="-Xmx6g"
+          # Disable Metro eager bundling
+          export METRO_WORKER_MAX=1
+          # Increase timeout for bundler
+          eas build --platform android --profile $BUILD_TYPE --local --output ./app.apk --non-interactive --wait
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          NODE_OPTIONS: "--max-old-space-size=8192"
+          METRO_MAX_WORKERS: "1"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: android-apk
+          path: ./app.apk
+          retention-days: 7
+
+      - name: Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            ~/.expo/logs
+            /tmp/eas-*
+            android/app/build/outputs/logs
+          retention-days: 3
+          if-no-files-found: ignore

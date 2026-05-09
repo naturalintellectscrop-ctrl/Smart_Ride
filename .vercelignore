@@ -1,0 +1,21 @@
+# Mobile apps - these are built with EAS, not Vercel
+smart-ride-mobile/
+expo-app/
+mobile/
+
+# Mini services - standalone services
+mini-services/
+
+# Development files
+*.log
+dev.log
+server.log
+
+# Upload folder
+upload/
+
+# Skills
+skills/
+
+# Examples
+examples/
