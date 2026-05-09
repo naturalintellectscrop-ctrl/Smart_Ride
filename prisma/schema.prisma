@@ -1,20 +1,1449 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Minimal model for build compatibility
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                       String                    @id @default(cuid())
+  email                    String                    @unique
+  phone                    String?                   @unique
+  passwordHash             String?
+  name                     String
+  role                     UserRole                  @default(CLIENT)
+  status                   UserStatus                @default(ACTIVE)
+  authProvider             String?
+  avatarUrl                String?
+  refreshToken             String?
+  refreshTokenExpiresAt    DateTime?
+  lastLoginAt              DateTime?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  auditLogs                AuditLog[]                @relation("UserAuditLogs")
+  cashCollections          CashCollection[]
+  conversationParticipants ConversationParticipant[]
+  notifications            Notification[]
+  orders                   Order[]
+  payments                 Payment[]
+  ratingsGiven             Rating[]                  @relation("RatingFromUser")
+  ratingsReceived          Rating[]                  @relation("RatingToUser")
+  rider                    Rider?
+  sessions                 Session[]
+  sosAlerts                SOSAlert[]                @relation("UserSOSAlerts")
+  tasks                    Task[]
+
+  @@index([email])
+  @@index([phone])
+  @@index([role])
+  @@index([status])
+}
+
+// ============================================
+// SESSION MODEL - Production Auth System
+// Supports multi-device sessions with revocation
+// ============================================
+model Session {
+  id               String      @id @default(cuid())
+  userId           String
+  refreshTokenHash String      // Hashed refresh token (NEVER store raw token)
+  deviceId         String?     // Unique device identifier
+  deviceName       String?     // e.g., "iPhone 14 Pro", "Samsung Galaxy S23"
+  deviceType       String?     // "ios", "android", "web"
+  ipAddress        String?
+  userAgent        String?
+  expiresAt        DateTime
+  createdAt        DateTime    @default(now())
+  lastAccessedAt   DateTime    @default(now())
+  revoked          Boolean     @default(false)
+  revokedAt        DateTime?
+  revokedReason    String?
+  
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([deviceId])
+  @@index([expiresAt])
+  @@index([revoked])
+}
+
+// ============================================
+// OTP MODEL - Phone Authentication
+// ============================================
+model OTP {
+  id          String    @id @default(cuid())
+  phone       String
+  otpHash     String    // Hashed OTP (NEVER store raw OTP)
+  purpose     String    // "login", "register", "reset_password"
+  attempts    Int       @default(0)
+  verified    Boolean   @default(false)
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+  verifiedAt  DateTime?
+
+  @@index([phone])
+  @@index([expiresAt])
+}
+
+model Rider {
+  id                 String           @id @default(cuid())
+  userId             String           @unique
+  fullName           String
+  physicalAddress    String
+  phone              String           @unique
+  email              String?
+  facePhotoUrl       String?
+  nationalIdFrontUrl String?
+  nationalIdBackUrl  String?
+  driverLicenseUrl   String?
+  riderRole          RiderRole
+  vehicleType        VehicleType?
+  status             RiderStatus      @default(PENDING_APPROVAL)
+  verificationNotes  String?
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  hasReflectorVest   Boolean          @default(false)
+  hasHelmet          Boolean          @default(false)
+  hasInsulatedBox    Boolean          @default(false)
+  isOnline           Boolean          @default(false)
+  currentLatitude    Float?
+  currentLongitude   Float?
+  lastLocationUpdate DateTime?
+  rating             Float            @default(5.0)
+  totalTrips         Int              @default(0)
+  completedTrips     Int              @default(0)
+  cancelledTrips     Int              @default(0)
+  lastHeartbeatAt    DateTime?
+  connectionStatus   ConnectionStatus @default(ACTIVE)
+  lastKnownLatitude  Float?
+  lastKnownLongitude Float?
+  lastKnownSpeed     Float?
+  lastKnownBattery   Int?
+  lastKnownHeading   Float?
+  currentTaskId      String?
+  totalEarnings      Float            @default(0)
+  walletBalance      Float            @default(0)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  auditLogs          AuditLog[]       @relation("RiderAuditLogs")
+  cashCollections    CashCollection[]
+  heartbeatLogs      HeartbeatLog[]
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  riderPayouts       RiderPayout[]
+  sosAlerts          SOSAlert[]       @relation("RiderSOSAlerts")
+  tasks              Task[]
+  vehicle            Vehicle?
+
+  @@index([riderRole])
+  @@index([status])
+  @@index([isOnline])
+  @@index([currentLatitude, currentLongitude])
+}
+
+model Vehicle {
+  id                 String   @id @default(cuid())
+  riderId            String   @unique
+  make               String
+  model              String
+  year               Int?
+  color              String
+  plateNumber        String   @unique
+  registrationDocUrl String?
+  insuranceDocUrl    String?
+  inspectionDocUrl   String?
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  rider              Rider    @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@index([plateNumber])
+}
+
+model Merchant {
+  id                 String         @id @default(cuid())
+  name               String
+  type               MerchantType
+  description        String?
+  phone              String
+  email              String?
+  address            String
+  latitude           Float?
+  longitude          Float?
+  city               String?
+  isOpen             Boolean        @default(false)
+  openingTime        String?
+  closingTime        String?
+  averagePrepTime    Int            @default(15)
+  commissionRate     Float          @default(0.15)
+  bankAccountName    String?
+  bankAccountNumber  String?
+  bankName           String?
+  status             MerchantStatus @default(PENDING_APPROVAL)
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  logoUrl            String?
+  coverImageUrl      String?
+  businessLicenseUrl String?
+  totalOrders        Int            @default(0)
+  rating             Float          @default(5.0)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  auditLogs          AuditLog[]     @relation("MerchantAuditLogs")
+  kots               KOT[]
+  menuItems          MenuItem[]
+  orders             Order[]
+  pharmacy           Pharmacy?
+
+  @@index([type])
+  @@index([status])
+  @@index([isOpen])
+  @@index([latitude, longitude])
+}
+
+model MenuItem {
+  id              String      @id @default(cuid())
+  merchantId      String
+  name            String
+  description     String?
+  price           Float
+  imageUrl        String?
+  category        String?
+  isAvailable     Boolean     @default(true)
+  preparationTime Int?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  merchant        Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  orderItems      OrderItem[]
+
+  @@index([merchantId])
+  @@index([category])
+}
+
+model Order {
+  id                   String        @id @default(cuid())
+  orderNumber          String        @unique
+  clientId             String
+  merchantId           String?
+  orderType            OrderType
+  subtotal             Float
+  deliveryFee          Float
+  serviceFee           Float?
+  discount             Float?
+  totalAmount          Float
+  paymentMethod        PaymentMethod
+  paymentStatus        PaymentStatus @default(PENDING)
+  paymentReference     String?
+  status               OrderStatus   @default(ORDER_CREATED)
+  deliveryAddress      String
+  deliveryLatitude     Float?
+  deliveryLongitude    Float?
+  deliveryInstructions String?
+  recipientName        String?
+  recipientPhone       String?
+  confirmedAt          DateTime?
+  acceptedAt           DateTime?
+  preparingAt          DateTime?
+  readyAt              DateTime?
+  pickedUpAt           DateTime?
+  deliveredAt          DateTime?
+  cancelledAt          DateTime?
+  cancellationReason   String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  auditLogs            AuditLog[]    @relation("OrderAuditLogs")
+  kot                  KOT?
+  client               User          @relation(fields: [clientId], references: [id])
+  merchant             Merchant?     @relation(fields: [merchantId], references: [id])
+  items                OrderItem[]
+  task                 Task?
+
+  @@index([clientId])
+  @@index([merchantId])
+  @@index([status])
+  @@index([orderType])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id                  String    @id @default(cuid())
+  orderId             String
+  menuItemId          String?
+  itemName            String
+  itemDescription     String?
+  quantity            Int
+  unitPrice           Float
+  totalPrice          Float
+  specialInstructions String?
+  createdAt           DateTime  @default(now())
+  menuItem            MenuItem? @relation(fields: [menuItemId], references: [id])
+  order               Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model KOT {
+  id                  String    @id @default(cuid())
+  kotNumber           String    @unique
+  orderId             String    @unique
+  merchantId          String
+  status              KOTStatus @default(GENERATED)
+  items               String
+  specialInstructions String?
+  estimatedPrepTime   Int?
+  printedAt           DateTime?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  merchant            Merchant  @relation(fields: [merchantId], references: [id])
+  order               Order     @relation(fields: [orderId], references: [id])
+
+  @@index([merchantId])
+  @@index([status])
+}
+
+model Task {
+  id                  String            @id @default(cuid())
+  taskNumber          String            @unique
+  taskType            TaskType
+  clientId            String
+  riderId             String?
+  orderId             String?           @unique
+  status              TaskStatus        @default(CREATED)
+  pickupAddress       String
+  pickupLatitude      Float?
+  pickupLongitude     Float?
+  pickupContactName   String?
+  pickupContactPhone  String?
+  dropoffAddress      String
+  dropoffLatitude     Float?
+  dropoffLongitude    Float?
+  dropoffContactName  String?
+  dropoffContactPhone String?
+  distanceKm          Float?
+  estimatedDuration   Int?
+  actualDuration      Int?
+  baseFare            Float
+  distanceFare        Float?
+  timeFare            Float?
+  deliveryFee         Float?
+  serviceFee          Float?
+  discount            Float?
+  totalAmount         Float
+  platformCommission  Float?
+  riderEarnings       Float?
+  paymentMethod       PaymentMethod
+  paymentStatus       PaymentStatus     @default(PENDING)
+  passengerCount      Int?
+  passengerNames      String?
+  itemDescription     String?
+  itemWeight          Float?
+  itemValue           Float?
+  cancellationReason  String?
+  cancellationCode    String?
+  cancelledBy         String?
+  matchingStartedAt   DateTime?
+  assignedAt          DateTime?
+  acceptedAt          DateTime?
+  arrivedAtPickupAt   DateTime?
+  pickedUpAt          DateTime?
+  inProgressAt        DateTime?
+  deliveringAt        DateTime?
+  completedAt         DateTime?
+  cancelledAt         DateTime?
+  lastHeartbeatAt     DateTime?
+  lastKnownLatitude   Float?
+  lastKnownLongitude  Float?
+  connectionStatus    ConnectionStatus?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  healthOrderId       String?           @unique
+  auditLogs           AuditLog[]        @relation("TaskAuditLogs")
+  conversation        Conversation?
+  heartbeatLogs       HeartbeatLog[]
+  payment             Payment?
+  rating              Rating?
+  sosAlerts           SOSAlert[]        @relation("TaskSOSAlerts")
+  client              User              @relation(fields: [clientId], references: [id])
+  healthOrder         HealthOrder?      @relation(fields: [healthOrderId], references: [id])
+  order               Order?            @relation(fields: [orderId], references: [id])
+  rider               Rider?            @relation(fields: [riderId], references: [id])
+
+  @@index([taskType])
+  @@index([status])
+  @@index([clientId])
+  @@index([riderId])
+  @@index([createdAt])
+  @@index([pickupLatitude, pickupLongitude])
+  @@index([dropoffLatitude, dropoffLongitude])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  paymentReference  String        @unique
+  taskId            String?       @unique
+  userId            String
+  amount            Float
+  currency          String        @default("UGX")
+  paymentMethod     PaymentMethod
+  status            PaymentStatus @default(PENDING)
+  transactionId     String?
+  providerResponse  String?
+  failureReason     String?
+  phoneNumber       String?
+  momoTransactionId String?
+  cardLastFour      String?
+  cardBrand         String?
+  processedAt       DateTime?
+  refundedAt        DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  task              Task?         @relation(fields: [taskId], references: [id])
+  user              User          @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([paymentMethod])
+  @@index([createdAt])
+}
+
+model RiderPayout {
+  id            String       @id @default(cuid())
+  riderId       String
+  amount        Float
+  currency      String       @default("UGX")
+  status        PayoutStatus @default(PENDING)
+  periodStart   DateTime
+  periodEnd     DateTime
+  taskCount     Int
+  transactionId String?
+  paymentMethod String?
+  phoneNumber   String?
+  processedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  rider         Rider        @relation(fields: [riderId], references: [id])
+
+  @@index([riderId])
+  @@index([status])
+}
+
+model CashCollection {
+  id             String           @id @default(cuid())
+  riderId        String
+  userId         String?
+  taskId         String?
+  amount         Float
+  currency       String           @default("UGX")
+  collectionType CollectionType
+  status         CollectionStatus @default(PENDING)
+  collectedAt    DateTime?
+  depositedAt    DateTime?
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  rider          Rider            @relation(fields: [riderId], references: [id])
+  user           User?            @relation(fields: [userId], references: [id])
+
+  @@index([riderId])
+  @@index([status])
+  @@index([collectionType])
+}
+
+model FinanceLog {
+  id                 String          @id @default(cuid())
+  transactionType    TransactionType
+  referenceId        String
+  amount             Float
+  currency           String          @default("UGX")
+  clientId           String?
+  riderId            String?
+  merchantId         String?
+  platformCommission Float?
+  riderEarnings      Float?
+  merchantEarnings   Float?
+  status             String
+  description        String?
+  metadata           String?
+  createdAt          DateTime        @default(now())
+
+  @@index([transactionType])
+  @@index([referenceId])
+  @@index([createdAt])
+}
+
+model Rating {
+  id                    String   @id @default(cuid())
+  taskId                String   @unique
+  fromUserId            String
+  toUserId              String?
+  toRiderId             String?
+  score                 Int
+  comment               String?
+  punctualityScore      Int?
+  professionalismScore  Int?
+  vehicleConditionScore Int?
+  createdAt             DateTime @default(now())
+  fromUser              User     @relation("RatingFromUser", fields: [fromUserId], references: [id])
+  task                  Task     @relation(fields: [taskId], references: [id])
+  toUser                User?    @relation("RatingToUser", fields: [toUserId], references: [id])
+
+  @@index([fromUserId])
+  @@index([toUserId])
+}
+
+model AuditLog {
+  id            String       @id @default(cuid())
+  actorId       String?
+  actorType     ActorType
+  userId        String?
+  riderId       String?
+  merchantId    String?
+  action        String
+  entityType    String
+  entityId      String
+  orderId       String?
+  taskId        String?
+  description   String?
+  oldValues     String?
+  newValues     String?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime     @default(now())
+  healthOrderId String?
+  healthOrder   HealthOrder? @relation("HealthOrderAuditLogs", fields: [healthOrderId], references: [id])
+  merchant      Merchant?    @relation("MerchantAuditLogs", fields: [merchantId], references: [id])
+  order         Order?       @relation("OrderAuditLogs", fields: [orderId], references: [id])
+  rider         Rider?       @relation("RiderAuditLogs", fields: [riderId], references: [id])
+  task          Task?        @relation("TaskAuditLogs", fields: [taskId], references: [id])
+  user          User?        @relation("UserAuditLogs", fields: [userId], references: [id])
+
+  @@index([action])
+  @@index([entityType])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+model Notification {
+  id            String           @id @default(cuid())
+  userId        String
+  title         String
+  message       String
+  type          NotificationType
+  referenceId   String?
+  referenceType String?
+  isRead        Boolean          @default(false)
+  readAt        DateTime?
+  createdAt     DateTime         @default(now())
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model SOSAlert {
+  id              String    @id @default(cuid())
+  alertNumber     String    @unique
+  userId          String?
+  riderId         String?
+  taskId          String?
+  userType        String
+  userName        String
+  userPhone       String
+  riderName       String?
+  riderPhone      String?
+  vehicleInfo     String?
+  taskNumber      String?
+  taskType        String?
+  latitude        Float
+  longitude       Float
+  locationAddress String?
+  status          SOSStatus @default(ACTIVE)
+  acknowledgedAt  DateTime?
+  acknowledgedBy  String?
+  resolvedAt      DateTime?
+  resolvedBy      String?
+  resolutionNotes String?
+  actionsTaken    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  rider           Rider?    @relation("RiderSOSAlerts", fields: [riderId], references: [id])
+  task            Task?     @relation("TaskSOSAlerts", fields: [taskId], references: [id])
+  user            User?     @relation("UserSOSAlerts", fields: [userId], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SLAConfig {
+  id          String   @id @default(cuid())
+  serviceType String
+  state       String
+  slaMinutes  Int
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([serviceType, state])
+}
+
+model PricingConfig {
+  id                        String   @id @default(cuid())
+  serviceType               String   @unique
+  baseFare                  Float
+  perKmRate                 Float
+  perMinuteRate             Float?
+  minimumFare               Float
+  maximumFare               Float?
+  platformCommissionPercent Float?
+  serviceFeePercent         Float?
+  nightSurchargePercent     Float?
+  peakSurchargePercent      Float?
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+}
+
+model HeartbeatLog {
+  id               String           @id @default(cuid())
+  riderId          String
+  taskId           String?
+  latitude         Float
+  longitude        Float
+  speed            Float?
+  heading          Float?
+  accuracy         Float?
+  batteryLevel     Int?
+  isCharging       Boolean?
+  networkType      String?
+  connectionStatus ConnectionStatus @default(ACTIVE)
+  metadata         String?
+  createdAt        DateTime         @default(now())
+  rider            Rider            @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  task             Task?            @relation(fields: [taskId], references: [id])
+
+  @@index([riderId])
+  @@index([taskId])
+  @@index([createdAt])
+  @@index([connectionStatus])
+}
+
+model ConnectionAlert {
+  id              String        @id @default(cuid())
+  riderId         String
+  taskId          String?
+  alertType       AlertType
+  severity        AlertSeverity
+  message         String
+  isAcknowledged  Boolean       @default(false)
+  acknowledgedAt  DateTime?
+  acknowledgedBy  String?
+  isResolved      Boolean       @default(false)
+  resolvedAt      DateTime?
+  resolutionNotes String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([riderId])
+  @@index([taskId])
+  @@index([isAcknowledged])
+  @@index([createdAt])
+}
+
+model HealthOrder {
+  id                     String                  @id @default(cuid())
+  orderNumber            String                  @unique
+  clientId               String
+  providerId             String?
+  pharmacyId             String?
+  orderType              HealthOrderType
+  prescriptionId         String?
+  subtotal               Float
+  deliveryFee            Float
+  serviceFee             Float?
+  discount               Float?
+  totalAmount            Float
+  paymentMethod          PaymentMethod
+  paymentStatus          PaymentStatus           @default(PENDING)
+  paymentReference       String?
+  status                 HealthOrderStatus       @default(ORDER_PLACED)
+  deliveryAddress        String
+  deliveryLatitude       Float?
+  deliveryLongitude      Float?
+  deliveryInstructions   String?
+  recipientName          String?
+  recipientPhone         String?
+  isFragile              Boolean                 @default(false)
+  isTemperatureSensitive Boolean                 @default(false)
+  handlingInstructions   String?
+  placedAt               DateTime                @default(now())
+  reviewedAt             DateTime?
+  verifiedAt             DateTime?
+  preparingAt            DateTime?
+  readyAt                DateTime?
+  pickedUpAt             DateTime?
+  deliveredAt            DateTime?
+  cancelledAt            DateTime?
+  cancellationReason     String?
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  auditLogs              AuditLog[]              @relation("HealthOrderAuditLogs")
+  pharmacy               Pharmacy?               @relation(fields: [pharmacyId], references: [id])
+  prescription           Prescription?           @relation(fields: [prescriptionId], references: [id])
+  provider               HealthProvider?         @relation(fields: [providerId], references: [id])
+  items                  HealthOrderItem[]
+  pot                    PharmacyOrderTicket?
+  prescriptionAccessLogs PrescriptionAccessLog[]
+  task                   Task?
+
+  @@index([clientId])
+  @@index([pharmacyId])
+  @@index([status])
+  @@index([orderType])
+  @@index([createdAt])
+}
+
+model HealthOrderItem {
+  id                  String           @id @default(cuid())
+  healthOrderId       String
+  medicineCatalogId   String?
+  medicineName        String
+  medicineDescription String?
+  quantity            Int
+  unitPrice           Float
+  totalPrice          Float
+  dosageInstructions  String?
+  specialInstructions String?
+  createdAt           DateTime         @default(now())
+  healthOrder         HealthOrder      @relation(fields: [healthOrderId], references: [id], onDelete: Cascade)
+  medicineCatalog     MedicineCatalog? @relation(fields: [medicineCatalogId], references: [id])
+
+  @@index([healthOrderId])
+  @@index([medicineCatalogId])
+}
+
+model Prescription {
+  id                 String                  @id @default(cuid())
+  prescriptionNumber String                  @unique
+  clientId           String
+  imageUrl           String
+  imageHash          String?
+  doctorName         String?
+  doctorLicense      String?
+  clinicName         String?
+  prescriptionDate   DateTime?
+  expiryDate         DateTime?
+  status             PrescriptionStatus      @default(PENDING)
+  verifiedBy         String?
+  verifiedAt         DateTime?
+  verificationNotes  String?
+  rejectionReason    String?
+  medicines          String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  healthOrders       HealthOrder[]
+  accessLogs         PrescriptionAccessLog[]
+
+  @@index([clientId])
+  @@index([status])
+}
+
+model HealthProvider {
+  id                          String             @id @default(cuid())
+  userId                      String?            @unique
+  businessName                String
+  licenseNumber               String
+  licenseDocumentUrl          String?
+  licenseExpiryDate           DateTime?
+  issuingAuthority            String?
+  ownerFullName               String
+  ownerPhone                  String
+  ownerEmail                  String?
+  ownerNIN                    String?
+  address                     String
+  city                        String?
+  district                    String?
+  latitude                    Float?
+  longitude                   Float?
+  serviceRadius               Int                @default(10)
+  facilityPhotoUrl            String?
+  interiorPhotoUrl            String?
+  additionalPhotos            String?
+  additionalDocuments         String?
+  operatingHours              String?
+  is24Hours                   Boolean            @default(false)
+  supportsPrescription        Boolean            @default(true)
+  supportsOTC                 Boolean            @default(true)
+  supportsDelivery            Boolean            @default(true)
+  supportsPickup              Boolean            @default(true)
+  offersConsultation          Boolean            @default(false)
+  emergencyContactName        String?
+  emergencyContactPhone       String?
+  bankName                    String?
+  bankAccountName             String?
+  bankAccountNumber           String?
+  mobileMoneyNumber           String?
+  mobileMoneyProvider         String?
+  verifiedAt                  DateTime?
+  verifiedBy                  String?
+  verificationNotes           String?
+  totalOrders                 Int                @default(0)
+  rating                      Float              @default(5.0)
+  createdAt                   DateTime           @default(now())
+  updatedAt                   DateTime           @updatedAt
+  cancelledOrders             Int                @default(0)
+  commissionRate              Float              @default(0.10)
+  completedOrders             Int                @default(0)
+  complianceScore             Int                @default(100)
+  flagReason                  String?
+  flaggedAt                   DateTime?
+  flaggedBy                   String?
+  hasComplianceIssues         Boolean            @default(false)
+  isFlagged                   Boolean            @default(false)
+  isOpenNow                   Boolean            @default(false)
+  lastComplianceCheck         DateTime?
+  pendingPayout               Float              @default(0)
+  rejectionReason             String?
+  totalEarnings               Float              @default(0)
+  totalPrescriptionsProcessed Int                @default(0)
+  totalReviews                Int                @default(0)
+  providerType                HealthProviderType
+  verificationStatus          VerificationStatus @default(PENDING)
+  healthOrders                HealthOrder[]
+  medicineCatalog             MedicineCatalog[]
+  documents                   ProviderDocument[]
+  providerOrders              ProviderOrder[]
+
+  @@index([providerType])
+  @@index([verificationStatus])
+  @@index([city])
+  @@index([district])
+  @@index([isOpenNow])
+  @@index([latitude, longitude])
+}
+
+model ProviderDocument {
+  id                String         @id @default(cuid())
+  providerId        String
+  documentType      String
+  documentName      String
+  documentUrl       String
+  documentSize      Int?
+  isVerified        Boolean        @default(false)
+  verifiedBy        String?
+  verifiedAt        DateTime?
+  verificationNotes String?
+  uploadedAt        DateTime       @default(now())
+  provider          HealthProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@index([providerId])
+  @@index([documentType])
+}
+
+model ProviderOrder {
+  id                         String              @id @default(cuid())
+  orderNumber                String              @unique
+  providerId                 String
+  customerId                 String
+  customerName               String?
+  customerPhone              String?
+  orderType                  HealthOrderType
+  prescriptionId             String?
+  prescriptionVerified       Boolean             @default(false)
+  prescriptionVerifiedBy     String?
+  prescriptionVerifiedAt     DateTime?
+  prescriptionRejectedReason String?
+  items                      String
+  subtotal                   Float
+  deliveryFee                Float
+  serviceFee                 Float               @default(0)
+  discount                   Float               @default(0)
+  totalAmount                Float
+  providerEarnings           Float
+  status                     ProviderOrderStatus @default(ORDER_RECEIVED)
+  receivedAt                 DateTime            @default(now())
+  acceptedAt                 DateTime?
+  preparingAt                DateTime?
+  readyAt                    DateTime?
+  pickedUpAt                 DateTime?
+  deliveredAt                DateTime?
+  cancelledAt                DateTime?
+  cancellationReason         String?
+  deliveryAddress            String
+  deliveryLatitude           Float?
+  deliveryLongitude          Float?
+  deliveryInstructions       String?
+  createdAt                  DateTime            @default(now())
+  updatedAt                  DateTime            @updatedAt
+  provider                   HealthProvider      @relation(fields: [providerId], references: [id])
+
+  @@index([providerId])
+  @@index([status])
+  @@index([customerId])
+}
+
+model Pharmacy {
+  id                   String            @id @default(cuid())
+  merchantId           String            @unique
+  pharmacyLicense      String
+  pharmacyLicenseUrl   String?
+  pharmacistInCharge   String
+  pharmacistLicense    String
+  operatingHours       String?
+  supportsPrescription Boolean           @default(true)
+  supportsOTC          Boolean           @default(true)
+  deliveryRadius       Float             @default(10.0)
+  status               PharmacyStatus    @default(PENDING_APPROVAL)
+  isOpen               Boolean           @default(false)
+  totalOrders          Int               @default(0)
+  rating               Float             @default(5.0)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  healthOrders         HealthOrder[]
+  medicineCatalog      MedicineCatalog[]
+  merchant             Merchant          @relation(fields: [merchantId], references: [id])
+
+  @@index([status])
+  @@index([isOpen])
+}
+
+model MedicineCatalog {
+  id                   String            @id @default(cuid())
+  providerId           String?
+  pharmacyId           String?
+  name                 String
+  genericName          String?
+  description          String?
+  category             MedicineCategory
+  manufacturer         String?
+  price                Float
+  isAvailable          Boolean           @default(true)
+  stockQuantity        Int?
+  requiresPrescription Boolean           @default(false)
+  storageCondition     String?
+  handlingInstructions String?
+  imageUrl             String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  healthOrderItems     HealthOrderItem[]
+  pharmacy             Pharmacy?         @relation(fields: [pharmacyId], references: [id])
+  provider             HealthProvider?   @relation(fields: [providerId], references: [id])
+
+  @@index([providerId])
+  @@index([pharmacyId])
+  @@index([category])
+  @@index([isAvailable])
+}
+
+model PharmacyOrderTicket {
+  id                      String      @id @default(cuid())
+  potNumber               String      @unique
+  healthOrderId           String      @unique
+  items                   String
+  prescriptionRef         String?
+  preparationNotes        String?
+  status                  POTStatus   @default(GENERATED)
+  hasFragileItems         Boolean     @default(false)
+  hasTemperatureSensitive Boolean     @default(false)
+  estimatedPrepTime       Int         @default(15)
+  startedAt               DateTime?
+  completedAt             DateTime?
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+  healthOrder             HealthOrder @relation(fields: [healthOrderId], references: [id])
+
+  @@index([status])
+}
+
+model PrescriptionAccessLog {
+  id             String       @id @default(cuid())
+  prescriptionId String
+  accessedBy     String
+  accessedByType String
+  healthOrderId  String?
+  action         String
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime     @default(now())
+  healthOrder    HealthOrder? @relation(fields: [healthOrderId], references: [id])
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id])
+
+  @@index([prescriptionId])
+  @@index([accessedBy])
+  @@index([createdAt])
+}
+
+model FraudAlert {
+  id              String           @id @default(cuid())
+  userId          String?
+  riderId         String?
+  taskId          String?
+  orderId         String?
+  alertType       FraudAlertType
+  riskScore       Int
+  severity        AlertSeverity
+  description     String
+  indicators      String?
+  status          FraudAlertStatus @default(OPEN)
+  reviewedBy      String?
+  reviewedAt      DateTime?
+  resolution      String?
+  resolutionNotes String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([riderId])
+  @@index([alertType])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ApiRateLimit {
+  id           String   @id @default(cuid())
+  identifier   String   @unique
+  endpoint     String
+  requestCount Int      @default(1)
+  windowStart  DateTime @default(now())
+
+  @@index([identifier])
+  @@index([windowStart])
+}
+
+model Conversation {
+  id           String                    @id @default(cuid())
+  type         ConversationType          @default(DIRECT)
+  taskId       String?                   @unique
+  isActive     Boolean                   @default(true)
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+  task         Task?                     @relation(fields: [taskId], references: [id])
+  participants ConversationParticipant[]
+  messages     Message[]
+
+  @@index([taskId])
+  @@index([isActive])
+  @@index([updatedAt])
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, userId])
+  @@index([conversationId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String
+  type           MessageType  @default(TEXT)
+  mediaUrl       String?
+  mediaType      String?
+  mediaSize      Int?
+  isRead         Boolean      @default(false)
+  readAt         DateTime?
+  metadata       String?
+  createdAt      DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([createdAt])
+  @@index([isRead])
+}
+
+model Document {
+  id                String         @id @default(cuid())
+  riderId           String?
+  documentType      DocumentType
+  fileName          String
+  fileUrl           String
+  fileSize          Int?
+  mimeType          String?
+  status            DocumentStatus @default(PENDING)
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  rejectionReason   String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  merchantId        String?
+  description       String?
+  providerId        String?
+  verificationNotes String?
+
+  @@index([riderId])
+  @@index([merchantId])
+  @@index([providerId])
+  @@index([documentType])
+  @@index([status])
+}
+
+enum UserRole {
+  CLIENT
+  RIDER
+  MERCHANT
+  PHARMACIST
+  ADMIN
+  SUPER_ADMIN
+  OPERATIONS_ADMIN
+  COMPLIANCE_ADMIN
+  FINANCE_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum RiderRole {
+  SMART_BODA_RIDER
+  SMART_CAR_DRIVER
+  DELIVERY_PERSONNEL
+}
+
+enum VehicleType {
+  BODA
+  CAR
+  BICYCLE
+  SCOOTER
+}
+
+enum RiderStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUSPENDED
+  INACTIVE
+}
+
+enum MerchantType {
+  RESTAURANT
+  SUPERMARKET
+  RETAIL_STORE
+  PHARMACY
+  GROCERY
+}
+
+enum MerchantStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUSPENDED
+  INACTIVE
+}
+
+enum OrderType {
+  FOOD_DELIVERY
+  SHOPPING
+}
+
+enum OrderStatus {
+  ORDER_CREATED
+  PAYMENT_CONFIRMED
+  MERCHANT_ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  PICKED_UP
+  DELIVERED
+  CANCELLED
+  REJECTED
+}
+
+enum PaymentMethod {
+  CASH
+  MTN_MOMO
+  AIRTEL_MONEY
+  VISA
+  MASTERCARD
+  CREDIT_CARD
+  DEBIT_CARD
+  WALLET
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum KOTStatus {
+  GENERATED
+  PRINTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TaskType {
+  SMART_BODA_RIDE
+  SMART_CAR_RIDE
+  FOOD_DELIVERY
+  SHOPPING
+  ITEM_DELIVERY
+  SMART_HEALTH_DELIVERY
+}
+
+enum TaskStatus {
+  CREATED
+  MATCHING
+  ASSIGNED
+  ACCEPTED
+  ARRIVED
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum CollectionType {
+  COD_PAYMENT
+  DEPOSIT
+  ADJUSTMENT
+}
+
+enum CollectionStatus {
+  PENDING
+  COLLECTED
+  DEPOSITED
+  VERIFIED
+}
+
+enum TransactionType {
+  RIDE_PAYMENT
+  FOOD_ORDER_PAYMENT
+  SHOPPING_ORDER_PAYMENT
+  ITEM_DELIVERY_PAYMENT
+  HEALTH_ORDER_PAYMENT
+  RIDER_PAYOUT
+  MERCHANT_PAYOUT
+  PLATFORM_COMMISSION
+  REFUND
+  CASH_COLLECTION
+}
+
+enum ActorType {
+  SYSTEM
+  USER
+  RIDER
+  MERCHANT
+  ADMIN
+  PHARMACY_STAFF
+}
+
+enum NotificationType {
+  TASK_UPDATE
+  ORDER_UPDATE
+  PAYMENT
+  PROMOTION
+  SYSTEM
+  VERIFICATION
+  SOS_ALERT
+  HEALTH_ORDER_UPDATE
+  PRESCRIPTION_UPDATE
+}
+
+enum SOSStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+  FALSE_ALARM
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  UNSTABLE
+  DISCONNECTED
+}
+
+enum AlertType {
+  CONNECTION_UNSTABLE
+  CONNECTION_LOST
+  LONG_DISCONNECT
+  BATTERY_LOW
+  GPS_UNRELIABLE
+  TASK_TIMEOUT
+}
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum HealthOrderType {
+  PRESCRIPTION_MEDICINE
+  OVER_THE_COUNTER
+}
+
+enum HealthOrderStatus {
+  ORDER_PLACED
+  PHARMACY_REVIEW
+  PRESCRIPTION_VERIFIED
+  PREPARING_ORDER
+  READY_FOR_PICKUP
+  RIDER_ASSIGNED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REJECTED
+}
+
+enum PrescriptionStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum HealthProviderType {
+  PHARMACY
+  DRUG_SHOP
+  CLINIC
+  PRIVATE_DOCTOR
+}
+
+enum VerificationStatus {
+  PENDING
+  DOCUMENTS_REQUESTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+  DEACTIVATED
+}
+
+enum ProviderOrderStatus {
+  ORDER_RECEIVED
+  ACCEPTED
+  PREPARING
+  READY_FOR_PICKUP
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REJECTED
+}
+
+enum PharmacyStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum MedicineCategory {
+  PAINKILLERS
+  ANTIBIOTICS
+  VITAMINS
+  COLD_FLU
+  DIGESTIVE
+  CARDIOVASCULAR
+  DIABETES
+  HYGIENE
+  FIRST_AID
+  MOTHER_BABY
+  OTHER
+}
+
+enum POTStatus {
+  GENERATED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum FraudAlertType {
+  SUSPICIOUS_LOCATION
+  RAPID_TASKS
+  PAYMENT_ANOMALY
+  ACCOUNT_TAKEOVER
+  COLLUSION
+  FAKE_ORDER
+  LOCATION_SPOOFING
+  MULTIPLE_ACCOUNTS
+  UNUSUAL_PATTERN
+}
+
+enum FraudAlertStatus {
+  OPEN
+  UNDER_REVIEW
+  CONFIRMED
+  FALSE_POSITIVE
+  RESOLVED
+}
+
+enum ConversationType {
+  DIRECT
+  TASK_CHAT
+  SUPPORT
+  GROUP
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  LOCATION
+  SYSTEM
+  QUICK_REPLY
+}
+
+enum DocumentType {
+  NATIONAL_ID_FRONT
+  NATIONAL_ID_BACK
+  DRIVER_LICENSE
+  FACE_PHOTO
+  VEHICLE_REGISTRATION
+  INSURANCE_DOCUMENT
+  BUSINESS_LICENSE
+  BUSINESS_REGISTRATION
+  TAX_CERTIFICATE
+  NDA_CERTIFICATE
+  PHARMACY_LICENSE
+  MEDICAL_LICENSE
+  PRACTICING_CERTIFICATE
+  OTHER
+}
+
+enum DocumentStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
 }
