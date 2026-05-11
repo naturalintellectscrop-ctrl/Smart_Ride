@@ -17,9 +17,12 @@
       "infoPlist": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["com.googleusercontent.apps.531949209415-xxxxxxxxxxxxxxxxxxxxxxxxx"]
+            "CFBundleURLSchemes": ["com.googleusercontent.apps.531949209415-h0ri57i233r1l767tnc4i26brdt3asb3"]
           }
-        ]
+        ],
+        "NSLocationWhenInUseUsageDescription": "Smart Ride needs your location to show nearby rides and provide accurate pickup/dropoff locations.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Smart Ride needs your location to track your ride and provide real-time updates.",
+        "NSLocationAlwaysUsageDescription": "Smart Ride needs your location to track your ride in the background."
       }
     },
     "android": {
@@ -28,11 +31,30 @@
         "backgroundColor": "#0B1220"
       },
       "package": "ug.smartride.app",
-      "googleServicesFile": "./google-services.json"
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION"
+      ]
     },
     "plugins": [
       "expo-router",
-      "@react-native-google-signin/google-signin"
+      "expo-secure-store",
+      "expo-notifications",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Smart Ride to use your location."
+        }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMAPBOX_MAPS_DOWNLOAD_TOKEN": "RNMAPBOX_MAPS_DOWNLOAD_TOKEN"
+        }
+      ]
     ],
     "extra": {
       "router": {
