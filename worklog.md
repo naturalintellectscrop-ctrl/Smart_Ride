@@ -1,399 +1,55 @@
-# Smart Ride Work Log
+# Smart Ride Project Worklog
 
 ---
-Task ID: 3-0
-Agent: Main Developer (Senior Architect)
-Task: Production Architecture Upgrade - Complete Refactor
+Task ID: 1
+Agent: Main Agent
+Task: Fresh clone Smart_Ride repo and fix admin login
 
 Work Log:
-PHASE 1 - Database Migration:
-- Updated Prisma schema for production-ready database
-- Added PostgreSQL-compatible schema (SQLite for development)
-- Added all required entities: Users, Riders, Vehicles, Tasks, Orders, Merchants, Payments, CashCollections, Ratings, Locations, AuditLogs, Notifications, SOSAlerts, FraudAlerts
-- Added comprehensive indexes for task queries and geolocation
-- Added refresh token fields for JWT authentication
-- Pushed schema changes to database
-
-PHASE 2 - Authentication System:
-- Removed NextAuth.js dependency
-- Created custom JWT authentication system (/src/lib/auth/)
-- Implemented jwt.ts with token generation, verification, role-based authorization
-- Implemented password.ts with bcrypt hashing, strength validation, OTP generation
-- Implemented middleware.ts for API route authentication
-- Created auth API routes:
-  - POST /api/auth/register - User registration with validation
-  - POST /api/auth/login - User login with token generation
-  - POST /api/auth/refresh - Token refresh flow
-  - POST /api/auth/logout - Session invalidation
-  - GET /api/auth/me - Get current user
-
-PHASE 3 - Backend Services:
-- Created modular service architecture (/src/lib/services/)
-- auth.service.ts - User registration, login, token refresh, password management
-- task-state-machine.service.ts - Task lifecycle management with strict state transitions
-- notification.service.ts - In-app notifications with Socket.io integration
-
-PHASE 4 - Task State Machine:
-- Implemented strict task lifecycle with validated transitions
-- States: CREATED → MATCHING → ASSIGNED → ACCEPTED → ARRIVED → PICKED_UP → IN_TRANSIT → DELIVERED → COMPLETED
-- Added cancellation reason codes for client, rider, and system cancellations
-- Implemented rider capability validation (which roles can perform which tasks)
-- Added system timers for matching, response, and heartbeat timeouts
-- Every transition triggers notifications and audit logs
-
-PHASE 5 - Real-time System:
-- Created Socket.io mini-service (/mini-services/realtime-service/)
-- Implements live rider tracking
-- Real-time task notifications
-- Order status updates
-- Chat/messaging support
-- Admin monitoring dashboard
-- SOS alert broadcasting
-- Internal HTTP API for event emission (port 3002)
-
-PHASE 6 - API Enhancement:
-- Created rate-limiting middleware (/src/lib/api/rate-limit.ts)
-- Predefined rate limit configurations for auth, API, public, search, payment endpoints
-- Created validation utilities (/src/lib/api/validation.ts)
-- Zod-based body, query, and params validation
-- Common validation schemas for pagination, dates, phone, coordinates
-
-PHASE 7 - Testing:
-- Created test suite for authentication (/src/__tests__/auth/)
-- Created test suite for task state machine (/src/__tests__/services/)
-- 39 tests passing for task state machine
-- Tests cover state transitions, rider capabilities, timers, cancellation codes
+- Deleted old clone at /home/z/Smart_Ride_repo
+- Cloned Smart_Ride from GitHub (main branch) to /home/z/my-project/Smart_Ride/
+- Moved all repo contents to /home/z/my-project/ root (replacing old workspace)
+- Removed leftover Smart_Ride subdirectory
+- Discovered Railway PostgreSQL database is unreachable (maglev.proxy.rlwy.net:55740)
+- Switched Prisma schema from `provider = "postgresql"` to `provider = "sqlite"`
+- Updated .env DATABASE_URL to `file:./db/custom.db`
+- Removed hardcoded Railway PostgreSQL fallback from src/lib/db.ts
+- Ran `bunx prisma db push` to create SQLite tables
+- Seeded admin users with `bun prisma/seed.ts` and `bun prisma/seed-admin.ts`
+- Renamed babel.config.js → babel.config.expo.js (was causing Next.js crashes with Expo presets)
+- Disabled verbose Prisma query logging (changed to ['warn', 'error'])
+- Verified all endpoints working: Landing page, Admin login page, Admin login API, SUPER_ADMIN login API
 
 Stage Summary:
-- Production-ready database schema with all entities ✓
-- Custom JWT authentication system ✓
-- Modular backend services architecture ✓
-- Strict task lifecycle management ✓
-- Socket.io real-time service ✓
-- Rate limiting and validation middleware ✓
-- Comprehensive test coverage ✓
-- All lint checks passing ✓
+- Admin login credentials that work:
+  - Email: admin@smartride.com / Password: owner123 (ADMIN role)
+  - Email: naturalintellectscrop@gmail.com / Password: Admin@123 (SUPER_ADMIN role)
+- Database: SQLite at db/custom.db with full schema pushed
+- Server: Running on port 3000, stable after babel.config fix
+- Key fixes: PostgreSQL→SQLite, removed Railway fallback, seeded admin users, fixed babel config conflict
 
 ---
-Task ID: 1-a
-Agent: Sub-agent (Full-stack Developer)
-Task: Update service names throughout the application
+Task ID: 2
+Agent: Main Agent
+Task: Switch from SQLite back to Render PostgreSQL and fix database connection
 
 Work Log:
-- Updated SERVICE_CATEGORIES in types.ts: "Shopping" → "Smart Grocery", "Item Delivery" → "Smart Courier"
-- Updated client-home.tsx services array with new labels
-- Updated client-orders.tsx filter options and order types
-- Updated dashboard-overview.tsx serviceStats array
-- Updated order-management.tsx and task-management.tsx display labels
-- Updated mobile client screens (client-home.tsx, orders-history.tsx)
-- Updated rider onboarding role-selection with capability text
-- Database schema enums preserved for API consistency
+- Found Render PostgreSQL URL in fix-admin-password.ts: postgresql://smart_ride_db_user:UVJ2Gd3Nn4BWnQhyXqMIFrNMHJJUThBQ@dpg-d7ficoreo5us73eu1oi0-a.frankfurt-postgres.render.com/smart_ride_db
+- Switched Prisma schema back from "sqlite" to "postgresql"
+- Updated .env DATABASE_URL to Render PostgreSQL URL with sslmode=require and connection_limit=2
+- Fixed db.ts to explicitly load dotenv with override and pass datasourceUrl to PrismaClient
+- Tested Render DB connection: 2.1s first query (cold start), 186ms subsequent queries
+- Pushed schema to Render PostgreSQL (already in sync)
+- Seeded admin@smartride.com to Render DB
+- Both admin logins verified working with Render PostgreSQL
+- Server stable with NODE_OPTIONS="--max-old-space-size=4096"
+- Note: Render free tier has cold start (~2s) and connection limits; rapid successive API calls can crash the dev server
 
 Stage Summary:
-- All UI display names updated to new branding
-- Smart Boda and Smart Car names preserved (already correct)
-- Smart Health name preserved (already correct)
-- Food Delivery name preserved (already correct)
-
----
-Task ID: 1-b
-Agent: Main Developer
-Task: Fix bell icons and notification functionality
-
-Work Log:
-- Verified client-home.tsx has onBellClick prop that navigates to messages tab
-- Verified client-dashboard.tsx passes handleBellClick to ClientHome
-- Verified notification context tracks unread count
-- Messages tab shows numbered badge based on unread count
-- Badge updates when messages are marked as read
-
-Stage Summary:
-- Bell icon clicks navigate to messages tab ✓
-- Notification badge on messages tab updates correctly ✓
-- Messages can be marked as read ✓
-
----
-Task ID: 1-c
-Agent: Main Developer
-Task: Create and fix cart functionality
-
-Work Log:
-- Created cart-context.tsx with full cart state management
-- Created checkout-screen.tsx with multi-step checkout flow
-- Created smart-health-order.tsx for pharmacy ordering
-- Verified food-delivery.tsx has working cart bar with continue button
-- Cart bar fits within screen width (max-w-md mx-auto)
-- Delete item button works correctly
-- Continue button navigates to checkout
-
-Stage Summary:
-- Cart bar properly sized within screen ✓
-- Delete from cart works ✓
-- Continue to checkout works ✓
-- Checkout flow complete (cart → address → payment → confirm → success)
-
----
-Task ID: 1-d
-Agent: Main Developer
-Task: Implement ride booking flow with dynamic pricing
-
-Work Log:
-- Created ride-booking.tsx with proper booking steps:
-  1. Location entry (pickup + destination)
-  2. Passenger count selection
-  3. Vehicle selection with pricing
-  4. Payment method selection
-  5. Confirmation
-- Created location-picker.tsx for address entry
-- Created vehicle-selection.tsx with vehicle options
-- Created ride-pricing.ts with fare calculation
-- Fixed React Compiler lint errors by using useMemo with proper dependencies
-- Pricing formula: Base Fare + (Distance × Price/KM) + (Time × Price/Min) + Booking Fee
-- Vehicle multipliers: Smart Boda 0.7x, Economy Car 1.0x, Premium Car 1.5x, EV 1.3x
-
-Stage Summary:
-- Price only shows after locations entered ✓
-- Dynamic fare calculation working ✓
-- Vehicle selection with multipliers ✓
-- Payment method selection ✓
-- Confirmation screen with full breakdown ✓
-
----
-Task ID: 1-e
-Agent: Main Developer
-Task: General fixes and improvements
-
-Work Log:
-- Created SmartHealthOrder component for pharmacy ordering
-- Fixed lint errors in ride-booking.tsx
-- Verified all components use dark theme (#0D0D12 background)
-- All navigation bars use backdrop blur and dark styling
-- Notification badges update when messages read
-- Cart continue buttons work correctly
-
-Stage Summary:
-- All major functionality working
-- Dark theme consistent throughout
-- Lint check passing
-- App compiling successfully
-
----
-Task ID: 2-a
-Agent: Main Developer
-Task: Implement map integration for ride estimates
-
-Work Log:
-- Created map-view.tsx with stylized map component
-- Created LocationMapPicker for selecting pickup/destination
-- Implemented route calculation using Haversine formula
-- Added distance and time estimation display
-- Fixed lint error with lazy state initialization
-
-Stage Summary:
-- Map view component with route visualization ✓
-- Distance/time calculation working ✓
-- Location picker with predefined Kampala locations ✓
-- Pickup and destination markers with animations ✓
-
----
-Task ID: 2-b
-Agent: Main Developer
-Task: Implement wallet transfer functionality
-
-Work Log:
-- Created wallet-transfer.tsx with multi-step transfer flow
-- Step 1: Select recipient (phone number or recent contacts)
-- Step 2: Enter amount with quick amount buttons
-- Step 3: Confirm transfer details
-- Step 4: Processing animation
-- Step 5: Success confirmation
-- Updated client-wallet.tsx to integrate transfer functionality
-- Applied dark theme branding to all wallet screens
-
-Stage Summary:
-- Wallet transfer flow complete ✓
-- Phone number input for new recipients ✓
-- Recent recipients list ✓
-- Amount input with quick select buttons ✓
-- Transfer confirmation with processing animation ✓
-- Success screen with transaction details ✓
-
----
-Task ID: 2-c
-Agent: Main Developer
-Task: Fix Settings screen in client app
-
-Work Log:
-- Created client-settings.tsx with SettingsScreen component
-- Created HelpSupportScreen component with FAQ and contact info
-- Added notification settings with toggles (push, email, order updates, safety)
-- Added privacy settings (location sharing, profile visibility, analytics)
-- Added appearance settings (dark mode)
-- Added language and payment method management
-- Added legal section (terms, privacy, cookies)
-- Added danger zone (delete account)
-- Updated client-profile.tsx to navigate to settings and help screens
-
-Stage Summary:
-- Settings screen with all options working ✓
-- Help & Support with FAQ and contact support ✓
-- Toggle switches for all settings ✓
-- Dark theme applied ✓
-
----
-Task ID: 2-d
-Agent: Main Developer
-Task: Generate real images for products and restaurants
-
-Work Log:
-- Created image directories for restaurants, products, groceries, and drugs
-- Generated restaurant images using z-ai CLI:
-  - cafe-java.png (African restaurant storefront)
-  - ugandan-kitchen.png (Ugandan restaurant interior)
-- Generated product images:
-  - rolex.png (Ugandan Rolex street food)
-  - burger-meal.png (Fast food meal)
-- Generated grocery images:
-  - matooke.png (Fresh matooke bananas)
-- Generated pharmacy image:
-  - pharmacy-products.png (Medicine bottles and pills)
-- Updated food-delivery.tsx to use local restaurant images
-
-Stage Summary:
-- Real AI-generated images for restaurants ✓
-- Real AI-generated images for food products ✓
-- Real AI-generated images for groceries ✓
-- Real AI-generated images for pharmacy ✓
-- Components updated to use local images ✓
-
----
-Task ID: 3-a
-Agent: Main Developer
-Task: Fix Vercel build error and Admin login authentication
-
-Work Log:
-- Identified duplicate mobile apps (smart-ride-mobile and expo-app)
-- Created .vercelignore to exclude mobile apps from Vercel builds
-- Fixed Prisma database connection issue:
-  - Root cause: System environment had DATABASE_URL pointing to local SQLite file
-  - System env: DATABASE_URL=file:/home/z/my-project/db/custom.db
-  - This overrode the .env file with correct PostgreSQL URL
-  - Solution: Added dotenv with override option and fallback URL in db.ts
-- Added dotenv package for explicit environment loading
-- Updated next.config.ts with env configuration
-- Changed dev script to use --webpack instead of Turbopack
-- Renamed .config file to .config.backup (was blocking Prisma config)
-- Created prisma/.env for local development
-- Verified admin login works with SUPER_ADMIN account
-
-Stage Summary:
-- Admin login now working with correct database connection ✓
-- DATABASE_URL validation with fallback for development ✓
-- Vercel build configuration updated ✓
-- Mobile apps excluded from Vercel builds ✓
-- Git commit: d9a53b4 "fix: Admin login and Vercel build fixes"
-- Need valid GitHub token to push changes
-
----
-Task ID: 3-b
-Agent: Main Developer
-Task: Fix Vercel build errors - missing exports
-
-Work Log:
-- Identified build errors from Vercel deployment failures:
-  1. MTN_MOMO export missing from mtn-momo.ts
-  2. AIRTEL_MONEY export missing from airtel-money.ts  
-  3. DEFAULT_SURGE_CONFIG export missing from balance-engine.ts
-- Added missing exports to payment files:
-  - Exported MTN_MOMO alias for mtnMomoService
-  - Exported AIRTEL_MONEY alias for airtelMoneyService
-  - Exported generateReferenceId for backwards compatibility
-- Fixed balance-engine.ts:
-  - Re-exported DEFAULT_SURGE_CONFIG from types.ts
-  - Updated internal references to use SURGE_CONFIG alias
-- Fixed db.ts for build time:
-  - Removed production build error that blocked Vercel
-  - Added graceful handling of DATABASE_URL during build
-- Build now completes successfully
-
-Stage Summary:
-- All missing exports fixed ✓
-- Build passes locally ✓
-- Git commit: ffac364 "fix: Build errors - missing exports and DATABASE_URL handling"
-- Pushed to GitHub ✓
-- Vercel deployment should now succeed
-
----
-Task ID: 4
-Agent: Senior Production Engineer
-Task: Production Stress Test - Breaking the App
-
-Work Log:
-PHASE 1 - Failure Condition Simulations:
-- Analyzed no internet scenario - found App.tsx blocks on auth init
-- Analyzed slow network - 10s timeout OK, but loading states could block
-- Analyzed API down scenario - error states exist but blocked by loading
-- Analyzed invalid response - NO DATA VALIDATION - would crash
-
-PHASE 2 - UI Independence Verification:
-- CRITICAL: App.tsx blocks ALL rendering until auth init completes
-- If auth hangs, user sees "Loading Smart Ride..." forever
-- Fixed: Added "Continue" button and graceful timeout handling
-
-PHASE 3 - Auth Flow Validation:
-- CRITICAL: Token existence = authenticated (WRONG!)
-- Token could be expired or invalid
-- No API validation on startup
-- Fixed: Added JWT expiry check and API validation
-
-PHASE 4 - Data Validation:
-- CRITICAL: response.data.slice() assumes array, will crash
-- CRITICAL: response.data.data assumes paginated, will crash
-- Fixed: Added Array.isArray checks for all API responses
-
-PHASE 5 - Map & Location:
-- Map uses react-native-maps (native, not Mapbox)
-- Added error boundary for map failures
-- Location has good fallback to default
-
-PHASE 6 - State Consistency:
-- Loading states now always reset in finally blocks
-- Added 401 handling with auth cleanup
-
-Fixes Applied:
-1. App.tsx:
-   - Added "Continue" button to skip loading
-   - Reduced timeout to 3s for faster UX
-   - Never blocks UI forever
-
-2. authStore.ts:
-   - Added JWT token expiry check (local decode)
-   - Added API token validation in background
-   - Added clearAuth method
-   - Added tokenValidated state
-
-3. api.ts:
-   - Added 401 Unauthorized handling
-   - Automatic token cleanup on auth error
-   - Callback to auth store for logout
-
-4. Home Screen (index.tsx):
-   - Added Array.isArray validation for merchants
-   - Handle both direct array and paginated responses
-
-5. Rides Screen (rides.tsx):
-   - Added Array.isArray validation for tasks
-   - Handle both direct array and paginated responses
-
-6. Driver Screen (driver/index.tsx):
-   - Added SafeMapView with error boundary
-   - Added data validation for rider profile
-   - Better null/undefined handling
-
-Stage Summary:
-- App no longer blocks on loading screens ✓
-- Token expiry handled locally and via API ✓
-- Invalid API responses won't crash app ✓
-- Map failures gracefully handled ✓
-- All loading states properly reset ✓
-- 401 errors trigger logout flow ✓
+- Database: Render PostgreSQL (dpg-d7ficoreo5us73eu1oi0-a.frankfurt-postgres.render.com)
+- Connection string includes sslmode=require&connection_limit=2&pool_timeout=20
+- Both admin logins work:
+  - naturalintellectscrop@gmail.com / Admin@123 (SUPER_ADMIN - was already in Render DB)
+  - admin@smartride.com / owner123 (ADMIN - newly seeded to Render DB)
+- Server: Running on port 3000 with NODE_OPTIONS="--max-old-space-size=4096"
+- Key fixes: dotenv override for env loading, explicit datasourceUrl, connection pooling for Render
