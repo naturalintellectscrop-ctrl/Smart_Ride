@@ -19,7 +19,7 @@ console.log('[AUTH-STORE] Module loading...');
 
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { STORAGE_KEYS, API_CONFIG } from '@/src/constants';
+import { STORAGE_KEYS, API_CONFIG } from '@/constants';
 
 console.log('[AUTH-STORE] Imports complete');
 
@@ -239,7 +239,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         
         // Dynamic import to avoid circular deps
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { api } = require('@/src/services');
+        const { api } = require('@/services');
         
         // Set up API callbacks BEFORE refresh
         api.setTokenRefreshCallback(async () => {
@@ -497,7 +497,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         
         // Dynamic import
         // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const { api } = require('@/src/services');
+        const { api } = require('@/services');
         
         const response = await api.refreshAccessToken(refreshToken);
         

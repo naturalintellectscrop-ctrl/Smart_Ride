@@ -12,7 +12,7 @@
 // ============================================
 
 import * as SecureStore from 'expo-secure-store';
-import { API_CONFIG, NETWORK_CONFIG, STORAGE_KEYS } from '@/src/constants';
+import { API_CONFIG, NETWORK_CONFIG, STORAGE_KEYS } from '@/constants';
 import { 
   User, 
   Rider, 
@@ -23,7 +23,7 @@ import {
   ApiResponse,
   PaginatedResponse,
   PaymentMethod 
-} from '@/src/types';
+} from '@/types';
 
 // ============================================
 // TYPES - Match backend EXACTLY

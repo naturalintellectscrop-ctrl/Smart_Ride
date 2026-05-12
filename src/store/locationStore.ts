@@ -4,7 +4,7 @@
 
 import { create } from 'zustand';
 import * as Location from 'expo-location';
-import { DEFAULT_LOCATION } from '@/src/constants';
+import { DEFAULT_LOCATION } from '@/constants';
 
 interface LocationState {
   // State

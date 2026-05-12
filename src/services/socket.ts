@@ -4,9 +4,9 @@
 
 import { io, Socket } from 'socket.io-client';
 import * as SecureStore from 'expo-secure-store';
-import { API_CONFIG, STORAGE_KEYS } from '@/src/constants';
-import { SOCKET_URL } from '@/src/config/env';
-import { Task, TaskStatus } from '@/src/types';
+import { API_CONFIG, STORAGE_KEYS } from '@/constants';
+import { SOCKET_URL } from '@/config/env';
+import { Task, TaskStatus } from '@/types';
 
 // Socket event types
 interface SocketEventMap {

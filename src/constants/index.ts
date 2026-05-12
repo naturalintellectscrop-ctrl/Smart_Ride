@@ -8,7 +8,7 @@
 // ============================================
 
 import Constants from 'expo-constants';
-import { API_BASE_URL, MAPBOX_ACCESS_TOKEN, FIREBASE_VAPID_KEY } from '@/src/config/env';
+import { API_BASE_URL, MAPBOX_ACCESS_TOKEN, FIREBASE_VAPID_KEY } from '@/config/env';
 
 // API Configuration - Use env config with production fallback
 export const API_CONFIG = {

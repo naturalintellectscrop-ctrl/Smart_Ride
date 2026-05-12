@@ -3,8 +3,8 @@
 // ============================================
 
 import { useEffect, useCallback } from 'react';
-import { socketService } from '@/src/services';
-import { Task, TaskStatus } from '@/src/types';
+import { socketService } from '@/services';
+import { Task, TaskStatus } from '@/types';
 
 // Hook for listening to task status updates
 export function useTaskStatus(
@@ -95,7 +95,7 @@ export function useLocationTracking(enabled: boolean = false) {
     batteryLevel?: number;
   }) => {
     // Also send via HTTP for reliability
-    import('@/src/services').then(({ api }) => {
+    import('@/services').then(({ api }) => {
       api.sendHeartbeat(data);
     });
   }, []);
@@ -118,7 +118,7 @@ export function useSOS() {
         type: data.type,
       });
       
-      const { api } = await import('@/src/services');
+      const { api } = await import('@/services');
       await api.triggerSOS({
         latitude: data.latitude,
         longitude: data.longitude,

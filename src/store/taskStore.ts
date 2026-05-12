@@ -3,7 +3,7 @@
 // ============================================
 
 import { create } from 'zustand';
-import { Task, TaskStatus, Location } from '@/src/types';
+import { Task, TaskStatus, Location } from '@/types';
 
 interface TaskState {
   // State
