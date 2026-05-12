@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "18dfe55b-9c47-482d-bd88-f8ad2d6861ce"
+      }
+    },
+    "android": {
+      "package": "com.intellectssmartride.smartrideapp"
+    }
+  }
+}
