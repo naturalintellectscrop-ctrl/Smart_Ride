@@ -49,14 +49,14 @@ export const metadata: Metadata = {
   // Icons
   icons: {
     icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
       { url: "/favicon.jpg", sizes: "any", type: "image/jpeg" },
-      { url: "/smartride-logo.jpeg", sizes: "1024x1024", type: "image/jpeg" },
     ],
     apple: [
       { url: "/smartride-logo.jpeg", sizes: "1024x1024", type: "image/jpeg" },
     ],
     other: [
-      { rel: "mask-icon", url: "/smartride-logo.jpeg", color: "#00FF88" },
+      { rel: "mask-icon", url: "/favicon.svg", color: "#00FF88" },
     ],
   },
   

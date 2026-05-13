@@ -241,12 +241,21 @@ export function ConnectionMonitoringDashboard() {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4 md:p-6">
+      {/* Background Glow Effects */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00FF88]/5 rounded-full blur-[128px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00FFF3]/5 rounded-full blur-[128px]" />
+      </div>
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between relative z-10">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Connection Monitoring</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            <Activity className="h-6 w-6 text-[#00FF88]" />
+            Connection Monitoring
+          </h2>
+          <p className="text-white/50">
             Real-time rider heartbeat and connection status
           </p>
         </div>
@@ -268,60 +277,60 @@ export function ConnectionMonitoringDashboard() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Card>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
+        <Card className="bg-[#1A1A24] border-white/10">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Riders</p>
-                <p className="text-2xl font-bold">{stats.totalActiveRiders}</p>
+                <p className="text-sm font-medium text-white/50">Active Riders</p>
+                <p className="text-2xl font-bold text-white">{stats.totalActiveRiders}</p>
               </div>
-              <Smartphone className="h-8 w-8 text-muted-foreground" />
+              <Smartphone className="h-8 w-8 text-[#00FF88]" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-[#1A1A24] border-white/10">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Connected</p>
-                <p className="text-2xl font-bold text-green-600">{stats.activeConnections}</p>
+                <p className="text-sm font-medium text-white/50">Connected</p>
+                <p className="text-2xl font-bold text-[#00FF88]">{stats.activeConnections}</p>
               </div>
-              <CheckCircle2 className="h-8 w-8 text-green-500" />
+              <CheckCircle2 className="h-8 w-8 text-[#00FF88]" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-[#1A1A24] border-white/10">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Unstable</p>
-                <p className="text-2xl font-bold text-yellow-600">{stats.unstableConnections}</p>
+                <p className="text-sm font-medium text-white/50">Unstable</p>
+                <p className="text-2xl font-bold text-yellow-500">{stats.unstableConnections}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-yellow-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-[#1A1A24] border-white/10">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Disconnected</p>
-                <p className="text-2xl font-bold text-red-600">{stats.disconnectedRiders}</p>
+                <p className="text-sm font-medium text-white/50">Disconnected</p>
+                <p className="text-2xl font-bold text-red-500">{stats.disconnectedRiders}</p>
               </div>
               <XCircle className="h-8 w-8 text-red-500" />
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="bg-[#1A1A24] border-white/10">
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Alerts</p>
+                <p className="text-sm font-medium text-white/50">Active Alerts</p>
                 <p className="text-2xl font-bold text-orange-600">{stats.activeAlerts}</p>
               </div>
               <Bell className="h-8 w-8 text-orange-500" />
@@ -331,20 +340,20 @@ export function ConnectionMonitoringDashboard() {
       </div>
 
       {/* Main Content */}
-      <Tabs defaultValue="riders" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="riders">
+      <Tabs defaultValue="riders" className="space-y-4 relative z-10">
+        <TabsList className="bg-[#1A1A24] border border-white/10">
+          <TabsTrigger value="riders" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">
             <User className="h-4 w-4 mr-2" />
             Active Riders
           </TabsTrigger>
-          <TabsTrigger value="alerts">
+          <TabsTrigger value="alerts" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">
             <Bell className="h-4 w-4 mr-2" />
             Alerts
             {stats.activeAlerts > 0 && (
               <Badge variant="destructive" className="ml-2">{stats.activeAlerts}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="map">
+          <TabsTrigger value="map" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">
             <Map className="h-4 w-4 mr-2" />
             Map View
           </TabsTrigger>
@@ -352,17 +361,17 @@ export function ConnectionMonitoringDashboard() {
 
         {/* Riders Tab */}
         <TabsContent value="riders">
-          <Card>
+          <Card className="bg-[#1A1A24] border-white/10">
             <CardHeader>
-              <CardTitle>Active Riders</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Active Riders</CardTitle>
+              <CardDescription className="text-white/50">
                 Riders currently on active tasks with heartbeat monitoring
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[400px]">
                 {riders.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-white/50">
                     No active riders at the moment
                   </div>
                 ) : (
@@ -370,8 +379,8 @@ export function ConnectionMonitoringDashboard() {
                     {riders.map((rider) => (
                       <div
                         key={rider.riderId}
-                        className={`p-4 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50 ${
-                          selectedRider?.riderId === rider.riderId ? 'border-primary bg-muted/50' : ''
+                        className={`p-4 rounded-lg border border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
+                          selectedRider?.riderId === rider.riderId ? 'border-[#00FF88]/50 bg-[#00FF88]/10' : ''
                         }`}
                         onClick={() => setSelectedRider(rider)}
                       >
@@ -379,8 +388,8 @@ export function ConnectionMonitoringDashboard() {
                           <div className="flex items-center gap-3">
                             <div className={`w-3 h-3 rounded-full ${getConnectionColor(rider.connectionStatus)}`} />
                             <div>
-                              <p className="font-medium">{rider.riderName}</p>
-                              <p className="text-sm text-muted-foreground">
+                              <p className="font-medium text-white">{rider.riderName}</p>
+                              <p className="text-sm text-white/50">
                                 {rider.riderRole.replace(/_/g, ' ')}
                               </p>
                             </div>
@@ -396,10 +405,10 @@ export function ConnectionMonitoringDashboard() {
                               <span className="text-sm">{rider.batteryLevel}%</span>
                             )}
                             <div className="text-right">
-                              <p className="text-sm font-medium">
+                              <p className="text-sm font-medium text-white">
                                 {formatTimeSince(rider.lastHeartbeatAt)}
                               </p>
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-white/50">
                                 Last heartbeat
                               </p>
                             </div>
@@ -416,17 +425,17 @@ export function ConnectionMonitoringDashboard() {
 
         {/* Alerts Tab */}
         <TabsContent value="alerts">
-          <Card>
+          <Card className="bg-[#1A1A24] border-white/10">
             <CardHeader>
-              <CardTitle>Connection Alerts</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-white">Connection Alerts</CardTitle>
+              <CardDescription className="text-white/50">
                 Active alerts requiring attention
               </CardDescription>
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[400px]">
                 {alerts.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-white/50">
                     No active alerts
                   </div>
                 ) : (
@@ -445,7 +454,7 @@ export function ConnectionMonitoringDashboard() {
                             </div>
                             <div>
                               <div className="flex items-center gap-2">
-                                <p className="font-medium">{alert.alertType.replace(/_/g, ' ')}</p>
+                                <p className="font-medium text-white">{alert.alertType.replace(/_/g, ' ')}</p>
                                 <Badge variant="outline" className={`
                                   ${alert.severity === 'CRITICAL' ? 'border-red-500 text-red-500' : ''}
                                   ${alert.severity === 'HIGH' ? 'border-orange-500 text-orange-500' : ''}
@@ -454,10 +463,10 @@ export function ConnectionMonitoringDashboard() {
                                   {alert.severity}
                                 </Badge>
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1">
+                              <p className="text-sm text-white/50 mt-1">
                                 {alert.message}
                               </p>
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <p className="text-xs text-white/50 mt-1">
                                 Rider: {alert.riderId.slice(0, 8)} • {formatTimeSince(alert.createdAt)}
                               </p>
                             </div>
@@ -492,16 +501,16 @@ export function ConnectionMonitoringDashboard() {
 
         {/* Map Tab */}
         <TabsContent value="map">
-          <Card className="overflow-hidden">
+          <Card className="overflow-hidden bg-[#1A1A24] border-white/10">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle>Rider Locations</CardTitle>
-                  <CardDescription>
+                  <CardTitle className="text-white">Rider Locations</CardTitle>
+                  <CardDescription className="text-white/50">
                     Real-time rider positions on map
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="flex items-center gap-1">
+                <Badge variant="outline" className="flex items-center gap-1 border-[#00FF88]/30 text-[#00FF88]">
                   <MapPin className="h-3 w-3" />
                   {riders.filter(r => r.lastKnownLocation).length} riders
                 </Badge>
@@ -576,11 +585,11 @@ export function ConnectionMonitoringDashboard() {
 
       {/* Selected Rider Details */}
       {selectedRider && (
-        <Card className="border-primary">
+        <Card className="border-[#00FF88]/50 bg-[#1A1A24]">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <CardTitle>{selectedRider.riderName}</CardTitle>
+                <CardTitle className="text-white">{selectedRider.riderName}</CardTitle>
                 <Badge className={`${getConnectionColor(selectedRider.connectionStatus)} text-white`}>
                   {selectedRider.connectionStatus}
                 </Badge>
@@ -593,38 +602,38 @@ export function ConnectionMonitoringDashboard() {
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p className="text-sm text-muted-foreground">Last Heartbeat</p>
+                <p className="text-sm text-white/50">Last Heartbeat</p>
                 <p className="font-medium flex items-center gap-1">
                   <Clock className="h-4 w-4" />
                   {formatTimeSince(selectedRider.lastHeartbeatAt)}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Seconds Since</p>
-                <p className="font-medium">{selectedRider.secondsSinceHeartbeat}s</p>
+                <p className="text-sm text-white/50">Seconds Since</p>
+                <p className="font-medium text-white">{selectedRider.secondsSinceHeartbeat}s</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Battery</p>
+                <p className="text-sm text-white/50">Battery</p>
                 <p className="font-medium flex items-center gap-1">
                   {getBatteryIcon(selectedRider.batteryLevel)}
                   {selectedRider.batteryLevel !== null ? `${selectedRider.batteryLevel}%` : 'N/A'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Active Task</p>
-                <p className="font-medium">
+                <p className="text-sm text-white/50">Active Task</p>
+                <p className="font-medium text-white">
                   {selectedRider.taskId ? selectedRider.taskId.slice(0, 8) : 'No active task'}
                 </p>
               </div>
             </div>
 
             {selectedRider.lastKnownLocation && (
-              <div className="mt-4 p-3 bg-muted rounded-lg">
-                <p className="text-sm font-medium flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
+              <div className="mt-4 p-3 bg-[#252530] rounded-lg border border-white/5">
+                <p className="text-sm font-medium text-white flex items-center gap-1">
+                  <MapPin className="h-4 w-4 text-[#00FF88]" />
                   Last Known Location
                 </p>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-white/50 mt-1">
                   {selectedRider.lastKnownLocation.latitude.toFixed(6)}, {selectedRider.lastKnownLocation.longitude.toFixed(6)}
                 </p>
               </div>
