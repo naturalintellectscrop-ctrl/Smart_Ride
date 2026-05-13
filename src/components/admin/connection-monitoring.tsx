@@ -25,8 +25,12 @@ import {
   User,
   Map,
   Activity,
-  Zap
+  Zap,
+  Bike,
+  Car,
+  Package
 } from 'lucide-react';
+import { MapboxMap, MapMarker } from '@/components/maps/mapbox-map';
 
 // ==========================================
 // Types
@@ -471,40 +475,84 @@ export function ConnectionMonitoringDashboard() {
 
         {/* Map Tab */}
         <TabsContent value="map">
-          <Card>
+          <Card className="overflow-hidden">
             <CardHeader>
-              <CardTitle>Rider Locations</CardTitle>
-              <CardDescription>
-                Real-time rider positions on map
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Rider Locations</CardTitle>
+                  <CardDescription>
+                    Real-time rider positions on map
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {riders.filter(r => r.lastKnownLocation).length} riders
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="h-[400px] bg-muted rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">
-                    Map integration placeholder
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {riders.filter(r => r.lastKnownLocation).length} riders with location data
-                  </p>
+            <CardContent className="p-0">
+              {/* Actual MapBox Map */}
+              <div className="h-[500px] relative">
+                <MapboxMap
+                  className="w-full h-full"
+                  center={riders.find(r => r.lastKnownLocation)?.lastKnownLocation || { latitude: 0.3476, longitude: 32.5825 }}
+                  zoom={13}
+                  markers={riders
+                    .filter(r => r.lastKnownLocation)
+                    .map((rider) => ({
+                      id: rider.riderId,
+                      coordinates: rider.lastKnownLocation!,
+                      type: 'driver' as const,
+                      label: rider.riderName,
+                    }))}
+                  showControls={true}
+                  interactive={true}
+                />
+                
+                {/* Map Legend */}
+                <div className="absolute bottom-4 left-4 bg-[#1A1A24]/95 backdrop-blur-sm rounded-lg p-3 border border-white/10">
+                  <p className="text-xs text-white/50 mb-2">Connection Status</p>
+                  <div className="flex flex-wrap gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-green-500" />
+                      <span className="text-xs text-white">Active</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-yellow-500" />
+                      <span className="text-xs text-white">Unstable</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                      <span className="text-xs text-white">Disconnected</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               
-              {/* Location list */}
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-                {riders.filter(r => r.lastKnownLocation).map((rider) => (
-                  <div
-                    key={rider.riderId}
-                    className="p-2 rounded border text-sm flex items-center gap-2"
-                  >
-                    <div className={`w-2 h-2 rounded-full ${getConnectionColor(rider.connectionStatus)}`} />
-                    <span className="truncate">{rider.riderName}</span>
-                    <span className="text-xs text-muted-foreground ml-auto">
-                      {rider.lastKnownLocation?.latitude.toFixed(4)}, {rider.lastKnownLocation?.longitude.toFixed(4)}
-                    </span>
-                  </div>
-                ))}
+              {/* Rider List */}
+              <div className="p-4 border-t border-white/10 bg-[#0D0D12]">
+                <p className="text-sm font-medium text-white/70 mb-3">Riders with Location Data</p>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                  {riders.filter(r => r.lastKnownLocation).length === 0 ? (
+                    <div className="col-span-full text-center py-4 text-white/50">
+                      No riders with location data available
+                    </div>
+                  ) : (
+                    riders.filter(r => r.lastKnownLocation).map((rider) => (
+                      <div
+                        key={rider.riderId}
+                        className="p-2 rounded-lg bg-[#1A1A24] border border-white/5 text-sm flex items-center gap-2 cursor-pointer hover:bg-white/5 transition-colors"
+                        onClick={() => setSelectedRider(rider)}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${getConnectionColor(rider.connectionStatus)}`} />
+                        <span className="text-white truncate flex-1">{rider.riderName}</span>
+                        <span className="text-xs text-white/30">
+                          {rider.lastKnownLocation?.latitude.toFixed(4)}
+                        </span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
