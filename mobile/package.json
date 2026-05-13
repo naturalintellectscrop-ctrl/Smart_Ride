@@ -11,6 +11,7 @@
     "pod-install": "cd ios && pod install"
   },
   "dependencies": {
+    "@rnmapbox/maps": "^10.1.33",
     "@react-native-async-storage/async-storage": "^1.21.0",
     "@react-native-community/geolocation": "^3.1.0",
     "@react-native-community/netinfo": "^11.3.0",

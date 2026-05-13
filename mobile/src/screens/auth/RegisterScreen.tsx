@@ -2,6 +2,7 @@
  * Smart Ride - Register Screen
  *
  * New user registration with email verification.
+ * Dark theme with Smart Ride branding.
  */
 
 import React, { useState } from 'react';
@@ -65,6 +66,9 @@ export function RegisterScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
+          <View style={styles.logoIcon}>
+            <Text style={styles.logoIconText}>SR</Text>
+          </View>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Join Smart Ride today</Text>
         </View>
@@ -74,7 +78,7 @@ export function RegisterScreen() {
           <TextInput
             style={styles.input}
             placeholder="Full Name"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#6B7280"
             value={name}
             onChangeText={setName}
             autoCapitalize="words"
@@ -83,7 +87,7 @@ export function RegisterScreen() {
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#6B7280"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -94,7 +98,7 @@ export function RegisterScreen() {
           <TextInput
             style={styles.input}
             placeholder="Phone Number (+256...)"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#6B7280"
             value={phone}
             onChangeText={setPhone}
             keyboardType="phone-pad"
@@ -103,7 +107,7 @@ export function RegisterScreen() {
           <TextInput
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#6B7280"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -112,7 +116,7 @@ export function RegisterScreen() {
           <TextInput
             style={styles.input}
             placeholder="Confirm Password"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#6B7280"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry
@@ -124,7 +128,7 @@ export function RegisterScreen() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#0D0D12" />
             ) : (
               <Text style={styles.registerButtonText}>Create Account</Text>
             )}
@@ -153,7 +157,7 @@ export function RegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D0D12',
   },
   scrollContent: {
     flexGrow: 1,
@@ -161,12 +165,27 @@ const styles = StyleSheet.create({
     padding: 24,
   },
   header: {
+    alignItems: 'center',
     marginBottom: 32,
+  },
+  logoIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: '#00FF88',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoIconText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0D0D12',
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1F2937',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   subtitle: {
@@ -177,25 +196,26 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   input: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#1A1A24',
+    borderRadius: 16,
+    padding: 18,
     fontSize: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#2D2D3A',
+    color: '#FFFFFF',
   },
   registerButton: {
-    backgroundColor: '#1F4E79',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#00FF88',
+    borderRadius: 16,
+    padding: 18,
     alignItems: 'center',
     marginTop: 8,
   },
   registerButtonText: {
-    color: '#FFFFFF',
+    color: '#0D0D12',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   terms: {
     fontSize: 12,
@@ -205,7 +225,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   termsLink: {
-    color: '#1F4E79',
+    color: '#00FF88',
   },
   signInContainer: {
     flexDirection: 'row',
@@ -217,7 +237,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   signInLink: {
-    color: '#1F4E79',
+    color: '#00FF88',
     fontSize: 14,
     fontWeight: '600',
   },
