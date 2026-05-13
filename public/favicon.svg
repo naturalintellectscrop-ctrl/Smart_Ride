@@ -5,6 +5,13 @@
       <stop offset="100%" style="stop-color:#00FFF3;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <!-- Location pin icon -->
-  <path fill="url(#grad)" d="M16 2C10.477 2 6 6.477 6 12c0 7.5 10 18 10 18s10-10.5 10-18c0-5.523-4.477-10-10-10zm0 13.5c-1.933 0-3.5-1.567-3.5-3.5s1.567-3.5 3.5-3.5 3.5 1.567 3.5 3.5-1.567 3.5-3.5 3.5z"/>
+  <!-- Smart Ride Logo - Stylized Z/S shape (no background) -->
+  <g fill="url(#grad)">
+    <!-- Upper part -->
+    <path d="M6 6h16l-3 5H9z"/>
+    <!-- Middle diagonal -->
+    <path d="M22 6L6 26h16l3-5H12z"/>
+    <!-- Lower part -->
+    <path d="M6 21h13l-3 5H6z"/>
+  </g>
 </svg>

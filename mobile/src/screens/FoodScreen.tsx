@@ -2,9 +2,10 @@
  * Smart Ride - Food Delivery Screen
  * 
  * Browse restaurants and order food for delivery.
+ * Connected to backend API with fallback to mock data.
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,11 +15,13 @@ import {
   TextInput,
   Image,
   FlatList,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import api from '../services/api';
 
-// Mock restaurant data
-const RESTAURANTS = [
+// Fallback mock restaurant data (used when API is unavailable)
+const MOCK_RESTAURANTS = [
   {
     id: '1',
     name: 'Café Javas',
@@ -80,17 +83,65 @@ const CATEGORIES = [
   { id: 'local', name: 'Local', icon: '🥘' },
 ];
 
+interface Restaurant {
+  id: string;
+  name: string;
+  cuisine: string;
+  rating: number;
+  deliveryTime: string;
+  deliveryFee: string;
+  image: string;
+  featured?: boolean;
+}
+
 export function FoodScreen() {
   const navigation = useNavigation();
+  const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
-  const filteredRestaurants = RESTAURANTS.filter(r => 
+  // Fetch restaurants from API on mount
+  useEffect(() => {
+    fetchRestaurants();
+  }, []);
+
+  const fetchRestaurants = async () => {
+    setIsLoading(true);
+    try {
+      const response = await api.getRestaurants();
+      if (response.success && response.data && response.data.length > 0) {
+        // Transform API data to match our format
+        const apiRestaurants = response.data.map((r: any) => ({
+          id: r.id,
+          name: r.name || r.businessName,
+          cuisine: r.cuisineType || 'Various',
+          rating: r.rating || 4.5,
+          deliveryTime: r.deliveryTime || '20-30 min',
+          deliveryFee: r.deliveryFee ? `UGX ${r.deliveryFee.toLocaleString()}` : 'UGX 5,000',
+          image: r.imageUrl || r.logoUrl || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400',
+          featured: r.featured || r.isVerified,
+        }));
+        setRestaurants(apiRestaurants);
+      } else {
+        // Fall back to mock data if API returns no data
+        setRestaurants(MOCK_RESTAURANTS);
+      }
+    } catch (error) {
+      // Fall back to mock data on error
+      console.log('Using mock restaurant data');
+      setRestaurants(MOCK_RESTAURANTS);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const filteredRestaurants = restaurants.filter(r => 
     r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.cuisine.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const renderRestaurantCard = ({ item }: { item: typeof RESTAURANTS[0] }) => (
+  const renderRestaurantCard = ({ item }: { item: Restaurant }) => (
     <TouchableOpacity style={styles.restaurantCard}>
       <View style={styles.restaurantImageContainer}>
         <Image 

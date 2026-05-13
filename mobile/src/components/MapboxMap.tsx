@@ -23,15 +23,16 @@ import {
 import Geolocation from '@react-native-community/geolocation';
 import MapboxGL from '@rnmapbox/maps';
 
-// Mapbox Configuration
-// IMPORTANT: Replace with your actual Mapbox public token
+// Mapbox Configuration - loaded from environment variable
+// IMPORTANT: Set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN in your .env file
 // Get your token from: https://account.mapbox.com/access-tokens/
-// You can also set this as an environment variable: MAPBOX_ACCESS_TOKEN
-const MAPBOX_ACCESS_TOKEN = 'YOUR_MAPBOX_PUBLIC_TOKEN_HERE';
+const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 
 // Initialize Mapbox
-MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
-MapboxGL.setConnected(true);
+if (MAPBOX_ACCESS_TOKEN) {
+  MapboxGL.setAccessToken(MAPBOX_ACCESS_TOKEN);
+  MapboxGL.setConnected(true);
+}
 
 // Kampala, Uganda coordinates (default center)
 const KAMPALA_COORDINATES: [number, number] = [32.5825, 0.3476];
