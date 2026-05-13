@@ -3,8 +3,8 @@
  * Export all map-related components
  */
 
-export { MapboxMap, default as MapboxMapDefault } from './mapbox-map';
-export type { MapMarker, MapRoute, MapboxMapProps } from './mapbox-map';
+export { OpenStreetMap, default as OpenStreetMapDefault } from './openstreet-map';
+export type { MapMarker, MapLocation, OpenStreetMapProps } from './openstreet-map';
 
 export { PlaceSearch } from './place-search';
 export type { PlaceSearchProps } from './place-search';

@@ -30,7 +30,24 @@ import {
   Car,
   Package
 } from 'lucide-react';
-import { MapboxMap, MapMarker } from '@/components/maps/mapbox-map';
+import { OpenStreetMap } from '@/components/maps/openstreet-map';
+import dynamic from 'next/dynamic';
+
+// Dynamically import map component to avoid SSR issues with Leaflet
+const MapComponent = dynamic(
+  () => import('@/components/maps/openstreet-map').then(mod => mod.OpenStreetMap),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="w-full h-full bg-[#1A1A24] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-[#00FF88] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <span className="text-white/50 text-sm">Loading map...</span>
+        </div>
+      </div>
+    )
+  }
+);
 
 // ==========================================
 // Types
@@ -491,22 +508,20 @@ export function ConnectionMonitoringDashboard() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              {/* Actual MapBox Map */}
+              {/* OpenStreetMap with Leaflet */}
               <div className="h-[500px] relative">
-                <MapboxMap
+                <MapComponent
                   className="w-full h-full"
                   center={riders.find(r => r.lastKnownLocation)?.lastKnownLocation || { latitude: 0.3476, longitude: 32.5825 }}
-                  zoom={13}
+                  zoom={14}
                   markers={riders
                     .filter(r => r.lastKnownLocation)
                     .map((rider) => ({
                       id: rider.riderId,
                       coordinates: rider.lastKnownLocation!,
-                      type: 'driver' as const,
-                      label: rider.riderName,
+                      type: rider.connectionStatus.toLowerCase() as 'active' | 'unstable' | 'disconnected',
+                      label: `${rider.riderName} (${rider.connectionStatus})`,
                     }))}
-                  showControls={true}
-                  interactive={true}
                 />
                 
                 {/* Map Legend */}
