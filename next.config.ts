@@ -9,9 +9,6 @@ const nextConfig: NextConfig = {
   // Exclude mobile-only directories from the Next.js build
   // These contain expo/react-native imports that would fail in browser context
   serverExternalPackages: [],
-  experimental: {
-    serverComponentsExternalPackages: [],
-  },
 };
 
 export default nextConfig;
