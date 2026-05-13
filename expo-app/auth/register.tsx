@@ -1,7 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - REGISTER SCREEN
 // ============================================
-// Full registration with email/password and Google Sign-In
+// Full registration with email/password
+// Google Sign-In is optional (graceful fallback if not installed)
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -15,11 +16,20 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { registerUser, isAuthenticated } from '../services/auth';
+
+// Safe Google Sign-In import with fallback
+let GoogleSignin: any = null;
+let statusCodes: any = {};
+try {
+  const GoogleSignInModule = require('@react-native-google-signin/google-signin');
+  GoogleSignin = GoogleSignInModule.GoogleSignin;
+  statusCodes = GoogleSignInModule.statusCodes;
+} catch (e) {
+  console.log('[REGISTER] Google Sign-In not available:', e);
+}
 
 const COLORS = {
   primary: '#10B981',
@@ -35,6 +45,19 @@ const COLORS = {
   googleBlue: '#4285F4',
 };
 
+// Configure Google Sign-In if available
+if (GoogleSignin) {
+  try {
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+      offlineAccess: true,
+      forceCodeForRefreshToken: true,
+    });
+  } catch (e) {
+    console.log('[REGISTER] Google Sign-In configuration failed:', e);
+  }
+}
+
 export default function RegisterScreen() {
   const router = useRouter();
   
@@ -48,7 +71,6 @@ export default function RegisterScreen() {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Check if already authenticated
   useEffect(() => {
     checkAuth();
   }, []);
@@ -96,7 +118,6 @@ export default function RegisterScreen() {
     setError(null);
 
     try {
-      // Format phone number with country code
       const formattedPhone = phone.startsWith('+') ? phone : `+256${phone.replace(/^0+/, '')}`;
       
       const result = await registerUser({
@@ -119,6 +140,10 @@ export default function RegisterScreen() {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!GoogleSignin) {
+      return;
+    }
+
     setGoogleLoading(true);
     setError(null);
 
@@ -129,9 +154,7 @@ export default function RegisterScreen() {
       if (userInfo.data?.idToken) {
         const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/google`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken: userInfo.data.idToken }),
         });
 
@@ -142,21 +165,9 @@ export default function RegisterScreen() {
         } else {
           setError(result.error || 'Google login failed');
         }
-      } else {
-        setError('Failed to get Google ID token');
       }
     } catch (err: any) {
       console.error('Google Sign-In error:', err);
-      
-      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
-        // User cancelled
-      } else if (err.code === statusCodes.IN_PROGRESS) {
-        setError('Sign in is already in progress');
-      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        setError('Google Play Services not available');
-      } else {
-        setError('Google Sign-In failed. Please try again.');
-      }
     } finally {
       setGoogleLoading(false);
     }
@@ -185,7 +196,6 @@ export default function RegisterScreen() {
 
         {/* Form */}
         <View style={styles.formContainer}>
-          {/* Error Message */}
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
@@ -303,23 +313,24 @@ export default function RegisterScreen() {
             <View style={styles.divider} />
           </View>
 
-          {/* Google Sign-In Button */}
-          <TouchableOpacity 
-            style={styles.googleButton}
-            onPress={handleGoogleSignIn}
-            disabled={isLoading || googleLoading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color={COLORS.text} />
-            ) : (
-              <>
-                <View style={styles.googleIconContainer}>
-                  <Text style={styles.googleIcon}>G</Text>
-                </View>
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {GoogleSignin && (
+            <TouchableOpacity 
+              style={styles.googleButton}
+              onPress={handleGoogleSignIn}
+              disabled={isLoading || googleLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color={COLORS.text} />
+              ) : (
+                <>
+                  <View style={styles.googleIconContainer}>
+                    <Text style={styles.googleIcon}>G</Text>
+                  </View>
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Sign In Link */}

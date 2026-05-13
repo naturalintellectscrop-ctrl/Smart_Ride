@@ -1,7 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - LOGIN SCREEN
 // ============================================
-// Full authentication with email/password and Google Sign-In
+// Full authentication with email/password
+// Google Sign-In is optional (graceful fallback if not installed)
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -18,8 +19,18 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { GoogleSignin, statusCodes, User as GoogleUser } from '@react-native-google-signin/google-signin';
 import { loginWithEmail, isAuthenticated } from '../services/auth';
+
+// Safe Google Sign-In import with fallback
+let GoogleSignin: any = null;
+let statusCodes: any = {};
+try {
+  const GoogleSignInModule = require('@react-native-google-signin/google-signin');
+  GoogleSignin = GoogleSignInModule.GoogleSignin;
+  statusCodes = GoogleSignInModule.statusCodes;
+} catch (e) {
+  console.log('[LOGIN] Google Sign-In not available:', e);
+}
 
 const COLORS = {
   primary: '#10B981',
@@ -35,14 +46,18 @@ const COLORS = {
   googleBlue: '#4285F4',
 };
 
-// Configure Google Sign-In
-GoogleSignin.configure({
-  webClientId: '531949209415-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com', // Replace with your actual web client ID
-  iosClientId: '531949209415-xxxxxxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com', // Replace with your iOS client ID
-  offlineAccess: true,
-  hostedDomain: '',
-  forceCodeForRefreshToken: true,
-});
+// Configure Google Sign-In if available
+if (GoogleSignin) {
+  try {
+    GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
+      offlineAccess: true,
+      forceCodeForRefreshToken: true,
+    });
+  } catch (e) {
+    console.log('[LOGIN] Google Sign-In configuration failed:', e);
+  }
+}
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -99,23 +114,22 @@ export default function LoginScreen() {
   };
 
   const handleGoogleSignIn = async () => {
+    if (!GoogleSignin) {
+      Alert.alert('Not Available', 'Google Sign-In is not configured. Please use email login.');
+      return;
+    }
+
     setGoogleLoading(true);
     setError(null);
 
     try {
-      // Check if device supports Google Play Services
       await GoogleSignin.hasPlayServices();
-      
-      // Sign in
       const userInfo = await GoogleSignin.signIn();
       
       if (userInfo.data?.idToken) {
-        // Send ID token to backend
         const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/google`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ idToken: userInfo.data.idToken }),
         });
 
@@ -131,9 +145,8 @@ export default function LoginScreen() {
       }
     } catch (err: any) {
       console.error('Google Sign-In error:', err);
-      
       if (err.code === statusCodes.SIGN_IN_CANCELLED) {
-        // User cancelled the sign-in flow
+        // User cancelled
       } else if (err.code === statusCodes.IN_PROGRESS) {
         setError('Sign in is already in progress');
       } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
@@ -169,7 +182,6 @@ export default function LoginScreen() {
 
         {/* Form */}
         <View style={styles.formContainer}>
-          {/* Error Message */}
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
@@ -242,23 +254,25 @@ export default function LoginScreen() {
             <View style={styles.divider} />
           </View>
 
-          {/* Google Sign-In Button */}
-          <TouchableOpacity 
-            style={styles.googleButton}
-            onPress={handleGoogleSignIn}
-            disabled={isLoading || googleLoading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color={COLORS.text} />
-            ) : (
-              <>
-                <View style={styles.googleIconContainer}>
-                  <Text style={styles.googleIcon}>G</Text>
-                </View>
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {/* Google Sign-In Button - Only show if available */}
+          {GoogleSignin && (
+            <TouchableOpacity 
+              style={styles.googleButton}
+              onPress={handleGoogleSignIn}
+              disabled={isLoading || googleLoading}
+            >
+              {googleLoading ? (
+                <ActivityIndicator color={COLORS.text} />
+              ) : (
+                <>
+                  <View style={styles.googleIconContainer}>
+                    <Text style={styles.googleIcon}>G</Text>
+                  </View>
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
 
           {/* Phone Login */}
           <TouchableOpacity 
