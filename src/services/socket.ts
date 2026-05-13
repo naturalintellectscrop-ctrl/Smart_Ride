@@ -3,7 +3,7 @@
 // ============================================
 
 import { io, Socket } from 'socket.io-client';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, STORAGE_KEYS } from '@/constants';
 import { SOCKET_URL } from '@/config/env';
 import { Task, TaskStatus } from '@/types';
@@ -74,7 +74,7 @@ class SocketService {
       return;
     }
 
-    const token = await SecureStore.getItemAsync(STORAGE_KEYS.authToken);
+    const token = await AsyncStorage.getItem(STORAGE_KEYS.authToken);
     
     // Don't warn if no token - user may not be logged in yet
     if (!token) {

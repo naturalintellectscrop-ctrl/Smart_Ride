@@ -11,7 +11,7 @@
 // 5. No silent failures - everything logged and reported
 // ============================================
 
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_CONFIG, NETWORK_CONFIG, STORAGE_KEYS } from '@/constants';
 import { 
   User, 
@@ -563,12 +563,12 @@ class ApiService {
         };
       }
       
-      // Store refresh token in SecureStore (handle failure gracefully)
+      // Store refresh token in AsyncStorage (handle failure gracefully)
       try {
-        await SecureStore.setItemAsync(STORAGE_KEYS.refreshToken, refreshToken);
-        console.log('[API] RefreshToken stored in SecureStore');
+        await AsyncStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
+        console.log('[API] RefreshToken stored in AsyncStorage');
       } catch (storageError) {
-        console.error('[API] SecureStore error (non-fatal):', storageError);
+        console.error('[API] AsyncStorage error (non-fatal):', storageError);
         // Continue - token is still in memory for this session
       }
       
@@ -640,7 +640,7 @@ class ApiService {
       
       // Store refresh token in SecureStore
       try {
-        await SecureStore.setItemAsync(STORAGE_KEYS.refreshToken, refreshToken);
+        await AsyncStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
         console.log('[API] RefreshToken stored in SecureStore');
       } catch (storageError) {
         console.error('[API] SecureStore error (non-fatal):', storageError);
@@ -700,7 +700,7 @@ class ApiService {
       
       // Store refresh token
       try {
-        await SecureStore.setItemAsync(STORAGE_KEYS.refreshToken, refreshToken);
+        await AsyncStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
         console.log('[API] RefreshToken stored in SecureStore');
       } catch (storageError) {
         console.error('[API] SecureStore error (non-fatal):', storageError);
@@ -761,7 +761,7 @@ class ApiService {
       
       // Store refresh token in SecureStore
       try {
-        await SecureStore.setItemAsync(STORAGE_KEYS.refreshToken, refreshToken);
+        await AsyncStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
         console.log('[API] RefreshToken stored in SecureStore');
       } catch (storageError) {
         console.error('[API] SecureStore error (non-fatal):', storageError);
@@ -790,12 +790,12 @@ class ApiService {
       const response = await this.request<void>('/auth/logout', 'POST', undefined, accessToken);
       
       // Clear refresh token from SecureStore
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.refreshToken).catch(() => {});
+      await AsyncStorage.removeItem(STORAGE_KEYS.refreshToken).catch(() => {});
       
       return response;
     } catch (error) {
       // Even if logout fails on server, clear local tokens
-      await SecureStore.deleteItemAsync(STORAGE_KEYS.refreshToken).catch(() => {});
+      await AsyncStorage.removeItem(STORAGE_KEYS.refreshToken).catch(() => {});
       return { success: true };
     }
   }
@@ -839,7 +839,7 @@ class ApiService {
       // Store new refresh token if provided (rotation)
       if (newRefreshToken) {
         try {
-          await SecureStore.setItemAsync(STORAGE_KEYS.refreshToken, newRefreshToken);
+          await AsyncStorage.setItem(STORAGE_KEYS.refreshToken, newRefreshToken);
           console.log('[API] New refreshToken stored');
         } catch (storageError) {
           console.error('[API] SecureStore error (non-fatal):', storageError);

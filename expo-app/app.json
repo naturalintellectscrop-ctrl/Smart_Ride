@@ -1,12 +1,40 @@
 {
   "expo": {
-    "extra": {
-      "eas": {
-        "projectId": "18dfe55b-9c47-482d-bd88-f8ad2d6861ce"
-      }
+    "name": "Smart Ride",
+    "slug": "smart-ride-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "../assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "../assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#10B981"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ug.smartride.app"
     },
     "android": {
-      "package": "com.intellectssmartride.smartrideapp"
+      "adaptiveIcon": {
+        "foregroundImage": "../assets/adaptive-icon.png",
+        "backgroundColor": "#10B981"
+      },
+      "package": "ug.smartride.app"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "96fc7339-6554-4017-a800-64119cbbf150"
+      }
     }
   }
 }
