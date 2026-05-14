@@ -9,6 +9,9 @@
 // CRITICAL: Reanimated must be first import
 import 'react-native-reanimated';
 
+// NativeWind global styles
+import './global.css';
+
 import React, { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, LogBox } from 'react-native';
 import { Stack } from 'expo-router';
@@ -24,12 +27,16 @@ LogBox.ignoreLogs([
 ]);
 
 // ============================================
-// BRAND COLORS
+// BRAND COLORS - Smart Ride Uganda
 // ============================================
 const COLORS = {
-  primaryGreen: '#10B981',
-  darkSurface: '#0B1220',
+  primaryGreen: '#00FF88',    // Neon Green - Main brand color
+  accent: '#00FFF3',          // Cyan - Secondary accent
+  darkSurface: '#0D0D12',     // Dark background
+  surface: '#1A1A24',         // Card surface
   white: '#FFFFFF',
+  warning: '#FFB800',
+  error: '#FF4757',
 };
 
 // ============================================

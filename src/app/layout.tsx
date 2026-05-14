@@ -46,17 +46,18 @@ export const metadata: Metadata = {
   // PWA Configuration
   manifest: "/manifest.json",
   
-  // Icons
+  // Icons - Smart Ride Logo with transparent background
   icons: {
     icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-      { url: "/favicon.jpg", sizes: "any", type: "image/jpeg" },
+      { url: "/favicon.png", type: "image/png", sizes: "512x512" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
     ],
     apple: [
-      { url: "/smartride-logo.jpeg", sizes: "1024x1024", type: "image/jpeg" },
+      { url: "/smartride-logo-transparent.png", sizes: "1024x1024", type: "image/png" },
     ],
     other: [
-      { rel: "mask-icon", url: "/favicon.svg", color: "#00FF88" },
+      { rel: "mask-icon", url: "/smartride-logo-transparent.png", color: "#00FF88" },
     ],
   },
   

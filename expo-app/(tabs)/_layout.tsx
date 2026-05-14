@@ -1,6 +1,7 @@
-/* eslint-disable react-hooks/immutability */
 // ============================================
 // SMART RIDE MOBILE - TABS LAYOUT
+// ============================================
+// Dark Theme with Smart Ride Branding
 // ============================================
 
 import React from 'react';
@@ -19,13 +20,15 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: true,
         headerStyle: {
-          backgroundColor: COLORS.white,
+          backgroundColor: COLORS.background,
         },
+        headerTintColor: COLORS.text,
         headerTitleStyle: {
           fontWeight: '600',
+          color: COLORS.text,
         },
         tabBarStyle: {
-          backgroundColor: COLORS.white,
+          backgroundColor: COLORS.backgroundElevated,
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
           paddingTop: 8,

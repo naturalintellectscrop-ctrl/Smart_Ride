@@ -1,6 +1,7 @@
-/* eslint-disable react-hooks/immutability */
 // ============================================
 // SMART RIDE MOBILE - PROFILE SCREEN
+// ============================================
+// Dark Theme with Smart Ride Branding
 // ============================================
 
 import React, { useState } from 'react';
@@ -11,7 +12,8 @@ import {
   TouchableOpacity, 
   ActivityIndicator,
   Alert,
-  Switch
+  Switch,
+  StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -34,7 +36,6 @@ export default function ProfileScreen() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -68,9 +69,9 @@ export default function ProfileScreen() {
     {
       section: 'Account',
       items: [
-        { icon: '👤', label: 'Edit Profile', onPress: () => {} },
+        { icon: '👤', label: 'Edit Profile', onPress: () => router.push('/profile/edit') },
         { icon: '📍', label: 'Saved Addresses', onPress: () => {} },
-        { icon: '💳', label: 'Payment Methods', onPress: () => {} },
+        { icon: '💳', label: 'Payment Methods', onPress: () => router.push('/wallet') },
         { icon: '👥', label: 'Emergency Contacts', onPress: () => {} },
       ],
     },
@@ -83,13 +84,6 @@ export default function ProfileScreen() {
           type: 'toggle',
           value: notificationsEnabled,
           onToggle: setNotificationsEnabled,
-        },
-        { 
-          icon: '🌙', 
-          label: 'Dark Mode', 
-          type: 'toggle',
-          value: darkMode,
-          onToggle: setDarkMode,
         },
         { icon: '🌍', label: 'Language', value: 'English', onPress: () => {} },
       ],
@@ -106,44 +100,39 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
+    <ScrollView style={styles.container}>
       {/* Header */}
       <Animated.View 
         entering={FadeInDown.duration(400).springify()}
-        className="bg-primary-500 pt-12 pb-8 px-4"
+        style={styles.header}
       >
-        <Text className="text-2xl font-bold text-white mb-6">Profile</Text>
+        <Text style={styles.headerTitle}>Profile</Text>
         
         {/* User Info */}
-        <View className="flex-row items-center">
+        <View style={styles.userInfo}>
           <Animated.View 
             entering={ZoomIn.delay(200).duration(300)}
-            className="w-20 h-20 bg-white rounded-full items-center justify-center mr-4"
+            style={styles.avatar}
           >
-            <Text className="text-4xl">👤</Text>
+            <Text style={styles.avatarText}>👤</Text>
           </Animated.View>
-          <Animated.View entering={FadeInRight.delay(300).duration(400)}>
-            <Text className="text-white text-xl font-bold">{user?.name || 'Guest'}</Text>
-            <Text className="text-white/80">{user?.email || ''}</Text>
-            <Text className="text-white/80">{user?.phone || ''}</Text>
-          </Animated.View>
-          <AnimatedPressable>
-            <View className="w-10 h-10 bg-white/20 rounded-full items-center justify-center">
-              <Text>✏️</Text>
-            </View>
-          </AnimatedPressable>
+          <View style={styles.userDetails}>
+            <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
+            <Text style={styles.userEmail}>{user?.email || ''}</Text>
+            <Text style={styles.userPhone}>{user?.phone || ''}</Text>
+          </View>
         </View>
       </Animated.View>
 
       {/* Stats */}
       <Animated.View 
         entering={FadeInUp.duration(400).delay(200).springify()}
-        className="flex-row bg-white mx-4 -mt-4 rounded-2xl p-4 shadow-sm"
+        style={styles.statsContainer}
       >
         <StatItem label="Total Rides" value="24" delay={300} />
-        <View className="w-px bg-gray-200" />
+        <View style={styles.statDivider} />
         <StatItem label="Orders" value="12" delay={350} />
-        <View className="w-px bg-gray-200" />
+        <View style={styles.statDivider} />
         <StatItem label="Rating" value="4.8 ⭐" delay={400} />
       </Animated.View>
 
@@ -152,10 +141,10 @@ export default function ProfileScreen() {
         <Animated.View 
           key={sectionIndex} 
           entering={FadeInUp.duration(400).delay(300 + sectionIndex * 100).springify()}
-          className="mt-6 px-4"
+          style={styles.section}
         >
-          <Text className="text-gray-500 text-sm font-medium mb-2">{section.section}</Text>
-          <View className="bg-white rounded-2xl overflow-hidden">
+          <Text style={styles.sectionTitle}>{section.section}</Text>
+          <View style={styles.menuCard}>
             {section.items.map((item, itemIndex) => (
               <Animated.View
                 key={itemIndex}
@@ -174,25 +163,28 @@ export default function ProfileScreen() {
       {/* App Version */}
       <Animated.Text 
         entering={FadeIn.duration(400).delay(800)}
-        className="text-center text-gray-400 text-sm mt-6"
+        style={styles.version}
       >
         Smart Ride v1.0.0
       </Animated.Text>
 
       {/* Logout Button */}
-      <Animated.View entering={FadeInUp.duration(400).delay(900).springify()} className="px-4 mt-6 mb-8">
-        <AnimatedPressable
-          className="bg-red-50 rounded-2xl py-4"
+      <Animated.View entering={FadeInUp.duration(400).delay(900).springify()} style={styles.logoutContainer}>
+        <TouchableOpacity
+          style={styles.logoutButton}
           onPress={handleLogout}
           disabled={isLoading}
+          activeOpacity={0.8}
         >
           {isLoading ? (
-            <ActivityIndicator color={COLORS.warning} />
+            <ActivityIndicator color="#FF4757" />
           ) : (
-            <Text className="text-red-500 text-center font-semibold">Sign Out</Text>
+            <Text style={styles.logoutText}>Sign Out</Text>
           )}
-        </AnimatedPressable>
+        </TouchableOpacity>
       </Animated.View>
+
+      <View style={{ height: 40 }} />
     </ScrollView>
   );
 }
@@ -202,10 +194,10 @@ function StatItem({ label, value, delay }: { label: string; value: string; delay
   return (
     <Animated.View 
       entering={FadeIn.duration(400).delay(delay).springify()}
-      className="flex-1 items-center py-2"
+      style={styles.statItem}
     >
-      <Text className="text-2xl font-bold text-gray-900">{value}</Text>
-      <Text className="text-gray-500 text-sm">{label}</Text>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </Animated.View>
   );
 }
@@ -213,64 +205,182 @@ function StatItem({ label, value, delay }: { label: string; value: string; delay
 // Menu Item Component
 function MenuItem({ item, isLast }: { item: any; isLast: boolean }) {
   return (
-    <>
-      <AnimatedPressable
-        className="flex-row items-center px-4 py-4"
-        onPress={item.type === 'toggle' ? undefined : item.onPress}
-      >
-        <Text className="text-xl mr-3">{item.icon}</Text>
-        <Text className="flex-1 text-gray-900 font-medium">{item.label}</Text>
-        {item.type === 'toggle' ? (
-          <Switch
-            value={item.value}
-            onValueChange={item.onToggle}
-            trackColor={{ false: '#D1D5DB', true: '#86EFAC' }}
-            thumbColor={item.value ? COLORS.secondary : '#F4F4F5'}
-          />
-        ) : item.value ? (
-          <Text className="text-gray-500">{item.value}</Text>
-        ) : (
-          <Text className="text-gray-400">›</Text>
-        )}
-      </AnimatedPressable>
-      {!isLast && <View className="h-px bg-gray-100 ml-14" />}
-    </>
-  );
-}
-
-// Animated Pressable Component
-function AnimatedPressable({ children, onPress, disabled, className }: { children: React.ReactNode; onPress?: () => void; disabled?: boolean; className?: string }) {
-  const scale = useSharedValue(1);
-
-  const handlePressIn = () => {
-    'worklet';
-    scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
-  };
-
-  const handlePressOut = () => {
-    'worklet';
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  };
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
     <TouchableOpacity
-      className={className}
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      disabled={disabled}
-      activeOpacity={0.95}
+      style={styles.menuItem}
+      onPress={item.type === 'toggle' ? undefined : item.onPress}
+      activeOpacity={0.7}
     >
-      <Animated.View style={animatedStyle}>
-        {children}
-      </Animated.View>
+      <Text style={styles.menuIcon}>{item.icon}</Text>
+      <Text style={styles.menuLabel}>{item.label}</Text>
+      {item.type === 'toggle' ? (
+        <Switch
+          value={item.value}
+          onValueChange={item.onToggle}
+          trackColor={{ false: '#374151', true: COLORS.primary }}
+          thumbColor={item.value ? COLORS.primary : '#6B7280'}
+        />
+      ) : item.value ? (
+        <Text style={styles.menuValue}>{item.value}</Text>
+      ) : (
+        <Text style={styles.menuArrow}>›</Text>
+      )}
+      {!isLast && <View style={styles.menuDivider} />}
     </TouchableOpacity>
   );
 }
 
-// FadeInRight animation helper
-const FadeInRight = SlideInRight.duration(300);
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.primary,
+    paddingTop: 60,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.background,
+    marginBottom: 20,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  avatarText: {
+    fontSize: 32,
+  },
+  userDetails: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.background,
+  },
+  userEmail: {
+    fontSize: 14,
+    color: 'rgba(13, 13, 18, 0.7)',
+    marginTop: 2,
+  },
+  userPhone: {
+    fontSize: 14,
+    color: 'rgba(13, 13, 18, 0.7)',
+    marginTop: 2,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.backgroundElevated,
+    marginHorizontal: 20,
+    marginTop: -16,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  statItem: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: COLORS.border,
+  },
+  section: {
+    marginTop: 24,
+    paddingHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.textMuted,
+    marginBottom: 8,
+  },
+  menuCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    overflow: 'hidden',
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  menuIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  menuLabel: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  menuValue: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+  },
+  menuArrow: {
+    fontSize: 18,
+    color: COLORS.textMuted,
+  },
+  menuDivider: {
+    position: 'absolute',
+    left: 48,
+    right: 0,
+    bottom: 0,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  version: {
+    textAlign: 'center',
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 24,
+  },
+  logoutContainer: {
+    paddingHorizontal: 20,
+    marginTop: 24,
+  },
+  logoutButton: {
+    backgroundColor: 'rgba(255, 71, 87, 0.1)',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 71, 87, 0.3)',
+  },
+  logoutText: {
+    color: '#FF4757',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

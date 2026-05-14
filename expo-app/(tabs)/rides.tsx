@@ -1,6 +1,7 @@
-/* eslint-disable react-hooks/immutability */
 // ============================================
 // SMART RIDE MOBILE - RIDES HISTORY SCREEN
+// ============================================
+// Dark Theme with Smart Ride Branding
 // ============================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -10,7 +11,8 @@ import {
   FlatList, 
   TouchableOpacity, 
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -107,55 +109,48 @@ export default function RidesScreen() {
   const renderContent = () => {
     if (isLoading && taskHistory.length === 0 && !error) {
       return (
-        <View className="flex-1 items-center justify-center py-12">
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4 text-gray-500">Loading rides...</Text>
+          <Text style={styles.loadingText}>Loading rides...</Text>
         </View>
       );
     }
 
     if (error && taskHistory.length === 0) {
       return (
-        <Animated.View 
-          entering={FadeIn.duration(400)}
-          className="flex-1 items-center justify-center py-12"
-        >
-          <Text className="text-4xl mb-4">📋</Text>
-          <Text className="text-gray-600 text-center mb-4">{error}</Text>
-          <AnimatedButton onPress={loadTasks}>
-            <View className="bg-primary-500 rounded-xl px-6 py-3">
-              <Text className="text-white font-semibold">Retry</Text>
-            </View>
-          </AnimatedButton>
+        <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>📋</Text>
+          <Text style={styles.emptyText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadTasks}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
         </Animated.View>
       );
     }
 
     return (
       <FlatList
-        className="flex-1 px-4 pt-4"
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
         data={taskHistory}
         keyExtractor={(item) => item.id}
         renderItem={renderTask}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
         }
         ListEmptyComponent={
-          <Animated.View 
-            entering={FadeIn.duration(400)}
-            className="items-center justify-center py-12"
-          >
-            <Text className="text-4xl mb-4">🚗</Text>
-            <Text className="text-gray-500 text-center">
-              {activeTab === 'active' 
-                ? 'No active rides' 
-                : 'No ride history yet'}
+          <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
+            <Text style={styles.emptyIcon}>🚗</Text>
+            <Text style={styles.emptyText}>
+              {activeTab === 'active' ? 'No active rides' : 'No ride history yet'}
             </Text>
-            <AnimatedButton onPress={() => router.push('/rider/ride-request')}>
-              <View className="mt-4 bg-primary-500 rounded-xl px-6 py-3">
-                <Text className="text-white font-semibold">Book a Ride</Text>
-              </View>
-            </AnimatedButton>
+            <TouchableOpacity style={styles.bookButton} onPress={() => router.push('/rider/ride-request')}>
+              <Text style={styles.bookButtonText}>Book a Ride</Text>
+            </TouchableOpacity>
           </Animated.View>
         }
       />
@@ -163,20 +158,14 @@ export default function RidesScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
-      <Animated.View 
-        entering={FadeInDown.duration(400).springify()}
-        className="bg-white pt-12 pb-4 px-4 border-b border-gray-100"
-      >
-        <Text className="text-2xl font-bold text-gray-900">My Rides</Text>
+      <Animated.View entering={FadeInDown.duration(400).springify()} style={styles.header}>
+        <Text style={styles.headerTitle}>My Rides</Text>
       </Animated.View>
 
       {/* Tabs */}
-      <Animated.View 
-        entering={FadeInUp.duration(400).delay(100).springify()}
-        className="flex-row bg-white px-4 py-2"
-      >
+      <Animated.View entering={FadeInUp.duration(400).delay(100).springify()} style={styles.tabsContainer}>
         <AnimatedTabButton
           isActive={activeTab === 'active'}
           onPress={() => setActiveTab('active')}
@@ -186,7 +175,6 @@ export default function RidesScreen() {
           isActive={activeTab === 'history'}
           onPress={() => setActiveTab('history')}
           label="History"
-          style={{ marginLeft: 8 }}
         />
       </Animated.View>
 
@@ -201,17 +189,14 @@ function AnimatedTabButton({
   isActive, 
   onPress, 
   label, 
-  style 
 }: { 
   isActive: boolean; 
   onPress: () => void; 
   label: string;
-  style?: any;
 }) {
   const scale = useSharedValue(1);
 
   const handlePress = () => {
-    'worklet';
     scale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
     setTimeout(() => {
       scale.value = withSpring(1, { damping: 15, stiffness: 300 });
@@ -225,12 +210,11 @@ function AnimatedTabButton({
 
   return (
     <TouchableOpacity 
-      className={`flex-1 py-3 rounded-xl ${isActive ? 'bg-primary-500' : 'bg-gray-100'}`}
+      style={[styles.tabButton, isActive && styles.tabButtonActive]}
       onPress={handlePress}
-      style={style}
     >
       <Animated.View style={animatedStyle}>
-        <Text className={`text-center font-semibold ${isActive ? 'text-white' : 'text-gray-600'}`}>
+        <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>
           {label}
         </Text>
       </Animated.View>
@@ -241,82 +225,207 @@ function AnimatedTabButton({
 // Animated Task Card
 function TaskCard({ item, statusColor, onPress }: { item: Task; statusColor: string; onPress: () => void }) {
   return (
-    <AnimatedButton onPress={onPress}>
-      <View className="bg-white rounded-2xl p-4 mb-3 shadow-sm">
-        <View className="flex-row justify-between items-start mb-3">
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+      <View style={styles.taskCard}>
+        <View style={styles.taskHeader}>
           <View>
-            <Text className="text-gray-500 text-sm">#{item.taskNumber || item.id.slice(0, 8)}</Text>
-            <Text className="font-bold text-gray-900">
+            <Text style={styles.taskNumber}>#{item.taskNumber || item.id.slice(0, 8)}</Text>
+            <Text style={styles.taskType}>
               {item.taskType?.includes('BODA') ? '🏍️ Smart Boda' : 
                item.taskType?.includes('CAR') ? '🚗 Smart Car' : '📦 Delivery'}
             </Text>
           </View>
           <Animated.View 
             entering={FadeIn.duration(300)}
-            className="px-3 py-1 rounded-full"
-            style={{ backgroundColor: `${statusColor}20` }}
+            style={[styles.statusBadge, { backgroundColor: `${statusColor}20` }]}
           >
-            <Text 
-              className="text-xs font-medium"
-              style={{ color: statusColor }}
-            >
+            <Text style={[styles.statusText, { color: statusColor }]}>
               {TASK_STATUS_LABELS[item.status] || item.status}
             </Text>
           </Animated.View>
         </View>
 
-        <View className="flex-row items-start mb-2">
-          <View className="w-2 h-2 rounded-full bg-secondary-500 mt-1.5 mr-2" />
-          <Text className="text-gray-600 flex-1" numberOfLines={1}>
+        <View style={styles.locationRow}>
+          <View style={[styles.locationDot, { backgroundColor: COLORS.secondary }]} />
+          <Text style={styles.locationText} numberOfLines={1}>
             {item.pickupAddress || 'Pickup location'}
           </Text>
         </View>
-        <View className="flex-row items-start mb-3">
-          <View className="w-2 h-2 rounded-full bg-primary-500 mt-1.5 mr-2" />
-          <Text className="text-gray-600 flex-1" numberOfLines={1}>
+        <View style={styles.locationRow}>
+          <View style={[styles.locationDot, { backgroundColor: COLORS.primary }]} />
+          <Text style={styles.locationText} numberOfLines={1}>
             {item.dropoffAddress || 'Dropoff location'}
           </Text>
         </View>
 
-        <View className="flex-row justify-between items-center pt-3 border-t border-gray-100">
-          <Text className="text-gray-500 text-sm">{formatDate(item.createdAt)}</Text>
-          <Text className="font-bold text-primary-500">
-            UGX {(item.totalAmount || 0).toLocaleString()}
-          </Text>
+        <View style={styles.taskFooter}>
+          <Text style={styles.taskDate}>{formatDate(item.createdAt)}</Text>
+          <Text style={styles.taskAmount}>UGX {(item.totalAmount || 0).toLocaleString()}</Text>
         </View>
       </View>
-    </AnimatedButton>
-  );
-}
-
-// Animated Button Component
-function AnimatedButton({ children, onPress }: { children: React.ReactNode; onPress: () => void }) {
-  const scale = useSharedValue(1);
-
-  const handlePressIn = () => {
-    'worklet';
-    scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
-  };
-
-  const handlePressOut = () => {
-    'worklet';
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  };
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <TouchableOpacity
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={0.95}
-    >
-      <Animated.View style={animatedStyle}>
-        {children}
-      </Animated.View>
     </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.backgroundElevated,
+    paddingTop: 60,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.backgroundElevated,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: COLORS.background,
+  },
+  tabButtonActive: {
+    backgroundColor: COLORS.primary,
+  },
+  tabButtonText: {
+    textAlign: 'center',
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  tabButtonTextActive: {
+    color: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: COLORS.textMuted,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyText: {
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  retryButtonText: {
+    color: COLORS.background,
+    fontWeight: '600',
+  },
+  bookButton: {
+    marginTop: 16,
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  bookButtonText: {
+    color: COLORS.background,
+    fontWeight: '600',
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 20,
+  },
+  taskCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  taskNumber: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+  },
+  taskType: {
+    fontWeight: 'bold',
+    color: COLORS.text,
+    fontSize: 16,
+    marginTop: 2,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  locationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+    marginTop: 2,
+  },
+  locationText: {
+    flex: 1,
+    color: COLORS.textSecondary,
+    fontSize: 14,
+  },
+  taskFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  taskDate: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+  },
+  taskAmount: {
+    fontWeight: 'bold',
+    color: COLORS.primary,
+    fontSize: 14,
+  },
+});

@@ -18,12 +18,13 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // ============================================
-// BRAND COLORS
+// BRAND COLORS - Smart Ride Uganda
 // ============================================
 const COLORS = {
-  primaryGreen: '#10B981',
-  primaryGreenDark: '#059669',
-  darkSurface: '#0B1220',
+  primaryGreen: '#00FF88',       // Neon Green - Main brand
+  primaryGreenDark: '#00CC6D',
+  accent: '#00FFF3',             // Cyan - Secondary
+  darkSurface: '#0D0D12',        // Dark background
   accentGold: '#F59E0B',
   white: '#FFFFFF',
   mutedText: '#D1D5DB',

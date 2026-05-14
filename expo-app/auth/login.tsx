@@ -33,16 +33,17 @@ try {
 }
 
 const COLORS = {
-  primary: '#10B981',
-  primaryDark: '#059669',
-  background: '#0B1220',
+  primary: '#00FF88',          // Neon Green - Smart Ride brand
+  primaryDark: '#00CC6D',
+  accent: '#00FFF3',           // Cyan - Secondary accent
+  background: '#0D0D12',       // Dark background
   backgroundElevated: '#1A1A24',
   backgroundSurface: '#252530',
   text: '#FFFFFF',
   textSecondary: 'rgba(255, 255, 255, 0.7)',
   textMuted: 'rgba(255, 255, 255, 0.5)',
   border: 'rgba(255, 255, 255, 0.08)',
-  error: '#EF4444',
+  error: '#FF4757',
   googleBlue: '#4285F4',
 };
 

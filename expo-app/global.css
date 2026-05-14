@@ -1,0 +1,44 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Smart Ride Custom Utilities */
+@layer components {
+  .btn-primary {
+    @apply bg-primary text-dark font-semibold py-3 px-6 rounded-xl;
+  }
+  
+  .btn-secondary {
+    @apply bg-surface text-white font-semibold py-3 px-6 rounded-xl border border-primary/30;
+  }
+  
+  .card {
+    @apply bg-surface rounded-2xl p-4 border border-white/5;
+  }
+  
+  .input-field {
+    @apply bg-dark/50 border border-white/10 rounded-xl px-4 py-3 text-white;
+  }
+  
+  .text-brand {
+    @apply text-primary;
+  }
+  
+  .text-muted {
+    @apply text-white/60;
+  }
+}
+
+/* Custom scrollbar for web */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0D0D12;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00FF88;
+  border-radius: 3px;
+}
