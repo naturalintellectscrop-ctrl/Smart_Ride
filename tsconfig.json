@@ -37,6 +37,16 @@
     ".next/dev/types/**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "expo-app",
+    "mobile",
+    "mini-services",
+    "skills",
+    "examples",
+    "scripts",
+    "prisma",
+    "upload",
+    "docs",
+    "download"
   ]
 }

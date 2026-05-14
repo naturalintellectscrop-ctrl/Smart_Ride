@@ -36,10 +36,6 @@ export default function OrdersScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
   const loadOrders = async () => {
     setIsLoading(true);
     try {
@@ -53,6 +49,11 @@ export default function OrdersScreen() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);

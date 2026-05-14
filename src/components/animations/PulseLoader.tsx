@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/immutability */
+ 
 import React from 'react';
 import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
 import Animated, {

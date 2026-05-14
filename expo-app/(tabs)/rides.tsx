@@ -39,10 +39,6 @@ export default function RidesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'active' | 'history'>('history');
 
-  useEffect(() => {
-    loadTasks();
-  }, []);
-
   const loadTasks = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -74,6 +70,11 @@ export default function RidesScreen() {
     await loadTasks();
     setRefreshing(false);
   }, [loadTasks]);
+
+  useEffect(() => {
+    loadTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const formatDate = (dateStr: string) => {
     try {

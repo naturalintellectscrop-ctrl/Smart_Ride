@@ -57,17 +57,18 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Check if already authenticated
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
   const checkAuth = async () => {
     const authenticated = await isAuthenticated();
     if (authenticated) {
       router.replace('/(tabs)');
     }
   };
+
+  // Check if already authenticated
+  useEffect(() => {
+    checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // PRIMARY: Google Sign-In
   const handleGoogleSignIn = async () => {
