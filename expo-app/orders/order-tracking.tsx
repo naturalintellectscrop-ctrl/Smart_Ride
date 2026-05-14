@@ -44,7 +44,7 @@ export default function OrderTrackingScreen() {
 
   useEffect(() => {
     // Listen for order status updates
-    const unsubscribe = socketService.on('order:status', (data) => {
+    const unsubscribe = socketService.on('order:status', (data: { orderId: string; status: string }) => {
       if (data.orderId === params.orderId && order) {
         setOrder({ ...order, status: data.status as any });
       }

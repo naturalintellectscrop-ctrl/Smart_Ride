@@ -25,6 +25,7 @@ import {
   Animated,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS } from '@/src/constants';
@@ -57,8 +58,8 @@ export default function VerifyOTPScreen() {
   
   // Refs
   const inputRefs = useRef<(TextInput | null)[]>([]);
-  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const resendIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resendIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   
   // Animations
   const [shakeAnim] = useState(new Animated.Value(0));
@@ -272,7 +273,12 @@ export default function VerifyOTPScreen() {
         animateSuccess();
         
         // Login using authStore
-        await login(user, accessToken, refreshToken);
+        await login(user, accessToken);
+        
+        // Store refresh token separately if needed
+        if (refreshToken) {
+          await AsyncStorage.setItem('smart_ride_refresh_token', refreshToken);
+        }
         
         console.log('[VERIFY-OTP] Login successful, navigating to home');
         
@@ -419,7 +425,7 @@ export default function VerifyOTPScreen() {
               {otp.map((digit, index) => (
                 <TextInput
                   key={index}
-                  ref={(ref) => (inputRefs.current[index] = ref)}
+                  ref={(ref) => { inputRefs.current[index] = ref; }}
                   style={[
                     styles.otpInput,
                     digit && styles.otpInputFilled,

@@ -18,6 +18,24 @@ import { api } from '@/src/services';
 import { COLORS, RIDE_TYPES, PAYMENT_METHODS } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
 
+// Types for search results
+interface PlaceResult {
+  id: string;
+  place_name: string;
+  center: [number, number];
+  text?: string;
+}
+
+// Types for ride type
+interface RideTypeConfig {
+  id: string;
+  name: string;
+  description: string;
+  baseFare: number;
+  perKm: number;
+  capacity: number;
+}
+
 export default function RideRequestScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ type?: 'BODA' | 'CAR' }>();
@@ -266,7 +284,16 @@ function PickupStep({
   isSearching,
   onSelectPlace,
   onUseCurrentLocation 
-}: any) {
+}: {
+  rideType: RideTypeConfig;
+  pickupAddress: string;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  searchResults: PlaceResult[];
+  isSearching: boolean;
+  onSelectPlace: (place: PlaceResult) => void;
+  onUseCurrentLocation: () => void;
+}) {
   return (
     <View>
       {/* Ride Type */}
@@ -326,7 +353,14 @@ function DropoffStep({
   searchResults, 
   isSearching,
   onSelectPlace 
-}: any) {
+}: {
+  pickupAddress: string;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  searchResults: PlaceResult[];
+  isSearching: boolean;
+  onSelectPlace: (place: PlaceResult) => void;
+}) {
   return (
     <View>
       {/* Pickup Summary */}
@@ -383,7 +417,20 @@ function ConfirmStep({
   setPhoneNumber,
   onRequestRide,
   isRequesting,
-}: any) {
+}: {
+  rideType: RideTypeConfig;
+  pickupAddress: string;
+  dropoffAddress: string;
+  distance: number | null;
+  estimatedFare: number;
+  isCalculating: boolean;
+  paymentMethod: PaymentMethod;
+  setPaymentMethod: (method: PaymentMethod) => void;
+  phoneNumber: string;
+  setPhoneNumber: (phone: string) => void;
+  onRequestRide: () => void;
+  isRequesting: boolean;
+}) {
   return (
     <View>
       {/* Route Summary */}
@@ -434,7 +481,7 @@ function ConfirmStep({
                 ? 'border-primary-500 bg-primary-50' 
                 : 'border-gray-200 bg-white'
             }`}
-            onPress={() => setPaymentMethod(method.id)}
+            onPress={() => setPaymentMethod(method.id as PaymentMethod)}
           >
             <Text className="mr-2">{method.icon === 'phone' ? '📱' : method.icon === 'banknote' ? '💵' : '💳'}</Text>
             <Text className={paymentMethod === method.id ? 'text-primary-500 font-medium' : 'text-gray-700'}>

@@ -102,21 +102,37 @@ class ApiService {
     return response;
   }
 
-  async sendOtp(phone: string): Promise<ApiResponse<{ messageId: string }>> {
-    return this.request<{ messageId: string }>('/auth/send-otp', 'POST', { phone });
+  // OTP methods - both naming conventions supported
+  async sendOtp(phone: string, purpose?: string): Promise<ApiResponse<{ messageId: string; otp?: string; expiresIn?: number }>> {
+    return this.request<{ messageId: string; otp?: string; expiresIn?: number }>('/auth/send-otp', 'POST', { phone, purpose });
   }
 
-  async verifyOtp(phone: string, otp: string): Promise<ApiResponse<{ user: User; accessToken: string }>> {
-    const response = await this.request<{ user: User; accessToken: string }>('/auth/verify-otp', 'POST', {
-      phone,
-      otp,
-    });
+  // Alias for backwards compatibility
+  async sendOTP(phone: string, purpose?: string): Promise<ApiResponse<{ messageId: string; otp?: string; expiresIn?: number }>> {
+    return this.sendOtp(phone, purpose);
+  }
+
+  async verifyOtp(phoneOrData: string | { phone: string; otp: string; purpose?: string; deviceId?: string; deviceName?: string; deviceType?: string }, otp?: string): Promise<ApiResponse<{ user: User; accessToken: string; refreshToken?: string }>> {
+    let data: { phone: string; otp: string; purpose?: string; deviceId?: string; deviceName?: string; deviceType?: string };
+    
+    if (typeof phoneOrData === 'object') {
+      data = phoneOrData;
+    } else {
+      data = { phone: phoneOrData, otp: otp! };
+    }
+    
+    const response = await this.request<{ user: User; accessToken: string; refreshToken?: string }>('/auth/verify-otp', 'POST', data);
     
     if (response.success && response.data?.accessToken) {
       await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
     }
     
     return response;
+  }
+
+  // Alias for backwards compatibility
+  async verifyOTP(phoneOrData: string | { phone: string; otp: string; purpose?: string }, otp?: string): Promise<ApiResponse<{ user: User; accessToken: string; refreshToken?: string }>> {
+    return this.verifyOtp(phoneOrData as any, otp);
   }
 
   async logout(): Promise<ApiResponse<void>> {
@@ -127,6 +143,14 @@ class ApiService {
 
   async getCurrentUser(): Promise<ApiResponse<User>> {
     return this.request<User>('/auth/me');
+  }
+
+  // ==========================================
+  // USER PROFILE
+  // ==========================================
+
+  async updateProfile(data: { name?: string; phone?: string; avatarUrl?: string }): Promise<ApiResponse<User>> {
+    return this.request<User>('/user/profile', 'PUT', data);
   }
 
   // ==========================================
@@ -233,6 +257,18 @@ class ApiService {
     return this.request<any[]>(`/merchants/${merchantId}/menu`);
   }
 
+  async getMerchantProducts(merchantId: string): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>(`/merchants/${merchantId}/products`);
+  }
+
+  // ==========================================
+  // HEALTH / PHARMACIES
+  // ==========================================
+
+  async getPharmacies(): Promise<ApiResponse<Merchant[]>> {
+    return this.request<Merchant[]>('/merchants?type=PHARMACY');
+  }
+
   // ==========================================
   // MAPBOX / GEOCODING
   // ==========================================
@@ -248,6 +284,10 @@ class ApiService {
   // ==========================================
   // WALLET
   // ==========================================
+
+  async getWallet(): Promise<ApiResponse<{ balance: number; pendingBalance: number; totalEarnings: number }>> {
+    return this.request<{ balance: number; pendingBalance: number; totalEarnings: number }>('/wallet');
+  }
 
   async getWalletBalance(): Promise<ApiResponse<{ balance: number }>> {
     return this.request<{ balance: number }>('/wallet/balance');

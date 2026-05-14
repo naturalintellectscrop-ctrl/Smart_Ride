@@ -29,8 +29,8 @@ interface WalletData {
   balance: number;
   pendingBalance: number;
   totalEarnings: number;
-  totalWithdrawals: number;
-  transactions: Transaction[];
+  totalWithdrawals?: number;
+  transactions?: Transaction[];
 }
 
 interface Transaction {

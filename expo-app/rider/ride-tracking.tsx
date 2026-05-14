@@ -39,7 +39,7 @@ export default function RideTrackingScreen() {
   } | null>(null);
   
   // Polling refs
-  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const socketConnectedRef = useRef(false);
 
   // POLLING FALLBACK: Fetch task status periodically
@@ -47,7 +47,7 @@ export default function RideTrackingScreen() {
     if (!params.taskId) return;
     
     try {
-      const response = await api.getTask(params.taskId, accessToken || undefined);
+      const response = await api.getTask(params.taskId);
       if (response.success && response.data) {
         const updatedTask = response.data;
         
@@ -156,7 +156,7 @@ export default function RideTrackingScreen() {
     // ATTEMPT SOCKET CONNECTION (secondary, optional)
     const initSocket = async () => {
       try {
-        await socketService.connect(user?.id, 'CLIENT');
+        await socketService.connect();
         socketConnectedRef.current = socketService.isSocketConnected();
         
         if (socketConnectedRef.current && params.taskId) {
@@ -171,10 +171,10 @@ export default function RideTrackingScreen() {
     initSocket();
 
     // Listen for task status updates (if socket connects - secondary)
-    const unsubscribeStatus = socketService.on('task:status', (data) => {
+    const unsubscribeStatus = socketService.on('task:status', (data: { taskId: string; status: string }) => {
       if (data.taskId === params.taskId) {
         updateTaskStatus(data.taskId, data.status);
-        setTask(prev => prev ? { ...prev, status: data.status } : null);
+        setTask(prev => prev ? { ...prev, status: data.status as TaskStatus } : null);
         
         if (data.status === 'COMPLETED') {
           // Fetch full task and handle completion
@@ -184,7 +184,7 @@ export default function RideTrackingScreen() {
     });
 
     // Listen for driver location updates (if socket connects - secondary)
-    const unsubscribeLocation = socketService.on('location:update', (data) => {
+    const unsubscribeLocation = socketService.on('location:update', (data: { riderId: string; latitude: number; longitude: number; heading?: number }) => {
       if (task?.riderId === data.riderId) {
         setDriverLocation({
           latitude: data.latitude,
@@ -195,7 +195,7 @@ export default function RideTrackingScreen() {
     });
 
     // Listen for task cancellation (if socket connects - secondary)
-    const unsubscribeCancel = socketService.on('task:cancelled', (data) => {
+    const unsubscribeCancel = socketService.on('task:cancelled', (data: { taskId: string; reason: string }) => {
       if (data.taskId === params.taskId) {
         stopPolling();
         clearPendingTask();

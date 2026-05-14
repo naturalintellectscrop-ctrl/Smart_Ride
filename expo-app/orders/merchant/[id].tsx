@@ -102,7 +102,8 @@ export default function MerchantDetailScreen() {
 
   const addToCart = (product: Product) => {
     const cartItem: CartItem = {
-      id: product.id,
+      id: `cart-${product.id}`,
+      productId: product.id,
       name: product.name,
       price: product.price,
       quantity: 1,
