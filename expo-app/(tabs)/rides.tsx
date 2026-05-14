@@ -224,6 +224,20 @@ function AnimatedTabButton({
 
 // Animated Task Card
 function TaskCard({ item, statusColor, onPress }: { item: Task; statusColor: string; onPress: () => void }) {
+  const formatDate = (dateStr: string) => {
+    try {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+      });
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
       <View style={styles.taskCard}>
