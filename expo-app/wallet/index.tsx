@@ -28,9 +28,10 @@ import { COLORS } from '@/src/constants';
 interface WalletData {
   balance: number;
   pendingBalance: number;
-  totalEarnings: number;
-  totalWithdrawals?: number;
+  totalDeposited?: number;
+  totalWithdrawn?: number;
   transactions?: Transaction[];
+  paymentMethods?: any[];
 }
 
 interface Transaction {
@@ -57,7 +58,23 @@ export default function WalletScreen() {
     try {
       const response = await api.getWallet();
       if (response.success && response.data) {
-        setWalletData(response.data);
+        // Extract wallet data from the response structure
+        const { wallet, transactions, paymentMethods } = response.data;
+        setWalletData({
+          balance: wallet.balance,
+          pendingBalance: wallet.pendingBalance,
+          totalDeposited: wallet.totalDeposited,
+          totalWithdrawn: wallet.totalWithdrawn,
+          transactions: transactions?.map((t: any) => ({
+            id: t.id,
+            type: t.type || t.transactionType,
+            amount: t.amount,
+            description: t.description,
+            createdAt: t.createdAt,
+            status: t.status,
+          })),
+          paymentMethods,
+        });
       }
     } catch (error) {
       console.error('Failed to load wallet:', error);

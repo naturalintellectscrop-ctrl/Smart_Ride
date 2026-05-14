@@ -285,8 +285,26 @@ class ApiService {
   // WALLET
   // ==========================================
 
-  async getWallet(): Promise<ApiResponse<{ balance: number; pendingBalance: number; totalEarnings: number }>> {
-    return this.request<{ balance: number; pendingBalance: number; totalEarnings: number }>('/wallet');
+  async getWallet(): Promise<ApiResponse<{ 
+    wallet: { 
+      balance: number; 
+      pendingBalance: number; 
+      totalDeposited: number;
+      totalWithdrawn: number;
+    }; 
+    transactions: any[];
+    paymentMethods: any[];
+  }>> {
+    return this.request<{ 
+      wallet: { 
+        balance: number; 
+        pendingBalance: number; 
+        totalDeposited: number;
+        totalWithdrawn: number;
+      }; 
+      transactions: any[];
+      paymentMethods: any[];
+    }>('/wallet');
   }
 
   async getWalletBalance(): Promise<ApiResponse<{ balance: number }>> {
