@@ -19,7 +19,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { registerUser, isAuthenticated, saveTokens, saveUserData } from '../services/auth';
+import { registerUser, isAuthenticated, saveTokens, saveUserData } from '../../services/auth';
 
 const COLORS = {
   primary: '#00FF88',          // Neon Green - Smart Ride brand

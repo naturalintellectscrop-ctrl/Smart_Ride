@@ -20,7 +20,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
-import { loginWithEmail, isAuthenticated, saveTokens, saveUserData } from '../services/auth';
+import { loginWithEmail, isAuthenticated, saveTokens, saveUserData } from '../../services/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
