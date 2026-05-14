@@ -116,25 +116,35 @@ export default function DriverHomeScreen() {
       if (response.success && response.data) {
         // VALIDATE: Ensure we have required fields
         const riderData = response.data;
-        setRider({
+        const normalizedRider: Rider = {
           id: riderData.id || 'guest',
-          fullName: riderData.fullName || riderData.name || user?.name || 'Driver',
+          userId: riderData.userId || '',
+          fullName: riderData.fullName || user?.name || 'Driver',
           phone: riderData.phone || user?.phone || '',
+          email: riderData.email,
+          riderRole: riderData.riderRole || 'SMART_BODA_RIDER',
+          status: riderData.status || 'APPROVED',
           isOnline: typeof riderData.isOnline === 'boolean' ? riderData.isOnline : false,
+          currentLatitude: riderData.currentLatitude,
+          currentLongitude: riderData.currentLongitude,
           rating: typeof riderData.rating === 'number' ? riderData.rating : 5.0,
           totalTrips: riderData.totalTrips || 0,
           completedTrips: riderData.completedTrips || 0,
           walletBalance: riderData.walletBalance || 0,
-          ...riderData, // Keep any additional fields
-        } as Rider);
-        setIsOnline(typeof riderData.isOnline === 'boolean' ? riderData.isOnline : false);
+          vehicle: riderData.vehicle,
+        };
+        setRider(normalizedRider);
+        setIsOnline(normalizedRider.isOnline);
       } else {
         setProfileError(response.error || 'Failed to load profile');
         // Still allow driver to use app with default values
         setRider({
           id: 'guest',
+          userId: '',
           fullName: user?.name || 'Driver',
           phone: user?.phone || '',
+          riderRole: 'SMART_BODA_RIDER',
+          status: 'APPROVED',
           isOnline: false,
           rating: 5.0,
           totalTrips: 0,
@@ -148,8 +158,11 @@ export default function DriverHomeScreen() {
       // Set default rider so UI can still render
       setRider({
         id: 'guest',
+        userId: '',
         fullName: user?.name || 'Driver',
         phone: user?.phone || '',
+        riderRole: 'SMART_BODA_RIDER',
+        status: 'APPROVED',
         isOnline: false,
         rating: 5.0,
         totalTrips: 0,
@@ -309,8 +322,11 @@ export default function DriverHomeScreen() {
               setIsLoading(false);
               setRider({
                 id: 'guest',
+                userId: '',
                 fullName: user?.name || 'Driver',
                 phone: user?.phone || '',
+                riderRole: 'SMART_BODA_RIDER',
+                status: 'APPROVED',
                 isOnline: false,
                 rating: 5.0,
                 totalTrips: 0,

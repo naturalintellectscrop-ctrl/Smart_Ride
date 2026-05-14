@@ -1,10 +1,10 @@
 // ============================================
 // SMART RIDE MOBILE - API SERVICE
 // ============================================
-// Minimal API service for boot - no external dependencies
+// Complete API service with all endpoints
 // ============================================
 
-import { ApiResponse, Task, Order, Merchant, User } from '../types';
+import { ApiResponse, Task, Order, Merchant, User, Rider } from '../types';
 import { API_CONFIG, STORAGE_KEYS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -90,6 +90,35 @@ class ApiService {
     return response;
   }
 
+  async googleSignIn(idToken: string): Promise<ApiResponse<{ user: User; accessToken: string }>> {
+    const response = await this.request<{ user: User; accessToken: string }>('/auth/google', 'POST', {
+      idToken,
+    });
+    
+    if (response.success && response.data?.accessToken) {
+      await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
+    }
+    
+    return response;
+  }
+
+  async sendOtp(phone: string): Promise<ApiResponse<{ messageId: string }>> {
+    return this.request<{ messageId: string }>('/auth/send-otp', 'POST', { phone });
+  }
+
+  async verifyOtp(phone: string, otp: string): Promise<ApiResponse<{ user: User; accessToken: string }>> {
+    const response = await this.request<{ user: User; accessToken: string }>('/auth/verify-otp', 'POST', {
+      phone,
+      otp,
+    });
+    
+    if (response.success && response.data?.accessToken) {
+      await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
+    }
+    
+    return response;
+  }
+
   async logout(): Promise<ApiResponse<void>> {
     const response = await this.request<void>('/auth/logout', 'POST');
     await AsyncStorage.multiRemove([STORAGE_KEYS.authToken, STORAGE_KEYS.refreshToken]);
@@ -101,7 +130,32 @@ class ApiService {
   }
 
   // ==========================================
-  // TASKS
+  // RIDER / DRIVER PROFILE
+  // ==========================================
+
+  async getRiderProfile(): Promise<ApiResponse<Rider>> {
+    return this.request<Rider>('/riders/profile');
+  }
+
+  async updateRiderProfile(data: Partial<Rider>): Promise<ApiResponse<Rider>> {
+    return this.request<Rider>('/riders/profile', 'PUT', data);
+  }
+
+  async setRiderOnline(online: boolean): Promise<ApiResponse<Rider>> {
+    return this.request<Rider>('/riders/status', 'POST', { isOnline: online });
+  }
+
+  async sendHeartbeat(location: {
+    latitude: number;
+    longitude: number;
+    heading?: number | null;
+    speed?: number | null;
+  }): Promise<ApiResponse<void>> {
+    return this.request<void>('/riders/heartbeat', 'POST', location);
+  }
+
+  // ==========================================
+  // TASKS - CLIENT
   // ==========================================
 
   async requestRide(data: any): Promise<ApiResponse<Task>> {
@@ -122,6 +176,26 @@ class ApiService {
 
   async cancelTask(taskId: string, reason: string): Promise<ApiResponse<void>> {
     return this.request<void>(`/tasks/${taskId}/cancel`, 'POST', { reason });
+  }
+
+  // ==========================================
+  // TASKS - DRIVER
+  // ==========================================
+
+  async getAvailableTasks(): Promise<ApiResponse<Task[]>> {
+    return this.request<Task[]>('/tasks/available');
+  }
+
+  async acceptTask(taskId: string): Promise<ApiResponse<Task>> {
+    return this.request<Task>(`/tasks/${taskId}/accept`, 'POST');
+  }
+
+  async declineTask(taskId: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/tasks/${taskId}/decline`, 'POST');
+  }
+
+  async updateTaskStatus(taskId: string, status: string): Promise<ApiResponse<Task>> {
+    return this.request<Task>(`/tasks/${taskId}/status`, 'POST', { status });
   }
 
   // ==========================================
@@ -163,6 +237,26 @@ class ApiService {
 
   async searchPlaces(query: string): Promise<ApiResponse<any[]>> {
     return this.request<any[]>(`/mapbox/geocoding?query=${encodeURIComponent(query)}`);
+  }
+
+  async reverseGeocode(latitude: number, longitude: number): Promise<ApiResponse<any>> {
+    return this.request<any>(`/mapbox/reverse?lat=${latitude}&lng=${longitude}`);
+  }
+
+  // ==========================================
+  // WALLET
+  // ==========================================
+
+  async getWalletBalance(): Promise<ApiResponse<{ balance: number }>> {
+    return this.request<{ balance: number }>('/wallet/balance');
+  }
+
+  async getWalletTransactions(page: number = 1, limit: number = 20): Promise<ApiResponse<{ data: any[] }>> {
+    return this.request<{ data: any[] }>(`/wallet/transactions?page=${page}&limit=${limit}`);
+  }
+
+  async requestWithdrawal(amount: number, phone: string, provider: string): Promise<ApiResponse<any>> {
+    return this.request<any>('/wallet/withdraw', 'POST', { amount, phone, provider });
   }
 
   // ==========================================

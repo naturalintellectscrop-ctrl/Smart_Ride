@@ -10,7 +10,8 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
-  Linking
+  Linking,
+  Platform
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import MapView, { Marker, Polyline } from 'react-native-maps';

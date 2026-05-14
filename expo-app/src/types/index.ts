@@ -35,7 +35,8 @@ export type TaskStatus =
   | 'IN_TRANSIT' 
   | 'DELIVERED' 
   | 'COMPLETED' 
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'FAILED';
 
 export interface Task {
   id: string;
