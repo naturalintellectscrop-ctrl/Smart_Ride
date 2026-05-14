@@ -150,8 +150,10 @@ class ApiService {
     longitude: number;
     heading?: number | null;
     speed?: number | null;
+    task_id?: string;
+    battery_level?: number;
   }): Promise<ApiResponse<void>> {
-    return this.request<void>('/riders/heartbeat', 'POST', location);
+    return this.request<void>('/rider/heartbeat', 'POST', location);
   }
 
   // ==========================================
