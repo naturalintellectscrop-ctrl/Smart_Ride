@@ -4,16 +4,24 @@
 // ============================================
 
 import React, { useState, useEffect, useCallback, Component, ReactNode } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  TouchableOpacity,
   Switch,
   ActivityIndicator,
   Alert,
+  Platform
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import MapView, { Marker, MapViewProps } from 'react-native-maps';
+// Conditional import for web compatibility
+const MapView = Platform.OS === 'web'
+  ? require('@/src/mocks/react-native-maps').MapView
+  : require('react-native-maps').default;
+const { Marker } = Platform.OS === 'web'
+  ? require('@/src/mocks/react-native-maps')
+  : require('react-native-maps');
+type MapViewProps = any;
 import * as Location from 'expo-location';
 import Animated, {
   useSharedValue,
