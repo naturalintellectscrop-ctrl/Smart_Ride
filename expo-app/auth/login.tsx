@@ -1,8 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - LOGIN SCREEN
 // ============================================
-// Full authentication with email/password
-// Google Sign-In is optional (graceful fallback if not installed)
+// Google Sign-In is the PRIMARY authentication method
+// Email/password is secondary fallback
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -19,18 +19,9 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { loginWithEmail, isAuthenticated } from '../services/auth';
-
-// Safe Google Sign-In import with fallback
-let GoogleSignin: any = null;
-let statusCodes: any = {};
-try {
-  const GoogleSignInModule = require('@react-native-google-signin/google-signin');
-  GoogleSignin = GoogleSignInModule.GoogleSignin;
-  statusCodes = GoogleSignInModule.statusCodes;
-} catch (e) {
-  console.log('[LOGIN] Google Sign-In not available:', e);
-}
+import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { loginWithEmail, isAuthenticated, saveTokens, saveUserData } from '../services/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
   primary: '#00FF88',          // Neon Green - Smart Ride brand
@@ -47,18 +38,14 @@ const COLORS = {
   googleBlue: '#4285F4',
 };
 
-// Configure Google Sign-In if available
-if (GoogleSignin) {
-  try {
-    GoogleSignin.configure({
-      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '',
-      offlineAccess: true,
-      forceCodeForRefreshToken: true,
-    });
-  } catch (e) {
-    console.log('[LOGIN] Google Sign-In configuration failed:', e);
-  }
-}
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api';
+
+// Configure Google Sign-In
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com',
+  offlineAccess: true,
+  forceCodeForRefreshToken: true,
+});
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -82,7 +69,68 @@ export default function LoginScreen() {
     }
   };
 
-  const handleLogin = async () => {
+  // PRIMARY: Google Sign-In
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError(null);
+
+    try {
+      // Check if device has Google Play Services
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      
+      // Sign in
+      const userInfo = await GoogleSignin.signIn();
+      
+      if (userInfo.data?.idToken) {
+        // Send to backend for verification
+        const response = await fetch(`${API_BASE_URL}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: userInfo.data.idToken }),
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Save tokens and user data
+          if (result.data?.accessToken) {
+            await saveTokens(result.data.accessToken, result.data.refreshToken);
+            if (result.data.user) {
+              await saveUserData(result.data.user);
+            }
+          } else if (result.tokens?.accessToken) {
+            await saveTokens(result.tokens.accessToken, result.tokens.refreshToken);
+            if (result.user) {
+              await saveUserData(result.user);
+            }
+          }
+          
+          router.replace('/(tabs)');
+        } else {
+          setError(result.error || 'Google login failed. Please try again.');
+        }
+      } else {
+        setError('Failed to get Google ID token. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('Google Sign-In error:', err);
+      
+      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
+        // User cancelled - don't show error
+      } else if (err.code === statusCodes.IN_PROGRESS) {
+        setError('Sign in is already in progress');
+      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setError('Google Play Services not available. Please install or update.');
+      } else {
+        setError(err.message || 'Google Sign-In failed. Please try again.');
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  // SECONDARY: Email/Password Login
+  const handleEmailLogin = async () => {
     if (!email.trim()) {
       setError('Please enter your email');
       return;
@@ -114,52 +162,6 @@ export default function LoginScreen() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    if (!GoogleSignin) {
-      Alert.alert('Not Available', 'Google Sign-In is not configured. Please use email login.');
-      return;
-    }
-
-    setGoogleLoading(true);
-    setError(null);
-
-    try {
-      await GoogleSignin.hasPlayServices();
-      const userInfo = await GoogleSignin.signIn();
-      
-      if (userInfo.data?.idToken) {
-        const response = await fetch(`${process.env.EXPO_PUBLIC_API_BASE_URL}/auth/google`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken: userInfo.data.idToken }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          router.replace('/(tabs)');
-        } else {
-          setError(result.error || 'Google login failed');
-        }
-      } else {
-        setError('Failed to get Google ID token');
-      }
-    } catch (err: any) {
-      console.error('Google Sign-In error:', err);
-      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
-        // User cancelled
-      } else if (err.code === statusCodes.IN_PROGRESS) {
-        setError('Sign in is already in progress');
-      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        setError('Google Play Services not available');
-      } else {
-        setError('Google Sign-In failed. Please try again.');
-      }
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
   return (
     <KeyboardAvoidingView 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -181,13 +183,35 @@ export default function LoginScreen() {
           <Text style={styles.headerSubtitle}>Sign in to continue to Smart Ride</Text>
         </View>
 
-        {/* Form */}
         <View style={styles.formContainer}>
           {error && (
             <View style={styles.errorContainer}>
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
+
+          {/* PRIMARY: Google Sign-In Button */}
+          <TouchableOpacity 
+            style={styles.googlePrimaryButton}
+            onPress={handleGoogleSignIn}
+            disabled={isLoading || googleLoading}
+          >
+            {googleLoading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <>
+                <Text style={styles.googleLogo}>G</Text>
+                <Text style={styles.googlePrimaryButtonText}>Continue with Google</Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Divider */}
+          <View style={styles.dividerContainer}>
+            <View style={styles.divider} />
+            <Text style={styles.dividerText}>or sign in with email</Text>
+            <View style={styles.divider} />
+          </View>
 
           {/* Email Input */}
           <View style={styles.inputGroup}>
@@ -233,56 +257,17 @@ export default function LoginScreen() {
             <Text style={styles.forgotText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          {/* Login Button */}
+          {/* Email Login Button */}
           <TouchableOpacity 
             style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={handleLogin}
+            onPress={handleEmailLogin}
             disabled={isLoading || googleLoading}
           >
             {isLoading ? (
               <ActivityIndicator color={COLORS.background} />
             ) : (
-              <Text style={styles.loginButtonText}>Sign In</Text>
+              <Text style={styles.loginButtonText}>Sign In with Email</Text>
             )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Social Login */}
-        <View style={styles.socialContainer}>
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>Or continue with</Text>
-            <View style={styles.divider} />
-          </View>
-
-          {/* Google Sign-In Button - Only show if available */}
-          {GoogleSignin && (
-            <TouchableOpacity 
-              style={styles.googleButton}
-              onPress={handleGoogleSignIn}
-              disabled={isLoading || googleLoading}
-            >
-              {googleLoading ? (
-                <ActivityIndicator color={COLORS.text} />
-              ) : (
-                <>
-                  <View style={styles.googleIconContainer}>
-                    <Text style={styles.googleIcon}>G</Text>
-                  </View>
-                  <Text style={styles.googleButtonText}>Continue with Google</Text>
-                </>
-              )}
-            </TouchableOpacity>
-          )}
-
-          {/* Phone Login */}
-          <TouchableOpacity 
-            style={styles.phoneButton}
-            onPress={() => router.push('/auth/phone-login')}
-            disabled={isLoading || googleLoading}
-          >
-            <Text style={styles.phoneIcon}>📱</Text>
-            <Text style={styles.phoneButtonText}>Continue with Phone</Text>
           </TouchableOpacity>
         </View>
 
@@ -346,8 +331,8 @@ const styles = StyleSheet.create({
     marginTop: -20,
   },
   errorContainer: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: 'rgba(255, 71, 87, 0.1)',
+    borderColor: 'rgba(255, 71, 87, 0.3)',
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -357,6 +342,41 @@ const styles = StyleSheet.create({
   errorText: {
     color: COLORS.error,
     textAlign: 'center',
+  },
+  googlePrimaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.googleBlue,
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginTop: 24,
+  },
+  googleLogo: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 20,
+    marginRight: 12,
+  },
+  googlePrimaryButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    color: COLORS.textMuted,
+    marginHorizontal: 16,
+    fontSize: 14,
   },
   inputGroup: {
     marginTop: 16,
@@ -419,74 +439,6 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     fontSize: 18,
     fontWeight: '600',
-  },
-  socialContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.border,
-  },
-  dividerText: {
-    color: COLORS.textMuted,
-    marginHorizontal: 16,
-    fontSize: 14,
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 12,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    marginBottom: 12,
-  },
-  googleIconContainer: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: COLORS.googleBlue,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  googleIcon: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  googleButtonText: {
-    color: COLORS.text,
-    fontWeight: '600',
-    fontSize: 16,
-  },
-  phoneButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 12,
-    paddingVertical: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  phoneIcon: {
-    fontSize: 18,
-    marginRight: 12,
-  },
-  phoneButtonText: {
-    color: COLORS.text,
-    fontWeight: '600',
-    fontSize: 16,
   },
   signUpContainer: {
     flexDirection: 'row',
