@@ -70,3 +70,7 @@ dist/
 # Database files
 db/*.db
 *.db
+
+# Generated expo exports
+android-dist/
+dist/
