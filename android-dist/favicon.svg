@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00FF88;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#00FFF3;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <!-- Smart Ride Logo - Stylized Z/S shape (no background) -->
+  <g fill="url(#grad)">
+    <!-- Upper part -->
+    <path d="M6 6h16l-3 5H9z"/>
+    <!-- Middle diagonal -->
+    <path d="M22 6L6 26h16l3-5H12z"/>
+    <!-- Lower part -->
+    <path d="M6 21h13l-3 5H6z"/>
+  </g>
+</svg>
