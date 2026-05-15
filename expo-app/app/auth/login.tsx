@@ -19,7 +19,8 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
+import { statusCodes } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
 import { loginWithEmail, isAuthenticated, saveTokens, saveUserData } from '../../services/auth';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -39,13 +40,6 @@ const COLORS = {
 };
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api';
-
-// Configure Google Sign-In
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || '531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com',
-  offlineAccess: true,
-  forceCodeForRefreshToken: true,
-});
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -76,6 +70,9 @@ export default function LoginScreen() {
     setError(null);
 
     try {
+      // Ensure Google Sign-In is configured (safety measure)
+      configureGoogleSignIn();
+
       // Check if device has Google Play Services
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       
@@ -118,12 +115,14 @@ export default function LoginScreen() {
       
       if (err.code === statusCodes.SIGN_IN_CANCELLED) {
         // User cancelled - don't show error
+      } else if (err.message?.includes('DEVELOPER_ERROR') || err.code === 'DEVELOPER_ERROR') {
+        setError('Google Sign-In is not yet configured for this device. Please use email login instead.');
       } else if (err.code === statusCodes.IN_PROGRESS) {
         setError('Sign in is already in progress');
       } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        setError('Google Play Services not available. Please install or update.');
+        setError('Google Play Services not available. Please use email login instead.');
       } else {
-        setError(err.message || 'Google Sign-In failed. Please try again.');
+        setError('Google Sign-In is unavailable. Please use email login instead.');
       }
     } finally {
       setGoogleLoading(false);

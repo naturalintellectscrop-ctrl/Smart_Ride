@@ -12,13 +12,14 @@ import 'react-native-reanimated';
 // NativeWind global styles
 import './global.css';
 
-import React, { Component, ReactNode } from 'react';
+import React, { Component, ReactNode, useEffect } from 'react';
 import { View, Text, StyleSheet, LogBox } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { configureGoogleSignIn } from '../src/config/google';
 
 // Suppress known benign warnings in production
 LogBox.ignoreLogs([
@@ -94,6 +95,11 @@ const queryClient = createQueryClient();
 // ROOT LAYOUT - With Error Boundaries
 // ============================================
 export default function RootLayout() {
+  // Configure Google Sign-In once on app startup
+  useEffect(() => {
+    configureGoogleSignIn();
+  }, []);
+
   return (
     <ProviderErrorBoundary name="Root">
       <QueryClientProvider client={queryClient}>
