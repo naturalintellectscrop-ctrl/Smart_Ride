@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Smart Ride",
-    "slug": "smart-ride-mobile",
+    "slug": "smart-ride",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "../assets/icon.png",
@@ -31,9 +31,6 @@
     "extra": {
       "router": {
         "origin": false
-      },
-      "eas": {
-        "projectId": "96fc7339-6554-4017-a800-64119cbbf150"
       }
     }
   }
