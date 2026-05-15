@@ -123,8 +123,14 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Admin login error:', error);
+    // In development, include error details for debugging
+    const isDev = process.env.NODE_ENV === 'development';
     return NextResponse.json(
-      { success: false, error: 'Login failed. Please try again.' },
+      {
+        success: false,
+        error: 'Login failed. Please try again.',
+        ...(isDev ? { debug: error instanceof Error ? error.message : String(error) } : {}),
+      },
       { status: 500 }
     );
   }
