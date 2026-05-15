@@ -9,7 +9,7 @@ const { withNativeWind } = require('nativewind/metro');
 
 const config = getDefaultConfig(__dirname);
 
-// Ensure proper resolution of TypeScript paths
-config.resolver.sourceExts = ['tsx', 'ts', 'jsx', 'js', 'json'];
+// Don't override sourceExts - use Expo defaults
+// NativeWind handles CSS processing
 
 module.exports = withNativeWind(config, { input: './global.css' });

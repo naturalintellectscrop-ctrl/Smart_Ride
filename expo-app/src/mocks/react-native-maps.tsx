@@ -36,9 +36,9 @@ export const Polyline = ({ coordinates, strokeColor, strokeWidth, ...props }: an
 export const Callout = ({ children, ...props }: any) => children || null;
 export const Circle = ({ ...props }: any) => null;
 export const Polygon = ({ ...props }: any) => null;
-export const Polyline as Line = Polyline;
+export { Polyline as Line };
 export const UrlTile = ({ ...props }: any) => null;
-export const Marker as Pin = Marker;
+export { Marker as Pin };
 export const Geojson = ({ ...props }: any) => null;
 export const Heatmap = ({ ...props }: any) => null;
 export const Overlay = ({ ...props }: any) => null;
