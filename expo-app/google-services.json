@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "531949209415-ja4espd5h0m6p74esft4iv541os5ertj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ug.smartride.app",
+            "certificate_hash": "d3f559f3c0091dad6914f06975d48c9c1f0504cf"
+          }
+        },
+        {
           "client_id": "531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com",
           "client_type": 3
         }
