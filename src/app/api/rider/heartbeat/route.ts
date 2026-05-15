@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-utils';
 
 // Heartbeat configuration
 const HEARTBEAT_CONFIG = {
@@ -8,28 +9,6 @@ const HEARTBEAT_CONFIG = {
   DISCONNECT_THRESHOLD: 60,    // Mark DISCONNECTED after 60 seconds
   LONG_DISCONNECT_THRESHOLD: 120, // Escalate after 120 seconds
 };
-
-// Rate limiting - simple in-memory rate limiter
-const rateLimiter = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 10; // Max 10 heartbeats per minute per rider
-
-function checkRateLimit(riderId: string): boolean {
-  const now = Date.now();
-  const entry = rateLimiter.get(riderId);
-  
-  if (!entry || now > entry.resetAt) {
-    rateLimiter.set(riderId, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return true;
-  }
-  
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return false;
-  }
-  
-  entry.count++;
-  return true;
-}
 
 // Task states that require heartbeat monitoring
 const HEARTBEAT_ACTIVE_STATES = [
@@ -42,12 +21,32 @@ const HEARTBEAT_ACTIVE_STATES = [
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    // Verify authentication - get user from token
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult; // Return error response
+    }
     
-    // Validate required fields
+    const userId = authResult.userId;
+    
+    // Get rider profile for this user
+    const rider = await db.rider.findFirst({
+      where: { userId },
+      include: { vehicle: true },
+    });
+
+    if (!rider) {
+      return NextResponse.json(
+        { error: 'Rider profile not found. Please register as a driver first.' },
+        { status: 404 }
+      );
+    }
+
+    const riderId = rider.id;
+    
+    // Parse request body
+    const body = await request.json();
     const {
-      rider_id,
-      task_id,
       latitude,
       longitude,
       speed,
@@ -56,35 +55,13 @@ export async function POST(request: NextRequest) {
       accuracy,
       is_charging,
       network_type,
+      task_id,
     } = body;
 
-    if (!rider_id || latitude === undefined || longitude === undefined) {
+    if (latitude === undefined || longitude === undefined) {
       return NextResponse.json(
-        { error: 'Missing required fields: rider_id, latitude, longitude' },
+        { error: 'Missing required fields: latitude, longitude' },
         { status: 400 }
-      );
-    }
-
-    // Rate limiting check
-    if (!checkRateLimit(rider_id)) {
-      return NextResponse.json(
-        { error: 'Rate limit exceeded. Too many heartbeat requests.' },
-        { status: 429 }
-      );
-    }
-
-    // Verify rider exists
-    const rider = await db.rider.findUnique({
-      where: { id: rider_id },
-      include: {
-        vehicle: true,
-      },
-    });
-
-    if (!rider) {
-      return NextResponse.json(
-        { error: 'Rider not found' },
-        { status: 404 }
       );
     }
 
@@ -95,7 +72,7 @@ export async function POST(request: NextRequest) {
     const result = await db.$transaction(async (tx) => {
       // Update rider's last known location and heartbeat
       const updatedRider = await tx.rider.update({
-        where: { id: rider_id },
+        where: { id: riderId },
         data: {
           lastHeartbeatAt: now,
           connectionStatus: connectionStatus as any,
@@ -134,7 +111,7 @@ export async function POST(request: NextRequest) {
       // Create heartbeat log entry
       const heartbeatLog = await tx.heartbeatLog.create({
         data: {
-          riderId: rider_id,
+          riderId: riderId,
           taskId: task_id || null,
           latitude: latitude,
           longitude: longitude,
@@ -154,9 +131,6 @@ export async function POST(request: NextRequest) {
 
       return { rider: updatedRider, task: updatedTask, heartbeatLog };
     });
-
-    // Broadcast location update via WebSocket (will be handled by monitoring service)
-    // This endpoint returns the data that the monitoring service will stream
 
     return NextResponse.json({
       success: true,
@@ -185,19 +159,17 @@ export async function POST(request: NextRequest) {
 // GET endpoint to check rider connection status
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const riderId = searchParams.get('rider_id');
-    const taskId = searchParams.get('task_id');
-
-    if (!riderId) {
-      return NextResponse.json(
-        { error: 'Missing rider_id parameter' },
-        { status: 400 }
-      );
+    // Verify authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
-
-    const rider = await db.rider.findUnique({
-      where: { id: riderId },
+    
+    const userId = authResult.userId;
+    
+    // Get rider profile
+    const rider = await db.rider.findFirst({
+      where: { userId },
       select: {
         id: true,
         connectionStatus: true,
@@ -231,12 +203,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const { searchParams } = new URL(request.url);
+    const taskId = searchParams.get('task_id');
+
     // Get recent heartbeat logs if task_id provided
     let recentLogs = null;
     if (taskId) {
       recentLogs = await db.heartbeatLog.findMany({
         where: {
-          riderId: riderId,
+          riderId: rider.id,
           taskId: taskId,
         },
         orderBy: {

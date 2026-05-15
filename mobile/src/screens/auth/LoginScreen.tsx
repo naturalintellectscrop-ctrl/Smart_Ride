@@ -2,6 +2,7 @@
  * Smart Ride - Login Screen
  *
  * Handles email/password and Google Sign-In authentication.
+ * Dark theme with Smart Ride branding.
  */
 
 import React, { useState } from 'react';
@@ -65,6 +66,9 @@ export function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Logo */}
         <View style={styles.logoContainer}>
+          <View style={styles.logoIcon}>
+            <Text style={styles.logoIconText}>SR</Text>
+          </View>
           <Text style={styles.logoText}>Smart Ride</Text>
           <Text style={styles.tagline}>Your journey, our priority</Text>
         </View>
@@ -77,7 +81,7 @@ export function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="Email"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#6B7280"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
@@ -88,7 +92,7 @@ export function LoginScreen() {
           <TextInput
             style={styles.input}
             placeholder="Password"
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor="#6B7280"
             value={password}
             onChangeText={setPassword}
             secureTextEntry
@@ -107,7 +111,7 @@ export function LoginScreen() {
             disabled={isLoading}
           >
             {isLoading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color="#0D0D12" />
             ) : (
               <Text style={styles.loginButtonText}>Sign In</Text>
             )}
@@ -146,7 +150,7 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#0D0D12',
   },
   scrollContent: {
     flexGrow: 1,
@@ -157,10 +161,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 48,
   },
+  logoIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    backgroundColor: '#00FF88',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  logoIconText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#0D0D12',
+  },
   logoText: {
     fontSize: 32,
     fontWeight: '700',
-    color: '#1F4E79',
+    color: '#FFFFFF',
   },
   tagline: {
     fontSize: 14,
@@ -173,7 +191,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#FFFFFF',
     marginBottom: 8,
   },
   subtitle: {
@@ -182,33 +200,34 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   input: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#1A1A24',
+    borderRadius: 16,
+    padding: 18,
     fontSize: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#2D2D3A',
+    color: '#FFFFFF',
   },
   forgotPassword: {
     alignSelf: 'flex-end',
     marginBottom: 24,
   },
   forgotPasswordText: {
-    color: '#1F4E79',
+    color: '#00FF88',
     fontSize: 14,
   },
   loginButton: {
-    backgroundColor: '#1F4E79',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#00FF88',
+    borderRadius: 16,
+    padding: 18,
     alignItems: 'center',
     marginBottom: 24,
   },
   loginButtonText: {
-    color: '#FFFFFF',
+    color: '#0D0D12',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   divider: {
     flexDirection: 'row',
@@ -218,10 +237,10 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: '#2D2D3A',
   },
   dividerText: {
-    color: '#9CA3AF',
+    color: '#6B7280',
     fontSize: 14,
     marginHorizontal: 16,
   },
@@ -229,11 +248,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#1A1A24',
+    borderRadius: 16,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#2D2D3A',
     marginBottom: 24,
   },
   googleIcon: {
@@ -244,7 +263,7 @@ const styles = StyleSheet.create({
   },
   googleButtonText: {
     fontSize: 16,
-    color: '#1F2937',
+    color: '#FFFFFF',
   },
   signUpContainer: {
     flexDirection: 'row',
@@ -255,7 +274,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   signUpLink: {
-    color: '#1F4E79',
+    color: '#00FF88',
     fontSize: 14,
     fontWeight: '600',
   },

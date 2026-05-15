@@ -1,0 +1,327 @@
+/* ==========================================
+   Smart Ride - Authentication Animations
+   Premium futuristic animated backgrounds
+   ========================================== */
+
+/* ==========================================
+   Keyframe Animations
+   ========================================== */
+
+/* Fade Up - Entrance animation */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade In - Simple opacity transition */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Glow - Pulsing neon glow effect */
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 
+      0 0 20px rgba(0, 255, 136, 0.3),
+      0 0 40px rgba(0, 255, 136, 0.1),
+      0 0 60px rgba(0, 255, 136, 0.05);
+  }
+  50% {
+    box-shadow: 
+      0 0 30px rgba(0, 255, 136, 0.4),
+      0 0 60px rgba(0, 255, 136, 0.2),
+      0 0 90px rgba(0, 255, 136, 0.1);
+  }
+}
+
+/* Float - Gentle floating motion */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* Breathe - Subtle scaling pulse */
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.95;
+  }
+}
+
+/* Shimmer - Linear shimmer effect for buttons */
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Border Glow - Animated border glow */
+@keyframes borderGlow {
+  0%, 100% {
+    border-color: rgba(0, 255, 136, 0.3);
+  }
+  50% {
+    border-color: rgba(0, 255, 136, 0.6);
+  }
+}
+
+/* Rotate - Slow rotation for decorative elements */
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pulse Ring - Expanding ring effect */
+@keyframes pulseRing {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* ==========================================
+   Animation Utility Classes
+   ========================================== */
+
+.animate-fade-up {
+  animation: fadeUp 0.6s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.animate-glow {
+  animation: glow 3s ease-in-out infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 3s linear infinite;
+}
+
+.animate-border-glow {
+  animation: borderGlow 2s ease-in-out infinite;
+}
+
+.animate-rotate {
+  animation: rotate 20s linear infinite;
+}
+
+.animate-pulse-ring {
+  animation: pulseRing 2s ease-out infinite;
+}
+
+/* ==========================================
+   Staggered Animation Delays
+   ========================================== */
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+.delay-400 { animation-delay: 400ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-600 { animation-delay: 600ms; }
+.delay-700 { animation-delay: 700ms; }
+.delay-800 { animation-delay: 800ms; }
+.delay-900 { animation-delay: 900ms; }
+.delay-1000 { animation-delay: 1000ms; }
+
+/* ==========================================
+   Glassmorphism Card Styles
+   ========================================== */
+
+.glass-card {
+  background: rgba(26, 26, 31, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05),
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+.glass-card-hover:hover {
+  background: rgba(26, 26, 31, 0.8);
+  border-color: rgba(0, 255, 136, 0.2);
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(0, 255, 136, 0.1),
+    0 0 0 1px rgba(0, 255, 136, 0.1);
+}
+
+/* ==========================================
+   Neon Border Glow
+   ========================================== */
+
+.neon-border {
+  position: relative;
+}
+
+.neon-border::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(135deg, #00FF88, #00FFF3, #8B5CF6, #00FF88);
+  background-size: 300% 300%;
+  -webkit-mask: 
+    linear-gradient(#fff 0 0) content-box, 
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: shimmer 4s linear infinite;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ==========================================
+   Gradient Button Styles
+   ========================================== */
+
+.gradient-btn {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #00FF88, #00FFF3);
+  transition: all 0.3s ease;
+}
+
+.gradient-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  transform: translateX(-100%);
+  transition: transform 0.6s ease;
+}
+
+.gradient-btn:hover::before {
+  transform: translateX(100%);
+}
+
+.gradient-btn:hover {
+  box-shadow: 
+    0 20px 40px rgba(0, 255, 136, 0.3),
+    0 0 60px rgba(0, 255, 136, 0.2);
+  transform: translateY(-2px);
+}
+
+/* ==========================================
+   Input Focus Styles
+   ========================================== */
+
+.input-glow:focus {
+  border-color: rgba(0, 255, 136, 0.5);
+  box-shadow: 
+    0 0 0 3px rgba(0, 255, 136, 0.1),
+    0 0 20px rgba(0, 255, 136, 0.1);
+  outline: none;
+}
+
+/* ==========================================
+   Logo Floating Animation
+   ========================================== */
+
+.logo-container {
+  position: relative;
+}
+
+.logo-container::after {
+  content: '';
+  position: absolute;
+  inset: -10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 255, 136, 0.2), transparent 70%);
+  animation: breathe 4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* ==========================================
+   Responsive Optimizations
+   ========================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .glass-card {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+  
+  .neon-border::before {
+    opacity: 0.3;
+  }
+}
+
+/* ==========================================
+   Performance Hints
+   ========================================== */
+
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+}
+
+/* Prevent layout thrashing */
+.contain-strict {
+  contain: strict;
+}
+
+.contain-layout {
+  contain: layout;
+}

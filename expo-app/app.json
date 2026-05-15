@@ -1,12 +1,57 @@
 {
   "expo": {
-    "extra": {
-      "eas": {
-        "projectId": "18dfe55b-9c47-482d-bd88-f8ad2d6861ce"
+    "name": "Smart Ride",
+    "slug": "smart-ride",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "../assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "../assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#00FF88"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ug.smartride.app",
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["com.googleusercontent.apps.531949209415-h0ri57i233r1l767tnc4i26brdt3asb3"]
+          }
+        ]
       }
     },
     "android": {
-      "package": "com.intellectssmartride.smartrideapp"
+      "adaptiveIcon": {
+        "foregroundImage": "../assets/adaptive-icon.png",
+        "backgroundColor": "#00FF88"
+      },
+      "package": "ug.smartride.app",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow Smart Ride to use your location to find nearby rides."
+        }
+      ],
+      "@react-native-google-signin/google-signin"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      }
     }
   }
 }

@@ -1,26 +1,31 @@
 /**
  * Smart Ride - React Native App Entry Point
  * 
- * This is the future native mobile app for Smart Ride.
- * Architecture: React Native + TypeScript + Zustand
+ * Production mobile app with Mapbox integration.
+ * Architecture: React Native + TypeScript + Zustand + Mapbox GL
  * 
- * MIGRATION GUIDE:
+ * SETUP:
  * 1. Set up React Native environment: https://reactnative.dev/docs/environment-setup
- * 2. Copy this folder to a new project
- * 3. Run: npm install
- * 4. For iOS: cd ios && pod install
- * 5. Run: npm run android or npm run ios
+ * 2. Run: npm install
+ * 3. For iOS: cd ios && pod install
+ * 4. Run: npm run android or npm run ios
+ * 
+ * MAPBOX SETUP:
+ * 1. Get your Mapbox access token from https://account.mapbox.com/access-tokens/
+ * 2. Update the MAPBOX_ACCESS_TOKEN in src/components/MapboxMap.tsx
+ * 3. For iOS: Add your token to ios/SmartRide/Info.plist
+ * 4. For Android: Add your token to android/app/src/main/AndroidManifest.xml
  */
 
 import React from 'react';
-import { StatusBar } from 'react-native';
+import { StatusBar, View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// Screens (to be implemented)
+// Screens
 import { HomeScreen } from './src/screens/HomeScreen';
 import { RideScreen } from './src/screens/RideScreen';
 import { FoodScreen } from './src/screens/FoodScreen';
@@ -29,9 +34,35 @@ import { ProfileScreen } from './src/screens/ProfileScreen';
 import { LoginScreen } from './src/screens/auth/LoginScreen';
 import { RegisterScreen } from './src/screens/auth/RegisterScreen';
 
+// Store
+import { useAuthStore } from './src/store';
+
 // Navigation types
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+
+// Tab bar icons with emoji fallback
+function TabIcon({ name, focused }: { name: string; focused: boolean }) {
+  const icons: Record<string, string> = {
+    home: '🏠',
+    ride: '🚗',
+    food: '🍔',
+    shopping: '🛒',
+    profile: '👤',
+  };
+
+  return (
+    <View style={styles.tabIconContainer}>
+      <Text style={[
+        styles.tabIconText,
+        focused && styles.tabIconTextActive
+      ]}>
+        {icons[name] || '•'}
+      </Text>
+      {focused && <View style={styles.tabIndicator} />}
+    </View>
+  );
+}
 
 // Bottom Tab Navigator
 function MainTabs() {
@@ -40,70 +71,68 @@ function MainTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: '#fff',
+          backgroundColor: '#1A1A24',
           borderTopWidth: 1,
-          borderTopColor: '#e5e7eb',
+          borderTopColor: '#2D2D3A',
           paddingBottom: 8,
           paddingTop: 8,
-          height: 60,
+          height: 65,
         },
-        tabBarActiveTintColor: '#1F4E79',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarActiveTintColor: '#00FF88',
+        tabBarInactiveTintColor: '#6B7280',
+        tabBarLabelStyle: {
+          fontSize: 11,
+          fontWeight: '600',
+        },
       }}
     >
       <Tab.Screen 
         name="Home" 
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ color }) => <TabIcon name="home" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="home" focused={focused} />,
         }}
       />
       <Tab.Screen 
         name="Ride" 
         component={RideScreen}
         options={{
-          tabBarIcon: ({ color }) => <TabIcon name="car" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="ride" focused={focused} />,
         }}
       />
       <Tab.Screen 
         name="Food" 
         component={FoodScreen}
         options={{
-          tabBarIcon: ({ color }) => <TabIcon name="food" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="food" focused={focused} />,
         }}
       />
       <Tab.Screen 
         name="Shopping" 
         component={ShoppingScreen}
         options={{
-          tabBarIcon: ({ color }) => <TabIcon name="cart" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="shopping" focused={focused} />,
         }}
       />
       <Tab.Screen 
         name="Profile" 
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color }) => <TabIcon name="user" color={color} />,
+          tabBarIcon: ({ focused }) => <TabIcon name="profile" focused={focused} />,
         }}
       />
     </Tab.Navigator>
   );
 }
 
-// Placeholder Tab Icon component
-function TabIcon({ name, color }: { name: string; color: string }) {
-  // TODO: Implement with react-native-vector-icons
-  return null;
-}
-
 // Main App Component
 export default function App() {
-  const isAuthenticated = false; // TODO: Connect to auth store
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={styles.container}>
       <SafeAreaProvider>
-        <StatusBar barStyle="dark-content" backgroundColor="#1F4E79" />
+        <StatusBar barStyle="light-content" backgroundColor="#0D0D12" />
         <NavigationContainer>
           <Stack.Navigator 
             screenOptions={{ headerShown: false }}
@@ -118,3 +147,29 @@ export default function App() {
     </GestureHandlerRootView>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0D0D12',
+  },
+  tabIconContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabIconText: {
+    fontSize: 22,
+    opacity: 0.6,
+  },
+  tabIconTextActive: {
+    opacity: 1,
+  },
+  tabIndicator: {
+    position: 'absolute',
+    bottom: -8,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#00FF88',
+  },
+});

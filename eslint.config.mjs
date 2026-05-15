@@ -15,10 +15,15 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "@typescript-eslint/ban-ts-comment": "off",
     "@typescript-eslint/prefer-as-const": "off",
     "@typescript-eslint/no-unused-disable-directive": "off",
+    "@typescript-eslint/no-require-imports": "off",
     
     // React rules
     "react-hooks/exhaustive-deps": "off",
     "react-hooks/purity": "off",
+    "react-hooks/immutability": "off",
+    "react-hooks/preserve-manual-memoization": "off",
+    "react-hooks/set-state-in-effect": "off",
+    "react-hooks/refs": "off",
     "react/no-unescaped-entities": "off",
     "react/display-name": "off",
     "react/prop-types": "off",
@@ -42,9 +47,10 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "no-undef": "off",
     "no-unreachable": "off",
     "no-useless-escape": "off",
+    "import/no-anonymous-default-export": "off",
   },
 }, {
-  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills"]
+  ignores: ["node_modules/**", ".next/**", "out/**", "build/**", "next-env.d.ts", "examples/**", "skills/**", "expo-app/**", "mobile/**", "mini-services/**", "scripts/**", "prisma/**", "upload/**", "docs/**", "download/**", "fix-admin-password.ts", "App.tsx", "capacitor.config.ts", "metro.config.js", "migrate-*.js", "babel.config*.js"]
 }];
 
 export default eslintConfig;

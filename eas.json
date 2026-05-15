@@ -1,26 +1,54 @@
 {
   "cli": {
-    "version": ">= 13.0.0",
+    "version": ">= 18.12.0",
     "appVersionSource": "remote"
   },
   "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "workingDir": "expo-app",
+      "env": {
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
+        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
+      }
+    },
     "preview": {
       "distribution": "internal",
+      "workingDir": "expo-app",
       "android": {
         "buildType": "apk"
       },
       "env": {
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
         "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
       }
     },
     "production": {
+      "autoIncrement": true,
       "distribution": "internal",
+      "workingDir": "expo-app",
       "android": {
         "buildType": "apk"
       },
       "env": {
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
+        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
+      }
+    },
+    "apk": {
+      "distribution": "internal",
+      "workingDir": "expo-app",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
         "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
       }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }

@@ -28,11 +28,37 @@ export function AdminProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AdminUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    checkSession();
-  }, []);
+  const logout = useCallback(() => {
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('admin_user');
+    setUser(null);
+    router.push('/admin/login');
+  }, [router]);
 
-  const checkSession = async () => {
+  const refreshSession = useCallback(async () => {
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Session refresh failed');
+      }
+
+      const data = await response.json();
+      localStorage.setItem('admin_token', data.accessToken);
+      localStorage.setItem('admin_user', JSON.stringify(data.user));
+      setUser(data.user);
+    } catch (error) {
+      console.error('Session refresh failed:', error);
+      logout();
+    }
+  }, [logout]);
+
+  const checkSession = useCallback(async () => {
     try {
       // Check for both possible token keys for backwards compatibility
       const token = localStorage.getItem('admin_token') || localStorage.getItem('accessToken');
@@ -61,37 +87,11 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [refreshSession]);
 
-  const refreshSession = async () => {
-    try {
-      const response = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (!response.ok) {
-        throw new Error('Session refresh failed');
-      }
-
-      const data = await response.json();
-      localStorage.setItem('admin_token', data.accessToken);
-      localStorage.setItem('admin_user', JSON.stringify(data.user));
-      setUser(data.user);
-    } catch (error) {
-      console.error('Session refresh failed:', error);
-      logout();
-    }
-  };
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('admin_token');
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('admin_user');
-    setUser(null);
-    router.push('/admin/login');
-  }, [router]);
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
 
   const checkPermission = useCallback((permission: AdminPermission): boolean => {
     if (!user) return false;
