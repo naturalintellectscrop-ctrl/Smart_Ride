@@ -79,3 +79,22 @@ Stage Summary:
 - User needs to: (1) set DATABASE_URL in Vercel project environment variables, (2) promote the deployment to production
 - The premium futuristic theme (#0D0D12 dark bg, #00FF88 neon green, glass cards, glow effects) is in the codebase - just needs a successful Vercel deploy
 - Admin login page at /admin/login with Smart Ride branding is included in build
+
+---
+Task ID: 3
+Agent: Google Sign-In Fix Agent
+Task: Fix Google Sign-In DEVELOPER_ERROR
+
+Work Log:
+- Created centralized Google Sign-In config module at src/config/google.ts with all OAuth client IDs (androidClientId, iosClientId, webClientId)
+- Updated app/_layout.tsx to call configureGoogleSignIn() in a useEffect on app startup
+- Updated app/auth/register.tsx: removed top-level GoogleSignin.configure(), switched to config module import, added configureGoogleSignIn() safety call in handleGoogleSignIn, added graceful error handling for DEVELOPER_ERROR
+- Updated app/auth/login.tsx: same changes as register.tsx - removed top-level configure, switched to config module, added graceful error handling guiding users to email login
+- Created .env.example with EXPO_PUBLIC_API_BASE_URL and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
+
+Stage Summary:
+- Root cause fixed: Missing androidClientId in GoogleSignin.configure() - now provides all platform-specific client IDs
+- Graceful degradation: DEVELOPER_ERROR now shows user-friendly message ("Please use email registration/login instead") instead of raw error
+- GoogleSignin.configure() moved from module-level in each screen to centralized config module, called once in _layout.tsx on app startup
+- Safety measure: configureGoogleSignIn() also called at the start of handleGoogleSignIn in both screens
+- All OAuth client IDs preserved from Firebase project (not changed)
