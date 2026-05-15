@@ -98,3 +98,31 @@ Stage Summary:
 - GoogleSignin.configure() moved from module-level in each screen to centralized config module, called once in _layout.tsx on app startup
 - Safety measure: configureGoogleSignIn() also called at the start of handleGoogleSignIn in both screens
 - All OAuth client IDs preserved from Firebase project (not changed)
+
+---
+Task ID: 4
+Agent: Main Agent
+Task: Switch database from expired Render PostgreSQL to free SQLite, verify google-services.json, test DB
+
+Work Log:
+- Read uploaded google-services (3).json - confirmed it's identical to existing expo-app/google-services.json
+- Found system env variable DATABASE_URL was overriding .env file with old Render PostgreSQL URL
+- Changed Prisma schema provider from "postgresql" to "sqlite"
+- Updated .env DATABASE_URL to "file:./smart-ride.db"
+- Simplified db.ts - removed Render-specific connection handling (datasourceUrl, connection limits)
+- Updated .env.example to show SQLite as default for development
+- Pushed schema with `bunx prisma db push` - created SQLite DB at prisma/smart-ride.db
+- Seeded admin users: admin@smartride.com (ADMIN) and naturalintellectscrop@gmail.com (SUPER_ADMIN)
+- Comprehensive DB connectivity test: all queries respond instantly (0ms cold start, unlike Render's 2s)
+- Tested admin login API: both logins return JWT tokens successfully
+- Committed and pushed to GitHub (08a4c09)
+
+Stage Summary:
+- Database: SQLite at prisma/smart-ride.db (FREE, local, zero-config, no cold starts)
+- Render PostgreSQL expired - no longer used
+- Admin credentials still work:
+  - admin@smartride.com / owner123 (ADMIN)
+  - naturalintellectscrop@gmail.com / Admin@123 (SUPER_ADMIN)
+- Google Sign-In config verified: google-services.json matches uploaded file, all OAuth IDs correct
+- google-services.json contains certificate_hash: 1aec66618cc98e58af951d55366d33be5c45ccf6 (for debug/EAS builds)
+- Key change: DATABASE_URL system env var was overriding .env - had to use `unset DATABASE_URL` for seed scripts
