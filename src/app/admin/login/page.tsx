@@ -14,7 +14,10 @@ import {
   EyeOff,
   AlertCircle,
   Shield,
-  Sparkles
+  Sparkles,
+  ArrowLeft,
+  CheckCircle2,
+  X,
 } from 'lucide-react';
 import { ADMIN_DASHBOARD_CONFIG } from '@/lib/config/admin-access';
 import { AnimatedAuthBackground } from '@/components/auth/AnimatedAuthBackground';
@@ -30,17 +33,6 @@ import '@/styles/auth-animations.css';
 // Accent gradient: linear-gradient(135deg, #00FF88 → #00FFF3)
 // ============================================
 
-/**
- * Admin Login Page
- * 
- * Futuristic animated authentication with premium glassmorphism UI.
- * Features floating particles, ambient gradients, and smooth animations.
- * 
- * Separate authentication for admin dashboard.
- * Only accessible at /admin/login or admin.smartride.com
- * 
- * This is NOT available in the mobile app.
- */
 export default function AdminLoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
@@ -48,6 +40,13 @@ export default function AdminLoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+
+  // Forgot Password State
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
+  const [forgotError, setForgotError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +60,6 @@ export default function AdminLoginPage() {
     setIsLoading(true);
 
     try {
-      // Call admin login API
       const response = await fetch('/api/admin/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -89,6 +87,45 @@ export default function AdminLoginPage() {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotError('');
+
+    if (!forgotEmail) {
+      setForgotError('Please enter your email address');
+      return;
+    }
+
+    setForgotLoading(true);
+
+    try {
+      const response = await fetch('/api/admin/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok && !data.success) {
+        throw new Error(data.error || 'Failed to send reset email');
+      }
+
+      setForgotSuccess(true);
+    } catch (err) {
+      setForgotError(err instanceof Error ? err.message : 'Failed to send reset email. Please try again.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const closeForgotPassword = () => {
+    setShowForgotPassword(false);
+    setForgotEmail('');
+    setForgotSuccess(false);
+    setForgotError('');
+  };
+
   return (
     <div className="min-h-screen relative overflow-hidden">
       {/* Animated Background */}
@@ -99,7 +136,6 @@ export default function AdminLoginPage() {
         <div className="w-full max-w-md">
           {/* Logo and Title */}
           <div className="text-center mb-8 animate-fade-up">
-            {/* Logo with breathing animation */}
             <div className="logo-container inline-block mb-6">
               <Link href="/" className="inline-block">
                 <div 
@@ -197,6 +233,10 @@ export default function AdminLoginPage() {
                 <div className="text-right animate-fade-up delay-500">
                   <button
                     type="button"
+                    onClick={() => {
+                      setForgotEmail(email);
+                      setShowForgotPassword(true);
+                    }}
                     className="text-sm text-[#00FF88] hover:text-[#00FFF3] transition-colors duration-200"
                   >
                     Forgot password?
@@ -255,6 +295,118 @@ export default function AdminLoginPage() {
           </p>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={closeForgotPassword}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative w-full max-w-md glass-card rounded-3xl p-8 neon-border animate-fade-up">
+            {/* Close Button */}
+            <button
+              onClick={closeForgotPassword}
+              className="absolute top-4 right-4 text-white/30 hover:text-white transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {forgotSuccess ? (
+              /* Success State */
+              <div className="text-center py-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 bg-[#00FF88]/20 rounded-full mb-6">
+                  <CheckCircle2 className="w-8 h-8 text-[#00FF88]" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Check Your Email</h3>
+                <p className="text-white/50 text-sm mb-4">
+                  If an admin account with that email exists, a password reset link has been sent.
+                </p>
+                <p className="text-white/30 text-xs mb-6">
+                  The link will expire in 1 hour.
+                </p>
+                <button
+                  onClick={closeForgotPassword}
+                  className="gradient-btn text-[#0D0D12] font-semibold rounded-xl px-8 py-3"
+                >
+                  Back to Login
+                </button>
+              </div>
+            ) : (
+              /* Forgot Password Form */
+              <>
+                <div className="text-center mb-6">
+                  <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-[#00FF88]/20 to-[#00FFF3]/20 rounded-xl mb-4">
+                    <Mail className="w-7 h-7 text-[#00FF88]" />
+                  </div>
+                  <h3 className="text-xl font-bold text-white">Forgot Password?</h3>
+                  <p className="text-white/50 text-sm mt-1">
+                    Enter your admin email to receive a reset link
+                  </p>
+                </div>
+
+                <form onSubmit={handleForgotPassword} className="space-y-5">
+                  {/* Error Alert */}
+                  {forgotError && (
+                    <div className="flex items-center gap-3 p-4 bg-[#F43F5E]/10 border border-[#F43F5E]/20 rounded-xl">
+                      <AlertCircle className="h-5 w-5 text-[#F43F5E] flex-shrink-0" />
+                      <p className="text-[#F43F5E] text-sm">{forgotError}</p>
+                    </div>
+                  )}
+
+                  {/* Email Field */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-white/70">Admin Email</label>
+                    <div className="relative group">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30 group-focus-within:text-[#00FF88] transition-colors" />
+                      <Input
+                        type="email"
+                        placeholder="admin@smartride.com"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        className="pl-12 h-12 bg-[#252530]/80 border-white/10 text-white placeholder:text-white/30 rounded-xl input-glow transition-all duration-300"
+                        disabled={forgotLoading}
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    className="w-full h-12 gradient-btn text-[#0D0D12] font-semibold rounded-xl flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {forgotLoading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Send Reset Link'
+                    )}
+                  </button>
+
+                  {/* Back link */}
+                  <div className="text-center">
+                    <button
+                      type="button"
+                      onClick={closeForgotPassword}
+                      className="text-white/30 text-sm hover:text-[#00FF88] transition-colors inline-flex items-center gap-1"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Back to Login
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Decorative corner elements */}
       <div className="fixed top-8 left-8 w-32 h-32 border-l-2 border-t-2 border-[#00FF88]/20 rounded-tl-3xl pointer-events-none z-0" />
