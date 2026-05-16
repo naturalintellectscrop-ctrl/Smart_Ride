@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: false,
   // Exclude mobile-only directories from the Next.js build
   // These contain expo/react-native imports that would fail in browser context
-  serverExternalPackages: [],
+  serverExternalPackages: ['@prisma/client', 'bcryptjs'],
 };
 
 export default nextConfig;

@@ -9,7 +9,11 @@
     "web": "expo start --web",
     "dev": "next dev -p 3000",
     "build": "next build",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "db:push": "prisma db push",
+    "db:generate": "prisma generate",
+    "db:seed": "bun prisma/seed-admin.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.11.1",
