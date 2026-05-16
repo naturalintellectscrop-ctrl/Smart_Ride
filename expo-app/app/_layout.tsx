@@ -120,6 +120,8 @@ export default function RootLayout() {
                     <Stack.Screen name="auth/register" />
                     <Stack.Screen name="auth/phone-login" />
                     <Stack.Screen name="auth/verify-otp" />
+                    <Stack.Screen name="auth/forgot-password" />
+                    <Stack.Screen name="auth/reset-password" />
                     <Stack.Screen name="(tabs)" />
                   </Stack>
                 </ProviderErrorBoundary>

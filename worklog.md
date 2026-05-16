@@ -71,3 +71,79 @@ Stage Summary:
 - Forgot password: WORKING (generates token, would send email with RESEND_API_KEY)
 - Reset password: WORKING (validates token, updates password, invalidates sessions)
 - Database: Supabase PostgreSQL via pooler connection
+
+---
+Task ID: 5
+Agent: General-Purpose
+Task: Fix Vercel build issues
+
+Work Log:
+- Verified package.json has NO pg/pg-native/libpq references in dependencies or devDependencies ✅
+- Confirmed bun.lockb does NOT exist (Vercel uses `bun install` from package.json directly) ✅
+- Created .npmrc with `optional=false` to prevent native dependency builds (pg/pg-native/libpq) ✅
+- Added scripts to package.json: db:push, db:generate, db:seed, postinstall (prisma generate) ✅
+- Updated next.config.ts with serverExternalPackages: ['@prisma/client', 'bcryptjs'] ✅
+- Searched all config files for remaining pg/pg-native/libpq references:
+  - Found migrate-db-pg.js uses `require('pg')` but it's a standalone migration script, not part of the app build
+  - No references in package.json, next.config.ts, or prisma/schema.prisma ✅
+- Updated .env with proper environment variables:
+  - DATABASE_URL and DIRECT_URL with PostgreSQL placeholders (Supabase)
+  - RESEND_API_KEY
+  - JWT_SECRET (generated random 64-char hex)
+  - NEXT_PUBLIC_APP_URL=https://smartrideug.vercel.app
+  - EMAIL_FROM=onboarding@resend.dev
+- Verified prisma/schema.prisma has provider="postgresql" and directUrl=env("DIRECT_URL") ✅
+- Pushed commit 3ddc518 to origin/main
+
+Stage Summary:
+- .npmrc prevents optional native deps (pg-native/libpq) from being built
+- postinstall script ensures Prisma client is generated during Vercel build
+- serverExternalPackages ensures @prisma/client and bcryptjs work in serverless
+- .env updated locally (Vercel env vars need to be set in dashboard)
+- NOTE: .env is gitignored; DATABASE_URL/DIRECT_URL with real Supabase credentials must be set in Vercel dashboard
+
+---
+Task ID: 4
+Agent: General-Purpose
+Task: Add Resend email forgot-password functionality to mobile app
+
+Work Log:
+- Explored expo-app directory: app/ routes, src/services/, src/store/, src/config/, src/constants/
+- Confirmed NO existing forgot-password or reset-password screens in the mobile app
+- Read login screen (app/auth/login.tsx): glassmorphism style with neon green #00FF88, dark #0D0D12, cyan #00FFF3
+- Read register screen (app/auth/register.tsx) for additional UI reference
+- Read web admin API routes: /api/admin/forgot-password and /api/admin/reset-password
+- Read web admin reset-password page (src/app/admin/reset-password/page.tsx) for feature parity
+- Noted existing "Forgot Password?" button in login screen had no onPress handler
+
+Created files:
+1. app/auth/forgot-password.tsx - New forgot password screen
+   - Glassmorphism style matching login (animated background, logo float, glow pulse)
+   - Email input with validation
+   - Calls /api/admin/forgot-password endpoint via API_CONFIG.baseUrl
+   - Success state: "If an admin account with that email exists, a reset link has been sent."
+   - Back to login link
+   - Info banner explaining the reset flow
+
+2. app/auth/reset-password.tsx - New reset password screen
+   - Accepts token from URL params (useLocalSearchParams) for deep link support
+   - New password + confirm password fields with show/hide toggles
+   - Password strength indicator (progress bar + label: Weak/Fair/Good/Strong/Very Strong)
+   - Password requirements checklist matching web admin (8 chars, uppercase, lowercase, number, match)
+   - Calls /api/admin/reset-password endpoint
+   - Three states: form, success (auto-redirect to login in 3s), invalid token
+   - Invalid token state links to forgot-password to request new link
+
+Modified files:
+3. app/auth/login.tsx - Added router.push('/auth/forgot-password') to the existing "Forgot Password?" button
+4. src/services/api.ts - Added forgotPassword() and resetPassword() methods to ApiService class
+5. services/auth.ts - Added forgotPassword() and resetPassword() standalone functions
+6. app/_layout.tsx - Registered auth/forgot-password and auth/reset-password Stack.Screen routes
+
+Stage Summary:
+- Forgot password screen: COMPLETE with glassmorphism, email input, API call, success message
+- Reset password screen: COMPLETE with token validation, password strength, requirements checklist
+- Login screen: "Forgot Password?" link now navigates to /auth/forgot-password
+- API service: Both forgot-password and reset-password methods added
+- Router: Both new screens registered in Stack navigation
+- No dev server started, no build commands run

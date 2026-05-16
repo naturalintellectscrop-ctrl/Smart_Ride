@@ -123,13 +123,34 @@ export async function POST(request: NextRequest) {
     return response;
   } catch (error) {
     console.error('Admin login error:', error);
-    // In development, include error details for debugging
-    const isDev = process.env.NODE_ENV === 'development';
+    
+    // Provide specific error messages for common issues
+    let errorMessage = 'Login failed. Please try again.';
+    let debugInfo: string | undefined;
+    
+    if (error instanceof Error) {
+      debugInfo = error.message;
+      
+      // Database connection errors
+      if (error.message.includes('P1001') || error.message.includes('Can\'t reach database')) {
+        errorMessage = 'Database connection failed. Please check your DATABASE_URL environment variable.';
+      } else if (error.message.includes('P1003') || error.message.includes('does not exist')) {
+        errorMessage = 'Database tables not found. Please run database migrations first.';
+      } else if (error.message.includes('Prisma Client') || error.message.includes('prisma')) {
+        errorMessage = 'Database client not initialized. Please check your configuration.';
+      } else if (error.message.includes('DATABASE_URL must be a PostgreSQL')) {
+        errorMessage = 'Database URL is not configured correctly. Please set a PostgreSQL connection string.';
+      } else if (error.message.includes('JWT_SECRET')) {
+        errorMessage = 'Server configuration error. JWT_SECRET is not set.';
+      }
+    }
+    
     return NextResponse.json(
       {
         success: false,
-        error: 'Login failed. Please try again.',
-        ...(isDev ? { debug: error instanceof Error ? error.message : String(error) } : {}),
+        error: errorMessage,
+        // Always include debug in non-production for troubleshooting
+        ...(process.env.NODE_ENV !== 'production' ? { debug: debugInfo } : {}),
       },
       { status: 500 }
     );

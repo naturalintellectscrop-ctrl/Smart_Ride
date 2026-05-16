@@ -146,6 +146,18 @@ class ApiService {
   }
 
   // ==========================================
+  // PASSWORD RESET (Admin Forgot/Reset)
+  // ==========================================
+
+  async forgotPassword(email: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>('/admin/forgot-password', 'POST', { email });
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
+    return this.request<{ message: string }>('/admin/reset-password', 'POST', { token, newPassword });
+  }
+
+  // ==========================================
   // USER PROFILE
   // ==========================================
 

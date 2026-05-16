@@ -258,3 +258,39 @@ export async function isAuthenticated(): Promise<boolean> {
 export async function getCurrentUser(): Promise<User | null> {
   return getUserData();
 }
+
+// ============================================
+// PASSWORD RESET (Admin Forgot/Reset)
+// ============================================
+
+/**
+ * Request a password reset email
+ * Always returns success to prevent email enumeration
+ */
+export async function forgotPassword(email: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const response = await apiRequest<{ success: boolean; message?: string }>('/admin/forgot-password', 'POST', {
+      email: email.trim().toLowerCase(),
+    });
+    return response;
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    return { success: false, error: 'Network error. Please try again.' };
+  }
+}
+
+/**
+ * Reset password using token from email
+ */
+export async function resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
+  try {
+    const response = await apiRequest<{ success: boolean; message?: string }>('/admin/reset-password', 'POST', {
+      token,
+      newPassword,
+    });
+    return response;
+  } catch (error) {
+    console.error('Reset password error:', error);
+    throw error;
+  }
+}
