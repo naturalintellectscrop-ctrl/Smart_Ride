@@ -37,18 +37,49 @@ export async function GET() {
       provider: 'postgresql',
     };
   } catch (dbError) {
+    const dbUrl = process.env.DATABASE_URL || '';
     diagnostics.database = {
       status: 'error',
       error: dbError instanceof Error ? dbError.message : 'Unknown database error',
     };
     
-    // Check what DATABASE_URL looks like (don't expose the actual URL)
-    const dbUrl = process.env.DATABASE_URL || '';
+    // Diagnose the DATABASE_URL
     diagnostics.database.urlFormat = dbUrl.startsWith('postgresql://') || dbUrl.startsWith('postgres://')
       ? 'postgresql (correct)'
       : dbUrl.startsWith('file:')
         ? 'sqlite (incorrect - need postgresql)'
         : 'not set or invalid format';
+    
+    // Try to parse the URL and show diagnostic info (without exposing secrets)
+    try {
+      const parsed = new URL(dbUrl);
+      diagnostics.database.urlParsable = true;
+      diagnostics.database.urlUsername = parsed.username.substring(0, 15) + '...';
+      diagnostics.database.urlPasswordLength = (parsed.password || '').length;
+      diagnostics.database.urlHostname = parsed.hostname;
+      diagnostics.database.urlPort = parsed.port;
+      diagnostics.database.urlSearch = parsed.search.substring(0, 40);
+      // Check if password might have encoding issues
+      const decodedPassword = decodeURIComponent(parsed.password || '');
+      diagnostics.database.passwordHasSpecialChars = /[?$&#*]/.test(decodedPassword);
+    } catch (parseErr) {
+      diagnostics.database.urlParsable = false;
+      diagnostics.database.urlParseError = (parseErr as Error).message;
+      // Try manual extraction
+      const afterScheme = dbUrl.substring(dbUrl.indexOf('://') + 3);
+      const hostMatch = afterScheme.match(/@([a-zA-Z0-9][\w.-]*\.\w+)/);
+      if (hostMatch) {
+        const atPos = afterScheme.indexOf(hostMatch[0]);
+        const credentials = afterScheme.substring(0, atPos);
+        const colonIdx = credentials.indexOf(':');
+        if (colonIdx !== -1) {
+          const rawPass = credentials.substring(colonIdx + 1);
+          diagnostics.database.manualPasswordLength = rawPass.length;
+          diagnostics.database.manualPasswordHasSpecialChars = /[?$&#*]/.test(rawPass);
+          diagnostics.database.manualHostname = hostMatch[1];
+        }
+      }
+    }
   }
 
   // Test 2: Check for admin users
