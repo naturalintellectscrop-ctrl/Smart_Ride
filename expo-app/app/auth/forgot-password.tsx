@@ -22,7 +22,7 @@ import {
   Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { API_CONFIG } from '../../src/constants';
+import { forgotPassword } from '../../services/auth';
 
 const { height } = Dimensions.get('window');
 
@@ -131,21 +131,15 @@ export default function ForgotPasswordScreen() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_CONFIG.baseUrl}/admin/forgot-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-
-      const data = await response.json();
+      const result = await forgotPassword(email.trim().toLowerCase());
 
       // API always returns success to prevent email enumeration,
       // but we still check for actual errors
-      if (data.success) {
+      if (result.success) {
         setSuccess(true);
       } else {
         // Only show real errors, not enumeration-related ones
-        setError(data.error || 'Something went wrong. Please try again.');
+        setError(result.error || 'Something went wrong. Please try again.');
       }
     } catch (err: any) {
       setError('Network error. Please check your connection and try again.');

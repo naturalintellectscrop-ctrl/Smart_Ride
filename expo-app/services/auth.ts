@@ -284,13 +284,16 @@ export async function forgotPassword(email: string): Promise<{ success: boolean;
  */
 export async function resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const response = await apiRequest<{ success: boolean; message?: string }>('/admin/reset-password', 'POST', {
+    const response = await apiRequest<{ success: boolean; message?: string; error?: string }>('/admin/reset-password', 'POST', {
       token,
       newPassword,
     });
     return response;
   } catch (error) {
     console.error('Reset password error:', error);
-    throw error;
+    if (error instanceof Error) {
+      return { success: false, error: error.message };
+    }
+    return { success: false, error: 'Failed to reset password. Please try again.' };
   }
 }

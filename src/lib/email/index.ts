@@ -207,8 +207,12 @@ Need help? Contact our support team at support@smartride.ug
 
 /**
  * Generate password reset email template
+ * Includes both web and mobile app deep links
  */
 export function generatePasswordResetEmail(resetToken: string, resetUrl: string): EmailTemplate {
+  const webLink = `${resetUrl}?token=${resetToken}`;
+  const mobileLink = `smartride://auth/reset-password?token=${resetToken}`;
+  
   return {
     subject: 'Reset Your Smart Ride Password',
     html: `
@@ -220,7 +224,9 @@ export function generatePasswordResetEmail(resetToken: string, resetUrl: string)
             .container { max-width: 600px; margin: 0 auto; padding: 20px; }
             .header { text-align: center; padding: 20px 0; }
             .logo { font-size: 24px; font-weight: bold; color: #00FF88; }
-            .button { display: inline-block; padding: 12px 24px; background: #00FF88; color: #0D0D12; text-decoration: none; border-radius: 8px; font-weight: bold; }
+            .button { display: inline-block; padding: 12px 24px; background: #00FF88; color: #0D0D12; text-decoration: none; border-radius: 8px; font-weight: bold; margin: 8px; }
+            .button-secondary { display: inline-block; padding: 10px 20px; background: #1A1A24; color: #00FF88; text-decoration: none; border-radius: 8px; font-weight: 600; border: 1px solid #00FF88; margin: 8px; }
+            .divider { border: none; border-top: 1px solid #eee; margin: 20px 0; }
             .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
           </style>
         </head>
@@ -232,18 +238,27 @@ export function generatePasswordResetEmail(resetToken: string, resetUrl: string)
             <h1>Reset Your Password</h1>
             <p>We received a request to reset your password. Click the button below to create a new password:</p>
             
-            <p style="text-align: center; margin: 30px 0;">
-              <a href="${resetUrl}?token=${resetToken}" class="button">Reset Password</a>
+            <p style="text-align: center; margin: 20px 0;">
+              <a href="${webLink}" class="button">Reset Password (Web)</a>
             </p>
             
+            <hr class="divider">
+            
+            <p style="text-align: center; color: #666; font-size: 14px;">Using the mobile app?</p>
+            <p style="text-align: center; margin: 10px 0;">
+              <a href="${mobileLink}" class="button-secondary">Open in Smart Ride App</a>
+            </p>
+            
+            <hr class="divider">
+            
             <p>Or copy and paste this link into your browser:</p>
-            <p style="word-break: break-all; color: #666;">${resetUrl}?token=${resetToken}</p>
+            <p style="word-break: break-all; color: #666; font-size: 12px;">${webLink}</p>
             
             <p>This link will expire in 1 hour.</p>
             <p>If you didn't request this, please ignore this email.</p>
             
             <div class="footer">
-              <p>© ${new Date().getFullYear()} Smart Ride Uganda. All rights reserved.</p>
+              <p>&copy; ${new Date().getFullYear()} Smart Ride Uganda. All rights reserved.</p>
             </div>
           </div>
         </body>
@@ -254,7 +269,9 @@ Reset Your Smart Ride Password
 
 We received a request to reset your password.
 
-Click here to reset: ${resetUrl}?token=${resetToken}
+Reset via web: ${webLink}
+
+Reset via mobile app: ${mobileLink}
 
 This link will expire in 1 hour.
 

@@ -11,6 +11,7 @@
       "resizeMode": "contain",
       "backgroundColor": "#00FF88"
     },
+    "scheme": "smartride",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ug.smartride.app",
@@ -18,7 +19,10 @@
       "infoPlist": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["com.googleusercontent.apps.531949209415-h0ri57i233r1l767tnc4i26brdt3asb3"]
+            "CFBundleURLSchemes": [
+              "smartride",
+              "com.googleusercontent.apps.531949209415-h0ri57i233r1l767tnc4i26brdt3asb3"
+            ]
           }
         ]
       }
@@ -33,6 +37,20 @@
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "smartrideug.vercel.app",
+              "pathPrefix": "/reset-password"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
       ]
     },
     "plugins": [

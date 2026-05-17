@@ -23,7 +23,7 @@ import {
   Easing,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { API_CONFIG } from '../../src/constants';
+import { resetPassword } from '../../services/auth';
 
 const { height } = Dimensions.get('window');
 
@@ -164,25 +164,16 @@ export default function ResetPasswordScreen() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${API_CONFIG.baseUrl}/admin/reset-password`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          token, 
-          newPassword 
-        }),
-      });
+      const result = await resetPassword(token!, newPassword);
 
-      const data = await response.json();
-
-      if (data.success) {
+      if (result.success) {
         setSuccess(true);
         // Redirect to login after 3 seconds
         setTimeout(() => {
           router.replace('/auth/login');
         }, 3000);
       } else {
-        setError(data.error || 'Failed to reset password. Please try again.');
+        setError(result.error || 'Failed to reset password. Please try again.');
       }
     } catch (err: any) {
       setError('Network error. Please check your connection and try again.');
