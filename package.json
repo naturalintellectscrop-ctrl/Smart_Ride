@@ -107,5 +107,8 @@
     "tailwindcss": "^4",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "optionalDependencies": {
+    "lightningcss-linux-x64-gnu": "^1.32.0"
+  }
 }
