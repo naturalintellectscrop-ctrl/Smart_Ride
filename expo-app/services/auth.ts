@@ -269,7 +269,7 @@ export async function getCurrentUser(): Promise<User | null> {
  */
 export async function forgotPassword(email: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const response = await apiRequest<{ success: boolean; message?: string }>('/admin/forgot-password', 'POST', {
+    const response = await apiRequest<{ success: boolean; message?: string }>('/auth/forgot-password', 'POST', {
       email: email.trim().toLowerCase(),
     });
     return response;
@@ -284,7 +284,7 @@ export async function forgotPassword(email: string): Promise<{ success: boolean;
  */
 export async function resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
   try {
-    const response = await apiRequest<{ success: boolean; message?: string; error?: string }>('/admin/reset-password', 'POST', {
+    const response = await apiRequest<{ success: boolean; message?: string; error?: string }>('/auth/reset-password', 'POST', {
       token,
       newPassword,
     });

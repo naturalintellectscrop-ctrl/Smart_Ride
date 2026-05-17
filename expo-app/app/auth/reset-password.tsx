@@ -243,7 +243,7 @@ export default function ResetPasswordScreen() {
         </View>
         <Text style={styles.formTitle}>New Password</Text>
         <Text style={styles.formSubtitle}>
-          Create a strong password for your admin account
+          Create a strong password for your account
         </Text>
 
         {error && (
@@ -431,7 +431,7 @@ export default function ResetPasswordScreen() {
         {/* Security Notice */}
         <Animated.View style={[styles.securityNotice, { opacity: fadeAnim }]}>
           <Text style={styles.securityText}>
-            🔒 Secure reset • Smart Ride Admin
+            🔒 Secure reset • Smart Ride
           </Text>
         </Animated.View>
       </ScrollView>

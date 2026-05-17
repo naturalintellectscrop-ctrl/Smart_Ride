@@ -195,3 +195,84 @@ Stage Summary:
   5. User sets new password → calls /api/admin/reset-password → password updated
   6. Redirected to login screen
 - Expo build passes for both Android and iOS
+
+---
+Task ID: 8
+Agent: General-Purpose
+Task: Create auth forgot/reset password endpoints for ALL users
+
+Work Log:
+- Read worklog.md for context from previous agents
+- Read admin forgot-password and reset-password route.ts files as reference patterns
+- Read lib/auth/password.ts, lib/email/index.ts, lib/db.ts for utility imports
+- Created /src/app/api/auth/forgot-password/route.ts
+  - Accepts POST with { email }, validates with zod
+  - Finds user by email for ALL roles (no isAdminRole check)
+  - If user found with passwordHash, generates reset token stored in PasswordResetToken table
+  - Sends email via sendEmail + generatePasswordResetEmail
+  - Reset URL: ${NEXT_PUBLIC_APP_URL}/reset-password?token=TOKEN (not /admin/reset-password)
+  - Always returns success to prevent email enumeration
+  - Creates audit log with description "Password reset requested for user ..."
+  - In dev mode without RESEND_API_KEY, logs reset link and includes devToken
+- Created /src/app/api/auth/reset-password/route.ts
+  - Accepts POST with { token, newPassword }, validates with zod
+  - Validates password strength via validatePasswordStrength
+  - Finds reset token, checks expiry and usage
+  - Finds user by email from token for ALL roles (NO isAdminRole check)
+  - Hashes new password, updates user + invalidates sessions (refreshToken = null) in transaction
+  - Marks token as used
+  - Creates audit log with description "Password reset completed for user ..."
+  - Returns success message
+- Verified TypeScript compilation: no errors in new files
+
+Stage Summary:
+- Two new API endpoints created for general user password reset:
+  1. POST /api/auth/forgot-password - sends reset email (all user roles)
+  2. POST /api/auth/reset-password - resets password with token (all user roles)
+- Key differences from admin endpoints: no isAdminRole check, reset URL uses /reset-password (not /admin/reset-password), audit logs say "user" instead of "admin"
+- Same security patterns preserved: email enumeration prevention, zod validation, password strength check, session invalidation, audit logging
+- TypeScript compilation clean for both new files
+
+---
+Task ID: 2-b
+Agent: General-Purpose
+Task: Create user reset/forgot password web pages
+
+Work Log:
+- Read worklog.md for context from previous agents (Task 8 created API endpoints)
+- Read admin reset-password page and admin login page as design references
+- Created /src/app/forgot-password/page.tsx
+  - 'use client' component with Suspense wrapper + Loader2 spinner fallback
+  - Glassmorphism design matching admin pages (AnimatedAuthBackground, neon-border, glass-card)
+  - Email input with Mail icon, submit button with loading state
+  - Calls POST /api/auth/forgot-password with { email }
+  - Success state: "Check Your Email" message with link expiry notice
+  - Error display with AlertCircle icon
+  - "Back to Login" link pointing to / (home)
+  - Smart Ride branding (neon green #00FF88, dark #0D0D12)
+  - Decorative corner elements matching admin pages
+  - Footer: "Smart Ride" (not "Smart Ride Administration • Internal Use Only")
+- Created /src/app/reset-password/page.tsx
+  - 'use client' component with Suspense wrapper + Loader2 spinner fallback
+  - Uses useSearchParams() to get token query parameter
+  - Token validation on mount (shows error if no token)
+  - Glassmorphism design matching admin reset-password page exactly
+  - New password + confirm password inputs with show/hide toggles
+  - Password requirements checklist (8+ chars, uppercase, lowercase, number, passwords match)
+  - Calls POST /api/auth/reset-password with { token, newPassword }
+  - Success state: "Password Reset!" with redirect to / after 3 seconds
+  - Invalid token state with "Invalid Link" message
+  - "Back to Login" links pointing to / (home)
+  - Says "your account" instead of "admin account"
+  - Says "Smart Ride" instead of "Smart Ride Administration • Internal Use Only"
+- Removed unused Button import from both pages
+- Verified Next.js build: PASSES (both pages listed as static routes)
+- No TypeScript errors in new files (standalone tsc errors are pre-existing project config issues)
+
+Stage Summary:
+- Two new web pages created for general user password reset:
+  1. /forgot-password - Email entry page, calls /api/auth/forgot-password
+  2. /reset-password - Token-based password reset, calls /api/auth/reset-password
+- Both pages match the admin page glassmorphism design exactly
+- Key differences from admin pages: API calls to /api/auth/* instead of /api/admin/*, redirect to / instead of /admin/login, "your account" instead of "admin account", "Smart Ride" instead of "Smart Ride Administration • Internal Use Only"
+- Next.js build passes successfully

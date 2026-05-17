@@ -133,13 +133,15 @@ export async function POST(request: NextRequest) {
       
       // Database connection errors
       if (error.message.includes('P1001') || error.message.includes('Can\'t reach database')) {
-        errorMessage = 'Database connection failed. Please check your DATABASE_URL environment variable.';
+        errorMessage = 'Database connection failed. Please check your DATABASE_URL or set DB_HOST/DB_USER/DB_PASSWORD on Vercel.';
       } else if (error.message.includes('P1003') || error.message.includes('does not exist')) {
         errorMessage = 'Database tables not found. Please run database migrations first.';
+      } else if (error.message.includes('Authentication failed') || error.message.includes('credentials')) {
+        errorMessage = 'Database authentication failed. The DATABASE_URL password may have URL encoding issues. Try setting DB_HOST, DB_USER, DB_PASSWORD, DB_NAME as separate env vars on Vercel.';
       } else if (error.message.includes('Prisma Client') || error.message.includes('prisma')) {
         errorMessage = 'Database client not initialized. Please check your configuration.';
       } else if (error.message.includes('DATABASE_URL must be a PostgreSQL')) {
-        errorMessage = 'Database URL is not configured correctly. Please set a PostgreSQL connection string.';
+        errorMessage = 'Database URL is not configured correctly. Please set a PostgreSQL connection string or individual DB_HOST/DB_USER/DB_PASSWORD vars.';
       } else if (error.message.includes('JWT_SECRET')) {
         errorMessage = 'Server configuration error. JWT_SECRET is not set.';
       }

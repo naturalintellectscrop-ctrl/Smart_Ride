@@ -207,7 +207,7 @@ export default function ForgotPasswordScreen() {
               </View>
               <Text style={styles.successTitle}>Check Your Email</Text>
               <Text style={styles.successMessage}>
-                If an admin account with that email exists, a reset link has been sent.
+                If an account with that email exists, a reset link has been sent.
               </Text>
               <Text style={styles.successHint}>
                 Didn't receive the email? Check your spam folder.
