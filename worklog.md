@@ -170,3 +170,28 @@ Stage Summary:
 - Mobile app forgot/reset password: Already implemented in previous session
 - Vercel build: Fixed by switching from bun install to npm install, deleted bun.lock
 - All changes pushed to GitHub
+
+---
+Task ID: 7
+Agent: Main
+Task: Make mobile forgot-password work end-to-end, test Expo build
+
+Work Log:
+- Updated expo-app/app.json: added "scheme": "smartride" for deep linking, smartride:// URL scheme for iOS, Android intent filter for https://smartrideug.vercel.app/reset-password
+- Updated expo-app/app/auth/forgot-password.tsx: replaced raw fetch with forgotPassword() from services/auth.ts
+- Updated expo-app/app/auth/reset-password.tsx: replaced raw fetch with resetPassword() from services/auth.ts
+- Fixed services/auth.ts resetPassword(): returns errors gracefully instead of throwing
+- Updated src/lib/email/index.ts: password reset email now includes both "Reset Password (Web)" button and "Open in Smart Ride App" button with smartride:// deep link
+- Tested Expo build: Android ✅ (4.8MB), iOS ✅ (4.7MB), TypeScript ✅ (clean)
+- Tested forgot-password API with Resend: ✅ sends email with both web and mobile links
+- Committed and pushed f3f2c32
+
+Stage Summary:
+- Mobile forgot-password flow: COMPLETE end-to-end
+  1. User taps "Forgot Password?" → goes to /auth/forgot-password screen
+  2. Enters email → calls /api/admin/forgot-password → Resend sends email
+  3. Email has two buttons: "Reset Password (Web)" and "Open in Smart Ride App"
+  4. Mobile deep link: smartride://auth/reset-password?token=TOKEN opens app directly
+  5. User sets new password → calls /api/admin/reset-password → password updated
+  6. Redirected to login screen
+- Expo build passes for both Android and iOS
