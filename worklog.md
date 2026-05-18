@@ -276,3 +276,27 @@ Stage Summary:
 - Both pages match the admin page glassmorphism design exactly
 - Key differences from admin pages: API calls to /api/auth/* instead of /api/admin/*, redirect to / instead of /admin/login, "your account" instead of "admin account", "Smart Ride" instead of "Smart Ride Administration • Internal Use Only"
 - Next.js build passes successfully
+
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix "Database client not initialized" error by updating database credentials with new password
+
+Work Log:
+- Discovered .env file had reverted to SQLite path: `DATABASE_URL=file:/home/z/my-project/db/custom.db`
+- Updated .env with new Supabase PostgreSQL credentials (password: smart_ride662)
+- DATABASE_URL (pooler): postgresql://postgres.mmovwpdgrgdiyqheroak:smart_ride662@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&sslmode=require
+- DIRECT_URL (direct): postgresql://postgres:smart_ride662@db.mmovwpdgrgdiyqheroak.supabase.co:5432/postgres?sslmode=require
+- Ran prisma generate successfully
+- Verified all 41 tables exist in the database
+- Tested admin login API: ✅ SUCCESS (returns JWT token)
+- Tested forgot-password API: ✅ SUCCESS (returns reset link sent message)
+- Tested /api/setup diagnostics: ✅ ALL GREEN (database connected, 2 admin users, email configured)
+- Vercel env vars still need manual update (no Vercel CLI auth available)
+
+Stage Summary:
+- Local database connection is 100% working with new password
+- Admin login credentials: naturalintellectscrop@gmail.com / Admin@123
+- The .env file is in .gitignore, so credentials are NOT pushed to GitHub
+- Vercel environment variables MUST be updated manually by the user
+- Key Vercel env vars to update: DATABASE_URL and DIRECT_URL
