@@ -25,6 +25,7 @@ import * as Location from 'expo-location';
 import { useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
+import { Icon } from '@/components/Icon';
 import { Task, TaskStatus } from '@/src/types';
 
 const TASK_FLOW: Record<TaskStatus, TaskStatus | null> = {
@@ -271,9 +272,12 @@ export default function DriverTaskScreen() {
             className="px-3 py-1 rounded-full"
             style={{ backgroundColor: `${statusColor}20` }}
           >
-            <Text className="text-sm font-medium" style={{ color: statusColor }}>
-              {task.taskType.includes('BODA') ? '🏍️ Boda' : '🚗 Car'}
-            </Text>
+            <View className="flex-row items-center">
+              <Icon name={task.taskType.includes('BODA') ? 'navigation' : 'car'} size="sm" color={statusColor} />
+              <Text className="text-sm font-medium ml-1" style={{ color: statusColor }}>
+                {task.taskType.includes('BODA') ? 'Boda' : 'Car'}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -281,7 +285,7 @@ export default function DriverTaskScreen() {
         {task.client && (
           <View className="flex-row items-center bg-gray-50 rounded-xl p-4 mb-4">
             <View className="w-12 h-12 bg-gray-200 rounded-full items-center justify-center mr-3">
-              <Text className="text-xl">👤</Text>
+              <Icon name="user" size="lg" color="#6B7280" />
             </View>
             <View className="flex-1">
               <Text className="font-bold text-gray-900">{task.client.name}</Text>
@@ -291,7 +295,7 @@ export default function DriverTaskScreen() {
               className="w-10 h-10 bg-secondary-500 rounded-full items-center justify-center"
               onPress={handleCallClient}
             >
-              <Text>📞</Text>
+              <Icon name="phone" size="sm" color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         )}

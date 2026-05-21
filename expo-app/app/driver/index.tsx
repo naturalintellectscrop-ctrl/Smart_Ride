@@ -40,6 +40,7 @@ import Animated, {
 import { useAuthStore, useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS, DEFAULT_LOCATION } from '@/src/constants';
+import { Icon } from '@/components/Icon';
 import { Task, Rider } from '@/src/types';
 
 // Error Boundary for Map Component
@@ -62,8 +63,8 @@ class MapErrorBoundary extends Component<{ children: ReactNode; fallback: ReactN
 function SafeMapView(props: MapViewProps) {
   const fallback = (
     <View className="flex-1 bg-gray-100 items-center justify-center">
-      <Text className="text-4xl mb-2">🗺️</Text>
-      <Text className="text-gray-500">Map unavailable</Text>
+      <Icon name="map" size="2xl" color="#9CA3AF" />
+      <Text className="text-gray-500 mt-2">Map unavailable</Text>
       <Text className="text-gray-400 text-sm">Location: {props.initialRegion?.latitude?.toFixed(4)}, {props.initialRegion?.longitude?.toFixed(4)}</Text>
     </View>
   );
@@ -374,14 +375,14 @@ export default function DriverHomeScreen() {
           <View className="flex-row items-center">
             <Animated.View entering={ZoomIn.delay(200).duration(300)}>
               <View className="w-12 h-12 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <Text className="text-2xl">👤</Text>
+                <Icon name="user" size="lg" color="#6B7280" />
               </View>
             </Animated.View>
             <Animated.View entering={FadeInRight.delay(300).duration(300)}>
               <Text className="font-bold text-gray-900">{rider?.fullName || 'Driver'}</Text>
               <View className="flex-row items-center">
-                <Text className="text-yellow-500 mr-1">⭐</Text>
-                <Text className="text-gray-600">{rider?.rating?.toFixed(1) || '5.0'}</Text>
+                <Icon name="star" size="sm" color="#FBBF24" />
+                <Text className="text-gray-600 ml-1">{rider?.rating?.toFixed(1) || '5.0'}</Text>
               </View>
             </Animated.View>
           </View>
