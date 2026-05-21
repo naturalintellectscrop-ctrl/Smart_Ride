@@ -1,16 +1,19 @@
-/* eslint-disable react-hooks/immutability */
 // ============================================
 // SMART RIDE MOBILE - RIDES HISTORY SCREEN
 // ============================================
+// Premium rides history with vector icons
+// Matches admin dashboard design language
+// ============================================
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  TouchableOpacity, 
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
   ActivityIndicator,
-  RefreshControl
+  RefreshControl,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -25,13 +28,51 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTaskStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
 import { Task } from '@/src/types';
+import { Icon, IconName } from '../components/Icon';
+
+// Design system colors
+const COLORS = {
+  primary: '#00FF88',
+  primaryDark: '#00CC6A',
+  accent: '#00FFF3',
+  background: '#0D0D12',
+  backgroundElevated: '#1A1A24',
+  backgroundCard: '#15151F',
+  text: '#FFFFFF',
+  textSecondary: 'rgba(255, 255, 255, 0.7)',
+  textMuted: 'rgba(255, 255, 255, 0.5)',
+  border: 'rgba(255, 255, 255, 0.08)',
+  borderLight: 'rgba(255, 255, 255, 0.12)',
+  ride: '#00FF88',
+  car: '#3B82F6',
+  delivery: '#14B8A6',
+  warning: '#FBBF24',
+  error: '#F43F5E',
+};
+
+// Task status colors
+const TASK_STATUS_COLORS: Record<string, string> = {
+  PENDING: '#FBBF24',
+  ACCEPTED: '#3B82F6',
+  IN_PROGRESS: '#00FF88',
+  COMPLETED: '#22C55E',
+  CANCELLED: '#F43F5E',
+};
+
+// Task status labels
+const TASK_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pending',
+  ACCEPTED: 'Accepted',
+  IN_PROGRESS: 'In Progress',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+};
 
 export default function RidesScreen() {
   const router = useRouter();
   const { taskHistory, setTaskHistory } = useTaskStore();
-  
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,7 +85,7 @@ export default function RidesScreen() {
   const loadTasks = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
       const response = await api.getTaskHistory();
       if (response.success && response.data) {
@@ -76,11 +117,11 @@ export default function RidesScreen() {
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
         day: 'numeric',
         hour: 'numeric',
-        minute: '2-digit'
+        minute: '2-digit',
       });
     } catch {
       return 'Invalid date';
@@ -89,15 +130,15 @@ export default function RidesScreen() {
 
   const renderTask = ({ item, index }: { item: Task; index: number }) => {
     const statusColor = TASK_STATUS_COLORS[item.status] || COLORS.primary;
-    
+
     return (
       <Animated.View
         entering={SlideInRight.duration(400).delay(index * 80).springify()}
         layout={Layout.springify()}
       >
-        <TaskCard 
-          item={item} 
-          statusColor={statusColor} 
+        <TaskCard
+          item={item}
+          statusColor={statusColor}
           onPress={() => router.push(`/rider/ride-tracking?taskId=${item.id}`)}
         />
       </Animated.View>
@@ -107,24 +148,23 @@ export default function RidesScreen() {
   const renderContent = () => {
     if (isLoading && taskHistory.length === 0 && !error) {
       return (
-        <View className="flex-1 items-center justify-center py-12">
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text className="mt-4 text-gray-500">Loading rides...</Text>
+          <Text style={styles.loadingText}>Loading rides...</Text>
         </View>
       );
     }
 
     if (error && taskHistory.length === 0) {
       return (
-        <Animated.View 
-          entering={FadeIn.duration(400)}
-          className="flex-1 items-center justify-center py-12"
-        >
-          <Text className="text-4xl mb-4">📋</Text>
-          <Text className="text-gray-600 text-center mb-4">{error}</Text>
+        <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
+          <View style={[styles.emptyIconContainer, { backgroundColor: `${COLORS.warning}15` }]}>
+            <Icon name="clock" size="2xl" color={COLORS.warning} />
+          </View>
+          <Text style={styles.errorText}>{error}</Text>
           <AnimatedButton onPress={loadTasks}>
-            <View className="bg-primary-500 rounded-xl px-6 py-3">
-              <Text className="text-white font-semibold">Retry</Text>
+            <View style={styles.retryButton}>
+              <Text style={styles.retryButtonText}>Retry</Text>
             </View>
           </AnimatedButton>
         </Animated.View>
@@ -133,27 +173,31 @@ export default function RidesScreen() {
 
     return (
       <FlatList
-        className="flex-1 px-4 pt-4"
+        style={styles.list}
+        contentContainerStyle={styles.listContent}
         data={taskHistory}
         keyExtractor={(item) => item.id}
         renderItem={renderTask}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+            colors={[COLORS.primary]}
+          />
         }
         ListEmptyComponent={
-          <Animated.View 
-            entering={FadeIn.duration(400)}
-            className="items-center justify-center py-12"
-          >
-            <Text className="text-4xl mb-4">🚗</Text>
-            <Text className="text-gray-500 text-center">
-              {activeTab === 'active' 
-                ? 'No active rides' 
-                : 'No ride history yet'}
+          <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
+            <View style={[styles.emptyIconContainer, { backgroundColor: `${COLORS.ride}15` }]}>
+              <Icon name="car" size="2xl" color={COLORS.ride} />
+            </View>
+            <Text style={styles.emptyText}>
+              {activeTab === 'active' ? 'No active rides' : 'No ride history yet'}
             </Text>
             <AnimatedButton onPress={() => router.push('/rider/ride-request')}>
-              <View className="mt-4 bg-primary-500 rounded-xl px-6 py-3">
-                <Text className="text-white font-semibold">Book a Ride</Text>
+              <View style={styles.bookRideButton}>
+                <Icon name="plus" size="sm" color={COLORS.background} style={{ marginRight: 8 }} />
+                <Text style={styles.bookRideButtonText}>Book a Ride</Text>
               </View>
             </AnimatedButton>
           </Animated.View>
@@ -163,20 +207,14 @@ export default function RidesScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
-      <Animated.View 
-        entering={FadeInDown.duration(400).springify()}
-        className="bg-white pt-12 pb-4 px-4 border-b border-gray-100"
-      >
-        <Text className="text-2xl font-bold text-gray-900">My Rides</Text>
+      <Animated.View entering={FadeInDown.duration(400).springify()} style={styles.header}>
+        <Text style={styles.headerTitle}>My Rides</Text>
       </Animated.View>
 
       {/* Tabs */}
-      <Animated.View 
-        entering={FadeInUp.duration(400).delay(100).springify()}
-        className="flex-row bg-white px-4 py-2"
-      >
+      <Animated.View entering={FadeInUp.duration(400).delay(100).springify()} style={styles.tabsContainer}>
         <AnimatedTabButton
           isActive={activeTab === 'active'}
           onPress={() => setActiveTab('active')}
@@ -197,14 +235,14 @@ export default function RidesScreen() {
 }
 
 // Animated Tab Button
-function AnimatedTabButton({ 
-  isActive, 
-  onPress, 
-  label, 
-  style 
-}: { 
-  isActive: boolean; 
-  onPress: () => void; 
+function AnimatedTabButton({
+  isActive,
+  onPress,
+  label,
+  style,
+}: {
+  isActive: boolean;
+  onPress: () => void;
   label: string;
   style?: any;
 }) {
@@ -224,13 +262,21 @@ function AnimatedTabButton({
   }));
 
   return (
-    <TouchableOpacity 
-      className={`flex-1 py-3 rounded-xl ${isActive ? 'bg-primary-500' : 'bg-gray-100'}`}
+    <TouchableOpacity
+      style={[
+        styles.tabButton,
+        { backgroundColor: isActive ? COLORS.primary : COLORS.backgroundElevated },
+        style,
+      ]}
       onPress={handlePress}
-      style={style}
     >
       <Animated.View style={animatedStyle}>
-        <Text className={`text-center font-semibold ${isActive ? 'text-white' : 'text-gray-600'}`}>
+        <Text
+          style={[
+            styles.tabButtonText,
+            { color: isActive ? COLORS.background : COLORS.textSecondary },
+          ]}
+        >
           {label}
         </Text>
       </Animated.View>
@@ -239,50 +285,74 @@ function AnimatedTabButton({
 }
 
 // Animated Task Card
-function TaskCard({ item, statusColor, onPress }: { item: Task; statusColor: string; onPress: () => void }) {
+function TaskCard({
+  item,
+  statusColor,
+  onPress,
+}: {
+  item: Task;
+  statusColor: string;
+  onPress: () => void;
+}) {
+  const getTaskIcon = (): { icon: IconName; color: string } => {
+    if (item.taskType?.includes('BODA')) {
+      return { icon: 'bike', color: COLORS.ride };
+    }
+    if (item.taskType?.includes('CAR')) {
+      return { icon: 'car', color: COLORS.car };
+    }
+    return { icon: 'package', color: COLORS.delivery };
+  };
+
+  const taskIcon = getTaskIcon();
+
   return (
     <AnimatedButton onPress={onPress}>
-      <View className="bg-white rounded-2xl p-4 mb-3 shadow-sm">
-        <View className="flex-row justify-between items-start mb-3">
-          <View>
-            <Text className="text-gray-500 text-sm">#{item.taskNumber || item.id.slice(0, 8)}</Text>
-            <Text className="font-bold text-gray-900">
-              {item.taskType?.includes('BODA') ? '🏍️ Smart Boda' : 
-               item.taskType?.includes('CAR') ? '🚗 Smart Car' : '📦 Delivery'}
-            </Text>
+      <View style={[styles.taskCard, { borderColor: `${statusColor}20` }]}>
+        <View style={styles.taskCardHeader}>
+          <View style={styles.taskTypeContainer}>
+            <View style={[styles.taskIconContainer, { backgroundColor: `${taskIcon.color}15` }]}>
+              <Icon name={taskIcon.icon} size="lg" color={taskIcon.color} />
+            </View>
+            <View>
+              <Text style={styles.taskNumber}>#{item.taskNumber || item.id.slice(0, 8)}</Text>
+              <Text style={styles.taskType}>
+                {item.taskType?.includes('BODA')
+                  ? 'Smart Boda'
+                  : item.taskType?.includes('CAR')
+                  ? 'Smart Car'
+                  : 'Delivery'}
+              </Text>
+            </View>
           </View>
-          <Animated.View 
+          <Animated.View
             entering={FadeIn.duration(300)}
-            className="px-3 py-1 rounded-full"
-            style={{ backgroundColor: `${statusColor}20` }}
+            style={[styles.statusBadge, { backgroundColor: `${statusColor}15` }]}
           >
-            <Text 
-              className="text-xs font-medium"
-              style={{ color: statusColor }}
-            >
+            <Text style={[styles.statusText, { color: statusColor }]}>
               {TASK_STATUS_LABELS[item.status] || item.status}
             </Text>
           </Animated.View>
         </View>
 
-        <View className="flex-row items-start mb-2">
-          <View className="w-2 h-2 rounded-full bg-secondary-500 mt-1.5 mr-2" />
-          <Text className="text-gray-600 flex-1" numberOfLines={1}>
-            {item.pickupAddress || 'Pickup location'}
-          </Text>
-        </View>
-        <View className="flex-row items-start mb-3">
-          <View className="w-2 h-2 rounded-full bg-primary-500 mt-1.5 mr-2" />
-          <Text className="text-gray-600 flex-1" numberOfLines={1}>
-            {item.dropoffAddress || 'Dropoff location'}
-          </Text>
+        <View style={styles.taskLocations}>
+          <View style={styles.locationRow}>
+            <View style={[styles.locationDot, { backgroundColor: COLORS.accent }]} />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {item.pickupAddress || 'Pickup location'}
+            </Text>
+          </View>
+          <View style={styles.locationRow}>
+            <View style={[styles.locationDot, { backgroundColor: COLORS.primary }]} />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {item.dropoffAddress || 'Dropoff location'}
+            </Text>
+          </View>
         </View>
 
-        <View className="flex-row justify-between items-center pt-3 border-t border-gray-100">
-          <Text className="text-gray-500 text-sm">{formatDate(item.createdAt)}</Text>
-          <Text className="font-bold text-primary-500">
-            UGX {(item.totalAmount || 0).toLocaleString()}
-          </Text>
+        <View style={styles.taskFooter}>
+          <Text style={styles.taskDate}>{formatDate(item.createdAt)}</Text>
+          <Text style={styles.taskAmount}>UGX {(item.totalAmount || 0).toLocaleString()}</Text>
         </View>
       </View>
     </AnimatedButton>
@@ -290,12 +360,18 @@ function TaskCard({ item, statusColor, onPress }: { item: Task; statusColor: str
 }
 
 // Animated Button Component
-function AnimatedButton({ children, onPress }: { children: React.ReactNode; onPress: () => void }) {
+function AnimatedButton({
+  children,
+  onPress,
+}: {
+  children: React.ReactNode;
+  onPress: () => void;
+}) {
   const scale = useSharedValue(1);
 
   const handlePressIn = () => {
     'worklet';
-    scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 300 });
   };
 
   const handlePressOut = () => {
@@ -314,9 +390,191 @@ function AnimatedButton({ children, onPress }: { children: React.ReactNode; onPr
       onPressOut={handlePressOut}
       activeOpacity={0.95}
     >
-      <Animated.View style={animatedStyle}>
-        {children}
-      </Animated.View>
+      <Animated.View style={animatedStyle}>{children}</Animated.View>
     </TouchableOpacity>
   );
 }
+
+// Styles
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.backgroundElevated,
+    paddingTop: 48,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  tabsContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.backgroundElevated,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  tabButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: COLORS.textMuted,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  emptyIconContainer: {
+    width: 72,
+    height: 72,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  errorText: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+  },
+  retryButtonText: {
+    color: COLORS.background,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bookRideButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  bookRideButtonText: {
+    color: COLORS.background,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 20,
+  },
+  taskCard: {
+    backgroundColor: COLORS.backgroundCard,
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+  },
+  taskCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  taskTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  taskIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  taskNumber: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginBottom: 2,
+  },
+  taskType: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  taskLocations: {
+    marginBottom: 14,
+  },
+  locationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  locationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 10,
+  },
+  locationText: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  taskFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  taskDate: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+  taskAmount: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+});

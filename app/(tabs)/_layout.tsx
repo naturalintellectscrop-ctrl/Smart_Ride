@@ -1,17 +1,30 @@
-/* eslint-disable react-hooks/immutability */
 // ============================================
 // SMART RIDE MOBILE - TABS LAYOUT
+// ============================================
+// Premium tab bar with animated vector icons
+// Matches admin dashboard design language
 // ============================================
 
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { COLORS } from '@/src/constants';
+import { Icon, IconName } from '../components/Icon';
+
+// Design system colors
+const COLORS = {
+  primary: '#00FF88',
+  primaryDark: '#00CC6A',
+  background: '#0D0D12',
+  backgroundLight: '#FFFFFF',
+  border: 'rgba(255, 255, 255, 0.08)',
+  text: '#FFFFFF',
+  textMuted: 'rgba(255, 255, 255, 0.5)',
+};
 
 export default function TabsLayout() {
   return (
@@ -19,24 +32,26 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: true,
         headerStyle: {
-          backgroundColor: COLORS.white,
+          backgroundColor: COLORS.background,
         },
         headerTitleStyle: {
-          fontWeight: '600',
+          fontWeight: '700',
+          color: COLORS.text,
         },
+        headerTintColor: COLORS.primary,
         tabBarStyle: {
-          backgroundColor: COLORS.white,
+          backgroundColor: COLORS.background,
           borderTopWidth: 1,
           borderTopColor: COLORS.border,
           paddingTop: 8,
           paddingBottom: 8,
-          height: 60,
+          height: 64,
         },
         tabBarActiveTintColor: COLORS.primary,
         tabBarInactiveTintColor: COLORS.textMuted,
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
+          fontSize: 11,
+          fontWeight: '600',
         },
       }}
     >
@@ -45,7 +60,7 @@ export default function TabsLayout() {
         options={{
           title: 'Smart Ride',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="🏠" focused={focused} />
+            <AnimatedTabIcon icon="home" focused={focused} />
           ),
           tabBarLabel: 'Home',
         }}
@@ -55,7 +70,7 @@ export default function TabsLayout() {
         options={{
           title: 'My Rides',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="🚗" focused={focused} />
+            <AnimatedTabIcon icon="car" focused={focused} />
           ),
           tabBarLabel: 'Rides',
         }}
@@ -65,7 +80,7 @@ export default function TabsLayout() {
         options={{
           title: 'Orders',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="📦" focused={focused} />
+            <AnimatedTabIcon icon="package" focused={focused} />
           ),
           tabBarLabel: 'Orders',
         }}
@@ -75,7 +90,7 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="👤" focused={focused} />
+            <AnimatedTabIcon icon="user" focused={focused} />
           ),
           tabBarLabel: 'Profile',
         }}
@@ -85,13 +100,13 @@ export default function TabsLayout() {
 }
 
 // Animated Tab Icon with scale and bounce effect
-function AnimatedTabIcon({ icon, focused }: { icon: string; focused: boolean }) {
+function AnimatedTabIcon({ icon, focused }: { icon: IconName; focused: boolean }) {
   const scale = useSharedValue(1);
   const translateY = useSharedValue(0);
 
   React.useEffect(() => {
     if (focused) {
-      scale.value = withSpring(1.2, { damping: 12, stiffness: 200 });
+      scale.value = withSpring(1.15, { damping: 12, stiffness: 200 });
       translateY.value = withSpring(-4, { damping: 15, stiffness: 200 });
     } else {
       scale.value = withSpring(1, { damping: 15, stiffness: 200 });
@@ -108,7 +123,11 @@ function AnimatedTabIcon({ icon, focused }: { icon: string; focused: boolean }) 
 
   return (
     <Animated.View style={animatedStyle}>
-      <Text style={{ fontSize: 22 }}>{icon}</Text>
+      <Icon 
+        name={icon} 
+        size="lg" 
+        color={focused ? COLORS.primary : COLORS.textMuted} 
+      />
     </Animated.View>
   );
 }
