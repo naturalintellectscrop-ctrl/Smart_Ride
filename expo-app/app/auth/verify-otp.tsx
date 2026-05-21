@@ -25,6 +25,7 @@ import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { AnimatedBackground } from '../../components/AnimatedBackground';
 import { GlassCard } from '../../components/GlassCard';
+import { Icon } from '../../components/Icon';
 
 const COLORS = {
   primary: '#00FF88',
@@ -414,7 +415,7 @@ export default function VerifyOTPScreen() {
               {/* Error Display */}
               {error && (
                 <View style={styles.errorContainer}>
-                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Icon name="alert-circle" size="sm" color={COLORS.error} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               )}
@@ -468,7 +469,7 @@ export default function VerifyOTPScreen() {
                       <ActivityIndicator color={COLORS.primary} size="small" />
                     ) : (
                       <>
-                        <Text style={styles.resendIcon}>🔄</Text>
+                        <Icon name="refresh-cw" size="sm" color={COLORS.primary} />
                         <Text style={styles.resendButtonText}>Send New Code</Text>
                       </>
                     )}

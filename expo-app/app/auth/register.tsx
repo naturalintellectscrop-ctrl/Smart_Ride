@@ -26,6 +26,7 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 import { registerUser, isAuthenticated, saveTokens, saveUserData } from '../../services/auth';
 import { AnimatedBackground } from '../../components/AnimatedBackground';
 import { GlassCard } from '../../components/GlassCard';
+import { Icon } from '../../components/Icon';
 
 const COLORS = {
   primary: '#00FF88',          // Neon Green - Smart Ride brand
@@ -281,7 +282,7 @@ export default function RegisterScreen() {
               {/* Error Display */}
               {error && (
                 <View style={styles.errorContainer}>
-                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Icon name="alert-circle" size="sm" color={COLORS.error} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               )}
@@ -316,7 +317,7 @@ export default function RegisterScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Full Name</Text>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>👤</Text>
+                  <Icon name="user" size="md" color={COLORS.textMuted} />
                   <TextInput
                     style={styles.input}
                     placeholder="Enter your full name"
@@ -332,7 +333,7 @@ export default function RegisterScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Email</Text>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>📧</Text>
+                  <Icon name="mail" size="md" color={COLORS.textMuted} />
                   <TextInput
                     style={styles.input}
                     placeholder="you@example.com"
@@ -351,7 +352,7 @@ export default function RegisterScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Phone Number</Text>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>📱</Text>
+                  <Icon name="phone" size="md" color={COLORS.textMuted} />
                   <Text style={styles.phonePrefix}>+256</Text>
                   <TextInput
                     style={styles.phoneInput}
@@ -369,7 +370,7 @@ export default function RegisterScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Password</Text>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>🔒</Text>
+                  <Icon name="lock" size="md" color={COLORS.textMuted} />
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="Create a password"
@@ -384,7 +385,7 @@ export default function RegisterScreen() {
                     onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeButton}
                   >
-                    <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                    <Icon name={showPassword ? 'eye-off' : 'eye'} size="md" color={COLORS.textMuted} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -393,7 +394,7 @@ export default function RegisterScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Confirm Password</Text>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>🔒</Text>
+                  <Icon name="lock" size="md" color={COLORS.textMuted} />
                   <TextInput
                     style={styles.input}
                     placeholder="Confirm your password"
@@ -419,7 +420,7 @@ export default function RegisterScreen() {
                 ) : (
                   <>
                     <Text style={styles.registerButtonText}>Create Account</Text>
-                    <Text style={styles.registerButtonArrow}>→</Text>
+                    <Icon name="arrow-right" size="sm" color={COLORS.background} />
                   </>
                 )}
               </TouchableOpacity>
@@ -528,14 +529,11 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
   },
-  errorIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
   errorText: {
     flex: 1,
     color: COLORS.error,
     fontSize: 14,
+    marginLeft: 8,
   },
   googleButton: {
     flexDirection: 'row',
@@ -599,10 +597,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     paddingHorizontal: 14,
   },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: 10,
-  },
   input: {
     flex: 1,
     paddingVertical: 12,
@@ -627,9 +621,7 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     padding: 8,
-  },
-  eyeIcon: {
-    fontSize: 18,
+    marginLeft: 8,
   },
   registerButton: {
     flexDirection: 'row',
@@ -639,6 +631,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     marginTop: 8,
+    gap: 8,
   },
   registerButtonDisabled: {
     backgroundColor: COLORS.primaryDark,
@@ -647,11 +640,6 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     fontSize: 16,
     fontWeight: '600',
-  },
-  registerButtonArrow: {
-    color: COLORS.background,
-    fontSize: 18,
-    marginLeft: 8,
   },
   termsText: {
     textAlign: 'center',

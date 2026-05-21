@@ -27,6 +27,7 @@ import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-si
 import { loginWithEmail, isAuthenticated, saveTokens, saveUserData } from '../../services/auth';
 import { AnimatedBackground } from '../../components/AnimatedBackground';
 import { GlassCard } from '../../components/GlassCard';
+import { Icon } from '../../components/Icon';
 
 const { width } = Dimensions.get('window');
 
@@ -273,7 +274,7 @@ export default function LoginScreen() {
               {/* Error Display */}
               {error && (
                 <View style={styles.errorContainer}>
-                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Icon name="alert-circle" size="sm" color={COLORS.error} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               )}
@@ -308,7 +309,7 @@ export default function LoginScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Email</Text>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>📧</Text>
+                  <Icon name="mail" size="md" color={COLORS.textMuted} />
                   <TextInput
                     style={styles.input}
                     placeholder="you@example.com"
@@ -327,7 +328,7 @@ export default function LoginScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Password</Text>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.inputIcon}>🔒</Text>
+                  <Icon name="lock" size="md" color={COLORS.textMuted} />
                   <TextInput
                     style={styles.passwordInput}
                     placeholder="••••••••"
@@ -342,7 +343,7 @@ export default function LoginScreen() {
                     onPress={() => setShowPassword(!showPassword)}
                     style={styles.eyeButton}
                   >
-                    <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                    <Icon name={showPassword ? 'eye-off' : 'eye'} size="md" color={COLORS.textMuted} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -364,7 +365,7 @@ export default function LoginScreen() {
                 ) : (
                   <>
                     <Text style={styles.loginButtonText}>Sign In</Text>
-                    <Text style={styles.loginButtonArrow}>→</Text>
+                    <Icon name="arrow-right" size="sm" color={COLORS.background} />
                   </>
                 )}
               </TouchableOpacity>
@@ -473,14 +474,11 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
   },
-  errorIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
   errorText: {
     flex: 1,
     color: COLORS.error,
     fontSize: 14,
+    marginLeft: 8,
   },
   googleButton: {
     flexDirection: 'row',
@@ -544,10 +542,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     paddingHorizontal: 16,
   },
-  inputIcon: {
-    fontSize: 16,
-    marginRight: 12,
-  },
   input: {
     flex: 1,
     paddingVertical: 14,
@@ -562,9 +556,7 @@ const styles = StyleSheet.create({
   },
   eyeButton: {
     padding: 8,
-  },
-  eyeIcon: {
-    fontSize: 18,
+    marginLeft: 8,
   },
   forgotButton: {
     alignItems: 'flex-end',
@@ -583,6 +575,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 14,
     marginBottom: 20,
+    gap: 8,
   },
   loginButtonDisabled: {
     backgroundColor: COLORS.primaryDark,
@@ -591,11 +584,6 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     fontSize: 16,
     fontWeight: '600',
-  },
-  loginButtonArrow: {
-    color: COLORS.background,
-    fontSize: 18,
-    marginLeft: 8,
   },
   signUpContainer: {
     flexDirection: 'row',

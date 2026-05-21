@@ -25,6 +25,7 @@ import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { AnimatedBackground } from '../../components/AnimatedBackground';
 import { GlassCard } from '../../components/GlassCard';
+import { Icon } from '../../components/Icon';
 
 const COLORS = {
   primary: '#00FF88',          // Neon Green - Smart Ride brand
@@ -278,7 +279,7 @@ export default function PhoneLoginScreen() {
               {/* Error Display */}
               {error && (
                 <View style={styles.errorContainer}>
-                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Icon name="alert-circle" size="sm" color={COLORS.error} />
                   <Text style={styles.errorText}>{error}</Text>
                 </View>
               )}
@@ -287,7 +288,7 @@ export default function PhoneLoginScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Phone Number</Text>
                 <View style={styles.inputContainer}>
-                  <Text style={styles.countryFlag}>🇺🇬</Text>
+                  <Icon name="phone" size="md" color={COLORS.primary} />
                   <Text style={styles.countryCode}>+256</Text>
                   <TextInput
                     ref={inputRef}
@@ -324,7 +325,7 @@ export default function PhoneLoginScreen() {
                   ) : (
                     <>
                       <Text style={styles.sendButtonText}>Send Verification Code</Text>
-                      <Text style={styles.sendButtonArrow}>→</Text>
+                      <Icon name="arrow-right" size="sm" color={COLORS.background} />
                     </>
                   )}
                 </TouchableOpacity>
@@ -339,7 +340,7 @@ export default function PhoneLoginScreen() {
                   onPress={() => router.push('/auth/login')}
                   activeOpacity={0.8}
                 >
-                  <Text style={styles.alternativeButtonIcon}>📧</Text>
+                  <Icon name="mail" size="md" color={COLORS.text} />
                   <Text style={styles.alternativeButtonText}>Email</Text>
                 </TouchableOpacity>
               </View>

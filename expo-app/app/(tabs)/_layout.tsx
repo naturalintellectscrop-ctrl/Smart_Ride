@@ -1,17 +1,19 @@
 // ============================================
 // SMART RIDE MOBILE - TABS LAYOUT
 // ============================================
-// Dark Theme with Smart Ride Branding
+// Premium dark theme with vector icons
+// Matches admin dashboard tab styling
 // ============================================
 
 import React from 'react';
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+import { Icon, IconName } from '../../components/Icon';
 import { COLORS } from '@/src/constants';
 
 export default function TabsLayout() {
@@ -21,25 +23,32 @@ export default function TabsLayout() {
         headerShown: true,
         headerStyle: {
           backgroundColor: COLORS.background,
+          elevation: 0,
+          shadowOpacity: 0,
+          borderBottomWidth: 1,
+          borderBottomColor: 'rgba(255, 255, 255, 0.05)',
         },
         headerTintColor: COLORS.text,
         headerTitleStyle: {
           fontWeight: '600',
           color: COLORS.text,
+          fontSize: 18,
         },
         tabBarStyle: {
           backgroundColor: COLORS.backgroundElevated,
           borderTopWidth: 1,
-          borderTopColor: COLORS.border,
+          borderTopColor: 'rgba(255, 255, 255, 0.05)',
           paddingTop: 8,
           paddingBottom: 8,
-          height: 60,
+          height: 64,
+          elevation: 0,
         },
         tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarInactiveTintColor: 'rgba(255, 255, 255, 0.4)',
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: '500',
+          marginTop: 4,
         },
       }}
     >
@@ -48,7 +57,7 @@ export default function TabsLayout() {
         options={{
           title: 'Smart Ride',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="🏠" focused={focused} />
+            <AnimatedTabIcon icon="home" focused={focused} />
           ),
           tabBarLabel: 'Home',
         }}
@@ -58,7 +67,7 @@ export default function TabsLayout() {
         options={{
           title: 'My Rides',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="🚗" focused={focused} />
+            <AnimatedTabIcon icon="car" focused={focused} />
           ),
           tabBarLabel: 'Rides',
         }}
@@ -68,7 +77,7 @@ export default function TabsLayout() {
         options={{
           title: 'Orders',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="📦" focused={focused} />
+            <AnimatedTabIcon icon="package" focused={focused} />
           ),
           tabBarLabel: 'Orders',
         }}
@@ -78,7 +87,7 @@ export default function TabsLayout() {
         options={{
           title: 'Profile',
           tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="👤" focused={focused} />
+            <AnimatedTabIcon icon="user" focused={focused} />
           ),
           tabBarLabel: 'Profile',
         }}
@@ -87,18 +96,18 @@ export default function TabsLayout() {
   );
 }
 
-// Animated Tab Icon with scale and bounce effect
-function AnimatedTabIcon({ icon, focused }: { icon: string; focused: boolean }) {
+// Animated Tab Icon with smooth scale effect
+function AnimatedTabIcon({ icon, focused }: { icon: IconName; focused: boolean }) {
   const scale = useSharedValue(1);
   const translateY = useSharedValue(0);
 
   React.useEffect(() => {
     if (focused) {
-      scale.value = withSpring(1.2, { damping: 12, stiffness: 200 });
-      translateY.value = withSpring(-4, { damping: 15, stiffness: 200 });
+      scale.value = withSpring(1.1, { damping: 15, stiffness: 300 });
+      translateY.value = withSpring(-2, { damping: 15, stiffness: 300 });
     } else {
-      scale.value = withSpring(1, { damping: 15, stiffness: 200 });
-      translateY.value = withSpring(0, { damping: 15, stiffness: 200 });
+      scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+      translateY.value = withSpring(0, { damping: 15, stiffness: 300 });
     }
   }, [focused, scale, translateY]);
 
@@ -111,7 +120,18 @@ function AnimatedTabIcon({ icon, focused }: { icon: string; focused: boolean }) 
 
   return (
     <Animated.View style={animatedStyle}>
-      <Text style={{ fontSize: 22 }}>{icon}</Text>
+      <Icon
+        name={icon}
+        size="lg"
+        color={focused ? COLORS.primary : 'rgba(255, 255, 255, 0.4)'}
+      />
     </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  tabIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});
