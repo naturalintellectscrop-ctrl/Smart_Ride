@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, requireOwnershipOrAdmin } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
+import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 // GET /api/wallet - Get wallet balance and info
 export async function GET(request: NextRequest) {
@@ -170,6 +171,22 @@ export async function POST(request: NextRequest) {
         },
       },
     });
+
+    // Create audit log for wallet top-up
+    try {
+      await createAuditLog({
+        action: AuditActions.WALLET_TOPUP,
+        entityType: EntityTypes.WALLET,
+        entityId: wallet.id,
+        actorType: 'USER',
+        actorId: user.userId,
+        userId: user.userId,
+        description: `Wallet top-up of ${amount} via ${paymentMethod || 'unknown method'}`,
+        source: 'MOBILE_APP',
+      });
+    } catch (auditError) {
+      console.error('Audit log failed for wallet top-up:', auditError);
+    }
 
     return NextResponse.json({
       success: true,

@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService, DispatchRequest } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
+import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 // POST /api/dispatch/assign - Find and assign rider
 export async function POST(request: NextRequest) {
@@ -43,6 +44,22 @@ export async function POST(request: NextRequest) {
         { success: false, error: result.error, noRidersAvailable: result.noRidersAvailable },
         { status: result.noRidersAvailable ? 404 : 400 }
       );
+    }
+
+    // Create audit log for dispatch assignment
+    try {
+      await createAuditLog({
+        action: AuditActions.DISPATCH_ASSIGNED,
+        entityType: EntityTypes.DISPATCH,
+        entityId: taskId,
+        actorType: 'SYSTEM',
+        userId: user.id,
+        taskId,
+        description: `Dispatch assigned rider for task ${taskId} of type ${taskType}`,
+        source: 'SYSTEM',
+      });
+    } catch (auditError) {
+      console.error('Audit log failed for dispatch assignment:', auditError);
     }
 
     return NextResponse.json({

@@ -537,6 +537,7 @@ model AuditLog {
   newValues     String?
   ipAddress     String?
   userAgent     String?
+  source        String       @default("SYSTEM") // ADMIN_DASHBOARD | MOBILE_APP | API | SYSTEM
   createdAt     DateTime     @default(now())
   healthOrderId String?
   healthOrder   HealthOrder? @relation("HealthOrderAuditLogs", fields: [healthOrderId], references: [id])
@@ -550,6 +551,7 @@ model AuditLog {
   @@index([entityType])
   @@index([entityId])
   @@index([createdAt])
+  @@index([source])
 }
 
 model Notification {

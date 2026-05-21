@@ -26,6 +26,7 @@ import {
   DEFAULT_DISPATCH_CONFIG,
   Provider,
 } from '@/lib/dispatch/types';
+import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 // GET /api/dispatch - Get dispatch stats and pending requests
 export async function GET(request: NextRequest) {
@@ -207,6 +208,20 @@ async function handleCreateDispatch(data: {
 
   // Start dispatch (without WebSocket notifications in REST API)
   const result = startDispatch(dispatchRequest, dispatchConfig);
+
+  // Create audit log for dispatch creation
+  try {
+    await createAuditLog({
+      action: AuditActions.DISPATCH_CREATED,
+      entityType: EntityTypes.DISPATCH,
+      entityId: dispatchRequest.id,
+      actorType: 'SYSTEM',
+      description: `Dispatch created for service type ${dispatchRequest.serviceType}`,
+      source: 'SYSTEM',
+    });
+  } catch (auditError) {
+    console.error('Audit log failed for dispatch creation:', auditError);
+  }
 
   return NextResponse.json({
     success: true,

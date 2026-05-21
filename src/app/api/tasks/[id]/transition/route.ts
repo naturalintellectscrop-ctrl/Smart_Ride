@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TaskStatus } from '@prisma/client';
 import { EnhancedTaskStateMachine, TransitionContext } from '@/lib/services/enhanced-task-state-machine.service';
 import { authGuard } from '@/lib/auth/guards';
+import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -85,6 +86,36 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { success: false, error: result.error },
         { status: 400 }
       );
+    }
+
+    // Create audit log for task state transition
+    try {
+      const taskAuditActionMap: Record<string, string> = {
+        ASSIGNED: AuditActions.TASK_ASSIGNED,
+        ACCEPTED: AuditActions.TASK_ACCEPTED,
+        IN_PROGRESS: AuditActions.TASK_STARTED,
+        COMPLETED: AuditActions.TASK_COMPLETED,
+        CANCELLED: AuditActions.TASK_CANCELLED,
+      };
+      const auditAction = taskAuditActionMap[toStatus] || AuditActions.TASK_STARTED;
+      const actorType = context.triggeredByType === 'RIDER' ? 'RIDER' as const :
+                        context.triggeredByType === 'ADMIN' ? 'ADMIN' as const : 'USER' as const;
+      const auditSource = actorType === 'ADMIN' ? 'ADMIN_DASHBOARD' as const :
+                          actorType === 'RIDER' ? 'MOBILE_APP' as const : 'MOBILE_APP' as const;
+      await createAuditLog({
+        action: auditAction,
+        entityType: EntityTypes.TASK,
+        entityId: taskId,
+        actorType,
+        actorId: user.id,
+        userId: user.id,
+        riderId: riderId || undefined,
+        taskId,
+        description: `Task ${taskId} transitioned to ${toStatus}${reason ? `: ${reason}` : ''}`,
+        source: auditSource,
+      });
+    } catch (auditError) {
+      console.error('Audit log failed for task transition:', auditError);
     }
 
     return NextResponse.json({

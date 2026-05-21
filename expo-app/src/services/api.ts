@@ -338,6 +338,46 @@ class ApiService {
   async triggerSOS(data: any): Promise<ApiResponse<{ sosId: string }>> {
     return this.request<{ sosId: string }>('/sos', 'POST', data);
   }
+
+  // ==========================================
+  // AUDIT LOGGING - Mobile App Activity
+  // ==========================================
+
+  async logActivity(data: {
+    action: string;
+    entityType: string;
+    entityId: string;
+    description?: string;
+    actorType?: string;
+    actorId?: string;
+    userId?: string;
+    riderId?: string;
+    orderId?: string;
+    taskId?: string;
+    oldValues?: Record<string, unknown>;
+    newValues?: Record<string, unknown>;
+  }): Promise<ApiResponse<{ success: boolean }>> {
+    try {
+      const headers = await this.getHeaders();
+      const response = await fetch(`${this.baseUrl}/audit`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        console.warn('[AUDIT] Failed to log activity:', response.status);
+        return { success: false, error: 'Failed to log activity' };
+      }
+
+      const result = await response.json();
+      return { success: true, data: result };
+    } catch (error) {
+      // Audit logging should never block the main flow
+      console.warn('[AUDIT] Failed to log activity:', error);
+      return { success: false, error: 'Network error' };
+    }
+  }
 }
 
 export const api = new ApiService();

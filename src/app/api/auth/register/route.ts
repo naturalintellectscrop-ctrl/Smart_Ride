@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { registerUser, registerSchema } from '@/lib/services/auth.service';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
+import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +23,21 @@ export async function POST(request: NextRequest) {
 
     if (!result.success) {
       return errorResponse(result.error || 'Registration failed');
+    }
+
+    // Create audit log for user registration
+    try {
+      await createAuditLog({
+        action: AuditActions.USER_REGISTERED,
+        entityType: EntityTypes.USER,
+        entityId: result.user?.id || '',
+        actorType: 'USER',
+        userId: result.user?.id,
+        description: `User registered: ${result.user?.phone || result.user?.email || 'unknown'}`,
+        source: 'MOBILE_APP',
+      });
+    } catch (auditError) {
+      console.error('Audit log failed for user registration:', auditError);
     }
 
     // Set refresh token as HTTP-only cookie

@@ -69,6 +69,7 @@ export type EntityType =
   | 'system';
 
 export type ActorType = 'USER' | 'RIDER' | 'MERCHANT' | 'ADMIN' | 'SYSTEM';
+export type AuditSource = 'ADMIN_DASHBOARD' | 'MOBILE_APP' | 'API' | 'SYSTEM';
 
 export interface AuditLogEntry {
   action: AuditAction;
@@ -86,6 +87,7 @@ export interface AuditLogEntry {
   userAgent?: string;
   oldValues?: Record<string, unknown>;
   newValues?: Record<string, unknown>;
+  source?: AuditSource;
 }
 
 // ============================================================================
@@ -145,6 +147,7 @@ class SecurityAuditLogger {
           userAgent: entry.userAgent,
           oldValues: entry.oldValues ? JSON.stringify(entry.oldValues) : null,
           newValues: entry.newValues ? JSON.stringify(entry.newValues) : null,
+          source: entry.source || inferSourceFromActor(entry.actorType),
         })),
         skipDuplicates: true,
       });
@@ -177,6 +180,7 @@ class SecurityAuditLogger {
           userAgent: entry.userAgent,
           oldValues: entry.oldValues ? JSON.stringify(entry.oldValues) : null,
           newValues: entry.newValues ? JSON.stringify(entry.newValues) : null,
+          source: entry.source || inferSourceFromActor(entry.actorType),
         },
       });
     } catch (error) {
@@ -216,6 +220,23 @@ class SecurityAuditLogger {
       take: params.limit || 100,
       skip: params.offset || 0,
     });
+  }
+}
+
+/**
+ * Infer source from actor type if not explicitly provided
+ */
+function inferSourceFromActor(actorType: ActorType): AuditSource {
+  switch (actorType) {
+    case 'ADMIN':
+      return 'ADMIN_DASHBOARD';
+    case 'USER':
+    case 'RIDER':
+      return 'MOBILE_APP';
+    case 'MERCHANT':
+      return 'API';
+    default:
+      return 'SYSTEM';
   }
 }
 
@@ -262,6 +283,7 @@ export async function logAuthEvent(
     userAgent,
     description: action.replace(/_/g, ' ').toLowerCase(),
     newValues: params.details,
+    source: 'MOBILE_APP',
   });
 }
 
@@ -295,6 +317,7 @@ export async function logAdminAction(
     userAgent,
     oldValues: params.oldValues,
     newValues: params.newValues,
+    source: 'ADMIN_DASHBOARD',
   });
 }
 

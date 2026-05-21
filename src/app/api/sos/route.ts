@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, requireAdmin } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
+import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 // GET /api/sos - List SOS alerts (admin only)
 export async function GET(request: NextRequest) {
@@ -128,6 +129,24 @@ export async function POST(request: NextRequest) {
         referenceType: 'SOS_ALERT',
       },
     });
+
+    // Create audit log for SOS trigger
+    try {
+      await createAuditLog({
+        action: AuditActions.SOS_TRIGGERED,
+        entityType: EntityTypes.SOS,
+        entityId: alert.id,
+        actorType: riderId ? 'RIDER' : 'USER',
+        actorId: riderId || user.userId,
+        userId: user.userId,
+        riderId: riderId || undefined,
+        taskId: taskId || undefined,
+        description: `SOS alert ${alertNumber} triggered by ${userInfo?.name || 'Unknown User'}${riderId ? ' (Rider)' : ''} at ${locationAddress || `${latitude},${longitude}`}`,
+        source: 'MOBILE_APP',
+      });
+    } catch (auditError) {
+      console.error('Audit log failed for SOS trigger:', auditError);
+    }
 
     return NextResponse.json({
       success: true,

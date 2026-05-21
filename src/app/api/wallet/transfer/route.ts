@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
+import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 // POST /api/wallet/transfer - Transfer money to another user
 export async function POST(request: NextRequest) {
@@ -159,6 +160,29 @@ export async function POST(request: NextRequest) {
         referenceType: 'WALLET_TRANSACTION',
       },
     });
+
+    // Create audit log for wallet transfer
+    try {
+      await createAuditLog({
+        action: AuditActions.WALLET_TRANSFER,
+        entityType: EntityTypes.WALLET,
+        entityId: senderWallet.id,
+        actorType: 'USER',
+        actorId: user.userId,
+        userId: user.userId,
+        description: `Wallet transfer of ${amount} to ${recipientUser.name || recipientPhone} (fee: ${fee})`,
+        newValues: {
+          amount,
+          fee,
+          totalAmount,
+          recipientId: recipientUser.id,
+          recipientPhone,
+        },
+        source: 'MOBILE_APP',
+      });
+    } catch (auditError) {
+      console.error('Audit log failed for wallet transfer:', auditError);
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,6 +1,7 @@
 import { db } from '@/lib/db';
 
 export type ActorType = 'SYSTEM' | 'USER' | 'RIDER' | 'MERCHANT' | 'ADMIN';
+export type AuditSource = 'ADMIN_DASHBOARD' | 'MOBILE_APP' | 'API' | 'SYSTEM';
 
 interface AuditLogData {
   action: string;
@@ -18,6 +19,7 @@ interface AuditLogData {
   newValues?: Record<string, unknown>;
   ipAddress?: string;
   userAgent?: string;
+  source?: AuditSource;
 }
 
 /**
@@ -42,6 +44,7 @@ export async function createAuditLog(data: AuditLogData) {
         newValues: data.newValues ? JSON.stringify(data.newValues) : null,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
+        source: data.source || inferSourceFromActor(data.actorType),
       },
     });
     return auditLog;
@@ -49,6 +52,23 @@ export async function createAuditLog(data: AuditLogData) {
     console.error('Failed to create audit log:', error);
     // Don't throw - audit logging should not break the main flow
     return null;
+  }
+}
+
+/**
+ * Infer source from actor type if not explicitly provided
+ */
+function inferSourceFromActor(actorType: ActorType): AuditSource {
+  switch (actorType) {
+    case 'ADMIN':
+      return 'ADMIN_DASHBOARD';
+    case 'USER':
+    case 'RIDER':
+      return 'MOBILE_APP';
+    case 'MERCHANT':
+      return 'API';
+    default:
+      return 'SYSTEM';
   }
 }
 
@@ -61,7 +81,7 @@ export const AuditActions = {
   USER_UPDATED: 'USER_UPDATED',
   USER_SUSPENDED: 'USER_SUSPENDED',
   USER_BANNED: 'USER_BANNED',
-  
+
   // Rider actions
   RIDER_REGISTERED: 'RIDER_REGISTERED',
   RIDER_APPROVED: 'RIDER_APPROVED',
@@ -69,13 +89,13 @@ export const AuditActions = {
   RIDER_SUSPENDED: 'RIDER_SUSPENDED',
   RIDER_ONLINE: 'RIDER_ONLINE',
   RIDER_OFFLINE: 'RIDER_OFFLINE',
-  
+
   // Merchant actions
   MERCHANT_REGISTERED: 'MERCHANT_REGISTERED',
   MERCHANT_APPROVED: 'MERCHANT_APPROVED',
   MERCHANT_REJECTED: 'MERCHANT_REJECTED',
   MERCHANT_SUSPENDED: 'MERCHANT_SUSPENDED',
-  
+
   // Order actions
   ORDER_CREATED: 'ORDER_CREATED',
   ORDER_CONFIRMED: 'ORDER_CONFIRMED',
@@ -85,7 +105,7 @@ export const AuditActions = {
   ORDER_PICKED_UP: 'ORDER_PICKED_UP',
   ORDER_DELIVERED: 'ORDER_DELIVERED',
   ORDER_CANCELLED: 'ORDER_CANCELLED',
-  
+
   // Task actions
   TASK_CREATED: 'TASK_CREATED',
   TASK_ASSIGNED: 'TASK_ASSIGNED',
@@ -93,13 +113,40 @@ export const AuditActions = {
   TASK_STARTED: 'TASK_STARTED',
   TASK_COMPLETED: 'TASK_COMPLETED',
   TASK_CANCELLED: 'TASK_CANCELLED',
-  
+
   // Payment actions
   PAYMENT_INITIATED: 'PAYMENT_INITIATED',
   PAYMENT_COMPLETED: 'PAYMENT_COMPLETED',
   PAYMENT_FAILED: 'PAYMENT_FAILED',
   PAYMENT_REFUNDED: 'PAYMENT_REFUNDED',
-  
+
+  // Wallet actions
+  WALLET_TOPUP: 'WALLET_TOPUP',
+  WALLET_WITHDRAWAL: 'WALLET_WITHDRAWAL',
+  WALLET_TRANSFER: 'WALLET_TRANSFER',
+  WALLET_PAYMENT: 'WALLET_PAYMENT',
+
+  // Dispatch actions
+  DISPATCH_CREATED: 'DISPATCH_CREATED',
+  DISPATCH_ASSIGNED: 'DISPATCH_ASSIGNED',
+  DISPATCH_ACCEPTED: 'DISPATCH_ACCEPTED',
+  DISPATCH_REJECTED: 'DISPATCH_REJECTED',
+
+  // SOS actions
+  SOS_TRIGGERED: 'SOS_TRIGGERED',
+  SOS_ACKNOWLEDGED: 'SOS_ACKNOWLEDGED',
+  SOS_RESOLVED: 'SOS_RESOLVED',
+
+  // Finance actions
+  FINANCE_SETTLEMENT: 'FINANCE_SETTLEMENT',
+  FINANCE_COMMISSION: 'FINANCE_COMMISSION',
+  FINANCE_CASH_TRACKING: 'FINANCE_CASH_TRACKING',
+
+  // Compliance actions
+  COMPLIANCE_INSPECTION: 'COMPLIANCE_INSPECTION',
+  COMPLIANCE_DOCUMENT_VERIFIED: 'COMPLIANCE_DOCUMENT_VERIFIED',
+  COMPLIANCE_DOCUMENT_REJECTED: 'COMPLIANCE_DOCUMENT_REJECTED',
+
   // KOT actions
   KOT_GENERATED: 'KOT_GENERATED',
   KOT_PRINTED: 'KOT_PRINTED',
@@ -123,4 +170,11 @@ export const EntityTypes = {
   PAYMENT: 'Payment',
   RATING: 'Rating',
   NOTIFICATION: 'Notification',
+  WALLET: 'Wallet',
+  DISPATCH: 'Dispatch',
+  SOS: 'SOS',
+  FINANCE: 'Finance',
+  COMPLIANCE: 'Compliance',
+  PRESCRIPTION: 'Prescription',
+  HEALTH_ORDER: 'HealthOrder',
 } as const;

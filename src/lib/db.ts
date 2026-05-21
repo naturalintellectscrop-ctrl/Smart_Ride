@@ -165,15 +165,26 @@ function resolveDatabaseUrl(): string {
 
   // Strategy 2: process.env.DATABASE_URL with auto-repair
   const systemUrl = process.env.DATABASE_URL
-  if (systemUrl && (systemUrl.startsWith('postgresql://') || systemUrl.startsWith('postgres://'))) {
-    // Try the URL as-is first
-    return repairDatabaseUrl(systemUrl)
+  if (systemUrl) {
+    // Accept PostgreSQL URLs
+    if (systemUrl.startsWith('postgresql://') || systemUrl.startsWith('postgres://')) {
+      return repairDatabaseUrl(systemUrl)
+    }
+    // Accept SQLite file URLs for local development
+    if (systemUrl.startsWith('file:')) {
+      return systemUrl
+    }
   }
 
   // Strategy 3: .env file DATABASE_URL (for dev environments)
   const envFileUrl = readEnvFileVar('DATABASE_URL')
-  if (envFileUrl && (envFileUrl.startsWith('postgresql://') || envFileUrl.startsWith('postgres://'))) {
-    return envFileUrl
+  if (envFileUrl) {
+    if (envFileUrl.startsWith('postgresql://') || envFileUrl.startsWith('postgres://')) {
+      return envFileUrl
+    }
+    if (envFileUrl.startsWith('file:')) {
+      return envFileUrl
+    }
   }
 
   // No valid database URL found
