@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.531949209415-h0ri57i233r1l767tnc4i26brdt3asb3</string>
+	<key>API_KEY</key>
+	<string>AIzaSyDummyKeyForPlaceholder123456789</string>
+	<key>GCM_SENDER_ID</key>
+	<string>531949209415</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>ug.smartride.app</string>
+	<key>PROJECT_ID</key>
+	<string>smart-ride-ug</string>
+	<key>STORAGE_BUCKET</key>
+	<string>smart-ride-ug.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:531949209415:ios:abc123def456</string>
+</dict>
+</plist>

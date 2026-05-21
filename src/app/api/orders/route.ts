@@ -9,7 +9,7 @@ import {
   getPaginationParams 
 } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
-import { generateOrderNumber, generateKOTNumber } from '@/lib/api/state-machine';
+import { generateOrderNumber, generateKOTNumber } from '@/lib/services/enhanced-task-state-machine.service';
 import { OrderType, OrderStatus, PaymentStatus } from '@prisma/client';
 import { z } from 'zod';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';

@@ -17,7 +17,7 @@ import {
   isValidTransition,
   canRiderPerformTask,
   CancellationReasonCode,
-} from '@/lib/api/state-machine';
+} from '@/lib/services/enhanced-task-state-machine.service';
 import { TaskType, TaskStatus } from '@prisma/client';
 import { z } from 'zod';
 import { 

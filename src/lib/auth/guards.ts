@@ -20,6 +20,34 @@ import crypto from 'crypto';
 export { isAdmin } from './jwt';
 
 // ============================================================================
+// Convenience Guard Functions (async, return user or null)
+// Used by API routes for simple auth/admin checks
+// ============================================================================
+
+/**
+ * Auth guard - async convenience function for API routes
+ * Returns authenticated user payload or null
+ * Usage: const user = await authGuard(request); if (!user) return 401;
+ */
+export async function authGuard(req: NextRequest): Promise<(JWTPayload & { id: string }) | null> {
+  const user = getAuthUser(req);
+  if (!user) return null;
+  return { ...user, id: user.userId };
+}
+
+/**
+ * Admin guard - async convenience function for API routes
+ * Returns authenticated admin user payload or null
+ * Usage: const admin = await adminGuard(request); if (!admin) return 403;
+ */
+export async function adminGuard(req: NextRequest): Promise<(JWTPayload & { id: string }) | null> {
+  const user = getAuthUser(req);
+  if (!user) return null;
+  if (!isAdminCheck(user.role)) return null;
+  return { ...user, id: user.userId };
+}
+
+// ============================================================================
 // Types
 // ============================================================================
 

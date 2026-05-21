@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
-import { generateKOTNumber } from '@/lib/api/state-machine';
+import { generateKOTNumber } from '@/lib/services/enhanced-task-state-machine.service';
 import { z } from 'zod';
 
 interface RouteParams {

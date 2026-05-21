@@ -23,11 +23,14 @@ const CONFIG = {
 
 // Task states that require heartbeat monitoring
 const HEARTBEAT_ACTIVE_STATES = [
-  'RIDER_ACCEPTED',
-  'ARRIVED_AT_PICKUP',
+  'ASSIGNED',
+  'ACCEPTED',
+  'ARRIVED',
+  'ARRIVING',
   'PICKED_UP',
   'IN_PROGRESS',
-  'DELIVERING',
+  'IN_TRANSIT',
+  'DELIVERED',
 ];
 
 // In-memory tracking for active monitoring
