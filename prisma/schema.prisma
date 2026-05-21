@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -25,6 +25,8 @@ model User {
   auditLogs                AuditLog[]                @relation("UserAuditLogs")
   cashCollections          CashCollection[]
   conversationParticipants ConversationParticipant[]
+  disputes                 Dispute[]
+  notificationLogs         NotificationLog[]
   notifications            Notification[]
   orders                   Order[]
   payments                 Payment[]
@@ -46,22 +48,22 @@ model User {
 // Supports multi-device sessions with revocation
 // ============================================
 model Session {
-  id               String      @id @default(cuid())
+  id               String    @id @default(cuid())
   userId           String
-  refreshTokenHash String      // Hashed refresh token (NEVER store raw token)
-  deviceId         String?     // Unique device identifier
-  deviceName       String?     // e.g., "iPhone 14 Pro", "Samsung Galaxy S23"
-  deviceType       String?     // "ios", "android", "web"
+  refreshTokenHash String // Hashed refresh token (NEVER store raw token)
+  deviceId         String? // Unique device identifier
+  deviceName       String? // e.g., "iPhone 14 Pro", "Samsung Galaxy S23"
+  deviceType       String? // "ios", "android", "web"
   ipAddress        String?
   userAgent        String?
   expiresAt        DateTime
-  createdAt        DateTime    @default(now())
-  lastAccessedAt   DateTime    @default(now())
-  revoked          Boolean     @default(false)
+  createdAt        DateTime  @default(now())
+  lastAccessedAt   DateTime  @default(now())
+  revoked          Boolean   @default(false)
   revokedAt        DateTime?
   revokedReason    String?
-  
-  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([deviceId])
@@ -73,15 +75,15 @@ model Session {
 // OTP MODEL - Phone Authentication
 // ============================================
 model OTP {
-  id          String    @id @default(cuid())
-  phone       String
-  otpHash     String    // Hashed OTP (NEVER store raw OTP)
-  purpose     String    // "login", "register", "reset_password"
-  attempts    Int       @default(0)
-  verified    Boolean   @default(false)
-  expiresAt   DateTime
-  createdAt   DateTime  @default(now())
-  verifiedAt  DateTime?
+  id         String    @id @default(cuid())
+  phone      String
+  otpHash    String // Hashed OTP (NEVER store raw OTP)
+  purpose    String // "login", "register", "reset_password"
+  attempts   Int       @default(0)
+  verified   Boolean   @default(false)
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  verifiedAt DateTime?
 
   @@index([phone])
   @@index([expiresAt])
@@ -129,7 +131,9 @@ model Rider {
   updatedAt          DateTime         @updatedAt
   auditLogs          AuditLog[]       @relation("RiderAuditLogs")
   cashCollections    CashCollection[]
+  dispatchMatches    DispatchMatch[]
   heartbeatLogs      HeartbeatLog[]
+  transactions       Transaction[]
   user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   riderPayouts       RiderPayout[]
   sosAlerts          SOSAlert[]       @relation("RiderSOSAlerts")
@@ -305,13 +309,13 @@ model KOT {
 }
 
 model Task {
-  id                  String            @id @default(cuid())
-  taskNumber          String            @unique
+  id                  String                @id @default(cuid())
+  taskNumber          String                @unique
   taskType            TaskType
   clientId            String
   riderId             String?
-  orderId             String?           @unique
-  status              TaskStatus        @default(CREATED)
+  orderId             String?               @unique
+  status              TaskStatus            @default(CREATED)
   pickupAddress       String
   pickupLatitude      Float?
   pickupLongitude     Float?
@@ -335,7 +339,7 @@ model Task {
   platformCommission  Float?
   riderEarnings       Float?
   paymentMethod       PaymentMethod
-  paymentStatus       PaymentStatus     @default(PENDING)
+  paymentStatus       PaymentStatus         @default(PENDING)
   passengerCount      Int?
   passengerNames      String?
   itemDescription     String?
@@ -357,19 +361,23 @@ model Task {
   lastKnownLatitude   Float?
   lastKnownLongitude  Float?
   connectionStatus    ConnectionStatus?
-  createdAt           DateTime          @default(now())
-  updatedAt           DateTime          @updatedAt
-  healthOrderId       String?           @unique
-  auditLogs           AuditLog[]        @relation("TaskAuditLogs")
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  healthOrderId       String?               @unique
+  auditLogs           AuditLog[]            @relation("TaskAuditLogs")
   conversation        Conversation?
+  dispatchMatches     DispatchMatch[]
+  dispute             Dispute?
   heartbeatLogs       HeartbeatLog[]
   payment             Payment?
   rating              Rating?
-  sosAlerts           SOSAlert[]        @relation("TaskSOSAlerts")
-  client              User              @relation(fields: [clientId], references: [id])
-  healthOrder         HealthOrder?      @relation(fields: [healthOrderId], references: [id])
-  order               Order?            @relation(fields: [orderId], references: [id])
-  rider               Rider?            @relation(fields: [riderId], references: [id])
+  sosAlerts           SOSAlert[]            @relation("TaskSOSAlerts")
+  stateTransitions    TaskStateTransition[]
+  transactions        Transaction[]
+  client              User                  @relation(fields: [clientId], references: [id])
+  healthOrder         HealthOrder?          @relation(fields: [healthOrderId], references: [id])
+  order               Order?                @relation(fields: [orderId], references: [id])
+  rider               Rider?                @relation(fields: [riderId], references: [id])
 
   @@index([taskType])
   @@index([status])
@@ -1098,6 +1106,357 @@ model Document {
   @@index([status])
 }
 
+// ============================================
+// RIDER CAPABILITY MODEL
+// Defines which task types each rider role can handle
+// ============================================
+model RiderCapability {
+  id                   String    @id @default(cuid())
+  riderRole            RiderRole
+  taskType             TaskType
+  isAllowed            Boolean   @default(true)
+  requiresVehicle      Boolean   @default(false)
+  requiresInsulatedBox Boolean   @default(false)
+  maxDistance          Float? // Maximum delivery distance in km
+  notes                String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@unique([riderRole, taskType])
+  @@index([riderRole])
+  @@index([taskType])
+}
+
+// ============================================
+// TASK STATE TRANSITION MODEL
+// Audit trail for all task state changes
+// ============================================
+model TaskStateTransition {
+  id              String      @id @default(cuid())
+  taskId          String
+  fromStatus      TaskStatus?
+  toStatus        TaskStatus
+  triggeredBy     String? // User ID who triggered the change
+  triggeredByType String? // 'CLIENT', 'RIDER', 'SYSTEM', 'ADMIN'
+  reason          String?
+  metadata        String? // JSON string for additional data
+  latitude        Float?
+  longitude       Float?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime    @default(now())
+  task            Task        @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([fromStatus])
+  @@index([toStatus])
+  @@index([createdAt])
+}
+
+// ============================================
+// DISPATCH MATCH MODEL
+// Tracks dispatch attempts and outcomes
+// ============================================
+model DispatchMatch {
+  id                 String              @id @default(cuid())
+  taskId             String
+  riderId            String
+  matchScore         Float
+  distanceKm         Float?
+  estimatedArrival   Int? // Seconds
+  matchReason        String? // 'NEAREST', 'HIGHEST_RATED', 'MANUAL'
+  status             DispatchMatchStatus @default(PENDING)
+  expiresAt          DateTime
+  acceptedAt         DateTime?
+  rejectedAt         DateTime?
+  expiredAt          DateTime?
+  cancelledAt        DateTime?
+  rejectionReason    String?
+  notificationSent   Boolean             @default(false)
+  notificationSentAt DateTime?
+  retryCount         Int                 @default(0)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  rider              Rider               @relation(fields: [riderId], references: [id])
+  task               Task                @relation(fields: [taskId], references: [id])
+
+  @@index([taskId])
+  @@index([riderId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// ============================================
+// TRANSACTION MODEL
+// Financial transaction ledger
+// ============================================
+model Transaction {
+  id               String            @id @default(cuid())
+  transactionRef   String            @unique
+  userId           String?
+  riderId          String?
+  merchantId       String?
+  taskId           String?
+  orderId          String?
+  type             TransactionType
+  amount           Float
+  currency         String            @default("UGX")
+  balanceBefore    Float
+  balanceAfter     Float
+  status           TransactionStatus @default(COMPLETED)
+  paymentMethod    String?
+  paymentReference String?
+  description      String?
+  metadata         String? // JSON for additional data
+  processedAt      DateTime          @default(now())
+  reversedAt       DateTime?
+  reversalReason   String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  rider            Rider?            @relation(fields: [riderId], references: [id])
+  task             Task?             @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([riderId])
+  @@index([merchantId])
+  @@index([type])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================
+// SETTLEMENT MODEL
+// Payout settlements for riders and merchants
+// ============================================
+model Settlement {
+  id                 String                  @id @default(cuid())
+  settlementRef      String                  @unique
+  recipientType      SettlementRecipientType
+  recipientId        String // Rider ID or Merchant ID
+  periodStart        DateTime
+  periodEnd          DateTime
+  taskCount          Int                     @default(0)
+  orderCount         Int                     @default(0)
+  grossAmount        Float
+  platformCommission Float
+  adjustments        Float                   @default(0)
+  netAmount          Float
+  currency           String                  @default("UGX")
+  status             SettlementStatus        @default(PENDING)
+  paymentMethod      String?
+  paymentReference   String?
+  processedAt        DateTime?
+  paidAt             DateTime?
+  failedAt           DateTime?
+  failureReason      String?
+  processedBy        String? // Admin who processed
+  notes              String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@index([recipientType])
+  @@index([recipientId])
+  @@index([status])
+  @@index([periodStart])
+  @@index([createdAt])
+}
+
+// ============================================
+// ADMIN PERMISSION MODEL
+// Fine-grained RBAC permissions
+// ============================================
+model AdminPermission {
+  id         String   @id @default(cuid())
+  role       UserRole
+  resource   String // 'riders', 'tasks', 'merchants', 'finance', etc.
+  action     String // 'create', 'read', 'update', 'delete', 'approve', 'suspend'
+  isAllowed  Boolean  @default(true)
+  conditions String? // JSON for conditional permissions
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([role, resource, action])
+  @@index([role])
+  @@index([resource])
+}
+
+// ============================================
+// DISPUTE MODEL
+// Dispute handling for tasks and orders
+// ============================================
+model Dispute {
+  id             String          @id @default(cuid())
+  disputeNumber  String          @unique
+  taskId         String?         @unique
+  orderId        String?
+  healthOrderId  String?
+  clientId       String
+  riderId        String?
+  merchantId     String?
+  disputeType    DisputeType
+  category       String
+  description    String
+  status         DisputeStatus   @default(OPEN)
+  priority       DisputePriority @default(MEDIUM)
+  resolution     String?
+  resolutionType String? // 'REFUND', 'PARTIAL_REFUND', 'CREDIT', 'NO_ACTION'
+  refundAmount   Float?
+  creditAmount   Float?
+  openedAt       DateTime        @default(now())
+  acknowledgedAt DateTime?
+  acknowledgedBy String?
+  resolvedAt     DateTime?
+  resolvedBy     String?
+  closedAt       DateTime?
+  closedBy       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  task           Task?           @relation(fields: [taskId], references: [id])
+  client         User            @relation(fields: [clientId], references: [id])
+
+  @@index([taskId])
+  @@index([orderId])
+  @@index([clientId])
+  @@index([riderId])
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+// ============================================
+// DOCUMENT EXPIRY MODEL
+// Tracks document expiration dates
+// ============================================
+model DocumentExpiry {
+  id                 String    @id @default(cuid())
+  documentId         String    @unique
+  documentType       String
+  ownerId            String
+  ownerType          String // 'RIDER', 'MERCHANT', 'PROVIDER'
+  expiryDate         DateTime
+  reminderSentAt     DateTime?
+  firstWarningSentAt DateTime?
+  finalWarningSentAt DateTime?
+  isExpired          Boolean   @default(false)
+  isActioned         Boolean   @default(false)
+  actionedAt         DateTime?
+  actionedBy         String?
+  notes              String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([ownerId])
+  @@index([ownerType])
+  @@index([expiryDate])
+  @@index([isExpired])
+}
+
+// ============================================
+// NOTIFICATION LOG MODEL
+// Tracks notification delivery
+// ============================================
+model NotificationLog {
+  id             String                     @id @default(cuid())
+  userId         String
+  notificationId String?
+  type           NotificationChannel
+  status         NotificationDeliveryStatus @default(PENDING)
+  title          String
+  message        String
+  data           String? // JSON
+  provider       String? // 'FCM', 'SMS', 'EMAIL'
+  providerRef    String? // Provider message ID
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  failedAt       DateTime?
+  failureReason  String?
+  retryCount     Int                        @default(0)
+  createdAt      DateTime                   @default(now())
+  user           User                       @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+}
+
+// ============================================
+// OFFLINE ACTION MODEL
+// Offline action queue for sync
+// ============================================
+model OfflineAction {
+  id             String              @id @default(cuid())
+  userId         String
+  actionType     String // 'CREATE_TASK', 'UPDATE_STATUS', 'CREATE_ORDER', etc.
+  entityType     String // 'Task', 'Order', 'HealthOrder'
+  entityId       String? // Local ID if created offline
+  payload        String // JSON payload
+  status         OfflineActionStatus @default(PENDING)
+  syncedAt       DateTime?
+  syncedEntityId String? // Server ID after sync
+  conflictData   String? // JSON for conflict resolution
+  resolvedAt     DateTime?
+  retryCount     Int                 @default(0)
+  deviceId       String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+// ============================================
+// TASK ANALYTICS MODEL
+// Daily aggregated task metrics
+// ============================================
+model TaskAnalytics {
+  id                String   @id @default(cuid())
+  date              DateTime
+  taskType          TaskType
+  totalCreated      Int      @default(0)
+  totalCompleted    Int      @default(0)
+  totalCancelled    Int      @default(0)
+  totalFailed       Int      @default(0)
+  avgCompletionTime Int? // Seconds
+  avgRating         Float?
+  totalRevenue      Float    @default(0)
+  totalCommission   Float    @default(0)
+  avgDistance       Float?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([date, taskType])
+  @@index([date])
+  @@index([taskType])
+}
+
+// ============================================
+// PLATFORM METRICS MODEL
+// System-wide daily metrics
+// ============================================
+model PlatformMetrics {
+  id                   String   @id @default(cuid())
+  date                 DateTime @unique
+  activeRiders         Int      @default(0)
+  activeClients        Int      @default(0)
+  totalTasksCompleted  Int      @default(0)
+  totalRevenue         Float    @default(0)
+  totalCommission      Float    @default(0)
+  totalPayouts         Float    @default(0)
+  avgResponseTime      Int? // Seconds
+  avgDispatchTime      Int? // Seconds
+  customerSatisfaction Float?
+  newRegistrations     Int      @default(0)
+  disputesOpened       Int      @default(0)
+  disputesResolved     Int      @default(0)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([date])
+}
+
 enum UserRole {
   CLIENT
   RIDER
@@ -1209,14 +1568,20 @@ enum TaskType {
 
 enum TaskStatus {
   CREATED
+  REQUESTED
+  SEARCHING
   MATCHING
   ASSIGNED
   ACCEPTED
   ARRIVED
+  ARRIVING
   PICKED_UP
+  IN_PROGRESS
   IN_TRANSIT
   DELIVERED
   COMPLETED
+  PAID
+  CLOSED
   CANCELLED
   FAILED
 }
@@ -1252,6 +1617,13 @@ enum TransactionType {
   PLATFORM_COMMISSION
   REFUND
   CASH_COLLECTION
+  CREDIT
+  DEBIT
+  TOP_UP
+  WITHDRAWAL
+  ADJUSTMENT
+  CASH_DEPOSIT
+  SETTLEMENT
 }
 
 enum ActorType {
@@ -1446,4 +1818,85 @@ enum DocumentStatus {
   APPROVED
   REJECTED
   EXPIRED
+}
+
+enum DispatchMatchStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  EXPIRED
+  CANCELLED
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+enum SettlementRecipientType {
+  RIDER
+  MERCHANT
+  PROVIDER
+}
+
+enum SettlementStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum DisputeType {
+  ITEM_NOT_RECEIVED
+  ITEM_DAMAGED
+  WRONG_ITEM
+  LATE_DELIVERY
+  RIDER_MISCONDUCT
+  PRICE_DISPUTE
+  PAYMENT_ISSUE
+  SERVICE_QUALITY
+  SAFETY_CONCERN
+  OTHER
+}
+
+enum DisputeStatus {
+  OPEN
+  ACKNOWLEDGED
+  INVESTIGATING
+  RESOLVED
+  ESCALATED
+  CLOSED
+}
+
+enum DisputePriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum NotificationChannel {
+  PUSH
+  SMS
+  EMAIL
+  IN_APP
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+enum OfflineActionStatus {
+  PENDING
+  SYNCING
+  SYNCED
+  FAILED
+  CONFLICT
 }
