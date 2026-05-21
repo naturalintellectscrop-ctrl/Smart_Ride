@@ -1,8 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - HEALTH SCREEN
 // ============================================
-// VERSION: DEBUG-TRACE-001
-// PURPOSE: Health services - pharmacy, prescriptions
+// Premium dark theme with vector icons
+// Health services - pharmacy, prescriptions
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -15,6 +15,7 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -26,6 +27,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
 import { COLORS } from '@/src/constants';
+import { Icon, IconColors } from '../../components/Icon';
 
 interface Pharmacy {
   id: string;
@@ -45,6 +47,14 @@ interface Medicine {
   image?: string;
   inStock: boolean;
 }
+
+// Quick actions configuration
+const QUICK_ACTIONS = [
+  { id: 'medicine', iconName: 'activity' as const, label: 'Medicine', color: '#F43F5E' },
+  { id: 'prescriptions', iconName: 'file-text' as const, label: 'Prescriptions', color: '#00FFF3' },
+  { id: 'pharmacies', iconName: 'home' as const, label: 'Pharmacies', color: '#00FF88' },
+  { id: 'emergency', iconName: 'alert-circle' as const, label: 'Emergency', color: '#F59E0B' },
+];
 
 export default function HealthScreen() {
   const router = useRouter();
@@ -79,36 +89,53 @@ export default function HealthScreen() {
     setRefreshing(false);
   };
 
+  const handleQuickAction = (actionId: string) => {
+    switch (actionId) {
+      case 'medicine':
+        setActiveTab('medicines');
+        break;
+      case 'prescriptions':
+        router.push('/health/prescriptions');
+        break;
+      case 'pharmacies':
+        setActiveTab('pharmacies');
+        break;
+      case 'emergency':
+        router.push('/sos');
+        break;
+    }
+  };
+
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
       <Animated.View 
         entering={FadeInDown.duration(400).springify()}
-        className="bg-primary-500 pt-12 pb-6 px-4"
+        style={styles.header}
       >
-        <Text className="text-white text-2xl font-bold">Smart Health</Text>
-        <Text className="text-white/80 mt-1">Medicine delivery & prescriptions</Text>
+        <Text style={styles.headerTitle}>Smart Health</Text>
+        <Text style={styles.headerSubtitle}>Medicine delivery & prescriptions</Text>
         
         {/* Search */}
         <Animated.View 
           entering={ZoomIn.delay(200).duration(300)}
-          className="mt-4 bg-white rounded-xl flex-row items-center px-4 py-3"
+          style={styles.searchContainer}
         >
-          <Text className="text-gray-400 mr-2">🔍</Text>
+          <Icon name="search" size="md" color={COLORS.textMuted} />
           <TextInput
             value={searchQuery}
             onChangeText={setSearchQuery}
             placeholder="Search medicines or pharmacies..."
-            placeholderTextColor="#9CA3AF"
-            className="flex-1 text-gray-900"
+            placeholderTextColor={COLORS.textMuted}
+            style={styles.searchInput}
           />
         </Animated.View>
       </Animated.View>
@@ -116,44 +143,42 @@ export default function HealthScreen() {
       {/* Quick Actions */}
       <Animated.View 
         entering={FadeInUp.duration(400).delay(100)}
-        className="flex-row bg-white px-4 py-4 gap-3 shadow-sm"
+        style={styles.quickActionsContainer}
       >
-        <QuickAction 
-          icon="💊" 
-          label="Order Medicine" 
-          onPress={() => setActiveTab('medicines')}
-          delay={150}
-        />
-        <QuickAction 
-          icon="📋" 
-          label="Prescriptions" 
-          onPress={() => router.push('/health/prescriptions')}
-          delay={200}
-        />
-        <QuickAction 
-          icon="🏥" 
-          label="Pharmacies" 
-          onPress={() => setActiveTab('pharmacies')}
-          delay={250}
-        />
-        <QuickAction 
-          icon="🆘" 
-          label="Emergency" 
-          onPress={() => router.push('/sos')}
-          delay={300}
-        />
+        {QUICK_ACTIONS.map((action, index) => (
+          <Animated.View
+            key={action.id}
+            entering={ZoomIn.delay(150 + index * 50).duration(300)}
+            style={styles.quickActionItem}
+          >
+            <TouchableOpacity 
+              onPress={() => handleQuickAction(action.id)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}15` }]}>
+                <Icon name={action.iconName} size="md" color={action.color} />
+              </View>
+              <Text style={styles.quickActionLabel}>{action.label}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        ))}
       </Animated.View>
 
       {/* Content */}
       <ScrollView 
-        className="flex-1 px-4 pt-4"
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
         }
       >
         {activeTab === 'pharmacies' ? (
           <>
-            <Text className="text-gray-900 font-semibold mb-3">Nearby Pharmacies</Text>
+            <Text style={styles.sectionTitle}>Nearby Pharmacies</Text>
             {pharmacies.length > 0 ? (
               pharmacies.map((pharmacy, index) => (
                 <Animated.View
@@ -169,22 +194,26 @@ export default function HealthScreen() {
             ) : (
               <Animated.View 
                 entering={FadeIn.duration(400)}
-                className="items-center py-12"
+                style={styles.emptyContainer}
               >
-                <Text className="text-4xl mb-4">💊</Text>
-                <Text className="text-gray-500">No pharmacies available</Text>
+                <View style={styles.emptyIconContainer}>
+                  <Icon name="activity" size="2xl" color={COLORS.textMuted} />
+                </View>
+                <Text style={styles.emptyText}>No pharmacies available</Text>
               </Animated.View>
             )}
           </>
         ) : (
           <>
-            <Text className="text-gray-900 font-semibold mb-3">Popular Medicines</Text>
+            <Text style={styles.sectionTitle}>Popular Medicines</Text>
             <Animated.View 
               entering={FadeIn.duration(400)}
-              className="items-center py-12"
+              style={styles.emptyContainer}
             >
-              <Text className="text-4xl mb-4">💊</Text>
-              <Text className="text-gray-500">Search for medicines above</Text>
+              <View style={styles.emptyIconContainer}>
+                <Icon name="activity" size="2xl" color={COLORS.textMuted} />
+              </View>
+              <Text style={styles.emptyText}>Search for medicines above</Text>
             </Animated.View>
           </>
         )}
@@ -193,49 +222,45 @@ export default function HealthScreen() {
   );
 }
 
-function QuickAction({ icon, label, onPress, delay }: { icon: string; label: string; onPress: () => void; delay: number }) {
-  return (
-    <Animated.View entering={ZoomIn.delay(delay).duration(300)}>
-      <TouchableOpacity onPress={onPress} className="flex-1 items-center">
-        <View className="w-12 h-12 bg-primary-100 rounded-full items-center justify-center mb-1">
-          <Text className="text-xl">{icon}</Text>
-        </View>
-        <Text className="text-xs text-gray-600 text-center">{label}</Text>
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
+// Pharmacy Card Component
 function PharmacyCard({ pharmacy, onPress }: { pharmacy: Pharmacy; onPress: () => void }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
-      <View className="bg-white rounded-2xl p-4 mb-3 shadow-sm flex-row">
-        <View className="w-16 h-16 bg-green-50 rounded-xl items-center justify-center mr-3">
+    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
+      <View style={styles.pharmacyCard}>
+        <View style={styles.pharmacyImageContainer}>
           {pharmacy.image ? (
-            <Image source={{ uri: pharmacy.image }} className="w-16 h-16 rounded-xl" />
+            <Image source={{ uri: pharmacy.image }} style={styles.pharmacyImage} />
           ) : (
-            <Text className="text-2xl">💊</Text>
+            <View style={styles.pharmacyImagePlaceholder}>
+              <Icon name="activity" size="lg" color={COLORS.primary} />
+            </View>
           )}
         </View>
-        <View className="flex-1">
-          <View className="flex-row items-center">
-            <Text className="font-bold text-gray-900 flex-1">{pharmacy.name}</Text>
-            <View className={`px-2 py-1 rounded-full ${pharmacy.isOpen ? 'bg-green-100' : 'bg-red-100'}`}>
-              <Text className={`text-xs ${pharmacy.isOpen ? 'text-green-600' : 'text-red-600'}`}>
+        <View style={styles.pharmacyContent}>
+          <View style={styles.pharmacyHeader}>
+            <Text style={styles.pharmacyName} numberOfLines={1}>{pharmacy.name}</Text>
+            <View style={[
+              styles.statusBadge,
+              { backgroundColor: pharmacy.isOpen ? `${COLORS.success}20` : `${COLORS.error}20` }
+            ]}>
+              <Text style={[
+                styles.statusText,
+                { color: pharmacy.isOpen ? COLORS.success : COLORS.error }
+              ]}>
                 {pharmacy.isOpen ? 'Open' : 'Closed'}
               </Text>
             </View>
           </View>
-          <Text className="text-gray-500 text-sm">{pharmacy.address}</Text>
-          <View className="flex-row items-center mt-2">
+          <Text style={styles.pharmacyAddress} numberOfLines={1}>{pharmacy.address}</Text>
+          <View style={styles.pharmacyFooter}>
             {pharmacy.rating && (
-              <View className="flex-row items-center mr-4">
-                <Text className="text-yellow-500 mr-1">⭐</Text>
-                <Text className="text-gray-700 text-sm">{pharmacy.rating.toFixed(1)}</Text>
+              <View style={styles.ratingContainer}>
+                <Icon name="star" size="xs" color="#FBBF24" />
+                <Text style={styles.ratingText}>{pharmacy.rating.toFixed(1)}</Text>
               </View>
             )}
             {pharmacy.deliveryTime && (
-              <Text className="text-gray-500 text-sm">{pharmacy.deliveryTime} min delivery</Text>
+              <Text style={styles.deliveryTime}>{pharmacy.deliveryTime} min delivery</Text>
             )}
           </View>
         </View>
@@ -243,3 +268,177 @@ function PharmacyCard({ pharmacy, onPress }: { pharmacy: Pharmacy; onPress: () =
     </TouchableOpacity>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.primary,
+    paddingTop: 60,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTitle: {
+    color: COLORS.background,
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  headerSubtitle: {
+    color: 'rgba(13, 13, 18, 0.7)',
+    fontSize: 14,
+    marginTop: 4,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.text,
+    fontSize: 14,
+    marginLeft: 10,
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.backgroundElevated,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 8,
+  },
+  quickActionItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  quickActionLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  sectionTitle: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.backgroundElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyText: {
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+  pharmacyCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  pharmacyImageContainer: {
+    marginRight: 12,
+  },
+  pharmacyImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+  },
+  pharmacyImagePlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: `${COLORS.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pharmacyContent: {
+    flex: 1,
+  },
+  pharmacyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  pharmacyName: {
+    flex: 1,
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  pharmacyAddress: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  pharmacyFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  ratingText: {
+    color: COLORS.text,
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  deliveryTime: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+  },
+});

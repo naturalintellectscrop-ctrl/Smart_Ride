@@ -1,7 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - ORDERS SCREEN
 // ============================================
-// Dark Theme with Smart Ride Branding
+// Premium dark theme with Smart Ride branding
+// Uses vector icons instead of emojis
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -29,6 +30,15 @@ import Animated, {
 import { api } from '@/src/services';
 import { COLORS } from '@/src/constants';
 import { Order } from '@/src/types';
+import { Icon, IconColors } from '../../components/Icon';
+
+// Quick action configuration with icons
+const QUICK_ACTIONS = [
+  { id: 'food', icon: 'coffee' as const, label: 'Food', color: '#F59E0B', route: '/orders/restaurants' },
+  { id: 'shop', icon: 'shopping-bag' as const, label: 'Shop', color: '#8B5CF6', route: '/shopping' },
+  { id: 'delivery', icon: 'package' as const, label: 'Delivery', color: '#14B8A6', route: '/delivery' },
+  { id: 'health', icon: 'heart' as const, label: 'Health', color: '#F43F5E', route: '/health' },
+];
 
 export default function OrdersScreen() {
   const router = useRouter();
@@ -107,30 +117,16 @@ export default function OrdersScreen() {
 
       {/* Quick Actions */}
       <Animated.View entering={FadeInUp.duration(400).delay(100).springify()} style={styles.quickActions}>
-        <QuickAction 
-          icon="🍔" 
-          label="Food" 
-          onPress={() => router.push('/orders/restaurants')}
-          delay={150}
-        />
-        <QuickAction 
-          icon="🛒" 
-          label="Shop" 
-          onPress={() => router.push('/shopping')}
-          delay={200}
-        />
-        <QuickAction 
-          icon="📦" 
-          label="Delivery" 
-          onPress={() => router.push('/delivery')}
-          delay={250}
-        />
-        <QuickAction 
-          icon="💊" 
-          label="Health" 
-          onPress={() => router.push('/health')}
-          delay={300}
-        />
+        {QUICK_ACTIONS.map((action, index) => (
+          <QuickAction 
+            key={action.id}
+            icon={action.icon} 
+            label={action.label}
+            color={action.color}
+            onPress={() => router.push(action.route)}
+            delay={150 + index * 50}
+          />
+        ))}
       </Animated.View>
 
       {/* Orders List */}
@@ -154,9 +150,12 @@ export default function OrdersScreen() {
           }
           ListEmptyComponent={
             <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📦</Text>
+              <View style={styles.emptyIconContainer}>
+                <Icon name="package" size="2xl" color={COLORS.textMuted} />
+              </View>
               <Text style={styles.emptyText}>No orders yet</Text>
               <TouchableOpacity style={styles.orderButton} onPress={() => router.push('/orders/restaurants')}>
+                <Icon name="coffee" size="sm" color={COLORS.background} style={{ marginRight: 8 }} />
                 <Text style={styles.orderButtonText}>Order Food</Text>
               </TouchableOpacity>
             </Animated.View>
@@ -168,7 +167,19 @@ export default function OrdersScreen() {
 }
 
 // Quick Action with Animation
-function QuickAction({ icon, label, onPress, delay }: { icon: string; label: string; onPress: () => void; delay: number }) {
+function QuickAction({ 
+  icon, 
+  label, 
+  color,
+  onPress, 
+  delay 
+}: { 
+  icon: 'coffee' | 'shopping-bag' | 'package' | 'heart'; 
+  label: string; 
+  color: string;
+  onPress: () => void; 
+  delay: number 
+}) {
   const scale = useSharedValue(1);
 
   const handlePressIn = () => {
@@ -191,8 +202,10 @@ function QuickAction({ icon, label, onPress, delay }: { icon: string; label: str
         onPressOut={handlePressOut}
         activeOpacity={0.8}
       >
-        <Animated.View style={animatedStyle}>
-          <Text style={styles.quickActionIcon}>{icon}</Text>
+        <Animated.View style={[styles.quickActionContent, animatedStyle]}>
+          <View style={[styles.quickActionIconContainer, { backgroundColor: `${color}15` }]}>
+            <Icon name={icon} size="md" color={color} />
+          </View>
           <Text style={styles.quickActionLabel}>{label}</Text>
         </Animated.View>
       </TouchableOpacity>
@@ -201,7 +214,17 @@ function QuickAction({ icon, label, onPress, delay }: { icon: string; label: str
 }
 
 // Order Card with Animation
-function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order; onPress: () => void; getStatusColor: (s: string) => string; formatDate: (d: string) => string }) {
+function OrderCard({ 
+  item, 
+  onPress, 
+  getStatusColor, 
+  formatDate 
+}: { 
+  item: Order; 
+  onPress: () => void; 
+  getStatusColor: (s: string) => string; 
+  formatDate: (d: string) => string 
+}) {
   const scale = useSharedValue(1);
 
   const handlePressIn = () => {
@@ -216,6 +239,16 @@ function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order;
     transform: [{ scale: scale.value }],
   }));
 
+  // Determine order type
+  const getOrderTypeInfo = () => {
+    if (item.orderType === 'FOOD_DELIVERY') {
+      return { icon: 'coffee' as const, color: '#F59E0B' };
+    }
+    return { icon: 'shopping-bag' as const, color: '#8B5CF6' };
+  };
+
+  const orderType = getOrderTypeInfo();
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -226,10 +259,8 @@ function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order;
       <Animated.View style={[styles.orderCard, animatedStyle]}>
         <View style={styles.orderHeader}>
           <View style={styles.orderInfo}>
-            <View style={styles.orderIconContainer}>
-              <Text style={styles.orderIcon}>
-                {item.orderType === 'FOOD_DELIVERY' ? '🍔' : '🛒'}
-              </Text>
+            <View style={[styles.orderIconContainer, { backgroundColor: `${orderType.color}15` }]}>
+              <Icon name={orderType.icon} size="md" color={orderType.color} />
             </View>
             <View>
               <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
@@ -297,15 +328,21 @@ const styles = StyleSheet.create({
   },
   quickActionItem: {
     flex: 1,
+  },
+  quickActionContent: {
     alignItems: 'center',
     backgroundColor: COLORS.background,
     borderRadius: 12,
     paddingVertical: 12,
+    paddingHorizontal: 4,
   },
-  quickActionIcon: {
-    fontSize: 20,
-    marginBottom: 4,
-    textAlign: 'center',
+  quickActionIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
   },
   quickActionLabel: {
     fontSize: 12,
@@ -329,13 +366,19 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 48,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.backgroundElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   emptyText: {
     color: COLORS.textMuted,
     textAlign: 'center',
+    marginBottom: 16,
   },
   orderButton: {
     marginTop: 16,
@@ -343,6 +386,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   orderButtonText: {
     color: COLORS.background,
@@ -367,16 +412,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   orderIconContainer: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     borderRadius: 12,
-    backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
-  },
-  orderIcon: {
-    fontSize: 24,
   },
   orderNumber: {
     fontWeight: 'bold',

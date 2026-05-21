@@ -1,8 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - WALLET SCREEN
 // ============================================
-// VERSION: DEBUG-TRACE-001
-// PURPOSE: Manage user wallet and payments
+// Premium dark theme with vector icons
+// Manage user wallet and payments
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -24,6 +25,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
 import { COLORS } from '@/src/constants';
+import { Icon, IconColors } from '../../components/Icon';
 
 interface WalletData {
   balance: number;
@@ -42,6 +44,14 @@ interface Transaction {
   createdAt: string;
   status: 'COMPLETED' | 'PENDING' | 'FAILED';
 }
+
+// Quick actions configuration
+const QUICK_ACTIONS = [
+  { id: 'topup', iconName: 'plus-circle' as const, label: 'Top Up', color: '#00FF88' },
+  { id: 'withdraw', iconName: 'upload' as const, label: 'Withdraw', color: '#00FFF3' },
+  { id: 'transfer', iconName: 'send' as const, label: 'Transfer', color: '#8B5CF6' },
+  { id: 'history', iconName: 'clock' as const, label: 'History', color: '#F59E0B' },
+];
 
 export default function WalletScreen() {
   const router = useRouter();
@@ -103,36 +113,53 @@ export default function WalletScreen() {
     });
   };
 
+  const handleQuickAction = (actionId: string) => {
+    switch (actionId) {
+      case 'transfer':
+        router.push('/wallet/transfer');
+        break;
+      default:
+        // Handle other actions
+        break;
+    }
+  };
+
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
       <Animated.View 
         entering={FadeInDown.duration(400).springify()}
-        className="bg-primary-500 pt-12 pb-6 px-4"
+        style={styles.header}
       >
-        <Text className="text-white text-2xl font-bold mb-4">Wallet</Text>
+        <Text style={styles.headerTitle}>Wallet</Text>
         
         {/* Balance Card */}
         <Animated.View 
           entering={ZoomIn.delay(200).duration(400)}
-          className="bg-white/20 rounded-2xl p-4"
+          style={styles.balanceCard}
         >
-          <Text className="text-white/80 text-sm">Available Balance</Text>
-          <Text className="text-white text-3xl font-bold mt-1">
+          <View style={styles.balanceIconContainer}>
+            <Icon name="credit-card" size="xl" color="rgba(13, 13, 18, 0.5)" />
+          </View>
+          <Text style={styles.balanceLabel}>Available Balance</Text>
+          <Text style={styles.balanceAmount}>
             {formatCurrency(walletData?.balance || 0)}
           </Text>
           {walletData?.pendingBalance ? (
-            <Text className="text-white/80 text-sm mt-2">
-              Pending: {formatCurrency(walletData.pendingBalance)}
-            </Text>
+            <View style={styles.pendingContainer}>
+              <Icon name="clock" size="xs" color="rgba(13, 13, 18, 0.5)" />
+              <Text style={styles.pendingText}>
+                Pending: {formatCurrency(walletData.pendingBalance)}
+              </Text>
+            </View>
           ) : null}
         </Animated.View>
       </Animated.View>
@@ -140,38 +167,40 @@ export default function WalletScreen() {
       {/* Quick Actions */}
       <Animated.View 
         entering={FadeInUp.duration(400).delay(100)}
-        className="flex-row bg-white px-4 py-4 gap-3 shadow-sm"
+        style={styles.quickActionsContainer}
       >
-        <QuickAction 
-          icon="💳" 
-          label="Top Up" 
-          onPress={() => {}}
-        />
-        <QuickAction 
-          icon="📤" 
-          label="Withdraw" 
-          onPress={() => {}}
-        />
-        <QuickAction 
-          icon="📱" 
-          label="Transfer" 
-          onPress={() => router.push('/wallet/transfer')}
-        />
-        <QuickAction 
-          icon="📋" 
-          label="History" 
-          onPress={() => {}}
-        />
+        {QUICK_ACTIONS.map((action, index) => (
+          <Animated.View
+            key={action.id}
+            entering={ZoomIn.delay(150 + index * 50).duration(300)}
+            style={styles.quickActionItem}
+          >
+            <TouchableOpacity 
+              onPress={() => handleQuickAction(action.id)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.quickActionIcon, { backgroundColor: `${action.color}15` }]}>
+                <Icon name={action.iconName} size="md" color={action.color} />
+              </View>
+              <Text style={styles.quickActionLabel}>{action.label}</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        ))}
       </Animated.View>
 
       {/* Transactions */}
       <ScrollView 
-        className="flex-1 px-4 pt-4"
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
         }
       >
-        <Text className="text-gray-900 font-semibold mb-3">Recent Transactions</Text>
+        <Text style={styles.sectionTitle}>Recent Transactions</Text>
         
         {walletData?.transactions?.length ? (
           walletData.transactions.map((tx, index) => (
@@ -189,10 +218,12 @@ export default function WalletScreen() {
         ) : (
           <Animated.View 
             entering={FadeIn.duration(400)}
-            className="items-center py-12"
+            style={styles.emptyContainer}
           >
-            <Text className="text-4xl mb-4">💳</Text>
-            <Text className="text-gray-500">No transactions yet</Text>
+            <View style={styles.emptyIconContainer}>
+              <Icon name="credit-card" size="2xl" color={COLORS.textMuted} />
+            </View>
+            <Text style={styles.emptyText}>No transactions yet</Text>
           </Animated.View>
         )}
       </ScrollView>
@@ -200,17 +231,7 @@ export default function WalletScreen() {
   );
 }
 
-function QuickAction({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity onPress={onPress} className="flex-1 items-center">
-      <View className="w-12 h-12 bg-primary-100 rounded-full items-center justify-center mb-1">
-        <Text className="text-xl">{icon}</Text>
-      </View>
-      <Text className="text-xs text-gray-600">{label}</Text>
-    </TouchableOpacity>
-  );
-}
-
+// Transaction Item Component
 function TransactionItem({ 
   transaction, 
   formatCurrency, 
@@ -221,19 +242,165 @@ function TransactionItem({
   formatDate: (d: string) => string;
 }) {
   const isCredit = transaction.type === 'CREDIT';
+  const iconColor = isCredit ? '#22C55E' : '#F43F5E';
+  const iconName = isCredit ? 'arrow-down' : 'arrow-up';
   
   return (
-    <View className="bg-white rounded-xl p-4 mb-2 flex-row items-center shadow-sm">
-      <View className={`w-10 h-10 rounded-full items-center justify-center mr-3 ${isCredit ? 'bg-green-100' : 'bg-red-100'}`}>
-        <Text className="text-lg">{isCredit ? '↓' : '↑'}</Text>
+    <View style={styles.transactionCard}>
+      <View style={[styles.transactionIcon, { backgroundColor: `${iconColor}15` }]}>
+        <Icon name={iconName} size="md" color={iconColor} />
       </View>
-      <View className="flex-1">
-        <Text className="font-medium text-gray-900">{transaction.description}</Text>
-        <Text className="text-gray-500 text-sm">{formatDate(transaction.createdAt)}</Text>
+      <View style={styles.transactionContent}>
+        <Text style={styles.transactionDescription}>{transaction.description}</Text>
+        <Text style={styles.transactionDate}>{formatDate(transaction.createdAt)}</Text>
       </View>
-      <Text className={`font-bold ${isCredit ? 'text-green-600' : 'text-red-600'}`}>
+      <Text style={[styles.transactionAmount, { color: iconColor }]}>
         {isCredit ? '+' : '-'}{formatCurrency(transaction.amount)}
       </Text>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.primary,
+    paddingTop: 60,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTitle: {
+    color: COLORS.background,
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  balanceCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    padding: 20,
+  },
+  balanceIconContainer: {
+    marginBottom: 8,
+  },
+  balanceLabel: {
+    color: 'rgba(13, 13, 18, 0.6)',
+    fontSize: 14,
+  },
+  balanceAmount: {
+    color: COLORS.background,
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  pendingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  pendingText: {
+    color: 'rgba(13, 13, 18, 0.6)',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.backgroundElevated,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 8,
+  },
+  quickActionItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  quickActionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  quickActionLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  sectionTitle: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.backgroundElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyText: {
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+  transactionCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  transactionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  transactionContent: {
+    flex: 1,
+  },
+  transactionDescription: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  transactionDate: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  transactionAmount: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+});

@@ -1,7 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - RIDES HISTORY SCREEN
 // ============================================
-// Dark Theme with Smart Ride Branding
+// Premium dark theme with Smart Ride branding
+// Uses vector icons instead of emojis
 // ============================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -24,11 +25,13 @@ import Animated, {
   FadeInDown,
   SlideInRight,
   Layout,
+  ZoomIn,
 } from 'react-native-reanimated';
 import { useTaskStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
 import { Task } from '@/src/types';
+import { Icon, IconColors } from '../../components/Icon';
 
 export default function RidesScreen() {
   const router = useRouter();
@@ -120,7 +123,9 @@ export default function RidesScreen() {
     if (error && taskHistory.length === 0) {
       return (
         <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📋</Text>
+          <View style={styles.emptyIconContainer}>
+            <Icon name="file-text" size="2xl" color={COLORS.textMuted} />
+          </View>
           <Text style={styles.emptyText}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={loadTasks}>
             <Text style={styles.retryButtonText}>Retry</Text>
@@ -145,11 +150,14 @@ export default function RidesScreen() {
         }
         ListEmptyComponent={
           <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🚗</Text>
+            <View style={styles.emptyIconContainer}>
+              <Icon name="car" size="2xl" color={COLORS.textMuted} />
+            </View>
             <Text style={styles.emptyText}>
               {activeTab === 'active' ? 'No active rides' : 'No ride history yet'}
             </Text>
             <TouchableOpacity style={styles.bookButton} onPress={() => router.push('/rider/ride-request')}>
+              <Icon name="plus" size="sm" color={COLORS.background} style={{ marginRight: 8 }} />
               <Text style={styles.bookButtonText}>Book a Ride</Text>
             </TouchableOpacity>
           </Animated.View>
@@ -171,11 +179,13 @@ export default function RidesScreen() {
           isActive={activeTab === 'active'}
           onPress={() => setActiveTab('active')}
           label="Active Ride"
+          icon="activity"
         />
         <AnimatedTabButton
           isActive={activeTab === 'history'}
           onPress={() => setActiveTab('history')}
           label="History"
+          icon="clock"
         />
       </Animated.View>
 
@@ -189,11 +199,13 @@ export default function RidesScreen() {
 function AnimatedTabButton({ 
   isActive, 
   onPress, 
-  label, 
+  label,
+  icon,
 }: { 
   isActive: boolean; 
   onPress: () => void; 
   label: string;
+  icon: 'activity' | 'clock';
 }) {
   const scale = useSharedValue(1);
 
@@ -213,8 +225,14 @@ function AnimatedTabButton({
     <TouchableOpacity 
       style={[styles.tabButton, isActive && styles.tabButtonActive]}
       onPress={handlePress}
+      activeOpacity={0.8}
     >
-      <Animated.View style={animatedStyle}>
+      <Animated.View style={[styles.tabContent, animatedStyle]}>
+        <Icon 
+          name={icon} 
+          size="sm" 
+          color={isActive ? COLORS.background : COLORS.textMuted} 
+        />
         <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>
           {label}
         </Text>
@@ -225,6 +243,20 @@ function AnimatedTabButton({
 
 // Animated Task Card
 function TaskCard({ item, statusColor, onPress }: { item: Task; statusColor: string; onPress: () => void }) {
+  const scale = useSharedValue(1);
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
@@ -239,19 +271,38 @@ function TaskCard({ item, statusColor, onPress }: { item: Task; statusColor: str
     }
   };
 
+  // Determine ride type icon and color
+  const getRideTypeInfo = () => {
+    if (item.taskType?.includes('BODA')) {
+      return { icon: 'navigation' as const, label: 'Smart Boda', color: IconColors.primary };
+    } else if (item.taskType?.includes('CAR')) {
+      return { icon: 'car' as const, label: 'Smart Car', color: IconColors.accent };
+    }
+    return { icon: 'package' as const, label: 'Delivery', color: '#14B8A6' };
+  };
+
+  const rideType = getRideTypeInfo();
+
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.taskCard}>
+    <TouchableOpacity 
+      onPress={onPress} 
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={0.8}
+    >
+      <Animated.View style={[styles.taskCard, animatedStyle]}>
         <View style={styles.taskHeader}>
-          <View>
-            <Text style={styles.taskNumber}>#{item.taskNumber || item.id.slice(0, 8)}</Text>
-            <Text style={styles.taskType}>
-              {item.taskType?.includes('BODA') ? '🏍️ Smart Boda' : 
-               item.taskType?.includes('CAR') ? '🚗 Smart Car' : '📦 Delivery'}
-            </Text>
+          <View style={styles.taskHeaderLeft}>
+            <View style={[styles.rideTypeIcon, { backgroundColor: `${rideType.color}15` }]}>
+              <Icon name={rideType.icon} size="md" color={rideType.color} />
+            </View>
+            <View>
+              <Text style={styles.taskNumber}>#{item.taskNumber || item.id.slice(0, 8)}</Text>
+              <Text style={styles.taskType}>{rideType.label}</Text>
+            </View>
           </View>
           <Animated.View 
-            entering={FadeIn.duration(300)}
+            entering={ZoomIn.duration(300)}
             style={[styles.statusBadge, { backgroundColor: `${statusColor}20` }]}
           >
             <Text style={[styles.statusText, { color: statusColor }]}>
@@ -277,7 +328,7 @@ function TaskCard({ item, statusColor, onPress }: { item: Task; statusColor: str
           <Text style={styles.taskDate}>{formatDate(item.createdAt)}</Text>
           <Text style={styles.taskAmount}>UGX {(item.totalAmount || 0).toLocaleString()}</Text>
         </View>
-      </View>
+      </Animated.View>
     </TouchableOpacity>
   );
 }
@@ -309,17 +360,25 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
+    flexDirection: 'row',
     paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tabButtonActive: {
     backgroundColor: COLORS.primary,
+  },
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   tabButtonText: {
     textAlign: 'center',
     fontWeight: '600',
     color: COLORS.textMuted,
+    marginLeft: 6,
   },
   tabButtonTextActive: {
     color: COLORS.background,
@@ -339,8 +398,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 48,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.backgroundElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 16,
   },
   emptyText: {
@@ -353,6 +417,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   retryButtonText: {
     color: COLORS.background,
@@ -364,6 +430,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 24,
     paddingVertical: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   bookButtonText: {
     color: COLORS.background,
@@ -388,6 +456,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 12,
+  },
+  taskHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rideTypeIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
   },
   taskNumber: {
     color: COLORS.textMuted,

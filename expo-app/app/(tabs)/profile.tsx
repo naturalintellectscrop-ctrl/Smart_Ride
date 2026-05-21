@@ -1,7 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - PROFILE SCREEN
 // ============================================
-// Dark Theme with Smart Ride Branding
+// Premium dark theme with Smart Ride branding
+// Uses vector icons instead of emojis
 // ============================================
 
 import React, { useState } from 'react';
@@ -29,6 +30,20 @@ import Animated, {
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS } from '@/src/constants';
+import { Icon, IconColors } from '../../components/Icon';
+
+const MENU_ICONS = {
+  editProfile: 'user' as const,
+  addresses: 'map-pin' as const,
+  payment: 'credit-card' as const,
+  contacts: 'users' as const,
+  notifications: 'bell' as const,
+  language: 'grid' as const,
+  help: 'help-circle' as const,
+  support: 'message-circle' as const,
+  terms: 'file-text' as const,
+  privacy: 'shield' as const,
+};
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -69,35 +84,51 @@ export default function ProfileScreen() {
     {
       section: 'Account',
       items: [
-        { icon: '👤', label: 'Edit Profile', onPress: () => router.push('/profile/edit') },
-        { icon: '📍', label: 'Saved Addresses', onPress: () => {} },
-        { icon: '💳', label: 'Payment Methods', onPress: () => router.push('/wallet') },
-        { icon: '👥', label: 'Emergency Contacts', onPress: () => {} },
+        { iconName: MENU_ICONS.editProfile, iconColor: IconColors.primary, label: 'Edit Profile', onPress: () => router.push('/profile/edit') },
+        { iconName: MENU_ICONS.addresses, iconColor: IconColors.accent, label: 'Saved Addresses', onPress: () => {} },
+        { iconName: MENU_ICONS.payment, iconColor: '#F59E0B', label: 'Payment Methods', onPress: () => router.push('/wallet') },
+        { iconName: MENU_ICONS.contacts, iconColor: '#8B5CF6', label: 'Emergency Contacts', onPress: () => {} },
       ],
     },
     {
       section: 'Preferences',
       items: [
         { 
-          icon: '🔔', 
+          iconName: MENU_ICONS.notifications,
+          iconColor: IconColors.warning, 
           label: 'Notifications', 
           type: 'toggle',
           value: notificationsEnabled,
           onToggle: setNotificationsEnabled,
         },
-        { icon: '🌍', label: 'Language', value: 'English', onPress: () => {} },
+        { iconName: MENU_ICONS.language, iconColor: '#14B8A6', label: 'Language', value: 'English', onPress: () => {} },
       ],
     },
     {
       section: 'Support',
       items: [
-        { icon: '❓', label: 'Help Center', onPress: () => {} },
-        { icon: '💬', label: 'Contact Support', onPress: () => {} },
-        { icon: '📜', label: 'Terms of Service', onPress: () => {} },
-        { icon: '🔒', label: 'Privacy Policy', onPress: () => {} },
+        { iconName: MENU_ICONS.help, iconColor: IconColors.textSecondary, label: 'Help Center', onPress: () => {} },
+        { iconName: MENU_ICONS.support, iconColor: IconColors.primary, label: 'Contact Support', onPress: () => {} },
+        { iconName: MENU_ICONS.terms, iconColor: IconColors.textSecondary, label: 'Terms of Service', onPress: () => {} },
+        { iconName: MENU_ICONS.privacy, iconColor: IconColors.accent, label: 'Privacy Policy', onPress: () => {} },
       ],
     },
   ];
+
+  // Get user initials for avatar
+  const getUserInitials = () => {
+    if (user?.name) {
+      const parts = user.name.split(' ');
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      }
+      return user.name.substring(0, 2).toUpperCase();
+    }
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
 
   return (
     <ScrollView style={styles.container}>
@@ -114,7 +145,7 @@ export default function ProfileScreen() {
             entering={ZoomIn.delay(200).duration(300)}
             style={styles.avatar}
           >
-            <Text style={styles.avatarText}>👤</Text>
+            <Text style={styles.avatarText}>{getUserInitials()}</Text>
           </Animated.View>
           <View style={styles.userDetails}>
             <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
@@ -133,7 +164,7 @@ export default function ProfileScreen() {
         <View style={styles.statDivider} />
         <StatItem label="Orders" value="12" delay={350} />
         <View style={styles.statDivider} />
-        <StatItem label="Rating" value="4.8 ⭐" delay={400} />
+        <StatItem label="Rating" value="4.8" delay={400} showStar />
       </Animated.View>
 
       {/* Menu Items */}
@@ -179,7 +210,10 @@ export default function ProfileScreen() {
           {isLoading ? (
             <ActivityIndicator color="#FF4757" />
           ) : (
-            <Text style={styles.logoutText}>Sign Out</Text>
+            <>
+              <Icon name="log-out" size="md" color="#FF4757" />
+              <Text style={styles.logoutText}>Sign Out</Text>
+            </>
           )}
         </TouchableOpacity>
       </Animated.View>
@@ -190,13 +224,16 @@ export default function ProfileScreen() {
 }
 
 // Animated Stat Item
-function StatItem({ label, value, delay }: { label: string; value: string; delay: number }) {
+function StatItem({ label, value, delay, showStar }: { label: string; value: string; delay: number; showStar?: boolean }) {
   return (
     <Animated.View 
       entering={FadeIn.duration(400).delay(delay).springify()}
       style={styles.statItem}
     >
-      <Text style={styles.statValue}>{value}</Text>
+      <View style={styles.statValueRow}>
+        <Text style={styles.statValue}>{value}</Text>
+        {showStar && <Icon name="star" size="sm" color="#FBBF24" style={{ marginLeft: 4 }} />}
+      </View>
       <Text style={styles.statLabel}>{label}</Text>
     </Animated.View>
   );
@@ -204,13 +241,31 @@ function StatItem({ label, value, delay }: { label: string; value: string; delay
 
 // Menu Item Component
 function MenuItem({ item, isLast }: { item: any; isLast: boolean }) {
+  const scale = useSharedValue(1);
+  
+  const handlePressIn = () => {
+    scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
+  };
+
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
     <TouchableOpacity
       style={styles.menuItem}
       onPress={item.type === 'toggle' ? undefined : item.onPress}
+      onPressIn={item.type === 'toggle' ? undefined : handlePressIn}
+      onPressOut={item.type === 'toggle' ? undefined : handlePressOut}
       activeOpacity={0.7}
     >
-      <Text style={styles.menuIcon}>{item.icon}</Text>
+      <Animated.View style={[styles.menuIconContainer, { backgroundColor: `${item.iconColor}15` }]}>
+        <Icon name={item.iconName} size="sm" color={item.iconColor} />
+      </Animated.View>
       <Text style={styles.menuLabel}>{item.label}</Text>
       {item.type === 'toggle' ? (
         <Switch
@@ -222,7 +277,7 @@ function MenuItem({ item, isLast }: { item: any; isLast: boolean }) {
       ) : item.value ? (
         <Text style={styles.menuValue}>{item.value}</Text>
       ) : (
-        <Text style={styles.menuArrow}>›</Text>
+        <Icon name="chevron-right" size="sm" color={COLORS.textMuted} />
       )}
       {!isLast && <View style={styles.menuDivider} />}
     </TouchableOpacity>
@@ -262,7 +317,9 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   avatarText: {
-    fontSize: 32,
+    fontSize: 24,
+    fontWeight: '700',
+    color: COLORS.primary,
   },
   userDetails: {
     flex: 1,
@@ -296,6 +353,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: 4,
+  },
+  statValueRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   statValue: {
     fontSize: 22,
@@ -334,8 +395,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 16,
   },
-  menuIcon: {
-    fontSize: 20,
+  menuIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
   menuLabel: {
@@ -348,13 +413,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textMuted,
   },
-  menuArrow: {
-    fontSize: 18,
-    color: COLORS.textMuted,
-  },
   menuDivider: {
     position: 'absolute',
-    left: 48,
+    left: 64,
     right: 0,
     bottom: 0,
     height: 1,
@@ -374,7 +435,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 71, 87, 0.1)',
     borderRadius: 16,
     paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 71, 87, 0.3)',
   },
@@ -382,5 +445,6 @@ const styles = StyleSheet.create({
     color: '#FF4757',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
 });

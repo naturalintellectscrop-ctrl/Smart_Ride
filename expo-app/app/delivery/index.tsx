@@ -1,8 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - DELIVERY SCREEN
 // ============================================
-// VERSION: DEBUG-TRACE-001
-// PURPOSE: Package/item delivery service
+// Premium dark theme with vector icons
+// Package/item delivery service
 // ============================================
 
 import React, { useState } from 'react';
@@ -13,6 +13,7 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -22,12 +23,14 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { COLORS } from '@/src/constants';
+import { Icon, IconColors } from '../../components/Icon';
 
 interface DeliveryOption {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  iconName: 'navigation' | 'car' | 'truck';
+  iconColor: string;
   basePrice: number;
   estimatedTime: string;
 }
@@ -37,7 +40,8 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
     id: 'boda',
     name: 'Boda Boda',
     description: 'Quick delivery for small packages',
-    icon: '🏍️',
+    iconName: 'navigation',
+    iconColor: '#00FF88',
     basePrice: 5000,
     estimatedTime: '15-30 min',
   },
@@ -45,7 +49,8 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
     id: 'car',
     name: 'Car Delivery',
     description: 'Larger packages, multiple items',
-    icon: '🚗',
+    iconName: 'car',
+    iconColor: '#00FFF3',
     basePrice: 15000,
     estimatedTime: '30-45 min',
   },
@@ -53,7 +58,8 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
     id: 'truck',
     name: 'Truck Delivery',
     description: 'Bulk items, furniture, appliances',
-    icon: '🚚',
+    iconName: 'truck',
+    iconColor: '#F59E0B',
     basePrice: 30000,
     estimatedTime: '1-2 hours',
   },
@@ -86,20 +92,20 @@ export default function DeliveryScreen() {
   const selectedDelivery = DELIVERY_OPTIONS.find(o => o.id === selectedOption);
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
       <Animated.View 
         entering={FadeInDown.duration(400).springify()}
-        className="bg-primary-500 pt-12 pb-6 px-4"
+        style={styles.header}
       >
-        <Text className="text-white text-2xl font-bold">Delivery</Text>
-        <Text className="text-white/80 mt-1">Send packages anywhere</Text>
+        <Text style={styles.headerTitle}>Delivery</Text>
+        <Text style={styles.headerSubtitle}>Send packages anywhere</Text>
       </Animated.View>
 
-      <ScrollView className="flex-1 px-4 pt-4">
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Delivery Options */}
         <Animated.View entering={FadeInUp.duration(400).delay(100)}>
-          <Text className="text-gray-900 font-semibold mb-3">Select Delivery Type</Text>
+          <Text style={styles.sectionTitle}>Select Delivery Type</Text>
           {DELIVERY_OPTIONS.map((option, index) => (
             <Animated.View
               key={option.id}
@@ -107,26 +113,43 @@ export default function DeliveryScreen() {
             >
               <TouchableOpacity
                 onPress={() => setSelectedOption(option.id)}
-                className={`p-4 rounded-2xl mb-3 flex-row items-center ${
-                  selectedOption === option.id 
-                    ? 'bg-primary-500' 
-                    : 'bg-white shadow-sm'
-                }`}
+                style={[
+                  styles.optionCard,
+                  selectedOption === option.id && styles.optionCardSelected
+                ]}
+                activeOpacity={0.8}
               >
-                <Text className="text-3xl mr-3">{option.icon}</Text>
-                <View className="flex-1">
-                  <Text className={`font-bold ${selectedOption === option.id ? 'text-white' : 'text-gray-900'}`}>
+                <View style={[
+                  styles.optionIconContainer,
+                  { backgroundColor: `${option.iconColor}15` }
+                ]}>
+                  <Icon name={option.iconName} size="xl" color={option.iconColor} />
+                </View>
+                <View style={styles.optionContent}>
+                  <Text style={[
+                    styles.optionName,
+                    selectedOption === option.id && styles.optionNameSelected
+                  ]}>
                     {option.name}
                   </Text>
-                  <Text className={`text-sm ${selectedOption === option.id ? 'text-white/80' : 'text-gray-500'}`}>
+                  <Text style={[
+                    styles.optionDescription,
+                    selectedOption === option.id && styles.optionDescriptionSelected
+                  ]}>
                     {option.description}
                   </Text>
                 </View>
-                <View className="items-end">
-                  <Text className={`font-bold ${selectedOption === option.id ? 'text-white' : 'text-primary-500'}`}>
+                <View style={styles.optionPriceContainer}>
+                  <Text style={[
+                    styles.optionPrice,
+                    selectedOption === option.id && styles.optionPriceSelected
+                  ]}>
                     UGX {option.basePrice.toLocaleString()}
                   </Text>
-                  <Text className={`text-xs ${selectedOption === option.id ? 'text-white/70' : 'text-gray-400'}`}>
+                  <Text style={[
+                    styles.optionTime,
+                    selectedOption === option.id && styles.optionTimeSelected
+                  ]}>
                     {option.estimatedTime}
                   </Text>
                 </View>
@@ -136,50 +159,64 @@ export default function DeliveryScreen() {
         </Animated.View>
 
         {/* Location Inputs */}
-        <Animated.View entering={FadeInUp.duration(400).delay(300)} className="mt-4">
-          <Text className="text-gray-900 font-semibold mb-3">Delivery Details</Text>
+        <Animated.View entering={FadeInUp.duration(400).delay(300)} style={styles.locationSection}>
+          <Text style={styles.sectionTitle}>Delivery Details</Text>
           
-          <View className="bg-white rounded-2xl p-4 shadow-sm">
+          <View style={styles.locationCard}>
             {/* Pickup */}
-            <View className="mb-4">
-              <Text className="text-gray-500 text-sm mb-2">Pickup Location</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Pickup Location</Text>
               <TouchableOpacity 
                 onPress={() => router.push('/location-picker?type=pickup')}
-                className="flex-row items-center bg-gray-50 rounded-xl p-3"
+                style={styles.locationInput}
+                activeOpacity={0.8}
               >
-                <Text className="text-gray-400 mr-2">📍</Text>
-                <Text className={pickupLocation ? 'text-gray-900' : 'text-gray-400'}>
+                <View style={styles.locationIconContainer}>
+                  <Icon name="map-pin" size="sm" color={COLORS.primary} />
+                </View>
+                <Text style={[
+                  styles.locationInputText,
+                  pickupLocation ? styles.locationInputTextActive : {}
+                ]}>
                   {pickupLocation || 'Enter pickup location'}
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Dropoff */}
-            <View className="mb-4">
-              <Text className="text-gray-500 text-sm mb-2">Drop-off Location</Text>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Drop-off Location</Text>
               <TouchableOpacity 
                 onPress={() => router.push('/location-picker?type=dropoff')}
-                className="flex-row items-center bg-gray-50 rounded-xl p-3"
+                style={styles.locationInput}
+                activeOpacity={0.8}
               >
-                <Text className="text-gray-400 mr-2">🏁</Text>
-                <Text className={dropoffLocation ? 'text-gray-900' : 'text-gray-400'}>
+                <View style={styles.locationIconContainer}>
+                  <Icon name="navigation" size="sm" color={COLORS.secondary} />
+                </View>
+                <Text style={[
+                  styles.locationInputText,
+                  dropoffLocation ? styles.locationInputTextActive : {}
+                ]}>
                   {dropoffLocation || 'Enter drop-off location'}
                 </Text>
               </TouchableOpacity>
             </View>
 
             {/* Package Description */}
-            <View>
-              <Text className="text-gray-500 text-sm mb-2">Package Description</Text>
-              <TextInput
-                value={packageDescription}
-                onChangeText={setPackageDescription}
-                placeholder="What are you sending?"
-                placeholderTextColor="#9CA3AF"
-                className="bg-gray-50 rounded-xl p-3 text-gray-900"
-                multiline
-                numberOfLines={2}
-              />
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Package Description</Text>
+              <View style={styles.textInputContainer}>
+                <TextInput
+                  value={packageDescription}
+                  onChangeText={setPackageDescription}
+                  placeholder="What are you sending?"
+                  placeholderTextColor={COLORS.textMuted}
+                  style={styles.textInput}
+                  multiline
+                  numberOfLines={2}
+                />
+              </View>
             </View>
           </View>
         </Animated.View>
@@ -188,44 +225,46 @@ export default function DeliveryScreen() {
         {selectedDelivery && (
           <Animated.View 
             entering={FadeIn.duration(300)}
-            className="bg-white rounded-2xl p-4 mt-4 shadow-sm"
+            style={styles.summaryCard}
           >
-            <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-gray-500">Delivery Type</Text>
-              <Text className="text-gray-900 font-medium">{selectedDelivery.name}</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Delivery Type</Text>
+              <Text style={styles.summaryValue}>{selectedDelivery.name}</Text>
             </View>
-            <View className="flex-row justify-between items-center mb-3">
-              <Text className="text-gray-500">Estimated Time</Text>
-              <Text className="text-gray-900 font-medium">{selectedDelivery.estimatedTime}</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Estimated Time</Text>
+              <Text style={styles.summaryValue}>{selectedDelivery.estimatedTime}</Text>
             </View>
-            <View className="border-t border-gray-100 pt-3">
-              <View className="flex-row justify-between items-center">
-                <Text className="text-gray-900 font-bold">Estimated Cost</Text>
-                <Text className="text-primary-500 font-bold text-lg">
-                  UGX {selectedDelivery.basePrice.toLocaleString()}
-                </Text>
-              </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryTotalLabel}>Estimated Cost</Text>
+              <Text style={styles.summaryTotalValue}>
+                UGX {selectedDelivery.basePrice.toLocaleString()}
+              </Text>
             </View>
           </Animated.View>
         )}
 
         {/* Request Button */}
-        <Animated.View entering={FadeInUp.duration(400).delay(400)} className="mt-6 mb-8">
+        <Animated.View entering={FadeInUp.duration(400).delay(400)} style={styles.buttonContainer}>
           <TouchableOpacity
             onPress={handleRequestDelivery}
             disabled={!pickupLocation || !dropoffLocation || isLoading}
-            className={`rounded-2xl p-4 items-center ${
-              pickupLocation && dropoffLocation 
-                ? 'bg-primary-500' 
-                : 'bg-gray-300'
-            }`}
+            style={[
+              styles.requestButton,
+              pickupLocation && dropoffLocation ? styles.requestButtonActive : {}
+            ]}
+            activeOpacity={0.8}
           >
             {isLoading ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color={COLORS.background} />
             ) : (
-              <Text className="text-white font-bold text-lg">
-                Request Delivery
-              </Text>
+              <>
+                <Icon name="package" size="md" color={COLORS.background} />
+                <Text style={styles.requestButtonText}>
+                  Request Delivery
+                </Text>
+              </>
             )}
           </TouchableOpacity>
         </Animated.View>
@@ -233,3 +272,204 @@ export default function DeliveryScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.primary,
+    paddingTop: 60,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTitle: {
+    color: COLORS.background,
+    fontSize: 28,
+    fontWeight: 'bold',
+  },
+  headerSubtitle: {
+    color: 'rgba(13, 13, 18, 0.7)',
+    fontSize: 16,
+    marginTop: 4,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  sectionTitle: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  optionCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  optionCardSelected: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  optionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  optionContent: {
+    flex: 1,
+  },
+  optionName: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  optionNameSelected: {
+    color: COLORS.background,
+  },
+  optionDescription: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  optionDescriptionSelected: {
+    color: 'rgba(13, 13, 18, 0.7)',
+  },
+  optionPriceContainer: {
+    alignItems: 'flex-end',
+  },
+  optionPrice: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  optionPriceSelected: {
+    color: COLORS.background,
+  },
+  optionTime: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    marginTop: 2,
+  },
+  optionTimeSelected: {
+    color: 'rgba(13, 13, 18, 0.6)',
+  },
+  locationSection: {
+    marginTop: 8,
+  },
+  locationCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  locationInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: 12,
+  },
+  locationIconContainer: {
+    marginRight: 10,
+  },
+  locationInputText: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+  },
+  locationInputTextActive: {
+    color: COLORS.text,
+  },
+  textInputContainer: {
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    padding: 12,
+  },
+  textInput: {
+    color: COLORS.text,
+    fontSize: 14,
+    minHeight: 48,
+  },
+  summaryCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  summaryLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+  },
+  summaryValue: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 4,
+  },
+  summaryTotalLabel: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  summaryTotalValue: {
+    color: COLORS.primary,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  buttonContainer: {
+    marginTop: 24,
+    marginBottom: 32,
+  },
+  requestButton: {
+    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestButtonActive: {
+    backgroundColor: COLORS.primary,
+  },
+  requestButtonText: {
+    color: COLORS.background,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+});
