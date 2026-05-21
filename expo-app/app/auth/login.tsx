@@ -1,11 +1,13 @@
 // ============================================
 // SMART RIDE MOBILE - LOGIN SCREEN
 // ============================================
+// Premium authentication with animated particles
+// and glassmorphism UI matching admin dashboard
 // Google Sign-In is the PRIMARY authentication method
 // Email/password is secondary fallback
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -16,12 +18,17 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Alert,
+  Animated,
+  Dimensions,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { GoogleSignin, statusCodes } from '@react-native-google-signin/google-signin';
 import { loginWithEmail, isAuthenticated, saveTokens, saveUserData } from '../../services/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AnimatedBackground } from '../../components/AnimatedBackground';
+import { GlassCard } from '../../components/GlassCard';
+
+const { width } = Dimensions.get('window');
 
 const COLORS = {
   primary: '#00FF88',          // Neon Green - Smart Ride brand
@@ -29,11 +36,11 @@ const COLORS = {
   accent: '#00FFF3',           // Cyan - Secondary accent
   background: '#0D0D12',       // Dark background
   backgroundElevated: '#1A1A24',
-  backgroundSurface: '#252530',
+  backgroundSurface: 'rgba(37, 37, 48, 0.8)',
   text: '#FFFFFF',
   textSecondary: 'rgba(255, 255, 255, 0.7)',
   textMuted: 'rgba(255, 255, 255, 0.5)',
-  border: 'rgba(255, 255, 255, 0.08)',
+  border: 'rgba(255, 255, 255, 0.1)',
   error: '#FF4757',
   googleBlue: '#4285F4',
 };
@@ -56,6 +63,42 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const logoAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    // Fade in and slide up animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      // Logo breathing animation
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(logoAnim, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(logoAnim, {
+            toValue: 0,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      ),
+    ]).start();
+  }, []);
 
   const checkAuth = async () => {
     const authenticated = await isAuthenticated();
@@ -163,127 +206,192 @@ export default function LoginScreen() {
     }
   };
 
+  const logoScale = logoAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.05],
+  });
+
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+    <View style={styles.container}>
+      {/* Animated Background */}
+      <AnimatedBackground />
+      
+      {/* Content */}
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            style={styles.backButton}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Logo Section */}
+          <Animated.View 
+            style={[
+              styles.logoContainer,
+              {
+                opacity: fadeAnim,
+                transform: [
+                  { translateY: slideAnim },
+                  { scale: logoScale },
+                ],
+              },
+            ]}
           >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Welcome Back</Text>
-          <Text style={styles.headerSubtitle}>Sign in to continue to Smart Ride</Text>
-        </View>
-
-        <View style={styles.formContainer}>
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
-          {/* PRIMARY: Google Sign-In Button */}
-          <TouchableOpacity 
-            style={styles.googlePrimaryButton}
-            onPress={handleGoogleSignIn}
-            disabled={isLoading || googleLoading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.googleLogo}>G</Text>
-                <Text style={styles.googlePrimaryButtonText}>Continue with Google</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>or sign in with email</Text>
-            <View style={styles.divider} />
-          </View>
-
-          {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor={COLORS.textMuted}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isLoading && !googleLoading}
-            />
-          </View>
-
-          {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Enter your password"
-                placeholderTextColor={COLORS.textMuted}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                editable={!isLoading && !googleLoading}
+            <View style={styles.logoWrapper}>
+              <Image
+                source={require('../../assets/images/smartride-logo.png')}
+                style={styles.logo}
+                resizeMode="cover"
               />
-              <TouchableOpacity 
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-              >
-                <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
-              </TouchableOpacity>
             </View>
-          </View>
+            <Text style={styles.appName}>
+              <Text style={styles.appNameLight}>Smart </Text>
+              <Text style={styles.appNameAccent}>Ride</Text>
+            </Text>
+            <Text style={styles.tagline}>Your premium ride-hailing experience in Uganda</Text>
+          </Animated.View>
 
-          {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotButton}>
-            <Text style={styles.forgotText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          {/* Email Login Button */}
-          <TouchableOpacity 
-            style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
-            onPress={handleEmailLogin}
-            disabled={isLoading || googleLoading}
+          {/* Login Card */}
+          <Animated.View 
+            style={[
+              styles.cardWrapper,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
           >
-            {isLoading ? (
-              <ActivityIndicator color={COLORS.background} />
-            ) : (
-              <Text style={styles.loginButtonText}>Sign In with Email</Text>
-            )}
-          </TouchableOpacity>
-        </View>
+            <GlassCard>
+              {/* Header */}
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Sign In</Text>
+                <Text style={styles.cardSubtitle}>Enter your credentials to continue</Text>
+              </View>
 
-        {/* Sign Up Link */}
-        <View style={styles.signUpContainer}>
-          <Text style={styles.signUpText}>Don't have an account? </Text>
-          <TouchableOpacity 
-            onPress={() => router.push('/auth/register')}
-            disabled={isLoading || googleLoading}
-          >
-            <Text style={styles.signUpLink}>Sign Up</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+              {/* Error Display */}
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Text style={styles.errorIcon}>⚠️</Text>
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
+
+              {/* PRIMARY: Google Sign-In Button */}
+              <TouchableOpacity 
+                style={styles.googleButton}
+                onPress={handleGoogleSignIn}
+                disabled={isLoading || googleLoading}
+                activeOpacity={0.8}
+              >
+                {googleLoading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <View style={styles.googleIconContainer}>
+                      <Text style={styles.googleIcon}>G</Text>
+                    </View>
+                    <Text style={styles.googleButtonText}>Continue with Google</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Divider */}
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or sign in with email</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Email Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email</Text>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputIcon}>📧</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="you@example.com"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading && !googleLoading}
+                  />
+                </View>
+              </View>
+
+              {/* Password Input */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password</Text>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.inputIcon}>🔒</Text>
+                  <TextInput
+                    style={styles.passwordInput}
+                    placeholder="••••••••"
+                    placeholderTextColor={COLORS.textMuted}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    editable={!isLoading && !googleLoading}
+                  />
+                  <TouchableOpacity 
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeButton}
+                  >
+                    <Text style={styles.eyeIcon}>{showPassword ? '🙈' : '👁️'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Forgot Password */}
+              <TouchableOpacity style={styles.forgotButton}>
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </TouchableOpacity>
+
+              {/* Email Login Button */}
+              <TouchableOpacity 
+                style={[styles.loginButton, isLoading && styles.loginButtonDisabled]}
+                onPress={handleEmailLogin}
+                disabled={isLoading || googleLoading}
+                activeOpacity={0.8}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color={COLORS.background} />
+                ) : (
+                  <>
+                    <Text style={styles.loginButtonText}>Sign In</Text>
+                    <Text style={styles.loginButtonArrow}>→</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              {/* Sign Up Link */}
+              <View style={styles.signUpContainer}>
+                <Text style={styles.signUpText}>Don't have an account? </Text>
+                <TouchableOpacity 
+                  onPress={() => router.push('/auth/register')}
+                  disabled={isLoading || googleLoading}
+                >
+                  <Text style={styles.signUpLink}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Footer */}
+              <Text style={styles.footerText}>
+                By signing in, you agree to our{' '}
+                <Text style={styles.footerLink}>Terms of Service</Text>
+                {' '}and{' '}
+                <Text style={styles.footerLink}>Privacy Policy</Text>
+              </Text>
+            </GlassCard>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
@@ -292,84 +400,122 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  keyboardView: {
+    flex: 1,
+  },
   scrollContent: {
     flexGrow: 1,
-  },
-  header: {
-    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 40,
-    paddingHorizontal: 24,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  logoContainer: {
     alignItems: 'center',
-    justifyContent: 'center',
+    marginBottom: 32,
+  },
+  logoWrapper: {
+    width: 96,
+    height: 96,
+    borderRadius: 28,
+    overflow: 'hidden',
+    backgroundColor: COLORS.primary,
     marginBottom: 16,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 24,
+    elevation: 10,
   },
-  backButtonText: {
-    color: 'white',
-    fontSize: 20,
+  logo: {
+    width: '100%',
+    height: '100%',
   },
-  headerTitle: {
-    color: 'white',
-    fontSize: 28,
+  appName: {
+    fontSize: 32,
     fontWeight: 'bold',
+    marginBottom: 8,
   },
-  headerSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 16,
-    marginTop: 8,
+  appNameLight: {
+    color: COLORS.text,
   },
-  formContainer: {
-    flex: 1,
-    paddingHorizontal: 24,
-    marginTop: -20,
+  appNameAccent: {
+    color: COLORS.primary,
+  },
+  tagline: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    textAlign: 'center',
+  },
+  cardWrapper: {
+    marginBottom: 20,
+  },
+  cardHeader: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  cardTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: COLORS.textMuted,
   },
   errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: 'rgba(255, 71, 87, 0.1)',
     borderColor: 'rgba(255, 71, 87, 0.3)',
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
-    marginTop: 24,
+  },
+  errorIcon: {
+    fontSize: 16,
+    marginRight: 8,
   },
   errorText: {
+    flex: 1,
     color: COLORS.error,
-    textAlign: 'center',
+    fontSize: 14,
   },
-  googlePrimaryButton: {
+  googleButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.googleBlue,
     borderRadius: 12,
-    paddingVertical: 16,
-    marginTop: 24,
+    paddingVertical: 14,
+    marginBottom: 16,
   },
-  googleLogo: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 20,
+  googleIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 12,
   },
-  googlePrimaryButtonText: {
-    color: 'white',
-    fontSize: 18,
+  googleIcon: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  googleButtonText: {
+    color: '#fff',
+    fontSize: 16,
     fontWeight: '600',
   },
-  dividerContainer: {
+  divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: 20,
   },
-  divider: {
+  dividerLine: {
     flex: 1,
     height: 1,
     backgroundColor: COLORS.border,
@@ -377,81 +523,101 @@ const styles = StyleSheet.create({
   dividerText: {
     color: COLORS.textMuted,
     marginHorizontal: 16,
-    fontSize: 14,
+    fontSize: 12,
+    textTransform: 'uppercase',
   },
   inputGroup: {
-    marginTop: 16,
+    marginBottom: 16,
   },
   label: {
-    color: COLORS.text,
+    color: COLORS.textSecondary,
+    fontSize: 14,
     marginBottom: 8,
-    fontWeight: '600',
+    fontWeight: '500',
   },
-  input: {
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  passwordContainer: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.backgroundSurface,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: COLORS.border,
+    paddingHorizontal: 16,
+  },
+  inputIcon: {
+    fontSize: 16,
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: COLORS.text,
   },
   passwordInput: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: 14,
     fontSize: 16,
     color: COLORS.text,
   },
   eyeButton: {
-    paddingHorizontal: 16,
+    padding: 8,
   },
-  eyeText: {
+  eyeIcon: {
     fontSize: 18,
   },
   forgotButton: {
-    marginTop: 16,
     alignItems: 'flex-end',
+    marginBottom: 20,
   },
   forgotText: {
     color: COLORS.primary,
+    fontSize: 14,
     fontWeight: '500',
   },
   loginButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: COLORS.primary,
     borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 24,
+    paddingVertical: 14,
+    marginBottom: 20,
   },
   loginButtonDisabled: {
     backgroundColor: COLORS.primaryDark,
   },
   loginButtonText: {
     color: COLORS.background,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
+  },
+  loginButtonArrow: {
+    color: COLORS.background,
+    fontSize: 18,
+    marginLeft: 8,
   },
   signUpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 32,
-    marginBottom: 24,
+    marginBottom: 20,
   },
   signUpText: {
-    color: COLORS.textSecondary,
+    color: COLORS.textMuted,
+    fontSize: 14,
   },
   signUpLink: {
     color: COLORS.primary,
+    fontSize: 14,
     fontWeight: '600',
+  },
+  footerText: {
+    textAlign: 'center',
+    color: COLORS.textMuted,
+    fontSize: 11,
+    lineHeight: 18,
+  },
+  footerLink: {
+    color: COLORS.primary,
   },
 });
