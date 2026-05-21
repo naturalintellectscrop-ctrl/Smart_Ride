@@ -12,6 +12,141 @@ import { db } from '@/lib/db';
 import { TaskStatus, TaskType, RiderRole } from '@prisma/client';
 
 // ============================================
+// UTILITY FUNCTIONS (consolidated from state-machine.ts)
+// ============================================
+
+/**
+ * Generate a task number
+ */
+export function generateTaskNumber(): string {
+  const year = new Date().getFullYear();
+  const timestamp = Date.now().toString(36).toUpperCase();
+  return `TASK-${year}-${timestamp}`;
+}
+
+/**
+ * Generate an order number
+ */
+export function generateOrderNumber(): string {
+  const year = new Date().getFullYear();
+  const timestamp = Date.now().toString(36).toUpperCase();
+  return `SR-${year}-${timestamp}`;
+}
+
+/**
+ * Generate a KOT number
+ */
+export function generateKOTNumber(): string {
+  const date = new Date();
+  const dateStr = date.toISOString().slice(0, 10).replace(/-/g, '');
+  const timestamp = Date.now().toString(36).toUpperCase();
+  return `KOT-${dateStr}-${timestamp}`;
+}
+
+/**
+ * Check if a rider can perform a task based on their role
+ */
+export function canRiderPerformTask(riderRole: RiderRole, taskType: TaskType): boolean {
+  const CAPABILITY_MAP: Record<RiderRole, TaskType[]> = {
+    SMART_BODA_RIDER: ['SMART_BODA_RIDE', 'ITEM_DELIVERY'],
+    SMART_CAR_DRIVER: ['SMART_CAR_RIDE', 'ITEM_DELIVERY'],
+    DELIVERY_PERSONNEL: ['FOOD_DELIVERY', 'SHOPPING', 'ITEM_DELIVERY', 'SMART_HEALTH_DELIVERY'],
+  };
+  
+  return CAPABILITY_MAP[riderRole]?.includes(taskType) ?? false;
+}
+
+/**
+ * Get required rider roles for a task type
+ */
+export function getRequiredRiderRoles(taskType: TaskType): RiderRole[] {
+  const ROLE_MAP: Record<TaskType, RiderRole[]> = {
+    SMART_BODA_RIDE: ['SMART_BODA_RIDER'],
+    SMART_CAR_RIDE: ['SMART_CAR_DRIVER'],
+    FOOD_DELIVERY: ['DELIVERY_PERSONNEL'],
+    SHOPPING: ['DELIVERY_PERSONNEL'],
+    ITEM_DELIVERY: ['SMART_BODA_RIDER', 'SMART_CAR_DRIVER', 'DELIVERY_PERSONNEL'],
+    SMART_HEALTH_DELIVERY: ['DELIVERY_PERSONNEL'],
+  };
+  
+  return ROLE_MAP[taskType] || [];
+}
+
+/**
+ * System timer configurations (in seconds)
+ */
+export const SYSTEM_TIMERS = {
+  MATCHING_TIMEOUT: 300,
+  RIDER_RESPONSE_TIMEOUT: 60,
+  HEARTBEAT_INTERVAL: 30,
+  PICKUP_WAIT_TIMEOUT: 600,
+  ORDER_ACCEPT_TIMEOUT: 180,
+  ORDER_PREPARATION_DEFAULT: 900,
+} as const;
+
+/**
+ * Check if a timer has expired
+ */
+export function isTimerExpired(startTime: Date, timeoutSeconds: number): boolean {
+  const elapsedMs = Date.now() - startTime.getTime();
+  return elapsedMs / 1000 > timeoutSeconds;
+}
+
+/**
+ * Get remaining time in seconds
+ */
+export function getRemainingTime(startTime: Date, timeoutSeconds: number): number {
+  const elapsedMs = Date.now() - startTime.getTime();
+  return Math.max(0, Math.round(timeoutSeconds - elapsedMs / 1000));
+}
+
+/**
+ * Check if a transition is valid (simple check using state machine)
+ */
+export function isValidTransition(currentStatus: TaskStatus, newStatus: TaskStatus): boolean {
+  // Simple validation - will be enhanced by the full state machine
+  const VALID_TRANSITIONS: Partial<Record<TaskStatus, TaskStatus[]>> = {
+    [TaskStatus.CREATED]: [TaskStatus.SEARCHING, TaskStatus.MATCHING, TaskStatus.CANCELLED],
+    [TaskStatus.SEARCHING]: [TaskStatus.ASSIGNED, TaskStatus.MATCHING, TaskStatus.CANCELLED, TaskStatus.FAILED],
+    [TaskStatus.MATCHING]: [TaskStatus.ASSIGNED, TaskStatus.CANCELLED, TaskStatus.FAILED],
+    [TaskStatus.ASSIGNED]: [TaskStatus.ACCEPTED, TaskStatus.MATCHING, TaskStatus.CANCELLED],
+    [TaskStatus.ACCEPTED]: [TaskStatus.ARRIVING, TaskStatus.ARRIVED, TaskStatus.CANCELLED],
+    [TaskStatus.ARRIVING]: [TaskStatus.ARRIVED, TaskStatus.CANCELLED],
+    [TaskStatus.ARRIVED]: [TaskStatus.PICKED_UP, TaskStatus.CANCELLED],
+    [TaskStatus.PICKED_UP]: [TaskStatus.IN_PROGRESS, TaskStatus.IN_TRANSIT, TaskStatus.CANCELLED],
+    [TaskStatus.IN_PROGRESS]: [TaskStatus.COMPLETED, TaskStatus.CANCELLED],
+    [TaskStatus.IN_TRANSIT]: [TaskStatus.DELIVERED, TaskStatus.CANCELLED],
+    [TaskStatus.DELIVERED]: [TaskStatus.COMPLETED],
+    [TaskStatus.COMPLETED]: [TaskStatus.PAID],
+    [TaskStatus.PAID]: [TaskStatus.CLOSED],
+    [TaskStatus.CANCELLED]: [],
+    [TaskStatus.FAILED]: [],
+    [TaskStatus.CLOSED]: [],
+    [TaskStatus.REQUESTED]: [TaskStatus.SEARCHING, TaskStatus.CANCELLED],
+  };
+  
+  return VALID_TRANSITIONS[currentStatus]?.includes(newStatus) ?? false;
+}
+
+/**
+ * Cancellation reason codes
+ */
+export const CancellationReasonCode = {
+  CLIENT_CANCELLED: 'CLIENT_CANCELLED',
+  CLIENT_NO_SHOW: 'CLIENT_NO_SHOW',
+  CLIENT_WRONG_ADDRESS: 'CLIENT_WRONG_ADDRESS',
+  RIDER_CANCELLED: 'RIDER_CANCELLED',
+  RIDER_VEHICLE_BREAKDOWN: 'RIDER_VEHICLE_BREAKDOWN',
+  RIDER_EMERGENCY: 'RIDER_EMERGENCY',
+  MERCHANT_CANCELLED: 'MERCHANT_CANCELLED',
+  MERCHANT_OUT_OF_STOCK: 'MERCHANT_OUT_OF_STOCK',
+  SYSTEM_TIMEOUT: 'SYSTEM_TIMEOUT',
+  NO_RIDER_AVAILABLE: 'NO_RIDER_AVAILABLE',
+  MATCHING_TIMEOUT: 'MATCHING_TIMEOUT',
+  PAYMENT_FAILED: 'PAYMENT_FAILED',
+} as const;
+
+// ============================================
 // STATE MACHINE CONFIGURATION
 // ============================================
 
