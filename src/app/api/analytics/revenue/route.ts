@@ -19,11 +19,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Revenue analytics requires finance admin access
-    const financeAdmin = await financeAdminGuard(request);
-    if (!financeAdmin) {
+    const financeResult = financeAdminGuard(request);
+    if (!financeResult.success) {
       return NextResponse.json(
-        { success: false, error: 'Finance admin access required' },
-        { status: 403 }
+        { success: false, error: financeResult.error || 'Finance admin access required' },
+        { status: financeResult.statusCode || 403 }
       );
     }
 
