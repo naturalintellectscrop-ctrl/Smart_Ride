@@ -1,8 +1,7 @@
 // ============================================
 // SMART RIDE MOBILE - PROFILE EDIT SCREEN
 // ============================================
-// VERSION: DEBUG-TRACE-001
-// PURPOSE: Edit user profile information
+// Premium dark theme with vector icons
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -15,6 +14,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -26,6 +26,7 @@ import Animated, {
 import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
 import { COLORS } from '@/src/constants';
+import { Icon, IconColors } from '../../components/Icon';
 
 interface UserProfile {
   name: string;
@@ -58,6 +59,18 @@ export default function ProfileEditScreen() {
     }
   }, [user]);
 
+  // Get user initials
+  const getUserInitials = () => {
+    if (profile.name) {
+      const parts = profile.name.split(' ');
+      if (parts.length >= 2) {
+        return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+      }
+      return profile.name.substring(0, 2).toUpperCase();
+    }
+    return 'U';
+  };
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -77,113 +90,148 @@ export default function ProfileEditScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
       <Animated.View 
         entering={FadeInDown.duration(400).springify()}
-        className="bg-white pt-12 pb-4 px-4 border-b border-gray-100"
+        style={styles.header}
       >
-        <View className="flex-row items-center justify-between">
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text className="text-primary-500 text-lg">← Back</Text>
-          </TouchableOpacity>
-          <Text className="text-lg font-bold text-gray-900">Edit Profile</Text>
-          <TouchableOpacity onPress={handleSave} disabled={isSaving}>
-            <Text className="text-primary-500 text-lg font-medium">
-              {isSaving ? 'Saving...' : 'Save'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity 
+          onPress={() => router.back()}
+          style={styles.headerButton}
+          activeOpacity={0.8}
+        >
+          <Icon name="arrow-left" size="md" color={COLORS.primary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <TouchableOpacity 
+          onPress={handleSave} 
+          disabled={isSaving}
+          style={styles.headerButton}
+          activeOpacity={0.8}
+        >
+          {isSaving ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <Text style={styles.saveText}>Save</Text>
+          )}
+        </TouchableOpacity>
       </Animated.View>
 
-      <ScrollView className="flex-1 px-4 pt-4">
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Avatar */}
         <Animated.View 
           entering={ZoomIn.duration(400)}
-          className="items-center mb-6"
+          style={styles.avatarSection}
         >
-          <TouchableOpacity>
-            <View className="w-24 h-24 bg-primary-100 rounded-full items-center justify-center">
+          <TouchableOpacity activeOpacity={0.8}>
+            <View style={styles.avatarContainer}>
               {profile.avatar ? (
-                <Image source={{ uri: profile.avatar }} className="w-24 h-24 rounded-full" />
+                <Image source={{ uri: profile.avatar }} style={styles.avatar} />
               ) : (
-                <Text className="text-4xl">👤</Text>
+                <View style={styles.avatarPlaceholder}>
+                  <Text style={styles.avatarInitials}>{getUserInitials()}</Text>
+                </View>
               )}
-            </View>
-            <View className="absolute bottom-0 right-0 bg-primary-500 rounded-full p-2">
-              <Text className="text-white text-sm">📷</Text>
+              <View style={styles.cameraButton}>
+                <Icon name="camera" size="sm" color={COLORS.background} />
+              </View>
             </View>
           </TouchableOpacity>
-          <Text className="text-gray-500 text-sm mt-2">Tap to change photo</Text>
+          <Text style={styles.avatarHint}>Tap to change photo</Text>
         </Animated.View>
 
         {/* Form */}
         <Animated.View entering={FadeInUp.duration(400).delay(100)}>
           {/* Name */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <Text className="text-gray-500 text-sm mb-2">Full Name</Text>
-            <TextInput
-              value={profile.name}
-              onChangeText={(text) => setProfile({ ...profile, name: text })}
-              placeholder="Enter your name"
-              placeholderTextColor="#9CA3AF"
-              className="text-gray-900 text-lg"
-            />
+          <View style={styles.inputCard}>
+            <View style={styles.inputIcon}>
+              <Icon name="user" size="sm" color={COLORS.primary} />
+            </View>
+            <View style={styles.inputContent}>
+              <Text style={styles.inputLabel}>Full Name</Text>
+              <TextInput
+                value={profile.name}
+                onChangeText={(text) => setProfile({ ...profile, name: text })}
+                placeholder="Enter your name"
+                placeholderTextColor={COLORS.textMuted}
+                style={styles.inputText}
+              />
+            </View>
           </View>
 
           {/* Email */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <Text className="text-gray-500 text-sm mb-2">Email Address</Text>
-            <TextInput
-              value={profile.email}
-              onChangeText={(text) => setProfile({ ...profile, email: text })}
-              placeholder="Enter your email"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              className="text-gray-900 text-lg"
-            />
+          <View style={styles.inputCard}>
+            <View style={styles.inputIcon}>
+              <Icon name="mail" size="sm" color={COLORS.accent} />
+            </View>
+            <View style={styles.inputContent}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <TextInput
+                value={profile.email}
+                onChangeText={(text) => setProfile({ ...profile, email: text })}
+                placeholder="Enter your email"
+                placeholderTextColor={COLORS.textMuted}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={styles.inputText}
+              />
+            </View>
           </View>
 
           {/* Phone */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <Text className="text-gray-500 text-sm mb-2">Phone Number</Text>
-            <TextInput
-              value={profile.phone}
-              onChangeText={(text) => setProfile({ ...profile, phone: text })}
-              placeholder="Enter your phone number"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="phone-pad"
-              className="text-gray-900 text-lg"
-            />
+          <View style={styles.inputCard}>
+            <View style={styles.inputIcon}>
+              <Icon name="phone" size="sm" color="#8B5CF6" />
+            </View>
+            <View style={styles.inputContent}>
+              <Text style={styles.inputLabel}>Phone Number</Text>
+              <TextInput
+                value={profile.phone}
+                onChangeText={(text) => setProfile({ ...profile, phone: text })}
+                placeholder="Enter your phone number"
+                placeholderTextColor={COLORS.textMuted}
+                keyboardType="phone-pad"
+                style={styles.inputText}
+              />
+            </View>
           </View>
 
           {/* Address */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <Text className="text-gray-500 text-sm mb-2">Default Address</Text>
-            <TextInput
-              value={profile.address}
-              onChangeText={(text) => setProfile({ ...profile, address: text })}
-              placeholder="Enter your address"
-              placeholderTextColor="#9CA3AF"
-              multiline
-              numberOfLines={2}
-              className="text-gray-900 text-lg"
-            />
+          <View style={styles.inputCard}>
+            <View style={styles.inputIcon}>
+              <Icon name="map-pin" size="sm" color="#F59E0B" />
+            </View>
+            <View style={styles.inputContent}>
+              <Text style={styles.inputLabel}>Default Address</Text>
+              <TextInput
+                value={profile.address}
+                onChangeText={(text) => setProfile({ ...profile, address: text })}
+                placeholder="Enter your address"
+                placeholderTextColor={COLORS.textMuted}
+                multiline
+                numberOfLines={2}
+                style={styles.inputText}
+              />
+            </View>
           </View>
         </Animated.View>
 
         {/* Save Button */}
-        <Animated.View entering={FadeInUp.duration(400).delay(200)} className="mt-4 mb-8">
+        <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.saveButtonContainer}>
           <TouchableOpacity
             onPress={handleSave}
             disabled={isSaving}
-            className="bg-primary-500 rounded-2xl p-4 items-center"
+            style={styles.saveButton}
+            activeOpacity={0.8}
           >
             {isSaving ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color={COLORS.background} />
             ) : (
-              <Text className="text-white font-bold text-lg">Save Changes</Text>
+              <>
+                <Icon name="check" size="md" color={COLORS.background} />
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              </>
             )}
           </TouchableOpacity>
         </Animated.View>
@@ -191,3 +239,129 @@ export default function ProfileEditScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.backgroundElevated,
+    paddingTop: 60,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerButton: {
+    minWidth: 60,
+  },
+  headerTitle: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  saveText: {
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatar: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+  },
+  avatarPlaceholder: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: `${COLORS.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarInitials: {
+    color: COLORS.primary,
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  cameraButton: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    padding: 8,
+  },
+  avatarHint: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 12,
+  },
+  inputCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  inputIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    marginTop: 4,
+  },
+  inputContent: {
+    flex: 1,
+  },
+  inputLabel: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  inputText: {
+    color: COLORS.text,
+    fontSize: 16,
+    padding: 0,
+  },
+  saveButtonContainer: {
+    marginTop: 24,
+    marginBottom: 32,
+  },
+  saveButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveButtonText: {
+    color: COLORS.background,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+});

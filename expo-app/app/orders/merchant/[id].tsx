@@ -1,8 +1,7 @@
 // ============================================
 // SMART RIDE MOBILE - MERCHANT DETAIL SCREEN
 // ============================================
-// VERSION: DEBUG-TRACE-001
-// PURPOSE: View merchant details and menu/products
+// Premium dark theme with vector icons
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -14,6 +13,7 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  StyleSheet
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, {
@@ -26,6 +26,7 @@ import Animated, {
 import { api } from '@/src/services';
 import { COLORS } from '@/src/constants';
 import { useCartStore, CartItem } from '@/src/store';
+import { Icon, IconColors } from '../../../components/Icon';
 
 interface Merchant {
   id: string;
@@ -120,7 +121,7 @@ export default function MerchantDetailScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
@@ -128,18 +129,23 @@ export default function MerchantDetailScreen() {
 
   if (!merchant) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <Text className="text-gray-500">Merchant not found</Text>
+      <View style={styles.emptyContainer}>
+        <Icon name="home" size="2xl" color={COLORS.textMuted} />
+        <Text style={styles.emptyText}>Merchant not found</Text>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       <ScrollView 
-        className="flex-1"
+        style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
         }
       >
         {/* Cover Image */}
@@ -147,74 +153,82 @@ export default function MerchantDetailScreen() {
           {merchant.coverImage ? (
             <Image 
               source={{ uri: merchant.coverImage }} 
-              className="w-full h-48"
+              style={styles.coverImage}
               resizeMode="cover"
             />
           ) : (
-            <View className="w-full h-48 bg-primary-500 items-center justify-center">
-              <Text className="text-5xl text-white">🏪</Text>
+            <View style={styles.coverPlaceholder}>
+              <Icon name="home" size="2xl" color={COLORS.background} />
             </View>
           )}
           
           {/* Back Button */}
           <TouchableOpacity 
             onPress={() => router.back()}
-            className="absolute top-12 left-4 bg-white/90 rounded-full p-2"
+            style={styles.backButton}
+            activeOpacity={0.8}
           >
-            <Text className="text-xl">←</Text>
+            <Icon name="arrow-left" size="md" color={COLORS.text} />
           </TouchableOpacity>
         </Animated.View>
 
         {/* Merchant Info */}
         <Animated.View 
           entering={FadeInUp.duration(400).delay(100)}
-          className="bg-white p-4 -mt-6 rounded-t-3xl"
+          style={styles.merchantInfoCard}
         >
-          <View className="flex-row items-start">
-            <View className="w-16 h-16 bg-gray-100 rounded-xl items-center justify-center mr-3">
+          <View style={styles.merchantHeader}>
+            <View style={styles.merchantImageContainer}>
               {merchant.image ? (
-                <Image source={{ uri: merchant.image }} className="w-16 h-16 rounded-xl" />
+                <Image source={{ uri: merchant.image }} style={styles.merchantImage} />
               ) : (
-                <Text className="text-2xl">🏪</Text>
+                <View style={styles.merchantImagePlaceholder}>
+                  <Icon name="home" size="lg" color={COLORS.primary} />
+                </View>
               )}
             </View>
-            <View className="flex-1">
-              <Text className="text-xl font-bold text-gray-900">{merchant.name}</Text>
-              <Text className="text-gray-500 text-sm">{merchant.address}</Text>
-              <View className="flex-row items-center mt-2">
+            <View style={styles.merchantDetails}>
+              <Text style={styles.merchantName}>{merchant.name}</Text>
+              <Text style={styles.merchantAddress}>{merchant.address}</Text>
+              <View style={styles.merchantStats}>
                 {merchant.rating && (
-                  <View className="flex-row items-center mr-4">
-                    <Text className="text-yellow-500 mr-1">⭐</Text>
-                    <Text className="font-medium">{merchant.rating.toFixed(1)}</Text>
-                    <Text className="text-gray-400 text-sm ml-1">
-                      ({merchant.reviewCount || 0})
-                    </Text>
+                  <View style={styles.ratingContainer}>
+                    <Icon name="star" size="xs" color="#FBBF24" />
+                    <Text style={styles.ratingText}>{merchant.rating.toFixed(1)}</Text>
+                    <Text style={styles.reviewCount}>({merchant.reviewCount || 0})</Text>
                   </View>
                 )}
                 {merchant.deliveryTime && (
-                  <Text className="text-gray-500 text-sm">{merchant.deliveryTime} min</Text>
+                  <Text style={styles.deliveryTime}>{merchant.deliveryTime} min</Text>
                 )}
               </View>
             </View>
-            <View className={`px-3 py-1 rounded-full ${merchant.isOpen ? 'bg-green-100' : 'bg-red-100'}`}>
-              <Text className={`text-xs font-medium ${merchant.isOpen ? 'text-green-600' : 'text-red-600'}`}>
+            <View style={[
+              styles.statusBadge,
+              { backgroundColor: merchant.isOpen ? `${COLORS.success}15` : `${COLORS.error}15` }
+            ]}>
+              <Text style={[
+                styles.statusText,
+                { color: merchant.isOpen ? COLORS.success : COLORS.error }
+              ]}>
                 {merchant.isOpen ? 'Open' : 'Closed'}
               </Text>
             </View>
           </View>
 
           {/* Info Pills */}
-          <View className="flex-row mt-4 gap-3">
+          <View style={styles.infoPills}>
             {merchant.deliveryFee !== undefined && (
-              <View className="bg-gray-100 rounded-full px-3 py-1">
-                <Text className="text-gray-600 text-sm">
-                  🚗 UGX {merchant.deliveryFee.toLocaleString()} delivery
+              <View style={styles.infoPill}>
+                <Icon name="truck" size="xs" color={COLORS.textSecondary} />
+                <Text style={styles.infoPillText}>
+                  UGX {merchant.deliveryFee.toLocaleString()} delivery
                 </Text>
               </View>
             )}
             {merchant.minOrder && (
-              <View className="bg-gray-100 rounded-full px-3 py-1">
-                <Text className="text-gray-600 text-sm">
+              <View style={styles.infoPill}>
+                <Text style={styles.infoPillText}>
                   Min. UGX {merchant.minOrder.toLocaleString()}
                 </Text>
               </View>
@@ -223,7 +237,7 @@ export default function MerchantDetailScreen() {
 
           {/* Description */}
           {merchant.description && (
-            <Text className="text-gray-500 mt-4">{merchant.description}</Text>
+            <Text style={styles.description}>{merchant.description}</Text>
           )}
         </Animated.View>
 
@@ -231,18 +245,23 @@ export default function MerchantDetailScreen() {
         {categories.length > 1 && (
           <Animated.View 
             entering={FadeInUp.duration(400).delay(200)}
-            className="bg-white px-4 py-3 mt-2"
+            style={styles.categoriesContainer}
           >
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {categories.map((cat, index) => (
                 <TouchableOpacity
                   key={cat}
                   onPress={() => setSelectedCategory(cat)}
-                  className={`mr-3 px-4 py-2 rounded-full ${
-                    selectedCategory === cat ? 'bg-primary-500' : 'bg-gray-100'
-                  }`}
+                  style={[
+                    styles.categoryButton,
+                    selectedCategory === cat && styles.categoryButtonActive
+                  ]}
+                  activeOpacity={0.8}
                 >
-                  <Text className={selectedCategory === cat ? 'text-white font-medium' : 'text-gray-700'}>
+                  <Text style={[
+                    styles.categoryText,
+                    selectedCategory === cat && styles.categoryTextActive
+                  ]}>
                     {cat}
                   </Text>
                 </TouchableOpacity>
@@ -252,8 +271,8 @@ export default function MerchantDetailScreen() {
         )}
 
         {/* Products */}
-        <View className="px-4 pt-4 pb-32">
-          <Text className="text-gray-900 font-semibold mb-3">Menu</Text>
+        <View style={styles.productsContainer}>
+          <Text style={styles.sectionTitle}>Menu</Text>
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product, index) => (
               <Animated.View
@@ -267,8 +286,8 @@ export default function MerchantDetailScreen() {
               </Animated.View>
             ))
           ) : (
-            <View className="items-center py-12">
-              <Text className="text-gray-500">No products available</Text>
+            <View style={styles.noProducts}>
+              <Text style={styles.noProductsText}>No products available</Text>
             </View>
           )}
         </View>
@@ -278,19 +297,20 @@ export default function MerchantDetailScreen() {
       {cart.totalItems > 0 && (
         <Animated.View 
           entering={ZoomIn.duration(300)}
-          className="absolute bottom-6 left-4 right-4"
+          style={styles.cartButtonContainer}
         >
           <TouchableOpacity
             onPress={() => router.push('/orders/cart')}
-            className="bg-primary-500 rounded-2xl p-4 flex-row items-center justify-between"
+            style={styles.cartButton}
+            activeOpacity={0.9}
           >
-            <View className="flex-row items-center">
-              <View className="bg-white/20 rounded-full w-8 h-8 items-center justify-center mr-3">
-                <Text className="text-white font-bold">{cart.totalItems}</Text>
+            <View style={styles.cartButtonLeft}>
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cart.totalItems}</Text>
               </View>
-              <Text className="text-white font-bold">View Cart</Text>
+              <Text style={styles.cartButtonText}>View Cart</Text>
             </View>
-            <Text className="text-white font-bold">
+            <Text style={styles.cartTotal}>
               UGX {cart.totalPrice.toLocaleString()}
             </Text>
           </TouchableOpacity>
@@ -302,34 +322,321 @@ export default function MerchantDetailScreen() {
 
 function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: () => void }) {
   return (
-    <View className="bg-white rounded-2xl p-4 mb-3 shadow-sm flex-row">
-      <View className="flex-1 mr-3">
-        <Text className="font-bold text-gray-900">{product.name}</Text>
+    <View style={styles.productCard}>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName}>{product.name}</Text>
         {product.description && (
-          <Text className="text-gray-500 text-sm mt-1" numberOfLines={2}>
+          <Text style={styles.productDescription} numberOfLines={2}>
             {product.description}
           </Text>
         )}
-        <Text className="text-primary-500 font-bold mt-2">
+        <Text style={styles.productPrice}>
           UGX {product.price.toLocaleString()}
         </Text>
       </View>
-      <View className="w-20 h-20 bg-gray-100 rounded-xl items-center justify-center">
+      <View style={styles.productImageContainer}>
         {product.image ? (
-          <Image source={{ uri: product.image }} className="w-20 h-20 rounded-xl" />
+          <Image source={{ uri: product.image }} style={styles.productImage} />
         ) : (
-          <Text className="text-2xl">🍽️</Text>
+          <View style={styles.productImagePlaceholder}>
+            <Icon name="coffee" size="lg" color={IconColors.food} />
+          </View>
         )}
       </View>
       <TouchableOpacity
         onPress={onAddToCart}
         disabled={!product.inStock}
-        className={`absolute bottom-2 right-2 rounded-full w-8 h-8 items-center justify-center ${
-          product.inStock ? 'bg-primary-500' : 'bg-gray-300'
-        }`}
+        style={[
+          styles.addButton,
+          { backgroundColor: product.inStock ? COLORS.primary : COLORS.backgroundSurface }
+        ]}
+        activeOpacity={0.8}
       >
-        <Text className="text-white text-xl">+</Text>
+        <Icon name="plus" size="sm" color={COLORS.background} />
       </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  emptyText: {
+    color: COLORS.textMuted,
+    marginTop: 16,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  coverImage: {
+    width: '100%',
+    height: 192,
+  },
+  coverPlaceholder: {
+    width: '100%',
+    height: 192,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    top: 48,
+    left: 16,
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 12,
+    padding: 8,
+  },
+  merchantInfoCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    marginTop: -24,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  merchantHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  merchantImageContainer: {
+    marginRight: 12,
+  },
+  merchantImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+  },
+  merchantImagePlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: `${COLORS.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  merchantDetails: {
+    flex: 1,
+  },
+  merchantName: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  merchantAddress: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  merchantStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  ratingText: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  reviewCount: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  deliveryTime: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  infoPills: {
+    flexDirection: 'row',
+    marginTop: 16,
+    gap: 8,
+  },
+  infoPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  infoPillText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  description: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    marginTop: 16,
+    lineHeight: 20,
+  },
+  categoriesContainer: {
+    backgroundColor: COLORS.backgroundElevated,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  categoryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: COLORS.background,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  categoryButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  categoryText: {
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  categoryTextActive: {
+    color: COLORS.background,
+  },
+  productsContainer: {
+    padding: 20,
+    paddingBottom: 120,
+  },
+  sectionTitle: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  noProducts: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  noProductsText: {
+    color: COLORS.textMuted,
+  },
+  productCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  productInfo: {
+    flex: 1,
+    marginRight: 12,
+  },
+  productName: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  productDescription: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  productPrice: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginTop: 8,
+  },
+  productImageContainer: {
+    marginRight: 8,
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+  },
+  productImagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: `${IconColors.food}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addButton: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cartButtonContainer: {
+    position: 'absolute',
+    bottom: 24,
+    left: 16,
+    right: 16,
+  },
+  cartButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  cartButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 12,
+    width: 32,
+    height: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  cartBadgeText: {
+    color: COLORS.background,
+    fontWeight: 'bold',
+  },
+  cartButtonText: {
+    color: COLORS.background,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  cartTotal: {
+    color: COLORS.background,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+});

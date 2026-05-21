@@ -1,6 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - RIDE REQUEST SCREEN
 // ============================================
+// Premium dark theme with vector icons
+// ============================================
 
 import { useState, useEffect } from 'react';
 import { 
@@ -10,13 +12,22 @@ import {
   TouchableOpacity, 
   ActivityIndicator,
   ScrollView,
-  Alert
+  Alert,
+  StyleSheet
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  FadeInDown,
+  ZoomIn,
+  SlideInRight,
+} from 'react-native-reanimated';
 import { useLocationStore, useTaskStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS, RIDE_TYPES, PAYMENT_METHODS } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
+import { Icon, IconColors } from '../../components/Icon';
 
 // Types for search results
 interface PlaceResult {
@@ -41,7 +52,7 @@ export default function RideRequestScreen() {
   const params = useLocalSearchParams<{ type?: 'BODA' | 'CAR' }>();
   const { latitude, longitude, address, getCurrentLocation } = useLocationStore();
   const { setPendingTask } = useTaskStore();
-  const { user } = useAuthStore(); // FIX: Get user for clientId
+  const { user } = useAuthStore();
 
   const rideType = params.type === 'CAR' ? RIDE_TYPES.CAR : RIDE_TYPES.BODA;
   const [step, setStep] = useState<'pickup' | 'dropoff' | 'confirm'>('pickup');
@@ -118,7 +129,6 @@ export default function RideRequestScreen() {
   const calculateFare = async (destLat: number, destLng: number) => {
     setIsCalculating(true);
     try {
-      // Calculate straight-line distance (simplified)
       const dist = calculateDistance(
         pickupLatitude,
         pickupLongitude,
@@ -126,8 +136,6 @@ export default function RideRequestScreen() {
         destLng
       );
       setDistance(dist);
-
-      // Calculate fare
       const fare = rideType.baseFare + (dist * rideType.perKm);
       setEstimatedFare(Math.round(fare));
     } catch (error) {
@@ -139,7 +147,7 @@ export default function RideRequestScreen() {
 
   // Calculate distance between two points (Haversine formula)
   const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
     const a = 
@@ -157,14 +165,12 @@ export default function RideRequestScreen() {
       return;
     }
 
-    // FIX: Validate user is logged in
     if (!user?.id) {
       Alert.alert('Error', 'Please login to request a ride');
       router.replace('/auth/login');
       return;
     }
 
-    // FIX: Calculate distance if not already done
     const distanceKm = distance || calculateDistance(
       pickupLatitude,
       pickupLongitude,
@@ -176,7 +182,7 @@ export default function RideRequestScreen() {
     try {
       const response = await api.requestRide({
         taskType: rideType.id === 'BODA' ? 'SMART_BODA_RIDE' : 'SMART_CAR_RIDE',
-        clientId: user.id, // FIX: Send clientId from auth
+        clientId: user.id,
         pickupAddress,
         pickupLatitude,
         pickupLongitude,
@@ -184,7 +190,7 @@ export default function RideRequestScreen() {
         dropoffLatitude,
         dropoffLongitude,
         paymentMethod,
-        distanceKm, // FIX: Send distanceKm
+        distanceKm,
       });
 
       if (response.success && response.data) {
@@ -200,30 +206,37 @@ export default function RideRequestScreen() {
     }
   };
 
+  const getStepTitle = () => {
+    switch (step) {
+      case 'pickup': return 'Set Pickup';
+      case 'dropoff': return 'Set Destination';
+      case 'confirm': return 'Confirm Ride';
+    }
+  };
+
   return (
-    <View className="flex-1 bg-white">
+    <View style={styles.container}>
       {/* Header */}
-      <View className="bg-primary-500 pt-12 pb-4 px-4">
-        <View className="flex-row items-center">
-          <TouchableOpacity 
-            onPress={() => {
-              if (step === 'dropoff') setStep('pickup');
-              else if (step === 'confirm') setStep('dropoff');
-              else router.back();
-            }}
-            className="w-10 h-10 bg-white/20 rounded-full items-center justify-center mr-3"
-          >
-            <Text className="text-white text-xl">←</Text>
-          </TouchableOpacity>
-          <Text className="text-white text-xl font-bold">
-            {step === 'pickup' ? 'Set Pickup' : 
-             step === 'dropoff' ? 'Set Destination' : 'Confirm Ride'}
-          </Text>
-        </View>
-      </View>
+      <Animated.View 
+        entering={FadeInDown.duration(400).springify()}
+        style={styles.header}
+      >
+        <TouchableOpacity 
+          onPress={() => {
+            if (step === 'dropoff') setStep('pickup');
+            else if (step === 'confirm') setStep('dropoff');
+            else router.back();
+          }}
+          style={styles.backButton}
+          activeOpacity={0.8}
+        >
+          <Icon name="arrow-left" size="md" color={COLORS.background} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{getStepTitle()}</Text>
+      </Animated.View>
 
       {/* Content */}
-      <ScrollView className="flex-1 px-4 py-4">
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {step === 'pickup' && (
           <PickupStep
             rideType={rideType}
@@ -294,54 +307,70 @@ function PickupStep({
   onSelectPlace: (place: PlaceResult) => void;
   onUseCurrentLocation: () => void;
 }) {
+  const rideTypeIcon = rideType.id === 'BODA' ? 'navigation' : 'car';
+  const rideTypeColor = rideType.id === 'BODA' ? IconColors.primary : IconColors.accent;
+
   return (
-    <View>
-      {/* Ride Type */}
-      <View className="flex-row items-center bg-primary-50 rounded-xl p-4 mb-4">
-        <Text className="text-3xl mr-3">{rideType.id === 'BODA' ? '🏍️' : '🚗'}</Text>
-        <View>
-          <Text className="font-bold text-gray-900">{rideType.name}</Text>
-          <Text className="text-gray-500">{rideType.description}</Text>
+    <Animated.View entering={FadeInUp.duration(400).springify()}>
+      {/* Ride Type Card */}
+      <View style={[styles.rideTypeCard, { borderColor: rideTypeColor }]}>
+        <View style={[styles.rideTypeIcon, { backgroundColor: `${rideTypeColor}15` }]}>
+          <Icon name={rideTypeIcon} size="xl" color={rideTypeColor} />
+        </View>
+        <View style={styles.rideTypeInfo}>
+          <Text style={styles.rideTypeName}>{rideType.name}</Text>
+          <Text style={styles.rideTypeDesc}>{rideType.description}</Text>
         </View>
       </View>
 
       {/* Current Location Button */}
       <TouchableOpacity 
-        className="flex-row items-center bg-secondary-50 rounded-xl p-4 mb-4"
+        style={styles.currentLocationCard}
         onPress={onUseCurrentLocation}
+        activeOpacity={0.8}
       >
-        <Text className="text-2xl mr-3">📍</Text>
-        <View className="flex-1">
-          <Text className="font-medium text-gray-900">Use Current Location</Text>
-          <Text className="text-gray-500 text-sm" numberOfLines={1}>{pickupAddress}</Text>
+        <View style={styles.currentLocationIcon}>
+          <Icon name="map-pin" size="md" color={COLORS.secondary} />
         </View>
-        <Text className="text-secondary-500">→</Text>
+        <View style={styles.currentLocationInfo}>
+          <Text style={styles.currentLocationTitle}>Use Current Location</Text>
+          <Text style={styles.currentLocationAddress} numberOfLines={1}>{pickupAddress}</Text>
+        </View>
+        <Icon name="chevron-right" size="sm" color={COLORS.textMuted} />
       </TouchableOpacity>
 
       {/* Search Input */}
-      <Text className="text-gray-600 font-medium mb-2">Or search for pickup point</Text>
-      <TextInput
-        className="bg-gray-100 rounded-xl px-4 py-4 text-base"
-        placeholder="Search for a place..."
-        placeholderTextColor="#9CA3AF"
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-      />
+      <Text style={styles.inputLabel}>Or search for pickup point</Text>
+      <View style={styles.searchInputContainer}>
+        <Icon name="search" size="md" color={COLORS.textMuted} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search for a place..."
+          placeholderTextColor={COLORS.textMuted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </View>
 
       {/* Search Results */}
-      {isSearching && <ActivityIndicator size="large" color={COLORS.primary} className="mt-4" />}
+      {isSearching && (
+        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+      )}
       
       {searchResults.map((place, index) => (
         <TouchableOpacity
           key={index}
-          className="flex-row items-center py-3 border-b border-gray-100"
+          style={styles.searchResult}
           onPress={() => onSelectPlace(place)}
+          activeOpacity={0.7}
         >
-          <Text className="mr-3">📍</Text>
-          <Text className="flex-1 text-gray-900">{place.place_name}</Text>
+          <View style={styles.searchResultIcon}>
+            <Icon name="map-pin" size="sm" color={COLORS.primary} />
+          </View>
+          <Text style={styles.searchResultText} numberOfLines={1}>{place.place_name}</Text>
         </TouchableOpacity>
       ))}
-    </View>
+    </Animated.View>
   );
 }
 
@@ -362,44 +391,56 @@ function DropoffStep({
   onSelectPlace: (place: PlaceResult) => void;
 }) {
   return (
-    <View>
+    <Animated.View entering={FadeInUp.duration(400).springify()}>
       {/* Pickup Summary */}
-      <View className="bg-gray-50 rounded-xl p-4 mb-4">
-        <Text className="text-gray-500 text-sm mb-1">Pickup</Text>
-        <Text className="text-gray-900 font-medium">{pickupAddress}</Text>
+      <View style={styles.pickupSummary}>
+        <View style={styles.pickupDot} />
+        <View>
+          <Text style={styles.pickupLabel}>Pickup</Text>
+          <Text style={styles.pickupAddress}>{pickupAddress}</Text>
+        </View>
       </View>
 
       {/* Search Input */}
-      <Text className="text-gray-600 font-medium mb-2">Where are you going?</Text>
-      <TextInput
-        className="bg-gray-100 rounded-xl px-4 py-4 text-base"
-        placeholder="Search for destination..."
-        placeholderTextColor="#9CA3AF"
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        autoFocus
-      />
+      <Text style={styles.inputLabel}>Where are you going?</Text>
+      <View style={styles.searchInputContainer}>
+        <Icon name="search" size="md" color={COLORS.textMuted} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search for destination..."
+          placeholderTextColor={COLORS.textMuted}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoFocus
+        />
+      </View>
 
       {/* Search Results */}
-      {isSearching && <ActivityIndicator size="large" color={COLORS.primary} className="mt-4" />}
+      {isSearching && (
+        <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+      )}
       
       {searchResults.map((place, index) => (
         <TouchableOpacity
           key={index}
-          className="flex-row items-center py-3 border-b border-gray-100"
+          style={styles.searchResult}
           onPress={() => onSelectPlace(place)}
+          activeOpacity={0.7}
         >
-          <Text className="mr-3">📍</Text>
-          <Text className="flex-1 text-gray-900">{place.place_name}</Text>
+          <View style={styles.searchResultIcon}>
+            <Icon name="map-pin" size="sm" color={COLORS.primary} />
+          </View>
+          <Text style={styles.searchResultText} numberOfLines={1}>{place.place_name}</Text>
         </TouchableOpacity>
       ))}
 
       {/* Recent Destinations */}
-      <Text className="text-gray-600 font-medium mt-6 mb-2">Recent Destinations</Text>
-      <View className="bg-gray-50 rounded-xl p-4">
-        <Text className="text-gray-400 text-center">No recent destinations</Text>
+      <Text style={styles.sectionTitle}>Recent Destinations</Text>
+      <View style={styles.emptyState}>
+        <Icon name="clock" size="lg" color={COLORS.textMuted} />
+        <Text style={styles.emptyText}>No recent destinations</Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -431,60 +472,74 @@ function ConfirmStep({
   onRequestRide: () => void;
   isRequesting: boolean;
 }) {
+  const rideTypeIcon = rideType.id === 'BODA' ? 'navigation' : 'car';
+  const rideTypeColor = rideType.id === 'BODA' ? IconColors.primary : IconColors.accent;
+
+  // Payment method icons
+  const getPaymentIcon = (methodId: string): 'phone' | 'dollar-sign' | 'credit-card' => {
+    if (methodId === 'MTN_MOMO' || methodId === 'AIRTEL_MONEY') return 'phone';
+    if (methodId === 'CASH') return 'dollar-sign';
+    return 'credit-card';
+  };
+
   return (
-    <View>
+    <Animated.View entering={FadeInUp.duration(400).springify()}>
       {/* Route Summary */}
-      <View className="bg-gray-50 rounded-xl p-4 mb-4">
-        <View className="flex-row items-start mb-3">
-          <View className="w-3 h-3 rounded-full bg-secondary-500 mt-1.5 mr-3" />
-          <View className="flex-1">
-            <Text className="text-gray-500 text-xs">Pickup</Text>
-            <Text className="text-gray-900">{pickupAddress}</Text>
+      <View style={styles.routeCard}>
+        <View style={styles.routeRow}>
+          <View style={[styles.routeDot, { backgroundColor: COLORS.secondary }]} />
+          <View style={styles.routeInfo}>
+            <Text style={styles.routeLabel}>Pickup</Text>
+            <Text style={styles.routeAddress}>{pickupAddress}</Text>
           </View>
         </View>
-        <View className="flex-row items-start">
-          <View className="w-3 h-3 rounded-full bg-primary-500 mt-1.5 mr-3" />
-          <View className="flex-1">
-            <Text className="text-gray-500 text-xs">Dropoff</Text>
-            <Text className="text-gray-900">{dropoffAddress}</Text>
+        <View style={styles.routeLine} />
+        <View style={styles.routeRow}>
+          <View style={[styles.routeDot, { backgroundColor: COLORS.primary }]} />
+          <View style={styles.routeInfo}>
+            <Text style={styles.routeLabel}>Dropoff</Text>
+            <Text style={styles.routeAddress}>{dropoffAddress}</Text>
           </View>
         </View>
       </View>
 
       {/* Fare Estimate */}
-      <View className="bg-white rounded-xl p-4 border border-gray-200 mb-4">
-        <Text className="text-gray-500 text-sm mb-2">Estimated Fare</Text>
+      <View style={styles.fareCard}>
+        <Text style={styles.fareLabel}>Estimated Fare</Text>
         {isCalculating ? (
           <ActivityIndicator size="small" color={COLORS.primary} />
         ) : (
           <>
-            <Text className="text-3xl font-bold text-gray-900">
-              UGX {estimatedFare.toLocaleString()}
-            </Text>
+            <Text style={styles.fareAmount}>UGX {estimatedFare.toLocaleString()}</Text>
             {distance && (
-              <Text className="text-gray-500 text-sm mt-1">
-                ~{distance.toFixed(1)} km
-              </Text>
+              <Text style={styles.distanceText}>~{distance.toFixed(1)} km</Text>
             )}
           </>
         )}
       </View>
 
       {/* Payment Method */}
-      <Text className="text-gray-600 font-medium mb-2">Payment Method</Text>
-      <View className="flex-row flex-wrap gap-2 mb-4">
+      <Text style={styles.sectionTitle}>Payment Method</Text>
+      <View style={styles.paymentMethods}>
         {PAYMENT_METHODS.slice(0, 3).map((method) => (
           <TouchableOpacity
             key={method.id}
-            className={`flex-row items-center px-4 py-3 rounded-xl border ${
-              paymentMethod === method.id 
-                ? 'border-primary-500 bg-primary-50' 
-                : 'border-gray-200 bg-white'
-            }`}
+            style={[
+              styles.paymentMethod,
+              paymentMethod === method.id && styles.paymentMethodActive
+            ]}
             onPress={() => setPaymentMethod(method.id as PaymentMethod)}
+            activeOpacity={0.8}
           >
-            <Text className="mr-2">{method.icon === 'phone' ? '📱' : method.icon === 'banknote' ? '💵' : '💳'}</Text>
-            <Text className={paymentMethod === method.id ? 'text-primary-500 font-medium' : 'text-gray-700'}>
+            <Icon 
+              name={getPaymentIcon(method.id)} 
+              size="sm" 
+              color={paymentMethod === method.id ? COLORS.background : COLORS.text} 
+            />
+            <Text style={[
+              styles.paymentMethodText,
+              paymentMethod === method.id && styles.paymentMethodTextActive
+            ]}>
               {method.name}
             </Text>
           </TouchableOpacity>
@@ -493,30 +548,335 @@ function ConfirmStep({
 
       {/* Phone Number for Mobile Money */}
       {paymentMethod !== 'CASH' && (
-        <TextInput
-          className="bg-gray-100 rounded-xl px-4 py-4 text-base mb-4"
-          placeholder="Enter phone number"
-          placeholderTextColor="#9CA3AF"
-          value={phoneNumber}
-          onChangeText={setPhoneNumber}
-          keyboardType="phone-pad"
-        />
+        <View style={styles.searchInputContainer}>
+          <Icon name="phone" size="md" color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Enter phone number"
+            placeholderTextColor={COLORS.textMuted}
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
+          />
+        </View>
       )}
 
       {/* Request Button */}
       <TouchableOpacity
-        className={`rounded-xl py-4 ${isRequesting ? 'bg-primary-300' : 'bg-primary-500'}`}
+        style={[styles.requestButton, isRequesting && styles.requestButtonDisabled]}
         onPress={onRequestRide}
         disabled={isRequesting}
+        activeOpacity={0.8}
       >
         {isRequesting ? (
-          <ActivityIndicator color="white" />
+          <ActivityIndicator color={COLORS.background} />
         ) : (
-          <Text className="text-white text-center text-lg font-semibold">
-            Request {rideType.name}
-          </Text>
+          <>
+            <Icon name={rideTypeIcon} size="md" color={COLORS.background} />
+            <Text style={styles.requestButtonText}>
+              Request {rideType.name}
+            </Text>
+          </>
         )}
       </TouchableOpacity>
-    </View>
+    </Animated.View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.primary,
+    paddingTop: 60,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerTitle: {
+    color: COLORS.background,
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  rideTypeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  rideTypeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  rideTypeInfo: {
+    flex: 1,
+  },
+  rideTypeName: {
+    color: COLORS.text,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  rideTypeDesc: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    marginTop: 2,
+  },
+  currentLocationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  currentLocationIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: `${COLORS.secondary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  currentLocationInfo: {
+    flex: 1,
+  },
+  currentLocationTitle: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  currentLocationAddress: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  inputLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.text,
+    fontSize: 14,
+    marginLeft: 10,
+  },
+  loader: {
+    marginTop: 20,
+  },
+  searchResult: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  searchResultIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: `${COLORS.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  searchResultText: {
+    flex: 1,
+    color: COLORS.text,
+    fontSize: 14,
+  },
+  pickupSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  pickupDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.secondary,
+    marginRight: 12,
+  },
+  pickupLabel: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+  },
+  pickupAddress: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  sectionTitle: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 20,
+    marginBottom: 12,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 24,
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  emptyText: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    marginTop: 8,
+  },
+  routeCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  routeDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginTop: 4,
+    marginRight: 12,
+  },
+  routeInfo: {
+    flex: 1,
+  },
+  routeLabel: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+  },
+  routeAddress: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  routeLine: {
+    width: 2,
+    height: 20,
+    backgroundColor: COLORS.border,
+    marginLeft: 5,
+    marginVertical: 4,
+  },
+  fareCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    alignItems: 'center',
+  },
+  fareLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+  },
+  fareAmount: {
+    color: COLORS.primary,
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginTop: 4,
+  },
+  distanceText: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    marginTop: 4,
+  },
+  paymentMethods: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  paymentMethod: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 12,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  paymentMethodActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  paymentMethodText: {
+    color: COLORS.text,
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 6,
+  },
+  paymentMethodTextActive: {
+    color: COLORS.background,
+  },
+  requestButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  requestButtonDisabled: {
+    backgroundColor: COLORS.backgroundSurface,
+  },
+  requestButtonText: {
+    color: COLORS.background,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+});

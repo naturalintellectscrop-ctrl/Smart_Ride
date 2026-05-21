@@ -1,6 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - ORDER TRACKING SCREEN
 // ============================================
+// Premium dark theme with vector icons
+// ============================================
 
 import { useState, useEffect } from 'react';
 import {
@@ -11,9 +13,16 @@ import {
   Alert,
   ScrollView,
   Linking,
-  Platform
+  Platform,
+  StyleSheet
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  FadeInDown,
+  ZoomIn,
+} from 'react-native-reanimated';
 // Conditional import for web compatibility
 const MapView = Platform.OS === 'web'
   ? require('@/src/mocks/react-native-maps').MapView
@@ -25,14 +34,16 @@ import { useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS } from '@/src/constants';
 import { Order } from '@/src/types';
+import { Icon, IconColors } from '../../components/Icon';
 
+// Order status flow with vector icons
 const ORDER_STATUS_FLOW = [
-  { status: 'ORDER_CREATED', label: 'Order Placed', icon: '📝' },
-  { status: 'MERCHANT_ACCEPTED', label: 'Confirmed', icon: '✅' },
-  { status: 'PREPARING', label: 'Preparing', icon: '👨‍🍳' },
-  { status: 'READY_FOR_PICKUP', label: 'Ready', icon: '📦' },
-  { status: 'OUT_FOR_DELIVERY', label: 'On the Way', icon: '🚗' },
-  { status: 'DELIVERED', label: 'Delivered', icon: '🎉' },
+  { status: 'ORDER_CREATED', label: 'Order Placed', iconName: 'file-text' as const, color: '#8B5CF6' },
+  { status: 'MERCHANT_ACCEPTED', label: 'Confirmed', iconName: 'check-circle' as const, color: '#22C55E' },
+  { status: 'PREPARING', label: 'Preparing', iconName: 'clock' as const, color: '#F59E0B' },
+  { status: 'READY_FOR_PICKUP', label: 'Ready', iconName: 'package' as const, color: '#00FFF3' },
+  { status: 'OUT_FOR_DELIVERY', label: 'On the Way', iconName: 'truck' as const, color: '#00FF88' },
+  { status: 'DELIVERED', label: 'Delivered', iconName: 'star' as const, color: '#FBBF24' },
 ];
 
 export default function OrderTrackingScreen() {
@@ -50,7 +61,6 @@ export default function OrderTrackingScreen() {
   }, [params.orderId]);
 
   useEffect(() => {
-    // Listen for order status updates
     const unsubscribe = socketService.on('order:status', (data: { orderId: string; status: string }) => {
       if (data.orderId === params.orderId && order) {
         setOrder({ ...order, status: data.status as any });
@@ -87,7 +97,6 @@ export default function OrderTrackingScreen() {
   };
 
   const handleCallDriver = () => {
-    // Would get driver phone from task
     Alert.alert('Coming Soon', 'Driver calling will be available soon');
   };
 
@@ -99,17 +108,18 @@ export default function OrderTrackingScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text className="mt-4 text-gray-500">Loading order details...</Text>
+        <Text style={styles.loadingText}>Loading order details...</Text>
       </View>
     );
   }
 
   if (!order) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">No order found</Text>
+      <View style={styles.emptyContainer}>
+        <Icon name="package" size="2xl" color={COLORS.textMuted} />
+        <Text style={styles.emptyText}>No order found</Text>
       </View>
     );
   }
@@ -117,11 +127,11 @@ export default function OrderTrackingScreen() {
   const currentStep = getCurrentStep();
 
   return (
-    <View className="flex-1 bg-white">
+    <View style={styles.container}>
       {/* Map */}
       {order.deliveryLatitude && order.deliveryLongitude && (
         <MapView
-          className="h-48"
+          style={styles.map}
           initialRegion={{
             latitude: order.deliveryLatitude,
             longitude: order.deliveryLongitude,
@@ -141,44 +151,49 @@ export default function OrderTrackingScreen() {
         </MapView>
       )}
 
-      <ScrollView className="flex-1">
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Order Status */}
-        <View className="px-4 pt-4">
-          <Text className="text-xl font-bold text-gray-900 mb-4">
+        <Animated.View entering={FadeInDown.duration(400).springify()}>
+          <Text style={styles.orderNumber}>
             Order #{order.orderNumber}
           </Text>
 
           {/* Progress Steps */}
-          <View className="bg-gray-50 rounded-2xl p-4 mb-4">
+          <View style={styles.progressCard}>
             {ORDER_STATUS_FLOW.map((step, index) => {
               const isActive = index <= currentStep;
               const isCurrent = index === currentStep;
 
               return (
-                <View key={step.status} className="flex-row items-start">
+                <View key={step.status} style={styles.stepContainer}>
                   {/* Line */}
                   {index > 0 && (
                     <View 
-                      className={`w-0.5 h-6 ml-4 -mb-2 ${
-                        index <= currentStep ? 'bg-secondary-500' : 'bg-gray-200'
-                      }`}
+                      style={[
+                        styles.stepLine,
+                        { backgroundColor: index <= currentStep ? COLORS.secondary : COLORS.border }
+                      ]}
                     />
                   )}
 
                   {/* Icon & Content */}
-                  <View className="flex-row items-center flex-1 py-2">
+                  <View style={styles.stepContent}>
                     <View 
-                      className={`w-8 h-8 rounded-full items-center justify-center ${
-                        isActive ? 'bg-secondary-500' : 'bg-gray-200'
-                      }`}
+                      style={[
+                        styles.stepIcon,
+                        { backgroundColor: isActive ? `${step.color}15` : COLORS.background }
+                      ]}
                     >
-                      <Text className="text-sm">{step.icon}</Text>
+                      <Icon 
+                        name={step.iconName} 
+                        size="sm" 
+                        color={isActive ? step.color : COLORS.textMuted} 
+                      />
                     </View>
-                    <Text 
-                      className={`ml-3 flex-1 ${
-                        isCurrent ? 'font-bold text-gray-900' : 'text-gray-500'
-                      }`}
-                    >
+                    <Text style={[
+                      styles.stepLabel,
+                      isCurrent && styles.stepLabelActive
+                    ]}>
                       {step.label}
                     </Text>
                     {isCurrent && (
@@ -189,98 +204,104 @@ export default function OrderTrackingScreen() {
               );
             })}
           </View>
+        </Animated.View>
 
-          {/* Merchant Info */}
-          {order.merchant && (
-            <View className="bg-gray-50 rounded-2xl p-4 mb-4">
-              <Text className="text-gray-500 text-sm mb-2">Restaurant</Text>
-              <View className="flex-row items-center">
-                <View className="w-12 h-12 bg-gray-200 rounded-xl items-center justify-center mr-3">
-                  <Text className="text-2xl">🍽️</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="font-bold text-gray-900">{order.merchant.name}</Text>
-                  <Text className="text-gray-500 text-sm">{order.merchant.address}</Text>
-                </View>
-                <TouchableOpacity 
-                  className="w-10 h-10 bg-secondary-50 rounded-full items-center justify-center"
-                  onPress={handleCallMerchant}
-                >
-                  <Text>📞</Text>
-                </TouchableOpacity>
+        {/* Merchant Info */}
+        {order.merchant && (
+          <Animated.View entering={FadeInUp.delay(100).duration(400)} style={styles.card}>
+            <Text style={styles.cardLabel}>Restaurant</Text>
+            <View style={styles.merchantRow}>
+              <View style={styles.merchantIcon}>
+                <Icon name="coffee" size="lg" color={IconColors.food} />
               </View>
-            </View>
-          )}
-
-          {/* Order Items */}
-          <View className="bg-gray-50 rounded-2xl p-4 mb-4">
-            <Text className="text-gray-500 text-sm mb-2">Order Items</Text>
-            {order.items.map((item, index) => (
-              <View key={index} className="flex-row justify-between py-2">
-                <Text className="text-gray-900">
-                  {item.quantity}x {item.name}
-                </Text>
-                <Text className="text-gray-600">
-                  UGX {item.totalPrice.toLocaleString()}
-                </Text>
+              <View style={styles.merchantInfo}>
+                <Text style={styles.merchantName}>{order.merchant.name}</Text>
+                <Text style={styles.merchantAddress}>{order.merchant.address}</Text>
               </View>
-            ))}
-          </View>
+              <TouchableOpacity 
+                style={styles.callButton}
+                onPress={handleCallMerchant}
+                activeOpacity={0.8}
+              >
+                <Icon name="phone" size="md" color={COLORS.secondary} />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        )}
 
-          {/* Delivery Address */}
-          <View className="bg-gray-50 rounded-2xl p-4 mb-4">
-            <Text className="text-gray-500 text-sm mb-2">Delivery Address</Text>
-            <View className="flex-row items-start">
-              <Text className="mr-2">📍</Text>
-              <Text className="text-gray-900 flex-1">{order.deliveryAddress}</Text>
-            </View>
-          </View>
-
-          {/* Payment Summary */}
-          <View className="bg-gray-50 rounded-2xl p-4 mb-4">
-            <Text className="text-gray-500 text-sm mb-2">Payment Summary</Text>
-            <View className="flex-row justify-between py-1">
-              <Text className="text-gray-500">Subtotal</Text>
-              <Text className="text-gray-900">UGX {order.subtotal.toLocaleString()}</Text>
-            </View>
-            <View className="flex-row justify-between py-1">
-              <Text className="text-gray-500">Delivery</Text>
-              <Text className="text-gray-900">UGX {order.deliveryFee.toLocaleString()}</Text>
-            </View>
-            <View className="flex-row justify-between py-2 border-t border-gray-200 mt-2">
-              <Text className="font-bold text-gray-900">Total</Text>
-              <Text className="font-bold text-primary-500">
-                UGX {order.totalAmount.toLocaleString()}
+        {/* Order Items */}
+        <Animated.View entering={FadeInUp.delay(200).duration(400)} style={styles.card}>
+          <Text style={styles.cardLabel}>Order Items</Text>
+          {order.items.map((item, index) => (
+            <View key={index} style={styles.itemRow}>
+              <Text style={styles.itemName}>
+                {item.quantity}x {item.name}
+              </Text>
+              <Text style={styles.itemPrice}>
+                UGX {item.totalPrice.toLocaleString()}
               </Text>
             </View>
+          ))}
+        </Animated.View>
+
+        {/* Delivery Address */}
+        <Animated.View entering={FadeInUp.delay(300).duration(400)} style={styles.card}>
+          <Text style={styles.cardLabel}>Delivery Address</Text>
+          <View style={styles.addressRow}>
+            <Icon name="map-pin" size="sm" color={COLORS.primary} />
+            <Text style={styles.addressText}>{order.deliveryAddress}</Text>
           </View>
-        </View>
+        </Animated.View>
+
+        {/* Payment Summary */}
+        <Animated.View entering={FadeInUp.delay(400).duration(400)} style={styles.card}>
+          <Text style={styles.cardLabel}>Payment Summary</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Subtotal</Text>
+            <Text style={styles.summaryValue}>UGX {order.subtotal.toLocaleString()}</Text>
+          </View>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Delivery</Text>
+            <Text style={styles.summaryValue}>UGX {order.deliveryFee.toLocaleString()}</Text>
+          </View>
+          <View style={styles.summaryDivider} />
+          <View style={styles.summaryRow}>
+            <Text style={styles.totalLabel}>Total</Text>
+            <Text style={styles.totalValue}>
+              UGX {order.totalAmount.toLocaleString()}
+            </Text>
+          </View>
+        </Animated.View>
       </ScrollView>
 
       {/* Bottom Action */}
-      <View className="bg-white px-4 py-4 border-t border-gray-100">
+      <View style={styles.footer}>
         {order.status === 'DELIVERED' ? (
           <TouchableOpacity
-            className="bg-secondary-500 rounded-xl py-4"
+            style={styles.doneButton}
             onPress={() => router.replace('/(tabs)')}
+            activeOpacity={0.8}
           >
-            <Text className="text-white text-center text-lg font-semibold">
-              Done
-            </Text>
+            <Icon name="check" size="md" color={COLORS.background} />
+            <Text style={styles.doneButtonText}>Done</Text>
           </TouchableOpacity>
         ) : (
-          <View className="flex-row gap-3">
+          <View style={styles.actionButtons}>
             <TouchableOpacity
-              className="flex-1 bg-red-50 rounded-xl py-4"
+              style={styles.cancelButton}
               onPress={() => Alert.alert('Coming Soon', 'Order cancellation will be available soon')}
+              activeOpacity={0.8}
             >
-              <Text className="text-red-500 text-center font-semibold">Cancel</Text>
+              <Icon name="x" size="sm" color="#F43F5E" />
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              className="flex-1 bg-primary-500 rounded-xl py-4"
+              style={styles.supportButton}
               onPress={handleCallDriver}
+              activeOpacity={0.8}
             >
-              <Text className="text-white text-center font-semibold">Contact Support</Text>
+              <Icon name="message-circle" size="sm" color={COLORS.background} />
+              <Text style={styles.supportButtonText}>Support</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -288,3 +309,244 @@ export default function OrderTrackingScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  loadingText: {
+    color: COLORS.textMuted,
+    marginTop: 16,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  emptyText: {
+    color: COLORS.textMuted,
+    marginTop: 16,
+  },
+  map: {
+    height: 192,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 100,
+  },
+  orderNumber: {
+    color: COLORS.text,
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  progressCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  stepContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  stepLine: {
+    width: 2,
+    height: 24,
+    marginLeft: 15,
+    marginBottom: -8,
+  },
+  stepContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingVertical: 8,
+  },
+  stepIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepLabel: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+    marginLeft: 12,
+    flex: 1,
+  },
+  stepLabelActive: {
+    color: COLORS.text,
+    fontWeight: '600',
+  },
+  card: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  cardLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginBottom: 12,
+  },
+  merchantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  merchantIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: `${IconColors.food}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  merchantInfo: {
+    flex: 1,
+  },
+  merchantName: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  merchantAddress: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  callButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: `${COLORS.secondary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  itemName: {
+    color: COLORS.text,
+    fontSize: 14,
+  },
+  itemPrice: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  addressText: {
+    color: COLORS.text,
+    fontSize: 14,
+    marginLeft: 8,
+    flex: 1,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  summaryLabel: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+  },
+  summaryValue: {
+    color: COLORS.text,
+    fontSize: 14,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: COLORS.border,
+    marginVertical: 8,
+  },
+  totalLabel: {
+    color: COLORS.text,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  totalValue: {
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  footer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.backgroundElevated,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  doneButton: {
+    backgroundColor: COLORS.secondary,
+    borderRadius: 16,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doneButtonText: {
+    color: COLORS.background,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+    borderRadius: 12,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(244, 63, 94, 0.3)',
+  },
+  cancelButtonText: {
+    color: '#F43F5E',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  supportButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.primary,
+    borderRadius: 12,
+    paddingVertical: 14,
+  },
+  supportButtonText: {
+    color: COLORS.background,
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+});

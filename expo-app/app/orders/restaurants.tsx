@@ -1,6 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - RESTAURANTS LIST
 // ============================================
+// Premium dark theme with vector icons
+// ============================================
 
 import { useState, useEffect } from 'react';
 import { 
@@ -11,12 +13,28 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
-  Image
+  Image,
+  StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  FadeInDown,
+  SlideInRight,
+  ZoomIn,
+} from 'react-native-reanimated';
 import { api } from '@/src/services';
 import { COLORS } from '@/src/constants';
 import { Merchant } from '@/src/types';
+import { Icon, IconColors } from '../../components/Icon';
+
+const CATEGORIES = [
+  { id: 'all', label: 'All' },
+  { id: 'RESTAURANT', label: 'Restaurants' },
+  { id: 'FAST_FOOD', label: 'Fast Food' },
+  { id: 'CAFE', label: 'Cafes' },
+];
 
 export default function RestaurantsScreen() {
   const router = useRouter();
@@ -26,13 +44,6 @@ export default function RestaurantsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-
-  const categories = [
-    { id: 'all', label: 'All' },
-    { id: 'RESTAURANT', label: 'Restaurants' },
-    { id: 'FAST_FOOD', label: 'Fast Food' },
-    { id: 'CAFE', label: 'Cafes' },
-  ];
 
   useEffect(() => {
     loadMerchants();
@@ -74,104 +85,326 @@ export default function RestaurantsScreen() {
     setRefreshing(false);
   };
 
-  const renderMerchant = ({ item }: { item: Merchant }) => (
-    <TouchableOpacity 
-      className="flex-row bg-white rounded-2xl p-3 mb-3 shadow-sm"
-      onPress={() => router.push(`/orders/merchant/${item.id}`)}
+  const renderMerchant = ({ item, index }: { item: Merchant; index: number }) => (
+    <Animated.View
+      entering={SlideInRight.duration(300).delay(index * 80).springify()}
     >
-      {/* Image */}
-      <View className="w-20 h-20 bg-gray-100 rounded-xl items-center justify-center mr-3">
-        <Text className="text-3xl">🍽️</Text>
-      </View>
-
-      {/* Details */}
-      <View className="flex-1 justify-center">
-        <Text className="font-bold text-gray-900" numberOfLines={1}>{item.name}</Text>
-        <Text className="text-gray-500 text-sm" numberOfLines={1}>{item.description}</Text>
-        
-        <View className="flex-row items-center mt-2">
-          <Text className="text-yellow-500 mr-1">⭐</Text>
-          <Text className="text-gray-600 text-sm">{item.rating.toFixed(1)}</Text>
-          <Text className="text-gray-300 mx-2">•</Text>
-          <Text className="text-gray-500 text-sm">{item.address}</Text>
+      <TouchableOpacity 
+        style={styles.merchantCard}
+        onPress={() => router.push(`/orders/merchant/${item.id}`)}
+        activeOpacity={0.8}
+      >
+        {/* Image */}
+        <View style={styles.merchantImageContainer}>
+          {item.image ? (
+            <Image source={{ uri: item.image }} style={styles.merchantImage} />
+          ) : (
+            <View style={styles.merchantImagePlaceholder}>
+              <Icon name="coffee" size="lg" color={IconColors.food} />
+            </View>
+          )}
         </View>
 
-        <View className="flex-row items-center mt-1">
-          <View className={`px-2 py-0.5 rounded-full ${item.isOpen ? 'bg-secondary-50' : 'bg-gray-100'}`}>
-            <Text className={`text-xs font-medium ${item.isOpen ? 'text-secondary-500' : 'text-gray-400'}`}>
-              {item.isOpen ? 'Open' : 'Closed'}
-            </Text>
+        {/* Details */}
+        <View style={styles.merchantContent}>
+          <Text style={styles.merchantName} numberOfLines={1}>{item.name}</Text>
+          <Text style={styles.merchantDescription} numberOfLines={1}>{item.description}</Text>
+          
+          <View style={styles.merchantFooter}>
+            <View style={styles.ratingContainer}>
+              <Icon name="star" size="xs" color="#FBBF24" />
+              <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+            </View>
+            <Text style={styles.dot}>•</Text>
+            <Text style={styles.addressText} numberOfLines={1}>{item.address}</Text>
+          </View>
+
+          <View style={styles.statusRow}>
+            <View style={[
+              styles.statusBadge,
+              { backgroundColor: item.isOpen ? `${COLORS.success}15` : `${COLORS.textMuted}15` }
+            ]}>
+              <Text style={[
+                styles.statusText,
+                { color: item.isOpen ? COLORS.success : COLORS.textMuted }
+              ]}>
+                {item.isOpen ? 'Open' : 'Closed'}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
-    </TouchableOpacity>
+      </TouchableOpacity>
+    </Animated.View>
   );
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
-      <View className="bg-white pt-12 pb-4 px-4 border-b border-gray-100">
-        <View className="flex-row items-center mb-4">
+      <Animated.View 
+        entering={FadeInDown.duration(400).springify()}
+        style={styles.header}
+      >
+        <View style={styles.headerTop}>
           <TouchableOpacity 
             onPress={() => router.back()}
-            className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3"
+            style={styles.backButton}
+            activeOpacity={0.8}
           >
-            <Text className="text-gray-600">←</Text>
+            <Icon name="arrow-left" size="md" color={COLORS.text} />
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-900">Restaurants</Text>
+          <Text style={styles.headerTitle}>Restaurants</Text>
         </View>
 
         {/* Search */}
-        <TextInput
-          className="bg-gray-100 rounded-xl px-4 py-3"
-          placeholder="Search restaurants..."
-          placeholderTextColor="#9CA3AF"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
+        <View style={styles.searchContainer}>
+          <Icon name="search" size="md" color={COLORS.textMuted} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search restaurants..."
+            placeholderTextColor={COLORS.textMuted}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+        </View>
+      </Animated.View>
 
       {/* Categories */}
-      <View className="flex-row bg-white px-4 py-3 gap-2">
-        {categories.map((cat) => (
-          <TouchableOpacity
+      <Animated.View 
+        entering={FadeInUp.duration(400).delay(100)}
+        style={styles.categoriesContainer}
+      >
+        {CATEGORIES.map((cat, index) => (
+          <Animated.View
             key={cat.id}
-            className={`px-4 py-2 rounded-full ${
-              selectedCategory === cat.id ? 'bg-primary-500' : 'bg-gray-100'
-            }`}
-            onPress={() => setSelectedCategory(cat.id)}
+            entering={ZoomIn.delay(150 + index * 50).duration(200)}
           >
-            <Text className={`font-medium ${
-              selectedCategory === cat.id ? 'text-white' : 'text-gray-600'
-            }`}>
-              {cat.label}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.categoryButton,
+                selectedCategory === cat.id && styles.categoryButtonActive
+              ]}
+              onPress={() => setSelectedCategory(cat.id)}
+              activeOpacity={0.8}
+            >
+              <Text style={[
+                styles.categoryText,
+                selectedCategory === cat.id && styles.categoryTextActive
+              ]}>
+                {cat.label}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
         ))}
-      </View>
+      </Animated.View>
 
       {/* List */}
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
       ) : (
         <FlatList
-          className="flex-1 px-4 pt-4"
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
           data={filteredMerchants}
           keyExtractor={(item) => item.id}
           renderItem={renderMerchant}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={onRefresh}
+              tintColor={COLORS.primary}
+            />
           }
           ListEmptyComponent={
-            <View className="items-center justify-center py-12">
-              <Text className="text-4xl mb-4">🍽️</Text>
-              <Text className="text-gray-500 text-center">No restaurants found</Text>
-            </View>
+            <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
+              <View style={styles.emptyIconContainer}>
+                <Icon name="coffee" size="2xl" color={COLORS.textMuted} />
+              </View>
+              <Text style={styles.emptyText}>No restaurants found</Text>
+            </Animated.View>
           }
         />
       )}
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.backgroundElevated,
+    paddingTop: 60,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  headerTitle: {
+    color: COLORS.text,
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.text,
+    fontSize: 14,
+    marginLeft: 10,
+  },
+  categoriesContainer: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.backgroundElevated,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  categoryButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: COLORS.background,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  categoryButtonActive: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  categoryText: {
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  categoryTextActive: {
+    color: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 20,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.backgroundElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  emptyText: {
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+  merchantCard: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  merchantImageContainer: {
+    marginRight: 12,
+  },
+  merchantImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+  },
+  merchantImagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: `${IconColors.food}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  merchantContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  merchantName: {
+    color: COLORS.text,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  merchantDescription: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
+  },
+  merchantFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingText: {
+    color: COLORS.text,
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  dot: {
+    color: COLORS.textMuted,
+    marginHorizontal: 6,
+  },
+  addressText: {
+    color: COLORS.textSecondary,
+    fontSize: 12,
+    flex: 1,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    marginTop: 6,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '500',
+  },
+});
