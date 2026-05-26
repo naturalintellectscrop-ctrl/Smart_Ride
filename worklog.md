@@ -52,3 +52,33 @@ Stage Summary:
 - **PHASE 2 REFINED**: driver:location:update event now handled by realtime service
 - **PHASE 3 REFINED**: DELIVERED notification template added
 - **STATE MACHINE COMPLETE**: MATCHING status properly integrated into item delivery lifecycle
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Production verification audit — found and fixed INTERNAL_API_KEY mismatch
+
+Work Log:
+- **EXECUTION PATH AUDIT** performed on all 14 steps of the parcel delivery flow
+- **CRITICAL BUG DISCOVERED**: JWT_SECRET / INTERNAL_API_KEY mismatch between Next.js and realtime service
+  - Next.js app sends `X-Internal-Key: process.env.JWT_SECRET || 'internal'` → resolves to `'internal'` (JWT_SECRET not in .env)
+  - Realtime service checks `authKey !== JWT_SECRET` where JWT_SECRET defaults to `'your-super-secret-jwt-key-change-in-production-min-32-chars'`
+  - Result: `'internal' !== long-string` → **401 Unauthorized** — ALL socket emissions silently rejected
+  - This is WORSE than the port bug — even with the correct port, every /emit call was being rejected with 401
+- **ADDITIONAL BUG**: Socket.io auth also uses JWT_SECRET. The auth system uses `'dev-jwt-secret-not-for-production-use'` as default while realtime uses a different default. Client tokens signed with one secret can't be verified with another.
+- **FIX APPLIED**:
+  1. Added JWT_SECRET and INTERNAL_API_KEY to .env file with consistent values
+  2. Separated concerns: JWT_SECRET for socket auth (signing/verifying tokens), INTERNAL_API_KEY for service-to-service /emit auth
+  3. Updated realtime-service to use INTERNAL_API_KEY for /emit and /broadcast endpoints (instead of JWT_SECRET)
+  4. Updated all 4 Next.js backend files to use INTERNAL_API_KEY for X-Internal-Key header
+  5. Both services use the same JWT_SECRET default value for socket token verification
+- Could not perform live database verification due to Render free tier DB being unreachable from sandbox
+
+Stage Summary:
+- **THIRD CRITICAL BUG FOUND AND FIXED**: Internal API key mismatch — every /emit call was getting 401 Unauthorized, silently failing
+- **Three critical bugs found across this session**:
+  1. Wrong port (3001 → 3002 for /emit HTTP endpoint)
+  2. Premature autoAssign (task was jumping to ASSIGNED before rider accepted)
+  3. Internal API key mismatch (all socket emissions silently rejected with 401)
+- **Cannot verify with live DB** — Render free tier DB is unreachable from this sandbox
+- **RECOMMENDATION**: User should verify in production by creating a test parcel and checking DB for DispatchMatch, Notification, and AuditLog records

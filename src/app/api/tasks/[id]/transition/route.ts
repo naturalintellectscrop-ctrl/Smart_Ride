@@ -155,7 +155,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         // Emit real-time socket event for task status change
         // Internal HTTP emit API runs on port 3002 (Socket.io WebSocket is on 3001)
         const socketPort = process.env.SOCKET_PORT || '3002';
-        const internalKey = process.env.JWT_SECRET || 'internal';
+        const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
         await fetch(`http://localhost:${socketPort}/emit`, {
           method: 'POST',
           headers: {

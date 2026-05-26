@@ -7,7 +7,8 @@ import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 
 const PORT = 3001;
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production-min-32-chars';
+const JWT_SECRET = process.env.JWT_SECRET || 'smart-ride-jwt-secret-prod-2024-ug-kampala';
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
 
 // Create Socket.io server
 const io = new Server(PORT, {
@@ -329,7 +330,7 @@ const httpServer = Bun.serve({
     // Emit event endpoint
     if (url.pathname === '/emit' && request.method === 'POST') {
       const authKey = request.headers.get('X-Internal-Key');
-      if (authKey !== JWT_SECRET) {
+      if (authKey !== INTERNAL_API_KEY) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -354,7 +355,7 @@ const httpServer = Bun.serve({
     // Broadcast endpoint
     if (url.pathname === '/broadcast' && request.method === 'POST') {
       const authKey = request.headers.get('X-Internal-Key');
-      if (authKey !== JWT_SECRET) {
+      if (authKey !== INTERNAL_API_KEY) {
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -436,7 +436,7 @@ async function emitNotification(userId: string, data: unknown): Promise<void> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Internal-Key': process.env.JWT_SECRET || 'internal',
+        'X-Internal-Key': process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024',
       },
       body: JSON.stringify({
         room: `user:${userId}`,
