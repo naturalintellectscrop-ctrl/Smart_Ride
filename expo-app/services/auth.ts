@@ -5,11 +5,13 @@
 // ============================================
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '../src/store/authStore';
+import { STORAGE_KEYS } from '../src/constants';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api';
 
 // Token storage keys
-const ACCESS_TOKEN_KEY = 'smart_ride_access_token';
+const ACCESS_TOKEN_KEY = 'smart_ride_auth_token';
 const REFRESH_TOKEN_KEY = 'smart_ride_refresh_token';
 const USER_DATA_KEY = 'smart_ride_user_data';
 
@@ -63,6 +65,7 @@ export interface RegisterData {
 
 export async function saveTokens(accessToken: string, refreshToken?: string): Promise<void> {
   await AsyncStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  await AsyncStorage.setItem(STORAGE_KEYS.authToken, accessToken); // Sync with API service
   if (refreshToken) {
     await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   }
@@ -77,7 +80,7 @@ export async function getRefreshToken(): Promise<string | null> {
 }
 
 export async function clearTokens(): Promise<void> {
-  await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_DATA_KEY]);
+  await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_DATA_KEY, STORAGE_KEYS.authToken]);
 }
 
 export async function saveUserData(user: User): Promise<void> {
@@ -87,6 +90,24 @@ export async function saveUserData(user: User): Promise<void> {
 export async function getUserData(): Promise<User | null> {
   const data = await AsyncStorage.getItem(USER_DATA_KEY);
   return data ? JSON.parse(data) : null;
+}
+
+// ============================================
+// AUTH STORE SYNC
+// ============================================
+
+export function syncAuthStore(user: User, accessToken: string): void {
+  try {
+    useAuthStore.getState().login({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+    }, accessToken);
+  } catch (e) {
+    console.warn('[AUTH] Failed to sync auth store:', e);
+  }
 }
 
 // ============================================
@@ -143,6 +164,7 @@ export async function loginWithEmail(credentials: LoginCredentials): Promise<Aut
     if (response.success && response.data) {
       await saveTokens(response.data.accessToken, response.data.refreshToken);
       await saveUserData(response.data.user);
+      syncAuthStore(response.data.user, response.data.accessToken);
     }
     
     return response;
@@ -167,6 +189,7 @@ export async function registerUser(data: RegisterData): Promise<AuthResponse> {
     if (response.success && response.data) {
       await saveTokens(response.data.accessToken, response.data.refreshToken);
       await saveUserData(response.data.user);
+      syncAuthStore(response.data.user, response.data.accessToken);
     }
     
     return response;
@@ -188,6 +211,7 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
     if (response.success && response.user && response.tokens) {
       await saveTokens(response.tokens.accessToken, response.tokens.refreshToken);
       await saveUserData(response.user);
+      syncAuthStore(response.user, response.tokens.accessToken);
     }
     
     return response;
@@ -207,6 +231,9 @@ export async function logout(): Promise<void> {
     console.error('Logout API error:', error);
   } finally {
     await clearTokens();
+    try {
+      useAuthStore.getState().logout();
+    } catch (e) {}
   }
 }
 

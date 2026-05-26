@@ -39,7 +39,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useAuthStore, useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS, DEFAULT_LOCATION } from '@/src/constants';
+import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS, DEFAULT_LOCATION, API_CONFIG } from '@/src/constants';
 import { Task, Rider } from '@/src/types';
 
 // Error Boundary for Map Component
@@ -125,10 +125,10 @@ export default function DriverHomeScreen() {
         // VALIDATE: Ensure we have required fields
         const riderData = response.data;
         const normalizedRider: Rider = {
-          id: riderData.id || 'guest',
+          id: riderData.id,
           userId: riderData.userId || '',
-          fullName: riderData.fullName || user?.name || 'Driver',
-          phone: riderData.phone || user?.phone || '',
+          fullName: riderData.fullName || 'Driver',
+          phone: riderData.phone || '',
           email: riderData.email,
           riderRole: riderData.riderRole || 'SMART_BODA_RIDER',
           status: riderData.status || 'APPROVED',
@@ -145,40 +145,11 @@ export default function DriverHomeScreen() {
         setIsOnline(normalizedRider.isOnline);
       } else {
         setProfileError(response.error || 'Failed to load profile');
-        // Still allow driver to use app with default values
-        setRider({
-          id: 'guest',
-          userId: '',
-          fullName: user?.name || 'Driver',
-          phone: user?.phone || '',
-          riderRole: 'SMART_BODA_RIDER',
-          status: 'APPROVED',
-          isOnline: false,
-          rating: 5.0,
-          totalTrips: 0,
-          completedTrips: 0,
-          walletBalance: 0,
-        } as Rider);
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
       setProfileError('Unable to load driver profile');
-      // Set default rider so UI can still render
-      setRider({
-        id: 'guest',
-        userId: '',
-        fullName: user?.name || 'Driver',
-        phone: user?.phone || '',
-        riderRole: 'SMART_BODA_RIDER',
-        status: 'APPROVED',
-        isOnline: false,
-        rating: 5.0,
-        totalTrips: 0,
-        completedTrips: 0,
-        walletBalance: 0,
-      } as Rider);
     } finally {
-      // ALWAYS set loading to false
       setIsLoading(false);
     }
   }, [user]);
@@ -271,13 +242,26 @@ export default function DriverHomeScreen() {
 
     setIsAccepting(true);
     try {
-      const response = await api.acceptTask(incomingRequest.task.id);
-      if (response.success) {
+      // Use transition API to accept the task
+      const { accessToken } = useAuthStore.getState();
+      const response = await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          toStatus: 'ACCEPTED',
+          riderId: rider?.id,
+        }),
+      });
+      const result = await response.json();
+      if (result.success) {
         clearIncomingRequest();
         setRequestTimer(null);
         router.push(`/driver/driver-task?taskId=${incomingRequest.task.id}`);
       } else {
-        Alert.alert('Error', response.error || 'Failed to accept request');
+        Alert.alert('Error', result.error || 'Failed to accept request');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to accept request');
@@ -290,7 +274,20 @@ export default function DriverHomeScreen() {
     if (!incomingRequest) return;
 
     try {
-      await api.declineTask(incomingRequest.task.id);
+      // Decline via task transition with reason
+      const { accessToken } = useAuthStore.getState();
+      await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          toStatus: 'CANCELLED',
+          riderId: rider?.id,
+          reason: 'Declined by rider',
+        }),
+      });
       clearIncomingRequest();
       setRequestTimer(null);
     } catch (error) {
@@ -317,35 +314,29 @@ export default function DriverHomeScreen() {
     return () => clearInterval(interval);
   }, [requestTimer, clearIncomingRequest]);
 
-  // Show loading state but with timeout
+  // Show loading state
   if (isLoading) {
     return (
       <View className="flex-1 items-center justify-center bg-white">
         <PulsingLoader />
         <Text className="mt-4 text-gray-500">Loading driver profile...</Text>
-        <Animated.View entering={FadeIn.delay(2000).duration(300)}>
-          <TouchableOpacity 
-            className="mt-4 bg-gray-200 rounded-xl px-6 py-3"
-            onPress={() => {
-              setIsLoading(false);
-              setRider({
-                id: 'guest',
-                userId: '',
-                fullName: user?.name || 'Driver',
-                phone: user?.phone || '',
-                riderRole: 'SMART_BODA_RIDER',
-                status: 'APPROVED',
-                isOnline: false,
-                rating: 5.0,
-                totalTrips: 0,
-                completedTrips: 0,
-                walletBalance: 0,
-              } as Rider);
-            }}
-          >
-            <Text className="text-gray-600 font-medium">Skip</Text>
-          </TouchableOpacity>
-        </Animated.View>
+      </View>
+    );
+  }
+
+  // Show error state if rider profile failed to load
+  if (profileError && !rider) {
+    return (
+      <View className="flex-1 items-center justify-center bg-white px-6">
+        <Text className="text-4xl mb-4">⚠️</Text>
+        <Text className="text-lg font-bold text-gray-900 mb-2">Profile Load Error</Text>
+        <Text className="text-gray-500 text-center mb-6">{profileError}</Text>
+        <TouchableOpacity
+          className="bg-primary-500 rounded-xl px-8 py-4"
+          onPress={loadRiderProfile}
+        >
+          <Text className="text-white font-semibold">Retry</Text>
+        </TouchableOpacity>
       </View>
     );
   }

@@ -236,6 +236,13 @@ class ApiService {
     return this.request<Task>(`/tasks/${taskId}/status`, 'POST', { status });
   }
 
+  async transitionTask(taskId: string, toStatus: string, context?: { riderId?: string; reason?: string; latitude?: number; longitude?: number; metadata?: Record<string, unknown> }): Promise<ApiResponse<{ task: Task }>> {
+    return this.request<{ task: Task }>(`/tasks/${taskId}/transition`, 'POST', {
+      toStatus,
+      ...context,
+    });
+  }
+
   // ==========================================
   // ORDERS
   // ==========================================
@@ -377,6 +384,120 @@ class ApiService {
       console.warn('[AUDIT] Failed to log activity:', error);
       return { success: false, error: 'Network error' };
     }
+  }
+
+  // ==========================================
+  // TASK TRANSITIONS (State Machine)
+  // ==========================================
+
+  async transitionTask(taskId: string, toStatus: string, context?: {
+    riderId?: string;
+    reason?: string;
+    metadata?: Record<string, unknown>;
+    latitude?: number;
+    longitude?: number;
+  }): Promise<ApiResponse<{ task: any; transition: any }>> {
+    return this.request<{ task: any; transition: any }>(`/tasks/${taskId}/transition`, 'POST', {
+      toStatus,
+      ...context,
+    });
+  }
+
+  // ==========================================
+  // DISPATCH
+  // ==========================================
+
+  async dispatchAssign(data: {
+    taskId: string;
+    taskType: string;
+    pickupLatitude: number;
+    pickupLongitude: number;
+    excludeRiderIds?: string[];
+    priority?: number;
+  }): Promise<ApiResponse<any>> {
+    return this.request<any>('/dispatch/assign', 'POST', data);
+  }
+
+  async dispatchAccept(matchId: string): Promise<ApiResponse<{ taskId: string }>> {
+    return this.request<{ taskId: string }>(`/dispatch/${matchId}/accept`, 'POST');
+  }
+
+  async dispatchReject(matchId: string, reason?: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/dispatch/${matchId}/reject`, 'POST', { reason });
+  }
+
+  async getDispatchHistory(taskId: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/dispatch?taskid=${taskId}`);
+  }
+
+  // ==========================================
+  // AUDIT LOGS
+  // ==========================================
+
+  async getAuditLogs(filters?: {
+    actorType?: string;
+    entityType?: string;
+    source?: string;
+    search?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<ApiResponse<{ logs: any[]; pagination: any }>> {
+    const params = new URLSearchParams();
+    params.set('action', 'list');
+    if (filters?.actorType) params.set('actorType', filters.actorType);
+    if (filters?.entityType) params.set('entityType', filters.entityType);
+    if (filters?.source) params.set('source', filters.source);
+    if (filters?.search) params.set('search', filters.search);
+    if (filters?.startDate) params.set('startDate', filters.startDate);
+    if (filters?.endDate) params.set('endDate', filters.endDate);
+    if (filters?.page) params.set('page', String(filters.page));
+    if (filters?.limit) params.set('limit', String(filters.limit));
+    return this.request<{ logs: any[]; pagination: any }>(`/audit?${params.toString()}`);
+  }
+
+  async getAuditStats(filters?: {
+    startDate?: string;
+    endDate?: string;
+  }): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams();
+    params.set('action', 'stats');
+    if (filters?.startDate) params.set('startDate', filters.startDate);
+    if (filters?.endDate) params.set('endDate', filters.endDate);
+    return this.request<any>(`/audit?${params.toString()}`);
+  }
+
+  // ==========================================
+  // NOTIFICATIONS
+  // ==========================================
+
+  async getNotifications(page: number = 1, limit: number = 20, unreadOnly?: boolean): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams();
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    if (unreadOnly) params.set('unreadOnly', 'true');
+    return this.request<any>(`/notifications?${params.toString()}`);
+  }
+
+  async markNotificationRead(notificationId?: string, markAll?: boolean): Promise<ApiResponse<any>> {
+    return this.request<any>('/notifications/read', 'POST', {
+      notificationId,
+      markAll,
+    });
+  }
+
+  // ==========================================
+  // TASK HISTORY (for client)
+  // ==========================================
+
+  async getClientTasks(taskType?: string, status?: string, page: number = 1, limit: number = 20): Promise<ApiResponse<{ data: any[]; pagination: any }>> {
+    const params = new URLSearchParams();
+    if (taskType) params.set('taskType', taskType);
+    if (status) params.set('status', status);
+    params.set('page', String(page));
+    params.set('limit', String(limit));
+    return this.request<{ data: any[]; pagination: any }>(`/tasks?${params.toString()}`);
   }
 }
 

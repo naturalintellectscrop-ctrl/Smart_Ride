@@ -33,6 +33,33 @@ export type ActiveView =
 
 export function AdminDashboard() {
   const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportAuditLogs = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch('/api/audit?action=export-docx');
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `smart-ride-audit-report-${new Date().toISOString().split('T')[0]}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        console.error('Export failed');
+        alert('Failed to export audit logs. Please try again.');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      alert('Failed to export audit logs. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const renderContent = () => {
     switch (activeView) {
@@ -78,6 +105,36 @@ export function AdminDashboard() {
       
       <Sidebar activeView={activeView} setActiveView={setActiveView} />
       <main className="flex-1 overflow-auto relative z-10 glass-scrollbar">
+        {/* Header Bar with Export Button */}
+        <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-3 bg-[#0D0D12]/80 backdrop-blur-md border-b border-white/5">
+          <h2 className="text-sm font-medium text-white/50 uppercase tracking-wider">
+            {activeView === 'dashboard' ? 'Overview' : 
+             activeView === 'audit' ? 'Audit Logs' :
+             activeView.charAt(0).toUpperCase() + activeView.slice(1)}
+          </h2>
+          <button
+            onClick={handleExportAuditLogs}
+            disabled={isExporting}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00FF88]/10 border border-[#00FF88]/20 text-[#00FF88] hover:bg-[#00FF88]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+          >
+            {isExporting ? (
+              <>
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                </svg>
+                Exporting...
+              </>
+            ) : (
+              <>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export Audit Report
+              </>
+            )}
+          </button>
+        </div>
         {renderContent()}
       </main>
     </div>

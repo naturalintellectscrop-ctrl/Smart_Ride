@@ -51,13 +51,29 @@ export default function HomeScreen() {
     }
   }, [getCurrentLocation]);
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
   const handleServicePress = (serviceId: string) => {
     switch (serviceId) {
+      case 'ride':
+        router.push('/rider/ride-request?type=BODA');
+        break;
       case 'food':
         router.push('/orders/restaurants');
         break;
-      default:
-        // For now, just show an alert
+      case 'shopping':
+        router.push('/shopping');
+        break;
+      case 'delivery':
+        router.push('/delivery');
+        break;
+      case 'health':
+        router.push('/health');
         break;
     }
   };
@@ -73,7 +89,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <View>
-            <Text style={styles.greeting}>Good day,</Text>
+            <Text style={styles.greeting}>{getGreeting()},</Text>
             <Text style={styles.userName}>
               {user?.name?.split(' ')[0] || 'Guest'} 👋
             </Text>

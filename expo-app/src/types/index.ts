@@ -28,6 +28,7 @@ export type TaskType =
 export type TaskStatus = 
   | 'CREATED' 
   | 'MATCHING' 
+  | 'SEARCHING'
   | 'ASSIGNED' 
   | 'ACCEPTED' 
   | 'ARRIVED' 

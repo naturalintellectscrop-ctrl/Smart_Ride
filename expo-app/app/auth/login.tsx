@@ -27,7 +27,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes } from '@react-native-google-signin/google-signin';
 import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
-import { loginWithEmail, isAuthenticated, saveTokens, saveUserData } from '../../services/auth';
+import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData } from '../../services/auth';
+import { useAuthStore } from '../../src/store/authStore';
 
 const { width, height } = Dimensions.get('window');
 
@@ -128,7 +129,8 @@ export default function LoginScreen() {
 
   const checkAuth = async () => {
     const authenticated = await isAuthenticated();
-    if (authenticated) {
+    const { isAuthenticated: storeAuth } = useAuthStore.getState();
+    if (authenticated || storeAuth) {
       router.replace('/(tabs)');
     }
   };
@@ -159,6 +161,18 @@ export default function LoginScreen() {
           } else if (result.tokens?.accessToken) {
             await saveTokens(result.tokens.accessToken, result.tokens.refreshToken);
             if (result.user) await saveUserData(result.user);
+          }
+          // Sync with auth store for screens that use useAuthStore
+          const token = await getAccessToken();
+          const userData = await getUserData();
+          if (token && userData) {
+            useAuthStore.getState().login({
+              id: userData.id,
+              email: userData.email,
+              name: userData.name,
+              phone: userData.phone,
+              role: userData.role,
+            }, token);
           }
           router.replace('/(tabs)');
         } else {
@@ -208,6 +222,18 @@ export default function LoginScreen() {
       });
 
       if (result.success) {
+        // Sync with auth store for screens that use useAuthStore
+        const token = await getAccessToken();
+        const userData = await getUserData();
+        if (token && userData) {
+          useAuthStore.getState().login({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            phone: userData.phone,
+            role: userData.role,
+          }, token);
+        }
         router.replace('/(tabs)');
       } else {
         setError(result.error || 'Login failed');

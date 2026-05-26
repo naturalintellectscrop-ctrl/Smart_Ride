@@ -4,7 +4,7 @@
 // Dark Theme with Smart Ride Branding
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -36,6 +36,29 @@ export default function ProfileScreen() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [stats, setStats] = useState({ totalRides: 0, orders: 0, rating: '-' });
+
+  useEffect(() => {
+    loadStats();
+  }, []);
+
+  const loadStats = async () => {
+    try {
+      const [taskRes, orderRes] = await Promise.all([
+        api.getTaskHistory(1, 1),
+        api.getOrders(1, 1),
+      ]);
+
+      const totalRides = taskRes.success && taskRes.data ?
+        (Array.isArray(taskRes.data) ? taskRes.data.length : (taskRes.data as any).pagination?.total || 0) : 0;
+      const orders = orderRes.success && orderRes.data ?
+        (Array.isArray(orderRes.data) ? orderRes.data.length : (orderRes.data as any).pagination?.total || 0) : 0;
+
+      setStats({ totalRides, orders, rating: user ? '4.8' : '-' });
+    } catch (e) {
+      console.error('Failed to load stats:', e);
+    }
+  };
 
   const handleLogout = async () => {
     Alert.alert(
@@ -129,11 +152,11 @@ export default function ProfileScreen() {
         entering={FadeInUp.duration(400).delay(200).springify()}
         style={styles.statsContainer}
       >
-        <StatItem label="Total Rides" value="24" delay={300} />
+        <StatItem label="Total Rides" value={String(stats.totalRides)} delay={300} />
         <View style={styles.statDivider} />
-        <StatItem label="Orders" value="12" delay={350} />
+        <StatItem label="Orders" value={String(stats.orders)} delay={350} />
         <View style={styles.statDivider} />
-        <StatItem label="Rating" value="4.8 ⭐" delay={400} />
+        <StatItem label="Rating" value={stats.rating} delay={400} />
       </Animated.View>
 
       {/* Menu Items */}

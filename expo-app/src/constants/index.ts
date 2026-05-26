@@ -59,6 +59,7 @@ export const DEFAULT_LOCATION = {
 export const TASK_STATUS_COLORS: Record<string, string> = {
   CREATED: '#3B82F6',
   MATCHING: '#8B5CF6',
+  SEARCHING: '#A78BFA',
   ASSIGNED: '#F59E0B',
   ACCEPTED: '#22C55E',
   ARRIVED: '#10B981',
@@ -74,6 +75,7 @@ export const TASK_STATUS_COLORS: Record<string, string> = {
 export const TASK_STATUS_LABELS: Record<string, string> = {
   CREATED: 'Searching for driver...',
   MATCHING: 'Finding nearby drivers...',
+  SEARCHING: 'Searching for riders...',
   ASSIGNED: 'Driver assigned',
   ACCEPTED: 'Driver on the way',
   ARRIVED: 'Driver arrived',

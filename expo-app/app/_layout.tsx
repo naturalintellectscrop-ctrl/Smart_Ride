@@ -123,6 +123,17 @@ export default function RootLayout() {
                     <Stack.Screen name="auth/forgot-password" />
                     <Stack.Screen name="auth/reset-password" />
                     <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="delivery/index" />
+                    <Stack.Screen name="rider/ride-request" />
+                    <Stack.Screen name="rider/ride-tracking" />
+                    <Stack.Screen name="driver/index" />
+                    <Stack.Screen name="driver/driver-task" />
+                    <Stack.Screen name="wallet/index" />
+                    <Stack.Screen name="health/index" />
+                    <Stack.Screen name="shopping/index" />
+                    <Stack.Screen name="profile/edit" />
+                    <Stack.Screen name="orders/restaurants" />
+                    <Stack.Screen name="orders/order-tracking" />
                   </Stack>
                 </ProviderErrorBoundary>
               </SafeAreaProvider>

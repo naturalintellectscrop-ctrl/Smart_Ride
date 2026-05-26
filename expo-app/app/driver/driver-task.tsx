@@ -22,21 +22,22 @@ const { Marker, Polyline } = Platform.OS === 'web'
   ? require('@/src/mocks/react-native-maps') 
   : require('react-native-maps');
 import * as Location from 'expo-location';
-import { useTaskStore, useLocationStore } from '@/src/store';
+import { useTaskStore, useLocationStore, useAuthStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
+import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS, API_CONFIG } from '@/src/constants';
 import { Task, TaskStatus } from '@/src/types';
 
 const TASK_FLOW: Record<TaskStatus, TaskStatus | null> = {
-  'CREATED': 'ASSIGNED',
+  'CREATED': 'MATCHING',
   'MATCHING': 'ASSIGNED',
+  'SEARCHING': 'MATCHING',
   'ASSIGNED': 'ACCEPTED',
   'ACCEPTED': 'ARRIVED',
   'ARRIVED': 'PICKED_UP',
   'PICKED_UP': 'IN_TRANSIT',
-  'IN_TRANSIT': 'COMPLETED',
+  'IN_TRANSIT': 'DELIVERED',
+  'DELIVERED': 'COMPLETED',
   'COMPLETED': null,
-  'DELIVERED': null,
   'CANCELLED': null,
   'FAILED': null,
 };
@@ -81,16 +82,34 @@ export default function DriverTaskScreen() {
     }
   };
 
+  const transitionTask = async (taskId: string, toStatus: string) => {
+    const { accessToken } = useAuthStore.getState();
+    const response = await fetch(`${API_CONFIG.baseUrl}/tasks/${taskId}/transition`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({
+        toStatus,
+        latitude,
+        longitude,
+      }),
+    });
+    const data = await response.json();
+    return data;
+  };
+
   const updateStatus = async (newStatus: TaskStatus) => {
     if (!task) return;
 
     setIsUpdating(true);
     try {
-      const response = await api.updateTaskStatus(task.id, newStatus);
-      if (response.success && response.data) {
-        setTask(response.data);
+      const result = await transitionTask(task.id, newStatus);
+      if (result.success && result.data?.task) {
+        setTask(result.data.task);
       } else {
-        Alert.alert('Error', response.error || 'Failed to update status');
+        Alert.alert('Error', result.error || 'Failed to update status');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to update status');
@@ -182,14 +201,17 @@ export default function DriverTaskScreen() {
   const getButtonLabel = (): string => {
     switch (task.status) {
       case 'ASSIGNED':
+        return 'Accept Task';
       case 'ACCEPTED':
         return 'Navigate to Pickup';
       case 'ARRIVED':
         return 'Confirm Pickup';
       case 'PICKED_UP':
-        return 'Start Trip';
+        return 'Start Delivery';
       case 'IN_TRANSIT':
-        return 'Complete Trip';
+        return 'Mark Delivered';
+      case 'DELIVERED':
+        return 'Complete Task';
       default:
         return 'Update Status';
     }
@@ -198,10 +220,13 @@ export default function DriverTaskScreen() {
   const handleButtonPress = () => {
     switch (task.status) {
       case 'ASSIGNED':
+        updateStatus('ACCEPTED');
+        break;
       case 'ACCEPTED':
         if (task.pickupLatitude && task.pickupLongitude) {
           openNavigation(task.pickupLatitude, task.pickupLongitude);
         }
+        updateStatus('ARRIVED');
         break;
       case 'ARRIVED':
         updateStatus('PICKED_UP');
@@ -210,6 +235,9 @@ export default function DriverTaskScreen() {
         updateStatus('IN_TRANSIT');
         break;
       case 'IN_TRANSIT':
+        updateStatus('DELIVERED');
+        break;
+      case 'DELIVERED':
         updateStatus('COMPLETED');
         break;
       default:
