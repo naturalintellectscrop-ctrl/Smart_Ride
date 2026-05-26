@@ -108,7 +108,7 @@ export function isValidTransition(currentStatus: TaskStatus, newStatus: TaskStat
   const VALID_TRANSITIONS: Partial<Record<TaskStatus, TaskStatus[]>> = {
     [TaskStatus.CREATED]: [TaskStatus.SEARCHING, TaskStatus.MATCHING, TaskStatus.CANCELLED],
     [TaskStatus.SEARCHING]: [TaskStatus.ASSIGNED, TaskStatus.MATCHING, TaskStatus.CANCELLED, TaskStatus.FAILED],
-    [TaskStatus.MATCHING]: [TaskStatus.ASSIGNED, TaskStatus.CANCELLED, TaskStatus.FAILED],
+    [TaskStatus.MATCHING]: [TaskStatus.ASSIGNED, TaskStatus.SEARCHING, TaskStatus.CANCELLED, TaskStatus.FAILED],
     [TaskStatus.ASSIGNED]: [TaskStatus.ACCEPTED, TaskStatus.MATCHING, TaskStatus.CANCELLED],
     [TaskStatus.ACCEPTED]: [TaskStatus.ARRIVING, TaskStatus.ARRIVED, TaskStatus.CANCELLED],
     [TaskStatus.ARRIVING]: [TaskStatus.ARRIVED, TaskStatus.CANCELLED],
@@ -227,9 +227,11 @@ const SHOPPING_TRANSITIONS: TransitionConfig[] = [
 
 // Item delivery lifecycle
 const ITEM_DELIVERY_TRANSITIONS: TransitionConfig[] = [
+  { from: TaskStatus.CREATED, to: TaskStatus.MATCHING },
+  { from: TaskStatus.MATCHING, to: TaskStatus.SEARCHING },
   { from: TaskStatus.CREATED, to: TaskStatus.SEARCHING },
   { 
-    from: TaskStatus.SEARCHING, 
+    from: [TaskStatus.SEARCHING, TaskStatus.MATCHING], 
     to: TaskStatus.ASSIGNED,
     requiredFields: ['riderId'],
   },
@@ -239,6 +241,12 @@ const ITEM_DELIVERY_TRANSITIONS: TransitionConfig[] = [
   { from: TaskStatus.PICKED_UP, to: TaskStatus.IN_TRANSIT },
   { from: TaskStatus.IN_TRANSIT, to: TaskStatus.DELIVERED },
   { from: TaskStatus.DELIVERED, to: TaskStatus.COMPLETED },
+  // Cancel from any active state
+  { 
+    from: [TaskStatus.MATCHING, TaskStatus.SEARCHING, TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.ARRIVING, TaskStatus.PICKED_UP, TaskStatus.IN_TRANSIT],
+    to: TaskStatus.CANCELLED,
+    requiredFields: ['cancellationReason'],
+  },
 ];
 
 // Health delivery lifecycle

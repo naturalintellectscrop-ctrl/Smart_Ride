@@ -252,6 +252,10 @@ export async function sendTaskUpdateNotification(
       title: 'On The Way',
       message: 'Your delivery is on its way to the destination.',
     },
+    DELIVERED: {
+      title: 'Delivered',
+      message: 'Your delivery has been dropped off at the destination.',
+    },
     COMPLETED: {
       title: 'Task Completed',
       message: 'Your task has been completed successfully.',
@@ -426,7 +430,8 @@ async function emitNotification(userId: string, data: unknown): Promise<void> {
   try {
     // In production, this would emit via Socket.io
     // For now, we'll use fetch to the mini-service
-    const socketPort = process.env.SOCKET_PORT || '3001';
+    // Internal HTTP emit API runs on port 3002 (Socket.io WebSocket is on 3001)
+    const socketPort = process.env.SOCKET_PORT || '3002';
     const response = await fetch(`http://localhost:${socketPort}/emit`, {
       method: 'POST',
       headers: {

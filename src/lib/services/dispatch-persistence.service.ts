@@ -275,7 +275,8 @@ export class DispatchService {
         select: { userId: true },
       });
       
-      const socketPort = process.env.SOCKET_PORT || '3001';
+      // Internal HTTP emit API runs on port 3002 (Socket.io WebSocket is on 3001)
+      const socketPort = process.env.SOCKET_PORT || '3002';
       const internalKey = process.env.JWT_SECRET || 'internal';
       await fetch(`http://localhost:${socketPort}/emit`, {
         method: 'POST',

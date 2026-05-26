@@ -141,6 +141,26 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Driver location update (alias for rider:location, emitted by expo app)
+  socket.on('driver:location:update', (data: {
+    latitude: number;
+    longitude: number;
+    heading?: number | null;
+    speed?: number | null;
+  }) => {
+    // Use authenticated userId to broadcast to user's rooms
+    if (socket.data.userId) {
+      // Emit to user's personal room (for customer tracking if they have an active task)
+      socket.emit('rider:location:update', {
+        latitude: data.latitude,
+        longitude: data.longitude,
+        heading: data.heading,
+        speed: data.speed,
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
   // Join rider tracking room
   socket.on('rider:track', (riderId: string) => {
     socket.join(`rider:${riderId}`);

@@ -261,29 +261,29 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Auto-dispatch: Find and assign nearest rider
-    // This runs asynchronously - the task is already saved and response is sent
-    const dispatchPromise = DispatchService.findAndAssign({
+    // Auto-dispatch: Find and offer task to nearest rider
+    // This runs asynchronously - the task is already saved and response is sent.
+    // The match starts as PENDING - rider must explicitly accept via /api/dispatch/[id]/accept
+    // Only then does the task transition to ASSIGNED (handled by DispatchService.acceptMatch)
+    DispatchService.findAndAssign({
       taskId: task.id,
       taskType: validatedData.taskType as TaskType,
       pickupLatitude: validatedData.pickupLatitude || 0,
       pickupLongitude: validatedData.pickupLongitude || 0,
     }).then(async (result) => {
       if (result.success && result.match) {
-        // Dispatch succeeded - transition task to ASSIGNED via state machine
-        const { EnhancedTaskStateMachine } = await import('@/lib/services/enhanced-task-state-machine.service');
-        await EnhancedTaskStateMachine.autoAssign(task.id, result.match.riderId);
-        
+        // Dispatch match created (PENDING) - rider has been notified via socket
+        // Do NOT transition to ASSIGNED here - wait for rider to accept
         await createAuditLog({
           action: AuditActions.DISPATCH_ASSIGNED,
           entityType: EntityTypes.DISPATCH,
           entityId: result.match.id,
           actorType: 'SYSTEM',
           taskId: task.id,
-          description: `Dispatch auto-assigned rider for task ${task.taskNumber}`,
+          description: `Dispatch match created for task ${task.taskNumber}, awaiting rider acceptance`,
         });
       } else if (result.noRidersAvailable) {
-        // No riders available - update task status to reflect this
+        // No riders available - update task status to SEARCHING for retry
         await db.task.update({
           where: { id: task.id },
           data: { status: 'SEARCHING' },
@@ -292,10 +292,6 @@ export async function POST(request: NextRequest) {
     }).catch((error) => {
       console.error('Auto-dispatch error (non-blocking):', error);
     });
-
-    // Don't await dispatch - return immediately so the client doesn't wait
-    // The dispatch will complete in the background
-    dispatchPromise.catch(() => {}); // Prevent unhandled rejection
 
     return successResponse(matchingTask, 'Task created and matching started', 201);
   } catch (error) {
