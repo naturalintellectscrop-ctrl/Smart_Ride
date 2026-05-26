@@ -2,7 +2,7 @@
 // SMART RIDE - TASK TRANSITION API
 // ============================================
 // API endpoint for transitioning task states
-// with validation, persistence, and audit logging
+// with validation, persistence, audit logging, and notifications
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,6 +10,8 @@ import { TaskStatus } from '@prisma/client';
 import { EnhancedTaskStateMachine, TransitionContext } from '@/lib/services/enhanced-task-state-machine.service';
 import { authGuard } from '@/lib/auth/guards';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
+import { db } from '@/lib/db';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -116,6 +118,62 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       });
     } catch (auditError) {
       console.error('Audit log failed for task transition:', auditError);
+    }
+
+    // Send notifications for important status changes
+    try {
+      const notificationStatuses = ['ASSIGNED', 'ACCEPTED', 'ARRIVED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELLED'];
+      if (notificationStatuses.includes(toStatus) && result.task) {
+        const task = result.task;
+        // Notify the client (customer)
+        if (task.clientId) {
+          await sendTaskUpdateNotification(
+            task.clientId,
+            taskId,
+            task.taskNumber || taskId,
+            toStatus
+          );
+        }
+        // Notify the rider for certain status changes
+        const riderNotificationStatuses = ['ASSIGNED', 'COMPLETED', 'CANCELLED'];
+        if (riderNotificationStatuses.includes(toStatus) && task.riderId) {
+          // Get rider's userId for notification
+          const riderRecord = await db.rider.findUnique({
+            where: { id: task.riderId },
+            select: { userId: true },
+          });
+          if (riderRecord?.userId && riderRecord.userId !== task.clientId) {
+            await sendTaskUpdateNotification(
+              riderRecord.userId,
+              taskId,
+              task.taskNumber || taskId,
+              toStatus
+            );
+          }
+        }
+
+        // Emit real-time socket event for task status change
+        const socketPort = process.env.SOCKET_PORT || '3001';
+        const internalKey = process.env.JWT_SECRET || 'internal';
+        await fetch(`http://localhost:${socketPort}/emit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Key': internalKey,
+          },
+          body: JSON.stringify({
+            room: `task:${taskId}`,
+            event: 'task:status:update',
+            data: {
+              taskId,
+              status: toStatus,
+              timestamp: new Date().toISOString(),
+            },
+          }),
+        }).catch(() => {}); // Non-blocking
+      }
+    } catch (notificationError) {
+      console.error('Notification failed for task transition (non-blocking):', notificationError);
     }
 
     return NextResponse.json({

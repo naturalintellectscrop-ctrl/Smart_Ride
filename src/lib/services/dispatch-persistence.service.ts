@@ -77,14 +77,22 @@ export class DispatchService {
     request: DispatchRequest
   ): Promise<DispatchResult> {
     try {
-      // Update task to SEARCHING status
-      await db.task.update({
+      // Update task status - use SEARCHING unless already in a matching state
+      const currentTask = await db.task.findUnique({
         where: { id: request.taskId },
-        data: {
-          status: TaskStatus.SEARCHING,
-          matchingStartedAt: new Date(),
-        },
+        select: { status: true },
       });
+      
+      const matchingStatuses = [TaskStatus.MATCHING, TaskStatus.SEARCHING];
+      if (!currentTask || !matchingStatuses.includes(currentTask.status)) {
+        await db.task.update({
+          where: { id: request.taskId },
+          data: {
+            status: TaskStatus.SEARCHING,
+            matchingStartedAt: new Date(),
+          },
+        });
+      }
 
       // Find eligible riders
       const eligibleRiders = await CapabilityService.getEligibleRiders(
@@ -228,9 +236,10 @@ export class DispatchService {
 
   /**
    * Notify rider about the dispatch match
+   * Emits socket event to the realtime service so the rider app receives the offer
    */
   private static async notifyRider(match: any, taskId: string): Promise<void> {
-    // Mark notification as sent
+    // Mark notification as sent in DB
     await db.dispatchMatch.update({
       where: { id: match.id },
       data: {
@@ -239,9 +248,76 @@ export class DispatchService {
       },
     });
 
-    // TODO: Integrate with push notification service
-    // For now, just log
-    console.log(`[Dispatch] Notified rider ${match.riderId} about task ${taskId}`);
+    // Get task details for the offer
+    const task = await db.task.findUnique({
+      where: { id: taskId },
+      select: {
+        taskNumber: true,
+        taskType: true,
+        pickupAddress: true,
+        dropoffAddress: true,
+        totalAmount: true,
+        riderEarnings: true,
+        pickupLatitude: true,
+        pickupLongitude: true,
+        dropoffLatitude: true,
+        dropoffLongitude: true,
+        clientId: true,
+        paymentMethod: true,
+      },
+    });
+
+    // Emit socket event to the realtime service for delivery to the rider
+    try {
+      // Get rider's userId for socket room targeting (rooms are keyed by userId)
+      const rider = await db.rider.findUnique({
+        where: { id: match.riderId },
+        select: { userId: true },
+      });
+      
+      const socketPort = process.env.SOCKET_PORT || '3001';
+      const internalKey = process.env.JWT_SECRET || 'internal';
+      await fetch(`http://localhost:${socketPort}/emit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Key': internalKey,
+        },
+        body: JSON.stringify({
+          room: `user:${rider?.userId || match.riderId}`,
+          event: 'driver:request',
+          data: {
+            task: {
+              id: taskId,
+              taskNumber: task?.taskNumber,
+              taskType: task?.taskType,
+              pickupAddress: task?.pickupAddress,
+              dropoffAddress: task?.dropoffAddress,
+              pickupLatitude: task?.pickupLatitude,
+              pickupLongitude: task?.pickupLongitude,
+              dropoffLatitude: task?.dropoffLatitude,
+              dropoffLongitude: task?.dropoffLongitude,
+              totalAmount: task?.totalAmount,
+              paymentMethod: task?.paymentMethod,
+              status: 'ASSIGNED',
+            },
+            pickup: {
+              address: task?.pickupAddress,
+              latitude: task?.pickupLatitude || 0,
+              longitude: task?.pickupLongitude || 0,
+            },
+            matchId: match.id,
+            distanceKm: match.distanceKm,
+            estimatedArrival: match.estimatedArrival,
+            expiresAt: match.expiresAt?.toISOString(),
+          },
+        }),
+      });
+      console.log(`[Dispatch] Socket notification sent to rider ${match.riderId} about task ${taskId}`);
+    } catch (error) {
+      // Socket service might not be running - don't fail the dispatch
+      console.log(`[Dispatch] Socket notification skipped for rider ${match.riderId} (service unavailable)`);
+    }
   }
 
   /**
@@ -465,7 +541,7 @@ export class DispatchService {
         where: { id: match.taskId },
       });
 
-      if (task && task.status === TaskStatus.SEARCHING) {
+      if (task && (task.status === TaskStatus.SEARCHING || task.status === TaskStatus.MATCHING)) {
         await this.findAndAssign({
           taskId: task.id,
           taskType: task.taskType,

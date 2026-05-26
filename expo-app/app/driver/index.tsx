@@ -242,7 +242,28 @@ export default function DriverHomeScreen() {
 
     setIsAccepting(true);
     try {
-      // Use transition API to accept the task
+      // If we have a matchId, accept via dispatch match endpoint first
+      const matchId = (incomingRequest as any).matchId;
+      if (matchId) {
+        const { accessToken } = useAuthStore.getState();
+        const dispatchResponse = await fetch(`${API_CONFIG.baseUrl}/dispatch/${matchId}/accept`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+        });
+        const dispatchResult = await dispatchResponse.json();
+        if (dispatchResult.success) {
+          clearIncomingRequest();
+          setRequestTimer(null);
+          router.push(`/driver/driver-task?taskId=${incomingRequest.task.id}`);
+          return;
+        }
+        // If dispatch accept fails, fall through to transition API
+      }
+
+      // Fallback: Use transition API to accept the task
       const { accessToken } = useAuthStore.getState();
       const response = await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
         method: 'POST',
@@ -274,20 +295,36 @@ export default function DriverHomeScreen() {
     if (!incomingRequest) return;
 
     try {
-      // Decline via task transition with reason
-      const { accessToken } = useAuthStore.getState();
-      await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          toStatus: 'CANCELLED',
-          riderId: rider?.id,
-          reason: 'Declined by rider',
-        }),
-      });
+      // If we have a matchId, reject via dispatch match endpoint
+      const matchId = (incomingRequest as any).matchId;
+      if (matchId) {
+        const { accessToken } = useAuthStore.getState();
+        await fetch(`${API_CONFIG.baseUrl}/dispatch/${matchId}/reject`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            reason: 'Declined by rider',
+          }),
+        });
+      } else {
+        // Fallback: Decline via task transition with reason
+        const { accessToken } = useAuthStore.getState();
+        await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            toStatus: 'CANCELLED',
+            riderId: rider?.id,
+            reason: 'Declined by rider',
+          }),
+        });
+      }
       clearIncomingRequest();
       setRequestTimer(null);
     } catch (error) {

@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
 import { db } from '@/lib/db';
+import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -43,6 +44,76 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { success: false, error: result.error },
         { status: 400 }
       );
+    }
+
+    // Emit real-time event to task room so client gets notified
+    if (result.taskId) {
+      try {
+        const task = await db.task.findUnique({
+          where: { id: result.taskId },
+          select: { clientId: true, taskNumber: true },
+        });
+        if (task) {
+          const socketPort = process.env.SOCKET_PORT || '3001';
+          const internalKey = process.env.JWT_SECRET || 'internal';
+          
+          // Notify client that rider accepted
+          await fetch(`http://localhost:${socketPort}/emit`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Internal-Key': internalKey,
+            },
+            body: JSON.stringify({
+              room: `user:${task.clientId}`,
+              event: 'rider:task:matched',
+              data: {
+                taskId: result.taskId,
+                rider: {
+                  id: rider.id,
+                  name: rider.fullName,
+                  phone: rider.phone,
+                  rating: rider.rating,
+                },
+              },
+            }),
+          });
+
+          // Also notify task room
+          await fetch(`http://localhost:${socketPort}/emit`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Internal-Key': internalKey,
+            },
+            body: JSON.stringify({
+              room: `task:${result.taskId}`,
+              event: 'task:status:update',
+              data: {
+                taskId: result.taskId,
+                status: 'ASSIGNED',
+                timestamp: new Date().toISOString(),
+              },
+            }),
+          });
+        }
+      } catch (socketError) {
+        console.error('Socket emission failed (non-blocking):', socketError);
+      }
+
+      // Send DB notification to client about rider assignment
+      try {
+        if (task) {
+          await sendTaskUpdateNotification(
+            task.clientId,
+            result.taskId!,
+            task.taskNumber || result.taskId!,
+            'ASSIGNED'
+          );
+        }
+      } catch (notificationError) {
+        console.error('Notification failed (non-blocking):', notificationError);
+      }
     }
 
     return NextResponse.json({

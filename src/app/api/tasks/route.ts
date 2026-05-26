@@ -27,6 +27,7 @@ import {
   AuthenticatedRequest 
 } from '@/lib/auth/guards';
 import { UserRole } from '@prisma/client';
+import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 
 /**
  * GET /api/tasks
@@ -251,8 +252,7 @@ export async function POST(request: NextRequest) {
       description: `Task created: ${task.taskNumber} (${validatedData.taskType})`,
     });
 
-    // Start matching process (in background - would normally be a job queue)
-    // For now, we just update status to MATCHING
+    // Update task status to MATCHING
     const matchingTask = await db.task.update({
       where: { id: task.id },
       data: {
@@ -260,6 +260,42 @@ export async function POST(request: NextRequest) {
         matchingStartedAt: new Date(),
       },
     });
+
+    // Auto-dispatch: Find and assign nearest rider
+    // This runs asynchronously - the task is already saved and response is sent
+    const dispatchPromise = DispatchService.findAndAssign({
+      taskId: task.id,
+      taskType: validatedData.taskType as TaskType,
+      pickupLatitude: validatedData.pickupLatitude || 0,
+      pickupLongitude: validatedData.pickupLongitude || 0,
+    }).then(async (result) => {
+      if (result.success && result.match) {
+        // Dispatch succeeded - transition task to ASSIGNED via state machine
+        const { EnhancedTaskStateMachine } = await import('@/lib/services/enhanced-task-state-machine.service');
+        await EnhancedTaskStateMachine.autoAssign(task.id, result.match.riderId);
+        
+        await createAuditLog({
+          action: AuditActions.DISPATCH_ASSIGNED,
+          entityType: EntityTypes.DISPATCH,
+          entityId: result.match.id,
+          actorType: 'SYSTEM',
+          taskId: task.id,
+          description: `Dispatch auto-assigned rider for task ${task.taskNumber}`,
+        });
+      } else if (result.noRidersAvailable) {
+        // No riders available - update task status to reflect this
+        await db.task.update({
+          where: { id: task.id },
+          data: { status: 'SEARCHING' },
+        });
+      }
+    }).catch((error) => {
+      console.error('Auto-dispatch error (non-blocking):', error);
+    });
+
+    // Don't await dispatch - return immediately so the client doesn't wait
+    // The dispatch will complete in the background
+    dispatchPromise.catch(() => {}); // Prevent unhandled rejection
 
     return successResponse(matchingTask, 'Task created and matching started', 201);
   } catch (error) {

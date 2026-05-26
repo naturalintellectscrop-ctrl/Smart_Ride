@@ -74,9 +74,22 @@ class SocketService {
     try {
       const token = await AsyncStorage.getItem(STORAGE_KEYS.authToken);
       
-      // Parse the base URL to get WebSocket URL
-      const apiBase = API_CONFIG.baseUrl;
-      const wsUrl = apiBase.replace(/^https?/, apiBase.startsWith('https') ? 'wss' : 'ws');
+      // Build the socket URL: connect through gateway to realtime service
+      // The gateway uses XTransformPort query param to route to the correct service
+      let wsUrl: string;
+      
+      if (API_CONFIG.socketUrl) {
+        // Explicit socket URL provided (e.g. for production)
+        wsUrl = API_CONFIG.socketUrl;
+      } else {
+        // Derive from API base URL, add XTransformPort for gateway routing
+        const apiBase = API_CONFIG.baseUrl;
+        // Strip /api suffix if present, then add gateway routing params
+        const baseUrl = apiBase.replace(/\/api$/, '');
+        const protocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
+        const host = baseUrl.replace(/^https?:\/\//, '');
+        wsUrl = `${protocol}://${host}/?XTransformPort=${API_CONFIG.realtimePort}`;
+      }
       
       console.log('[SOCKET] Connecting to:', wsUrl);
 
@@ -88,6 +101,8 @@ class SocketService {
         reconnectionDelay: 1000,
         reconnectionDelayMax: 5000,
         timeout: 20000,
+        // Socket.io path - default is /socket.io/
+        path: '/socket.io/',
       });
 
       this.setupEventHandlers();
@@ -124,7 +139,7 @@ class SocketService {
     });
 
     // ==========================================
-    // DRIVER EVENTS
+    // DRIVER EVENTS (matching backend realtime service)
     // ==========================================
 
     this.socket.on('driver:request', (data: IncomingRequest) => {
@@ -148,7 +163,21 @@ class SocketService {
     });
 
     // ==========================================
-    // RIDER EVENTS
+    // DISPATCH MATCH EVENTS
+    // ==========================================
+
+    this.socket.on('dispatch:match', (data: { matchId: string; taskId: string; riderId: string }) => {
+      console.log('[SOCKET] Dispatch match:', data);
+      this.emit('dispatch:match', data);
+    });
+
+    this.socket.on('dispatch:assignment', (data: { taskId: string; riderId: string }) => {
+      console.log('[SOCKET] Dispatch assignment:', data);
+      this.emit('dispatch:assignment', data);
+    });
+
+    // ==========================================
+    // CLIENT EVENTS (customer side)
     // ==========================================
 
     this.socket.on('rider:task:created', (data: TaskUpdate) => {
@@ -182,6 +211,17 @@ class SocketService {
     this.socket.on('task:status:changed', (data: TaskUpdate) => {
       console.log('[SOCKET] Task status changed:', data);
       this.emit('task:status:changed', data);
+    });
+
+    this.socket.on('task:status:update', (data: TaskUpdate) => {
+      console.log('[SOCKET] Task status update:', data);
+      this.emit('task:status:update', data);
+    });
+
+    // Notification events from backend
+    this.socket.on('notification', (data: any) => {
+      console.log('[SOCKET] Notification received');
+      this.emit('notification', data);
     });
   }
 
