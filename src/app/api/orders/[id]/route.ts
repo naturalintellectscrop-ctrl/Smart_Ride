@@ -498,9 +498,12 @@ async function handleReady(orderId: string, body: Record<string, unknown>) {
     const deliveryLng = order.deliveryLongitude || 32.582520;
     const distanceKm = calculateDistance(merchantLat, merchantLng, deliveryLat, deliveryLng);
 
+    // Use the order's type to determine task type
+    const taskType = order.orderType === 'SHOPPING' ? 'SHOPPING' as const : 'FOOD_DELIVERY' as const;
+
     // Calculate pricing for delivery
     const pricing = calculatePricing({
-      taskType: 'FOOD_DELIVERY',
+      taskType,
       distanceKm,
     });
 
@@ -508,7 +511,7 @@ async function handleReady(orderId: string, body: Record<string, unknown>) {
     task = await db.task.create({
       data: {
         taskNumber: generateTaskNumber(),
-        taskType: 'FOOD_DELIVERY',
+        taskType,
         clientId: order.clientId,
         orderId: orderId,
         status: 'CREATED',
@@ -538,7 +541,7 @@ async function handleReady(orderId: string, body: Record<string, unknown>) {
         paymentMethod: order.paymentMethod,
         paymentStatus: order.paymentStatus,
 
-        itemDescription: `Food Order ${order.orderNumber}`,
+        itemDescription: taskType === 'SHOPPING' ? `Shopping Order ${order.orderNumber}` : `Food Order ${order.orderNumber}`,
       },
     });
 
@@ -562,9 +565,10 @@ async function handleReady(orderId: string, body: Record<string, unknown>) {
     });
 
     // Dispatch rider asynchronously - don't block the response
+    const dispatchTaskType = order.orderType === 'SHOPPING' ? 'SHOPPING' as const : 'FOOD_DELIVERY' as const;
     DispatchService.findAndAssign({
       taskId: task.id,
-      taskType: 'FOOD_DELIVERY',
+      taskType: dispatchTaskType,
       pickupLatitude: merchantLat,
       pickupLongitude: merchantLng,
     }).then(async (result) => {
@@ -575,7 +579,7 @@ async function handleReady(orderId: string, body: Record<string, unknown>) {
           entityId: result.match.id,
           actorType: 'SYSTEM',
           taskId: task!.id,
-          description: `Dispatch match created for food delivery task ${task!.taskNumber}, awaiting rider acceptance`,
+          description: `Dispatch match created for ${dispatchTaskType.toLowerCase()} task ${task!.taskNumber}, awaiting rider acceptance`,
         });
       } else if (result.noRidersAvailable) {
         await db.task.update({

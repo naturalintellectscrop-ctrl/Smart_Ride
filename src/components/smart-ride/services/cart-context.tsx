@@ -11,6 +11,7 @@ export interface CartItem {
   image?: string;
   description?: string;
   variant?: string;
+  menuItemId?: string; // Links to DB MenuItem for order creation
 }
 
 // Cart type for different services
@@ -22,6 +23,12 @@ interface CartState {
   deliveryFee: number;
   serviceId?: string;
   serviceName?: string;
+  merchantId?: string; // Required for order creation - links to DB Merchant
+  merchantName?: string;
+  merchantAddress?: string;
+  merchantLatitude?: number;
+  merchantLongitude?: number;
+  orderType?: 'FOOD_DELIVERY' | 'SHOPPING'; // Maps to OrderType enum
 }
 
 // Context interface
@@ -46,6 +53,8 @@ interface CartContextType {
   clearCart: (cartType: CartType) => void;
   setDeliveryFee: (fee: number, cartType: CartType) => void;
   setServiceInfo: (serviceId: string, serviceName: string, cartType: CartType) => void;
+  setMerchantInfo: (merchant: { id: string; name: string; address?: string; latitude?: number; longitude?: number }, cartType: CartType) => void;
+  setOrderType: (orderType: 'FOOD_DELIVERY' | 'SHOPPING', cartType: CartType) => void;
   
   // Cart totals
   getCartTotal: (cartType: CartType) => number;
@@ -177,6 +186,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }));
   }, [setCartByType]);
 
+  // Set merchant info for order creation
+  const setMerchantInfo = useCallback((merchant: { id: string; name: string; address?: string; latitude?: number; longitude?: number }, cartType: CartType) => {
+    setCartByType(cartType, (prev: CartState) => ({
+      ...prev,
+      merchantId: merchant.id,
+      merchantName: merchant.name,
+      merchantAddress: merchant.address,
+      merchantLatitude: merchant.latitude,
+      merchantLongitude: merchant.longitude,
+    }));
+  }, [setCartByType]);
+
+  // Set order type for order creation
+  const setOrderType = useCallback((orderType: 'FOOD_DELIVERY' | 'SHOPPING', cartType: CartType) => {
+    setCartByType(cartType, (prev: CartState) => ({
+      ...prev,
+      orderType,
+    }));
+  }, [setCartByType]);
+
   // Get cart total (subtotal)
   const getCartTotal = useCallback((cartType: CartType): number => {
     const cart = getCartByType(cartType);
@@ -225,6 +254,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     clearCart,
     setDeliveryFee,
     setServiceInfo,
+    setMerchantInfo,
+    setOrderType,
     getCartTotal,
     getCartCount,
     getGrandTotal,
@@ -244,6 +275,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     clearCart,
     setDeliveryFee,
     setServiceInfo,
+    setMerchantInfo,
+    setOrderType,
     getCartTotal,
     getCartCount,
     getGrandTotal,
@@ -299,6 +332,8 @@ export function useCartForType(cartType: CartType) {
     clearCart: () => clearCart(cartType),
     setDeliveryFee: (fee: number) => setDeliveryFee(fee, cartType),
     setServiceInfo: (serviceId: string, serviceName: string) => setServiceInfo(serviceId, serviceName, cartType),
+    setMerchantInfo: (merchant: { id: string; name: string; address?: string; latitude?: number; longitude?: number }) => setMerchantInfo(merchant, cartType),
+    setOrderType: (orderType: 'FOOD_DELIVERY' | 'SHOPPING') => setOrderType(orderType, cartType),
     proceedToCheckout: () => setCheckoutCart(cartType),
   };
 }

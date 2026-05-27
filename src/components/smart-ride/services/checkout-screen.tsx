@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,8 @@ import {
   Trash2,
   ChevronRight,
   CheckCircle,
-  Loader2
+  Loader2,
+  AlertCircle,
 } from 'lucide-react';
 import { useCart, CartItem, CartType } from './cart-context';
 import { PaymentMethodSelector, PaymentMethod, paymentMethodLabels } from '@/components/smart-ride/shared/payment-method-selector';
@@ -27,7 +28,7 @@ interface CheckoutScreenProps {
   onOrderComplete: () => void;
 }
 
-type CheckoutStep = 'cart' | 'address' | 'payment' | 'confirm' | 'success';
+type CheckoutStep = 'cart' | 'address' | 'payment' | 'confirm' | 'success' | 'error';
 
 // Theme colors based on cart type
 const themeColors: Record<CartType, { primary: string; gradient: string; light: string }> = {
@@ -37,12 +38,28 @@ const themeColors: Record<CartType, { primary: string; gradient: string; light: 
   shopping: { primary: 'bg-blue-600', gradient: 'from-blue-500 to-indigo-500', light: 'bg-blue-100 text-blue-600' },
 };
 
+const SERVICE_FEE = 1000;
+
+// Map PaymentMethod selector enum to API payment method enum
+function mapPaymentMethod(method: PaymentMethod): string {
+  switch (method) {
+    case 'MTN_MOMO': return 'MOBILE_MONEY_MTN';
+    case 'AIRTEL_MONEY': return 'MOBILE_MONEY_AIRTEL';
+    case 'VISA': return 'VISA';
+    case 'MASTERCARD': return 'MASTERCARD';
+    case 'CASH': return 'CASH';
+    default: return 'CASH';
+  }
+}
+
 export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutScreenProps) {
   const { getCartByType, removeItem, updateQuantity, clearCart, getGrandTotal } = useCart();
   const [step, setStep] = useState<CheckoutStep>('cart');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('MTN_MOMO');
-  const [deliveryAddress, setDeliveryAddress] = useState('Ntinda, Kampala');
+  const [deliveryAddress, setDeliveryAddress] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [createdOrder, setCreatedOrder] = useState<{ id: string; orderNumber: string } | null>(null);
 
   const cart = getCartByType(cartType);
   const total = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -57,23 +74,115 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
     updateQuantity(itemId, newQuantity, cartType);
   };
 
-  const handlePlaceOrder = async () => {
+  // REAL ORDER CREATION via /api/orders
+  const handlePlaceOrder = useCallback(async () => {
+    if (!cart.merchantId) {
+      setErrorMessage('No merchant selected. Please go back and select a store.');
+      setStep('error');
+      return;
+    }
+
+    if (!deliveryAddress.trim()) {
+      setErrorMessage('Please enter a delivery address.');
+      setStep('error');
+      return;
+    }
+
     setIsProcessing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsProcessing(false);
-    setStep('success');
-  };
+    setErrorMessage('');
+
+    try {
+      const orderPayload = {
+        clientId: '', // Will be set server-side from auth token
+        merchantId: cart.merchantId,
+        orderType: cart.orderType || (cartType === 'grocery' || cartType === 'shopping' ? 'SHOPPING' : 'FOOD_DELIVERY'),
+        items: cart.items.map(item => ({
+          menuItemId: item.menuItemId || undefined,
+          itemName: item.name,
+          itemDescription: item.description || undefined,
+          quantity: item.quantity,
+          unitPrice: item.price,
+          specialInstructions: undefined,
+        })),
+        subtotal: total,
+        deliveryFee: cart.deliveryFee,
+        serviceFee: SERVICE_FEE,
+        totalAmount: grandTotal + SERVICE_FEE,
+        paymentMethod: mapPaymentMethod(paymentMethod),
+        deliveryAddress: deliveryAddress.trim(),
+        deliveryLatitude: undefined,
+        deliveryLongitude: undefined,
+        deliveryInstructions: undefined,
+        recipientName: undefined,
+        recipientPhone: undefined,
+      };
+
+      const response = await fetch('/api/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderPayload),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to create order');
+      }
+
+      setCreatedOrder({
+        id: data.data.id,
+        orderNumber: data.data.orderNumber,
+      });
+
+      setStep('success');
+    } catch (err: any) {
+      console.error('[Checkout] Order creation failed:', err);
+      setErrorMessage(err.message || 'Failed to place order. Please try again.');
+      setStep('error');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [cart, cartType, deliveryAddress, grandTotal, paymentMethod, total]);
 
   const handleContinue = () => {
     if (step === 'cart' && cart.items.length > 0) {
       setStep('address');
-    } else if (step === 'address') {
+    } else if (step === 'address' && deliveryAddress.trim()) {
       setStep('payment');
     } else if (step === 'payment') {
       setStep('confirm');
     }
   };
+
+  // Error Screen
+  if (step === 'error') {
+    return (
+      <div className="min-h-screen bg-[#0D0D12] flex flex-col items-center justify-center p-6">
+        <div className="text-center">
+          <div className="w-24 h-24 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
+            <AlertCircle className="h-12 w-12 text-red-400" />
+          </div>
+          <h1 className="text-2xl font-bold text-white mb-2">Order Failed</h1>
+          <p className="text-gray-400 mb-6">{errorMessage || 'Something went wrong'}</p>
+          <div className="flex gap-3">
+            <Button
+              onClick={() => setStep('confirm')}
+              variant="outline"
+              className="border-white/10 text-white"
+            >
+              Try Again
+            </Button>
+            <Button
+              onClick={onBack}
+              className="bg-gradient-to-r from-[#00FF88] to-emerald-500 text-black font-semibold"
+            >
+              Go Back
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Success Screen
   if (step === 'success') {
@@ -85,19 +194,25 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Order Placed!</h1>
           <p className="text-gray-400 mb-2">Your order has been placed successfully</p>
-          <p className="text-gray-500 text-sm mb-8">Order ID: #SR{Date.now().toString().slice(-8)}</p>
-          
+          {createdOrder && (
+            <p className="text-gray-500 text-sm mb-8">Order: {createdOrder.orderNumber}</p>
+          )}
+
           <div className="bg-[#13131A] rounded-2xl p-4 mb-6 max-w-xs mx-auto">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-[#1A1A24] rounded-xl flex items-center justify-center">
                 <Clock className="h-6 w-6 text-[#00FF88]" />
               </div>
               <div className="text-left">
-                <p className="text-gray-400 text-sm">Estimated Delivery</p>
-                <p className="text-white font-semibold">30-45 minutes</p>
+                <p className="text-gray-400 text-sm">Next Step</p>
+                <p className="text-white font-semibold">Awaiting merchant confirmation</p>
               </div>
             </div>
           </div>
+
+          <p className="text-gray-500 text-xs mb-6">
+            You will receive notifications as your order progresses
+          </p>
 
           <Button
             onClick={() => {
@@ -117,7 +232,6 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
   if (step === 'confirm') {
     return (
       <div className="min-h-screen bg-[#0D0D12] pb-32">
-        {/* Header */}
         <header className="sticky top-0 z-40 bg-[#13131A] border-b border-white/5 px-4 py-3">
           <div className="flex items-center gap-3">
             <button
@@ -153,6 +267,23 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
               </div>
             </CardContent>
           </Card>
+
+          {/* Merchant Info */}
+          {cart.merchantName && (
+            <Card className="bg-[#13131A] border-white/5 mb-4">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
+                    <Truck className="h-5 w-5 text-purple-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-400 text-xs">Store</p>
+                    <p className="text-white font-medium">{cart.merchantName}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Delivery Address */}
           <Card className="bg-[#13131A] border-white/5 mb-4">
@@ -199,12 +330,12 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
                 </div>
                 <div className="flex justify-between text-gray-400">
                   <span>Service Fee</span>
-                  <span>UGX 1,000</span>
+                  <span>UGX {SERVICE_FEE.toLocaleString()}</span>
                 </div>
                 <div className="border-t border-white/5 pt-2 mt-2">
                   <div className="flex justify-between text-white font-bold text-lg">
                     <span>Total</span>
-                    <span>UGX {(grandTotal + 1000).toLocaleString()}</span>
+                    <span>UGX {(grandTotal + SERVICE_FEE).toLocaleString()}</span>
                   </div>
                 </div>
               </div>
@@ -227,11 +358,11 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
             {isProcessing ? (
               <>
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Processing...
+                Placing Order...
               </>
             ) : (
               <>
-                Place Order • UGX {(grandTotal + 1000).toLocaleString()}
+                Place Order - UGX {(grandTotal + SERVICE_FEE).toLocaleString()}
               </>
             )}
           </Button>
@@ -293,81 +424,29 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
         </header>
 
         <div className="px-4 pt-4">
-          {/* Saved Addresses */}
-          <h3 className="text-white font-semibold mb-3">Saved Addresses</h3>
-          <div className="space-y-3 mb-6">
-            <Card
-              className={cn(
-                "cursor-pointer transition-all",
-                deliveryAddress === 'Ntinda, Kampala'
-                  ? "bg-[#00FF88]/10 border-[#00FF88]/30"
-                  : "bg-[#13131A] border-white/5"
-              )}
-              onClick={() => setDeliveryAddress('Ntinda, Kampala')}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                    <MapPin className="h-5 w-5 text-blue-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-white font-medium">Home</p>
-                    <p className="text-gray-400 text-sm">Ntinda, Kampala</p>
-                  </div>
-                  {deliveryAddress === 'Ntinda, Kampala' && (
-                    <Check className="h-5 w-5 text-[#00FF88]" />
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card
-              className={cn(
-                "cursor-pointer transition-all",
-                deliveryAddress === 'Kampala CBD'
-                  ? "bg-[#00FF88]/10 border-[#00FF88]/30"
-                  : "bg-[#13131A] border-white/5"
-              )}
-              onClick={() => setDeliveryAddress('Kampala CBD')}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
-                    <MapPin className="h-5 w-5 text-purple-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-white font-medium">Work</p>
-                    <p className="text-gray-400 text-sm">Kampala CBD</p>
-                  </div>
-                  {deliveryAddress === 'Kampala CBD' && (
-                    <Check className="h-5 w-5 text-[#00FF88]" />
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Custom Address */}
-          <h3 className="text-white font-semibold mb-3">Or enter new address</h3>
-          <div className="bg-[#13131A] rounded-xl p-3 flex items-center gap-3 border border-white/5">
+          <h3 className="text-white font-semibold mb-3">Enter delivery address</h3>
+          <div className="bg-[#13131A] rounded-xl p-3 flex items-center gap-3 border border-white/5 mb-4">
             <MapPin className="h-5 w-5 text-gray-500" />
             <input
               type="text"
-              placeholder="Enter delivery address"
+              placeholder="e.g. Ntinda, Kampala"
               value={deliveryAddress}
               onChange={(e) => setDeliveryAddress(e.target.value)}
               className="flex-1 bg-transparent outline-none text-white placeholder-gray-500"
             />
           </div>
+          <p className="text-gray-500 text-xs">
+            Please provide a detailed address including area, street, and building/plot number for easy delivery.
+          </p>
         </div>
 
         <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12] border-t border-white/5 max-w-md mx-auto">
           <Button
             onClick={handleContinue}
-            disabled={!deliveryAddress}
+            disabled={!deliveryAddress.trim()}
             className={cn(
               "w-full font-semibold py-4 rounded-xl",
-              deliveryAddress
+              deliveryAddress.trim()
                 ? "bg-gradient-to-r from-[#00FF88] to-emerald-500 text-black"
                 : "bg-gray-700 text-gray-400"
             )}
@@ -433,7 +512,6 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
                 <Card key={item.id} className="bg-[#13131A] border-white/5">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
-                      {/* Item Image or Placeholder */}
                       <div className="w-16 h-16 bg-[#1A1A24] rounded-xl flex items-center justify-center flex-shrink-0">
                         {item.image ? (
                           <div
@@ -445,7 +523,6 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
                         )}
                       </div>
 
-                      {/* Item Details */}
                       <div className="flex-1 min-w-0">
                         <p className="text-white font-medium truncate">{item.name}</p>
                         {item.description && (
@@ -456,7 +533,6 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
                         </p>
                       </div>
 
-                      {/* Delete Button */}
                       <button
                         onClick={() => handleDeleteItem(item.id)}
                         className="w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center hover:bg-red-500/20 transition-colors"
@@ -465,7 +541,6 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
                       </button>
                     </div>
 
-                    {/* Quantity Controls */}
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
                       <p className="text-gray-400 text-sm">Quantity</p>
                       <div className="flex items-center gap-3">
@@ -473,7 +548,7 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
                           onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
                           className="w-8 h-8 rounded-full bg-[#1A1A24] flex items-center justify-center hover:bg-white/10 transition-colors"
                         >
-                          <span className="text-white text-lg">−</span>
+                          <span className="text-white text-lg">-</span>
                         </button>
                         <span className="text-white font-medium w-8 text-center">{item.quantity}</span>
                         <button
@@ -501,10 +576,14 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
                     <span>Delivery Fee</span>
                     <span>UGX {cart.deliveryFee.toLocaleString()}</span>
                   </div>
+                  <div className="flex justify-between text-gray-400">
+                    <span>Service Fee</span>
+                    <span>UGX {SERVICE_FEE.toLocaleString()}</span>
+                  </div>
                   <div className="border-t border-white/5 pt-2 mt-2">
                     <div className="flex justify-between text-white font-bold text-lg">
                       <span>Total</span>
-                      <span>UGX {grandTotal.toLocaleString()}</span>
+                      <span>UGX {(grandTotal + SERVICE_FEE).toLocaleString()}</span>
                     </div>
                   </div>
                 </div>

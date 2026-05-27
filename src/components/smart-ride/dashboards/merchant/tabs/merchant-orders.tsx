@@ -78,7 +78,6 @@ export function MerchantOrders({ merchantId }: MerchantOrdersProps) {
     setError(null);
     try {
       const params = new URLSearchParams({
-        orderType: 'FOOD_DELIVERY',
         limit: '50',
       });
       if (merchantId) {
