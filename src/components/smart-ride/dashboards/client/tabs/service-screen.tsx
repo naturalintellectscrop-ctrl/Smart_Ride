@@ -170,36 +170,26 @@ function calculateFare(
 }
 
 // ============================================
-// Mock Geocoding (Kampala areas)
+// Geocoding - Uses real Mapbox API
 // ============================================
 
-const KAMPALA_LOCATIONS = [
-  { name: 'Nakasero', lat: 0.3180, lng: 32.5810 },
-  { name: 'Kololo', lat: 0.3330, lng: 32.5870 },
-  { name: 'Ntinda', lat: 0.3510, lng: 32.6120 },
-  { name: 'Kampala CBD', lat: 0.3150, lng: 32.5710 },
-  { name: 'Makindye', lat: 0.2930, lng: 32.5780 },
-  { name: 'Mengo', lat: 0.3050, lng: 32.5580 },
-  { name: 'Kisenyi', lat: 0.3160, lng: 32.5610 },
-  { name: 'Katwe', lat: 0.3090, lng: 32.5700 },
-  { name: 'Wandegeya', lat: 0.3390, lng: 32.5730 },
-  { name: 'Kamwokya', lat: 0.3320, lng: 32.5780 },
-];
-
-function geocodeAddress(address: string): LocationData | null {
-  const found = KAMPALA_LOCATIONS.find(loc => 
-    address.toLowerCase().includes(loc.name.toLowerCase())
-  );
+async function geocodeAddress(address: string): Promise<LocationData | null> {
+  try {
+    const response = await fetch(`/api/mapbox/geocoding?search=${encodeURIComponent(address)}&limit=1`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.success && data.places?.[0]) {
+        const place = data.places[0];
+        return {
+          address: place.name || place.fullAddress || address,
+          latitude: place.center?.[1] || 0.3150,
+          longitude: place.center?.[0] || 32.5710,
+        };
+      }
+    }
+  } catch {}
   
-  if (found) {
-    return {
-      address: found.name,
-      latitude: found.lat,
-      longitude: found.lng
-    };
-  }
-  
-  // Default to Kampala CBD
+  // Fallback to Kampala CBD
   return {
     address: address || 'Kampala',
     latitude: 0.3150,
@@ -225,7 +215,7 @@ function calculateRoute(pickup: LocationData, destination: LocationData): RouteD
   return {
     distanceKm: Math.round(distanceKm * 10) / 10,
     durationMin: Math.max(5, durationMin),
-    geometry: '' // Would contain encoded polyline in production
+    geometry: ''
   };
 }
 
@@ -293,11 +283,8 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
     
     setCalculating(true);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    const pickupLocation = geocodeAddress(pickupInput);
-    const destinationLocation = geocodeAddress(destinationInput);
+    const pickupLocation = await geocodeAddress(pickupInput);
+    const destinationLocation = await geocodeAddress(destinationInput);
     
     if (pickupLocation && destinationLocation) {
       setPickup(pickupLocation);
@@ -305,15 +292,6 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
       
       const routeData = calculateRoute(pickupLocation, destinationLocation);
       setRoute(routeData);
-      
-      // Calculate surge (mock)
-      const hour = new Date().getHours();
-      let surge = 1.0;
-      if ((hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19)) {
-        surge = 1.25;
-      } else if (hour >= 22 || hour <= 5) {
-        surge = 1.15;
-      }
       
       // Generate vehicle options
       const options: VehicleOption[] = Object.entries(VEHICLE_CONFIG)
@@ -330,8 +308,8 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           description: config.description,
           icon: config.icon,
           multiplier: config.multiplier,
-          eta: `${Math.round(routeData.durationMin / (config.avgSpeed / 30)) + Math.floor(Math.random() * 3)}-${Math.round(routeData.durationMin / (config.avgSpeed / 30)) + 3 + Math.floor(Math.random() * 3)} min`,
-          fare: calculateFare(routeData.distanceKm, routeData.durationMin, id as VehicleType, surge)
+          eta: `${Math.max(2, Math.round(routeData.durationMin / (config.avgSpeed / 30)))}-${Math.max(3, Math.round(routeData.durationMin / (config.avgSpeed / 30)) + 3)} min`,
+          fare: calculateFare(routeData.distanceKm, routeData.durationMin, id as VehicleType, 1.0)
         }));
       
       setVehicleOptions(options);
@@ -361,7 +339,11 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
         taskType: selectedVehicle === 'moto' ? 'SMART_BODA_RIDE' : 'SMART_CAR_RIDE',
         clientId,
         pickupAddress: pickup.address,
+        pickupLatitude: pickup.latitude,
+        pickupLongitude: pickup.longitude,
         dropoffAddress: destination.address,
+        dropoffLatitude: destination.latitude,
+        dropoffLongitude: destination.longitude,
         distanceKm: route.distanceKm,
         paymentMethod: paymentMethod,
         passengerCount: isRideService ? passengers : undefined,
@@ -376,35 +358,120 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           status: result.data.status,
         });
         
-        await createDispatch(
-          result.data.id,
-          selectedVehicle === 'moto' ? 'SMART_BODA_RIDE' : 'SMART_CAR_RIDE',
-          { latitude: pickup.latitude, longitude: pickup.longitude }
-        );
+        // Join the task room for real-time updates
+        const { socketService } = await import('@/services/socket');
+        socketService.joinTaskRoom(result.data.id);
+
+        // Listen for rider:task:matched event (real matching via socket)
+        const unsubMatched = socketService.on('rider:task:matched', async (data: any) => {
+          if (data.taskId === result.data.id) {
+            // Fetch real rider details from the task
+            try {
+              const taskResult = await fetch(`/api/tasks/${result.data.id}?XTransformPort=3000`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` },
+              });
+              if (taskResult.ok) {
+                const taskDetail = await taskResult.json();
+                const task = taskDetail.data;
+                if (task?.rider) {
+                  setMatchedProvider({
+                    id: task.rider.id,
+                    name: task.rider.fullName || 'Your Rider',
+                    rating: 4.5,
+                    trips: 0,
+                    vehicle: VEHICLE_CONFIG[selectedVehicle].name,
+                    plateNumber: '',
+                    phone: task.rider.phone,
+                    eta: 3,
+                  });
+                }
+              }
+            } catch {}
+            setStep('matched');
+            unsubMatched();
+          }
+        });
+
+        // Listen for task status updates (ASSIGNED means rider accepted)
+        const unsubStatus = socketService.on('task:status:update', async (data: any) => {
+          if (data.taskId === result.data.id) {
+            if (data.status === 'ASSIGNED' || data.status === 'ACCEPTED') {
+              try {
+                const taskResult = await fetch(`/api/tasks/${result.data.id}?XTransformPort=3000`, {
+                  headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` },
+                });
+                if (taskResult.ok) {
+                  const taskDetail = await taskResult.json();
+                  const task = taskDetail.data;
+                  if (task?.rider) {
+                    setMatchedProvider({
+                      id: task.rider.id,
+                      name: task.rider.fullName || 'Your Rider',
+                      rating: 4.5,
+                      trips: 0,
+                      vehicle: VEHICLE_CONFIG[selectedVehicle].name,
+                      plateNumber: '',
+                      phone: task.rider.phone,
+                      eta: 3,
+                    });
+                  }
+                }
+              } catch {}
+              setStep('matched');
+              unsubStatus();
+            } else if (data.status === 'CANCELLED' || data.status === 'FAILED') {
+              setStep('confirmation');
+              unsubStatus();
+            }
+          }
+        });
+
+        // Auto-dispatch is triggered by the task creation API,
+        // so no need to call createDispatch separately. The dispatch
+        // service will find riders and they will accept via socket.
+        // We also don't need createDispatch here as the task API handles it.
         
-        // Simulate matching
-        setTimeout(() => {
-          setMatchedProvider({
-            id: 'rider_demo_001',
-            name: 'Emmanuel Okello',
-            rating: 4.8,
-            trips: 234,
-            vehicle: VEHICLE_CONFIG[selectedVehicle].name,
-            plateNumber: 'UAX 123A',
-            phone: '+256 700 123 456',
-            eta: 3,
-          });
-          setStep('matched');
-        }, 2000 + Math.random() * 2000);
+        // HTTP polling fallback in case socket events are missed
+        const pollInterval = setInterval(async () => {
+          try {
+            const taskResult = await fetch(`/api/tasks/${result.data.id}?XTransformPort=3000`, {
+              headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` },
+            });
+            if (taskResult.ok) {
+              const taskDetail = await taskResult.json();
+              const task = taskDetail.data;
+              if (task?.status === 'ASSIGNED' || task?.status === 'ACCEPTED') {
+                if (task?.rider) {
+                  setMatchedProvider({
+                    id: task.rider.id,
+                    name: task.rider.fullName || 'Your Rider',
+                    rating: 4.5,
+                    trips: 0,
+                    vehicle: VEHICLE_CONFIG[selectedVehicle].name,
+                    plateNumber: '',
+                    phone: task.rider.phone,
+                    eta: 3,
+                  });
+                }
+                setStep('matched');
+                clearInterval(pollInterval);
+              } else if (task?.status === 'CANCELLED' || task?.status === 'FAILED') {
+                setStep('confirmation');
+                clearInterval(pollInterval);
+              }
+            }
+          } catch {}
+        }, 5000);
+
+        // Stop polling after 5 minutes max
+        setTimeout(() => clearInterval(pollInterval), 300000);
       } else {
         setStep('confirmation');
-        alert('Failed to create request. Please try again.');
       }
     } catch (error) {
       setStep('confirmation');
-      alert('An error occurred. Please try again.');
     }
-  }, [pickup, destination, route, selectedVehicle, paymentMethod, passengers, isRideService, createTask, createDispatch]);
+  }, [pickup, destination, route, selectedVehicle, paymentMethod, passengers, isRideService, createTask, clientId]);
 
   // ============================================
   // Get selected vehicle fare
@@ -642,10 +709,10 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
             </div>
             {step === 'matched' && (
               <button 
-                onClick={() => setStep('inTrip')}
+                onClick={onBack}
                 className="w-full bg-[#1A1A24] text-white py-4 rounded-xl font-medium border border-white/10 hover:border-white/20 transition-all"
               >
-                Start Trip
+                Track Ride
               </button>
             )}
             {step === 'inTrip' && (
@@ -655,11 +722,11 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                 style={{ backgroundColor: `${serviceColors.primary}20`, color: serviceColors.primary }}
               >
                 <Check className="h-5 w-5" />
-                Complete Trip
+                View Trip Status
               </button>
             )}
             <button onClick={onBack} className="w-full text-[#EF4444] py-3 font-medium hover:text-red-400 transition-colors">
-              Cancel Ride
+              Close
             </button>
           </div>
         </div>

@@ -112,7 +112,7 @@ function RiderDashboardContent({ user }: RiderDashboardProps) {
   const renderContent = () => {
     switch (activeTab) {
       case 'home':
-        return <RiderHome isOnline={isOnline} onToggleOnline={() => setIsOnline(!isOnline)} onBellClick={handleBellClick} />;
+        return <RiderHome isOnline={isOnline} onToggleOnline={() => setIsOnline(!isOnline)} onBellClick={handleBellClick} riderName={user.name} />;
       case 'tasks':
         return <RiderTasks />;
       case 'earnings':
@@ -122,7 +122,7 @@ function RiderDashboardContent({ user }: RiderDashboardProps) {
       case 'profile':
         return <RiderProfile />;
       default:
-        return <RiderHome isOnline={isOnline} onToggleOnline={() => setIsOnline(!isOnline)} onBellClick={handleBellClick} />;
+        return <RiderHome isOnline={isOnline} onToggleOnline={() => setIsOnline(!isOnline)} onBellClick={handleBellClick} riderName={user.name} />;
     }
   };
 

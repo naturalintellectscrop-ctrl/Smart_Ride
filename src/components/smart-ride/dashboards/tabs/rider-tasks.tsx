@@ -113,7 +113,21 @@ const filterOptions: { value: UIFilterStatus; label: string }[] = [
 ];
 
 // Get next status for transition
-function getNextStatus(currentStatus: PrismaTaskStatus): PrismaTaskStatus | null {
+function getNextStatus(currentStatus: PrismaTaskStatus, taskType?: TaskType): PrismaTaskStatus | null {
+  // Ride-specific transitions
+  if (taskType === 'boda' || taskType === 'car') {
+    const rideTransitions: Record<string, PrismaTaskStatus> = {
+      ASSIGNED: 'ACCEPTED',
+      ACCEPTED: 'ARRIVING',
+      ARRIVING: 'ARRIVED',
+      ARRIVED: 'PICKED_UP',
+      PICKED_UP: 'IN_PROGRESS',
+      IN_PROGRESS: 'COMPLETED',
+    };
+    if (rideTransitions[currentStatus]) return rideTransitions[currentStatus];
+  }
+
+  // Delivery/generic transitions
   const transitions: Record<string, PrismaTaskStatus> = {
     ASSIGNED: 'ACCEPTED',
     ACCEPTED: 'ARRIVED',
@@ -487,11 +501,11 @@ export function RiderTasks() {
                     <Phone className="h-4 w-4" />
                     Call Client
                   </Button>
-                  {getNextStatus(activeTask.status) && (
+                  {getNextStatus(activeTask.status, activeTask.type) && (
                     <Button
                       size="sm"
                       className="flex-1 gap-2 bg-emerald-600 hover:bg-emerald-700"
-                      onClick={() => handleTransition(activeTask.id, getNextStatus(activeTask.status)!)}
+                      onClick={() => handleTransition(activeTask.id, getNextStatus(activeTask.status, activeTask.type)!)}
                       disabled={transitioning === activeTask.id}
                     >
                       {transitioning === activeTask.id ? (
@@ -701,10 +715,10 @@ export function RiderTasks() {
                   <Button variant="outline" className="flex-1">
                     Cancel Task
                   </Button>
-                  {getNextStatus(selectedTask.status) && (
+                  {getNextStatus(selectedTask.status, selectedTask.type) && (
                     <Button
                       className="flex-1 bg-emerald-600 hover:bg-emerald-700 gap-2"
-                      onClick={() => handleTransition(selectedTask.id, getNextStatus(selectedTask.status)!)}
+                      onClick={() => handleTransition(selectedTask.id, getNextStatus(selectedTask.status, selectedTask.type)!)}
                       disabled={transitioning === selectedTask.id}
                     >
                       {transitioning === selectedTask.id ? (

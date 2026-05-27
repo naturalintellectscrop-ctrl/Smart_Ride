@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { socketService } from '@/services/socket';
 
 // ==========================================
 // Types
@@ -57,8 +57,6 @@ const DEFAULT_CONFIG: HeartbeatConfig = {
   enableOfflineQueue: true,
 };
 
-const HEARTBEAT_MONITOR_PORT = 3004;
-
 // ==========================================
 // Storage Keys
 // ==========================================
@@ -86,7 +84,6 @@ function saveOfflineHeartbeat(heartbeat: HeartbeatData): void {
   try {
     const existing = getOfflineHeartbeats();
     existing.push(heartbeat);
-    // Keep only last 50 heartbeats
     const trimmed = existing.slice(-50);
     localStorage.setItem(STORAGE_KEYS.OFFLINE_HEARTBEATS, JSON.stringify(trimmed));
   } catch (error) {
@@ -225,6 +222,8 @@ export function useBatteryStatus() {
 // ==========================================
 // Hook: useHeartbeat (Main Hook)
 // ==========================================
+// Uses the central socketService (port 3001 via XTransformPort)
+// instead of creating a separate socket connection to a non-existent port.
 
 export function useHeartbeat(
   riderId: string | null,
@@ -245,7 +244,6 @@ export function useHeartbeat(
   const { location, startWatching, stopWatching, getCurrentPosition } = useGeolocation();
   const { batteryLevel, isCharging } = useBatteryStatus();
   
-  const socketRef = useRef<Socket | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isOnlineRef = useRef<boolean>(true);
 
@@ -253,7 +251,6 @@ export function useHeartbeat(
   useEffect(() => {
     const handleOnline = () => {
       isOnlineRef.current = true;
-      // Sync offline heartbeats
       syncOfflineHeartbeats();
     };
     const handleOffline = () => {
@@ -268,35 +265,6 @@ export function useHeartbeat(
       window.removeEventListener('offline', handleOffline);
     };
   }, []);
-
-  // Initialize WebSocket connection
-  useEffect(() => {
-    if (finalConfig.enableWebSocket && riderId) {
-      socketRef.current = io(`/?XTransformPort=${HEARTBEAT_MONITOR_PORT}`, {
-        transports: ['websocket'],
-        autoConnect: false,
-      });
-
-      socketRef.current.on('connect', () => {
-        console.log('Heartbeat monitor connected');
-      });
-
-      socketRef.current.on('disconnect', () => {
-        console.log('Heartbeat monitor disconnected');
-      });
-
-      socketRef.current.on('error', (error) => {
-        console.error('Heartbeat monitor error:', error);
-      });
-    }
-
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-    };
-  }, [riderId, finalConfig.enableWebSocket]);
 
   // Send heartbeat
   const sendHeartbeat = useCallback(async () => {
@@ -342,9 +310,9 @@ export function useHeartbeat(
       return;
     }
 
-    // Try WebSocket first
-    if (finalConfig.enableWebSocket && socketRef.current?.connected) {
-      socketRef.current.emit('heartbeat', heartbeatData);
+    // Try WebSocket first via central socketService
+    if (finalConfig.enableWebSocket && socketService.isConnectedToSocket()) {
+      socketService.emit('heartbeat', heartbeatData);
       setStatus(prev => ({
         ...prev,
         lastHeartbeatAt: new Date(),
@@ -357,7 +325,7 @@ export function useHeartbeat(
 
     // Fallback to HTTP
     try {
-      const response = await fetch('/api/rider/heartbeat', {
+      const response = await fetch('/api/rider/heartbeat?XTransformPort=3000', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -418,11 +386,10 @@ export function useHeartbeat(
 
     console.log(`Syncing ${offlineHeartbeats.length} offline heartbeats...`);
 
-    // Send the most recent heartbeat
     const latest = offlineHeartbeats[offlineHeartbeats.length - 1];
     
     try {
-      await fetch('/api/rider/heartbeat', {
+      await fetch('/api/rider/heartbeat?XTransformPort=3000', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -450,28 +417,15 @@ export function useHeartbeat(
   const startMonitoring = useCallback(() => {
     if (!riderId) return;
 
-    // Start watching location
     startWatching();
 
-    // Connect WebSocket
-    if (socketRef.current && !socketRef.current.connected) {
-      socketRef.current.connect();
-      
-      // Emit task start if we have a task
-      if (taskId) {
-        socketRef.current.emit('rider:task:start', { riderId, taskId });
-      }
-    }
+    // Send initial heartbeat immediately
+    sendHeartbeat();
 
     // Start heartbeat interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-
-    // Send initial heartbeat immediately
-    sendHeartbeat();
-
-    // Then start interval
     intervalRef.current = setInterval(sendHeartbeat, finalConfig.intervalMs);
 
     setStatus(prev => ({
@@ -485,18 +439,8 @@ export function useHeartbeat(
 
   // Stop monitoring
   const stopMonitoring = useCallback(() => {
-    // Stop location watching
     stopWatching();
 
-    // Disconnect WebSocket
-    if (socketRef.current) {
-      if (taskId && riderId) {
-        socketRef.current.emit('rider:task:end', { riderId, taskId });
-      }
-      socketRef.current.disconnect();
-    }
-
-    // Clear interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
@@ -508,7 +452,7 @@ export function useHeartbeat(
     }));
 
     console.log('Heartbeat monitoring stopped');
-  }, [stopWatching, taskId, riderId]);
+  }, [stopWatching]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -555,74 +499,88 @@ export function useHeartbeat(
 // ==========================================
 // Hook: useClientTracking (For Clients)
 // ==========================================
+// Uses the central socketService instead of creating
+// a separate socket connection to a non-existent port.
 
 export function useClientTracking(riderId: string | null, taskId: string | null) {
   const [riderLocation, setRiderLocation] = useState<LocationData | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<string>('ACTIVE');
   const [isTracking, setIsTracking] = useState(false);
-  const socketRef = useRef<Socket | null>(null);
+  const socketUnsubsRef = useRef<Array<() => void>>([]);
 
   useEffect(() => {
     if (!riderId) return;
 
-    socketRef.current = io(`/?XTransformPort=${HEARTBEAT_MONITOR_PORT}`, {
-      transports: ['websocket'],
-      autoConnect: false,
+    // Join the task room to receive rider location updates
+    if (taskId) {
+      socketService.joinTaskRoom(taskId);
+    }
+
+    // Listen for rider location updates via central socketService
+    const unsubLocation = socketService.on('rider:location:update', (data: any) => {
+      if (data.riderId === riderId || !data.riderId) {
+        setRiderLocation({
+          latitude: data.latitude,
+          longitude: data.longitude,
+          speed: data.speed,
+          heading: data.heading,
+        });
+        setConnectionStatus('ACTIVE');
+      }
     });
 
-    socketRef.current.on('connect', () => {
-      console.log('Connected to heartbeat monitor for tracking');
-      
-      // Subscribe to rider location
-      if (riderId) {
-        socketRef.current?.emit('subscribe:rider', { riderId });
-      }
-      if (taskId) {
-        socketRef.current?.emit('subscribe:task', { taskId });
-      }
-    });
-
-    socketRef.current.on('rider:location', (data: any) => {
+    // Also listen for the driver:location:update event (used by Expo app)
+    const unsubDriverLocation = socketService.on('rider:location:update', (data: any) => {
       setRiderLocation({
         latitude: data.latitude,
         longitude: data.longitude,
         speed: data.speed,
         heading: data.heading,
       });
-      setConnectionStatus(data.connectionStatus || 'ACTIVE');
     });
 
-    socketRef.current.on(`rider:${riderId}:status`, (data: any) => {
-      setConnectionStatus(data.connectionStatus);
+    // Listen for task status updates
+    const unsubStatus = socketService.on('task:status:update', (data: any) => {
+      if (data.taskId === taskId) {
+        // Connection status may change based on task state
+        setConnectionStatus('ACTIVE');
+      }
     });
+
+    socketUnsubsRef.current = [unsubLocation, unsubDriverLocation, unsubStatus];
+    setIsTracking(true);
 
     return () => {
-      if (socketRef.current) {
-        socketRef.current.emit('unsubscribe:rider', { riderId });
-        socketRef.current.disconnect();
+      socketUnsubsRef.current.forEach(unsub => unsub());
+      socketUnsubsRef.current = [];
+      if (taskId) {
+        socketService.leaveTaskRoom(taskId);
       }
+      setIsTracking(false);
     };
   }, [riderId, taskId]);
 
-  const startTracking = useCallback(() => {
-    if (socketRef.current && !socketRef.current.connected) {
-      socketRef.current.connect();
-      setIsTracking(true);
+  const startTrackingFn = useCallback(() => {
+    if (taskId) {
+      socketService.joinTaskRoom(taskId);
     }
-  }, []);
+    setIsTracking(true);
+  }, [taskId]);
 
-  const stopTracking = useCallback(() => {
-    if (socketRef.current && socketRef.current.connected) {
-      socketRef.current.disconnect();
-      setIsTracking(false);
+  const stopTrackingFn = useCallback(() => {
+    socketUnsubsRef.current.forEach(unsub => unsub());
+    socketUnsubsRef.current = [];
+    if (taskId) {
+      socketService.leaveTaskRoom(taskId);
     }
-  }, []);
+    setIsTracking(false);
+  }, [taskId]);
 
   return {
     riderLocation,
     connectionStatus,
     isTracking,
-    startTracking,
-    stopTracking,
+    startTracking: startTrackingFn,
+    stopTracking: stopTrackingFn,
   };
 }

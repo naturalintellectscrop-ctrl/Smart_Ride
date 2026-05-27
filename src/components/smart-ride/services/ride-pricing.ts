@@ -267,6 +267,7 @@ export async function estimateRoute(
 /**
  * Synchronous version for backward compatibility
  * Uses coordinates if available, otherwise returns zero
+ * DEPRECATED: Use estimateRouteAsync instead
  */
 export function estimateRouteSync(
   pickup: string,
@@ -278,6 +279,14 @@ export function estimateRouteSync(
     estimatedTimeMinutes: 0,
   };
 }
+
+/**
+ * Async route estimation - the production version
+ * Same as estimateRoute but explicitly named async for clarity.
+ * Uses Mapbox Directions API when coordinates are available,
+ * falls back to geocoding + Haversine estimation.
+ */
+export const estimateRouteAsync = estimateRoute;
 
 /**
  * Format currency in UGX

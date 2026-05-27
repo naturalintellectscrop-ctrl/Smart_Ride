@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { socketService } from '@/services/socket';
 
 // ==========================================
 // Types
@@ -53,12 +53,11 @@ export interface UseDriverLocationReturn {
   totalDistance: number;
 }
 
-// Expo release builds require EXPO_PUBLIC_ prefix
-const DISPATCH_SERVICE_URL = process.env.EXPO_PUBLIC_DISPATCH_SERVICE_URL || process.env.NEXT_PUBLIC_DISPATCH_SERVICE_URL || 'http://localhost:3003';
-
 // ==========================================
 // Hook: useDriverLocation
 // ==========================================
+// Uses the central socketService (port 3001 via XTransformPort)
+// instead of creating a separate socket connection.
 
 export function useDriverLocation({
   driverId,
@@ -78,68 +77,31 @@ export function useDriverLocation({
   const [lastUpdateTime, setLastUpdateTime] = useState<Date | null>(null);
   const [totalDistance, setTotalDistance] = useState(0);
 
-  const socketRef = useRef<Socket | null>(null);
   const watchIdRef = useRef<number | null>(null);
   const lastLocationRef = useRef<DriverLocation | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const socketUnsubsRef = useRef<Array<() => void>>([]);
 
-  // ==========================================
-  // Socket Connection
-  // ==========================================
-
-  const connectSocket = useCallback(() => {
-    if (socketRef.current?.connected) return;
-
-    socketRef.current = io(DISPATCH_SERVICE_URL, {
-      transports: ['websocket'],
-      reconnection: true,
-      reconnectionAttempts: Infinity,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
-    });
-
-    socketRef.current.on('connect', () => {
-      console.log('[DriverLocation] Connected to dispatch service');
+  // Track socket connection status
+  useEffect(() => {
+    const unsubConnect = socketService.on('connect', () => {
       setIsConnected(true);
-      setError(null);
       onConnectionChange?.(true);
     });
 
-    socketRef.current.on('disconnect', () => {
-      console.log('[DriverLocation] Disconnected from dispatch service');
+    const unsubDisconnect = socketService.on('disconnect', () => {
       setIsConnected(false);
       onConnectionChange?.(false);
     });
 
-    socketRef.current.on('connect_error', (err) => {
-      console.error('[DriverLocation] Connection error:', err);
-      setError('Failed to connect to dispatch service');
-    });
+    // Set initial state
+    setIsConnected(socketService.isConnectedToSocket());
 
-    socketRef.current.on('rider:online:ack', (data: { success: boolean; error?: string }) => {
-      if (data.success) {
-        console.log('[DriverLocation] Successfully went online');
-        setIsOnline(true);
-      } else {
-        console.error('[DriverLocation] Failed to go online:', data.error);
-        setError(data.error || 'Failed to go online');
-      }
-    });
-
-    socketRef.current.on('rider:offline:ack', (data: { success: boolean }) => {
-      if (data.success) {
-        console.log('[DriverLocation] Successfully went offline');
-        setIsOnline(false);
-      }
-    });
+    return () => {
+      unsubConnect();
+      unsubDisconnect();
+    };
   }, [onConnectionChange]);
-
-  const disconnectSocket = useCallback(() => {
-    if (socketRef.current) {
-      socketRef.current.disconnect();
-      socketRef.current = null;
-      setIsConnected(false);
-    }
-  }, []);
 
   // ==========================================
   // Geolocation Tracking
@@ -170,8 +132,8 @@ export function useDriverLocation({
     setCurrentLocation(location);
     setLastUpdateTime(new Date());
 
-    // Send to server
-    if (socketRef.current?.connected && isOnline) {
+    // Send to server via central socket service
+    if (socketService.isConnectedToSocket() && isOnline) {
       const update: LocationUpdate = {
         driver_id: driverId,
         latitude: location.latitude,
@@ -182,7 +144,22 @@ export function useDriverLocation({
         accuracy: location.accuracy,
       };
 
-      socketRef.current.emit('rider:location', update);
+      // Emit via the central socketService (which connects to port 3001 via XTransformPort)
+      socketService.updateLocation({
+        riderId: driverId,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        speed: location.speed,
+        heading: location.heading,
+      });
+
+      // Also emit via the alias event name for compatibility
+      socketService.updateDriverLocation({
+        latitude: location.latitude,
+        longitude: location.longitude,
+        heading: location.heading,
+        speed: location.speed,
+      });
     }
 
     onLocationUpdate?.(location);
@@ -227,7 +204,7 @@ export function useDriverLocation({
   }, []);
 
   // ==========================================
-  // Online/Offline Control
+  // Online/Offline Control (via API + socket)
   // ==========================================
 
   const goOnline = useCallback(async () => {
@@ -236,63 +213,78 @@ export function useDriverLocation({
       return;
     }
 
-    if (!socketRef.current?.connected) {
-      connectSocket();
-      // Wait for connection
-      await new Promise(resolve => {
-        socketRef.current?.once('connect', resolve);
+    // Update rider status via API (which also notifies the realtime service)
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('/api/riders/status?XTransformPort=3000', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          isOnline: true,
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+        }),
       });
+
+      if (response.ok) {
+        setIsOnline(true);
+        setError(null);
+      } else {
+        setError('Failed to go online');
+      }
+    } catch (err) {
+      console.error('[DriverLocation] Error going online:', err);
+      setError('Failed to go online');
     }
+  }, [currentLocation]);
 
-    socketRef.current?.emit('rider:online', {
-      riderId: driverId,
-      name: driverName,
-      role: driverRole,
-      latitude: currentLocation.latitude,
-      longitude: currentLocation.longitude,
-    });
-  }, [currentLocation, driverId, driverName, driverRole, connectSocket]);
-
-  const goOffline = useCallback(() => {
-    socketRef.current?.emit('rider:offline', { riderId: driverId });
+  const goOffline = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      await fetch('/api/riders/status?XTransformPort=3000', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ isOnline: false }),
+      });
+    } catch (err) {
+      console.error('[DriverLocation] Error going offline:', err);
+    }
     setIsOnline(false);
-  }, [driverId]);
+  }, []);
 
   // ==========================================
   // Tracking Control
   // ==========================================
 
   const startTracking = useCallback(() => {
-    connectSocket();
     startGeolocation();
-  }, [connectSocket, startGeolocation]);
+  }, [startGeolocation]);
 
   const stopTracking = useCallback(() => {
     stopGeolocation();
     if (isOnline) {
       goOffline();
     }
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
   }, [stopGeolocation, isOnline, goOffline]);
 
   // ==========================================
-  // Cleanup
-  // ==========================================
-
-  useEffect(() => {
-    return () => {
-      stopGeolocation();
-      disconnectSocket();
-    };
-  }, [stopGeolocation, disconnectSocket]);
-
-  // ==========================================
-  // Auto-start if isOnline
+  // Periodic location updates while online
   // ==========================================
 
   useEffect(() => {
     if (isOnline && currentLocation) {
       // Periodic location updates while online
-      const interval = setInterval(() => {
+      intervalRef.current = setInterval(() => {
         // Request fresh position
         navigator.geolocation.getCurrentPosition(
           handlePositionUpdate,
@@ -301,9 +293,26 @@ export function useDriverLocation({
         );
       }, updateInterval);
 
-      return () => clearInterval(interval);
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      };
     }
   }, [isOnline, currentLocation, updateInterval, enableHighAccuracy, handlePositionUpdate, handlePositionError]);
+
+  // ==========================================
+  // Cleanup on unmount
+  // ==========================================
+
+  useEffect(() => {
+    return () => {
+      stopGeolocation();
+      socketUnsubsRef.current.forEach(unsub => unsub());
+      socketUnsubsRef.current = [];
+    };
+  }, [stopGeolocation]);
 
   return {
     currentLocation,

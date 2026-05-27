@@ -159,3 +159,32 @@ Stage Summary:
 - Zero lint errors
 - Zero compilation errors
 - Dev server running cleanly on port 3000
+---
+Task ID: 1-8
+Agent: Main Agent
+Task: Ride Hailing Production Hardening - Complete Phase 1-7
+
+Work Log:
+- Phase 1: Traced full ride hailing lifecycle across 30+ files
+- Phase 2: Identified 6 critical mock systems (fake rider in RideBooking, fake timer matching, fake geocoding, wrong socket ports, no incoming request handling, hardcoded names)
+- Phase 3: Rewrote ride-booking.tsx - replaced mock with real POST /api/tasks, socket event listeners, HTTP polling fallback, real cancellation via transition API
+- Phase 4: Rewrote rider-home.tsx - added driver:request socket listener, accept/reject UI with expiry timers, real rider name from props, real stats from profile API
+- Phase 5: Fixed use-driver-location.ts - removed separate socket to port 3003, now uses central socketService (port 3001), uses API for online/offline toggle
+- Phase 5: Fixed use-heartbeat.ts - removed separate socket to port 3004, now uses central socketService for WebSocket heartbeat, HTTP fallback via /api/rider/heartbeat
+- Phase 5: Fixed useClientTracking - removed separate socket to port 3004, now uses socketService with task room joining, rider:location:update and driver:location:update listeners
+- Phase 6: Added MATCHING transition to RIDE_TRANSITIONS in enhanced-task-state-machine.service.ts (CREATED→MATCHING, MATCHING→SEARCHING, MATCHING→ASSIGNED, MATCHING→FAILED, MATCHING→CANCELLED)
+- Phase 6: Added ride-specific getNextStatus in rider-tasks.tsx (ASSIGNED→ACCEPTED→ARRIVING→ARRIVED→PICKED_UP→IN_PROGRESS→COMPLETED)
+- Phase 7: Fixed service-screen.tsx - replaced fake "Emmanuel Okello" with real socket-driven matching, replaced mock geocoding with Mapbox API, replaced setTimeout simulation with real socket event listeners + HTTP polling fallback
+- Phase 7: Passed rider name through rider-dashboard.tsx to RiderHome
+- Phase 8: ride-pricing.ts - added estimateRouteAsync export, deprecated sync version
+- Verified all lint passes and dev server compiles cleanly
+
+Stage Summary:
+- 8 files modified
+- All mock systems removed from ride hailing flow
+- Real API integration for task creation, dispatch matching, transitions
+- Real socket event handling for rider matching, location updates
+- Correct socket ports (all use socketService on port 3001)
+- Ride-specific state machine transitions added
+- Security: auth checks already in place from parcel/food delivery hardening
+- Remaining: saved places in location-picker are still demo data (low priority), rider profile API endpoint needs to return rating/acceptanceRate

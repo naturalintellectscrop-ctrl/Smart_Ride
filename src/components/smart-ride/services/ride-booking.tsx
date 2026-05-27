@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,9 @@ import {
   Star,
   Phone,
   MessageSquare,
-  AlertTriangle
+  AlertTriangle,
+  X,
+  RefreshCw,
 } from 'lucide-react';
 import { LocationPicker, Location } from './location-picker';
 import { VehicleSelection } from './vehicle-selection';
@@ -32,10 +34,12 @@ import {
   PricingBreakdown,
   calculateFare,
   calculateAllFares,
-  estimateRoute,
+  estimateRouteAsync,
   VEHICLE_CONFIGS,
   formatCurrency,
 } from './ride-pricing';
+import { socketService, DriverRequestData, TaskStatusUpdateData, RiderTaskMatchedData } from '@/services/socket';
+import { fetchWithRetry } from '@/lib/api/client-retry';
 
 type BookingStep = 
   | 'location' 
@@ -44,14 +48,43 @@ type BookingStep =
   | 'payment' 
   | 'confirm' 
   | 'searching' 
-  | 'matched';
+  | 'matched'
+  | 'no_riders';
 
 interface RideBookingProps {
   onClose: () => void;
   initialService?: 'boda' | 'car';
+  clientId?: string;
 }
 
-export function RideBooking({ onClose, initialService }: RideBookingProps) {
+// Map frontend vehicle type to backend TaskType
+function vehicleTypeToTaskType(v: VehicleType): 'SMART_BODA_RIDE' | 'SMART_CAR_RIDE' {
+  return v === 'smart_boda' ? 'SMART_BODA_RIDE' : 'SMART_CAR_RIDE';
+}
+
+// Map frontend vehicle type to payment method enum
+function paymentMethodToApi(method: PaymentMethod): string {
+  switch (method) {
+    case 'CASH': return 'CASH';
+    case 'MTN_MOMO': return 'MOBILE_MONEY_MTN';
+    case 'AIRTEL_MONEY': return 'MOBILE_MONEY_AIRTEL';
+    case 'CARD': return 'VISA';
+    default: return 'CASH';
+  }
+}
+
+function getAuthHeaders(): Record<string, string> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export function RideBooking({ onClose, initialService, clientId }: RideBookingProps) {
   // Step state
   const [step, setStep] = useState<BookingStep>('location');
   
@@ -59,23 +92,12 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
   const [pickup, setPickup] = useState<Location | null>(null);
   const [destination, setDestination] = useState<Location | null>(null);
   
-  // Route details - computed from locations
-  const pickupAddress = pickup?.address;
-  const destinationAddress = destination?.address;
-  
-  const distanceKm = React.useMemo(() => {
-    if (pickupAddress && destinationAddress) {
-      return estimateRoute(pickupAddress, destinationAddress).distanceKm;
-    }
-    return 0;
-  }, [pickupAddress, destinationAddress]);
-  
-  const estimatedTimeMinutes = React.useMemo(() => {
-    if (pickupAddress && destinationAddress) {
-      return estimateRoute(pickupAddress, destinationAddress).estimatedTimeMinutes;
-    }
-    return 0;
-  }, [pickupAddress, destinationAddress]);
+  // Route estimation (async)
+  const [routeInfo, setRouteInfo] = useState<{ distanceKm: number; estimatedTimeMinutes: number }>({ distanceKm: 0, estimatedTimeMinutes: 0 });
+  const [routeLoading, setRouteLoading] = useState(false);
+
+  const distanceKm = routeInfo.distanceKm;
+  const estimatedTimeMinutes = routeInfo.estimatedTimeMinutes;
   
   // Passenger state
   const [passengers, setPassengers] = useState(1);
@@ -87,7 +109,7 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
   
   // Pricing - computed from route and passengers
   const pricing = React.useMemo<Record<VehicleType, PricingBreakdown | null>>(() => {
-    if (pickupAddress && destinationAddress) {
+    if (distanceKm > 0) {
       return calculateAllFares(distanceKm, estimatedTimeMinutes, passengers);
     }
     return {
@@ -96,53 +118,328 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
       premium_car: null,
       electric_vehicle: null,
     };
-  }, [pickupAddress, destinationAddress, distanceKm, estimatedTimeMinutes, passengers]);
+  }, [distanceKm, estimatedTimeMinutes, passengers]);
   
   // Payment state
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   
-  // Matching state
+  // Task/ride state
+  const [taskId, setTaskId] = useState<string | null>(null);
+  const [taskNumber, setTaskNumber] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [matchTimer, setMatchTimer] = useState(0);
+  const [cancelling, setCancelling] = useState(false);
 
+  // Matched rider info (from socket event)
+  const [matchedRider, setMatchedRider] = useState<{
+    id: string;
+    name: string;
+    phone: string;
+    rating: number;
+    vehicle: string;
+    plateNumber: string;
+    eta: string;
+    riderRole: string;
+  } | null>(null);
 
+  // Refs
+  const socketUnsubs = useRef<Array<() => void>>([]);
+  const matchTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Match timer effect
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (step === 'searching') {
-      interval = setInterval(() => {
-        setMatchTimer((prev) => {
-          if (prev >= 3) {
-            setStep('matched');
-            return 0;
-          }
-          return prev + 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [step]);
-
-  // Auto-select best available vehicle when pricing is ready - using callback pattern
-  const autoSelectVehicle = React.useCallback(() => {
-    if (pickupAddress && destinationAddress && !selectedVehicle) {
+  // Auto-select best available vehicle when pricing is ready
+  const effectiveVehicle = React.useMemo(() => {
+    if (!selectedVehicle && distanceKm > 0) {
       const availableVehicles = Object.entries(pricing)
         .filter(([_, p]) => p !== null)
         .sort((a, b) => (a[1]?.totalFare || 0) - (b[1]?.totalFare || 0));
-      
       if (availableVehicles.length > 0) {
         return availableVehicles[0][0] as VehicleType;
       }
     }
     return selectedVehicle;
-  }, [pricing, pickupAddress, destinationAddress, selectedVehicle]);
-  
-  // Use the auto-selected vehicle
-  const effectiveVehicle = selectedVehicle || autoSelectVehicle();
-  if (effectiveVehicle !== selectedVehicle && effectiveVehicle) {
-    // This runs during render, which is valid for derived state
-    setSelectedVehicle(effectiveVehicle);
-  }
+  }, [selectedVehicle, pricing, distanceKm]);
+
+  // Sync selected vehicle
+  useEffect(() => {
+    if (effectiveVehicle && effectiveVehicle !== selectedVehicle) {
+      setSelectedVehicle(effectiveVehicle);
+    }
+  }, [effectiveVehicle, selectedVehicle]);
+
+  // Async route estimation when locations change
+  useEffect(() => {
+    if (!pickup?.address || !destination?.address) {
+      setRouteInfo({ distanceKm: 0, estimatedTimeMinutes: 0 });
+      return;
+    }
+
+    let cancelled = false;
+    setRouteLoading(true);
+
+    estimateRouteAsync(pickup.address, destination.address, 
+      pickup.lat && pickup.lng ? { lat: pickup.lat, lng: pickup.lng } : undefined,
+      destination.lat && destination.lng ? { lat: destination.lat, lng: destination.lng } : undefined
+    ).then((result) => {
+      if (!cancelled) {
+        setRouteInfo(result);
+        setRouteLoading(false);
+      }
+    }).catch(() => {
+      if (!cancelled) {
+        setRouteInfo({ distanceKm: 0, estimatedTimeMinutes: 0 });
+        setRouteLoading(false);
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, [pickup?.address, destination?.address, pickup?.lat, pickup?.lng, destination?.lat, destination?.lng]);
+
+  const selectedPricing = selectedVehicle ? pricing[selectedVehicle] : null;
+
+  // ========================================
+  // SOCKET EVENT HANDLING
+  // ========================================
+
+  // Cleanup socket listeners on unmount
+  useEffect(() => {
+    return () => {
+      socketUnsubs.current.forEach(unsub => unsub());
+      socketUnsubs.current = [];
+      if (matchTimerRef.current) clearInterval(matchTimerRef.current);
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, []);
+
+  // Start listening for ride matching events
+  const startListeningForMatch = useCallback((createdTaskId: string) => {
+    // Clear any previous listeners
+    socketUnsubs.current.forEach(unsub => unsub());
+    socketUnsubs.current = [];
+
+    // Join the task room to receive status updates
+    socketService.joinTaskRoom(createdTaskId);
+
+    // Listen for rider:task:matched event (rider accepted)
+    const unsubMatched = socketService.on('rider:task:matched', async (data: RiderTaskMatchedData) => {
+      if (data.taskId === createdTaskId) {
+        // Fetch rider details from the task
+        try {
+          const result = await fetchWithRetry(`/api/tasks?limit=1&XTransformPort=3000`, {
+            headers: getAuthHeaders(),
+            maxRetries: 2,
+          });
+          if (result.ok) {
+            const taskData = result.data as { data?: any[] } | null;
+            const task = taskData?.data?.find((t: any) => t.id === createdTaskId);
+            if (task?.rider) {
+              setMatchedRider({
+                id: task.rider.id,
+                name: task.rider.fullName || 'Rider',
+                phone: task.rider.phone || '',
+                rating: 4.5, // Will be enriched from rider profile
+                vehicle: task.rider.riderRole === 'SMART_BODA_RIDER' ? 'Motorcycle' : 'Car',
+                plateNumber: '', // Will need vehicle API
+                eta: '3-5',
+                riderRole: task.rider.riderRole,
+              });
+            }
+          }
+        } catch {
+          setMatchedRider({
+            id: data.riderId || '',
+            name: 'Your Rider',
+            phone: '',
+            rating: 4.5,
+            vehicle: 'Vehicle',
+            plateNumber: '',
+            eta: '3-5',
+            riderRole: '',
+          });
+        }
+        setStep('matched');
+        if (matchTimerRef.current) clearInterval(matchTimerRef.current);
+      }
+    });
+
+    // Listen for task status updates
+    const unsubStatus = socketService.on('task:status:update', async (data: TaskStatusUpdateData) => {
+      if (data.taskId === createdTaskId) {
+        if (data.status === 'ASSIGNED' || data.status === 'ACCEPTED') {
+          // Task has been assigned - fetch rider details
+          try {
+            const result = await fetchWithRetry(`/api/tasks/${createdTaskId}?XTransformPort=3000`, {
+              headers: getAuthHeaders(),
+              maxRetries: 2,
+            });
+            if (result.ok) {
+              const taskData = result.data as { data?: any } | null;
+              const task = taskData?.data;
+              if (task?.rider) {
+                setMatchedRider({
+                  id: task.rider.id,
+                  name: task.rider.fullName || 'Rider',
+                  phone: task.rider.phone || '',
+                  rating: 4.5,
+                  vehicle: task.rider.riderRole === 'SMART_BODA_RIDER' ? 'Motorcycle' : 'Car',
+                  plateNumber: '',
+                  eta: '3-5',
+                  riderRole: task.rider.riderRole,
+                });
+              }
+            }
+          } catch {}
+          setStep('matched');
+          if (matchTimerRef.current) clearInterval(matchTimerRef.current);
+        } else if (data.status === 'CANCELLED' || data.status === 'FAILED') {
+          setStep('no_riders');
+          if (matchTimerRef.current) clearInterval(matchTimerRef.current);
+        }
+      }
+    });
+
+    socketUnsubs.current = [unsubMatched, unsubStatus];
+  }, []);
+
+  // ========================================
+  // RIDE CREATION
+  // ========================================
+
+  const handleConfirmBooking = useCallback(async () => {
+    if (!pickup?.address || !destination?.address || !selectedVehicle || !clientId) {
+      setCreateError('Missing required booking information');
+      return;
+    }
+
+    setCreating(true);
+    setCreateError(null);
+    setStep('searching');
+
+    try {
+      const taskType = vehicleTypeToTaskType(selectedVehicle);
+      const fare = selectedPricing;
+
+      const payload = {
+        taskType,
+        clientId,
+        pickupAddress: pickup.address,
+        pickupLatitude: pickup.lat || null,
+        pickupLongitude: pickup.lng || null,
+        dropoffAddress: destination.address,
+        dropoffLatitude: destination.lat || null,
+        dropoffLongitude: destination.lng || null,
+        distanceKm: distanceKm || 1,
+        paymentMethod: paymentMethodToApi(paymentMethod),
+        passengerCount: passengers,
+        customPricing: fare ? {
+          baseFare: fare.baseFare,
+          totalAmount: fare.totalFare,
+        } : undefined,
+      };
+
+      const result = await fetchWithRetry('/api/tasks?XTransformPort=3000', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(payload),
+        maxRetries: 2,
+      });
+
+      if (!result.ok) {
+        const errorData = result.data as { error?: string } | null;
+        throw new Error(errorData?.error || result.error?.message || 'Failed to create ride');
+      }
+
+      const data = result.data as { data?: any } | null;
+      const createdTask = data?.data;
+      
+      if (createdTask?.id) {
+        setTaskId(createdTask.id);
+        setTaskNumber(createdTask.taskNumber);
+        startListeningForMatch(createdTask.id);
+
+        // Start match timer
+        matchTimerRef.current = setInterval(() => {
+          setMatchTimer(prev => prev + 1);
+        }, 1000);
+
+        // Start HTTP polling fallback for status checks
+        pollingRef.current = setInterval(async () => {
+          if (!createdTask?.id) return;
+          try {
+            const pollResult = await fetchWithRetry(`/api/tasks/${createdTask.id}?XTransformPort=3000`, {
+              headers: getAuthHeaders(),
+              maxRetries: 1,
+            });
+            if (pollResult.ok) {
+              const pollData = pollResult.data as { data?: any } | null;
+              const task = pollData?.data;
+              if (task?.status === 'ASSIGNED' || task?.status === 'ACCEPTED') {
+                if (task?.rider) {
+                  setMatchedRider({
+                    id: task.rider.id,
+                    name: task.rider.fullName || 'Rider',
+                    phone: task.rider.phone || '',
+                    rating: 4.5,
+                    vehicle: task.rider.riderRole === 'SMART_BODA_RIDER' ? 'Motorcycle' : 'Car',
+                    plateNumber: '',
+                    eta: '3-5',
+                    riderRole: task.rider.riderRole,
+                  });
+                }
+                setStep('matched');
+                if (matchTimerRef.current) clearInterval(matchTimerRef.current);
+                if (pollingRef.current) clearInterval(pollingRef.current);
+              } else if (task?.status === 'CANCELLED' || task?.status === 'FAILED') {
+                setStep('no_riders');
+                if (matchTimerRef.current) clearInterval(matchTimerRef.current);
+                if (pollingRef.current) clearInterval(pollingRef.current);
+              }
+            }
+          } catch {}
+        }, 5000); // Poll every 5 seconds as fallback
+      }
+    } catch (err) {
+      console.error('Error creating ride:', err);
+      setCreateError(err instanceof Error ? err.message : 'Failed to create ride');
+      setStep('confirm');
+    } finally {
+      setCreating(false);
+    }
+  }, [pickup, destination, selectedVehicle, clientId, distanceKm, passengers, paymentMethod, selectedPricing, startListeningForMatch]);
+
+  // ========================================
+  // CANCELLATION
+  // ========================================
+
+  const handleCancelRide = useCallback(async () => {
+    if (!taskId) {
+      onClose();
+      return;
+    }
+    setCancelling(true);
+    try {
+      await fetchWithRetry(`/api/tasks/${taskId}/transition?XTransformPort=3000`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          toStatus: 'CANCELLED',
+          reason: 'CLIENT_CANCELLED',
+        }),
+        maxRetries: 2,
+      });
+    } catch (err) {
+      console.error('Error cancelling ride:', err);
+    }
+    // Cleanup
+    if (taskId) socketService.leaveTaskRoom(taskId);
+    socketUnsubs.current.forEach(unsub => unsub());
+    socketUnsubs.current = [];
+    if (matchTimerRef.current) clearInterval(matchTimerRef.current);
+    if (pollingRef.current) clearInterval(pollingRef.current);
+    setCancelling(false);
+    onClose();
+  }, [taskId, onClose]);
 
   const handleSwapLocations = () => {
     const temp = pickup;
@@ -151,12 +448,12 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
   };
 
   const canProceedFromLocation = pickup?.address && destination?.address;
-  
-  const selectedPricing = selectedVehicle ? pricing[selectedVehicle] : null;
 
-  // Handle booking confirmation
-  const handleConfirmBooking = () => {
-    setStep('searching');
+  // Format match timer as mm:ss
+  const formatMatchTimer = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
   // Render step header
@@ -167,6 +464,9 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
           if (step === 'location') {
             onClose();
           } else if (step === 'searching' || step === 'matched') {
+            // Don't allow back during search/match - must cancel
+            return;
+          } else if (step === 'no_riders') {
             setStep('confirm');
           } else {
             const steps: BookingStep[] = ['location', 'passengers', 'vehicle', 'payment', 'confirm'];
@@ -189,15 +489,17 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
           {step === 'confirm' && 'Confirm Booking'}
           {step === 'searching' && 'Finding Rider...'}
           {step === 'matched' && 'Rider Found!'}
+          {step === 'no_riders' && 'No Riders Available'}
         </h1>
         <p className="text-gray-400 text-sm">
           {step === 'location' && 'Enter pickup and destination'}
           {step === 'passengers' && 'How many passengers?'}
-          {step === 'vehicle' && `${distanceKm.toFixed(1)} km • ~${estimatedTimeMinutes} min`}
+          {step === 'vehicle' && `${distanceKm.toFixed(1)} km - ~${estimatedTimeMinutes} min`}
           {step === 'payment' && 'Select payment method'}
           {step === 'confirm' && 'Review your booking'}
-          {step === 'searching' && 'Please wait...'}
+          {step === 'searching' && `Searching... ${formatMatchTimer(matchTimer)}`}
           {step === 'matched' && 'Your rider is on the way'}
+          {step === 'no_riders' && 'Please try again later'}
         </p>
       </div>
     </div>
@@ -219,21 +521,30 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
 
           {/* Continue button */}
           <Button
-            disabled={!canProceedFromLocation}
+            disabled={!canProceedFromLocation || routeLoading}
             onClick={() => setStep('passengers')}
             className={cn(
               'w-full py-4 rounded-xl font-semibold text-base transition-all',
-              canProceedFromLocation
+              canProceedFromLocation && !routeLoading
                 ? 'bg-[#00FF88] text-black hover:bg-[#00CC6E]'
                 : 'bg-gray-700 text-gray-400 cursor-not-allowed'
             )}
           >
-            Continue
-            <ArrowRight className="h-5 w-5 ml-2" />
+            {routeLoading ? (
+              <>
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Calculating route...
+              </>
+            ) : (
+              <>
+                Continue
+                <ArrowRight className="h-5 w-5 ml-2" />
+              </>
+            )}
           </Button>
 
           {/* Price hint */}
-          {canProceedFromLocation && (
+          {canProceedFromLocation && distanceKm > 0 && (
             <Card className="bg-[#13131A] border-white/5 p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -308,7 +619,7 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
                 </p>
               )}
               {passengers >= 2 && passengers <= 4 && (
-                <p className="text-blue-400 text-sm text-center">
+                <p className="text-cyan-400 text-sm text-center">
                   Car required for {passengers} passengers
                 </p>
               )}
@@ -542,13 +853,30 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
             </div>
           </Card>
 
+          {/* Error message */}
+          {createError && (
+            <Card className="bg-red-500/10 border-red-500/30 p-4">
+              <p className="text-red-400 text-sm">{createError}</p>
+            </Card>
+          )}
+
           {/* Confirm button */}
           <Button
             onClick={handleConfirmBooking}
+            disabled={creating}
             className="w-full py-4 rounded-xl font-semibold text-base bg-[#00FF88] text-black hover:bg-[#00CC6E] mt-4"
           >
-            Confirm Booking
-            <Check className="h-5 w-5 ml-2" />
+            {creating ? (
+              <>
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Creating ride...
+              </>
+            ) : (
+              <>
+                Confirm Booking
+                <Check className="h-5 w-5 ml-2" />
+              </>
+            )}
           </Button>
 
           {/* Disclaimer */}
@@ -586,8 +914,11 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
               </div>
               <p className="text-white font-medium text-lg">Finding nearby riders...</p>
               <p className="text-gray-400 text-sm mt-1">
-                {matchTimer < 3 ? 'This usually takes 1-2 minutes' : 'Almost there...'}
+                {matchTimer < 30 ? 'This usually takes 1-2 minutes' : matchTimer < 60 ? 'Still searching...' : 'Taking longer than usual'}
               </p>
+              {taskNumber && (
+                <p className="text-gray-500 text-xs mt-2">Ride #{taskNumber}</p>
+              )}
             </div>
           </div>
 
@@ -607,10 +938,14 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
 
           {/* Cancel button */}
           <Button
-            onClick={() => setStep('confirm')}
+            onClick={handleCancelRide}
+            disabled={cancelling}
             variant="outline"
             className="w-full py-4 rounded-xl font-medium text-base mt-6 border-white/10 text-gray-400 hover:bg-white/5"
           >
+            {cancelling ? (
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+            ) : null}
             Cancel Search
           </Button>
         </div>
@@ -618,17 +953,48 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
     );
   }
 
+  // No riders available step
+  if (step === 'no_riders') {
+    return (
+      <div className="min-h-screen bg-[#0D0D12]">
+        {renderHeader()}
+        <div className="p-4">
+          <div className="bg-gradient-to-br from-[#13131A] to-[#1A1A24] rounded-3xl p-8 flex flex-col items-center justify-center text-center">
+            <div className="w-24 h-24 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-12 w-12 text-orange-500" />
+            </div>
+            <p className="text-white font-medium text-lg">No riders available</p>
+            <p className="text-gray-400 text-sm mt-2">
+              We couldn&apos;t find a nearby rider. Please try again in a moment.
+            </p>
+            {taskNumber && (
+              <p className="text-gray-500 text-xs mt-2">Ride #{taskNumber}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mt-6">
+            <Button
+              onClick={handleConfirmBooking}
+              className="bg-[#00FF88] text-black py-4 rounded-xl font-semibold hover:bg-[#00CC6E]"
+            >
+              <RefreshCw className="h-5 w-5 mr-2" />
+              Try Again
+            </Button>
+            <Button
+              onClick={onClose}
+              variant="outline"
+              className="py-4 rounded-xl font-medium border-white/10 text-gray-400 hover:bg-white/5"
+            >
+              Close
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Matched step
   if (step === 'matched') {
-    const rider = {
-      name: 'Emmanuel Okello',
-      rating: 4.8,
-      trips: 234,
-      vehicle: selectedVehicle === 'smart_boda' ? 'Bajaj Boxer' : 'Toyota Corolla',
-      plateNumber: 'UAX 123A',
-      eta: '3 min',
-    };
-
     return (
       <div className="min-h-screen bg-[#0D0D12]">
         {renderHeader()}
@@ -642,46 +1008,60 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
           </div>
 
           {/* Rider card */}
-          <Card className="bg-[#13131A] border-[#00FF88]/30 p-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-[#00FF88]/20 rounded-full flex items-center justify-center">
-                <User className="h-8 w-8 text-[#00FF88]" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-lg text-white">{rider.name}</h3>
-                <div className="flex items-center gap-2 mt-1">
-                  <div className="flex items-center gap-1">
-                    <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                    <span className="text-sm font-medium text-white">{rider.rating}</span>
+          {matchedRider ? (
+            <Card className="bg-[#13131A] border-[#00FF88]/30 p-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-[#00FF88]/20 rounded-full flex items-center justify-center">
+                  <User className="h-8 w-8 text-[#00FF88]" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-bold text-lg text-white">{matchedRider.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                      <span className="text-sm font-medium text-white">{matchedRider.rating}</span>
+                    </div>
+                    <Badge className="bg-[#00FF88]/10 text-[#00FF88] text-xs ml-1">
+                      <Shield className="h-3 w-3 mr-1" />
+                      Verified
+                    </Badge>
                   </div>
-                  <span className="text-gray-600">•</span>
-                  <span className="text-sm text-gray-400">{rider.trips} rides</span>
-                  <Badge className="bg-[#00FF88]/10 text-[#00FF88] text-xs ml-1">
-                    <Shield className="h-3 w-3 mr-1" />
-                    Verified
-                  </Badge>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-4 pt-4 border-t border-white/5">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-400">Vehicle</p>
-                  <p className="font-medium text-white">{rider.vehicle}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-400">Plate Number</p>
-                  <p className="font-medium text-white">{rider.plateNumber}</p>
+              <div className="mt-4 pt-4 border-t border-white/5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-400">Vehicle</p>
+                    <p className="font-medium text-white">{matchedRider.vehicle}</p>
+                  </div>
+                  {matchedRider.plateNumber && (
+                    <div className="text-right">
+                      <p className="text-sm text-gray-400">Plate Number</p>
+                      <p className="font-medium text-white">{matchedRider.plateNumber}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          ) : (
+            <Card className="bg-[#13131A] border-[#00FF88]/30 p-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 bg-[#00FF88]/20 rounded-full flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 text-[#00FF88] animate-spin" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-white">Loading rider info...</h3>
+                  <p className="text-gray-400 text-sm">Fetching rider details</p>
+                </div>
+              </div>
+            </Card>
+          )}
 
           {/* ETA */}
           <div className="text-center py-4">
             <p className="text-gray-400">Arriving in</p>
-            <p className="text-4xl font-bold text-[#00FF88]">{rider.eta}</p>
+            <p className="text-4xl font-bold text-[#00FF88]">{matchedRider?.eta || '3-5'} min</p>
           </div>
 
           {/* Route */}
@@ -717,7 +1097,7 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
               <Phone className="h-5 w-5 mr-2" />
               Call Rider
             </Button>
-            <Button className="bg-blue-600 text-white py-4 rounded-xl font-semibold hover:bg-blue-700">
+            <Button className="bg-cyan-600 text-white py-4 rounded-xl font-semibold hover:bg-cyan-700">
               <MessageSquare className="h-5 w-5 mr-2" />
               Message
             </Button>
@@ -725,10 +1105,12 @@ export function RideBooking({ onClose, initialService }: RideBookingProps) {
 
           {/* Cancel */}
           <Button
-            onClick={onClose}
+            onClick={handleCancelRide}
+            disabled={cancelling}
             variant="outline"
             className="w-full py-3 text-red-400 border-red-500/20 hover:bg-red-500/10"
           >
+            {cancelling ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : null}
             Cancel Ride
           </Button>
         </div>

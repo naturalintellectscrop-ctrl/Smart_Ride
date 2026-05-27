@@ -162,8 +162,11 @@ interface TransitionConfig {
 
 // Ride lifecycle: REQUESTED → SEARCHING → ASSIGNED → ARRIVING → PICKED_UP → IN_PROGRESS → COMPLETED → PAID → CLOSED
 const RIDE_TRANSITIONS: TransitionConfig[] = [
+  { from: TaskStatus.CREATED, to: TaskStatus.MATCHING },
   { from: TaskStatus.CREATED, to: TaskStatus.REQUESTED },
+  { from: TaskStatus.MATCHING, to: TaskStatus.SEARCHING },
   { from: TaskStatus.REQUESTED, to: TaskStatus.SEARCHING },
+  { from: TaskStatus.MATCHING, to: TaskStatus.ASSIGNED, requiredFields: ['riderId'] },
   { 
     from: TaskStatus.SEARCHING, 
     to: TaskStatus.ASSIGNED,
@@ -183,11 +186,12 @@ const RIDE_TRANSITIONS: TransitionConfig[] = [
   { from: TaskStatus.PAID, to: TaskStatus.CLOSED },
   // Cancel from any active state
   { 
-    from: [TaskStatus.REQUESTED, TaskStatus.SEARCHING, TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.ARRIVING, TaskStatus.ARRIVED, TaskStatus.PICKED_UP, TaskStatus.IN_PROGRESS],
+    from: [TaskStatus.REQUESTED, TaskStatus.MATCHING, TaskStatus.SEARCHING, TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.ARRIVING, TaskStatus.ARRIVED, TaskStatus.PICKED_UP, TaskStatus.IN_PROGRESS],
     to: TaskStatus.CANCELLED,
     requiredFields: ['cancellationReason'],
   },
   { from: TaskStatus.SEARCHING, to: TaskStatus.FAILED },
+  { from: TaskStatus.MATCHING, to: TaskStatus.FAILED },
 ];
 
 // Food delivery lifecycle: CREATED → RESTAURANT_ACCEPTED → KOT_GENERATED → PREPARING → READY → RIDER_ASSIGNED → PICKED_UP → DELIVERED
