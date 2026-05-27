@@ -370,7 +370,11 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     // In production, send OTP via email/SMS
     console.log(`Password reset OTP for ${email}: ${otp}`);
     
-    return { success: true, otp }; // Return OTP for testing
+    // SECURITY: Only return OTP in development with explicit opt-in
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    const allowOtpInResponse = isDevelopment && process.env.ALLOW_OTP_IN_RESPONSE === 'true';
+    
+    return { success: true, ...(allowOtpInResponse ? { otp } : {}) };
   } catch (error) {
     console.error('Password reset request error:', error);
     return { success: false, error: 'Failed to request password reset' };

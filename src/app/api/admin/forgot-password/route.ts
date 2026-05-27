@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       message: 'If an admin account with that email exists, a reset link has been sent.',
-      // In dev mode, include the token for testing
-      ...(process.env.NODE_ENV === 'development' && !process.env.RESEND_API_KEY ? { devToken: resetToken } : {}),
+      // SECURITY: Never expose reset tokens in API responses, even in development
+      // Use server logs for development debugging instead
     });
   } catch (error) {
     console.error('Forgot password error:', error);

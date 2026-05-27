@@ -22,9 +22,28 @@ const io = new Server(PORT, {
 
 console.log(`🚀 Real-time service running on port ${PORT}`);
 
+// Maximum number of tracked users to prevent unbounded memory growth
+const MAX_CONNECTED_USERS = 10_000;
+
 // Store connected users
 const connectedUsers = new Map<string, Set<string>>(); // userId -> Set of socketIds
 const userRooms = new Map<string, string>(); // socketId -> current room
+
+/** Enforce max size on connectedUsers map — evicts oldest entry if limit exceeded */
+function enforceConnectedUsersLimit() {
+  if (connectedUsers.size > MAX_CONNECTED_USERS) {
+    // Evict the first (oldest) entry to stay within limit
+    const firstKey = connectedUsers.keys().next().value;
+    if (firstKey) {
+      const socketIds = connectedUsers.get(firstKey);
+      if (socketIds) {
+        socketIds.forEach(sid => userRooms.delete(sid));
+      }
+      connectedUsers.delete(firstKey);
+      console.warn(`[Socket] connectedUsers limit (${MAX_CONNECTED_USERS}) reached, evicted user: ${firstKey}`);
+    }
+  }
+}
 
 // Middleware: Authenticate socket connections
 io.use((socket, next) => {
@@ -59,10 +78,11 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`);
 
-  // Track authenticated users
+    // Track authenticated users
   if (socket.data.userId) {
     if (!connectedUsers.has(socket.data.userId)) {
       connectedUsers.set(socket.data.userId, new Set());
+      enforceConnectedUsersLimit();
     }
     connectedUsers.get(socket.data.userId)!.add(socket.id);
 

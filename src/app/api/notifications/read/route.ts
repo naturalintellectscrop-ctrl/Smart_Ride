@@ -1,54 +1,48 @@
-import { NextRequest } from 'next/server';
-import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
-import { 
-  markNotificationAsRead, 
-  markAllNotificationsAsRead 
-} from '@/lib/notifications/notification-service';
-import { z } from 'zod';
-
-const markReadSchema = z.object({
-  notificationId: z.string(),
-  userId: z.string(),
-});
-
-const markAllReadSchema = z.object({
-  userId: z.string(),
-});
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthUser } from '@/lib/auth/middleware';
+import { markNotificationAsRead, markAllNotificationsAsRead } from '@/lib/services/notification.service';
 
 /**
  * POST /api/notifications/read
  * Mark notification(s) as read
+ * Auth-protected: userId is derived from the authenticated user's token
  */
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
+    const userId = user.userId as string;
 
     // Mark all as read
     if (body.markAll) {
-      const validatedData = markAllReadSchema.parse(body);
-      const result = await markAllNotificationsAsRead(validatedData.userId);
-      return successResponse({ 
-        count: result.count 
-      }, `${result.count} notifications marked as read`);
+      const result = await markAllNotificationsAsRead(userId);
+      if (!result.success) {
+        return NextResponse.json({ error: result.error }, { status: 500 });
+      }
+      return NextResponse.json({ success: true, message: 'All notifications marked as read' });
     }
 
     // Mark single notification as read
-    const validatedData = markReadSchema.parse(body);
-    const result = await markNotificationAsRead(
-      validatedData.notificationId, 
-      validatedData.userId
-    );
-
-    if (result.count === 0) {
-      return errorResponse('Notification not found or already read');
+    const { notificationId } = body;
+    if (!notificationId) {
+      return NextResponse.json(
+        { error: 'Missing notificationId or markAll' },
+        { status: 400 }
+      );
     }
 
-    return successResponse({ success: true }, 'Notification marked as read');
+    const result = await markNotificationAsRead(notificationId, userId);
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return errorResponse(error.errors[0].message);
-    }
     console.error('Error marking notification as read:', error);
-    return serverErrorResponse('Failed to mark notification as read');
+    return NextResponse.json({ error: 'Failed to mark notification as read' }, { status: 500 });
   }
 }

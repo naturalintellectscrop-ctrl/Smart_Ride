@@ -29,6 +29,7 @@ model User {
   disputes                 Dispute[]
   notificationLogs         NotificationLog[]
   notifications            Notification[]
+  notificationPreference   NotificationPreference?
   orders                   Order[]
   payments                 Payment[]
   ratingsGiven             Rating[]                  @relation("RatingFromUser")
@@ -569,6 +570,55 @@ model Notification {
 
   @@index([userId])
   @@index([isRead])
+  @@index([createdAt])
+}
+
+model NotificationPreference {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  surgeAlerts          Boolean  @default(true)
+  highDemandAlerts     Boolean  @default(true)
+  incentiveAlerts      Boolean  @default(true)
+  earningsOpportunities Boolean @default(true)
+  repositionRequests   Boolean  @default(true)
+  surgeWarnings        Boolean  @default(true)
+  promoAlerts          Boolean  @default(true)
+  discountOffers       Boolean  @default(true)
+  taskUpdates          Boolean  @default(true)
+  orderUpdates         Boolean  @default(true)
+  paymentUpdates       Boolean  @default(true)
+  systemUpdates        Boolean  @default(true)
+  quietHoursEnabled    Boolean  @default(false)
+  quietHoursStart      String   @default("22:00")
+  quietHoursEnd        String   @default("07:00")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model NotificationBroadcast {
+  id               String    @id @default(cuid())
+  zoneId           String?
+  broadcastType    String
+  title            String
+  message          String
+  targetAudience   String
+  referenceId      String?
+  referenceType    String?
+  metadata         String?
+  expiresAt        DateTime?
+  status           String    @default("PENDING")
+  sentAt           DateTime?
+  recipientsCount  Int       @default(0)
+  deliveredCount   Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([broadcastType])
+  @@index([status])
   @@index([createdAt])
 }
 

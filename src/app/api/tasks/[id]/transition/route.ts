@@ -61,6 +61,68 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // SECURITY: Ownership validation - verify user is authorized to transition this task
+    const task = await db.task.findUnique({
+      where: { id: taskId },
+      select: { clientId: true, riderId: true, status: true },
+    });
+
+    if (!task) {
+      return NextResponse.json(
+        { success: false, error: 'Task not found' },
+        { status: 404 }
+      );
+    }
+
+    // Determine user's rider ID (if applicable)
+    const userRider = user.role === 'RIDER'
+      ? await db.rider.findFirst({ where: { userId: user.id }, select: { id: true } })
+      : null;
+
+    // Check authorization: user must be the client, the assigned rider, or an admin
+    const isClient = task.clientId === user.id;
+    const isAssignedRider = userRider && task.riderId === userRider.id;
+    const userIsAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ||
+                        user.role === 'OPERATIONS_ADMIN' || user.role === 'COMPLIANCE_ADMIN' ||
+                        user.role === 'FINANCE_ADMIN';
+
+    if (!isClient && !isAssignedRider && !userIsAdmin) {
+      // Audit unauthorized transition attempt
+      try {
+        await createAuditLog({
+          action: AuditActions.TASK_CANCELLED, // Closest action for unauthorized access
+          entityType: EntityTypes.TASK,
+          entityId: taskId,
+          actorType: user.role === 'RIDER' ? 'RIDER' : user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+          actorId: user.id,
+          userId: user.id,
+          taskId,
+          description: `UNAUTHORIZED: User ${user.id} (role: ${user.role}) attempted to transition task ${taskId} to ${toStatus}`,
+          source: 'API',
+        });
+      } catch {}
+
+      return NextResponse.json(
+        { success: false, error: 'Not authorized to transition this task' },
+        { status: 403 }
+      );
+    }
+
+    // Role-based transition restrictions:
+    // - Clients can only cancel
+    // - Riders can only update status for their assigned tasks (ARRIVED, PICKED_UP, etc.)
+    // - Admins can perform any transition
+    if (isClient && !userIsAdmin) {
+      // Clients can only cancel their own tasks
+      const clientAllowedTransitions: TaskStatus[] = [TaskStatus.CANCELLED];
+      if (!clientAllowedTransitions.includes(toStatus as TaskStatus)) {
+        return NextResponse.json(
+          { success: false, error: 'Clients can only cancel tasks' },
+          { status: 403 }
+        );
+      }
+    }
+
     // Build transition context
     const context: TransitionContext = {
       userId: user.id,
@@ -122,7 +184,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Send notifications for important status changes
     try {
-      const notificationStatuses = ['ASSIGNED', 'ACCEPTED', 'ARRIVED', 'IN_TRANSIT', 'DELIVERED', 'COMPLETED', 'CANCELLED'];
+      const notificationStatuses = [
+        'SEARCHING', 'MATCHING', 'ASSIGNED', 'REASSIGNED', 'ACCEPTED', 'ARRIVING',
+        'ARRIVED', 'PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT', 'DELIVERED',
+        'COMPLETED', 'CANCELLED', 'FAILED',
+      ];
       if (notificationStatuses.includes(toStatus) && result.task) {
         const task = result.task;
         // Notify the client (customer)
@@ -135,7 +201,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           );
         }
         // Notify the rider for certain status changes
-        const riderNotificationStatuses = ['ASSIGNED', 'COMPLETED', 'CANCELLED'];
+        const riderNotificationStatuses = ['ASSIGNED', 'REASSIGNED', 'PICKED_UP', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'FAILED'];
         if (riderNotificationStatuses.includes(toStatus) && task.riderId) {
           // Get rider's userId for notification
           const riderRecord = await db.rider.findUnique({

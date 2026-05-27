@@ -38,6 +38,60 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Verify the match exists and belongs to this rider before rejecting
+    const match = await db.dispatchMatch.findUnique({
+      where: { id: matchId },
+      include: {
+        task: {
+          select: {
+            id: true,
+            taskNumber: true,
+            taskType: true,
+            pickupLatitude: true,
+            pickupLongitude: true,
+            clientId: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!match) {
+      return NextResponse.json(
+        { success: false, error: 'Dispatch match not found' },
+        { status: 404 }
+      );
+    }
+
+    if (match.riderId !== rider.id) {
+      return NextResponse.json(
+        { success: false, error: 'Not authorized to reject this dispatch' },
+        { status: 403 }
+      );
+    }
+
+    // Create audit log for rejection BEFORE processing (for traceability)
+    await db.auditLog.create({
+      data: {
+        actorId: rider.id,
+        actorType: 'RIDER',
+        taskId: match.taskId,
+        action: 'DISPATCH_REJECTED',
+        entityType: 'DispatchMatch',
+        entityId: matchId,
+        description: `Rider rejected dispatch for task ${match.task?.taskNumber || match.taskId}${reason ? `: ${reason}` : ''}`,
+        source: 'MOBILE_APP',
+        metadata: JSON.stringify({
+          matchScore: match.matchScore,
+          distanceKm: match.distanceKm,
+          rejectionReason: reason || 'RIDER_DECLINED',
+          retryCount: match.retryCount,
+          taskStatus: match.task?.status,
+        }),
+      },
+    });
+
+    // Reject the match and trigger reassignment
     const result = await DispatchService.rejectMatch(matchId, rider.id, reason);
 
     if (!result.success) {

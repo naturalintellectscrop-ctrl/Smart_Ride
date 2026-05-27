@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,21 +30,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
-  BarChart,
-  Bar,
-  Legend,
-} from 'recharts';
 import { 
   Search, 
   Filter, 
@@ -64,6 +50,19 @@ import {
   ChevronRight,
   Loader2,
 } from 'lucide-react';
+
+// Dynamic import for recharts to reduce initial bundle size
+const RechartsComponents = dynamic(
+  () => import('./driver-reputation-charts'),
+  { 
+    ssr: false,
+    loading: () => (
+      <div className="h-64 flex items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+      </div>
+    ),
+  }
+);
 
 // Types
 interface Rider {
@@ -350,59 +349,10 @@ export function DriverReputationDashboard() {
 
       {/* Charts Row */}
       {stats && (
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Tier Distribution */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Trust Tier Distribution</CardTitle>
-              <CardDescription>Drivers by trust tier status</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={tierChartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={80}
-                      paddingAngle={2}
-                      dataKey="value"
-                      label={({ name, value }) => `${name}: ${value}`}
-                    >
-                      {tierChartData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Metrics Comparison */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Average Metrics</CardTitle>
-              <CardDescription>Platform-wide driver performance</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={metricsChartData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                    <XAxis dataKey="name" className="text-xs" />
-                    <YAxis domain={[0, 100]} className="text-xs" />
-                    <Tooltip />
-                    <Bar dataKey="value" fill="#7CDA28" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <RechartsComponents
+          tierChartData={tierChartData}
+          metricsChartData={metricsChartData}
+        />
       )}
 
       {/* Filters */}

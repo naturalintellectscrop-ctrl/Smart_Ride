@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { cn } from '@/lib/utils';
 import { 
@@ -61,60 +60,82 @@ export function MapboxMap({
   showControls = true,
 }: MapboxMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<Map<string, mapboxgl.Marker>>(new Map());
+  const map = useRef<any>(null);
+  const mapboxglRef = useRef<any>(null);
+  const markersRef = useRef<Map<string, any>>(new Map());
   const routeLayerRef = useRef<string | null>(null);
-  const userLocationMarker = useRef<mapboxgl.Marker | null>(null);
+  const userLocationMarker = useRef<any>(null);
 
   const [isLoading, setIsLoading] = useState(true);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [routeInfo, setRouteInfo] = useState<{
     distance: number;
     duration: number;
   } | null>(null);
 
   // ==========================================
-  // Initialize Map
+  // Initialize Map (dynamic import of mapbox-gl)
   // ==========================================
 
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    mapboxgl.accessToken = MAPBOX_CONFIG.token;
+    let cancelled = false;
 
-    map.current = new mapboxgl.Map({
-      container: mapContainer.current,
-      style: MAPBOX_CONFIG.style,
-      center: [center.longitude, center.latitude],
-      zoom: zoom,
-      interactive: interactive,
-    });
+    const initMap = async () => {
+      try {
+        // Dynamic import of mapbox-gl to reduce initial bundle size
+        const mapboxgl = (await import('mapbox-gl')).default;
+        if (cancelled) return;
+        mapboxglRef.current = mapboxgl;
 
-    map.current.on('load', () => {
-      setIsLoading(false);
-    });
+        mapboxgl.accessToken = MAPBOX_CONFIG.token;
 
-    map.current.on('click', (e) => {
-      if (onMapClick) {
-        onMapClick({
-          latitude: e.lngLat.lat,
-          longitude: e.lngLat.lng,
+        map.current = new mapboxgl.Map({
+          container: mapContainer.current!,
+          style: MAPBOX_CONFIG.style,
+          center: [center.longitude, center.latitude],
+          zoom: zoom,
+          interactive: interactive,
         });
-      }
-    });
 
-    // Add navigation controls
-    if (showControls && interactive) {
-      map.current.addControl(
-        new mapboxgl.NavigationControl({
-          showCompass: true,
-          showZoom: true,
-        }),
-        'top-right'
-      );
-    }
+        map.current.on('load', () => {
+          if (!cancelled) setIsLoading(false);
+        });
+
+        map.current.on('click', (e: any) => {
+          if (onMapClick) {
+            onMapClick({
+              latitude: e.lngLat.lat,
+              longitude: e.lngLat.lng,
+            });
+          }
+        });
+
+        // Add navigation controls
+        if (showControls && interactive) {
+          map.current.addControl(
+            new mapboxgl.NavigationControl({
+              showCompass: true,
+              showZoom: true,
+            }),
+            'top-right'
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Map initialization error:', error);
+          setMapError('Failed to initialize map');
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initMap();
 
     // Clean up on unmount
     return () => {
+      cancelled = true;
       map.current?.remove();
       map.current = null;
     };
@@ -135,14 +156,16 @@ export function MapboxMap({
   }, [center.latitude, center.longitude, zoom]);
 
   // ==========================================
-  // Add Markers
+  // Add Markers (uses dynamic mapbox-gl ref)
   // ==========================================
 
   useEffect(() => {
-    if (!map.current || isLoading) return;
+    if (!map.current || isLoading || !mapboxglRef.current) return;
+
+    const mapboxgl = mapboxglRef.current;
 
     // Clear existing markers
-    markersRef.current.forEach((marker) => marker.remove());
+    markersRef.current.forEach((marker: any) => marker.remove());
     markersRef.current.clear();
 
     // Add new markers
@@ -266,8 +289,8 @@ export function MapboxMap({
 
         // Fit bounds to show entire route
         const coordinates = result.geometry.coordinates;
-        const bounds = new mapboxgl.LngLatBounds();
-        coordinates.forEach(coord => bounds.extend(coord as [number, number]));
+        const bounds = new mapboxglRef.current.LngLatBounds();
+        coordinates.forEach((coord: [number, number]) => bounds.extend(coord));
         map.current.fitBounds(bounds, { padding: 50 });
       }
     };
@@ -280,12 +303,13 @@ export function MapboxMap({
   // ==========================================
 
   useEffect(() => {
-    if (!map.current || !showUserLocation || isLoading) return;
+    if (!map.current || !showUserLocation || isLoading || !mapboxglRef.current) return;
 
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const { latitude, longitude } = position.coords;
+          const mapboxgl = mapboxglRef.current;
 
           // Remove existing user marker
           if (userLocationMarker.current) {
@@ -334,11 +358,19 @@ export function MapboxMap({
       <div ref={mapContainer} className="absolute inset-0" />
 
       {/* Loading Overlay */}
-      {isLoading && (
+      {(isLoading || mapError) && (
         <div className="absolute inset-0 bg-[#0D0D12] flex items-center justify-center">
           <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 border-2 border-[#00FF88] border-t-transparent rounded-full animate-spin" />
-            <span className="text-white/50 text-sm">Loading map...</span>
+            {mapError ? (
+              <>
+                <span className="text-white/50 text-sm">{mapError}</span>
+              </>
+            ) : (
+              <>
+                <div className="w-8 h-8 border-2 border-[#00FF88] border-t-transparent rounded-full animate-spin" />
+                <span className="text-white/50 text-sm">Loading map...</span>
+              </>
+            )}
           </div>
         </div>
       )}

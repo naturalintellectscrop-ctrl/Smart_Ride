@@ -273,9 +273,14 @@ export async function sendOTP(
       console.log(`[OTP] DEV MODE - OTP for ${normalizedPhone}: ${otp} (Purpose: ${purpose})`);
     }
 
+    // SECURITY: Only include OTP in response in development mode with explicit opt-in
+    // Production MUST NEVER expose OTP in API responses
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    const allowOtpInResponse = isDevelopment && process.env.ALLOW_OTP_IN_RESPONSE === 'true';
+
     return {
       success: true,
-      otp: otp, // MVP FIX: Always return OTP for testing
+      ...(allowOtpInResponse ? { otp } : {}),
       expiresIn: OTP_CONFIG.expiryMinutes * 60,
     };
   } catch (error) {

@@ -307,7 +307,32 @@ export interface TransitionResult {
 
 export class EnhancedTaskStateMachine {
   /**
-   * Attempt to transition a task to a new status
+   * Idempotency window in seconds.
+   * If a transition from the same fromStatus → toStatus was created within
+   * this window for the same task, we return the existing result instead of
+   * creating a duplicate.
+   */
+  private static readonly IDEMPOTENCY_WINDOW_SECONDS = 5;
+
+  /**
+   * Generate an idempotency key for a transition.
+   * Key = taskId + fromStatus + toStatus + timestamp-rounded-to-5s
+   * The 5-second rounding means two calls within the same 5-second bucket
+   * produce the same key, allowing deduplication.
+   */
+  private static generateTransitionId(
+    taskId: string,
+    fromStatus: TaskStatus,
+    toStatus: TaskStatus
+  ): string {
+    const bucket = Math.floor(Date.now() / (this.IDEMPOTENCY_WINDOW_SECONDS * 1000));
+    return `${taskId}:${fromStatus}:${toStatus}:${bucket}`;
+  }
+
+  /**
+   * Attempt to transition a task to a new status.
+   * Includes idempotency check: if the same transition was already recorded
+   * within the last 5 seconds, returns the existing result.
    */
   static async transition(
     taskId: string,
@@ -331,6 +356,37 @@ export class EnhancedTaskStateMachine {
 
       const fromStatus = task.status;
       const taskType = task.taskType;
+
+      // ── Idempotency check ─────────────────────────────────────
+      // If a transition from the same fromStatus → toStatus was created within
+      // the last 5 seconds for this task, return the existing result.
+      const recentTransition = await db.taskStateTransition.findFirst({
+        where: {
+          taskId,
+          fromStatus,
+          toStatus,
+          createdAt: {
+            gte: new Date(Date.now() - this.IDEMPOTENCY_WINDOW_SECONDS * 1000),
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (recentTransition) {
+        // The task was already transitioned — verify the task status matches
+        if (task.status === toStatus) {
+          console.log(
+            `[StateMachine] Idempotent transition detected: ${taskId} ${fromStatus} → ${toStatus}, returning existing result`
+          );
+          return {
+            success: true,
+            task,
+            transition: recentTransition,
+          };
+        }
+        // If task status doesn't match (edge case: race condition where task
+        // was updated again), fall through to perform the transition normally.
+      }
 
       // Check if transition is valid
       const transitions = getTransitionsForTaskType(taskType);
@@ -376,8 +432,30 @@ export class EnhancedTaskStateMachine {
         await transitionConfig.beforeTransition(task, context);
       }
 
+      // Generate the transition ID for this attempt
+      const transitionId = this.generateTransitionId(taskId, fromStatus, toStatus);
+
       // Execute transition in transaction
       const result = await db.$transaction(async (tx) => {
+        // Double-check idempotency inside the transaction to prevent race conditions
+        const existingInTx = await tx.taskStateTransition.findFirst({
+          where: {
+            taskId,
+            fromStatus,
+            toStatus,
+            createdAt: {
+              gte: new Date(Date.now() - this.IDEMPOTENCY_WINDOW_SECONDS * 1000),
+            },
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        if (existingInTx) {
+          // Another concurrent request already created this transition
+          const currentTask = await tx.task.findUnique({ where: { id: taskId } });
+          return { task: currentTask, transition: existingInTx, idempotent: true };
+        }
+
         // Update task status
         const updatedTask = await tx.task.update({
           where: { id: taskId },
@@ -388,7 +466,7 @@ export class EnhancedTaskStateMachine {
           },
         });
 
-        // Create state transition record
+        // Create state transition record with metadata that includes the transitionId
         const transition = await tx.taskStateTransition.create({
           data: {
             taskId,
@@ -397,7 +475,11 @@ export class EnhancedTaskStateMachine {
             triggeredBy: context.userId,
             triggeredByType: context.triggeredByType,
             reason: context.reason,
-            metadata: context.metadata ? JSON.stringify(context.metadata) : null,
+            metadata: JSON.stringify({
+              ...(context.metadata || {}),
+              _transitionId: transitionId,
+              _idempotencyWindow: this.IDEMPOTENCY_WINDOW_SECONDS,
+            }),
             latitude: context.latitude,
             longitude: context.longitude,
             ipAddress: context.ipAddress,
@@ -420,11 +502,11 @@ export class EnhancedTaskStateMachine {
           },
         });
 
-        return { task: updatedTask, transition };
+        return { task: updatedTask, transition, idempotent: false };
       });
 
-      // Run after transition hook
-      if (transitionConfig.afterTransition) {
+      // Run after transition hook (only if this was not an idempotent result)
+      if (!result.idempotent && transitionConfig.afterTransition) {
         await transitionConfig.afterTransition(result.task, context);
       }
 

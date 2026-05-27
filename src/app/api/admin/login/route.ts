@@ -111,6 +111,16 @@ export async function POST(request: NextRequest) {
       expiresIn: tokens.expiresIn,
     });
 
+    // SECURITY: Set admin-session cookie with access token
+    // This is required for the /api/auth/session endpoint to verify the admin session
+    response.cookies.set('admin-session', tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60, // 7 days (match JWT expiry)
+      path: '/',
+    });
+
     // Set refresh token as HTTP-only cookie
     response.cookies.set('admin_refresh_token', tokens.refreshToken, {
       httpOnly: true,

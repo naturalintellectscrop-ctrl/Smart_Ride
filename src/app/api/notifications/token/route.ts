@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { getAuthUser } from '@/lib/auth/middleware';
 
 /**
  * POST /api/notifications/token
  * Register FCM token for a user
+ * Auth-protected: userId is derived from the authenticated user's token
  */
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { token, userId, deviceInfo } = body;
+    const { token, deviceInfo } = body;
 
     if (!token) {
       return NextResponse.json({ error: 'Token is required' }, { status: 400 });
@@ -20,14 +26,14 @@ export async function POST(request: NextRequest) {
     
     console.log('[FCM Token] Received token:', {
       token: token.substring(0, 20) + '...',
-      userId,
+      userId: user.userId,
       deviceInfo,
     });
 
     // Optionally store in database
     // await db.fcmToken.upsert({
     //   where: { token },
-    //   create: { token, userId, deviceInfo: JSON.stringify(deviceInfo) },
+    //   create: { token, userId: user.userId, deviceInfo: JSON.stringify(deviceInfo) },
     //   update: { lastUsedAt: new Date() },
     // });
 
@@ -41,9 +47,15 @@ export async function POST(request: NextRequest) {
 /**
  * DELETE /api/notifications/token
  * Remove FCM token
+ * Auth-protected: only the authenticated user can remove their own token
  */
 export async function DELETE(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { token } = body;
 
@@ -52,7 +64,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Remove the FCM token from database
-    console.log('[FCM Token] Removing token:', token.substring(0, 20) + '...');
+    console.log('[FCM Token] Removing token:', token.substring(0, 20) + '...', 'for user:', user.userId);
 
     // await db.fcmToken.delete({ where: { token } });
 

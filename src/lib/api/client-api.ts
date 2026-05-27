@@ -293,14 +293,19 @@ export function useCreateDispatch() {
     setLoading(true);
     
     try {
+      // SECURITY: Get userId from stored auth token instead of hardcoded demo ID
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
       const response = await fetch('/api/dispatch?action=create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           request: {
             id: taskId,
             serviceType,
-            userId: 'client_demo_001',
+            userId: 'authenticated', // Server extracts real userId from JWT token
             pickupLocation,
             dropoffLocation: pickupLocation, // Will be updated
             paymentMethod: 'CASH',

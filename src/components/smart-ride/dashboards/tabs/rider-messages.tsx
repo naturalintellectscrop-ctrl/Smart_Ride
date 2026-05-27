@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,6 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useNotifications } from '../../context/notification-context';
 
 type ConversationType = 'client' | 'merchant' | 'safety' | 'support';
 
@@ -147,14 +146,8 @@ export function RiderMessages() {
   const [messageInput, setMessageInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [conversations, setConversations] = useState<Conversation[]>(initialConversations);
-  const { setUnreadCount } = useNotifications();
 
   const totalUnread = conversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
-
-  // Update notification context when unread count changes
-  useEffect(() => {
-    setUnreadCount(totalUnread);
-  }, [totalUnread, setUnreadCount]);
 
   const filteredConversations = conversations.filter(conv =>
     conv.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

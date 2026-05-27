@@ -1232,3 +1232,94 @@ io.on('connection', (socket) => {
 
 // Export for testing
 export { io, riders, pendingTasks, dispatchLogs };
+
+// ============================================
+// PERIODIC EXPIRED MATCH PROCESSING
+// ============================================
+// Calls the Next.js API to process expired dispatch matches every 30 seconds.
+// This ensures that tasks stuck in MATCHING/SEARCHING status are properly
+// retried or cancelled, even if no external cron scheduler is configured.
+
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
+const NEXTJS_BASE_URL = process.env.NEXTJS_BASE_URL || 'http://localhost:3000';
+const PROCESS_EXPIRED_INTERVAL_MS = 30_000; // 30 seconds
+
+let expiredMatchTimer: ReturnType<typeof setInterval> | null = null;
+
+async function triggerExpiredMatchProcessing(): Promise<void> {
+  try {
+    const response = await fetch(`${NEXTJS_BASE_URL}/api/dispatch/process-expired`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Key': INTERNAL_API_KEY,
+      },
+    });
+
+    if (response.ok) {
+      const result = await response.json();
+      if (result.processed > 0) {
+        console.log(`[DispatchService] Expired match processing: ${result.processed} entries processed in ${result.durationMs}ms`);
+      }
+    } else {
+      const text = await response.text().catch(() => 'unknown error');
+      console.error(`[DispatchService] Expired match processing failed: ${response.status} - ${text}`);
+    }
+  } catch (error) {
+    // Next.js might not be running yet, or network issue - don't crash
+    console.error('[DispatchService] Failed to call process-expired endpoint:', error);
+  }
+}
+
+// Start the periodic processing
+expiredMatchTimer = setInterval(triggerExpiredMatchProcessing, PROCESS_EXPIRED_INTERVAL_MS);
+
+// Run once on startup after a short delay to let Next.js be ready
+setTimeout(triggerExpiredMatchProcessing, 10_000); // 10 second initial delay
+
+console.log(`⏰ Expired match processor scheduled every ${PROCESS_EXPIRED_INTERVAL_MS / 1000}s`);
+
+// ============================================
+// CLEANUP ON PROCESS EXIT
+// ============================================
+
+function cleanup(): void {
+  console.log('[DispatchService] Cleaning up...');
+  
+  if (expiredMatchTimer) {
+    clearInterval(expiredMatchTimer);
+    expiredMatchTimer = null;
+  }
+
+  // Clear all task timers
+  for (const [taskId, timer] of taskTimers) {
+    clearTimeout(timer);
+  }
+  taskTimers.clear();
+
+  for (const [, timers] of offerTimers) {
+    for (const [, timer] of timers) {
+      clearTimeout(timer);
+    }
+  }
+  offerTimers.clear();
+
+  // Close socket.io connections
+  io.close();
+
+  console.log('[DispatchService] Cleanup complete');
+}
+
+process.on('SIGINT', () => {
+  cleanup();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  cleanup();
+  process.exit(0);
+});
+
+process.on('beforeExit', () => {
+  cleanup();
+});

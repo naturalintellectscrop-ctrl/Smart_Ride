@@ -25,6 +25,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // SECURITY: Verify user is a rider
+    if (user.role !== 'RIDER') {
+      return NextResponse.json(
+        { success: false, error: 'Only riders can accept dispatches' },
+        { status: 403 }
+      );
+    }
+
     // Get rider ID from user
     const rider = await db.rider.findFirst({
       where: { userId: user.id },
@@ -34,6 +42,41 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         { success: false, error: 'Rider profile not found' },
         { status: 400 }
+      );
+    }
+
+    // SECURITY: Verify the dispatch match belongs to this rider BEFORE accepting
+    const match = await db.dispatchMatch.findUnique({
+      where: { id: matchId },
+      select: { riderId: true, status: true },
+    });
+
+    if (!match) {
+      return NextResponse.json(
+        { success: false, error: 'Dispatch match not found' },
+        { status: 404 }
+      );
+    }
+
+    if (match.riderId !== rider.id) {
+      // Audit unauthorized accept attempt
+      try {
+        await db.auditLog.create({
+          data: {
+            actorId: rider.id,
+            actorType: 'RIDER',
+            action: 'DISPATCH_UNAUTHORIZED_ACCEPT',
+            entityType: 'DispatchMatch',
+            entityId: matchId,
+            description: `Rider ${rider.id} attempted to accept dispatch ${matchId} assigned to rider ${match.riderId}`,
+            source: 'MOBILE_APP',
+          },
+        });
+      } catch {}
+
+      return NextResponse.json(
+        { success: false, error: 'Not authorized to accept this dispatch' },
+        { status: 403 }
       );
     }
 

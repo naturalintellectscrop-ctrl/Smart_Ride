@@ -51,11 +51,18 @@ export async function GET(request: NextRequest) {
 /**
  * POST /api/notifications
  * Send a notification to a user
+ * Auth-protected: requires authentication. Backend services should use
+ * createNotification() from notification.service.ts directly.
  */
 export async function POST(request: NextRequest) {
   try {
+    const user = await getAuthUser(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
-    const { userId, title, message, type, referenceId, referenceType, data } = body;
+    const { userId, title, message, type, referenceId, referenceType } = body;
 
     if (!userId || !title || !message || !type) {
       return NextResponse.json(
@@ -75,9 +82,6 @@ export async function POST(request: NextRequest) {
         referenceType,
       },
     });
-
-    // In production, this would also send via FCM
-    // For now, we just store it in the database
 
     return NextResponse.json({ success: true, notification });
   } catch (error) {

@@ -2,6 +2,10 @@
  * POST /api/riders/status
  * Toggle rider online/offline status
  * SECURITY: Requires authentication. Riders can only update their own status.
+ * 
+ * Body: { isOnline: boolean, latitude?: number, longitude?: number }
+ * - When going online: optionally updates location coordinates
+ * - When going offline: clears isOnline flag
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -34,20 +38,35 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { isOnline } = body;
+    const { isOnline, latitude, longitude } = body;
 
     if (typeof isOnline !== 'boolean') {
       return errorResponse('isOnline must be a boolean value');
     }
 
+    // Build update data based on online/offline status
+    const updateData: Record<string, unknown> = {
+      isOnline,
+    };
+
+    if (isOnline) {
+      // When going online, update location if provided
+      if (typeof latitude === 'number' && typeof longitude === 'number') {
+        updateData.currentLatitude = latitude;
+        updateData.currentLongitude = longitude;
+        updateData.lastLocationUpdate = new Date();
+      }
+      updateData.lastHeartbeatAt = new Date();
+      updateData.connectionStatus = 'ACTIVE';
+    } else {
+      // When going offline, update connection status
+      updateData.connectionStatus = 'DISCONNECTED';
+    }
+
     // Update rider status
     const updatedRider = await db.rider.update({
       where: { id: rider.id },
-      data: {
-        isOnline,
-        lastOnlineAt: isOnline ? new Date() : rider.lastOnlineAt,
-        lastOfflineAt: !isOnline ? new Date() : rider.lastOfflineAt,
-      },
+      data: updateData,
     });
 
     // Create audit log for status change
@@ -58,20 +77,53 @@ export async function POST(request: NextRequest) {
         entityId: rider.id,
         actorType: 'RIDER',
         riderId: rider.id,
-        description: `Driver went ${isOnline ? 'online' : 'offline'}`,
+        description: `Driver went ${isOnline ? 'online' : 'offline'}${isOnline && latitude && longitude ? ` at (${latitude}, ${longitude})` : ''}`,
+        source: 'MOBILE_APP',
         metadata: JSON.stringify({
           previousStatus: rider.isOnline,
           newStatus: isOnline,
+          locationUpdated: isOnline && typeof latitude === 'number' && typeof longitude === 'number',
         }),
       },
     });
+
+    // If going online, notify the realtime dispatch service so it knows about this rider
+    if (isOnline) {
+      try {
+        const socketPort = process.env.SOCKET_PORT || '3002';
+        const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
+        await fetch(`http://localhost:${socketPort}/emit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Key': internalKey,
+          },
+          body: JSON.stringify({
+            room: 'dispatch',
+            event: 'rider:status:update',
+            data: {
+              riderId: rider.id,
+              isOnline: true,
+              latitude: latitude || rider.currentLatitude,
+              longitude: longitude || rider.currentLongitude,
+              riderRole: rider.riderRole,
+            },
+          }),
+        });
+      } catch {
+        // Socket service might not be running - don't fail the status update
+        console.log(`[RiderStatus] Socket notification skipped for rider ${rider.id}`);
+      }
+    }
 
     return successResponse({
       id: updatedRider.id,
       isOnline: updatedRider.isOnline,
       status: updatedRider.status,
-      lastOnlineAt: updatedRider.lastOnlineAt,
-      lastOfflineAt: updatedRider.lastOfflineAt,
+      currentLatitude: updatedRider.currentLatitude,
+      currentLongitude: updatedRider.currentLongitude,
+      lastLocationUpdate: updatedRider.lastLocationUpdate,
+      connectionStatus: updatedRider.connectionStatus,
     });
   } catch (error) {
     console.error('Error updating rider status:', error);

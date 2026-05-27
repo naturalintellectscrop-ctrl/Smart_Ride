@@ -36,6 +36,7 @@ import {
   useCreateDispatch,
   TaskRequest 
 } from '@/lib/api/client-api';
+import { useUser } from '@/components/smart-ride/context/user-context';
 
 // ============================================
 // Types
@@ -90,7 +91,7 @@ interface DeliveryProvider {
 // Constants
 // ============================================
 
-const DEMO_CLIENT_ID = 'client_demo_001';
+// SECURITY: Use authenticated user ID from context instead of hardcoded demo ID
 
 // Teal theme color for item delivery
 const TEAL_PRIMARY = '#14B8A6';
@@ -209,6 +210,11 @@ interface ItemDeliveryScreenProps {
 }
 
 export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
+  const { user } = useUser();
+  
+  // SECURITY: Get client ID from authenticated user context
+  const clientId = user?.id || '';
+  
   // Booking state
   const [step, setStep] = useState<BookingStep>('location');
   const [pickup, setPickup] = useState<LocationData | null>(null);
@@ -309,7 +315,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
     try {
       const taskData: TaskRequest = {
         taskType: 'ITEM_DELIVERY',
-        clientId: DEMO_CLIENT_ID,
+        clientId,
         pickupAddress: pickup.address,
         dropoffAddress: dropoff.address,
         distanceKm: route.distanceKm,
@@ -388,7 +394,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
     return (
       <SOSEmergencyScreen
         userType="CLIENT"
-        userId={DEMO_CLIENT_ID}
+        userId={clientId}
         activeTask={activeTask}
         onClose={() => setShowSOS(false)}
       />

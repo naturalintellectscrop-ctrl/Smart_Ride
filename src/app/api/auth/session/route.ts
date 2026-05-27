@@ -1,33 +1,38 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
-import { db } from '@/lib/db';
+/**
+ * GET /api/auth/session
+ * Check admin session validity
+ * SECURITY: Uses the SAME JWT secret as the login/signing flow (jsonwebtoken)
+ * Previously used jose with a DIFFERENT secret, causing all sessions to fail.
+ */
 
-// Get secret key for JWT verification
-const getSecretKey = () => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('JWT_SECRET environment variable is required in production');
-    }
-    return new TextEncoder().encode('dev-secret-key-not-for-production');
-  }
-  return new TextEncoder().encode(secret);
-};
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyAccessToken, extractTokenFromHeader, JWTPayload } from '@/lib/auth/jwt';
+import { db } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    const token = request.cookies.get('admin-session')?.value;
+    // Try to get token from admin-session cookie (admin dashboard)
+    const cookieToken = request.cookies.get('admin-session')?.value;
+    // Also check Authorization header (mobile/API clients)
+    const authHeader = request.headers.get('authorization');
+    const headerToken = extractTokenFromHeader(authHeader);
+
+    const token = cookieToken || headerToken;
 
     if (!token) {
       return NextResponse.json({ authenticated: false, user: null });
     }
 
-    // Verify token
-    const { payload } = await jwtVerify(token, getSecretKey());
+    // Verify token using the SAME method as all other auth checks
+    const payload: JWTPayload | null = verifyAccessToken(token);
+
+    if (!payload) {
+      return NextResponse.json({ authenticated: false, user: null });
+    }
 
     // Get fresh user data (only essential fields)
     const user = await db.user.findUnique({
-      where: { id: payload.userId as string },
+      where: { id: payload.userId },
       select: {
         id: true,
         name: true,

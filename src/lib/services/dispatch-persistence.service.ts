@@ -12,6 +12,7 @@
 import { db } from '@/lib/db';
 import { DispatchMatchStatus, TaskStatus, TaskType } from '@prisma/client';
 import { CapabilityService } from './capability.service';
+import { sendDispatchReassignedNotification, sendSearchingNotification, sendTaskUpdateNotification } from './notification.service';
 
 // ============================================
 // DISPATCH CONFIGURATION
@@ -236,18 +237,12 @@ export class DispatchService {
 
   /**
    * Notify rider about the dispatch match
-   * Emits socket event to the realtime service so the rider app receives the offer
+   * Emits socket event to the realtime service so the rider app receives the offer.
+   * Includes retry logic: if the socket emission fails, retries up to 3 times
+   * with 1-second delays. If all retries fail, marks notificationSent as false
+   * so the periodic processExpiredMatches() can re-attempt later.
    */
   private static async notifyRider(match: any, taskId: string): Promise<void> {
-    // Mark notification as sent in DB
-    await db.dispatchMatch.update({
-      where: { id: match.id },
-      data: {
-        notificationSent: true,
-        notificationSentAt: new Date(),
-      },
-    });
-
     // Get task details for the offer
     const task = await db.task.findUnique({
       where: { id: taskId },
@@ -267,57 +262,109 @@ export class DispatchService {
       },
     });
 
-    // Emit socket event to the realtime service for delivery to the rider
-    try {
-      // Get rider's userId for socket room targeting (rooms are keyed by userId)
-      const rider = await db.rider.findUnique({
-        where: { id: match.riderId },
-        select: { userId: true },
-      });
-      
-      // Internal HTTP emit API runs on port 3002 (Socket.io WebSocket is on 3001)
-      const socketPort = process.env.SOCKET_PORT || '3002';
-      const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-      await fetch(`http://localhost:${socketPort}/emit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Internal-Key': internalKey,
+    // Get rider's userId for socket room targeting (rooms are keyed by userId)
+    const rider = await db.rider.findUnique({
+      where: { id: match.riderId },
+      select: { userId: true },
+    });
+
+    // Build the socket emission payload
+    const socketPort = process.env.SOCKET_PORT || '3002';
+    const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
+    const payload = {
+      room: `user:${rider?.userId || match.riderId}`,
+      event: 'driver:request',
+      data: {
+        task: {
+          id: taskId,
+          taskNumber: task?.taskNumber,
+          taskType: task?.taskType,
+          pickupAddress: task?.pickupAddress,
+          dropoffAddress: task?.dropoffAddress,
+          pickupLatitude: task?.pickupLatitude,
+          pickupLongitude: task?.pickupLongitude,
+          dropoffLatitude: task?.dropoffLatitude,
+          dropoffLongitude: task?.dropoffLongitude,
+          totalAmount: task?.totalAmount,
+          paymentMethod: task?.paymentMethod,
+          status: 'ASSIGNED',
         },
-        body: JSON.stringify({
-          room: `user:${rider?.userId || match.riderId}`,
-          event: 'driver:request',
-          data: {
-            task: {
-              id: taskId,
-              taskNumber: task?.taskNumber,
-              taskType: task?.taskType,
-              pickupAddress: task?.pickupAddress,
-              dropoffAddress: task?.dropoffAddress,
-              pickupLatitude: task?.pickupLatitude,
-              pickupLongitude: task?.pickupLongitude,
-              dropoffLatitude: task?.dropoffLatitude,
-              dropoffLongitude: task?.dropoffLongitude,
-              totalAmount: task?.totalAmount,
-              paymentMethod: task?.paymentMethod,
-              status: 'ASSIGNED',
-            },
-            pickup: {
-              address: task?.pickupAddress,
-              latitude: task?.pickupLatitude || 0,
-              longitude: task?.pickupLongitude || 0,
-            },
-            matchId: match.id,
-            distanceKm: match.distanceKm,
-            estimatedArrival: match.estimatedArrival,
-            expiresAt: match.expiresAt?.toISOString(),
+        pickup: {
+          address: task?.pickupAddress,
+          latitude: task?.pickupLatitude || 0,
+          longitude: task?.pickupLongitude || 0,
+        },
+        matchId: match.id,
+        distanceKm: match.distanceKm,
+        estimatedArrival: match.estimatedArrival,
+        expiresAt: match.expiresAt?.toISOString(),
+      },
+    };
+
+    // Attempt socket emission with retry (3 attempts, 1s delay)
+    const maxRetries = 3;
+    const retryDelayMs = 1000;
+    let notificationSucceeded = false;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await fetch(`http://localhost:${socketPort}/emit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Key': internalKey,
           },
-        }),
+          body: JSON.stringify(payload),
+        });
+
+        if (response.ok) {
+          notificationSucceeded = true;
+          console.log(`[Dispatch] Socket notification sent to rider ${match.riderId} about task ${taskId} (attempt ${attempt})`);
+          break;
+        }
+
+        // Non-OK response — might be temporary server issue
+        console.warn(
+          `[Dispatch] Socket emission returned ${response.status} for rider ${match.riderId}, task ${taskId} (attempt ${attempt}/${maxRetries})`
+        );
+
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        }
+      } catch (error) {
+        // Network error — service might be temporarily unavailable
+        console.warn(
+          `[Dispatch] Socket emission failed for rider ${match.riderId}, task ${taskId} (attempt ${attempt}/${maxRetries}):`,
+          error instanceof Error ? error.message : error
+        );
+
+        if (attempt < maxRetries) {
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+        }
+      }
+    }
+
+    // Update the match record with the notification result
+    if (notificationSucceeded) {
+      await db.dispatchMatch.update({
+        where: { id: match.id },
+        data: {
+          notificationSent: true,
+          notificationSentAt: new Date(),
+        },
       });
-      console.log(`[Dispatch] Socket notification sent to rider ${match.riderId} about task ${taskId}`);
-    } catch (error) {
-      // Socket service might not be running - don't fail the dispatch
-      console.log(`[Dispatch] Socket notification skipped for rider ${match.riderId} (service unavailable)`);
+    } else {
+      // All retries failed — mark notificationSent as false so the
+      // periodic processExpiredMatches() can re-attempt notification
+      await db.dispatchMatch.update({
+        where: { id: match.id },
+        data: {
+          notificationSent: false,
+        },
+      });
+      console.error(
+        `[Dispatch] All ${maxRetries} socket emission attempts failed for rider ${match.riderId}, task ${taskId}. Match added to retry queue.`
+      );
     }
   }
 
@@ -481,13 +528,100 @@ export class DispatchService {
 
   /**
    * Handle case when no riders are available
+   * Updates task status to SEARCHING (keeps it eligible for future matching)
+   * and notifies the client about the delay
    */
   private static async handleNoRidersAvailable(taskId: string): Promise<void> {
-    // Could implement:
-    // 1. Notify client about delay
-    // 2. Expand search radius
-    // 3. Schedule for retry later
     console.log(`[Dispatch] No riders available for task ${taskId}`);
+
+    try {
+      // Get current task status
+      const task = await db.task.findUnique({
+        where: { id: taskId },
+        select: { status: true, clientId: true, taskNumber: true },
+      });
+
+      if (!task) {
+        console.error(`[Dispatch] Task ${taskId} not found when handling no riders`);
+        return;
+      }
+
+      // If task is in MATCHING status, move it to SEARCHING so it stays eligible
+      // for the periodic expired match processor to retry
+      if (task.status === TaskStatus.MATCHING || task.status === TaskStatus.SEARCHING) {
+        await db.task.update({
+          where: { id: taskId },
+          data: {
+            status: TaskStatus.SEARCHING,
+          },
+        });
+      }
+
+      // Notify the client about the delay via socket
+      await this.notifyClient(taskId, task.clientId, {
+        event: 'dispatch:delay',
+        data: {
+          taskId,
+          taskNumber: task.taskNumber,
+          status: 'SEARCHING',
+          message: 'We are searching for available riders. Please wait a moment.',
+          reason: 'NO_RIDERS_AVAILABLE',
+        },
+      });
+
+      // Create DB notification for the client about the searching status
+      try {
+        await sendSearchingNotification(task.clientId, taskId, task.taskNumber || taskId);
+      } catch (notifError) {
+        console.error(`[Dispatch] Failed to send SEARCHING notification for task ${taskId}:`, notifError);
+      }
+
+      // Create audit log
+      await db.auditLog.create({
+        data: {
+          actorType: 'SYSTEM',
+          taskId,
+          action: 'DISPATCH_NO_RIDERS',
+          entityType: 'Task',
+          entityId: taskId,
+          description: `No riders available for task ${task.taskNumber}, status set to SEARCHING`,
+          source: 'SYSTEM',
+        },
+      });
+    } catch (error) {
+      console.error(`[Dispatch] Error handling no riders for task ${taskId}:`, error);
+    }
+  }
+
+  /**
+   * Notify the client about dispatch status via socket emission
+   * Emits an event to the client's user room through the realtime service
+   */
+  private static async notifyClient(
+    taskId: string,
+    clientId: string,
+    payload: { event: string; data: Record<string, unknown> }
+  ): Promise<void> {
+    try {
+      const socketPort = process.env.SOCKET_PORT || '3002';
+      const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
+      await fetch(`http://localhost:${socketPort}/emit`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Key': internalKey,
+        },
+        body: JSON.stringify({
+          room: `user:${clientId}`,
+          event: payload.event,
+          data: payload.data,
+        }),
+      });
+      console.log(`[Dispatch] Client notification sent for task ${taskId}, event: ${payload.event}`);
+    } catch (error) {
+      // Socket service might not be running - don't fail the dispatch
+      console.log(`[Dispatch] Client notification skipped for task ${taskId} (service unavailable)`);
+    }
   }
 
   /**
@@ -497,6 +631,11 @@ export class DispatchService {
     taskId: string,
     reason: string
   ): Promise<void> {
+    const task = await db.task.findUnique({
+      where: { id: taskId },
+      select: { clientId: true, taskNumber: true },
+    });
+
     await db.$transaction([
       db.task.update({
         where: { id: taskId },
@@ -515,45 +654,291 @@ export class DispatchService {
           entityType: 'Task',
           entityId: taskId,
           description: `Task auto-cancelled: ${reason}`,
+          source: 'SYSTEM',
         },
       }),
     ]);
 
-    // Notify client
+    // Notify client via socket about the cancellation
+    if (task) {
+      await this.notifyClient(taskId, task.clientId, {
+        event: 'task:cancelled',
+        data: {
+          taskId,
+          taskNumber: task.taskNumber,
+          reason: 'NO_RIDER_AVAILABLE',
+          message: 'Your task has been cancelled because no rider was available.',
+        },
+      });
+
+      // Create DB notification for the client about the cancellation
+      try {
+        await sendTaskUpdateNotification(
+          task.clientId,
+          taskId,
+          task.taskNumber || taskId,
+          'CANCELLED'
+        );
+      } catch (notifError) {
+        console.error(`[Dispatch] Failed to send CANCELLED notification for task ${taskId}:`, notifError);
+      }
+    }
+
     console.log(`[Dispatch] Task ${taskId} auto-cancelled: ${reason}`);
   }
 
   /**
-   * Check and process expired matches (run periodically)
+   * Re-attempt notification for matches where notification failed.
+   * Called by processExpiredMatches() as Step 0 before processing expired matches.
+   * 
+   * Finds PENDING matches where notificationSent is false and the match
+   * hasn't expired yet, then re-attempts the socket emission.
+   * 
+   * @returns Number of matches re-notified
    */
-  static async processExpiredMatches(): Promise<number> {
-    const expiredMatches = await db.dispatchMatch.findMany({
-      where: {
-        status: DispatchMatchStatus.PENDING,
-        expiresAt: { lt: new Date() },
-      },
-    });
+  private static async retryFailedNotifications(): Promise<number> {
+    let retriedCount = 0;
 
-    for (const match of expiredMatches) {
-      await this.expireMatch(match.id);
-      
-      // Try to reassign
-      const task = await db.task.findUnique({
-        where: { id: match.taskId },
+    try {
+      // Find PENDING matches where notification was never sent
+      const failedNotificationMatches = await db.dispatchMatch.findMany({
+        where: {
+          status: DispatchMatchStatus.PENDING,
+          notificationSent: false,
+          // Only retry for matches that haven't expired yet
+          expiresAt: { gt: new Date() },
+        },
       });
 
-      if (task && (task.status === TaskStatus.SEARCHING || task.status === TaskStatus.MATCHING)) {
-        await this.findAndAssign({
-          taskId: task.id,
-          taskType: task.taskType,
-          pickupLatitude: task.pickupLatitude || 0,
-          pickupLongitude: task.pickupLongitude || 0,
-          excludeRiderIds: [match.riderId],
-        });
+      for (const match of failedNotificationMatches) {
+        try {
+          console.log(
+            `[Dispatch] Re-attempting notification for match ${match.id}, rider ${match.riderId}, task ${match.taskId}`
+          );
+          await this.notifyRider(match, match.taskId);
+          retriedCount++;
+        } catch (error) {
+          console.error(
+            `[Dispatch] Failed to re-notify match ${match.id}:`,
+            error instanceof Error ? error.message : error
+          );
+        }
       }
+
+      if (retriedCount > 0) {
+        console.log(`[Dispatch] Re-notified ${retriedCount} matches with failed notifications`);
+      }
+    } catch (error) {
+      console.error('[Dispatch] Error in retryFailedNotifications:', error);
     }
 
-    return expiredMatches.length;
+    return retriedCount;
+  }
+
+  /**
+   * Check and process expired matches (run periodically via cron or scheduler)
+   * 
+   * This method finds all PENDING matches that have passed their expiresAt timestamp,
+   * marks them as EXPIRED, and attempts to reassign the task to a different rider.
+   * If no riders are available after exhausting retries, the task may be auto-cancelled.
+   * 
+   * Also finds tasks stuck in MATCHING or SEARCHING status with no active pending matches,
+   * and re-triggers the dispatch flow.
+   * 
+   * Step 0: Re-attempt notification for PENDING matches where notificationSent=false.
+   * 
+   * @returns Number of expired matches processed
+   */
+  static async processExpiredMatches(): Promise<number> {
+    let processedCount = 0;
+
+    try {
+      // Step 0: Re-attempt failed notifications before processing expired matches
+      await this.retryFailedNotifications();
+
+      // Step 1: Find and expire all PENDING matches past their timeout
+      const expiredMatches = await db.dispatchMatch.findMany({
+        where: {
+          status: DispatchMatchStatus.PENDING,
+          expiresAt: { lt: new Date() },
+        },
+        include: {
+          task: {
+            select: {
+              id: true,
+              taskNumber: true,
+              status: true,
+              taskType: true,
+              pickupLatitude: true,
+              pickupLongitude: true,
+              clientId: true,
+            },
+          },
+        },
+      });
+
+      for (const match of expiredMatches) {
+        try {
+          // Expire the match
+          await this.expireMatch(match.id);
+
+          // Create audit log for the expiry
+          await db.auditLog.create({
+            data: {
+              actorType: 'SYSTEM',
+              taskId: match.taskId,
+              action: 'DISPATCH_MATCH_EXPIRED',
+              entityType: 'DispatchMatch',
+              entityId: match.id,
+              description: `Dispatch match expired for rider on task ${match.task?.taskNumber || match.taskId}`,
+              source: 'SYSTEM',
+              metadata: JSON.stringify({
+                riderId: match.riderId,
+                matchScore: match.matchScore,
+                retryCount: match.retryCount,
+              }),
+            },
+          });
+
+          // Try to reassign if task is still in a matching state
+          const task = match.task;
+          if (task && (task.status === TaskStatus.SEARCHING || task.status === TaskStatus.MATCHING)) {
+            // Count how many expired/rejected matches this task has had
+            const failedMatchCount = await db.dispatchMatch.count({
+              where: {
+                taskId: task.id,
+                status: { in: [DispatchMatchStatus.EXPIRED, DispatchMatchStatus.REJECTED] },
+              },
+            });
+
+            if (failedMatchCount < DISPATCH_CONFIG.maxRetryAttempts) {
+              // Notify client that we're still searching
+              await this.notifyClient(task.id, task.clientId, {
+                event: 'dispatch:retry',
+                data: {
+                  taskId: task.id,
+                  taskNumber: task.taskNumber,
+                  message: 'Previous rider did not respond. Searching for another rider...',
+                  attempt: failedMatchCount + 1,
+                  maxAttempts: DISPATCH_CONFIG.maxRetryAttempts,
+                },
+              });
+
+              // Create DB notification for the client about the reassignment
+              try {
+                await sendDispatchReassignedNotification(
+                  task.clientId,
+                  task.id,
+                  task.taskNumber || task.id,
+                  'Previous rider did not respond. Searching for another rider...'
+                );
+              } catch (notifError) {
+                console.error(`[Dispatch] Failed to send REASSIGNED notification for task ${task.id}:`, notifError);
+              }
+
+              await this.findAndAssign({
+                taskId: task.id,
+                taskType: task.taskType,
+                pickupLatitude: task.pickupLatitude || 0,
+                pickupLongitude: task.pickupLongitude || 0,
+                excludeRiderIds: [match.riderId],
+              });
+            } else {
+              // Max retries reached - auto-cancel
+              await this.autoCancelTask(task.id, 'Max dispatch attempts reached - all riders expired or rejected');
+
+              // Notify client about cancellation
+              await this.notifyClient(task.id, task.clientId, {
+                event: 'dispatch:cancelled',
+                data: {
+                  taskId: task.id,
+                  taskNumber: task.taskNumber,
+                  message: 'Sorry, we could not find an available rider. Your task has been cancelled.',
+                  reason: 'MAX_RETRIES_EXCEEDED',
+                },
+              });
+            }
+          }
+
+          processedCount++;
+        } catch (error) {
+          console.error(`[Dispatch] Error processing expired match ${match.id}:`, error);
+          // Continue processing other matches
+        }
+      }
+
+      // Step 2: Find tasks stuck in MATCHING/SEARCHING with no active pending matches
+      // These are tasks where all matches may have been expired/rejected but no new
+      // dispatch was triggered (edge case during service restart, etc.)
+      const stuckTasks = await db.task.findMany({
+        where: {
+          status: { in: [TaskStatus.MATCHING, TaskStatus.SEARCHING] },
+          matchingStartedAt: { lt: new Date(Date.now() - 60000) }, // stuck for at least 1 minute
+        },
+        select: {
+          id: true,
+          taskNumber: true,
+          taskType: true,
+          pickupLatitude: true,
+          pickupLongitude: true,
+          clientId: true,
+          matchingStartedAt: true,
+        },
+      });
+
+      for (const task of stuckTasks) {
+        // Check if there are any active pending matches for this task
+        const activeMatches = await db.dispatchMatch.count({
+          where: {
+            taskId: task.id,
+            status: DispatchMatchStatus.PENDING,
+          },
+        });
+
+        if (activeMatches === 0) {
+          console.log(`[Dispatch] Found stuck task ${task.taskNumber} with no active matches, re-triggering dispatch`);
+
+          // Count total failed attempts
+          const failedMatchCount = await db.dispatchMatch.count({
+            where: {
+              taskId: task.id,
+              status: { in: [DispatchMatchStatus.EXPIRED, DispatchMatchStatus.REJECTED] },
+            },
+          });
+
+          if (failedMatchCount < DISPATCH_CONFIG.maxRetryAttempts) {
+            await this.findAndAssign({
+              taskId: task.id,
+              taskType: task.taskType,
+              pickupLatitude: task.pickupLatitude || 0,
+              pickupLongitude: task.pickupLongitude || 0,
+            });
+            processedCount++;
+          } else {
+            await this.autoCancelTask(task.id, 'Task stuck in matching - max dispatch attempts exceeded');
+
+            await this.notifyClient(task.id, task.clientId, {
+              event: 'dispatch:cancelled',
+              data: {
+                taskId: task.id,
+                taskNumber: task.taskNumber,
+                message: 'Sorry, we could not find an available rider. Your task has been cancelled.',
+                reason: 'STUCK_TASK_MAX_RETRIES',
+              },
+            });
+            processedCount++;
+          }
+        }
+      }
+
+      if (processedCount > 0) {
+        console.log(`[Dispatch] Processed ${processedCount} expired/stuck dispatch entries`);
+      }
+    } catch (error) {
+      console.error('[Dispatch] Error in processExpiredMatches:', error);
+    }
+
+    return processedCount;
   }
 
   /**

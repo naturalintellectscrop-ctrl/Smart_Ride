@@ -1,265 +1,500 @@
 // ============================================
-// SMART RIDE MOBILE - SOCKET SERVICE
+// SMART RIDE WEB - SOCKET SERVICE
 // ============================================
+// Production-ready socket.io client for Next.js web context.
+// - Singleton pattern (prevents duplicate connections)
+// - Exponential backoff reconnect
+// - Proper listener cleanup on disconnect
+// - Event names match backend realtime-service emissions
+// - Connects through Caddy gateway via XTransformPort
 
 import { io, Socket } from 'socket.io-client';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { API_CONFIG, STORAGE_KEYS } from '@/constants';
-import { SOCKET_URL } from '@/config/env';
-import { Task, TaskStatus } from '@/types';
 
-// Socket event types
-interface SocketEventMap {
-  // Connection events
-  connect: () => void;
-  disconnect: (reason: string) => void;
-  error: (error: Error) => void;
-  
-  // Task events
-  'task:created': (task: Task) => void;
-  'task:assigned': (data: { taskId: string; riderId: string }) => void;
-  'task:accepted': (data: { taskId: string }) => void;
-  'task:status': (data: { taskId: string; status: TaskStatus }) => void;
-  'task:cancelled': (data: { taskId: string; reason: string }) => void;
-  'task:completed': (data: { taskId: string }) => void;
-  
-  // Location events
-  'location:update': (data: {
-    riderId: string;
-    latitude: number;
-    longitude: number;
-    heading?: number;
-    speed?: number;
-  }) => void;
-  
-  // Driver specific events
-  'driver:request': (data: {
-    task: Task;
-    pickup: { latitude: number; longitude: number; address: string };
-    expiresAt: string;
-  }) => void;
-  'driver:request:expired': (data: { taskId: string }) => void;
-  
-  // Order events
-  'order:status': (data: { orderId: string; status: string }) => void;
-  
-  // Chat events
-  'message:new': (data: { conversationId: string; message: any }) => void;
-  
-  // SOS events
-  'sos:alert': (data: { sosId: string; type: string; location: any }) => void;
+// ============================================
+// TYPES
+// ============================================
+
+/** Task status values matching backend enum */
+export type TaskStatus =
+  | 'CREATED'
+  | 'MATCHING'
+  | 'ASSIGNED'
+  | 'RIDER_ACCEPTED'
+  | 'IN_PROGRESS'
+  | 'ARRIVED_AT_PICKUP'
+  | 'DELIVERING'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'FAILED';
+
+/** Minimal Task shape for socket payloads */
+export interface SocketTask {
+  id: string;
+  status: TaskStatus;
+  [key: string]: unknown;
 }
 
+/** Location data from rider/driver */
+export interface LocationData {
+  riderId: string;
+  latitude: number;
+  longitude: number;
+  speed?: number;
+  heading?: number;
+  battery?: number;
+  timestamp?: string;
+}
+
+/** Driver dispatch request payload */
+export interface DriverRequestData {
+  task: SocketTask;
+  matchId?: string;
+  pickup: { latitude: number; longitude: number; address: string };
+  expiresAt: string;
+}
+
+/** Task status update payload */
+export interface TaskStatusUpdateData {
+  taskId: string;
+  status: TaskStatus;
+  metadata?: unknown;
+  timestamp?: string;
+}
+
+/** Rider task matched payload */
+export interface RiderTaskMatchedData {
+  taskId: string;
+  riderId: string;
+  matchId?: string;
+  timestamp?: string;
+}
+
+/** Notification payload */
+export interface NotificationData {
+  type: string;
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+  timestamp?: string;
+}
+
+/** Connection established payload */
+export interface ConnectionEstablishedData {
+  socketId: string;
+  userId: string;
+  timestamp: string;
+}
+
+/** Socket event map — keys match what the *backend emits* */
+export interface SocketEventMap {
+  // Connection lifecycle
+  connect: undefined;
+  disconnect: string; // reason
+  'connection:established': ConnectionEstablishedData;
+
+  // Task events (emitted by backend)
+  'task:status:update': TaskStatusUpdateData;
+  'rider:task:matched': RiderTaskMatchedData;
+
+  // Location events (emitted by backend)
+  'rider:location:update': LocationData;
+
+  // Dispatch events (emitted by backend)
+  'driver:request': DriverRequestData;
+
+  // General notification (emitted by backend)
+  notification: NotificationData;
+}
+
+/** Event callback type */
+type EventCallback<T> = (data: T) => void;
+
+// ============================================
+// CONFIGURATION
+// ============================================
+
+const SOCKET_PORT = 3001;
+const TOKEN_STORAGE_KEY = 'smart_ride_auth_token';
+
+// Exponential backoff settings
+const INITIAL_RECONNECT_DELAY = 1000; // 1s
+const MAX_RECONNECT_DELAY = 30000; // 30s
+const RECONNECT_MULTIPLIER = 2;
+
+// ============================================
+// SOCKET SERVICE CLASS (Singleton)
+// ============================================
+
 class SocketService {
+  private static instance: SocketService | null = null;
   private socket: Socket | null = null;
-  private isConnected: boolean = false;
-  private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5;
+  private isConnected = false;
+  private isConnecting = false;
+  private currentToken: string | null = null;
+
+  // Listener management
   private listeners: Map<string, Set<(...args: unknown[]) => void>> = new Map();
 
-  constructor() {
-    this.connect = this.connect.bind(this);
-    this.disconnect = this.disconnect.bind(this);
+  // Reconnect backoff state
+  private reconnectAttempts = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private intentionalDisconnect = false;
+
+  /** Private constructor — use getInstance() */
+  private constructor() {}
+
+  /** Get the singleton instance */
+  static getInstance(): SocketService {
+    if (!SocketService.instance) {
+      SocketService.instance = new SocketService();
+    }
+    return SocketService.instance;
   }
 
-  // Get socket URL from config
-  private getSocketUrl(): string {
-    // Use SOCKET_URL from env config (production URL without /api)
-    return SOCKET_URL;
-  }
+  // ------------------------------------------
+  // PUBLIC API
+  // ------------------------------------------
 
-  // Connect to socket server
-  async connect(userId?: string, role?: string): Promise<void> {
-    if (this.socket?.connected) {
+  /** Connect to the realtime service with an auth token */
+  connect(token: string, options?: { forceReconnect?: boolean }): void {
+    if (!options?.forceReconnect) {
+      if (this.socket?.connected) {
+        console.log('[Socket] Already connected, skipping');
+        return;
+      }
+      if (this.isConnecting) {
+        console.log('[Socket] Connection already in progress, skipping');
+        return;
+      }
+    } else {
+      // Force reconnect: tear down existing connection first
+      console.log('[Socket] Force reconnect requested');
+      this.clearReconnectTimer();
+      if (this.socket) {
+        this.socket.removeAllListeners();
+        this.socket.disconnect();
+        this.socket = null;
+      }
+      this.isConnected = false;
+      this.isConnecting = false;
+    }
+
+    if (!token) {
+      console.warn('[Socket] No auth token provided, skipping connection');
       return;
     }
 
-    const token = await AsyncStorage.getItem(STORAGE_KEYS.authToken);
-    
-    // Don't warn if no token - user may not be logged in yet
-    if (!token) {
-      console.log('No auth token found, skipping socket connection');
-      return;
+    this.intentionalDisconnect = false;
+    this.currentToken = token;
+    this.isConnecting = true;
+
+    // Persist token to localStorage for reconnection
+    try {
+      localStorage.setItem(TOKEN_STORAGE_KEY, token);
+    } catch {
+      // localStorage may be unavailable (SSR, private mode)
     }
 
     const socketUrl = this.getSocketUrl();
-    
-    console.log('Connecting to socket:', socketUrl);
-    
-    try {
-      this.socket = io(socketUrl, {
-        transports: ['websocket', 'polling'], // Fallback to polling
-        auth: { token },
-        query: { userId, role },
-        reconnection: true,
-        reconnectionAttempts: this.maxReconnectAttempts,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 10000, // 10 second connection timeout
-      });
 
-      this.setupEventHandlers();
-    } catch (error) {
-      console.error('Failed to initialize socket:', error);
-    }
+    console.log('[Socket] Connecting to:', socketUrl, 'with XTransformPort:', SOCKET_PORT);
+
+    this.socket = io(socketUrl, {
+      path: '/socket.io',
+      transports: ['websocket', 'polling'],
+      query: { XTransformPort: String(SOCKET_PORT) },
+      auth: { token },
+      reconnection: false, // We handle reconnection ourselves with backoff
+      timeout: 10000,
+    });
+
+    this.setupEventHandlers();
   }
 
-  // Disconnect from socket server
+  /** Disconnect from the realtime service */
   disconnect(): void {
+    this.intentionalDisconnect = true;
+    this.clearReconnectTimer();
+    this.reconnectAttempts = 0;
+    this.currentToken = null;
+
     if (this.socket) {
+      this.socket.removeAllListeners();
       this.socket.disconnect();
       this.socket = null;
-      this.isConnected = false;
-      this.listeners.clear();
+    }
+
+    this.isConnected = false;
+    this.isConnecting = false;
+
+    // Clear all local listeners on intentional disconnect
+    this.listeners.clear();
+
+    try {
+      localStorage.removeItem(TOKEN_STORAGE_KEY);
+    } catch {
+      // ignore
     }
   }
 
-  // Check if connected
-  isSocketConnected(): boolean {
+  /** Check if currently connected */
+  isConnectedToSocket(): boolean {
     return this.isConnected;
   }
 
-  // Setup socket event handlers
-  private setupEventHandlers(): void {
-    if (!this.socket) return;
-
-    this.socket.on('connect', () => {
-      console.log('Socket connected');
-      this.isConnected = true;
-      this.reconnectAttempts = 0;
-      this.emitLocal('connect', undefined);
-    });
-
-    this.socket.on('disconnect', (reason) => {
-      console.log('Socket disconnected:', reason);
-      this.isConnected = false;
-      this.emitLocal('disconnect', reason);
-    });
-
-    this.socket.on('connect_error', (error) => {
-      console.error('Socket connection error:', error.message);
-      this.reconnectAttempts++;
-      this.emitLocal('error', error);
-    });
-
-    // Task events
-    this.socket.on('task:created', (data) => this.emitLocal('task:created', data));
-    this.socket.on('task:assigned', (data) => this.emitLocal('task:assigned', data));
-    this.socket.on('task:accepted', (data) => this.emitLocal('task:accepted', data));
-    this.socket.on('task:status', (data) => this.emitLocal('task:status', data));
-    this.socket.on('task:cancelled', (data) => this.emitLocal('task:cancelled', data));
-    this.socket.on('task:completed', (data) => this.emitLocal('task:completed', data));
-
-    // Location events
-    this.socket.on('location:update', (data) => this.emitLocal('location:update', data));
-
-    // Driver events
-    this.socket.on('driver:request', (data) => this.emitLocal('driver:request', data));
-    this.socket.on('driver:request:expired', (data) => this.emitLocal('driver:request:expired', data));
-
-    // Order events
-    this.socket.on('order:status', (data) => this.emitLocal('order:status', data));
-
-    // Chat events
-    this.socket.on('message:new', (data) => this.emitLocal('message:new', data));
-
-    // SOS events
-    this.socket.on('sos:alert', (data) => this.emitLocal('sos:alert', data));
-  }
-
-  // Subscribe to an event
-  on<K extends keyof SocketEventMap>(event: K, callback: SocketEventMap[K]): () => void {
+  /** Subscribe to a typed event. Returns an unsubscribe function. */
+  on<K extends keyof SocketEventMap>(
+    event: K,
+    callback: EventCallback<SocketEventMap[K]>
+  ): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
-    this.listeners.get(event)!.add(callback);
+    this.listeners.get(event)!.add(callback as (...args: unknown[]) => void);
 
-    // Return unsubscribe function
     return () => {
-      this.listeners.get(event)?.delete(callback);
+      this.off(event, callback);
     };
   }
 
-  // Unsubscribe from an event
-  off<K extends keyof SocketEventMap>(event: K, callback?: SocketEventMap[K]): void {
+  /** Unsubscribe from a typed event */
+  off<K extends keyof SocketEventMap>(
+    event: K,
+    callback?: EventCallback<SocketEventMap[K]>
+  ): void {
     if (callback) {
-      this.listeners.get(event)?.delete(callback);
+      this.listeners.get(event)?.delete(callback as (...args: unknown[]) => void);
     } else {
       this.listeners.delete(event);
     }
   }
 
-  // Emit to local listeners
-  private emitLocal(event: string, data: any): void {
-    const callbacks = this.listeners.get(event);
-    if (callbacks) {
-      callbacks.forEach(callback => callback(data));
-    }
-  }
-
-  // Emit to server
-  emit(event: string, data: any): void {
+  /** Emit a raw event to the server */
+  emit(event: string, data: unknown): void {
     if (this.socket?.connected) {
       this.socket.emit(event, data);
+    } else {
+      console.warn('[Socket] Cannot emit, not connected:', event);
     }
   }
 
-  // Join a room
-  joinRoom(room: string): void {
-    if (this.socket?.connected) {
-      this.socket.emit('join', room);
-    }
-  }
-
-  // Leave a room
-  leaveRoom(room: string): void {
-    if (this.socket?.connected) {
-      this.socket.emit('leave', room);
-    }
-  }
-
-  // Join task room for real-time updates
+  /** Join a task room for real-time updates (matches backend `task:join`) */
   joinTaskRoom(taskId: string): void {
-    this.joinRoom(`task:${taskId}`);
+    if (this.socket?.connected) {
+      this.socket.emit('task:join', taskId);
+    }
   }
 
-  // Leave task room
+  /** Leave a task room (matches backend `task:leave`) */
   leaveTaskRoom(taskId: string): void {
-    this.leaveRoom(`task:${taskId}`);
+    if (this.socket?.connected) {
+      this.socket.emit('task:leave', taskId);
+    }
   }
 
-  // Update location (for drivers)
+  /** Send rider location update (matches backend `rider:location`) */
   updateLocation(data: {
+    riderId: string;
+    taskId?: string;
+    latitude: number;
+    longitude: number;
+    speed?: number;
+    heading?: number;
+    battery?: number;
+  }): void {
+    this.emit('rider:location', data);
+  }
+
+  /** Send driver location update (matches backend `driver:location:update`) */
+  updateDriverLocation(data: {
     latitude: number;
     longitude: number;
     heading?: number;
     speed?: number;
-    batteryLevel?: number;
   }): void {
-    this.emit('location:update', data);
+    this.emit('driver:location:update', data);
   }
 
-  // Accept task request (for drivers)
-  acceptTask(taskId: string): void {
-    this.emit('task:accept', { taskId });
+  /** Try to auto-connect using a stored token (useful on page load) */
+  autoConnect(): boolean {
+    try {
+      const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (token) {
+        this.connect(token);
+        return true;
+      }
+    } catch {
+      // localStorage unavailable
+    }
+    return false;
   }
 
-  // Decline task request (for drivers)
-  declineTask(taskId: string, reason?: string): void {
-    this.emit('task:decline', { taskId, reason });
+  /** Get the underlying Socket instance (for advanced usage) */
+  getSocket(): Socket | null {
+    return this.socket;
   }
 
-  // Send message in conversation
-  sendMessage(conversationId: string, content: string): void {
-    this.emit('message:send', { conversationId, content });
+  // ------------------------------------------
+  // PRIVATE HELPERS
+  // ------------------------------------------
+
+  /** Determine socket URL — same origin so Caddy gateway handles routing */
+  private getSocketUrl(): string {
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+    return '';
   }
 
-  // Trigger SOS
-  triggerSOS(data: { latitude: number; longitude: number; type: string }): void {
-    this.emit('sos:trigger', data);
+  /** Set up socket.io event handlers */
+  private setupEventHandlers(): void {
+    if (!this.socket) return;
+
+    this.socket.on('connect', () => {
+      console.log('[Socket] Connected:', this.socket?.id);
+      this.isConnected = true;
+      this.isConnecting = false;
+      this.reconnectAttempts = 0;
+      this.clearReconnectTimer();
+      this.emitLocal('connect', undefined);
+    });
+
+    this.socket.on('disconnect', (reason) => {
+      console.log('[Socket] Disconnected:', reason);
+      this.isConnected = false;
+      this.isConnecting = false;
+      this.emitLocal('disconnect', reason);
+
+      // Auto-reconnect unless intentionally disconnected
+      if (!this.intentionalDisconnect) {
+        this.scheduleReconnect();
+      }
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('[Socket] Connection error:', error.message);
+      this.isConnected = false;
+      this.isConnecting = false;
+      this.scheduleReconnect();
+    });
+
+    // Backend-emitted events
+    this.socket.on('connection:established', (data: ConnectionEstablishedData) => {
+      this.emitLocal('connection:established', data);
+    });
+
+    this.socket.on('task:status:update', (data: TaskStatusUpdateData) => {
+      this.emitLocal('task:status:update', data);
+    });
+
+    this.socket.on('rider:task:matched', (data: RiderTaskMatchedData) => {
+      this.emitLocal('rider:task:matched', data);
+    });
+
+    this.socket.on('rider:location:update', (data: LocationData) => {
+      this.emitLocal('rider:location:update', data);
+    });
+
+    this.socket.on('driver:request', (data: DriverRequestData) => {
+      this.emitLocal('driver:request', data);
+    });
+
+    this.socket.on('notification', (data: NotificationData) => {
+      this.emitLocal('notification', data);
+    });
+  }
+
+  /** Emit to local listeners */
+  private emitLocal(event: string, data: unknown): void {
+    const callbacks = this.listeners.get(event);
+    if (callbacks) {
+      callbacks.forEach((cb) => {
+        try {
+          cb(data);
+        } catch (err) {
+          console.error(`[Socket] Listener error for "${event}":`, err);
+        }
+      });
+    }
+  }
+
+  /** Schedule a reconnect attempt with exponential backoff */
+  private scheduleReconnect(): void {
+    if (this.intentionalDisconnect) return;
+    if (this.reconnectTimer) return; // Already scheduled
+
+    this.reconnectAttempts++;
+    const delay = Math.min(
+      INITIAL_RECONNECT_DELAY * Math.pow(RECONNECT_MULTIPLIER, this.reconnectAttempts - 1),
+      MAX_RECONNECT_DELAY
+    );
+
+    console.log(
+      `[Socket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`
+    );
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.attemptReconnect();
+    }, delay);
+  }
+
+  /** Attempt a single reconnect */
+  private attemptReconnect(): void {
+    if (this.intentionalDisconnect) return;
+    if (this.socket?.connected) return;
+
+    // Get token: prefer in-memory, fall back to localStorage
+    const token = this.currentToken || this.getStoredToken();
+    if (!token) {
+      console.warn('[Socket] No token available for reconnect, giving up');
+      return;
+    }
+
+    console.log('[Socket] Attempting reconnect...');
+
+    // Clean up old socket before reconnecting (preserve listeners map)
+    if (this.socket) {
+      this.socket.removeAllListeners();
+      this.socket.disconnect();
+      this.socket = null;
+    }
+
+    this.connect(token);
+  }
+
+  /** Get stored token from localStorage */
+  private getStoredToken(): string | null {
+    try {
+      return localStorage.getItem(TOKEN_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  }
+
+  /** Clear the reconnect timer */
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  /** Clean up socket reference. Does NOT clear the listeners map so re-subscriptions persist. */
+  private cleanupSocket(): void {
+    if (this.socket) {
+      this.socket.removeAllListeners();
+    }
+    this.socket = null;
+    this.isConnected = false;
+    this.isConnecting = false;
   }
 }
 
-// Export singleton instance
-export const socketService = new SocketService();
+// ============================================
+// EXPORTS
+// ============================================
+
+/** Singleton instance — always use this */
+export const socketService = SocketService.getInstance();
 export default socketService;

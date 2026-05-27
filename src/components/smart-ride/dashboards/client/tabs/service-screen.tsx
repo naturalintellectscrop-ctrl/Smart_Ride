@@ -38,6 +38,7 @@ import {
   TaskRequest 
 } from '@/lib/api/client-api';
 import { getServiceColors } from '@/lib/theme/smart-ride-theme';
+import { useUser } from '@/components/smart-ride/context/user-context';
 
 // ============================================
 // Types
@@ -83,7 +84,7 @@ interface VehicleOption {
 // Constants
 // ============================================
 
-const DEMO_CLIENT_ID = 'client_demo_001';
+// SECURITY: Use authenticated user ID from context instead of hardcoded demo ID
 
 const VEHICLE_CONFIG: Record<VehicleType, {
   name: string;
@@ -239,6 +240,10 @@ interface ServiceScreenProps {
 
 export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
   const serviceColors = getServiceColors(serviceType);
+  const { user } = useUser();
+  
+  // SECURITY: Get client ID from authenticated user context
+  const clientId = user?.id || '';
   
   // Booking state
   const [step, setStep] = useState<BookingStep>('location');
@@ -354,7 +359,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
     try {
       const taskData: TaskRequest = {
         taskType: selectedVehicle === 'moto' ? 'SMART_BODA_RIDE' : 'SMART_CAR_RIDE',
-        clientId: DEMO_CLIENT_ID,
+        clientId,
         pickupAddress: pickup.address,
         dropoffAddress: destination.address,
         distanceKm: route.distanceKm,
@@ -434,7 +439,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
     return (
       <SOSEmergencyScreen
         userType="CLIENT"
-        userId={DEMO_CLIENT_ID}
+        userId={clientId}
         activeTask={activeTask}
         onClose={() => setShowSOS(false)}
       />

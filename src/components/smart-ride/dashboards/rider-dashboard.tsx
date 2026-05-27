@@ -1,7 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { fetchWithRetry } from '@/lib/api/client-retry';
+import { socketService } from '@/services/socket';
 import { User } from '../types';
 import { NotificationProvider, useNotifications } from '../context/notification-context';
 import { RiderHome } from './tabs/rider-home';
@@ -32,10 +34,76 @@ const tabs: { id: RiderTab; label: string; icon: React.ReactNode }[] = [
   { id: 'profile', label: 'Profile', icon: <UserIcon className="h-5 w-5" /> },
 ];
 
+// Helper to get auth headers
+function getAuthHeaders(): Record<string, string> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
+
 function RiderDashboardContent({ user }: RiderDashboardProps) {
   const [activeTab, setActiveTab] = useState<RiderTab>('home');
   const [isOnline, setIsOnline] = useState(false);
-  const { unreadCount } = useNotifications();
+  const { unreadCount, setUnreadCount } = useNotifications();
+
+  // Fetch unread notification count on mount (with retry)
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const result = await fetchWithRetry('/api/notifications?unreadOnly=true&limit=0&XTransformPort=3000', {
+          headers: getAuthHeaders(),
+          maxRetries: 3,
+        });
+        if (result.ok) {
+          const data = result.data as { pagination?: { total?: number } } | null;
+          // The pagination total gives us the unread count
+          const total = data?.pagination?.total || 0;
+          setUnreadCount(total);
+        }
+      } catch (err) {
+        console.error('Error fetching unread notification count:', err);
+      }
+    };
+
+    fetchUnreadCount();
+  }, [setUnreadCount]);
+
+  // Task state restoration on socket reconnect
+  // When the socket reconnects, refresh notification count.
+  // Each tab (RiderHome, RiderTasks, RiderEarnings) has its own socket-driven
+  // refresh + fallback polling logic that will auto-update their data.
+  useEffect(() => {
+    const handleReconnect = () => {
+      console.log('[RiderDashboard] Socket reconnected, refreshing data');
+      // Refetch notification count on reconnect
+      const fetchUnreadCount = async () => {
+        try {
+          const result = await fetchWithRetry('/api/notifications?unreadOnly=true&limit=0&XTransformPort=3000', {
+            headers: getAuthHeaders(),
+            maxRetries: 3,
+          });
+          if (result.ok) {
+            const data = result.data as { pagination?: { total?: number } } | null;
+            const total = data?.pagination?.total || 0;
+            setUnreadCount(total);
+          }
+        } catch {
+          // Silently fail — tabs handle their own refresh
+        }
+      };
+      fetchUnreadCount();
+    };
+
+    const unsubscribe = socketService.on('connect', handleReconnect);
+    return () => {
+      unsubscribe();
+    };
+  }, [setUnreadCount]);
 
   const handleBellClick = () => {
     setActiveTab('messages');
@@ -113,7 +181,7 @@ function RiderDashboardContent({ user }: RiderDashboardProps) {
 
 export function RiderDashboard({ user }: RiderDashboardProps) {
   return (
-    <NotificationProvider initialUnreadCount={3}>
+    <NotificationProvider initialUnreadCount={0}>
       <RiderDashboardContent user={user} />
     </NotificationProvider>
   );

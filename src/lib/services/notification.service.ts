@@ -236,17 +236,41 @@ export async function sendTaskUpdateNotification(
   status: string
 ): Promise<NotificationResult> {
   const templates: Record<string, { title: string; message: string }> = {
+    SEARCHING: {
+      title: 'Searching for Rider',
+      message: 'We are searching for available riders near you. Please wait a moment.',
+    },
+    MATCHING: {
+      title: 'Matching in Progress',
+      message: 'We are matching you with the best available rider.',
+    },
     ASSIGNED: {
       title: 'Rider Assigned',
       message: 'A rider has been assigned to your request.',
+    },
+    REASSIGNED: {
+      title: 'Rider Reassigned',
+      message: 'Your previous rider was unavailable. A new rider is being assigned to your request.',
     },
     ACCEPTED: {
       title: 'Rider On The Way',
       message: 'Your rider has accepted and is heading to you.',
     },
+    ARRIVING: {
+      title: 'Rider Approaching',
+      message: 'Your rider is approaching the pickup location.',
+    },
     ARRIVED: {
       title: 'Rider Arrived',
       message: 'Your rider has arrived at the pickup location.',
+    },
+    PICKED_UP: {
+      title: 'Picked Up',
+      message: 'Your item has been picked up and the ride is ready to go.',
+    },
+    IN_PROGRESS: {
+      title: 'Trip Started',
+      message: 'Your trip has started. Sit back and enjoy the ride!',
     },
     IN_TRANSIT: {
       title: 'On The Way',
@@ -263,6 +287,10 @@ export async function sendTaskUpdateNotification(
     CANCELLED: {
       title: 'Task Cancelled',
       message: 'Your task has been cancelled.',
+    },
+    FAILED: {
+      title: 'Task Failed',
+      message: 'Your task could not be completed. Please try again or contact support.',
     },
   };
 
@@ -416,6 +444,44 @@ export async function sendSOSAlertNotification(
   );
 
   return { success: true };
+}
+
+// ============================================
+// DISPATCH NOTIFICATION HELPERS
+// ============================================
+
+/**
+ * Send a REASSIGNED notification to the client when a dispatch match expires
+ * and a new rider is being searched for.
+ * Also sends a real-time socket event via the dispatch service.
+ */
+export async function sendDispatchReassignedNotification(
+  clientId: string,
+  taskId: string,
+  taskNumber: string,
+  reason: string
+): Promise<NotificationResult> {
+  return createNotification({
+    userId: clientId,
+    type: 'TASK_UPDATE',
+    title: 'Rider Reassigned',
+    message: reason || 'Your previous rider was unavailable. A new rider is being assigned to your request.',
+    referenceId: taskId,
+    referenceType: 'TASK',
+    data: { taskNumber, status: 'REASSIGNED', reason },
+  });
+}
+
+/**
+ * Send a SEARCHING notification to the client when no riders are available
+ * and the system is actively searching for one.
+ */
+export async function sendSearchingNotification(
+  clientId: string,
+  taskId: string,
+  taskNumber: string
+): Promise<NotificationResult> {
+  return sendTaskUpdateNotification(clientId, taskId, taskNumber, 'SEARCHING');
 }
 
 // ============================================
