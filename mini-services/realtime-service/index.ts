@@ -229,6 +229,11 @@ io.on('connection', (socket) => {
     socket.emit('order:joined', { orderId });
   });
 
+  // Leave order room
+  socket.on('order:leave', (orderId: string) => {
+    socket.leave(`order:${orderId}`);
+  });
+
   // Order status update
   socket.on('order:status', (data: { orderId: string; status: string; metadata?: unknown }) => {
     io.to(`order:${data.orderId}`).emit('order:status:update', {
@@ -238,6 +243,10 @@ io.on('connection', (socket) => {
       timestamp: new Date().toISOString(),
     });
   });
+
+  // Merchant order events - merchant joins their room to receive order notifications
+  // (Already handled by auto-join to user:${userId} room on connection)
+  // The /emit endpoint sends merchant:order:new and merchant:order:cancelled events to user:${merchantUserId}
 
   // ============================================
   // CHAT/MESSAGING

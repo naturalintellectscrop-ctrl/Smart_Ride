@@ -336,6 +336,18 @@ export async function sendOrderUpdateNotification(
       title: 'Order Ready',
       message: 'Your order is ready for pickup. A rider is on the way.',
     },
+    PICKED_UP: {
+      title: 'Order Picked Up',
+      message: 'Your order has been picked up by the rider and is on its way!',
+    },
+    RIDER_ASSIGNED: {
+      title: 'Rider Assigned',
+      message: 'A rider has been assigned to your order.',
+    },
+    IN_TRANSIT: {
+      title: 'Order In Transit',
+      message: 'Your order is on its way to you.',
+    },
     DELIVERED: {
       title: 'Order Delivered',
       message: 'Your order has been delivered. Enjoy!',
@@ -343,6 +355,14 @@ export async function sendOrderUpdateNotification(
     CANCELLED: {
       title: 'Order Cancelled',
       message: 'Your order has been cancelled.',
+    },
+    REJECTED: {
+      title: 'Order Rejected',
+      message: 'The merchant has rejected your order. A refund will be processed if applicable.',
+    },
+    REFUNDED: {
+      title: 'Refund Processed',
+      message: 'A refund for your order has been processed.',
     },
   };
 
