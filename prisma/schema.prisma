@@ -3,9 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -226,19 +225,22 @@ model Merchant {
 }
 
 model MenuItem {
-  id              String      @id @default(cuid())
+  id              String           @id @default(cuid())
   merchantId      String
   name            String
   description     String?
   price           Float
   imageUrl        String?
   category        String?
-  isAvailable     Boolean     @default(true)
+  isAvailable     Boolean          @default(true)
+  stockQuantity   Int?
   preparationTime Int?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  merchant        Merchant    @relation(fields: [merchantId], references: [id], onDelete: Cascade)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  merchant        Merchant         @relation(fields: [merchantId], references: [id], onDelete: Cascade)
   orderItems      OrderItem[]
+  variants        ProductVariant[]
+  reservations    InventoryReservation[]
 
   @@index([merchantId])
   @@index([category])
@@ -1527,6 +1529,226 @@ model PlatformMetrics {
   @@index([date])
 }
 
+// ============================================
+// WALLET MODEL
+// Digital wallet for users, riders, merchants
+// ============================================
+model Wallet {
+  id               String        @id @default(cuid())
+  ownerId          String
+  ownerType        WalletOwnerType
+  balance          Float         @default(0)
+  pendingBalance   Float         @default(0)
+  currency         String        @default("UGX")
+  status           WalletStatus  @default(ACTIVE)
+  totalDeposited   Float         @default(0)
+  totalWithdrawn   Float         @default(0)
+  totalSpent       Float         @default(0)
+  totalReceived    Float         @default(0)
+  lastDepositAt    DateTime?
+  lastWithdrawalAt DateTime?
+  lastTransactionAt DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  transactions     WalletTransaction[]
+
+  @@unique([ownerId, ownerType])
+  @@index([ownerId])
+  @@index([ownerType])
+  @@index([status])
+}
+
+// ============================================
+// WALLET TRANSACTION MODEL
+// Tracks all wallet balance changes
+// ============================================
+model WalletTransaction {
+  id                 String                  @id @default(cuid())
+  walletId           String
+  transactionType    WalletTransactionType
+  amount             Float
+  balanceBefore      Float
+  balanceAfter       Float
+  referenceId        String?
+  referenceType      String?
+  externalReference  String?
+  externalProvider   String?
+  description        String?
+  status             WalletTransactionStatus @default(COMPLETED)
+  metadata           String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  wallet             Wallet                  @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([walletId])
+  @@index([transactionType])
+  @@index([referenceId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+// ============================================
+// CART MODEL
+// Shopping cart for marketplace orders
+// ============================================
+model Cart {
+  id             String    @id @default(cuid())
+  userId         String    @unique
+  merchantId     String?
+  isActive       Boolean   @default(true)
+  lastActivityAt DateTime  @default(now())
+  abandonedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  items          CartItem[]
+
+  @@index([userId])
+  @@index([merchantId])
+  @@index([isActive])
+  @@index([abandonedAt])
+}
+
+// ============================================
+// CART ITEM MODEL
+// Individual items in a shopping cart
+// ============================================
+model CartItem {
+  id            String   @id @default(cuid())
+  cartId        String
+  menuItemId    String
+  productName   String
+  quantity      Int      @default(1)
+  unitPrice     Float
+  totalPrice    Float
+  specialNotes  String?
+  priceSnapshot Float
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  cart          Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+
+  @@index([cartId])
+  @@index([menuItemId])
+  @@index([isActive])
+}
+
+// ============================================
+// PRODUCT VARIANT MODEL
+// Variants for menu items (size, color, etc.)
+// ============================================
+model ProductVariant {
+  id            String   @id @default(cuid())
+  menuItemId    String
+  variantName   String
+  variantValue  String
+  priceModifier Float    @default(0)
+  stockQuantity Int?
+  isAvailable   Boolean  @default(true)
+  sku           String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  menuItem      MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([menuItemId])
+  @@index([isAvailable])
+}
+
+// ============================================
+// INVENTORY RESERVATION MODEL
+// Temporary stock reservations during checkout
+// ============================================
+model InventoryReservation {
+  id          String                     @id @default(cuid())
+  menuItemId  String
+  variantId   String?
+  orderId     String?
+  taskId      String?
+  quantity    Int
+  status      InventoryReservationStatus @default(RESERVED)
+  expiresAt   DateTime
+  releasedAt  DateTime?
+  createdAt   DateTime                   @default(now())
+  updatedAt   DateTime                   @updatedAt
+  menuItem    MenuItem                   @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+
+  @@index([menuItemId])
+  @@index([orderId])
+  @@index([status])
+  @@index([expiresAt])
+}
+
+// ============================================
+// RIDER METRICS MODEL
+// Operational metrics for rider performance
+// ============================================
+model RiderMetrics {
+  id                 String   @id @default(cuid())
+  riderId            String   @unique
+  acceptanceRate     Float    @default(0)
+  cancellationRate   Float    @default(0)
+  completionRate     Float    @default(0)
+  averageRating      Float    @default(0)
+  totalOnlineHours   Float    @default(0)
+  totalTasksOffered  Int      @default(0)
+  totalTasksAccepted Int      @default(0)
+  totalTasksCompleted Int     @default(0)
+  totalTasksCancelled Int     @default(0)
+  lastCalculatedAt   DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([riderId])
+  @@index([acceptanceRate])
+  @@index([averageRating])
+}
+
+// ============================================
+// MERCHANT DOCUMENT MODEL
+// Document management for merchant verification
+// ============================================
+model MerchantDocument {
+  id                String         @id @default(cuid())
+  merchantId        String
+  documentType      String
+  documentName      String
+  documentUrl       String
+  documentSize      Int?
+  status            DocumentStatus @default(PENDING)
+  verifiedAt        DateTime?
+  verifiedBy        String?
+  rejectionReason   String?
+  verificationNotes String?
+  uploadedAt        DateTime       @default(now())
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@index([merchantId])
+  @@index([documentType])
+  @@index([status])
+}
+
+// ============================================
+// PAYMENT STATE TRANSITION MODEL
+// Strict payment state machine audit trail
+// ============================================
+model PaymentStateTransition {
+  id              String        @id @default(cuid())
+  paymentId       String
+  fromStatus      PaymentStatus?
+  toStatus        PaymentStatus
+  triggeredBy     String?
+  triggeredByType String?
+  reason          String?
+  metadata        String?
+  ipAddress       String?
+  createdAt       DateTime      @default(now())
+
+  @@index([paymentId])
+  @@index([fromStatus])
+  @@index([toStatus])
+  @@index([createdAt])
+}
+
 enum UserRole {
   CLIENT
   RIDER
@@ -1969,4 +2191,43 @@ enum OfflineActionStatus {
   SYNCED
   FAILED
   CONFLICT
+}
+
+enum WalletOwnerType {
+  USER
+  RIDER
+  MERCHANT
+  PROVIDER
+}
+
+enum WalletStatus {
+  ACTIVE
+  FROZEN
+  CLOSED
+}
+
+enum WalletTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  PAYMENT
+  REFUND
+  REWARD
+  CASHBACK
+  COMMISSION
+  PAYOUT
+  ADJUSTMENT
+}
+
+enum WalletTransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+enum InventoryReservationStatus {
+  RESERVED
+  CONFIRMED
+  RELEASED
+  EXPIRED
 }
