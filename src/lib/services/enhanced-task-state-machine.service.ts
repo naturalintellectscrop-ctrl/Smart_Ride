@@ -10,6 +10,8 @@
 
 import { db } from '@/lib/db';
 import { TaskStatus, TaskType, RiderRole } from '@prisma/client';
+import { TaskAnalyticsUpdater } from './analytics-updater.service';
+import { FinanceLedgerService } from './finance-ledger.service';
 
 // ============================================
 // UTILITY FUNCTIONS (consolidated from state-machine.ts)
@@ -104,25 +106,27 @@ export function getRemainingTime(startTime: Date, timeoutSeconds: number): numbe
  * Check if a transition is valid (simple check using state machine)
  */
 export function isValidTransition(currentStatus: TaskStatus, newStatus: TaskStatus): boolean {
-  // Simple validation - will be enhanced by the full state machine
+  // Comprehensive validation covering all task types (ride, food delivery,
+  // shopping, item delivery, health delivery) and cancellation from any
+  // active state.
   const VALID_TRANSITIONS: Partial<Record<TaskStatus, TaskStatus[]>> = {
-    [TaskStatus.CREATED]: [TaskStatus.SEARCHING, TaskStatus.MATCHING, TaskStatus.CANCELLED],
+    [TaskStatus.CREATED]: [TaskStatus.SEARCHING, TaskStatus.MATCHING, TaskStatus.ASSIGNED, TaskStatus.REQUESTED, TaskStatus.CANCELLED],
+    [TaskStatus.REQUESTED]: [TaskStatus.SEARCHING, TaskStatus.CANCELLED],
     [TaskStatus.SEARCHING]: [TaskStatus.ASSIGNED, TaskStatus.MATCHING, TaskStatus.CANCELLED, TaskStatus.FAILED],
     [TaskStatus.MATCHING]: [TaskStatus.ASSIGNED, TaskStatus.SEARCHING, TaskStatus.CANCELLED, TaskStatus.FAILED],
-    [TaskStatus.ASSIGNED]: [TaskStatus.ACCEPTED, TaskStatus.MATCHING, TaskStatus.CANCELLED],
+    [TaskStatus.ASSIGNED]: [TaskStatus.ACCEPTED, TaskStatus.IN_PROGRESS, TaskStatus.PICKED_UP, TaskStatus.MATCHING, TaskStatus.CANCELLED],
     [TaskStatus.ACCEPTED]: [TaskStatus.ARRIVING, TaskStatus.ARRIVED, TaskStatus.CANCELLED],
     [TaskStatus.ARRIVING]: [TaskStatus.ARRIVED, TaskStatus.CANCELLED],
     [TaskStatus.ARRIVED]: [TaskStatus.PICKED_UP, TaskStatus.CANCELLED],
-    [TaskStatus.PICKED_UP]: [TaskStatus.IN_PROGRESS, TaskStatus.IN_TRANSIT, TaskStatus.CANCELLED],
-    [TaskStatus.IN_PROGRESS]: [TaskStatus.COMPLETED, TaskStatus.CANCELLED],
+    [TaskStatus.PICKED_UP]: [TaskStatus.IN_PROGRESS, TaskStatus.IN_TRANSIT, TaskStatus.DELIVERED, TaskStatus.CANCELLED],
+    [TaskStatus.IN_PROGRESS]: [TaskStatus.COMPLETED, TaskStatus.IN_TRANSIT, TaskStatus.SEARCHING, TaskStatus.PICKED_UP, TaskStatus.CANCELLED],
     [TaskStatus.IN_TRANSIT]: [TaskStatus.DELIVERED, TaskStatus.CANCELLED],
-    [TaskStatus.DELIVERED]: [TaskStatus.COMPLETED],
+    [TaskStatus.DELIVERED]: [TaskStatus.COMPLETED, TaskStatus.CANCELLED],
     [TaskStatus.COMPLETED]: [TaskStatus.PAID],
     [TaskStatus.PAID]: [TaskStatus.CLOSED],
     [TaskStatus.CANCELLED]: [],
     [TaskStatus.FAILED]: [],
     [TaskStatus.CLOSED]: [],
-    [TaskStatus.REQUESTED]: [TaskStatus.SEARCHING, TaskStatus.CANCELLED],
   };
   
   return VALID_TRANSITIONS[currentStatus]?.includes(newStatus) ?? false;
@@ -197,6 +201,8 @@ const RIDE_TRANSITIONS: TransitionConfig[] = [
 // Food delivery lifecycle: CREATED → RESTAURANT_ACCEPTED → KOT_GENERATED → PREPARING → READY → RIDER_ASSIGNED → PICKED_UP → DELIVERED
 // Note: We map these to existing TaskStatus enum
 const FOOD_DELIVERY_TRANSITIONS: TransitionConfig[] = [
+  { from: TaskStatus.CREATED, to: TaskStatus.MATCHING }, // Order ready, starting dispatch
+  { from: TaskStatus.MATCHING, to: TaskStatus.SEARCHING },
   { from: TaskStatus.CREATED, to: TaskStatus.ASSIGNED }, // Restaurant accepts
   { from: TaskStatus.ASSIGNED, to: TaskStatus.IN_PROGRESS }, // Preparing
   { 
@@ -208,13 +214,27 @@ const FOOD_DELIVERY_TRANSITIONS: TransitionConfig[] = [
     to: TaskStatus.ASSIGNED,
     requiredFields: ['riderId'],
   },
+  { from: TaskStatus.MATCHING, to: TaskStatus.ASSIGNED, requiredFields: ['riderId'] },
   { from: TaskStatus.ASSIGNED, to: TaskStatus.PICKED_UP },
   { from: TaskStatus.PICKED_UP, to: TaskStatus.DELIVERED },
   { from: TaskStatus.DELIVERED, to: TaskStatus.COMPLETED },
+  { from: TaskStatus.COMPLETED, to: TaskStatus.PAID, requiredFields: ['paymentStatus'] },
+  { from: TaskStatus.PAID, to: TaskStatus.CLOSED },
+  // Cancel from any active state
+  {
+    from: [TaskStatus.CREATED, TaskStatus.MATCHING, TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS, TaskStatus.SEARCHING, TaskStatus.PICKED_UP, TaskStatus.DELIVERED],
+    to: TaskStatus.CANCELLED,
+    requiredFields: ['cancellationReason'],
+  },
 ];
 
 // Shopping lifecycle: CREATED → ASSIGNED → IN_PROGRESS (shopping) → PICKED_UP → DELIVERED
 const SHOPPING_TRANSITIONS: TransitionConfig[] = [
+  { 
+    from: TaskStatus.CREATED, 
+    to: TaskStatus.MATCHING, // Order ready, starting dispatch
+  },
+  { from: TaskStatus.MATCHING, to: TaskStatus.SEARCHING },
   { 
     from: TaskStatus.CREATED, 
     to: TaskStatus.SEARCHING, // Looking for shopper
@@ -224,9 +244,19 @@ const SHOPPING_TRANSITIONS: TransitionConfig[] = [
     to: TaskStatus.ASSIGNED,
     requiredFields: ['riderId'],
   },
+  { from: TaskStatus.MATCHING, to: TaskStatus.ASSIGNED, requiredFields: ['riderId'] },
   { from: TaskStatus.ASSIGNED, to: TaskStatus.IN_PROGRESS }, // Shopping in progress
   { from: TaskStatus.IN_PROGRESS, to: TaskStatus.PICKED_UP }, // Items picked up
   { from: TaskStatus.PICKED_UP, to: TaskStatus.DELIVERED },
+  { from: TaskStatus.DELIVERED, to: TaskStatus.COMPLETED },
+  { from: TaskStatus.COMPLETED, to: TaskStatus.PAID, requiredFields: ['paymentStatus'] },
+  { from: TaskStatus.PAID, to: TaskStatus.CLOSED },
+  // Cancel from any active state
+  {
+    from: [TaskStatus.SEARCHING, TaskStatus.MATCHING, TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS, TaskStatus.PICKED_UP, TaskStatus.DELIVERED],
+    to: TaskStatus.CANCELLED,
+    requiredFields: ['cancellationReason'],
+  },
 ];
 
 // Item delivery lifecycle
@@ -245,9 +275,11 @@ const ITEM_DELIVERY_TRANSITIONS: TransitionConfig[] = [
   { from: TaskStatus.PICKED_UP, to: TaskStatus.IN_TRANSIT },
   { from: TaskStatus.IN_TRANSIT, to: TaskStatus.DELIVERED },
   { from: TaskStatus.DELIVERED, to: TaskStatus.COMPLETED },
+  { from: TaskStatus.COMPLETED, to: TaskStatus.PAID, requiredFields: ['paymentStatus'] },
+  { from: TaskStatus.PAID, to: TaskStatus.CLOSED },
   // Cancel from any active state
   { 
-    from: [TaskStatus.MATCHING, TaskStatus.SEARCHING, TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.ARRIVING, TaskStatus.PICKED_UP, TaskStatus.IN_TRANSIT],
+    from: [TaskStatus.MATCHING, TaskStatus.SEARCHING, TaskStatus.ASSIGNED, TaskStatus.ACCEPTED, TaskStatus.ARRIVING, TaskStatus.PICKED_UP, TaskStatus.IN_TRANSIT, TaskStatus.DELIVERED],
     to: TaskStatus.CANCELLED,
     requiredFields: ['cancellationReason'],
   },
@@ -265,6 +297,14 @@ const HEALTH_DELIVERY_TRANSITIONS: TransitionConfig[] = [
   { from: TaskStatus.PICKED_UP, to: TaskStatus.IN_TRANSIT },
   { from: TaskStatus.IN_TRANSIT, to: TaskStatus.DELIVERED },
   { from: TaskStatus.DELIVERED, to: TaskStatus.COMPLETED },
+  { from: TaskStatus.COMPLETED, to: TaskStatus.PAID, requiredFields: ['paymentStatus'] },
+  { from: TaskStatus.PAID, to: TaskStatus.CLOSED },
+  // Cancel from any active state
+  {
+    from: [TaskStatus.SEARCHING, TaskStatus.ASSIGNED, TaskStatus.PICKED_UP, TaskStatus.IN_TRANSIT, TaskStatus.DELIVERED],
+    to: TaskStatus.CANCELLED,
+    requiredFields: ['cancellationReason'],
+  },
 ];
 
 // Get transitions for task type
@@ -514,6 +554,13 @@ export class EnhancedTaskStateMachine {
         await transitionConfig.afterTransition(result.task, context);
       }
 
+      // Fire-and-forget analytics updates
+      if (!result.idempotent) {
+        this.updateAnalytics(toStatus, result.task, context).catch(err =>
+          console.error('[StateMachine] Analytics update failed:', err)
+        );
+      }
+
       return { 
         success: true, 
         task: result.task, 
@@ -572,6 +619,104 @@ export class EnhancedTaskStateMachine {
         return 'ADMIN';
       default:
         return 'SYSTEM';
+    }
+  }
+
+  /**
+   * Fire-and-forget analytics updates based on the new task status.
+   * Calls the appropriate TaskAnalyticsUpdater methods.
+   * This method MUST never throw — all calls are already wrapped in
+   * try/catch inside TaskAnalyticsUpdater, but we also catch here as
+   * an extra safety net.
+   */
+  private static async updateAnalytics(
+    toStatus: TaskStatus,
+    task: any,
+    context: TransitionContext
+  ): Promise<void> {
+    try {
+      const taskType = task.taskType as TaskType;
+      const riderId = task.riderId || context.riderId;
+
+      switch (toStatus) {
+        case TaskStatus.ASSIGNED: {
+          // Task assigned to rider
+          const dispatchDurationMs =
+            task.matchingStartedAt && task.assignedAt
+              ? new Date(task.assignedAt).getTime() - new Date(task.matchingStartedAt).getTime()
+              : task.matchingStartedAt
+                ? Date.now() - new Date(task.matchingStartedAt).getTime()
+                : undefined;
+
+          if (riderId) {
+            await TaskAnalyticsUpdater.onTaskAssigned(taskType, riderId, dispatchDurationMs);
+          }
+          break;
+        }
+
+        case TaskStatus.COMPLETED: {
+          // Task completed
+          const taskDurationMs =
+            task.createdAt && task.completedAt
+              ? new Date(task.completedAt).getTime() - new Date(task.createdAt).getTime()
+              : task.createdAt
+                ? Date.now() - new Date(task.createdAt).getTime()
+                : undefined;
+
+          if (riderId) {
+            await TaskAnalyticsUpdater.onTaskCompleted(
+              taskType,
+              riderId,
+              taskDurationMs,
+              task.riderEarnings ?? undefined
+            );
+          }
+
+          // Fire-and-forget: Record task completion in the finance ledger
+          // for immutable audit trail and atomic earnings update
+          FinanceLedgerService.recordTaskCompletion(task.id).catch(err =>
+            console.error('[StateMachine] FinanceLedger recordTaskCompletion failed:', err)
+          );
+          break;
+        }
+
+        case TaskStatus.CANCELLED: {
+          // Task cancelled
+          const reason = context.reason || task.cancellationReason || undefined;
+          await TaskAnalyticsUpdater.onTaskCancelled(taskType, reason, riderId || undefined);
+
+          // Fire-and-forget: Record cancellation in the finance ledger
+          // for refund handling and audit trail
+          FinanceLedgerService.recordCancellation(task.id, reason).catch(err =>
+            console.error('[StateMachine] FinanceLedger recordCancellation failed:', err)
+          );
+          break;
+        }
+
+        case TaskStatus.PAID: {
+          // Payment completed for task
+          if (riderId) {
+            await TaskAnalyticsUpdater.onPaymentCompleted(
+              taskType,
+              task.totalAmount ?? 0,
+              task.platformCommission ?? 0,
+              task.riderEarnings ?? 0,
+              riderId,
+              task.clientId
+            );
+          }
+          break;
+        }
+
+        default:
+          // No specific analytics for other statuses
+          break;
+      }
+    } catch (error) {
+      // Extra safety net — should never reach here since TaskAnalyticsUpdater
+      // methods have their own try/catch, but we don't want to propagate
+      // analytics failures under any circumstance.
+      console.error('[StateMachine] updateAnalytics unexpected error:', error);
     }
   }
 

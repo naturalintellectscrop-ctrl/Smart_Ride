@@ -7,10 +7,10 @@ import {
   calculateSurgeMultiplier,
   DEFAULT_SURGE_CONFIG,
 } from '@/lib/marketplace/balance-engine';
-import { 
-  notifySurgeActivation, 
-  warnClientsAboutSurge 
-} from '@/lib/notifications/notification-service';
+import {
+  notifySurgeActivation,
+  warnClientsAboutSurge
+} from '@/lib/services/notification.service';
 
 /**
  * GET /api/marketplace/surge

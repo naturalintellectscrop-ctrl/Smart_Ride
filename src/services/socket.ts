@@ -14,16 +14,23 @@ import { io, Socket } from 'socket.io-client';
 // TYPES
 // ============================================
 
-/** Task status values matching backend enum */
+/** Task status values matching Prisma TaskStatus enum */
 export type TaskStatus =
   | 'CREATED'
+  | 'REQUESTED'
+  | 'SEARCHING'
   | 'MATCHING'
   | 'ASSIGNED'
-  | 'RIDER_ACCEPTED'
+  | 'ACCEPTED'
+  | 'ARRIVED'
+  | 'ARRIVING'
+  | 'PICKED_UP'
   | 'IN_PROGRESS'
-  | 'ARRIVED_AT_PICKUP'
-  | 'DELIVERING'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
   | 'COMPLETED'
+  | 'PAID'
+  | 'CLOSED'
   | 'CANCELLED'
   | 'FAILED';
 

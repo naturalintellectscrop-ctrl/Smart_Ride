@@ -3,7 +3,7 @@ import { getAuthUser } from '@/lib/auth/middleware';
 import {
   getNotificationPreferences,
   updateNotificationPreferences
-} from '@/lib/notifications/notification-service';
+} from '@/lib/services/notification.service';
 
 /**
  * GET /api/notifications/preferences

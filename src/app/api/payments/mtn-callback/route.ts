@@ -1,7 +1,7 @@
 /**
  * MTN MoMo Payment Callback
  * POST /api/payments/mtn-callback
- * 
+ *
  * This endpoint receives payment status updates from MTN MoMo
  * SECURITY: Validates webhook signature to prevent fraudulent callbacks
  */
@@ -10,19 +10,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { PaymentStatus } from '@prisma/client';
 import { verifyMtnSignature } from '@/lib/auth/guards';
+import { isWebhookProcessed, recordWebhookProcessed } from '@/lib/security/webhook-protection';
+import { sendPaymentNotification } from '@/lib/services/notification.service';
+import { handleSuccessfulPayment } from '@/lib/payments/payment-service';
 
 export async function POST(request: NextRequest) {
   try {
     // Get raw body for signature verification
     const rawBody = await request.text();
     const body = JSON.parse(rawBody);
-    
+
     console.log('MTN MoMo Callback received:', JSON.stringify(body, null, 2));
 
     // SECURITY: Verify webhook signature
     // Skip verification in development if no secret is configured
     const skipSignatureCheck = process.env.NODE_ENV !== 'production' && !process.env.MTN_MOMO_SECRET_KEY;
-    
+
     if (!skipSignatureCheck) {
       const isValidSignature = verifyMtnSignature(request, rawBody);
       if (!isValidSignature) {
@@ -46,6 +49,7 @@ export async function POST(request: NextRequest) {
       payeeNote,
       externalId,
       referenceId,
+      financialTransactionId,
     } = body;
 
     // Find payment by reference
@@ -62,6 +66,15 @@ export async function POST(request: NextRequest) {
     if (!payment) {
       console.error('Payment not found for callback:', { referenceId, externalId });
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
+    }
+
+    // Check for duplicate webhook
+    const webhookTransactionId = transactionId || referenceId || externalId;
+    if (webhookTransactionId) {
+      const isDuplicate = await isWebhookProcessed('MTN', webhookTransactionId);
+      if (isDuplicate) {
+        return NextResponse.json({ success: true, message: 'Already processed' });
+      }
     }
 
     // Map MTN status to internal status
@@ -81,39 +94,86 @@ export async function POST(request: NextRequest) {
         newStatus = PaymentStatus.PROCESSING;
     }
 
-    // Update payment
-    await db.payment.update({
-      where: { id: payment.id },
+    // Race condition guard: only update if payment is still in a non-final state
+    const updateResult = await db.payment.updateMany({
+      where: {
+        id: payment.id,
+        status: { in: ['PENDING', 'PROCESSING'] },
+      },
       data: {
         status: newStatus,
-        transactionId: transactionId || payment.transactionId,
+        transactionId: financialTransactionId || transactionId || payment.transactionId,
         providerResponse: JSON.stringify(body),
         processedAt: newStatus === PaymentStatus.COMPLETED ? new Date() : null,
         failureReason: newStatus === PaymentStatus.FAILED ? payeeNote : null,
       },
     });
 
-    // If payment completed, update related task/order
+    if (updateResult.count === 0) {
+      console.warn('MTN MoMo callback: payment already processed, skipping', {
+        paymentId: payment.id,
+        newStatus,
+      });
+      return NextResponse.json({ success: true, message: 'Payment already processed' });
+    }
+
+    // If payment completed, update related task/order and process financial records
     if (newStatus === PaymentStatus.COMPLETED && payment.taskId) {
-      // Update task payment status
-      await db.task.update({
-        where: { id: payment.taskId },
+      // Race condition guard for task update
+      await db.task.updateMany({
+        where: {
+          id: payment.taskId,
+          paymentStatus: { in: ['PENDING', 'PROCESSING'] },
+        },
         data: {
           paymentStatus: PaymentStatus.COMPLETED,
         },
       });
 
-      // Create notification for user
-      await db.notification.create({
+      // Call handleSuccessfulPayment to create FinanceLog, credit rider earnings, etc.
+      try {
+        await handleSuccessfulPayment(payment.id);
+      } catch (financeError) {
+        console.error('MTN MoMo callback: handleSuccessfulPayment failed:', financeError);
+        // Don't fail the callback — payment status is already updated
+        // Finance reconciliation can be retried later
+      }
+    }
+
+    // Send notification via notification service (handles socket emission and preference checking)
+    await sendPaymentNotification(
+      payment.userId,
+      payment.id,
+      payment.amount,
+      newStatus === PaymentStatus.COMPLETED ? 'COMPLETED' :
+      newStatus === PaymentStatus.FAILED ? 'FAILED' : 'REFUNDED'
+    );
+
+    // Create audit log for payment callback
+    try {
+      await db.auditLog.create({
         data: {
-          userId: payment.userId,
-          title: 'Payment Successful',
-          message: `Your payment of ${amount} ${currency} was successful.`,
-          type: 'PAYMENT',
-          referenceId: payment.id,
-          referenceType: 'PAYMENT',
+          actorType: 'SYSTEM',
+          action: 'PAYMENT_CALLBACK_PROCESSED',
+          entityType: 'Payment',
+          entityId: payment.id,
+          taskId: payment.taskId,
+          description: `MTN MoMo callback: payment ${payment.paymentReference} → ${newStatus}`,
+          newValues: JSON.stringify({
+            status: newStatus,
+            transactionId: financialTransactionId || transactionId,
+            amount,
+            currency,
+          }),
         },
       });
+    } catch (auditError) {
+      console.error('MTN MoMo callback: audit log creation failed:', auditError);
+    }
+
+    // Record webhook as processed
+    if (webhookTransactionId) {
+      await recordWebhookProcessed('MTN', webhookTransactionId, payment.id, newStatus, body);
     }
 
     // Return success response

@@ -13,7 +13,11 @@ const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'smart-ride-internal-ap
 // Create Socket.io server
 const io = new Server(PORT, {
   cors: {
-    origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000',
+      'https://smartrideug.vercel.app',
+    ],
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -103,7 +107,10 @@ io.on('connection', (socket) => {
   // ============================================
 
   // Join task room for real-time updates
-  socket.on('task:join', (taskId: string) => {
+  // Accepts both plain string (web) and { taskId } object (Expo mobile)
+  socket.on('task:join', (data: string | { taskId: string }) => {
+    const taskId = typeof data === 'string' ? data : data?.taskId;
+    if (!taskId) return;
     socket.join(`task:${taskId}`);
     userRooms.set(socket.id, `task:${taskId}`);
     console.log(`Socket ${socket.id} joined task room: ${taskId}`);
@@ -111,7 +118,10 @@ io.on('connection', (socket) => {
   });
 
   // Leave task room
-  socket.on('task:leave', (taskId: string) => {
+  // Accepts both plain string (web) and { taskId } object (Expo mobile)
+  socket.on('task:leave', (data: string | { taskId: string }) => {
+    const taskId = typeof data === 'string' ? data : data?.taskId;
+    if (!taskId) return;
     socket.leave(`task:${taskId}`);
     userRooms.delete(socket.id);
     console.log(`Socket ${socket.id} left task room: ${taskId}`);
@@ -163,16 +173,32 @@ io.on('connection', (socket) => {
   });
 
   // Driver location update (alias for rider:location, emitted by expo app)
+  // CRITICAL FIX: Broadcast to task room (customer) instead of echoing back to the driver
   socket.on('driver:location:update', (data: {
     latitude: number;
     longitude: number;
     heading?: number | null;
     speed?: number | null;
   }) => {
-    // Use authenticated userId to broadcast to user's rooms
     if (socket.data.userId) {
-      // Emit to user's personal room (for customer tracking if they have an active task)
-      socket.emit('rider:location:update', {
+      // Look up which task room this driver/socket is in
+      const currentRoom = userRooms.get(socket.id);
+
+      if (currentRoom && currentRoom.startsWith('task:')) {
+        // Broadcast to the task room (customer is in this room) — excluding the sender (driver)
+        socket.to(currentRoom).emit('rider:location:update', {
+          riderId: socket.data.userId,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          heading: data.heading,
+          speed: data.speed,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      // Also broadcast to the rider's user room for admin monitoring
+      socket.to(`user:${socket.data.userId}`).emit('rider:location:update', {
+        riderId: socket.data.userId,
         latitude: data.latitude,
         longitude: data.longitude,
         heading: data.heading,
@@ -194,20 +220,64 @@ io.on('connection', (socket) => {
   });
 
   // ============================================
+  // DRIVER ROOM EVENTS (Expo mobile app)
+  // ============================================
+
+  // Driver joins their dedicated room for receiving dispatch requests
+  socket.on('driver:join', (data: { driverId: string } | string) => {
+    const driverId = typeof data === 'string' ? data : data?.driverId;
+    if (!driverId) return;
+    socket.join(`driver:${driverId}`);
+    console.log(`Socket ${socket.id} joined driver room: ${driverId}`);
+  });
+
+  // Driver leaves their dedicated room
+  socket.on('driver:leave', (data: { driverId: string } | string) => {
+    const driverId = typeof data === 'string' ? data : data?.driverId;
+    if (!driverId) return;
+    socket.leave(`driver:${driverId}`);
+    console.log(`Socket ${socket.id} left driver room: ${driverId}`);
+  });
+
+  // ============================================
+  // RIDER ROOM EVENTS (Expo mobile app)
+  // ============================================
+
+  // Rider joins their dedicated room for receiving dispatch requests
+  socket.on('rider:join', (data: { riderId: string } | string) => {
+    const riderId = typeof data === 'string' ? data : data?.riderId;
+    if (!riderId) return;
+    socket.join(`rider:${riderId}`);
+    console.log(`Socket ${socket.id} joined rider room: ${riderId}`);
+  });
+
+  // Rider leaves their dedicated room
+  socket.on('rider:leave', (data: { riderId: string } | string) => {
+    const riderId = typeof data === 'string' ? data : data?.riderId;
+    if (!riderId) return;
+    socket.leave(`rider:${riderId}`);
+    console.log(`Socket ${socket.id} left rider room: ${riderId}`);
+  });
+
+  // ============================================
   // DISPATCH EVENTS
   // ============================================
 
-  // New task request (for riders)
+  // New task request (for riders/drivers)
+  // Emits BOTH event names for backward compatibility
   socket.on('dispatch:request', (data: { 
     riderId: string; 
     task: unknown;
     expiresIn: number;
   }) => {
-    io.to(`user:${data.riderId}`).emit('dispatch:new-task', {
+    const payload = {
       task: data.task,
       expiresIn: data.expiresIn,
       timestamp: new Date().toISOString(),
-    });
+    };
+    // Emit with both event names for backward compatibility
+    io.to(`user:${data.riderId}`).emit('dispatch:new-task', payload);
+    io.to(`user:${data.riderId}`).emit('driver:request', payload);
   });
 
   // Task assignment broadcast
@@ -224,13 +294,19 @@ io.on('connection', (socket) => {
   // ============================================
 
   // Join order room
-  socket.on('order:join', (orderId: string) => {
+  // Accepts both plain string (web) and { orderId } object (Expo mobile)
+  socket.on('order:join', (data: string | { orderId: string }) => {
+    const orderId = typeof data === 'string' ? data : data?.orderId;
+    if (!orderId) return;
     socket.join(`order:${orderId}`);
     socket.emit('order:joined', { orderId });
   });
 
   // Leave order room
-  socket.on('order:leave', (orderId: string) => {
+  // Accepts both plain string (web) and { orderId } object (Expo mobile)
+  socket.on('order:leave', (data: string | { orderId: string }) => {
+    const orderId = typeof data === 'string' ? data : data?.orderId;
+    if (!orderId) return;
     socket.leave(`order:${orderId}`);
   });
 
@@ -305,6 +381,16 @@ io.on('connection', (socket) => {
     longitude: number;
     battery?: number;
   }) => {
+    // Store heartbeat data in userRooms context for tracking
+    socket.data.lastHeartbeat = {
+      riderId: data.riderId,
+      taskId: data.taskId,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      battery: data.battery,
+      timestamp: new Date().toISOString(),
+    };
+
     socket.emit('heartbeat:ack', { 
       received: true, 
       timestamp: new Date().toISOString() 
@@ -425,6 +511,26 @@ const httpServer = Bun.serve({
 });
 
 console.log(`📡 Internal API running on port ${httpServer.port}`);
+
+// Periodic cleanup of stale connections
+setInterval(() => {
+  let cleaned = 0;
+  for (const [userId, socketIds] of connectedUsers.entries()) {
+    for (const socketId of socketIds) {
+      if (!io.sockets.sockets.has(socketId)) {
+        socketIds.delete(socketId);
+        userRooms.delete(socketId);
+        cleaned++;
+      }
+    }
+    if (socketIds.size === 0) {
+      connectedUsers.delete(userId);
+    }
+  }
+  if (cleaned > 0) {
+    console.log(`[Socket] Cleaned up ${cleaned} stale socket entries`);
+  }
+}, 60000);
 
 // Export for type checking
 export { io, connectedUsers };

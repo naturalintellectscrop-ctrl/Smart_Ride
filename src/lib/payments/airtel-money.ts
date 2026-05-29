@@ -374,12 +374,62 @@ export async function getAccountBalance(): Promise<{
   }
 }
 
+/**
+ * Validate if phone number is a valid Airtel Uganda number
+ */
+function isValidAirtelNumber(phone: string): boolean {
+  const cleaned = phone.replace(/[\s+\-()]/g, '');
+  // Airtel Uganda prefixes: 070, 074, 075, 25670, 25674, 25675
+  return /^(\+?256|0)(70|74|75)\d{7}$/.test(cleaned);
+}
+
+/**
+ * Map Airtel API status to internal payment status
+ */
+function mapAirtelStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    'PENDING': 'PENDING',
+    'SUCCESS': 'SUCCESSFUL',
+    'SUCCESSFUL': 'SUCCESSFUL',
+    'FAILED': 'FAILED',
+    'REVERSED': 'REFUNDED',
+    'CANCELLED': 'REFUNDED',
+    'ERROR': 'FAILED',
+  };
+  return statusMap[status] || 'PENDING';
+}
+
+/**
+ * Format Uganda phone number to international format
+ */
+function formatUgandaPhone(phone: string): string {
+  let cleaned = phone.replace(/[\s+\-()]/g, '');
+  if (cleaned.startsWith('0')) {
+    cleaned = '256' + cleaned.substring(1);
+  }
+  if (!cleaned.startsWith('+')) {
+    cleaned = '+' + cleaned;
+  }
+  return cleaned;
+}
+
+/**
+ * Get payment status (alias for getTransactionStatus for compatibility)
+ */
+async function getPaymentStatus(referenceId: string) {
+  return getTransactionStatus(referenceId);
+}
+
 export const airtelMoneyService = {
   requestPayment,
   collectPayment,
   getTransactionStatus,
+  getPaymentStatus,
   disburseFunds,
   getAccountBalance,
+  isValidAirtelNumber,
+  mapAirtelStatus,
+  formatUgandaPhone,
 };
 
 // Export alias for backwards compatibility

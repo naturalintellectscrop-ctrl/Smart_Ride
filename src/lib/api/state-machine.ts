@@ -3,17 +3,26 @@ import { TaskStatus, TaskType, RiderRole } from '@prisma/client';
 /**
  * Valid state transitions for tasks
  * Each state maps to an array of allowed next states
+ * Aligned with the enhanced state machine and Prisma TaskStatus enum
  */
 export const TASK_STATE_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
-  CREATED: ['MATCHING', 'CANCELLED'],
-  MATCHING: ['ASSIGNED', 'CANCELLED', 'FAILED'],
-  ASSIGNED: ['RIDER_ACCEPTED', 'MATCHING', 'CANCELLED'], // If rider rejects, goes back to MATCHING
-  RIDER_ACCEPTED: ['PICKED_UP', 'CANCELLED'],
-  PICKED_UP: ['IN_PROGRESS', 'CANCELLED'],
-  IN_PROGRESS: ['COMPLETED', 'CANCELLED', 'FAILED'],
-  COMPLETED: [], // Terminal state
-  CANCELLED: [], // Terminal state
-  FAILED: [], // Terminal state
+  CREATED: ['REQUESTED', 'SEARCHING', 'MATCHING', 'ASSIGNED', 'CANCELLED'],
+  REQUESTED: ['SEARCHING', 'CANCELLED'],
+  SEARCHING: ['ASSIGNED', 'MATCHING', 'CANCELLED', 'FAILED'],
+  MATCHING: ['ASSIGNED', 'SEARCHING', 'CANCELLED', 'FAILED'],
+  ASSIGNED: ['ACCEPTED', 'IN_PROGRESS', 'PICKED_UP', 'MATCHING', 'CANCELLED'],
+  ACCEPTED: ['ARRIVING', 'ARRIVED', 'CANCELLED'],
+  ARRIVING: ['ARRIVED', 'CANCELLED'],
+  ARRIVED: ['PICKED_UP', 'CANCELLED'],
+  PICKED_UP: ['IN_PROGRESS', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED', 'IN_TRANSIT', 'SEARCHING', 'PICKED_UP', 'CANCELLED'],
+  IN_TRANSIT: ['DELIVERED', 'CANCELLED'],
+  DELIVERED: ['COMPLETED', 'CANCELLED'],
+  COMPLETED: ['PAID'],
+  PAID: ['CLOSED'],
+  CLOSED: [],
+  CANCELLED: [],
+  FAILED: [],
 };
 
 /**

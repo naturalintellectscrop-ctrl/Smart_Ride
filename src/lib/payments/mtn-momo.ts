@@ -242,10 +242,50 @@ export async function disburseFunds(params: {
   }
 }
 
+/**
+ * Validate if phone number is a valid MTN Uganda number
+ */
+function isValidMTNNumber(phone: string): boolean {
+  const cleaned = phone.replace(/[\s+\-()]/g, '');
+  // MTN Uganda prefixes: 077, 078, 039, 25677, 25678, 25639
+  return /^(\+?256|0)(77|78|39)\d{7}$/.test(cleaned);
+}
+
+/**
+ * Map MTN API status to internal payment status
+ */
+function mapMTNStatus(status: string): string {
+  const statusMap: Record<string, string> = {
+    'PENDING': 'PENDING',
+    'SUCCESSFUL': 'SUCCESSFUL',
+    'FAILED': 'FAILED',
+    'REJECTED': 'REJECTED',
+    'TIMEOUT': 'TIMEOUT',
+  };
+  return statusMap[status] || 'PENDING';
+}
+
+/**
+ * Format Uganda phone number to international format
+ */
+function formatUgandaPhone(phone: string): string {
+  let cleaned = phone.replace(/[\s+\-()]/g, '');
+  if (cleaned.startsWith('0')) {
+    cleaned = '256' + cleaned.substring(1);
+  }
+  if (!cleaned.startsWith('+')) {
+    cleaned = '+' + cleaned;
+  }
+  return cleaned;
+}
+
 export const mtnMomoService = {
   requestPayment,
   getPaymentStatus,
   disburseFunds,
+  isValidMTNNumber,
+  mapMTNStatus,
+  formatUgandaPhone,
 };
 
 // Export alias for backwards compatibility

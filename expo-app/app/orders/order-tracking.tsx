@@ -1,8 +1,9 @@
 // ============================================
 // SMART RIDE MOBILE - ORDER TRACKING SCREEN
+// FIXED: Added polling fallback, fixed event name
 // ============================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -26,6 +27,12 @@ import { api, socketService } from '@/src/services';
 import { COLORS } from '@/src/constants';
 import { Order } from '@/src/types';
 
+// Terminal states where polling should stop
+const TERMINAL_STATES = ['DELIVERED', 'CANCELLED', 'COMPLETED'];
+
+// Polling interval in ms
+const POLL_INTERVAL = 5000;
+
 const ORDER_STATUS_FLOW = [
   { status: 'ORDER_CREATED', label: 'Order Placed', icon: '📝' },
   { status: 'MERCHANT_ACCEPTED', label: 'Confirmed', icon: '✅' },
@@ -42,18 +49,86 @@ export default function OrderTrackingScreen() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ==========================================
+  // POLLING FALLBACK
+  // ==========================================
+  const isTerminalState = (status: string): boolean => {
+    return TERMINAL_STATES.includes(status);
+  };
+
+  const pollOrderStatus = async () => {
+    if (!params.orderId) return;
+
+    try {
+      const response = await api.getOrder(params.orderId);
+      if (response.success && response.data) {
+        const updatedOrder = response.data;
+
+        setOrder(prev => {
+          if (prev && prev.status !== updatedOrder.status) {
+            // Status changed
+            if (isTerminalState(updatedOrder.status)) {
+              stopPolling();
+            }
+          }
+          return updatedOrder;
+        });
+      }
+    } catch (error) {
+      console.error('[OrderTracking] Poll error:', error);
+    }
+  };
+
+  const startPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+    }
+
+    pollingIntervalRef.current = setInterval(pollOrderStatus, POLL_INTERVAL);
+    console.log('[OrderTracking] Started polling with interval:', POLL_INTERVAL);
+  };
+
+  const stopPolling = () => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current);
+      pollingIntervalRef.current = null;
+    }
+    console.log('[OrderTracking] Stopped polling');
+  };
 
   useEffect(() => {
     if (params.orderId) {
       loadOrder(params.orderId);
     }
+
+    // Start polling as primary update mechanism
+    startPolling();
+
+    return () => {
+      stopPolling();
+    };
   }, [params.orderId]);
 
+  // Stop polling when order reaches terminal state
   useEffect(() => {
-    // Listen for order status updates
-    const unsubscribe = socketService.on('order:status', (data: { orderId: string; status: string }) => {
+    if (order && isTerminalState(order.status)) {
+      stopPolling();
+    }
+  }, [order?.status]);
+
+  useEffect(() => {
+    // Listen for order status updates via socket (secondary mechanism)
+    // FIXED: Event name is 'order:status:update' (matches server emission)
+    const unsubscribe = socketService.on('order:status:update', (data: { orderId: string; status: string }) => {
       if (data.orderId === params.orderId && order) {
         setOrder({ ...order, status: data.status as any });
+
+        // Stop polling if terminal state
+        if (isTerminalState(data.status)) {
+          stopPolling();
+        }
       }
     });
 
@@ -68,6 +143,11 @@ export default function OrderTrackingScreen() {
       const response = await api.getOrder(orderId);
       if (response.success && response.data) {
         setOrder(response.data);
+
+        // If already in terminal state, no need to poll
+        if (isTerminalState(response.data.status)) {
+          stopPolling();
+        }
       } else {
         Alert.alert('Error', 'Failed to load order details');
         router.back();
@@ -181,7 +261,7 @@ export default function OrderTrackingScreen() {
                     >
                       {step.label}
                     </Text>
-                    {isCurrent && (
+                    {isCurrent && !isTerminalState(order.status) && (
                       <ActivityIndicator size="small" color={COLORS.secondary} />
                     )}
                   </View>

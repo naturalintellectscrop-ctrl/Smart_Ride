@@ -17,6 +17,7 @@ import {
   isValidTransition,
   canRiderPerformTask,
   CancellationReasonCode,
+  EnhancedTaskStateMachine,
 } from '@/lib/services/enhanced-task-state-machine.service';
 import { TaskType, TaskStatus } from '@prisma/client';
 import { z } from 'zod';
@@ -28,6 +29,7 @@ import {
 } from '@/lib/auth/guards';
 import { UserRole } from '@prisma/client';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
+import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 
 /**
  * GET /api/tasks
@@ -252,14 +254,28 @@ export async function POST(request: NextRequest) {
       description: `Task created: ${task.taskNumber} (${validatedData.taskType})`,
     });
 
-    // Update task status to MATCHING
-    const matchingTask = await db.task.update({
-      where: { id: task.id },
-      data: {
-        status: 'MATCHING',
-        matchingStartedAt: new Date(),
-      },
-    });
+    // Transition task to MATCHING via state machine (creates TaskStateTransition + AuditLog)
+    const transitionResult = await EnhancedTaskStateMachine.transition(
+      task.id,
+      TaskStatus.MATCHING,
+      { triggeredByType: 'SYSTEM', reason: 'Task created, starting dispatch' }
+    );
+    if (!transitionResult.success) {
+      console.error(`[Tasks] Failed to transition task ${task.id} to MATCHING:`, transitionResult.error);
+    }
+    const matchingTask = transitionResult.task || task;
+
+    // Send MATCHING notification to client
+    if (transitionResult.success) {
+      await sendTaskUpdateNotification(
+        validatedData.clientId,
+        task.id,
+        task.taskNumber,
+        'MATCHING'
+      ).catch((err: unknown) => {
+        console.error(`[Tasks] Failed to send MATCHING notification for task ${task.id}:`, err);
+      });
+    }
 
     // Auto-dispatch: Find and offer task to nearest rider
     // This runs asynchronously - the task is already saved and response is sent.
@@ -283,11 +299,15 @@ export async function POST(request: NextRequest) {
           description: `Dispatch match created for task ${task.taskNumber}, awaiting rider acceptance`,
         });
       } else if (result.noRidersAvailable) {
-        // No riders available - update task status to SEARCHING for retry
-        await db.task.update({
-          where: { id: task.id },
-          data: { status: 'SEARCHING' },
-        });
+        // No riders available - transition to SEARCHING via state machine
+        const searchResult = await EnhancedTaskStateMachine.transition(
+          task.id,
+          TaskStatus.SEARCHING,
+          { triggeredByType: 'SYSTEM', reason: 'No riders available, continuing search' }
+        );
+        if (!searchResult.success) {
+          console.error(`[Tasks] Failed to transition task ${task.id} to SEARCHING:`, searchResult.error);
+        }
       }
     }).catch((error) => {
       console.error('Auto-dispatch error (non-blocking):', error);

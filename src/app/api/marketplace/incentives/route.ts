@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
-import { notifyNewIncentive } from '@/lib/notifications/notification-service';
+import { notifyNewIncentive } from '@/lib/services/notification.service';
 import { z } from 'zod';
 
 // Incentive creation schema

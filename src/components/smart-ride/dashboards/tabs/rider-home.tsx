@@ -165,7 +165,7 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
       today.setHours(0, 0, 0, 0);
 
       const [activeResult, completedResult] = await Promise.all([
-        fetchWithRetry('/api/tasks?status=IN_PROGRESS,ASSIGNED,ACCEPTED,ARRIVED,PICKED_UP,IN_TRANSIT,DELIVERING&limit=100&XTransformPort=3000', {
+        fetchWithRetry('/api/tasks?status=IN_PROGRESS,ASSIGNED,ACCEPTED,ARRIVED,PICKED_UP,IN_TRANSIT,DELIVERED&limit=100&XTransformPort=3000', {
           headers: getAuthHeaders(),
           maxRetries: 3,
         }),
@@ -258,7 +258,7 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
     setActiveTaskError(null);
     try {
       const result = await fetchWithRetry(
-        '/api/tasks?status=ASSIGNED,ACCEPTED,ARRIVING,ARRIVED,PICKED_UP,IN_TRANSIT,IN_PROGRESS,DELIVERING&limit=1&XTransformPort=3000',
+        '/api/tasks?status=ASSIGNED,ACCEPTED,ARRIVING,ARRIVED,PICKED_UP,IN_TRANSIT,IN_PROGRESS,DELIVERED&limit=1&XTransformPort=3000',
         { headers: getAuthHeaders(), maxRetries: 3 }
       );
 

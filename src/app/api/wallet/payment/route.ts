@@ -1,6 +1,7 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { payFromWallet, refundToWallet, hasSufficientBalance, getWalletBalance } from '@/lib/wallet/wallet-service';
+import { requireAuth } from '@/lib/auth/guards';
 import { z } from 'zod';
 
 // ============================================
@@ -30,6 +31,15 @@ const refundSchema = z.object({
 // ============================================
 
 export async function POST(request: NextRequest) {
+  // Require authentication
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+
   try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
@@ -95,6 +105,15 @@ export async function POST(request: NextRequest) {
 // ============================================
 
 export async function GET(request: NextRequest) {
+  // Require authentication
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const ownerId = searchParams.get('ownerId');

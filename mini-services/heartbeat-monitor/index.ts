@@ -163,6 +163,10 @@ io.on('connection', (socket) => {
       if (rider.socketId === socket.id) {
         rider.connectionStatus = 'DISCONNECTED';
         broadcastRiderStatus(riderId, 'DISCONNECTED');
+        // Update Rider model in database to DISCONNECTED
+        updateRiderConnectionStatus(riderId, 'DISCONNECTED', rider.taskId).catch((err: any) => {
+          console.error(`Error updating rider ${riderId} disconnect status in DB:`, err);
+        });
         break;
       }
     }
@@ -199,6 +203,50 @@ async function processHeartbeat(data: HeartbeatData) {
     batteryLevel: data.batteryLevel ?? existing?.batteryLevel ?? null,
     socketId: data.socketId || existing?.socketId,
   });
+
+  // Update Rider model in database with lastHeartbeatAt, connectionStatus, and location
+  try {
+    const riderUpdateData: any = {
+      lastHeartbeatAt: now,
+      connectionStatus: 'ACTIVE',
+      lastKnownLatitude: data.latitude,
+      lastKnownLongitude: data.longitude,
+      lastLocationUpdate: now,
+    };
+
+    if (data.batteryLevel !== undefined) {
+      riderUpdateData.lastKnownBattery = data.batteryLevel;
+    }
+    if (data.speed !== undefined) {
+      riderUpdateData.lastKnownSpeed = data.speed;
+    }
+    if (data.heading !== undefined) {
+      riderUpdateData.lastKnownHeading = data.heading;
+    }
+
+    await prisma.rider.update({
+      where: { id: data.riderId },
+      data: riderUpdateData,
+    });
+
+    // If task is active, update task's lastHeartbeatAt and connectionStatus too
+    const activeTaskId = data.taskId || existing?.taskId;
+    if (activeTaskId) {
+      await prisma.task.update({
+        where: { id: activeTaskId },
+        data: {
+          lastHeartbeatAt: now,
+          connectionStatus: 'ACTIVE',
+          lastKnownLatitude: data.latitude,
+          lastKnownLongitude: data.longitude,
+        },
+      }).catch((err: any) => {
+        console.error(`Error updating task ${activeTaskId} heartbeat:`, err);
+      });
+    }
+  } catch (error) {
+    console.error(`Error updating rider ${data.riderId} heartbeat in DB:`, error);
+  }
 
   // Broadcast location to subscribers
   io.to(`rider:${data.riderId}:location`).emit('rider:location', {
@@ -302,11 +350,21 @@ async function updateRiderConnectionStatus(
   taskId: string | null
 ) {
   try {
+    const riderUpdateData: any = {
+      connectionStatus: status as any,
+    };
+
+    // When marking as DISCONNECTED, also update lastHeartbeatAt for accurate tracking
+    if (status === 'DISCONNECTED') {
+      const rider = activeRiders.get(riderId);
+      if (rider) {
+        riderUpdateData.lastHeartbeatAt = rider.lastHeartbeatAt;
+      }
+    }
+
     await prisma.rider.update({
       where: { id: riderId },
-      data: {
-        connectionStatus: status as any,
-      },
+      data: riderUpdateData,
     });
 
     if (taskId) {

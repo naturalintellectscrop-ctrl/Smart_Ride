@@ -10,13 +10,14 @@ const HEARTBEAT_CONFIG = {
   LONG_DISCONNECT_THRESHOLD: 120, // Escalate after 120 seconds
 };
 
-// Task states that require heartbeat monitoring
+// Task states that require heartbeat monitoring — aligned with Prisma TaskStatus enum
 const HEARTBEAT_ACTIVE_STATES = [
-  'RIDER_ACCEPTED',
-  'ARRIVED_AT_PICKUP',
+  'ACCEPTED',
+  'ARRIVING',
+  'ARRIVED',
   'PICKED_UP',
   'IN_PROGRESS',
-  'DELIVERING',
+  'IN_TRANSIT',
 ];
 
 export async function POST(request: NextRequest) {

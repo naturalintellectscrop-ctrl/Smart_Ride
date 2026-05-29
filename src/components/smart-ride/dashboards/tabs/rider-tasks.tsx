@@ -34,8 +34,8 @@ import type { TaskStatusUpdateData } from '@/services/socket';
 type PrismaTaskStatus = 
   | 'CREATED' | 'REQUESTED' | 'SEARCHING' | 'MATCHING'
   | 'ASSIGNED' | 'ACCEPTED' | 'ARRIVED' | 'ARRIVING'
-  | 'PICKED_UP' | 'IN_PROGRESS' | 'IN_TRANSIT' | 'DELIVERING'
-  | 'DELIVERED' | 'COMPLETED' | 'PAID' | 'CLOSED'
+  | 'PICKED_UP' | 'IN_PROGRESS' | 'IN_TRANSIT' | 'DELIVERED'
+  | 'COMPLETED' | 'PAID' | 'CLOSED'
   | 'CANCELLED' | 'FAILED';
 
 // UI-facing task type
@@ -96,7 +96,6 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   PICKED_UP: { label: 'Picked Up', color: 'text-orange-600', bgColor: 'bg-orange-100' },
   IN_PROGRESS: { label: 'In Progress', color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
   IN_TRANSIT: { label: 'In Transit', color: 'text-emerald-600', bgColor: 'bg-emerald-100' },
-  DELIVERING: { label: 'Delivering', color: 'text-teal-600', bgColor: 'bg-teal-100' },
   DELIVERED: { label: 'Delivered', color: 'text-green-600', bgColor: 'bg-green-100' },
   COMPLETED: { label: 'Completed', color: 'text-green-600', bgColor: 'bg-green-100' },
   PAID: { label: 'Paid', color: 'text-green-600', bgColor: 'bg-green-100' },
@@ -136,7 +135,6 @@ function getNextStatus(currentStatus: PrismaTaskStatus, taskType?: TaskType): Pr
     PICKED_UP: 'IN_TRANSIT',
     IN_PROGRESS: 'IN_TRANSIT',
     IN_TRANSIT: 'DELIVERED',
-    DELIVERING: 'DELIVERED',
     DELIVERED: 'COMPLETED',
   };
   return transitions[currentStatus] || null;
@@ -156,7 +154,7 @@ function getAuthHeaders(): Record<string, string> {
 
 // Active statuses
 const ACTIVE_STATUSES: PrismaTaskStatus[] = [
-  'ASSIGNED', 'ACCEPTED', 'ARRIVING', 'ARRIVED', 'PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT', 'DELIVERING'
+  'ASSIGNED', 'ACCEPTED', 'ARRIVING', 'ARRIVED', 'PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT'
 ];
 
 // Format relative time

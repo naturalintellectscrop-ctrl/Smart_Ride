@@ -236,37 +236,43 @@ export async function createSettlement(
   // Generate settlement reference
   const settlementRef = `STL${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 5).toUpperCase()}`;
 
-  // Create settlement in database
-  const settlement = await db.settlement.create({
-    data: {
-      settlementRef,
-      recipientType: 'RIDER',
-      recipientId: riderId,
-      periodStart: period.startDate,
-      periodEnd: period.endDate,
-      taskCount: earnings.completedTasks,
-      grossAmount: earnings.totalEarnings,
-      platformCommission: earnings.platformCommission,
-      adjustments: 0,
-      netAmount: earnings.netEarnings - processingFee,
-      status: 'PENDING',
-      paymentMethod,
-      paymentReference: payoutPhone,
-    },
-  });
+  // Create settlement and rider payout atomically in a transaction.
+  // Both records track the same data; they must be created together to prevent divergence.
+  const settlement = await db.$transaction(async (tx) => {
+    const settlement = await tx.settlement.create({
+      data: {
+        settlementRef,
+        recipientType: 'RIDER',
+        recipientId: riderId,
+        periodStart: period.startDate,
+        periodEnd: period.endDate,
+        taskCount: earnings.completedTasks,
+        grossAmount: earnings.totalEarnings,
+        platformCommission: earnings.platformCommission,
+        adjustments: 0,
+        netAmount: earnings.netEarnings - processingFee,
+        status: 'PENDING',
+        paymentMethod,
+        paymentReference: payoutPhone,
+      },
+    });
 
-  // Also create rider payout record for compatibility
-  await db.riderPayout.create({
-    data: {
-      riderId,
-      amount: earnings.netEarnings - processingFee,
-      status: 'PENDING',
-      periodStart: period.startDate,
-      periodEnd: period.endDate,
-      taskCount: earnings.completedTasks,
-      paymentMethod,
-      phoneNumber: payoutPhone,
-    },
+    // Also create rider payout record for compatibility.
+    // This is coupled with the Settlement record — both must exist together.
+    await tx.riderPayout.create({
+      data: {
+        riderId,
+        amount: earnings.netEarnings - processingFee,
+        status: 'PENDING',
+        periodStart: period.startDate,
+        periodEnd: period.endDate,
+        taskCount: earnings.completedTasks,
+        paymentMethod,
+        phoneNumber: payoutPhone,
+      },
+    });
+
+    return settlement;
   });
 
   return {

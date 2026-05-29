@@ -4,7 +4,7 @@
  */
 
 import { db } from '@/lib/db';
-import { PaymentMethod } from '@prisma/client';
+import { PaymentMethod, TaskType, TransactionType } from '@prisma/client';
 import { MTN_MOMO, generateReferenceId as generateMTNReference } from './mtn-momo';
 import { AIRTEL_MONEY, generateReferenceId as generateAirtelReference } from './airtel-money';
 
@@ -129,15 +129,13 @@ async function processMTNPayment(
     }
 
     // Request payment
-    const result = await MTN_MOMO.requestPayment(
-      amount,
+    const result = await MTN_MOMO.requestPayment({
       phoneNumber,
-      reference,
-      {
-        payerMessage: description || 'Smart Ride Payment',
-        payeeNote: `Payment ref: ${reference}`,
-      }
-    );
+      amount,
+      payerMessage: description || 'Smart Ride Payment',
+      payeeNote: `Payment ref: ${reference}`,
+      externalId: reference,
+    });
 
     // Update payment with reference ID
     await db.payment.update({
@@ -186,18 +184,18 @@ async function processAirtelPayment(
     }
 
     // Request payment
-    const result = await AIRTEL_MONEY.requestPayment(
-      amount,
+    const result = await AIRTEL_MONEY.collectPayment({
       phoneNumber,
+      amount,
       reference,
-      { description: description || 'Smart Ride Payment' }
-    );
+      customerName: undefined,
+    });
 
     // Update payment
     await db.payment.update({
       where: { id: paymentId },
       data: {
-        momoTransactionId: result.transaction?.id || reference,
+        momoTransactionId: result.referenceId || reference,
         status: 'PROCESSING',
       },
     });
@@ -323,8 +321,12 @@ export async function handleMTNCallback(data: PaymentCallbackData): Promise<void
     const dbStatus = mappedStatus === 'SUCCESSFUL' ? 'COMPLETED' : 
                      mappedStatus === 'TIMEOUT' || mappedStatus === 'REJECTED' ? 'FAILED' : mappedStatus;
 
-    await db.payment.update({
-      where: { id: payment.id },
+    // Race condition guard: only update if payment is still in a non-final state
+    const updateResult = await db.payment.updateMany({
+      where: {
+        id: payment.id,
+        status: { in: ['PENDING', 'PROCESSING'] },
+      },
       data: {
         status: dbStatus as 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED',
         transactionId: data.transactionId,
@@ -334,9 +336,35 @@ export async function handleMTNCallback(data: PaymentCallbackData): Promise<void
       },
     });
 
+    if (updateResult.count === 0) {
+      console.warn('MTN callback: payment already processed, skipping', { paymentId: payment.id, newStatus: dbStatus });
+      return;
+    }
+
     // If successful, trigger post-payment actions
     if (mappedStatus === 'SUCCESSFUL') {
-      await handleSuccessfulPayment(payment.id);
+      try {
+        await handleSuccessfulPayment(payment.id);
+      } catch (financeError) {
+        console.error('MTN callback: handleSuccessfulPayment failed:', financeError);
+        // Don't rethrow — payment status is already updated, finance reconciliation can be retried
+      }
+    }
+
+    // Create audit log
+    try {
+      await db.auditLog.create({
+        data: {
+          actorType: 'SYSTEM',
+          action: 'PAYMENT_CALLBACK_PROCESSED',
+          entityType: 'Payment',
+          entityId: payment.id,
+          description: `MTN MoMo callback: payment ${payment.paymentReference} → ${dbStatus}`,
+          newValues: JSON.stringify({ status: dbStatus, transactionId: data.transactionId }),
+        },
+      });
+    } catch (auditError) {
+      console.error('MTN callback: audit log creation failed:', auditError);
     }
   } catch (error) {
     console.error('MTN callback handling error:', error);
@@ -361,8 +389,12 @@ export async function handleAirtelCallback(data: PaymentCallbackData): Promise<v
     const dbStatus = mappedStatus === 'SUCCESSFUL' ? 'COMPLETED' : 
                      mappedStatus === 'TIMEOUT' || mappedStatus === 'REJECTED' ? 'FAILED' : mappedStatus;
 
-    await db.payment.update({
-      where: { id: payment.id },
+    // Race condition guard: only update if payment is still in a non-final state
+    const updateResult = await db.payment.updateMany({
+      where: {
+        id: payment.id,
+        status: { in: ['PENDING', 'PROCESSING'] },
+      },
       data: {
         status: dbStatus as 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'REFUNDED',
         transactionId: data.transactionId,
@@ -372,8 +404,34 @@ export async function handleAirtelCallback(data: PaymentCallbackData): Promise<v
       },
     });
 
+    if (updateResult.count === 0) {
+      console.warn('Airtel callback: payment already processed, skipping', { paymentId: payment.id, newStatus: dbStatus });
+      return;
+    }
+
     if (mappedStatus === 'SUCCESSFUL') {
-      await handleSuccessfulPayment(payment.id);
+      try {
+        await handleSuccessfulPayment(payment.id);
+      } catch (financeError) {
+        console.error('Airtel callback: handleSuccessfulPayment failed:', financeError);
+        // Don't rethrow — payment status is already updated, finance reconciliation can be retried
+      }
+    }
+
+    // Create audit log
+    try {
+      await db.auditLog.create({
+        data: {
+          actorType: 'SYSTEM',
+          action: 'PAYMENT_CALLBACK_PROCESSED',
+          entityType: 'Payment',
+          entityId: payment.id,
+          description: `Airtel Money callback: payment ${payment.paymentReference} → ${dbStatus}`,
+          newValues: JSON.stringify({ status: dbStatus, transactionId: data.transactionId }),
+        },
+      });
+    } catch (auditError) {
+      console.error('Airtel callback: audit log creation failed:', auditError);
     }
   } catch (error) {
     console.error('Airtel callback handling error:', error);
@@ -383,7 +441,7 @@ export async function handleAirtelCallback(data: PaymentCallbackData): Promise<v
 /**
  * Handle successful payment - update related records
  */
-async function handleSuccessfulPayment(paymentId: string): Promise<void> {
+export async function handleSuccessfulPayment(paymentId: string): Promise<void> {
   const payment = await db.payment.findUnique({
     where: { id: paymentId },
     include: { task: true },
@@ -398,10 +456,21 @@ async function handleSuccessfulPayment(paymentId: string): Promise<void> {
       data: { paymentStatus: 'COMPLETED' },
     });
 
+    // Map task type to the appropriate transaction type
+    const TRANSACTION_TYPE_MAP: Record<TaskType, TransactionType> = {
+      SMART_BODA_RIDE: 'RIDE_PAYMENT',
+      SMART_CAR_RIDE: 'RIDE_PAYMENT',
+      FOOD_DELIVERY: 'FOOD_ORDER_PAYMENT',
+      SHOPPING: 'SHOPPING_ORDER_PAYMENT',
+      ITEM_DELIVERY: 'ITEM_DELIVERY_PAYMENT',
+      SMART_HEALTH_DELIVERY: 'HEALTH_ORDER_PAYMENT',
+    };
+    const transactionType = TRANSACTION_TYPE_MAP[payment.task.taskType] || 'RIDE_PAYMENT';
+
     // Create finance log
     await db.financeLog.create({
       data: {
-        transactionType: 'RIDE_PAYMENT',
+        transactionType,
         referenceId: payment.taskId!,
         amount: payment.amount,
         currency: payment.currency,
@@ -414,16 +483,9 @@ async function handleSuccessfulPayment(paymentId: string): Promise<void> {
       },
     });
 
-    // Update rider earnings if applicable
-    if (payment.task.riderId && payment.task.riderEarnings) {
-      await db.rider.update({
-        where: { id: payment.task.riderId },
-        data: {
-          totalEarnings: { increment: payment.task.riderEarnings },
-          walletBalance: { increment: payment.task.riderEarnings },
-        },
-      });
-    }
+    // NOTE: Rider earnings are now handled by FinanceLedgerService.recordTaskCompletion()
+    // which is called from EnhancedTaskStateMachine when task transitions to COMPLETED.
+    // Do NOT increment earnings here to avoid double-crediting.
   }
 }
 
@@ -456,8 +518,8 @@ export async function checkPaymentStatus(paymentId: string): Promise<PaymentResu
 
   // Check with provider
   if (payment.paymentMethod === 'MTN_MOMO' && payment.momoTransactionId) {
-    const status = await MTN_MOMO.getPaymentStatus(payment.paymentReference);
-    const mappedStatus = MTN_MOMO.mapMTNStatus(status.status);
+    const status = await MTN_MOMO.getPaymentStatus(payment.momoTransactionId);
+    const mappedStatus = MTN_MOMO.mapMTNStatus(status.status || 'PENDING');
 
     if (mappedStatus === 'SUCCESSFUL') {
       await handleSuccessfulPayment(paymentId);
@@ -480,7 +542,7 @@ export async function checkPaymentStatus(paymentId: string): Promise<PaymentResu
 
   if (payment.paymentMethod === 'AIRTEL_MONEY' && payment.momoTransactionId) {
     const status = await AIRTEL_MONEY.getPaymentStatus(payment.paymentReference);
-    const mappedStatus = AIRTEL_MONEY.mapAirtelStatus(status.transaction?.status || 'PENDING');
+    const mappedStatus = AIRTEL_MONEY.mapAirtelStatus(status.status || 'PENDING');
 
     if (mappedStatus === 'SUCCESSFUL') {
       await handleSuccessfulPayment(paymentId);
@@ -574,6 +636,7 @@ export const PaymentService = {
   checkPaymentStatus,
   handleMTNCallback,
   handleAirtelCallback,
+  handleSuccessfulPayment,
 };
 
 export default PaymentService;

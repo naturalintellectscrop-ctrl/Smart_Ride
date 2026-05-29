@@ -300,6 +300,8 @@ export class DashboardService {
       monthEarnings,
       activeTask,
       recentTasks,
+      totalDispatches,
+      acceptedDispatches,
     ] = await Promise.all([
       db.task.aggregate({
         where: {
@@ -339,10 +341,17 @@ export class DashboardService {
         orderBy: { completedAt: 'desc' },
         take: 10,
       }),
+      db.dispatchMatch.count({ where: { riderId } }),
+      db.dispatchMatch.count({ where: { riderId, status: 'ACCEPTED' } }),
     ]);
 
     const avgRating = rider.ratingsReceived.length > 0
       ? rider.ratingsReceived.reduce((sum, r) => sum + r.score, 0) / rider.ratingsReceived.length
+      : 0;
+
+    // Calculate acceptance rate from DispatchMatch records
+    const acceptanceRate = totalDispatches > 0
+      ? (acceptedDispatches / totalDispatches) * 100
       : 0;
 
     return {
@@ -355,7 +364,7 @@ export class DashboardService {
       recentTasks,
       onlineStatus: rider.isOnline,
       completionRate: rider.totalTrips > 0 ? (rider.completedTrips / rider.totalTrips) * 100 : 0,
-      acceptanceRate: 0, // Would need offer/accept tracking
+      acceptanceRate,
     };
   }
 

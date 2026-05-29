@@ -232,6 +232,51 @@ export class MetricsService {
       ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length / 1000 // in seconds
       : 0;
 
+    // Calculate on-time rate: query tasks that have estimatedDuration set
+    const tasksWithEstimates = await db.task.findMany({
+      where: {
+        riderId,
+        status: { in: ['COMPLETED', 'CLOSED'] },
+        estimatedDuration: { not: null },
+        actualDuration: { not: null },
+      },
+      select: {
+        estimatedDuration: true,
+        actualDuration: true,
+      },
+      take: 100,
+      orderBy: { completedAt: 'desc' },
+    });
+
+    const onTimeRate = tasksWithEstimates.length > 0
+      ? (tasksWithEstimates.filter(t => (t.actualDuration ?? 0) <= (t.estimatedDuration ?? 0) * 1.15).length / tasksWithEstimates.length) * 100
+      : rider.completedTrips > 0 ? 100 : 0;
+
+    // Calculate online hours from HeartbeatLog
+    const heartbeatStats = await db.heartbeatLog.aggregate({
+      where: {
+        riderId,
+        createdAt: {
+          gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // Last 30 days
+        },
+      },
+      _count: true,
+    });
+    // Heartbeats are sent every ~30 seconds (SYSTEM_TIMERS.HEARTBEAT_INTERVAL)
+    // So online hours ≈ heartbeat_count * 30s / 3600s
+    const onlineHours = heartbeatStats._count > 0
+      ? (heartbeatStats._count * 30) / 3600
+      : 0;
+
+    // Calculate acceptance rate from DispatchMatch records
+    const totalDispatches = await db.dispatchMatch.count({ where: { riderId } });
+    const acceptedDispatches = await db.dispatchMatch.count({
+      where: { riderId, status: 'ACCEPTED' },
+    });
+    const acceptanceRate = totalDispatches > 0
+      ? (acceptedDispatches / totalDispatches) * 100
+      : 0;
+
     return {
       riderId,
       riderName: rider.user.name,
@@ -242,10 +287,10 @@ export class MetricsService {
       averageRating: avgRating,
       totalEarnings,
       averageEarningsPerDay: totalEarnings / 30, // Assuming 30-day period
-      onTimeRate: 85, // Would need actual on-time tracking
+      onTimeRate,
       averageResponseTime: avgResponseTime,
-      onlineHours: 0, // Would need heartbeat tracking
-      acceptanceRate: totalTrips > 0 ? (completedTrips / totalTrips) * 100 : 0,
+      onlineHours,
+      acceptanceRate,
     };
   }
 
@@ -270,6 +315,71 @@ export class MetricsService {
         ? rider.ratingsReceived.reduce((sum, r) => sum + r.score, 0) / rider.ratingsReceived.length
         : 0;
 
+      // Calculate on-time rate from tasks with estimated vs actual duration
+      const tasksWithEstimates = await db.task.findMany({
+        where: {
+          riderId: rider.id,
+          status: { in: ['COMPLETED', 'CLOSED'] },
+          estimatedDuration: { not: null },
+          actualDuration: { not: null },
+        },
+        select: {
+          estimatedDuration: true,
+          actualDuration: true,
+        },
+        take: 100,
+        orderBy: { completedAt: 'desc' },
+      });
+
+      const onTimeRate = tasksWithEstimates.length > 0
+        ? (tasksWithEstimates.filter(t => (t.actualDuration ?? 0) <= (t.estimatedDuration ?? 0) * 1.15).length / tasksWithEstimates.length) * 100
+        : rider.completedTrips > 0 ? 100 : 0;
+
+      // Calculate online hours from HeartbeatLog (last 30 days)
+      const heartbeatStats = await db.heartbeatLog.aggregate({
+        where: {
+          riderId: rider.id,
+          createdAt: {
+            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          },
+        },
+        _count: true,
+      });
+      const onlineHours = heartbeatStats._count > 0
+        ? (heartbeatStats._count * 30) / 3600
+        : 0;
+
+      // Calculate acceptance rate from DispatchMatch
+      const totalDispatches = await db.dispatchMatch.count({ where: { riderId: rider.id } });
+      const acceptedDispatches = await db.dispatchMatch.count({
+        where: { riderId: rider.id, status: 'ACCEPTED' },
+      });
+      const acceptanceRate = totalDispatches > 0
+        ? (acceptedDispatches / totalDispatches) * 100
+        : 0;
+
+      // Calculate average response time from dispatch matches
+      const acceptedMatches = await db.dispatchMatch.findMany({
+        where: {
+          riderId: rider.id,
+          status: 'ACCEPTED',
+          acceptedAt: { not: null },
+        },
+        select: {
+          createdAt: true,
+          acceptedAt: true,
+        },
+        take: 50,
+        orderBy: { createdAt: 'desc' },
+      });
+
+      const responseTimes = acceptedMatches
+        .filter(m => m.acceptedAt)
+        .map(m => m.acceptedAt!.getTime() - m.createdAt.getTime());
+      const avgResponseTime = responseTimes.length > 0
+        ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length / 1000
+        : 0;
+
       results.push({
         riderId: rider.id,
         riderName: rider.user.name,
@@ -280,10 +390,10 @@ export class MetricsService {
         averageRating: avgRating,
         totalEarnings: rider.totalEarnings,
         averageEarningsPerDay: rider.totalEarnings / 30,
-        onTimeRate: 85,
-        averageResponseTime: 0,
-        onlineHours: 0,
-        acceptanceRate: 0,
+        onTimeRate,
+        averageResponseTime: avgResponseTime,
+        onlineHours,
+        acceptanceRate,
       });
     }
 

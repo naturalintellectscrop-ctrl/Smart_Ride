@@ -20,11 +20,17 @@ import { maskPhoneNumber } from '@/lib/calling/masked-calling-service';
 
 export type TaskState =
   | 'CREATED'
+  | 'REQUESTED'
+  | 'SEARCHING'
   | 'MATCHING'
   | 'ASSIGNED'
-  | 'RIDER_ACCEPTED'
+  | 'ACCEPTED'
+  | 'ARRIVING'
+  | 'ARRIVED'
   | 'PICKED_UP'
   | 'IN_PROGRESS'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
   | 'COMPLETED'
   | 'CANCELLED'
   | 'FAILED';
@@ -74,9 +80,23 @@ const stateConfig: Record<TaskState, {
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
   },
-  MATCHING: {
+  REQUESTED: {
+    label: 'Requested',
+    description: 'Your request has been submitted',
+    icon: <Circle className="h-5 w-5" />,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-100',
+  },
+  SEARCHING: {
     label: 'Finding Rider',
     description: 'Looking for nearby riders...',
+    icon: <Loader2 className="h-5 w-5 animate-spin" />,
+    color: 'text-yellow-600',
+    bgColor: 'bg-yellow-100',
+  },
+  MATCHING: {
+    label: 'Matching',
+    description: 'Matching you with the best rider...',
     icon: <Loader2 className="h-5 w-5 animate-spin" />,
     color: 'text-yellow-600',
     bgColor: 'bg-yellow-100',
@@ -88,12 +108,26 @@ const stateConfig: Record<TaskState, {
     color: 'text-purple-600',
     bgColor: 'bg-purple-100',
   },
-  RIDER_ACCEPTED: {
+  ACCEPTED: {
     label: 'Rider On The Way',
     description: 'Your rider is heading to pickup',
     icon: <CheckCircle className="h-5 w-5" />,
     color: 'text-emerald-600',
     bgColor: 'bg-emerald-100',
+  },
+  ARRIVING: {
+    label: 'Rider Arriving',
+    description: 'Your rider is almost at the pickup point',
+    icon: <Navigation className="h-5 w-5" />,
+    color: 'text-emerald-600',
+    bgColor: 'bg-emerald-100',
+  },
+  ARRIVED: {
+    label: 'Rider Arrived',
+    description: 'Your rider has arrived at the pickup point',
+    icon: <MapPin className="h-5 w-5" />,
+    color: 'text-teal-600',
+    bgColor: 'bg-teal-100',
   },
   PICKED_UP: {
     label: 'Picked Up',
@@ -108,6 +142,20 @@ const stateConfig: Record<TaskState, {
     icon: <Navigation className="h-5 w-5" />,
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
+  },
+  IN_TRANSIT: {
+    label: 'In Transit',
+    description: 'On the way to destination',
+    icon: <Navigation className="h-5 w-5" />,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-100',
+  },
+  DELIVERED: {
+    label: 'Delivered',
+    description: 'Package has been delivered',
+    icon: <CheckCircle className="h-5 w-5" />,
+    color: 'text-green-600',
+    bgColor: 'bg-green-100',
   },
   COMPLETED: {
     label: 'Completed',
@@ -134,11 +182,16 @@ const stateConfig: Record<TaskState, {
 
 const stateOrder: TaskState[] = [
   'CREATED',
+  'SEARCHING',
   'MATCHING',
   'ASSIGNED',
-  'RIDER_ACCEPTED',
+  'ACCEPTED',
+  'ARRIVING',
+  'ARRIVED',
   'PICKED_UP',
   'IN_PROGRESS',
+  'IN_TRANSIT',
+  'DELIVERED',
   'COMPLETED',
 ];
 
@@ -188,7 +241,7 @@ export function TaskTracking({
           </div>
         </div>
 
-        {estimatedTime && currentState === 'RIDER_ACCEPTED' && (
+        {estimatedTime && currentState === 'ACCEPTED' && (
           <div className="bg-emerald-50 rounded-xl p-3 text-center">
             <p className="text-sm text-gray-500">Arriving in</p>
             <p className="text-2xl font-bold text-emerald-600">{estimatedTime}</p>
@@ -274,7 +327,7 @@ export function TaskTracking({
       </MobileCard>
 
       {/* Rider Info */}
-      {rider && (currentState === 'RIDER_ACCEPTED' || currentState === 'PICKED_UP' || currentState === 'IN_PROGRESS') && (
+      {rider && (currentState === 'ACCEPTED' || currentState === 'ARRIVING' || currentState === 'ARRIVED' || currentState === 'PICKED_UP' || currentState === 'IN_PROGRESS' || currentState === 'IN_TRANSIT') && (
         <MobileCard className="p-4">
           <h4 className="font-semibold text-gray-900 mb-3">Your Rider</h4>
           <div className="flex items-center justify-between">
@@ -331,7 +384,7 @@ export function TaskTracking({
       )}
 
       {/* Client Info (for riders) */}
-      {client && userType === 'RIDER' && (currentState === 'RIDER_ACCEPTED' || currentState === 'PICKED_UP' || currentState === 'IN_PROGRESS') && (
+      {client && userType === 'RIDER' && (currentState === 'ACCEPTED' || currentState === 'ARRIVING' || currentState === 'ARRIVED' || currentState === 'PICKED_UP' || currentState === 'IN_PROGRESS' || currentState === 'IN_TRANSIT') && (
         <MobileCard className="p-4">
           <h4 className="font-semibold text-gray-900 mb-3">Client</h4>
           <div className="flex items-center justify-between">

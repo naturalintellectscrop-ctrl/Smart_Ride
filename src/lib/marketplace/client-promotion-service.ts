@@ -3,7 +3,7 @@
 
 import { db } from '@/lib/db';
 import { PromotionStatus, ClientPromotionStatus, PromotionType } from '@prisma/client';
-import { createNotification } from '@/lib/notifications/notification-service';
+import { createNotification } from '@/lib/services/notification.service';
 import { creditCashbackToWallet, refundToWallet } from '@/lib/wallet/wallet-service';
 
 // ============================================

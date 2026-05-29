@@ -5,10 +5,12 @@ import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import {
   generateKOTNumber,
   generateTaskNumber,
+  EnhancedTaskStateMachine,
 } from '@/lib/services/enhanced-task-state-machine.service';
 import { sendOrderUpdateNotification } from '@/lib/services/notification.service';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { calculatePricing } from '@/lib/api/pricing';
+import { TaskStatus } from '@prisma/client';
 import { z } from 'zod';
 
 interface RouteParams {
@@ -555,14 +557,15 @@ async function handleReady(orderId: string, body: Record<string, unknown>) {
       description: `Delivery task ${task.taskNumber} created for order ${order.orderNumber}`,
     });
 
-    // Move task to MATCHING and auto-dispatch
-    await db.task.update({
-      where: { id: task.id },
-      data: {
-        status: 'MATCHING',
-        matchingStartedAt: new Date(),
-      },
-    });
+    // Move task to MATCHING via state machine and auto-dispatch
+    const matchResult = await EnhancedTaskStateMachine.transition(
+      task.id,
+      TaskStatus.MATCHING,
+      { triggeredByType: 'SYSTEM', reason: 'Food/shopping order ready, starting dispatch' }
+    );
+    if (!matchResult.success) {
+      console.error(`[Order] Failed to transition task ${task.id} to MATCHING:`, matchResult.error);
+    }
 
     // Dispatch rider asynchronously - don't block the response
     const dispatchTaskType = order.orderType === 'SHOPPING' ? 'SHOPPING' as const : 'FOOD_DELIVERY' as const;
@@ -582,10 +585,12 @@ async function handleReady(orderId: string, body: Record<string, unknown>) {
           description: `Dispatch match created for ${dispatchTaskType.toLowerCase()} task ${task!.taskNumber}, awaiting rider acceptance`,
         });
       } else if (result.noRidersAvailable) {
-        await db.task.update({
-          where: { id: task!.id },
-          data: { status: 'SEARCHING' },
-        });
+        // Transition to SEARCHING via state machine
+        EnhancedTaskStateMachine.transition(
+          task!.id,
+          TaskStatus.SEARCHING,
+          { triggeredByType: 'SYSTEM', reason: 'No riders available for order delivery' }
+        ).catch(err => console.error('[Order] Failed to transition to SEARCHING:', err));
       }
     }).catch((error) => {
       console.error('[Order] Auto-dispatch error (non-blocking):', error);
@@ -650,26 +655,20 @@ async function handlePickup(orderId: string, body: Record<string, unknown>) {
     },
   });
 
-  // Update task status if it exists
+  // Update task status via state machine if task exists
   if (order.task) {
-    await db.task.update({
-      where: { id: order.task.id },
-      data: {
-        status: 'PICKED_UP',
-        pickedUpAt: new Date(),
-      },
-    });
-
-    // Create task state transition
-    await db.taskStateTransition.create({
-      data: {
-        taskId: order.task.id,
-        fromStatus: order.task.status,
-        toStatus: 'PICKED_UP',
-        changedBy: validatedData.riderId || 'SYSTEM',
-        changeReason: 'Rider picked up food order',
-      },
-    }).catch(() => {/* Ignore if transition record fails */});
+    const pickupResult = await EnhancedTaskStateMachine.transition(
+      order.task.id,
+      TaskStatus.PICKED_UP,
+      {
+        riderId: validatedData.riderId || undefined,
+        triggeredByType: validatedData.riderId ? 'RIDER' : 'SYSTEM',
+        reason: 'Rider picked up food order',
+      }
+    );
+    if (!pickupResult.success) {
+      console.error(`[Order] Failed to transition task ${order.task.id} to PICKED_UP:`, pickupResult.error);
+    }
   }
 
   // Notify client
@@ -728,26 +727,20 @@ async function handleDeliver(orderId: string, body: Record<string, unknown>) {
     },
   });
 
-  // Update task status if it exists
+  // Update task status via state machine if task exists
   if (order.task) {
-    await db.task.update({
-      where: { id: order.task.id },
-      data: {
-        status: 'DELIVERED',
-        deliveringAt: new Date(),
-      },
-    });
-
-    // Create task state transition
-    await db.taskStateTransition.create({
-      data: {
-        taskId: order.task.id,
-        fromStatus: order.task.status,
-        toStatus: 'DELIVERED',
-        changedBy: validatedData.riderId || 'SYSTEM',
-        changeReason: 'Food order delivered to customer',
-      },
-    }).catch(() => {/* Ignore if transition record fails */});
+    const deliverResult = await EnhancedTaskStateMachine.transition(
+      order.task.id,
+      TaskStatus.DELIVERED,
+      {
+        riderId: validatedData.riderId || undefined,
+        triggeredByType: validatedData.riderId ? 'RIDER' : 'SYSTEM',
+        reason: 'Food order delivered to customer',
+      }
+    );
+    if (!deliverResult.success) {
+      console.error(`[Order] Failed to transition task ${order.task.id} to DELIVERED:`, deliverResult.error);
+    }
   }
 
   // Notify client about delivery
@@ -814,17 +807,23 @@ async function handleCancel(orderId: string, body: Record<string, unknown>) {
     },
   });
 
-  // Cancel the associated task if it exists
+  // Cancel the associated task via state machine if it exists
   if (order.task && !['COMPLETED', 'CANCELLED', 'CLOSED'].includes(order.task.status)) {
-    await db.task.update({
-      where: { id: order.task.id },
-      data: {
-        status: 'CANCELLED',
-        cancelledAt: new Date(),
-        cancellationReason: `Order cancelled: ${validatedData.reason}`,
-        cancellationCode: validatedData.cancelledBy === 'CUSTOMER' ? 'CUSTOMER_CANCELLED' : 'MERCHANT_CANCELLED',
-      },
-    });
+    const cancelResult = await EnhancedTaskStateMachine.transition(
+      order.task.id,
+      TaskStatus.CANCELLED,
+      {
+        triggeredByType: validatedData.cancelledBy === 'CUSTOMER' ? 'CLIENT' : validatedData.cancelledBy === 'MERCHANT' ? 'RIDER' : 'SYSTEM',
+        reason: `Order cancelled: ${validatedData.reason}`,
+        metadata: {
+          cancellationCode: validatedData.cancelledBy === 'CUSTOMER' ? 'CUSTOMER_CANCELLED' : 'MERCHANT_CANCELLED',
+          cancelledBy: validatedData.cancelledBy,
+        },
+      }
+    );
+    if (!cancelResult.success) {
+      console.error(`[Order] Failed to transition task ${order.task.id} to CANCELLED:`, cancelResult.error);
+    }
   }
 
   // Refund payment if already paid

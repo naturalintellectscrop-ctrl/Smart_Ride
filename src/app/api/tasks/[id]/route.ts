@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { TaskStatus } from '@prisma/client';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { isValidTransition, canRiderPerformTask } from '@/lib/services/enhanced-task-state-machine.service';
+import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 import { z } from 'zod';
 import { requireAuth, isAdmin, AuthenticatedRequest } from '@/lib/auth/guards';
 
@@ -164,7 +166,7 @@ async function handleAccept(taskId: string, body: Record<string, unknown>, user:
     return notFoundResponse('Task');
   }
 
-  if (!isValidTransition(task.status, 'RIDER_ACCEPTED')) {
+  if (!isValidTransition(task.status, TaskStatus.ACCEPTED)) {
     return errorResponse(`Cannot accept task in ${task.status} status`);
   }
 
@@ -176,7 +178,7 @@ async function handleAccept(taskId: string, body: Record<string, unknown>, user:
   const updatedTask = await db.task.update({
     where: { id: taskId },
     data: {
-      status: 'RIDER_ACCEPTED',
+      status: TaskStatus.ACCEPTED,
       riderId: validatedData.riderId,
       acceptedAt: new Date(),
     },
@@ -191,6 +193,44 @@ async function handleAccept(taskId: string, body: Record<string, unknown>, user:
     taskId: taskId,
     description: `Task accepted by rider: ${rider.fullName}`,
   });
+
+  // Emit socket notification to client about task acceptance
+  try {
+    const socketPort = process.env.SOCKET_PORT || '3002';
+    const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
+    await fetch(`http://localhost:${socketPort}/emit`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Internal-Key': internalKey,
+      },
+      body: JSON.stringify({
+        room: `user:${task.clientId}`,
+        event: 'task:status:update',
+        data: {
+          taskId,
+          status: 'ACCEPTED',
+          riderId: validatedData.riderId,
+          riderName: rider.fullName,
+          timestamp: new Date().toISOString(),
+        },
+      }),
+    });
+  } catch (socketError) {
+    console.error('[Task Accept] Failed to emit socket notification:', socketError);
+  }
+
+  // Send DB notification to the client about the acceptance
+  try {
+    await sendTaskUpdateNotification(
+      task.clientId,
+      taskId,
+      task.taskNumber || taskId,
+      'ACCEPTED'
+    );
+  } catch (notifError) {
+    console.error('[Task Accept] Failed to send notification:', notifError);
+  }
 
   return successResponse(updatedTask, 'Task accepted');
 }

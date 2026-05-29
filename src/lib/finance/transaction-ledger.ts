@@ -783,7 +783,8 @@ export async function generateFinancialStatement(
         break;
     }
 
-    platform.grossCommission += log.platformCommission || 0;
+    // Note: platformCommission is only counted in the PLATFORM_COMMISSION case above,
+    // not unconditionally, to avoid double-counting.
     costs.riderPayouts += log.riderEarnings || 0;
     costs.merchantPayouts += log.merchantEarnings || 0;
   }

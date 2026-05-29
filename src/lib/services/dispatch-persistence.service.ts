@@ -86,11 +86,22 @@ export class DispatchService {
       
       const matchingStatuses = [TaskStatus.MATCHING, TaskStatus.SEARCHING];
       if (!currentTask || !matchingStatuses.includes(currentTask.status)) {
+        const fromStatus = currentTask?.status || TaskStatus.CREATED;
         await db.task.update({
           where: { id: request.taskId },
           data: {
             status: TaskStatus.SEARCHING,
             matchingStartedAt: new Date(),
+          },
+        });
+        // Create state transition record
+        await db.taskStateTransition.create({
+          data: {
+            taskId: request.taskId,
+            fromStatus,
+            toStatus: TaskStatus.SEARCHING,
+            triggeredByType: 'SYSTEM',
+            reason: 'Dispatch searching for riders',
           },
         });
       }
@@ -398,32 +409,70 @@ export class DispatchService {
         return { success: false, error: 'Match has expired' };
       }
 
-      // Accept the match
-      await db.$transaction([
-        // Update match status
-        db.dispatchMatch.update({
-          where: { id: matchId },
+      // Accept the match — use updateMany with a status guard to prevent
+      // double-acceptance when two concurrent requests race for the same match.
+      const txResult = await db.$transaction(async (tx) => {
+        // Atomically update the match ONLY if it is still PENDING.
+        // If another transaction already changed it, this will affect 0 rows.
+        const updateResult = await tx.dispatchMatch.updateMany({
+          where: { id: matchId, status: DispatchMatchStatus.PENDING },
           data: {
             status: DispatchMatchStatus.ACCEPTED,
             acceptedAt: new Date(),
           },
-        }),
+        });
+
+        // If 0 rows were updated, the match was already handled by another
+        // concurrent transaction — abort to prevent double-acceptance.
+        if (updateResult.count === 0) {
+          return { alreadyHandled: true as const };
+        }
+
         // Update task with rider
-        db.task.update({
+        await tx.task.update({
           where: { id: match.taskId },
           data: {
             riderId,
             status: TaskStatus.ASSIGNED,
             assignedAt: new Date(),
           },
-        }),
+        });
+
+        // Create state transition record
+        await tx.taskStateTransition.create({
+          data: {
+            taskId: match.taskId,
+            fromStatus: match.task.status,
+            toStatus: TaskStatus.ASSIGNED,
+            triggeredBy: riderId,
+            triggeredByType: 'RIDER',
+            reason: 'Rider accepted dispatch match',
+          },
+        });
+
+        // Create audit log for status change (inside transaction for atomicity)
+        await tx.auditLog.create({
+          data: {
+            actorId: riderId,
+            actorType: 'RIDER',
+            taskId: match.taskId,
+            action: 'STATUS_CHANGE',
+            entityType: 'Task',
+            entityId: match.taskId,
+            description: `Task status changed from ${match.task.status} to ASSIGNED`,
+            oldValues: JSON.stringify({ status: match.task.status }),
+            newValues: JSON.stringify({ status: TaskStatus.ASSIGNED }),
+          },
+        });
+
         // Update rider's current task
-        db.rider.update({
+        await tx.rider.update({
           where: { id: riderId },
           data: { currentTaskId: match.taskId },
-        }),
+        });
+
         // Cancel other pending matches for this task
-        db.dispatchMatch.updateMany({
+        await tx.dispatchMatch.updateMany({
           where: {
             taskId: match.taskId,
             status: DispatchMatchStatus.PENDING,
@@ -433,21 +482,21 @@ export class DispatchService {
             status: DispatchMatchStatus.CANCELLED,
             cancelledAt: new Date(),
           },
-        }),
-      ]);
+        });
 
-      // Create audit log
-      await db.auditLog.create({
-        data: {
-          actorId: riderId,
-          actorType: 'RIDER',
-          taskId: match.taskId,
-          action: 'DISPATCH_ACCEPTED',
-          entityType: 'DispatchMatch',
-          entityId: matchId,
-          description: `Rider accepted dispatch for task ${match.task.taskNumber}`,
-        },
+        return { alreadyHandled: false as const };
       });
+
+      // If the match was already handled by another concurrent request,
+      // return an error so the caller knows it didn't win the race.
+      if (txResult.alreadyHandled) {
+        return { success: false, error: 'Match already accepted by another request' };
+      }
+
+      // NOTE: The DISPATCH_ACCEPTED audit log was previously created here
+      // outside the transaction. It has been moved inside the $transaction
+      // above as a STATUS_CHANGE audit log for atomicity with the state
+      // transition record, ensuring consistency.
 
       return { success: true, taskId: match.taskId };
     } catch (error: any) {
@@ -549,10 +598,21 @@ export class DispatchService {
       // If task is in MATCHING status, move it to SEARCHING so it stays eligible
       // for the periodic expired match processor to retry
       if (task.status === TaskStatus.MATCHING || task.status === TaskStatus.SEARCHING) {
+        const fromStatus = task.status;
         await db.task.update({
           where: { id: taskId },
           data: {
             status: TaskStatus.SEARCHING,
+          },
+        });
+        // Create state transition record
+        await db.taskStateTransition.create({
+          data: {
+            taskId,
+            fromStatus,
+            toStatus: TaskStatus.SEARCHING,
+            triggeredByType: 'SYSTEM',
+            reason: 'No riders available, continuing search',
           },
         });
       }
@@ -633,7 +693,7 @@ export class DispatchService {
   ): Promise<void> {
     const task = await db.task.findUnique({
       where: { id: taskId },
-      select: { clientId: true, taskNumber: true },
+      select: { clientId: true, taskNumber: true, status: true },
     });
 
     await db.$transaction([
@@ -642,8 +702,18 @@ export class DispatchService {
         data: {
           status: TaskStatus.CANCELLED,
           cancelledAt: new Date(),
+          cancelledBy: 'SYSTEM',
           cancellationReason: reason,
           cancellationCode: 'NO_RIDER_AVAILABLE',
+        },
+      }),
+      db.taskStateTransition.create({
+        data: {
+          taskId,
+          fromStatus: task?.status || TaskStatus.SEARCHING,
+          toStatus: TaskStatus.CANCELLED,
+          triggeredByType: 'SYSTEM',
+          reason: `Auto-cancelled: ${reason}`,
         },
       }),
       db.auditLog.create({

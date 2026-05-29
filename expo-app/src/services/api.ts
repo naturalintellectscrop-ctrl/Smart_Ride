@@ -236,13 +236,6 @@ class ApiService {
     return this.request<Task>(`/tasks/${taskId}/status`, 'POST', { status });
   }
 
-  async transitionTask(taskId: string, toStatus: string, context?: { riderId?: string; reason?: string; latitude?: number; longitude?: number; metadata?: Record<string, unknown> }): Promise<ApiResponse<{ task: Task }>> {
-    return this.request<{ task: Task }>(`/tasks/${taskId}/transition`, 'POST', {
-      toStatus,
-      ...context,
-    });
-  }
-
   // ==========================================
   // ORDERS
   // ==========================================

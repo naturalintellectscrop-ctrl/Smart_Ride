@@ -1,5 +1,6 @@
 // ============================================
 // SMART RIDE MOBILE - CART SCREEN
+// FIXED: Connected to cartStore instead of mock data
 // ============================================
 
 import { useState } from 'react';
@@ -13,51 +14,45 @@ import {
   Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useLocationStore } from '@/src/store';
+import { useLocationStore, useCartStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS, PAYMENT_METHODS } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
 
-interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-}
-
 export default function CartScreen() {
   const router = useRouter();
   const { address, latitude, longitude } = useLocationStore();
-
-  // Mock cart items
-  const [cartItems, setCartItems] = useState<CartItem[]>([
-    { id: '1', name: 'Rolex', price: 5000, quantity: 2 },
-    { id: '2', name: 'Chapati', price: 1000, quantity: 3 },
-  ]);
+  const { items, removeItem, updateQuantity, clearCart, totalPrice, merchantId, merchantName } = useCartStore();
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [deliveryInstructions, setDeliveryInstructions] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const deliveryFee = 3000;
   const serviceFee = 500;
-  const total = subtotal + deliveryFee + serviceFee;
+  const total = totalPrice + deliveryFee + serviceFee;
 
-  const updateQuantity = (id: string, delta: number) => {
-    setCartItems(items => 
-      items.map(item => 
-        item.id === id 
-          ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-          : item
-      ).filter(item => item.quantity > 0)
-    );
+  const handleQuantityChange = (productId: string, delta: number) => {
+    const item = items.find(i => i.productId === productId);
+    if (item) {
+      const newQuantity = item.quantity + delta;
+      if (newQuantity <= 0) {
+        removeItem(productId);
+      } else {
+        updateQuantity(productId, newQuantity);
+      }
+    }
   };
 
   const handlePlaceOrder = async () => {
-    if (cartItems.length === 0) {
+    if (items.length === 0) {
       Alert.alert('Error', 'Your cart is empty');
+      return;
+    }
+
+    if (!merchantId) {
+      Alert.alert('Error', 'No merchant selected. Please add items from a store.');
       return;
     }
 
@@ -69,19 +64,23 @@ export default function CartScreen() {
     setIsPlacingOrder(true);
     try {
       const response = await api.placeOrder({
-        merchantId: 'merchant-id', // Would come from actual cart state
+        merchantId,
         orderType: 'FOOD_DELIVERY',
-        items: cartItems.map(item => ({
-          menuItemId: item.id,
+        items: items.map(item => ({
+          menuItemId: item.productId,
           quantity: item.quantity,
+          name: item.name,
+          price: item.price,
         })),
         deliveryAddress: address,
         deliveryLatitude: latitude,
         deliveryLongitude: longitude,
         paymentMethod,
+        deliveryInstructions,
       });
 
       if (response.success && response.data) {
+        clearCart();
         router.replace(`/orders/order-tracking?orderId=${response.data.id}`);
       } else {
         Alert.alert('Error', response.error || 'Failed to place order');
@@ -109,12 +108,20 @@ export default function CartScreen() {
       </View>
 
       <ScrollView className="flex-1 px-4 pt-4">
+        {/* Merchant Info */}
+        {merchantName && (
+          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
+            <Text className="text-gray-500 text-sm mb-1">Ordering from</Text>
+            <Text className="font-bold text-gray-900">{merchantName}</Text>
+          </View>
+        )}
+
         {/* Cart Items */}
         <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
           <Text className="font-bold text-gray-900 mb-4">Order Items</Text>
           
-          {cartItems.map((item) => (
-            <View key={item.id} className="flex-row items-center py-3 border-b border-gray-100">
+          {items.map((item) => (
+            <View key={item.productId} className="flex-row items-center py-3 border-b border-gray-100">
               <View className="flex-1">
                 <Text className="text-gray-900 font-medium">{item.name}</Text>
                 <Text className="text-gray-500 text-sm">
@@ -125,14 +132,14 @@ export default function CartScreen() {
               <View className="flex-row items-center">
                 <TouchableOpacity 
                   className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
-                  onPress={() => updateQuantity(item.id, -1)}
+                  onPress={() => handleQuantityChange(item.productId, -1)}
                 >
                   <Text className="text-gray-600">-</Text>
                 </TouchableOpacity>
                 <Text className="w-8 text-center font-medium">{item.quantity}</Text>
                 <TouchableOpacity 
                   className="w-8 h-8 bg-primary-100 rounded-full items-center justify-center"
-                  onPress={() => updateQuantity(item.id, 1)}
+                  onPress={() => handleQuantityChange(item.productId, 1)}
                 >
                   <Text className="text-primary-500">+</Text>
                 </TouchableOpacity>
@@ -140,7 +147,7 @@ export default function CartScreen() {
             </View>
           ))}
 
-          {cartItems.length === 0 && (
+          {items.length === 0 && (
             <Text className="text-gray-400 text-center py-4">Your cart is empty</Text>
           )}
         </View>
@@ -210,7 +217,7 @@ export default function CartScreen() {
           
           <View className="flex-row justify-between py-2">
             <Text className="text-gray-500">Subtotal</Text>
-            <Text className="text-gray-900">UGX {subtotal.toLocaleString()}</Text>
+            <Text className="text-gray-900">UGX {totalPrice.toLocaleString()}</Text>
           </View>
           <View className="flex-row justify-between py-2">
             <Text className="text-gray-500">Delivery Fee</Text>
@@ -234,7 +241,7 @@ export default function CartScreen() {
         <TouchableOpacity
           className={`rounded-xl py-4 ${isPlacingOrder ? 'bg-primary-300' : 'bg-primary-500'}`}
           onPress={handlePlaceOrder}
-          disabled={isPlacingOrder || cartItems.length === 0}
+          disabled={isPlacingOrder || items.length === 0}
         >
           {isPlacingOrder ? (
             <ActivityIndicator color="white" />

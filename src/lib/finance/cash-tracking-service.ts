@@ -142,6 +142,20 @@ export async function recordCashCollection(
     },
   });
 
+  // Create finance log entry for the cash collection
+  await db.financeLog.create({
+    data: {
+      transactionType: 'CASH_COLLECTION',
+      referenceId: collection.id,
+      amount: input.amount,
+      currency: 'UGX',
+      riderId: input.riderId,
+      clientId: input.userId,
+      status: 'COMPLETED',
+      description: `Cash collection (${input.collectionType}) by rider ${rider.fullName}${input.taskId ? ` for task ${input.taskId}` : ''}`,
+    },
+  });
+
   // Check if this is a large collection
   if (input.amount >= LARGE_COLLECTION_THRESHOLD) {
     // Could trigger notification in production

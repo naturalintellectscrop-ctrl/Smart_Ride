@@ -75,13 +75,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       data: {
         actorId: rider.id,
         actorType: 'RIDER',
+        userId: user.id,
         taskId: match.taskId,
         action: 'DISPATCH_REJECTED',
         entityType: 'DispatchMatch',
         entityId: matchId,
         description: `Rider rejected dispatch for task ${match.task?.taskNumber || match.taskId}${reason ? `: ${reason}` : ''}`,
         source: 'MOBILE_APP',
-        metadata: JSON.stringify({
+        newValues: JSON.stringify({
           matchScore: match.matchScore,
           distanceKm: match.distanceKm,
           rejectionReason: reason || 'RIDER_DECLINED',
@@ -99,6 +100,40 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { success: false, error: result.error },
         { status: 400 }
       );
+    }
+
+    // Emit socket event to task room if task is going back to SEARCHING
+    // (i.e., retries remain and a new rider will be searched)
+    const maxRetryAttempts = 3; // must match DISPATCH_CONFIG.maxRetryAttempts
+    const nextRetryCount = match.retryCount + 1;
+    if (nextRetryCount < maxRetryAttempts && match.taskId) {
+      try {
+        const socketPort = process.env.SOCKET_PORT || '3002';
+        const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
+
+        await fetch(`http://localhost:${socketPort}/emit`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Internal-Key': internalKey,
+          },
+          body: JSON.stringify({
+            room: `task:${match.taskId}`,
+            event: 'task:status:update',
+            data: {
+              taskId: match.taskId,
+              status: 'SEARCHING',
+              reason: 'RIDER_REJECTED',
+              message: 'Rider declined the task. Searching for another rider...',
+              retryAttempt: nextRetryCount,
+              maxRetries: maxRetryAttempts,
+              timestamp: new Date().toISOString(),
+            },
+          }),
+        });
+      } catch (socketError) {
+        console.error('Socket emission to task room failed (non-blocking):', socketError);
+      }
     }
 
     return NextResponse.json({

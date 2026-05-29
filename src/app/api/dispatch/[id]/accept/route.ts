@@ -89,19 +89,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Emit real-time event to task room so client gets notified
+    // Emit real-time socket events and notifications after successful acceptance
     if (result.taskId) {
-      try {
-        const task = await db.task.findUnique({
-          where: { id: result.taskId },
-          select: { clientId: true, taskNumber: true },
-        });
-        if (task) {
-          // Internal HTTP emit API runs on port 3002 (Socket.io WebSocket is on 3001)
-          const socketPort = process.env.SOCKET_PORT || '3002';
-          const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-          
-          // Notify client that rider accepted
+      const task = await db.task.findUnique({
+        where: { id: result.taskId },
+        select: { clientId: true, taskNumber: true },
+      });
+
+      if (task) {
+        const socketPort = process.env.SOCKET_PORT || '3002';
+        const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
+
+        try {
+          // 1. Notify CLIENT that a rider was assigned
           await fetch(`http://localhost:${socketPort}/emit`, {
             method: 'POST',
             headers: {
@@ -122,8 +122,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
               },
             }),
           });
+        } catch (socketError) {
+          console.error('Socket emission to client failed (non-blocking):', socketError);
+        }
 
-          // Also notify task room
+        try {
+          // 2. Notify TASK ROOM that the task status changed
           await fetch(`http://localhost:${socketPort}/emit`, {
             method: 'POST',
             headers: {
@@ -136,27 +140,81 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
               data: {
                 taskId: result.taskId,
                 status: 'ASSIGNED',
+                rider: {
+                  id: rider.id,
+                  name: rider.fullName,
+                  phone: rider.phone,
+                  rating: rider.rating,
+                },
                 timestamp: new Date().toISOString(),
               },
             }),
           });
+        } catch (socketError) {
+          console.error('Socket emission to task room failed (non-blocking):', socketError);
         }
-      } catch (socketError) {
-        console.error('Socket emission failed (non-blocking):', socketError);
-      }
 
-      // Send DB notification to client about rider assignment
-      try {
-        if (task) {
+        try {
+          // 3. Notify RIDER that their acceptance was confirmed
+          await fetch(`http://localhost:${socketPort}/emit`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Internal-Key': internalKey,
+            },
+            body: JSON.stringify({
+              room: `user:${user.id}`,
+              event: 'dispatch:assignment',
+              data: {
+                taskId: result.taskId,
+                taskNumber: task.taskNumber,
+                status: 'ASSIGNED',
+                matchId,
+                timestamp: new Date().toISOString(),
+              },
+            }),
+          });
+        } catch (socketError) {
+          console.error('Socket emission to rider failed (non-blocking):', socketError);
+        }
+
+        // 4. Send DB notification to client about rider assignment
+        try {
           await sendTaskUpdateNotification(
             task.clientId,
             result.taskId!,
             task.taskNumber || result.taskId!,
             'ASSIGNED'
           );
+        } catch (notificationError) {
+          console.error('Notification failed (non-blocking):', notificationError);
         }
-      } catch (notificationError) {
-        console.error('Notification failed (non-blocking):', notificationError);
+
+        // 5. Create audit log for dispatch acceptance at route level
+        try {
+          await db.auditLog.create({
+            data: {
+              actorId: rider.id,
+              actorType: 'RIDER',
+              userId: user.id,
+              taskId: result.taskId,
+              action: 'DISPATCH_ACCEPTED',
+              entityType: 'DispatchMatch',
+              entityId: matchId,
+              description: `Rider ${rider.fullName || rider.id} accepted dispatch for task ${task.taskNumber || result.taskId}`,
+              source: 'MOBILE_APP',
+              newValues: JSON.stringify({
+                matchId,
+                taskId: result.taskId,
+                riderId: rider.id,
+                riderName: rider.fullName,
+                status: 'ASSIGNED',
+              }),
+            },
+          });
+        } catch (auditError) {
+          console.error('Audit log creation failed (non-blocking):', auditError);
+        }
       }
     }
 
