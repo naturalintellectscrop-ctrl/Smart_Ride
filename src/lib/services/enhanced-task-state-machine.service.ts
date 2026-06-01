@@ -12,6 +12,8 @@ import { db } from '@/lib/db';
 import { TaskStatus, TaskType, RiderRole } from '@prisma/client';
 import { TaskAnalyticsUpdater } from './analytics-updater.service';
 import { FinanceLedgerService } from './finance-ledger.service';
+import { sendTaskUpdateNotification } from './notification.service';
+import { SocketReliabilityService } from '@/lib/realtime/socket-reliability.service';
 
 // ============================================
 // UTILITY FUNCTIONS (consolidated from state-machine.ts)
@@ -463,6 +465,20 @@ export class EnhancedTaskStateMachine {
         }
       }
 
+      // ── Actor validation ─────────────────────────────────────
+      // If an actor type is specified in context, validate that this actor
+      // is permitted to perform the transition. If no actor is specified,
+      // the transition is allowed (backwards compatibility).
+      if (context.triggeredByType) {
+        const allowedActors = this.getAllowedActors(fromStatus, toStatus, taskType);
+        if (allowedActors.length > 0 && !allowedActors.includes(context.triggeredByType)) {
+          return {
+            success: false,
+            error: `Actor '${context.triggeredByType}' is not authorized to transition from ${fromStatus} to ${toStatus}`,
+          };
+        }
+      }
+
       // Run custom validation if defined
       if (transitionConfig.validate) {
         const isValid = await transitionConfig.validate(task, context);
@@ -546,6 +562,60 @@ export class EnhancedTaskStateMachine {
           },
         });
 
+        // ── Rider lifecycle: currentTaskId management ──────────
+        // Resolve the rider involved in this transition.
+        // context.riderId takes precedence (new assignment), then task.riderId (existing).
+        const effectiveRiderId = context.riderId ?? task.riderId;
+        const previousRiderId = task.riderId; // rider before this transition
+
+        // SET: When task becomes ASSIGNED, rider takes ownership of this task
+        if (toStatus === TaskStatus.ASSIGNED && effectiveRiderId) {
+          await tx.rider.updateMany({
+            where: { id: effectiveRiderId },
+            data: { currentTaskId: taskId },
+          });
+        }
+
+        // CLEAR: When task reaches a terminal state, release the rider
+        const terminalStatuses: TaskStatus[] = [
+          TaskStatus.COMPLETED,
+          TaskStatus.CANCELLED,
+          TaskStatus.FAILED,
+          TaskStatus.CLOSED,
+        ];
+        if (terminalStatuses.includes(toStatus) && previousRiderId) {
+          await tx.rider.updateMany({
+            where: { id: previousRiderId },
+            data: { currentTaskId: null },
+          });
+        }
+
+        // CLEAR: When task is reassigned (goes from an active state back to dispatch)
+        // the previous rider must be released so they can receive new assignments
+        const activeStatuses: TaskStatus[] = [
+          TaskStatus.ASSIGNED,
+          TaskStatus.ACCEPTED,
+          TaskStatus.ARRIVING,
+          TaskStatus.ARRIVED,
+          TaskStatus.PICKED_UP,
+          TaskStatus.IN_PROGRESS,
+          TaskStatus.IN_TRANSIT,
+        ];
+        const dispatchStatuses: TaskStatus[] = [
+          TaskStatus.MATCHING,
+          TaskStatus.SEARCHING,
+        ];
+        if (
+          dispatchStatuses.includes(toStatus) &&
+          activeStatuses.includes(fromStatus) &&
+          previousRiderId
+        ) {
+          await tx.rider.updateMany({
+            where: { id: previousRiderId },
+            data: { currentTaskId: null },
+          });
+        }
+
         return { task: updatedTask, transition, idempotent: false };
       });
 
@@ -558,6 +628,14 @@ export class EnhancedTaskStateMachine {
       if (!result.idempotent) {
         this.updateAnalytics(toStatus, result.task, context).catch(err =>
           console.error('[StateMachine] Analytics update failed:', err)
+        );
+      }
+
+      // Fire-and-forget: lifecycle side effects (notifications + socket events)
+      // These run after the transition is committed and must never affect the result.
+      if (!result.idempotent) {
+        this.emitLifecycleSideEffects(toStatus, task, result.task, fromStatus, context).catch(err =>
+          console.error('[StateMachine] Lifecycle side effects failed:', err)
         );
       }
 
@@ -839,6 +917,281 @@ export class EnhancedTaskStateMachine {
       riderId,
       triggeredByType: 'RIDER',
     });
+  }
+
+  // ============================================
+  // ACTOR VALIDATION
+  // ============================================
+
+  /**
+   * Get the list of actors allowed to perform a specific transition.
+   * Derived from the unified-state-machine.ts actor permission rules.
+   * SYSTEM and ADMIN are always allowed for non-FAILED transitions.
+   */
+  private static getAllowedActors(
+    fromStatus: TaskStatus,
+    toStatus: TaskStatus,
+    taskType: TaskType
+  ): Array<'CLIENT' | 'RIDER' | 'SYSTEM' | 'ADMIN'> {
+    // FAILED transitions are SYSTEM-only
+    if (toStatus === TaskStatus.FAILED) {
+      return ['SYSTEM'];
+    }
+
+    // SYSTEM and ADMIN can trigger any non-FAILED transition
+    const actors: Array<'CLIENT' | 'RIDER' | 'SYSTEM' | 'ADMIN'> = ['SYSTEM', 'ADMIN'];
+
+    // ── Cancellation actor rules ────────────────────────────
+    if (toStatus === TaskStatus.CANCELLED) {
+      actors.push('CLIENT');
+      const isRideType = taskType === TaskType.SMART_BODA_RIDE || taskType === TaskType.SMART_CAR_RIDE;
+      if (isRideType) {
+        // Ride: RIDER can cancel during active trip
+        if (fromStatus === TaskStatus.IN_PROGRESS) {
+          actors.push('RIDER');
+        }
+      } else {
+        // Delivery: RIDER can cancel during active delivery phases.
+        // Note: Merchants are mapped to 'RIDER' actor in existing code,
+        // so RIDER must be allowed from any active state for delivery types
+        // to maintain backwards compatibility with merchant cancellations.
+        actors.push('RIDER');
+      }
+      return actors;
+    }
+
+    // ── CLIENT-initiated transitions ────────────────────────
+    if (fromStatus === TaskStatus.CREATED && toStatus === TaskStatus.REQUESTED) {
+      actors.push('CLIENT');
+    }
+    // Ride-specific: client can start the trip when rider has arrived
+    if (
+      fromStatus === TaskStatus.ARRIVED &&
+      toStatus === TaskStatus.IN_PROGRESS &&
+      (taskType === TaskType.SMART_BODA_RIDE || taskType === TaskType.SMART_CAR_RIDE)
+    ) {
+      actors.push('CLIENT');
+    }
+
+    // ── RIDER-initiated transitions ─────────────────────────
+    const riderTransitionPairs: Array<[TaskStatus, TaskStatus]> = [
+      [TaskStatus.ASSIGNED, TaskStatus.ACCEPTED],
+      [TaskStatus.ACCEPTED, TaskStatus.ARRIVING],
+      [TaskStatus.ARRIVING, TaskStatus.ARRIVED],
+      [TaskStatus.ACCEPTED, TaskStatus.ARRIVED],
+      [TaskStatus.ARRIVED, TaskStatus.PICKED_UP],
+      [TaskStatus.PICKED_UP, TaskStatus.IN_PROGRESS],
+      [TaskStatus.PICKED_UP, TaskStatus.IN_TRANSIT],
+      [TaskStatus.PICKED_UP, TaskStatus.DELIVERED],
+      [TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED],
+      [TaskStatus.IN_TRANSIT, TaskStatus.DELIVERED],
+      [TaskStatus.DELIVERED, TaskStatus.COMPLETED],
+      [TaskStatus.ASSIGNED, TaskStatus.PICKED_UP],
+      [TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS],
+    ];
+    if (riderTransitionPairs.some(([from, to]) => from === fromStatus && to === toStatus)) {
+      actors.push('RIDER');
+    }
+
+    return actors;
+  }
+
+  // ============================================
+  // LIFECYCLE SIDE EFFECTS (notifications + sockets)
+  // ============================================
+
+  /**
+   * Emit lifecycle side effects after a successful transition.
+   * This method MUST never throw — it is called fire-and-forget.
+   * Handles both DB notifications and real-time socket events.
+   */
+  private static async emitLifecycleSideEffects(
+    toStatus: TaskStatus,
+    preTransitionTask: any,
+    postTransitionTask: any,
+    fromStatus: TaskStatus,
+    context: TransitionContext
+  ): Promise<void> {
+    try {
+      const taskId = preTransitionTask.id;
+      const taskNumber = preTransitionTask.taskNumber || preTransitionTask.id;
+      const clientId = preTransitionTask.clientId;
+      const riderUserId = preTransitionTask.rider?.userId;
+      const effectiveRiderId = context.riderId ?? preTransitionTask.riderId;
+
+      // ── Emit notifications (DB + socket via notification service) ──
+      await this.emitNotifications(toStatus, taskId, taskNumber, clientId, riderUserId, effectiveRiderId, context);
+
+      // ── Emit socket events (real-time updates) ──
+      await this.emitSocketEvents(toStatus, taskId, taskNumber, clientId, riderUserId, effectiveRiderId, fromStatus, context);
+    } catch (error) {
+      console.error('[StateMachine] emitLifecycleSideEffects error:', error);
+    }
+  }
+
+  /**
+   * Send DB notifications for task status transitions.
+   * Uses the existing sendTaskUpdateNotification which also emits
+   * a socket 'notification' event automatically.
+   */
+  private static async emitNotifications(
+    toStatus: TaskStatus,
+    taskId: string,
+    taskNumber: string,
+    clientId: string | undefined,
+    riderUserId: string | undefined,
+    effectiveRiderId: string | undefined,
+    context: TransitionContext
+  ): Promise<void> {
+    const statusStr = toStatus as string;
+
+    try {
+      switch (toStatus) {
+        case TaskStatus.ASSIGNED: {
+          // Notify client: rider has been assigned
+          if (clientId) {
+            await sendTaskUpdateNotification(clientId, taskId, taskNumber, statusStr).catch(() => {});
+          }
+          // Notify rider: you have a new task
+          if (riderUserId) {
+            await sendTaskUpdateNotification(riderUserId, taskId, taskNumber, statusStr).catch(() => {});
+          }
+          break;
+        }
+
+        case TaskStatus.ACCEPTED: {
+          // Notify client: rider accepted
+          if (clientId) {
+            await sendTaskUpdateNotification(clientId, taskId, taskNumber, statusStr).catch(() => {});
+          }
+          break;
+        }
+
+        case TaskStatus.COMPLETED: {
+          // Notify client: task completed
+          if (clientId) {
+            await sendTaskUpdateNotification(clientId, taskId, taskNumber, statusStr).catch(() => {});
+          }
+          // Notify rider: task completed
+          if (riderUserId) {
+            await sendTaskUpdateNotification(riderUserId, taskId, taskNumber, statusStr).catch(() => {});
+          }
+          break;
+        }
+
+        case TaskStatus.CANCELLED: {
+          // Notify client: task cancelled
+          if (clientId) {
+            await sendTaskUpdateNotification(clientId, taskId, taskNumber, statusStr).catch(() => {});
+          }
+          // Notify rider: task cancelled (if assigned)
+          if (riderUserId) {
+            await sendTaskUpdateNotification(riderUserId, taskId, taskNumber, statusStr).catch(() => {});
+          }
+          break;
+        }
+
+        case TaskStatus.FAILED: {
+          // Notify client: task failed
+          if (clientId) {
+            await sendTaskUpdateNotification(clientId, taskId, taskNumber, statusStr).catch(() => {});
+          }
+          break;
+        }
+
+        case TaskStatus.DELIVERED: {
+          // Notify client: delivery completed
+          if (clientId) {
+            await sendTaskUpdateNotification(clientId, taskId, taskNumber, statusStr).catch(() => {});
+          }
+          break;
+        }
+
+        case TaskStatus.PAID: {
+          // Notify client: payment confirmed
+          if (clientId) {
+            await sendTaskUpdateNotification(clientId, taskId, taskNumber, statusStr).catch(() => {});
+          }
+          break;
+        }
+
+        default:
+          // No specific notification for other statuses in Phase 1
+          break;
+      }
+    } catch (error) {
+      console.error('[StateMachine] emitNotifications error:', error);
+    }
+  }
+
+  /**
+   * Emit real-time socket events for task status transitions.
+   * Uses SocketReliabilityService for reliable delivery with DB fallback.
+   */
+  private static async emitSocketEvents(
+    toStatus: TaskStatus,
+    taskId: string,
+    taskNumber: string,
+    clientId: string | undefined,
+    riderUserId: string | undefined,
+    effectiveRiderId: string | undefined,
+    fromStatus: TaskStatus,
+    context: TransitionContext
+  ): Promise<void> {
+    try {
+      // ── All transitions: emit task:status:update to task room ──
+      await SocketReliabilityService.emitToTaskRoom(taskId, 'task:status:update', {
+        taskId,
+        status: toStatus,
+        fromStatus,
+        timestamp: new Date().toISOString(),
+      }).catch(() => {});
+
+      // ── Transition-specific socket events ──
+      switch (toStatus) {
+        case TaskStatus.ASSIGNED: {
+          // Notify client: rider matched
+          if (clientId) {
+            await SocketReliabilityService.emitToUser(clientId, 'rider:task:matched', {
+              taskId,
+              taskNumber,
+              status: toStatus,
+              riderId: effectiveRiderId,
+              timestamp: new Date().toISOString(),
+            }).catch(() => {});
+          }
+          // Notify rider: new assignment
+          if (riderUserId) {
+            await SocketReliabilityService.emitToUser(riderUserId, 'dispatch:assignment', {
+              taskId,
+              taskNumber,
+              status: toStatus,
+              timestamp: new Date().toISOString(),
+            }).catch(() => {});
+          }
+          break;
+        }
+
+        case TaskStatus.CANCELLED: {
+          // Notify client: task cancelled
+          if (clientId) {
+            await SocketReliabilityService.emitToUser(clientId, 'task:cancelled', {
+              taskId,
+              taskNumber,
+              reason: context.reason,
+              timestamp: new Date().toISOString(),
+            }).catch(() => {});
+          }
+          break;
+        }
+
+        default:
+          // No additional socket events for other statuses in Phase 1
+          break;
+      }
+    } catch (error) {
+      console.error('[StateMachine] emitSocketEvents error:', error);
+    }
   }
 }
 
