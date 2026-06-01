@@ -337,6 +337,8 @@ export interface TransitionContext {
   riderId?: string;
   triggeredByType?: 'CLIENT' | 'RIDER' | 'SYSTEM' | 'ADMIN';
   reason?: string;
+  /** Required for CANCELLED transitions: must be present at context top-level for requiredFields validation */
+  cancellationReason?: string;
   metadata?: Record<string, any>;
   latitude?: number;
   longitude?: number;
@@ -832,7 +834,8 @@ export class EnhancedTaskStateMachine {
       ...context,
       userId: cancelledBy,
       reason,
-      metadata: { cancellationReason: reason },
+      cancellationReason: reason, // Required at top-level for requiredFields validation
+      metadata: { cancellationReason: reason, ...(context.metadata || {}) },
     });
   }
 
@@ -855,11 +858,13 @@ export class EnhancedTaskStateMachine {
    */
   static async riderAccept(
     taskId: string, 
-    riderId: string
+    riderId: string,
+    additionalContext: Partial<TransitionContext> = {}
   ): Promise<TransitionResult> {
     return this.transition(taskId, TaskStatus.ACCEPTED, {
       riderId,
       triggeredByType: 'RIDER',
+      ...additionalContext,
     });
   }
 
@@ -898,11 +903,13 @@ export class EnhancedTaskStateMachine {
    */
   static async startTrip(
     taskId: string, 
-    riderId: string
+    riderId: string,
+    additionalContext: Partial<TransitionContext> = {}
   ): Promise<TransitionResult> {
     return this.transition(taskId, TaskStatus.IN_PROGRESS, {
       riderId,
       triggeredByType: 'RIDER',
+      ...additionalContext,
     });
   }
 
@@ -911,11 +918,13 @@ export class EnhancedTaskStateMachine {
    */
   static async completeTask(
     taskId: string, 
-    riderId: string
+    riderId: string,
+    additionalContext: Partial<TransitionContext> = {}
   ): Promise<TransitionResult> {
     return this.transition(taskId, TaskStatus.COMPLETED, {
       riderId,
       triggeredByType: 'RIDER',
+      ...additionalContext,
     });
   }
 

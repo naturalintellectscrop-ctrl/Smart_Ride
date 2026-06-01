@@ -70,3 +70,37 @@ Stage Summary:
 - All existing callers verified compatible (18 call sites across 5 files)
 - No compile errors, no API contract changes
 - Known Phase 1 artifact: duplicate notifications from SM hooks + existing callers (resolves in Phase 2)
+
+---
+Task ID: Phase-2
+Agent: Main Developer
+Task: Phase 2 — Remove direct task.status writes from tasks/[id]/route.ts
+
+Work Log:
+- Read complete tasks/[id]/route.ts (468 lines) — identified 4 handlers with direct status bypasses
+- Read complete enhanced-task-state-machine.service.ts (1199 lines after Phase 1) — verified SM handles all side effects
+- Read notification.service.ts — confirmed sendTaskUpdateNotification signature and socket emission
+- Read socket-reliability.service.ts — confirmed SocketReliabilityService API
+- Read audit.ts — confirmed createAuditLog signature and AuditActions constants
+- Fixed SM bug: cancelTask() didn't pass cancellationReason at context top-level for requiredFields validation
+- Added cancellationReason field to TransitionContext interface
+- Added optional additionalContext parameter to riderAccept(), startTrip(), completeTask() for richer audit trail
+- Rewrote handleAccept(): replaced direct db.task.update + createAuditLog + socket fetch + sendTaskUpdateNotification with EnhancedTaskStateMachine.riderAccept()
+- Rewrote handleStart(): replaced direct db.task.update + createAuditLog with EnhancedTaskStateMachine.startTrip(); preserved pickedUpAt update as route-specific logic
+- Rewrote handleComplete(): replaced direct db.task.update + createAuditLog with EnhancedTaskStateMachine.completeTask(); preserved actualDuration update, rider stats update, and payment response formatting as route-specific logic
+- Rewrote handleCancel(): replaced direct db.task.update + createAuditLog with EnhancedTaskStateMachine.cancelTask(); preserved cancelledBy/cancellationCode/cancellationReason task fields and rider stats update as route-specific logic
+- Removed imports: createAuditLog, AuditActions, EntityTypes, sendTaskUpdateNotification (no longer used in route)
+- Added import: EnhancedTaskStateMachine (class, not just utility functions)
+- Lint passes cleanly (0 errors)
+- Dev server compiles and runs successfully
+
+Stage Summary:
+- 2 files modified:
+  1. src/lib/services/enhanced-task-state-machine.service.ts (bug fix + convenience method enhancements)
+  2. src/app/api/tasks/[id]/route.ts (complete rewrite of 4 handlers)
+- 4 direct status bypasses eliminated (lines 178, 272, 338, 434 in original)
+- Duplicated logic removed: 4 createAuditLog calls, 1 raw socket fetch, 1 sendTaskUpdateNotification call
+- Preserved: all request validation, authentication, authorization, response formatting
+- Preserved as route-specific business logic: pickedUpAt, actualDuration, rider stats, cancellation fields, payment details
+- Transition conflict discovered: ASSIGNED→IN_PROGRESS is not valid for ITEM_DELIVERY or HEALTH_DELIVERY in SM task-type-specific configs, but was allowed by the generic isValidTransition() check
+- SM bug fixed: cancelTask() now passes cancellationReason at context top-level so requiredFields validation works correctly
