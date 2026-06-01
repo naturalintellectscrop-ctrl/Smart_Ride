@@ -111,3 +111,26 @@ Stage Summary:
 - Rate limiting uses existing ApiRateLimit model
 - Retry system supports notifications, socket emissions, and dispatch
 - Cross-service validation ensures architecture consistency
+---
+Task ID: B.1
+Agent: Main Agent
+Task: Phase B.1 — Runtime Execution Trace Audit for Operations & Assignment Engine
+
+Work Log:
+- Explored full codebase structure identifying 50+ operational workflow files across dispatch, state machines, capabilities, notifications, heartbeats, and mini-services
+- Read all critical source files: tasks/route.ts, dispatch-persistence.service.ts, enhanced-task-state-machine.service.ts, unified-state-machine.ts, orders/[id]/route.ts, health-orders/[id]/route.ts, capability.service.ts, dispatch accept/reject/process-expired routes, heartbeat route, mini-services/dispatch-service/index.ts, race-condition-guards.ts, task transition route
+- Traced complete lifecycle call graphs for all 5 task types (Ride, Food Delivery, Shopping, Item Delivery, Health Delivery)
+- Answered all 8 audit questions with source code evidence including file, function, line numbers
+- Compiled findings into CONFIRMED (12), PARTIALLY CONFIRMED (4), NOT CONFIRMED (3), FALSE POSITIVE (4)
+
+Stage Summary:
+- C7 CRITICAL: Rider `currentTaskId` never cleared on task cancellation → permanent rider unavailability
+- C8 CRITICAL: No automatic `isOnline: false` mechanism → ghost online riders receive dispatch offers
+- PC1 HIGH: Tasks can remain forever in CREATED status with no recovery
+- PC3 HIGH: Health Delivery has no fallback when no riders available (dead end in MATCHING)
+- C6 MEDIUM: DispatchService.acceptMatch() bypasses EnhancedTaskStateMachine for ASSIGNED transition
+- C9 MEDIUM: Four separate dispatch systems exist (only 2 used in production)
+- C10 MEDIUM: Three state machine definitions (only enhanced-task-state-machine.service.ts is authoritative)
+- Unified state machine has ZERO production callers
+- In-memory dispatch-engine.ts has only one caller (REST dispatch API, unused by production flows)
+- Health Delivery uses completely separate inline dispatch logic with hardcoded pricing
