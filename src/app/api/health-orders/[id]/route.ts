@@ -12,6 +12,7 @@ import {
   getRequiredRiderRoleForHealthDelivery 
 } from '@/lib/api/health-state-machine';
 import { calculatePricing } from '@/lib/api/pricing';
+import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
 import { HealthOrderStatus, TaskStatus, TaskType } from '@prisma/client';
 import { z } from 'zod';
 
@@ -194,7 +195,8 @@ async function startRiderMatching(healthOrderId: string, order: { id: string; de
     
     if (!merchant) return;
 
-    // Create a delivery task
+    // Create a delivery task — starts in SEARCHING status per HEALTH_DELIVERY lifecycle
+    // (CREATED → SEARCHING → ASSIGNED → PICKED_UP → ...)
     const taskNumber = `TASK-${Date.now().toString(36).toUpperCase()}`;
     
     const task = await db.task.create({
@@ -203,7 +205,7 @@ async function startRiderMatching(healthOrderId: string, order: { id: string; de
         taskType: 'SMART_HEALTH_DELIVERY',
         clientId: 'SYSTEM', // System creates this task
         healthOrderId: healthOrderId,
-        status: 'MATCHING',
+        status: 'SEARCHING',
         matchingStartedAt: new Date(),
         
         pickupAddress: merchant.address,
@@ -243,25 +245,25 @@ async function startRiderMatching(healthOrderId: string, order: { id: string; de
     });
 
     // In production, we would send notifications to nearby riders
-    // For now, we just update the task status
+    // For now, we auto-assign to the first available rider
     if (availableRiders.length > 0) {
       // Auto-assign to first available rider for demo
       const assignedRider = availableRiders[0];
       
-      await db.task.update({
-        where: { id: task.id },
-        data: {
-          riderId: assignedRider.id,
-          status: 'ASSIGNED',
-          assignedAt: new Date(),
-        },
-      });
+      // Use EnhancedTaskStateMachine.autoAssign() to perform SEARCHING → ASSIGNED
+      // transition. This ensures: status transition record, audit log, rider.currentTaskId
+      // management, notifications, and socket events are all handled centrally.
+      const assignResult = await EnhancedTaskStateMachine.autoAssign(task.id, assignedRider.id);
       
-      // Update health order status
-      await db.healthOrder.update({
-        where: { id: healthOrderId },
-        data: { status: 'RIDER_ASSIGNED' },
-      });
+      if (assignResult.success) {
+        // Update health order status (HealthOrder model, not Task — not governed by Task SM)
+        await db.healthOrder.update({
+          where: { id: healthOrderId },
+          data: { status: 'RIDER_ASSIGNED' },
+        });
+      } else {
+        console.error('[HealthOrders] Auto-assign failed:', assignResult.error);
+      }
     }
   } catch (error) {
     console.error('Error starting rider matching:', error);

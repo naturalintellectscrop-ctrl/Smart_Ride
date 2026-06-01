@@ -291,6 +291,13 @@ const ITEM_DELIVERY_TRANSITIONS: TransitionConfig[] = [
 // Health delivery lifecycle
 const HEALTH_DELIVERY_TRANSITIONS: TransitionConfig[] = [
   { from: TaskStatus.CREATED, to: TaskStatus.SEARCHING },
+  { from: TaskStatus.CREATED, to: TaskStatus.MATCHING },
+  { from: TaskStatus.MATCHING, to: TaskStatus.SEARCHING },
+  { 
+    from: TaskStatus.MATCHING, 
+    to: TaskStatus.ASSIGNED,
+    requiredFields: ['riderId'],
+  },
   { 
     from: TaskStatus.SEARCHING, 
     to: TaskStatus.ASSIGNED,

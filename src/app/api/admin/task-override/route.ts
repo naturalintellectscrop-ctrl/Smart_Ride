@@ -139,11 +139,18 @@ async function handleForceRedispatch(
   const previousRiderId = task.riderId;
   const previousStatus = task.status;
 
-  // Transition task to SEARCHING via state machine
+  // Transition task to SEARCHING via state machine.
+  // SM handles: status change, matchingStartedAt timestamp, rider.currentTaskId clearing
+  // (active→dispatch), taskStateTransition record, STATUS_CHANGE audit log,
+  // notifications, and socket events.
+  // additionalTaskData: clear riderId atomically within the SM transaction.
   const transitionResult = await EnhancedTaskStateMachine.transition(taskId, TaskStatus.SEARCHING, {
     triggeredByType: 'ADMIN',
     userId: adminId,
     reason: `Admin force redispatch: ${reason}`,
+    additionalTaskData: {
+      riderId: null, // Clear the rider assignment atomically with the status change
+    },
     metadata: {
       previousRiderId,
       previousStatus,
@@ -159,43 +166,23 @@ async function handleForceRedispatch(
     };
   }
 
-  // Clear riderId on the task and mark rider as available
-  const updatePromises: Promise<unknown>[] = [];
-
-  updatePromises.push(
-    db.task.update({
-      where: { id: taskId },
-      data: { riderId: null },
-    })
-  );
-
-  if (previousRiderId) {
-    // Release the rider: clear currentTaskId and keep them online
-    updatePromises.push(
-      db.rider.update({
-        where: { id: previousRiderId },
-        data: { currentTaskId: null },
-      })
-    );
-  }
+  // ── Post-transition: admin-specific operations ──────────────
+  // SM has already: changed status, cleared riderId, cleared rider.currentTaskId,
+  // created transition record, emitted notifications/sockets.
 
   // Cancel any pending dispatch matches for this task
-  updatePromises.push(
-    db.dispatchMatch.updateMany({
-      where: {
-        taskId,
-        status: DispatchMatchStatus.PENDING,
-      },
-      data: {
-        status: DispatchMatchStatus.CANCELLED,
-        cancelledAt: new Date(),
-      },
-    })
-  );
+  await db.dispatchMatch.updateMany({
+    where: {
+      taskId,
+      status: DispatchMatchStatus.PENDING,
+    },
+    data: {
+      status: DispatchMatchStatus.CANCELLED,
+      cancelledAt: new Date(),
+    },
+  });
 
-  await Promise.all(updatePromises);
-
-  // Create audit log with ADMIN actor type and ADMIN_DASHBOARD source
+  // Create admin-specific audit log (distinct from SM's STATUS_CHANGE audit)
   await db.auditLog.create({
     data: {
       actorId: adminId,
@@ -211,7 +198,7 @@ async function handleForceRedispatch(
     },
   });
 
-  // Notify client
+  // Notify client about redispatch (SM doesn't emit notification for SEARCHING)
   await sendTaskUpdateNotification(
     task.clientId,
     taskId,
@@ -219,14 +206,7 @@ async function handleForceRedispatch(
     'SEARCHING'
   ).catch((err) => console.error('[AdminOverride] Client notification failed:', err));
 
-  // Emit socket events
-  await emitSocketEvent(`task:${taskId}`, 'task:status:update', {
-    taskId,
-    status: 'SEARCHING',
-    previousStatus,
-    reason: 'Force redispatched by admin',
-  });
-
+  // Admin-specific socket events (SM already emitted task:status:update)
   await emitSocketEvent('admin:dashboard', 'admin:task-override', {
     action: 'force_redispatch',
     taskId,
@@ -237,7 +217,7 @@ async function handleForceRedispatch(
     adminId,
   });
 
-  // Notify previous rider that task was unassigned
+  // Notify previous rider that task was unassigned (admin-specific notification)
   if (previousRiderId && task.rider) {
     await emitSocketEvent(`rider:${previousRiderId}`, 'task:unassigned', {
       taskId,
@@ -296,11 +276,21 @@ async function handleForceCancel(
   const previousStatus = task.status;
   const previousRiderId = task.riderId;
 
-  // Transition via state machine
+  // Transition via state machine.
+  // SM handles: status change, cancelledAt timestamp, rider.currentTaskId clearing
+  // (terminal state), taskStateTransition record, STATUS_CHANGE audit log,
+  // notifications, and socket events.
+  // additionalTaskData: set cancellation fields atomically within the SM transaction.
+  // cancellationReason at context top-level: satisfies requiredFields validation.
   const transitionResult = await EnhancedTaskStateMachine.transition(taskId, TaskStatus.CANCELLED, {
     triggeredByType: 'ADMIN',
     userId: adminId,
     reason: `Admin force cancel: ${reason}`,
+    cancellationReason: `Admin: ${reason}`,
+    additionalTaskData: {
+      cancellationReason: `Admin: ${reason}`,
+      cancelledBy: adminId,
+    },
     metadata: {
       previousStatus,
       previousRiderId,
@@ -316,28 +306,11 @@ async function handleForceCancel(
     };
   }
 
-  // Release rider if assigned
+  // ── Post-transition: admin-specific operations ──────────────
+  // SM has already: changed status to CANCELLED, set cancellationReason/cancelledBy,
+  // cleared rider.currentTaskId, created transition record, emitted notifications/sockets.
+
   const updatePromises: Promise<unknown>[] = [];
-
-  if (previousRiderId) {
-    updatePromises.push(
-      db.rider.update({
-        where: { id: previousRiderId },
-        data: { currentTaskId: null },
-      })
-    );
-  }
-
-  // Update task cancellation details
-  updatePromises.push(
-    db.task.update({
-      where: { id: taskId },
-      data: {
-        cancellationReason: `Admin: ${reason}`,
-        cancelledBy: adminId,
-      },
-    })
-  );
 
   // Cancel any pending dispatch matches
   updatePromises.push(
@@ -369,7 +342,7 @@ async function handleForceCancel(
 
   await Promise.all(updatePromises);
 
-  // Create audit log
+  // Create admin-specific audit log (distinct from SM's STATUS_CHANGE audit)
   await db.auditLog.create({
     data: {
       actorId: adminId,
@@ -386,22 +359,7 @@ async function handleForceCancel(
     },
   });
 
-  // Notify client
-  await sendTaskUpdateNotification(
-    task.clientId,
-    taskId,
-    task.taskNumber,
-    'CANCELLED'
-  ).catch((err) => console.error('[AdminOverride] Client notification failed:', err));
-
-  // Emit socket events
-  await emitSocketEvent(`task:${taskId}`, 'task:status:update', {
-    taskId,
-    status: 'CANCELLED',
-    previousStatus,
-    reason: `Force cancelled by admin: ${reason}`,
-  });
-
+  // Admin-specific socket events (SM already emitted task:status:update and notifications)
   await emitSocketEvent('admin:dashboard', 'admin:task-override', {
     action: 'force_cancel',
     taskId,
@@ -411,7 +369,7 @@ async function handleForceCancel(
     adminId,
   });
 
-  // Notify rider
+  // Notify rider directly about cancellation (admin-specific context)
   if (previousRiderId) {
     await emitSocketEvent(`rider:${previousRiderId}`, 'task:cancelled', {
       taskId,
@@ -473,7 +431,10 @@ async function handleForceComplete(
 
   const previousStatus = task.status;
 
-  // Transition via state machine
+  // Transition via state machine.
+  // SM handles: status change, completedAt timestamp, rider.currentTaskId clearing
+  // (COMPLETED is terminal), taskStateTransition record, STATUS_CHANGE audit log,
+  // notifications, and socket events.
   const transitionResult = await EnhancedTaskStateMachine.transition(taskId, TaskStatus.COMPLETED, {
     triggeredByType: 'ADMIN',
     userId: adminId,
@@ -493,21 +454,11 @@ async function handleForceComplete(
     };
   }
 
-  // Release rider
-  const updatePromises: Promise<unknown>[] = [];
+  // ── Post-transition: admin-specific operations ──────────────
+  // SM has already: changed status to COMPLETED, cleared rider.currentTaskId,
+  // created transition record, emitted notifications/sockets.
 
-  if (task.riderId) {
-    updatePromises.push(
-      db.rider.update({
-        where: { id: task.riderId },
-        data: { currentTaskId: null },
-      })
-    );
-  }
-
-  await Promise.all(updatePromises);
-
-  // Create audit log
+  // Create admin-specific audit log (distinct from SM's STATUS_CHANGE audit)
   await db.auditLog.create({
     data: {
       actorId: adminId,
@@ -525,22 +476,7 @@ async function handleForceComplete(
     },
   });
 
-  // Notify client
-  await sendTaskUpdateNotification(
-    task.clientId,
-    taskId,
-    task.taskNumber,
-    'COMPLETED'
-  ).catch((err) => console.error('[AdminOverride] Client notification failed:', err));
-
-  // Emit socket events
-  await emitSocketEvent(`task:${taskId}`, 'task:status:update', {
-    taskId,
-    status: 'COMPLETED',
-    previousStatus,
-    reason: `Force completed by admin: ${reason}`,
-  });
-
+  // Admin-specific socket events (SM already emitted task:status:update and notifications)
   await emitSocketEvent('admin:dashboard', 'admin:task-override', {
     action: 'force_complete',
     taskId,
@@ -631,12 +567,19 @@ async function handleEmergencyReassign(
   const previousRiderId = task.riderId;
   const previousStatus = task.status;
 
-  // Step 1: If task has a rider, first transition to SEARCHING to clear the rider
+  // Step 1: If task has a rider, first transition to SEARCHING to clear the rider.
+  // SM handles: status change, matchingStartedAt timestamp, rider.currentTaskId clearing
+  // (active→dispatch), taskStateTransition record, STATUS_CHANGE audit log,
+  // notifications, and socket events.
+  // additionalTaskData: clear riderId atomically within the SM transaction.
   if (previousRiderId && previousRiderId !== newRiderId) {
     const redispatchResult = await EnhancedTaskStateMachine.transition(taskId, TaskStatus.SEARCHING, {
       triggeredByType: 'ADMIN',
       userId: adminId,
       reason: `Admin emergency reassign (preparing): ${reason}`,
+      additionalTaskData: {
+        riderId: null, // Clear old rider assignment atomically
+      },
       metadata: {
         previousRiderId,
         previousStatus,
@@ -651,21 +594,13 @@ async function handleEmergencyReassign(
         status: 400,
       };
     }
-
-    // Clear riderId and release old rider
-    await Promise.all([
-      db.task.update({
-        where: { id: taskId },
-        data: { riderId: null },
-      }),
-      db.rider.update({
-        where: { id: previousRiderId },
-        data: { currentTaskId: null },
-      }),
-    ]);
+    // SM has already: cleared previous rider's currentTaskId, cleared task.riderId
   }
 
-  // Step 2: Assign to the new rider
+  // Step 2: Assign to the new rider.
+  // SM handles: status change to ASSIGNED, assignedAt timestamp, setting new rider's
+  // currentTaskId, taskStateTransition record, STATUS_CHANGE audit log,
+  // notifications, and socket events (including dispatch:assignment).
   const assignResult = await EnhancedTaskStateMachine.transition(taskId, TaskStatus.ASSIGNED, {
     triggeredByType: 'ADMIN',
     userId: adminId,
@@ -687,10 +622,14 @@ async function handleEmergencyReassign(
     };
   }
 
-  // Update new rider's currentTaskId and set them online
+  // ── Post-transition: admin-specific operations ──────────────
+  // SM has already: changed status to ASSIGNED, set new rider's currentTaskId,
+  // created transition record, emitted notifications/sockets.
+
+  // Set rider online (admin-specific, not lifecycle — SM doesn't touch isOnline)
   await db.rider.update({
     where: { id: newRiderId },
-    data: { currentTaskId: taskId, isOnline: true },
+    data: { isOnline: true },
   });
 
   // Cancel any other pending dispatch matches for this task
@@ -705,7 +644,7 @@ async function handleEmergencyReassign(
     },
   });
 
-  // Create audit log
+  // Create admin-specific audit log (distinct from SM's STATUS_CHANGE audit)
   await db.auditLog.create({
     data: {
       actorId: adminId,
@@ -722,23 +661,8 @@ async function handleEmergencyReassign(
     },
   });
 
-  // Notify client
-  await sendTaskUpdateNotification(
-    task.clientId,
-    taskId,
-    task.taskNumber,
-    'ASSIGNED'
-  ).catch((err) => console.error('[AdminOverride] Client notification failed:', err));
-
-  // Emit socket events
-  await emitSocketEvent(`task:${taskId}`, 'task:status:update', {
-    taskId,
-    status: 'ASSIGNED',
-    previousStatus,
-    newRiderId,
-    reason: `Emergency reassigned by admin: ${reason}`,
-  });
-
+  // Admin-specific socket events (SM already emitted task:status:update, notifications,
+  // and dispatch:assignment for the new rider)
   await emitSocketEvent('admin:dashboard', 'admin:task-override', {
     action: 'emergency_reassign',
     taskId,
@@ -751,7 +675,7 @@ async function handleEmergencyReassign(
     adminId,
   });
 
-  // Notify old rider
+  // Notify old rider that task was unassigned (admin-specific)
   if (previousRiderId && previousRiderId !== newRiderId) {
     await emitSocketEvent(`rider:${previousRiderId}`, 'task:unassigned', {
       taskId,
@@ -759,16 +683,6 @@ async function handleEmergencyReassign(
       reason: 'Task reassigned to another rider by admin',
     });
   }
-
-  // Notify new rider
-  await emitSocketEvent(`rider:${newRiderId}`, 'dispatch:assignment', {
-    taskId,
-    taskNumber: task.taskNumber,
-    taskType: task.taskType,
-    pickupAddress: task.pickupAddress,
-    dropoffAddress: task.dropoffAddress,
-    reason: 'Emergency assigned by admin',
-  });
 
   const updatedTask = await db.task.findUnique({
     where: { id: taskId },
@@ -854,7 +768,10 @@ async function handleForceAssign(
 
   const previousStatus = task.status;
 
-  // Transition via state machine to ASSIGNED
+  // Transition via state machine to ASSIGNED.
+  // SM handles: status change, assignedAt timestamp, setting rider's currentTaskId,
+  // taskStateTransition record, STATUS_CHANGE audit log, notifications, and socket events
+  // (including dispatch:assignment).
   const transitionResult = await EnhancedTaskStateMachine.transition(taskId, TaskStatus.ASSIGNED, {
     triggeredByType: 'ADMIN',
     userId: adminId,
@@ -874,10 +791,14 @@ async function handleForceAssign(
     };
   }
 
-  // Update rider's currentTaskId and set online
+  // ── Post-transition: admin-specific operations ──────────────
+  // SM has already: changed status to ASSIGNED, set rider.currentTaskId,
+  // created transition record, emitted notifications/sockets.
+
+  // Set rider online (admin-specific, not lifecycle — SM doesn't touch isOnline)
   await db.rider.update({
     where: { id: riderId },
-    data: { currentTaskId: taskId, isOnline: true },
+    data: { isOnline: true },
   });
 
   // Cancel any pending dispatch matches
@@ -892,7 +813,7 @@ async function handleForceAssign(
     },
   });
 
-  // Create audit log
+  // Create admin-specific audit log (distinct from SM's STATUS_CHANGE audit)
   await db.auditLog.create({
     data: {
       actorId: adminId,
@@ -909,23 +830,8 @@ async function handleForceAssign(
     },
   });
 
-  // Notify client
-  await sendTaskUpdateNotification(
-    task.clientId,
-    taskId,
-    task.taskNumber,
-    'ASSIGNED'
-  ).catch((err) => console.error('[AdminOverride] Client notification failed:', err));
-
-  // Emit socket events
-  await emitSocketEvent(`task:${taskId}`, 'task:status:update', {
-    taskId,
-    status: 'ASSIGNED',
-    previousStatus,
-    riderId,
-    reason: `Force assigned to rider by admin: ${reason}`,
-  });
-
+  // Admin-specific socket events (SM already emitted task:status:update, notifications,
+  // and dispatch:assignment for the rider)
   await emitSocketEvent('admin:dashboard', 'admin:task-override', {
     action: 'force_assign',
     taskId,
@@ -935,16 +841,6 @@ async function handleForceAssign(
     riderName: rider.fullName,
     reason,
     adminId,
-  });
-
-  // Notify rider
-  await emitSocketEvent(`rider:${riderId}`, 'dispatch:assignment', {
-    taskId,
-    taskNumber: task.taskNumber,
-    taskType: task.taskType,
-    pickupAddress: task.pickupAddress,
-    dropoffAddress: task.dropoffAddress,
-    reason: 'Assigned by admin',
   });
 
   const updatedTask = await db.task.findUnique({

@@ -139,3 +139,107 @@ Stage Summary:
 - Transaction conflict RESOLVED: transitionInTx() pattern avoids nested transactions while maintaining atomicity
 - Preserved: dispatch matching, assignment logic, timeout handling, retry handling, dispatch-specific notifications (sendSearchingNotification, sendDispatchReassignedNotification, dispatch:delay/dispatch:cancelled socket events)
 - Changed autoCancelTask socket event from 'task:cancelled' to 'dispatch:cancelled' to avoid duplicate with SM's 'task:cancelled'
+
+---
+Task ID: Phase-4
+Agent: Main Developer
+Task: Phase 4 — Remove direct task.status writes from health-orders/[id]/route.ts
+
+Work Log:
+- Read complete health-orders/[id]/route.ts (269 lines) — identified 1 direct status bypass at line 251
+- Read enhanced-task-state-machine.service.ts — verified autoAssign() method for SEARCHING→ASSIGNED transition
+- Found task was being created with `status: 'MATCHING'` — MATCHING is NOT in the HEALTH_DELIVERY transition map (lifecycle is CREATED→SEARCHING→ASSIGNED)
+- Changed task creation from `status: 'MATCHING'` to `status: 'SEARCHING'` to align with HEALTH_DELIVERY lifecycle
+- Added MATCHING transitions to HEALTH_DELIVERY_TRANSITIONS for backwards compatibility with existing MATCHING tasks
+- Replaced `db.task.update({ status: 'ASSIGNED', riderId, assignedAt })` with `EnhancedTaskStateMachine.autoAssign(task.id, assignedRider.id)`
+- SM autoAssign now handles: status change, assignedAt timestamp, rider.currentTaskId SET, taskStateTransition record, STATUS_CHANGE audit log, notifications, socket events
+- Added import: EnhancedTaskStateMachine
+- Kept `db.healthOrder.update({ status: 'RIDER_ASSIGNED' })` — HealthOrder model, not Task; not governed by Task SM
+- Added error handling for autoAssign failure
+- Lint: 0 errors. No new TypeScript errors.
+
+Stage Summary:
+- 2 files modified:
+  1. src/app/api/health-orders/[id]/route.ts (1 direct status bypass eliminated + task creation fix)
+  2. src/lib/services/enhanced-task-state-machine.service.ts (added MATCHING transitions to HEALTH_DELIVERY_TRANSITIONS)
+- 1 direct status write eliminated:
+  1. startRiderMatching() line 251: status=ASSIGNED (replaced with SM.autoAssign())
+- Task creation fix: MATCHING → SEARCHING (aligns with HEALTH_DELIVERY lifecycle)
+- SM enhancements: Added CREATED→MATCHING, MATCHING→SEARCHING, MATCHING→ASSIGNED to HEALTH_DELIVERY_TRANSITIONS
+- Duplicated logic removed: 1 direct db.task.update with status change
+- New SM-provided logic: taskStateTransition record, audit log, rider.currentTaskId management, notifications, socket events
+- Preserved: HealthOrder status updates (RIDER_ASSIGNED), pharmacy/POT updates, all PATCH handler logic
+
+---
+Task ID: Phase-5
+Agent: Main Developer
+Task: Phase 5 — Remove direct rider lifecycle mutations from admin/task-override/route.ts
+
+Work Log:
+- Read complete admin/task-override/route.ts (1063 lines) — audited all 5 handlers for rider lifecycle mutations
+- Identified SM-owned lifecycle operations duplicated in the route:
+  1. db.rider.update({ currentTaskId: null }) — SM clears on terminal states and active→dispatch transitions
+  2. db.rider.update({ currentTaskId: taskId }) — SM sets on ASSIGNED
+  3. db.task.update({ riderId: null }) — now handled via SM additionalTaskData
+  4. db.task.update({ cancellationReason, cancelledBy }) — now handled via SM additionalTaskData
+  5. sendTaskUpdateNotification — SM emits for CANCELLED, COMPLETED, ASSIGNED (but NOT SEARCHING)
+  6. task:status:update socket event — SM emits for ALL transitions
+  7. dispatch:assignment socket event — SM emits for ASSIGNED
+- Migrated handleForceRedispatch():
+  - Added additionalTaskData: { riderId: null } to SM.transition() call
+  - Removed db.task.update({ riderId: null }) — handled by SM additionalTaskData
+  - Removed db.rider.update({ currentTaskId: null }) — SM handles active→dispatch
+  - Removed task:status:update socket event — SM already emits
+  - Kept sendTaskUpdateNotification for SEARCHING — SM doesn't emit for SEARCHING
+  - Kept admin:task-override, rider:task:unassigned socket events — admin-specific
+- Migrated handleForceCancel():
+  - Added additionalTaskData: { cancellationReason, cancelledBy } + cancellationReason at context top-level
+  - Removed db.rider.update({ currentTaskId: null }) — SM handles terminal state
+  - Removed db.task.update({ cancellationReason, cancelledBy }) — via additionalTaskData
+  - Removed sendTaskUpdateNotification — SM emits for CANCELLED
+  - Removed task:status:update socket event — SM already emits
+  - Kept admin:task-override, rider:task:cancelled socket events — admin-specific
+- Migrated handleForceComplete():
+  - Removed db.rider.update({ currentTaskId: null }) — SM handles (COMPLETED is terminal)
+  - Removed sendTaskUpdateNotification — SM emits for COMPLETED
+  - Removed task:status:update socket event — SM already emits
+  - Kept admin:task-override socket event — admin-specific
+- Migrated handleEmergencyReassign():
+  - Added additionalTaskData: { riderId: null } to Step 1 SM.transition() call
+  - Removed db.task.update({ riderId: null }) — via additionalTaskData
+  - Removed db.rider.update({ currentTaskId: null }) for old rider — SM handles active→dispatch
+  - Changed db.rider.update({ currentTaskId: taskId, isOnline: true }) to just { isOnline: true } — SM handles currentTaskId
+  - Removed sendTaskUpdateNotification — SM emits for ASSIGNED
+  - Removed task:status:update and dispatch:assignment socket events — SM already emits both
+  - Kept admin:task-override, rider:task:unassigned socket events — admin-specific
+- Migrated handleForceAssign():
+  - Changed db.rider.update({ currentTaskId: taskId, isOnline: true }) to just { isOnline: true } — SM handles currentTaskId
+  - Removed sendTaskUpdateNotification — SM emits for ASSIGNED
+  - Removed task:status:update and dispatch:assignment socket events — SM already emits both
+  - Kept admin:task-override socket event — admin-specific
+- Lint: 0 errors. No new TypeScript errors.
+
+Stage Summary:
+- 1 file modified: src/app/api/admin/task-override/route.ts
+- 7 rider lifecycle mutations eliminated:
+  1. handleForceRedispatch: db.rider.update({ currentTaskId: null }) — SM handles active→dispatch
+  2. handleForceRedispatch: db.task.update({ riderId: null }) — via additionalTaskData
+  3. handleForceCancel: db.rider.update({ currentTaskId: null }) — SM handles terminal
+  4. handleForceCancel: db.task.update({ cancellationReason, cancelledBy }) — via additionalTaskData
+  5. handleForceComplete: db.rider.update({ currentTaskId: null }) — SM handles terminal
+  6. handleEmergencyReassign: db.rider.update({ currentTaskId: null }) + db.task.update({ riderId: null }) — SM handles both
+  7. handleEmergencyReassign + handleForceAssign: db.rider.update({ currentTaskId: taskId }) — SM sets on ASSIGNED
+- 5 duplicate notifications/socket events removed (SM now handles centrally):
+  1. force_cancel sendTaskUpdateNotification — SM emits for CANCELLED
+  2. force_complete sendTaskUpdateNotification — SM emits for COMPLETED
+  3. emergency_reassign sendTaskUpdateNotification — SM emits for ASSIGNED
+  4. force_assign sendTaskUpdateNotification — SM emits for ASSIGNED
+  5. All task:status:update socket events — SM emits for all transitions
+- Admin-specific operations preserved:
+  - Admin audit logs (ADMIN_FORCE_REDISPATCH, ADMIN_FORCE_CANCEL, etc.)
+  - Admin socket events (admin:task-override)
+  - Rider-specific socket events (task:unassigned, task:cancelled)
+  - Dispatch match cancellation
+  - Order cascade cancellation (force_cancel)
+  - isOnline rider updates (admin-only, not SM lifecycle)
+- Conflicts discovered: None. All SM lifecycle operations were clean duplicates.
