@@ -12,7 +12,8 @@
 import { db } from '@/lib/db';
 import { DispatchMatchStatus, TaskStatus, TaskType } from '@prisma/client';
 import { CapabilityService } from './capability.service';
-import { sendDispatchReassignedNotification, sendSearchingNotification, sendTaskUpdateNotification } from './notification.service';
+import { sendDispatchReassignedNotification, sendSearchingNotification } from './notification.service';
+import { EnhancedTaskStateMachine } from './enhanced-task-state-machine.service';
 
 // ============================================
 // DISPATCH CONFIGURATION
@@ -84,26 +85,24 @@ export class DispatchService {
         select: { status: true },
       });
       
-      const matchingStatuses = [TaskStatus.MATCHING, TaskStatus.SEARCHING];
+      const matchingStatuses: TaskStatus[] = [TaskStatus.MATCHING, TaskStatus.SEARCHING];
       if (!currentTask || !matchingStatuses.includes(currentTask.status)) {
-        const fromStatus = currentTask?.status || TaskStatus.CREATED;
-        await db.task.update({
-          where: { id: request.taskId },
-          data: {
-            status: TaskStatus.SEARCHING,
-            matchingStartedAt: new Date(),
-          },
-        });
-        // Create state transition record
-        await db.taskStateTransition.create({
-          data: {
-            taskId: request.taskId,
-            fromStatus,
-            toStatus: TaskStatus.SEARCHING,
+        // ── PHASE 3: Route status transition through the State Machine ──
+        // SM handles: task.status update, matchingStartedAt timestamp, transition
+        // record creation, audit log, and post-commit side effects.
+        const smResult = await EnhancedTaskStateMachine.transition(
+          request.taskId,
+          TaskStatus.SEARCHING,
+          {
             triggeredByType: 'SYSTEM',
             reason: 'Dispatch searching for riders',
-          },
-        });
+          }
+        );
+        if (!smResult.success) {
+          console.warn(`[Dispatch] SM rejected SEARCHING transition for task ${request.taskId}: ${smResult.error}`);
+          // Continue with dispatch even if SM rejects — the task may already
+          // be in SEARCHING from a previous call (idempotent case).
+        }
       }
 
       // Find eligible riders
@@ -411,6 +410,16 @@ export class DispatchService {
 
       // Accept the match — use updateMany with a status guard to prevent
       // double-acceptance when two concurrent requests race for the same match.
+      //
+      // ── PHASE 3: Transaction Participant Pattern ──
+      // We use EnhancedTaskStateMachine.transitionInTx() to delegate the status
+      // transition to the SM WITHIN our existing transaction. This avoids unsafe
+      // nested transactions (Prisma doesn't support them) while ensuring the SM
+      // handles: status update, transition record, audit log, and rider lifecycle.
+      //
+      // Post-commit side effects (notifications, sockets, analytics) are fired
+      // AFTER the transaction commits via emitPostTransitionSideEffects().
+
       const txResult = await db.$transaction(async (tx) => {
         // Atomically update the match ONLY if it is still PENDING.
         // If another transaction already changed it, this will affect 0 rows.
@@ -425,51 +434,30 @@ export class DispatchService {
         // If 0 rows were updated, the match was already handled by another
         // concurrent transaction — abort to prevent double-acceptance.
         if (updateResult.count === 0) {
-          return { alreadyHandled: true as const };
+          return { alreadyHandled: true as const, smContextData: null as any };
         }
 
-        // Update task with rider
-        await tx.task.update({
-          where: { id: match.taskId },
-          data: {
-            riderId,
-            status: TaskStatus.ASSIGNED,
-            assignedAt: new Date(),
-          },
-        });
+        // ── Delegate status transition to SM within this transaction ──
+        // SM handles: task.status=ASSIGNED, assignedAt, riderId, transition
+        // record, audit log, and rider.currentTaskId — all within our tx.
+        const smContextData = {
+          riderId,
+          triggeredByType: 'RIDER' as const,
+          reason: 'Rider accepted dispatch match',
+        };
 
-        // Create state transition record
-        await tx.taskStateTransition.create({
-          data: {
-            taskId: match.taskId,
-            fromStatus: match.task.status,
-            toStatus: TaskStatus.ASSIGNED,
-            triggeredBy: riderId,
-            triggeredByType: 'RIDER',
-            reason: 'Rider accepted dispatch match',
-          },
-        });
+        const smResult = await EnhancedTaskStateMachine.transitionInTx(
+          tx,
+          match.taskId,
+          TaskStatus.ASSIGNED,
+          smContextData
+        );
 
-        // Create audit log for status change (inside transaction for atomicity)
-        await tx.auditLog.create({
-          data: {
-            actorId: riderId,
-            actorType: 'RIDER',
-            taskId: match.taskId,
-            action: 'STATUS_CHANGE',
-            entityType: 'Task',
-            entityId: match.taskId,
-            description: `Task status changed from ${match.task.status} to ASSIGNED`,
-            oldValues: JSON.stringify({ status: match.task.status }),
-            newValues: JSON.stringify({ status: TaskStatus.ASSIGNED }),
-          },
-        });
-
-        // Update rider's current task
-        await tx.rider.update({
-          where: { id: riderId },
-          data: { currentTaskId: match.taskId },
-        });
+        if (!smResult.success) {
+          // SM rejected the transition — this is a business rule violation.
+          // Throw to roll back the entire transaction.
+          throw new Error(`State machine rejected ASSIGNED transition: ${smResult.error}`);
+        }
 
         // Cancel other pending matches for this task
         await tx.dispatchMatch.updateMany({
@@ -484,7 +472,7 @@ export class DispatchService {
           },
         });
 
-        return { alreadyHandled: false as const };
+        return { alreadyHandled: false as const, smContextData: { smResult, context: smContextData } };
       });
 
       // If the match was already handled by another concurrent request,
@@ -493,10 +481,17 @@ export class DispatchService {
         return { success: false, error: 'Match already accepted by another request' };
       }
 
-      // NOTE: The DISPATCH_ACCEPTED audit log was previously created here
-      // outside the transaction. It has been moved inside the $transaction
-      // above as a STATUS_CHANGE audit log for atomicity with the state
-      // transition record, ensuring consistency.
+      // ── Fire post-commit side effects AFTER the transaction commits ──
+      // This ensures notifications, sockets, and analytics only fire if the
+      // transaction was successful — no inconsistency on rollback.
+      if (txResult.smContextData) {
+        EnhancedTaskStateMachine.emitPostTransitionSideEffects(
+          txResult.smContextData.smResult,
+          txResult.smContextData.context
+        ).catch(err =>
+          console.error('[Dispatch] Post-transition side effects failed:', err)
+        );
+      }
 
       return { success: true, taskId: match.taskId };
     } catch (error: any) {
@@ -595,29 +590,25 @@ export class DispatchService {
         return;
       }
 
-      // If task is in MATCHING status, move it to SEARCHING so it stays eligible
-      // for the periodic expired match processor to retry
+      // ── PHASE 3: Route MATCHING→SEARCHING through the State Machine ──
+      // SM handles: task.status update, timestamp, transition record, audit log.
+      // Dispatch-specific logic (client socket, DB notification) is preserved.
       if (task.status === TaskStatus.MATCHING || task.status === TaskStatus.SEARCHING) {
-        const fromStatus = task.status;
-        await db.task.update({
-          where: { id: taskId },
-          data: {
-            status: TaskStatus.SEARCHING,
-          },
-        });
-        // Create state transition record
-        await db.taskStateTransition.create({
-          data: {
-            taskId,
-            fromStatus,
-            toStatus: TaskStatus.SEARCHING,
+        const smResult = await EnhancedTaskStateMachine.transition(
+          taskId,
+          TaskStatus.SEARCHING,
+          {
             triggeredByType: 'SYSTEM',
             reason: 'No riders available, continuing search',
-          },
-        });
+          }
+        );
+        if (!smResult.success) {
+          console.warn(`[Dispatch] SM rejected SEARCHING transition for task ${taskId}: ${smResult.error}`);
+        }
       }
 
       // Notify the client about the delay via socket
+      // (dispatch-specific event — not handled by SM lifecycle hooks)
       await this.notifyClient(taskId, task.clientId, {
         event: 'dispatch:delay',
         data: {
@@ -630,24 +621,12 @@ export class DispatchService {
       });
 
       // Create DB notification for the client about the searching status
+      // (SEARCHING is not in SM's emitNotifications — dispatch-specific)
       try {
         await sendSearchingNotification(task.clientId, taskId, task.taskNumber || taskId);
       } catch (notifError) {
         console.error(`[Dispatch] Failed to send SEARCHING notification for task ${taskId}:`, notifError);
       }
-
-      // Create audit log
-      await db.auditLog.create({
-        data: {
-          actorType: 'SYSTEM',
-          taskId,
-          action: 'DISPATCH_NO_RIDERS',
-          entityType: 'Task',
-          entityId: taskId,
-          description: `No riders available for task ${task.taskNumber}, status set to SEARCHING`,
-          source: 'SYSTEM',
-        },
-      });
     } catch (error) {
       console.error(`[Dispatch] Error handling no riders for task ${taskId}:`, error);
     }
@@ -696,43 +675,49 @@ export class DispatchService {
       select: { clientId: true, taskNumber: true, status: true },
     });
 
-    await db.$transaction([
-      db.task.update({
-        where: { id: taskId },
-        data: {
-          status: TaskStatus.CANCELLED,
-          cancelledAt: new Date(),
+    // ── PHASE 3: Route CANCELLED transition through the State Machine ──
+    // SM handles: task.status=CANCELLED, cancelledAt, transition record, audit
+    // log, rider.currentTaskId cleanup, notifications, sockets, analytics.
+    //
+    // We use additionalTaskData to atomically set cancellation metadata fields
+    // (cancelledBy, cancellationReason, cancellationCode) within the SM's own
+    // transaction — no separate update needed.
+    //
+    // The previous batch $transaction is eliminated entirely. The SM's own
+    // $transaction covers all the atomicity guarantees that the batch provided.
+    //
+    // Previously duplicated logic (now removed):
+    //   - taskStateTransition.create → SM does this
+    //   - auditLog.create → SM does this
+    //   - sendTaskUpdateNotification → SM does this via emitNotifications
+    //   - notifyClient('task:cancelled') → SM does this via emitSocketEvents
+    const smResult = await EnhancedTaskStateMachine.cancelTask(
+      taskId,
+      'SYSTEM',
+      reason,
+      {
+        triggeredByType: 'SYSTEM',
+        reason: `Auto-cancelled: ${reason}`,
+        cancellationReason: reason,
+        additionalTaskData: {
           cancelledBy: 'SYSTEM',
           cancellationReason: reason,
           cancellationCode: 'NO_RIDER_AVAILABLE',
         },
-      }),
-      db.taskStateTransition.create({
-        data: {
-          taskId,
-          fromStatus: task?.status || TaskStatus.SEARCHING,
-          toStatus: TaskStatus.CANCELLED,
-          triggeredByType: 'SYSTEM',
-          reason: `Auto-cancelled: ${reason}`,
-        },
-      }),
-      db.auditLog.create({
-        data: {
-          actorType: 'SYSTEM',
-          taskId,
-          action: 'AUTO_CANCEL',
-          entityType: 'Task',
-          entityId: taskId,
-          description: `Task auto-cancelled: ${reason}`,
-          source: 'SYSTEM',
-        },
-      }),
-    ]);
+      }
+    );
 
-    // Notify client via socket about the cancellation
+    if (!smResult.success) {
+      console.error(`[Dispatch] SM rejected CANCELLED transition for task ${taskId}: ${smResult.error}`);
+      return;
+    }
+
+    // Dispatch-specific: notify client with user-friendly message about
+    // the auto-cancellation. The SM's socket event (task:cancelled) is more
+    // generic; this provides additional context specific to dispatch.
     if (task) {
       await this.notifyClient(taskId, task.clientId, {
-        event: 'task:cancelled',
+        event: 'dispatch:cancelled',
         data: {
           taskId,
           taskNumber: task.taskNumber,
@@ -740,18 +725,6 @@ export class DispatchService {
           message: 'Your task has been cancelled because no rider was available.',
         },
       });
-
-      // Create DB notification for the client about the cancellation
-      try {
-        await sendTaskUpdateNotification(
-          task.clientId,
-          taskId,
-          task.taskNumber || taskId,
-          'CANCELLED'
-        );
-      } catch (notifError) {
-        console.error(`[Dispatch] Failed to send CANCELLED notification for task ${taskId}:`, notifError);
-      }
     }
 
     console.log(`[Dispatch] Task ${taskId} auto-cancelled: ${reason}`);
@@ -862,11 +835,6 @@ export class DispatchService {
               entityId: match.id,
               description: `Dispatch match expired for rider on task ${match.task?.taskNumber || match.taskId}`,
               source: 'SYSTEM',
-              metadata: JSON.stringify({
-                riderId: match.riderId,
-                matchScore: match.matchScore,
-                retryCount: match.retryCount,
-              }),
             },
           });
 

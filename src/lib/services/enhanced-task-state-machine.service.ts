@@ -9,7 +9,7 @@
 // ============================================
 
 import { db } from '@/lib/db';
-import { TaskStatus, TaskType, RiderRole } from '@prisma/client';
+import { ActorType, TaskStatus, TaskType, RiderRole } from '@prisma/client';
 import { TaskAnalyticsUpdater } from './analytics-updater.service';
 import { FinanceLedgerService } from './finance-ledger.service';
 import { sendTaskUpdateNotification } from './notification.service';
@@ -172,6 +172,7 @@ const RIDE_TRANSITIONS: TransitionConfig[] = [
   { from: TaskStatus.CREATED, to: TaskStatus.REQUESTED },
   { from: TaskStatus.MATCHING, to: TaskStatus.SEARCHING },
   { from: TaskStatus.REQUESTED, to: TaskStatus.SEARCHING },
+  { from: TaskStatus.CREATED, to: TaskStatus.SEARCHING }, // Dispatch can search directly from CREATED
   { from: TaskStatus.MATCHING, to: TaskStatus.ASSIGNED, requiredFields: ['riderId'] },
   { 
     from: TaskStatus.SEARCHING, 
@@ -344,6 +345,11 @@ export interface TransitionContext {
   longitude?: number;
   ipAddress?: string;
   userAgent?: string;
+  /** Additional task fields to update atomically with the status change.
+   * Used by callers that need to set task-level metadata (e.g., cancelledBy,
+   * cancellationCode) within the same transaction as the status transition.
+   */
+  additionalTaskData?: Record<string, any>;
 }
 
 export interface TransitionResult {
@@ -351,6 +357,12 @@ export interface TransitionResult {
   task?: any;
   transition?: any;
   error?: string;
+  /** True if this was an idempotent result (transition already existed) */
+  idempotent?: boolean;
+  /** Pre-transition task snapshot (for post-transaction side effects) */
+  preTransitionTask?: any;
+  /** Status before the transition */
+  fromStatus?: TaskStatus;
 }
 
 export class EnhancedTaskStateMachine {
@@ -525,6 +537,7 @@ export class EnhancedTaskStateMachine {
             status: toStatus,
             ...this.getStatusTimestampUpdate(toStatus),
             riderId: context.riderId ?? task.riderId,
+            ...(context.additionalTaskData || {}),
           },
         });
 
@@ -644,7 +657,10 @@ export class EnhancedTaskStateMachine {
       return { 
         success: true, 
         task: result.task, 
-        transition: result.transition 
+        transition: result.transition,
+        idempotent: result.idempotent,
+        preTransitionTask: task,
+        fromStatus,
       };
     } catch (error: any) {
       console.error('Task state transition error:', error);
@@ -689,16 +705,16 @@ export class EnhancedTaskStateMachine {
   /**
    * Map triggered by type to ActorType enum
    */
-  private static getActorType(type?: string): string {
+  private static getActorType(type?: string): ActorType {
     switch (type) {
       case 'CLIENT':
-        return 'USER';
+        return ActorType.USER;
       case 'RIDER':
-        return 'RIDER';
+        return ActorType.RIDER;
       case 'ADMIN':
-        return 'ADMIN';
+        return ActorType.ADMIN;
       default:
-        return 'SYSTEM';
+        return ActorType.SYSTEM;
     }
   }
 
@@ -926,6 +942,320 @@ export class EnhancedTaskStateMachine {
       triggeredByType: 'RIDER',
       ...additionalContext,
     });
+  }
+
+  // ============================================
+  // TRANSACTION-PARTICIPANT METHODS
+  // ============================================
+  // These methods allow callers that already have a Prisma $transaction
+  // to delegate status transition authority to the state machine WITHOUT
+  // creating a nested transaction (which Prisma does not support safely).
+  //
+  // Pattern:
+  //   1. Call transitionInTx(tx, ...) INSIDE your $transaction
+  //   2. Call emitPostTransitionSideEffects(...) AFTER your $transaction commits
+  //
+  // This ensures:
+  //   - All SM writes are atomic with the caller's writes
+  //   - Side effects (notifications, sockets, analytics) only fire on commit
+  //   - No unsafe nested transactions
+  // ============================================
+
+  /**
+   * Execute a state machine transition within an EXISTING Prisma transaction.
+   *
+   * Use this when the caller already has a `db.$transaction(async (tx) => {...})`
+   * and needs the SM's status transition to be atomic with other writes.
+   *
+   * IMPORTANT: The caller MUST call `emitPostTransitionSideEffects()` AFTER
+   * the transaction commits. This method does NOT fire notifications, sockets,
+   * or analytics — those must happen post-commit to avoid inconsistency on
+   * rollback.
+   *
+   * @param tx - Prisma transaction client from the caller's $transaction
+   * @param taskId - Task ID to transition
+   * @param toStatus - Target status
+   * @param context - Transition context (actor, reason, etc.)
+   * @returns TransitionResult with preTransitionTask and fromStatus for post-commit side effects
+   */
+  static async transitionInTx(
+    tx: any,
+    taskId: string,
+    toStatus: TaskStatus,
+    context: TransitionContext = {}
+  ): Promise<TransitionResult> {
+    try {
+      // 1. Fetch task using tx (consistent read within caller's transaction)
+      const task = await tx.task.findUnique({
+        where: { id: taskId },
+        include: {
+          rider: { include: { user: true } },
+          client: true,
+          order: true,
+        },
+      });
+
+      if (!task) {
+        return { success: false, error: 'Task not found', preTransitionTask: undefined, fromStatus: undefined };
+      }
+
+      const fromStatus = task.status;
+      const taskType = task.taskType;
+
+      // 2. Idempotency check (using tx)
+      const existingInTx = await tx.taskStateTransition.findFirst({
+        where: {
+          taskId,
+          fromStatus,
+          toStatus,
+          createdAt: {
+            gte: new Date(Date.now() - this.IDEMPOTENCY_WINDOW_SECONDS * 1000),
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      if (existingInTx) {
+        const currentTask = await tx.task.findUnique({ where: { id: taskId } });
+        return {
+          success: true,
+          task: currentTask,
+          transition: existingInTx,
+          idempotent: true,
+          preTransitionTask: task,
+          fromStatus,
+        };
+      }
+
+      // 3. Validate transition
+      const transitions = getTransitionsForTaskType(taskType);
+      const transitionConfig = transitions.find(
+        (t) =>
+          t.to === toStatus &&
+          (Array.isArray(t.from) ? t.from.includes(fromStatus) : t.from === fromStatus)
+      );
+
+      if (!transitionConfig) {
+        return {
+          success: false,
+          error: `Invalid transition from ${fromStatus} to ${toStatus} for task type ${taskType}`,
+          preTransitionTask: task,
+          fromStatus,
+        };
+      }
+
+      // 4. Check required fields
+      if (transitionConfig.requiredFields) {
+        const missingFields = transitionConfig.requiredFields.filter(
+          (field) => {
+            const value = (task as any)[field] || (context as any)[field];
+            return value === undefined || value === null;
+          }
+        );
+        if (missingFields.length > 0) {
+          return {
+            success: false,
+            error: `Missing required fields: ${missingFields.join(', ')}`,
+            preTransitionTask: task,
+            fromStatus,
+          };
+        }
+      }
+
+      // 5. Actor validation
+      if (context.triggeredByType) {
+        const allowedActors = this.getAllowedActors(fromStatus, toStatus, taskType);
+        if (allowedActors.length > 0 && !allowedActors.includes(context.triggeredByType)) {
+          return {
+            success: false,
+            error: `Actor '${context.triggeredByType}' is not authorized to transition from ${fromStatus} to ${toStatus}`,
+            preTransitionTask: task,
+            fromStatus,
+          };
+        }
+      }
+
+      // 6. Custom validation
+      if (transitionConfig.validate) {
+        const isValid = await transitionConfig.validate(task, context);
+        if (!isValid) {
+          return { success: false, error: 'Validation failed for this transition', preTransitionTask: task, fromStatus };
+        }
+      }
+
+      // 7. Before transition hook
+      if (transitionConfig.beforeTransition) {
+        await transitionConfig.beforeTransition(task, context);
+      }
+
+      // 8. Execute core transition operations using tx
+      const transitionId = this.generateTransitionId(taskId, fromStatus, toStatus);
+
+      const updatedTask = await tx.task.update({
+        where: { id: taskId },
+        data: {
+          status: toStatus,
+          ...this.getStatusTimestampUpdate(toStatus),
+          riderId: context.riderId ?? task.riderId,
+          ...(context.additionalTaskData || {}),
+        },
+      });
+
+      const transition = await tx.taskStateTransition.create({
+        data: {
+          taskId,
+          fromStatus,
+          toStatus,
+          triggeredBy: context.userId,
+          triggeredByType: context.triggeredByType,
+          reason: context.reason,
+          metadata: JSON.stringify({
+            ...(context.metadata || {}),
+            _transitionId: transitionId,
+            _idempotencyWindow: this.IDEMPOTENCY_WINDOW_SECONDS,
+          }),
+          latitude: context.latitude,
+          longitude: context.longitude,
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent,
+        },
+      });
+
+      // Create audit log
+      await tx.auditLog.create({
+        data: {
+          actorId: context.userId,
+          actorType: this.getActorType(context.triggeredByType),
+          taskId,
+          action: 'STATUS_CHANGE',
+          entityType: 'Task',
+          entityId: taskId,
+          description: `Task status changed from ${fromStatus} to ${toStatus}`,
+          oldValues: JSON.stringify({ status: fromStatus }),
+          newValues: JSON.stringify({ status: toStatus }),
+        },
+      });
+
+      // 9. Rider lifecycle: currentTaskId management (same as transition())
+      const effectiveRiderId = context.riderId ?? task.riderId;
+      const previousRiderId = task.riderId;
+
+      if (toStatus === TaskStatus.ASSIGNED && effectiveRiderId) {
+        await tx.rider.updateMany({
+          where: { id: effectiveRiderId },
+          data: { currentTaskId: taskId },
+        });
+      }
+
+      const terminalStatuses: TaskStatus[] = [
+        TaskStatus.COMPLETED,
+        TaskStatus.CANCELLED,
+        TaskStatus.FAILED,
+        TaskStatus.CLOSED,
+      ];
+      if (terminalStatuses.includes(toStatus) && previousRiderId) {
+        await tx.rider.updateMany({
+          where: { id: previousRiderId },
+          data: { currentTaskId: null },
+        });
+      }
+
+      const dispatchStatuses: TaskStatus[] = [
+        TaskStatus.MATCHING,
+        TaskStatus.SEARCHING,
+      ];
+      const activeStatuses: TaskStatus[] = [
+        TaskStatus.ASSIGNED,
+        TaskStatus.ACCEPTED,
+        TaskStatus.ARRIVING,
+        TaskStatus.ARRIVED,
+        TaskStatus.PICKED_UP,
+        TaskStatus.IN_PROGRESS,
+        TaskStatus.IN_TRANSIT,
+      ];
+      if (
+        dispatchStatuses.includes(toStatus) &&
+        activeStatuses.includes(fromStatus) &&
+        previousRiderId
+      ) {
+        await tx.rider.updateMany({
+          where: { id: previousRiderId },
+          data: { currentTaskId: null },
+        });
+      }
+
+      return {
+        success: true,
+        task: updatedTask,
+        transition,
+        idempotent: false,
+        preTransitionTask: task,
+        fromStatus,
+      };
+    } catch (error: any) {
+      console.error('[StateMachine] transitionInTx error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to transition task state in transaction',
+        preTransitionTask: undefined,
+        fromStatus: undefined,
+      };
+    }
+  }
+
+  /**
+   * Fire post-transaction side effects for a transition executed via transitionInTx().
+   *
+   * MUST be called AFTER the caller's $transaction commits successfully.
+   * Handles: afterTransition hooks, analytics updates, notifications, socket events.
+   *
+   * All side effects are fire-and-forget — failures are logged but never propagated.
+   *
+   * @param smResult - The TransitionResult returned by transitionInTx()
+   * @param context - The same TransitionContext passed to transitionInTx()
+   */
+  static async emitPostTransitionSideEffects(
+    smResult: TransitionResult,
+    context: TransitionContext = {}
+  ): Promise<void> {
+    if (!smResult.success || smResult.idempotent) {
+      return; // No side effects for failed or idempotent transitions
+    }
+
+    const toStatus = smResult.transition?.toStatus as TaskStatus | undefined;
+    const fromStatus = smResult.fromStatus;
+    const preTransitionTask = smResult.preTransitionTask;
+    const postTransitionTask = smResult.task;
+
+    if (!toStatus || !fromStatus || !preTransitionTask || !postTransitionTask) {
+      return; // Missing data for side effects
+    }
+
+    // Get the transition config for afterTransition hook
+    const taskType = (preTransitionTask as any).taskType as TaskType;
+    const transitions = getTransitionsForTaskType(taskType);
+    const transitionConfig = transitions.find(
+      (t) => t.to === toStatus && (Array.isArray(t.from) ? t.from.includes(fromStatus) : t.from === fromStatus)
+    );
+
+    // Run afterTransition hook
+    if (transitionConfig?.afterTransition) {
+      try {
+        await transitionConfig.afterTransition(postTransitionTask, context);
+      } catch (err) {
+        console.error('[StateMachine] afterTransition hook failed:', err);
+      }
+    }
+
+    // Fire-and-forget analytics updates
+    this.updateAnalytics(toStatus, postTransitionTask, context).catch(err =>
+      console.error('[StateMachine] Analytics update failed:', err)
+    );
+
+    // Fire-and-forget: lifecycle side effects (notifications + socket events)
+    this.emitLifecycleSideEffects(toStatus, preTransitionTask, postTransitionTask, fromStatus, context).catch(err =>
+      console.error('[StateMachine] Lifecycle side effects failed:', err)
+    );
   }
 
   // ============================================

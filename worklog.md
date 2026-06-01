@@ -104,3 +104,38 @@ Stage Summary:
 - Preserved as route-specific business logic: pickedUpAt, actualDuration, rider stats, cancellation fields, payment details
 - Transition conflict discovered: ASSIGNED→IN_PROGRESS is not valid for ITEM_DELIVERY or HEALTH_DELIVERY in SM task-type-specific configs, but was allowed by the generic isValidTransition() check
 - SM bug fixed: cancelTask() now passes cancellationReason at context top-level so requiredFields validation works correctly
+---
+Task ID: Phase-3
+Agent: Main Developer
+Task: Phase 3 — Eliminate all task.status writes from dispatch-persistence.service.ts
+
+Work Log:
+- Read dispatch-persistence.service.ts (1062 lines) — identified 4 direct status bypasses
+- Read enhanced-task-state-machine.service.ts (1207+ lines) — analyzed transaction architecture
+- Investigated transaction nesting conflict: SM.transition() uses db.$transaction(), dispatch.acceptMatch() also uses db.$transaction() — Prisma doesn't support true nested transactions
+- Added `additionalTaskData` field to TransitionContext for atomic task field updates (cancelledBy, cancellationReason, cancellationCode)
+- Added `idempotent`, `preTransitionTask`, `fromStatus` fields to TransitionResult for post-commit side effects
+- Implemented `transitionInTx(tx, taskId, toStatus, context)` — executes SM logic within caller's existing transaction
+- Implemented `emitPostTransitionSideEffects(smResult, context)` — fires notifications/sockets/analytics after transaction commit
+- Added CREATED→SEARCHING to RIDE_TRANSITIONS for dispatch compatibility
+- Fixed pre-existing bug: getActorType() returned string instead of ActorType enum
+- Fixed pre-existing bug: auditLog.create in processExpiredMatches used non-existent `metadata` field
+- Migrated findAndAssign(): Replaced db.task.update + taskStateTransition.create with SM.transition()
+- Migrated acceptMatch(): Replaced tx.task.update + taskStateTransition.create + tx.auditLog.create + tx.rider.update with SM.transitionInTx() using Transaction Participant Pattern
+- Migrated handleNoRidersAvailable(): Replaced db.task.update + taskStateTransition.create + auditLog.create with SM.transition(); kept dispatch-specific sendSearchingNotification and notifyClient('dispatch:delay')
+- Migrated autoCancelTask(): Replaced entire batch $transaction with SM.cancelTask() using additionalTaskData for cancellation metadata; removed duplicated sendTaskUpdateNotification and notifyClient('task:cancelled')
+- Lint: 0 errors. TypeScript: 0 errors in modified files.
+
+Stage Summary:
+- 2 files modified:
+  1. src/lib/services/enhanced-task-state-machine.service.ts (transitionInTx + emitPostTransitionSideEffects + additionalTaskData + RIDE CREATED→SEARCHING transition + ActorType fix)
+  2. src/lib/services/dispatch-persistence.service.ts (all 4 status bypasses migrated to SM)
+- 4 direct status writes eliminated:
+  1. findAndAssign() line 90: status=SEARCHING
+  2. acceptMatch() line 432: status=ASSIGNED
+  3. handleNoRidersAvailable() line 602: status=SEARCHING
+  4. autoCancelTask() line 699: status=CANCELLED
+- Duplicated logic removed: 4 taskStateTransition.create calls, 3 auditLog.create calls, 1 rider.update (currentTaskId), 1 sendTaskUpdateNotification, 1 batch $transaction
+- Transaction conflict RESOLVED: transitionInTx() pattern avoids nested transactions while maintaining atomicity
+- Preserved: dispatch matching, assignment logic, timeout handling, retry handling, dispatch-specific notifications (sendSearchingNotification, sendDispatchReassignedNotification, dispatch:delay/dispatch:cancelled socket events)
+- Changed autoCancelTask socket event from 'task:cancelled' to 'dispatch:cancelled' to avoid duplicate with SM's 'task:cancelled'
