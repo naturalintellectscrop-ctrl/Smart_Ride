@@ -1,8 +1,9 @@
 // ============================================
 // SMART RIDE MOBILE - HEALTH SCREEN
 // ============================================
-// VERSION: DEBUG-TRACE-001
+// VERSION: DARK-THEME-002
 // PURPOSE: Health services - pharmacy, prescriptions
+// DESIGN: Dark theme with StyleSheet, custom components
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -12,7 +13,7 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
-  TextInput,
+  StyleSheet,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
@@ -20,12 +21,18 @@ import { useRouter } from 'expo-router';
 import Animated, {
   FadeIn,
   FadeInUp,
-  FadeInDown,
   SlideInRight,
   ZoomIn,
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
 import { COLORS } from '@/src/constants';
+import {
+  GlowHeader,
+  GlassCard,
+  GradientButton,
+  ServiceIcon,
+  IconInput,
+} from '@/src/components';
 
 interface Pharmacy {
   id: string;
@@ -81,110 +88,156 @@ export default function HealthScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.root}>
       {/* Header */}
-      <Animated.View 
-        entering={FadeInDown.duration(400).springify()}
-        className="bg-primary-500 pt-12 pb-6 px-4"
+      <GlowHeader
+        title="Smart Health"
+        subtitle="Medicine delivery & prescriptions"
       >
-        <Text className="text-white text-2xl font-bold">Smart Health</Text>
-        <Text className="text-white/80 mt-1">Medicine delivery & prescriptions</Text>
-        
         {/* Search */}
-        <Animated.View 
+        <Animated.View
           entering={ZoomIn.delay(200).duration(300)}
-          className="mt-4 bg-white rounded-xl flex-row items-center px-4 py-3"
+          style={styles.searchWrapper}
         >
-          <Text className="text-gray-400 mr-2">🔍</Text>
-          <TextInput
+          <IconInput
+            placeholder="Search medicines or pharmacies..."
             value={searchQuery}
             onChangeText={setSearchQuery}
-            placeholder="Search medicines or pharmacies..."
-            placeholderTextColor="#9CA3AF"
-            className="flex-1 text-gray-900"
+            icon="search"
           />
         </Animated.View>
-      </Animated.View>
+      </GlowHeader>
 
       {/* Quick Actions */}
-      <Animated.View 
+      <Animated.View
         entering={FadeInUp.duration(400).delay(100)}
-        className="flex-row bg-white px-4 py-4 gap-3 shadow-sm"
+        style={styles.quickActionsRow}
       >
-        <QuickAction 
-          icon="💊" 
-          label="Order Medicine" 
+        <QuickAction
+          emoji="💊"
+          label="Order Medicine"
           onPress={() => setActiveTab('medicines')}
           delay={150}
         />
-        <QuickAction 
-          icon="📋" 
-          label="Prescriptions" 
+        <QuickAction
+          emoji="📋"
+          label="Prescriptions"
           onPress={() => router.push('/health/prescriptions')}
           delay={200}
         />
-        <QuickAction 
-          icon="🏥" 
-          label="Pharmacies" 
+        <QuickAction
+          emoji="🏥"
+          label="Pharmacies"
           onPress={() => setActiveTab('pharmacies')}
           delay={250}
         />
-        <QuickAction 
-          icon="🆘" 
-          label="Emergency" 
+        <QuickAction
+          emoji="🆘"
+          label="Emergency"
           onPress={() => router.push('/sos')}
           delay={300}
         />
       </Animated.View>
 
+      {/* Emergency CTA */}
+      <Animated.View
+        entering={FadeInUp.duration(400).delay(350)}
+        style={styles.emergencyWrapper}
+      >
+        <GradientButton
+          title="🆘  Emergency SOS"
+          onPress={() => router.push('/sos')}
+          variant="danger"
+          size="md"
+          fullWidth
+        />
+      </Animated.View>
+
+      {/* Tab Selector */}
+      <View style={styles.tabRow}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'pharmacies' && styles.tabActive]}
+          onPress={() => setActiveTab('pharmacies')}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'pharmacies' && styles.tabTextActive,
+            ]}
+          >
+            Pharmacies
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'medicines' && styles.tabActive]}
+          onPress={() => setActiveTab('medicines')}
+          activeOpacity={0.7}
+        >
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === 'medicines' && styles.tabTextActive,
+            ]}
+          >
+            Medicines
+          </Text>
+        </TouchableOpacity>
+      </View>
+
       {/* Content */}
-      <ScrollView 
-        className="flex-1 px-4 pt-4"
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={COLORS.primary}
+          />
         }
       >
         {activeTab === 'pharmacies' ? (
           <>
-            <Text className="text-gray-900 font-semibold mb-3">Nearby Pharmacies</Text>
+            <Text style={styles.sectionTitle}>Nearby Pharmacies</Text>
             {pharmacies.length > 0 ? (
               pharmacies.map((pharmacy, index) => (
                 <Animated.View
                   key={pharmacy.id}
                   entering={SlideInRight.duration(300).delay(index * 80)}
                 >
-                  <PharmacyCard 
-                    pharmacy={pharmacy} 
+                  <PharmacyCard
+                    pharmacy={pharmacy}
                     onPress={() => router.push(`/health/pharmacy/${pharmacy.id}`)}
                   />
                 </Animated.View>
               ))
             ) : (
-              <Animated.View 
+              <Animated.View
                 entering={FadeIn.duration(400)}
-                className="items-center py-12"
+                style={styles.emptyState}
               >
-                <Text className="text-4xl mb-4">💊</Text>
-                <Text className="text-gray-500">No pharmacies available</Text>
+                <Text style={styles.emptyEmoji}>💊</Text>
+                <Text style={styles.emptyText}>No pharmacies available</Text>
               </Animated.View>
             )}
           </>
         ) : (
           <>
-            <Text className="text-gray-900 font-semibold mb-3">Popular Medicines</Text>
-            <Animated.View 
+            <Text style={styles.sectionTitle}>Popular Medicines</Text>
+            <Animated.View
               entering={FadeIn.duration(400)}
-              className="items-center py-12"
+              style={styles.emptyState}
             >
-              <Text className="text-4xl mb-4">💊</Text>
-              <Text className="text-gray-500">Search for medicines above</Text>
+              <Text style={styles.emptyEmoji}>💊</Text>
+              <Text style={styles.emptyText}>Search for medicines above</Text>
             </Animated.View>
           </>
         )}
@@ -193,53 +246,288 @@ export default function HealthScreen() {
   );
 }
 
-function QuickAction({ icon, label, onPress, delay }: { icon: string; label: string; onPress: () => void; delay: number }) {
+// ============================================
+// QUICK ACTION COMPONENT
+// ============================================
+function QuickAction({
+  emoji,
+  label,
+  onPress,
+  delay,
+}: {
+  emoji: string;
+  label: string;
+  onPress: () => void;
+  delay: number;
+}) {
   return (
     <Animated.View entering={ZoomIn.delay(delay).duration(300)}>
-      <TouchableOpacity onPress={onPress} className="flex-1 items-center">
-        <View className="w-12 h-12 bg-primary-100 rounded-full items-center justify-center mb-1">
-          <Text className="text-xl">{icon}</Text>
-        </View>
-        <Text className="text-xs text-gray-600 text-center">{label}</Text>
+      <TouchableOpacity onPress={onPress} style={styles.quickActionButton}>
+        <ServiceIcon service="custom" customEmoji={emoji} size="md" />
+        <Text style={styles.quickActionLabel}>{label}</Text>
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
-function PharmacyCard({ pharmacy, onPress }: { pharmacy: Pharmacy; onPress: () => void }) {
+// ============================================
+// PHARMACY CARD COMPONENT
+// ============================================
+function PharmacyCard({
+  pharmacy,
+  onPress,
+}: {
+  pharmacy: Pharmacy;
+  onPress: () => void;
+}) {
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
-      <View className="bg-white rounded-2xl p-4 mb-3 shadow-sm flex-row">
-        <View className="w-16 h-16 bg-green-50 rounded-xl items-center justify-center mr-3">
-          {pharmacy.image ? (
-            <Image source={{ uri: pharmacy.image }} className="w-16 h-16 rounded-xl" />
-          ) : (
-            <Text className="text-2xl">💊</Text>
-          )}
-        </View>
-        <View className="flex-1">
-          <View className="flex-row items-center">
-            <Text className="font-bold text-gray-900 flex-1">{pharmacy.name}</Text>
-            <View className={`px-2 py-1 rounded-full ${pharmacy.isOpen ? 'bg-green-100' : 'bg-red-100'}`}>
-              <Text className={`text-xs ${pharmacy.isOpen ? 'text-green-600' : 'text-red-600'}`}>
-                {pharmacy.isOpen ? 'Open' : 'Closed'}
+      <GlassCard variant="default" style={styles.pharmacyCard}>
+        <View style={styles.pharmacyRow}>
+          {/* Pharmacy Image / Placeholder */}
+          <View style={styles.pharmacyImageContainer}>
+            {pharmacy.image ? (
+              <Image source={{ uri: pharmacy.image }} style={styles.pharmacyImage} />
+            ) : (
+              <ServiceIcon service="HEALTH" size="lg" customEmoji="💊" />
+            )}
+          </View>
+
+          {/* Pharmacy Info */}
+          <View style={styles.pharmacyInfo}>
+            <View style={styles.pharmacyNameRow}>
+              <Text style={styles.pharmacyName} numberOfLines={1}>
+                {pharmacy.name}
               </Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: pharmacy.isOpen
+                      ? 'rgba(0, 255, 136, 0.1)'
+                      : 'rgba(239, 68, 68, 0.1)',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    {
+                      color: pharmacy.isOpen ? COLORS.success : COLORS.error,
+                    },
+                  ]}
+                >
+                  {pharmacy.isOpen ? 'Open' : 'Closed'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.pharmacyAddress} numberOfLines={1}>
+              {pharmacy.address}
+            </Text>
+
+            <View style={styles.pharmacyMetaRow}>
+              {pharmacy.rating && (
+                <View style={styles.ratingRow}>
+                  <Text style={styles.ratingStar}>⭐</Text>
+                  <Text style={styles.ratingText}>
+                    {pharmacy.rating.toFixed(1)}
+                  </Text>
+                </View>
+              )}
+              {pharmacy.deliveryTime && (
+                <Text style={styles.deliveryText}>
+                  {pharmacy.deliveryTime} min delivery
+                </Text>
+              )}
             </View>
           </View>
-          <Text className="text-gray-500 text-sm">{pharmacy.address}</Text>
-          <View className="flex-row items-center mt-2">
-            {pharmacy.rating && (
-              <View className="flex-row items-center mr-4">
-                <Text className="text-yellow-500 mr-1">⭐</Text>
-                <Text className="text-gray-700 text-sm">{pharmacy.rating.toFixed(1)}</Text>
-              </View>
-            )}
-            {pharmacy.deliveryTime && (
-              <Text className="text-gray-500 text-sm">{pharmacy.deliveryTime} min delivery</Text>
-            )}
-          </View>
         </View>
-      </View>
+      </GlassCard>
     </TouchableOpacity>
   );
 }
+
+// ============================================
+// STYLES
+// ============================================
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+
+  // Search
+  searchWrapper: {
+    marginTop: 16,
+  },
+
+  // Emergency CTA
+  emergencyWrapper: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 4,
+  },
+
+  // Quick Actions
+  quickActionsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 8,
+    backgroundColor: COLORS.backgroundElevated,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  quickActionButton: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  quickActionLabel: {
+    fontSize: 11,
+    color: COLORS.textSecondary,
+    marginTop: 6,
+    textAlign: 'center',
+  },
+
+  // Tabs
+  tabRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 8,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 10,
+    backgroundColor: COLORS.backgroundElevated,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  tabActive: {
+    backgroundColor: 'rgba(0, 255, 136, 0.08)',
+    borderColor: 'rgba(0, 255, 136, 0.2)',
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.textMuted,
+  },
+  tabTextActive: {
+    color: COLORS.primary,
+  },
+
+  // ScrollView
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 32,
+  },
+
+  // Section Title
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 12,
+  },
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 48,
+  },
+  emptyEmoji: {
+    fontSize: 40,
+    marginBottom: 12,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+  },
+
+  // Pharmacy Card
+  pharmacyCard: {
+    marginBottom: 12,
+  },
+  pharmacyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  pharmacyImageContainer: {
+    marginRight: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  pharmacyImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+  },
+  pharmacyInfo: {
+    flex: 1,
+  },
+  pharmacyNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  pharmacyName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+    flex: 1,
+    marginRight: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  pharmacyAddress: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  pharmacyMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  ratingStar: {
+    fontSize: 13,
+    marginRight: 4,
+  },
+  ratingText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    fontWeight: '500',
+  },
+  deliveryText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+});

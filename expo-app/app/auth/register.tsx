@@ -3,45 +3,35 @@
 // ============================================
 // Google Sign-In is the PRIMARY authentication method
 // Email/password is secondary fallback
+// Uses design system: GlowHeader, GlassCard, IconInput, GradientButton
 // ============================================
 
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ActivityIndicator,
+import {
+  View,
+  Text,
+  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Animated, { FadeInDown, FadeInUp, SlideInRight } from 'react-native-reanimated';
 import { statusCodes } from '@react-native-google-signin/google-signin';
 import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
 import { registerUser, isAuthenticated, saveTokens, saveUserData } from '../../services/auth';
-
-const COLORS = {
-  primary: '#00FF88',          // Neon Green - Smart Ride brand
-  primaryDark: '#00CC6D',
-  accent: '#00FFF3',           // Cyan - Secondary accent
-  background: '#0D0D12',       // Dark background
-  backgroundElevated: '#1A1A24',
-  backgroundSurface: '#252530',
-  text: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textMuted: 'rgba(255, 255, 255, 0.5)',
-  border: 'rgba(255, 255, 255, 0.08)',
-  error: '#FF4757',
-  googleBlue: '#4285F4',
-};
+import { COLORS } from '../../src/constants';
+import { GlowHeader } from '../../src/components/GlowHeader';
+import { GlassCard } from '../../src/components/GlassCard';
+import { IconInput } from '../../src/components/IconInput';
+import { GradientButton } from '../../src/components/GradientButton';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -74,7 +64,7 @@ export default function RegisterScreen() {
 
       await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
       const userInfo = await GoogleSignin.signIn();
-      
+
       if (userInfo.data?.idToken) {
         const response = await fetch(`${API_BASE_URL}/auth/google`, {
           method: 'POST',
@@ -97,7 +87,7 @@ export default function RegisterScreen() {
               await saveUserData(result.user);
             }
           }
-          
+
           router.replace('/(tabs)');
         } else {
           setError(result.error || 'Google sign up failed');
@@ -157,7 +147,7 @@ export default function RegisterScreen() {
 
     try {
       const formattedPhone = phone.startsWith('+') ? phone : `+256${phone.replace(/^0+/, '')}`;
-      
+
       const result = await registerUser({
         name: name.trim(),
         email: email.trim().toLowerCase(),
@@ -178,170 +168,147 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Create Account</Text>
-          <Text style={styles.headerSubtitle}>Join Smart Ride today</Text>
-        </View>
+        {/* Header - Replaces solid green header with GlowHeader */}
+        <Animated.View entering={FadeInUp.duration(500)}>
+          <GlowHeader title="Create Account" subtitle="Join Smart Ride Uganda" />
+        </Animated.View>
 
         {/* Form */}
-        <View style={styles.formContainer}>
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
-          {/* PRIMARY: Google Sign-In Button */}
-          <TouchableOpacity 
-            style={styles.googlePrimaryButton}
-            onPress={handleGoogleSignIn}
-            disabled={isLoading || googleLoading}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Text style={styles.googleLogo}>G</Text>
-                <Text style={styles.googlePrimaryButtonText}>Sign up with Google</Text>
-              </>
+        <Animated.View entering={FadeInDown.duration(600).delay(100)} style={styles.formContainer}>
+          <GlassCard variant="elevated" padding={20} style={styles.formCard}>
+            {/* Error Display */}
+            {error && (
+              <Animated.View entering={SlideInRight.duration(300)} style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+              </Animated.View>
             )}
-          </TouchableOpacity>
 
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.divider} />
-            <Text style={styles.dividerText}>or register with email</Text>
-            <View style={styles.divider} />
-          </View>
+            {/* PRIMARY: Google Sign-In Button */}
+            <Animated.View entering={FadeInDown.duration(400).delay(150)}>
+              <GradientButton
+                title="Sign up with Google"
+                variant="outline"
+                onPress={handleGoogleSignIn}
+                loading={googleLoading}
+                disabled={isLoading}
+                size="lg"
+                icon={<Text style={styles.googleLogo}>G</Text>}
+              />
+            </Animated.View>
 
-          {/* Name Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your full name"
-              placeholderTextColor={COLORS.textMuted}
-              value={name}
-              onChangeText={setName}
-              editable={!isLoading && !googleLoading}
-            />
-          </View>
+            {/* Divider */}
+            <Animated.View entering={FadeInDown.duration(400).delay(200)} style={styles.dividerContainer}>
+              <View style={styles.divider} />
+              <Text style={styles.dividerText}>or register with email</Text>
+              <View style={styles.divider} />
+            </Animated.View>
 
-          {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email"
-              placeholderTextColor={COLORS.textMuted}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!isLoading && !googleLoading}
-            />
-          </View>
+            {/* Name Input */}
+            <Animated.View entering={FadeInDown.duration(400).delay(250)}>
+              <IconInput
+                label="Full Name"
+                placeholder="Enter your full name"
+                value={name}
+                onChangeText={setName}
+                icon="person"
+                editable={!isLoading && !googleLoading}
+              />
+            </Animated.View>
 
-          {/* Phone Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number</Text>
-            <View style={styles.phoneContainer}>
-              <Text style={styles.phonePrefix}>+256</Text>
-              <TextInput
-                style={styles.phoneInput}
+            {/* Email Input */}
+            <Animated.View entering={FadeInDown.duration(400).delay(300)}>
+              <IconInput
+                label="Email"
+                placeholder="Enter your email"
+                value={email}
+                onChangeText={setEmail}
+                icon="mail"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                editable={!isLoading && !googleLoading}
+              />
+            </Animated.View>
+
+            {/* Phone Input */}
+            <Animated.View entering={FadeInDown.duration(400).delay(350)}>
+              <IconInput
+                label="Phone Number"
                 placeholder="7XX XXX XXX"
-                placeholderTextColor={COLORS.textMuted}
                 value={phone}
                 onChangeText={setPhone}
+                icon="call"
                 keyboardType="phone-pad"
                 editable={!isLoading && !googleLoading}
               />
-            </View>
-          </View>
+            </Animated.View>
 
-          {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
+            {/* Password Input */}
+            <Animated.View entering={FadeInDown.duration(400).delay(400)}>
+              <IconInput
+                label="Password"
                 placeholder="Create a password"
-                placeholderTextColor={COLORS.textMuted}
                 value={password}
                 onChangeText={setPassword}
+                icon="lock"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                rightIcon={showPassword ? 'eye-off' : 'eye'}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+                editable={!isLoading && !googleLoading}
+              />
+            </Animated.View>
+
+            {/* Confirm Password Input */}
+            <Animated.View entering={FadeInDown.duration(400).delay(450)}>
+              <IconInput
+                label="Confirm Password"
+                placeholder="Confirm your password"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                icon="lock"
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
                 editable={!isLoading && !googleLoading}
               />
-              <TouchableOpacity 
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-              >
-                <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+            </Animated.View>
 
-          {/* Confirm Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Confirm your password"
-              placeholderTextColor={COLORS.textMuted}
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              editable={!isLoading && !googleLoading}
-            />
-          </View>
+            {/* Register Button */}
+            <Animated.View entering={FadeInDown.duration(400).delay(500)} style={styles.buttonContainer}>
+              <GradientButton
+                title="Create Account"
+                variant="primary"
+                onPress={handleRegister}
+                loading={isLoading}
+                disabled={isLoading || googleLoading}
+                size="lg"
+              />
+            </Animated.View>
 
-          {/* Register Button */}
-          <TouchableOpacity 
-            style={[styles.registerButton, isLoading && styles.registerButtonDisabled]}
-            onPress={handleRegister}
-            disabled={isLoading || googleLoading}
-          >
-            {isLoading ? (
-              <ActivityIndicator color={COLORS.background} />
-            ) : (
-              <Text style={styles.registerButtonText}>Create Account</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Terms */}
-          <Text style={styles.termsText}>
-            By creating an account, you agree to our Terms of Service and Privacy Policy
-          </Text>
-        </View>
+            {/* Terms */}
+            <Text style={styles.termsText}>
+              By creating an account, you agree to our Terms of Service and Privacy Policy
+            </Text>
+          </GlassCard>
+        </Animated.View>
 
         {/* Sign In Link */}
-        <View style={styles.signInContainer}>
+        <Animated.View entering={FadeInUp.duration(500).delay(600)} style={styles.signInContainer}>
           <Text style={styles.signInText}>Already have an account? </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push('/auth/login')}
             disabled={isLoading || googleLoading}
           >
             <Text style={styles.signInLink}>Sign In</Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -355,79 +322,35 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  header: {
-    backgroundColor: COLORS.primary,
-    paddingTop: 60,
-    paddingBottom: 40,
-    paddingHorizontal: 24,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  backButtonText: {
-    color: 'white',
-    fontSize: 20,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-  headerSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 16,
-    marginTop: 8,
-  },
   formContainer: {
-    flex: 1,
-    paddingHorizontal: 24,
-    marginTop: -20,
+    paddingHorizontal: 20,
+    marginTop: 16,
+  },
+  formCard: {
+    marginBottom: 8,
   },
   errorContainer: {
-    backgroundColor: 'rgba(255, 71, 87, 0.1)',
-    borderColor: 'rgba(255, 71, 87, 0.3)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: 'rgba(239, 68, 68, 0.3)',
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
     marginBottom: 16,
-    marginTop: 24,
   },
   errorText: {
     color: COLORS.error,
     textAlign: 'center',
-  },
-  googlePrimaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.googleBlue,
-    borderRadius: 12,
-    paddingVertical: 16,
-    marginTop: 24,
+    fontSize: 14,
   },
   googleLogo: {
-    color: 'white',
+    color: COLORS.primary,
     fontWeight: 'bold',
     fontSize: 20,
-    marginRight: 12,
-  },
-  googlePrimaryButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    marginVertical: 20,
   },
   divider: {
     flex: 1,
@@ -437,80 +360,10 @@ const styles = StyleSheet.create({
   dividerText: {
     color: COLORS.textMuted,
     marginHorizontal: 16,
-    fontSize: 14,
+    fontSize: 13,
   },
-  inputGroup: {
-    marginTop: 16,
-  },
-  label: {
-    color: COLORS.text,
-    marginBottom: 8,
-    fontWeight: '600',
-  },
-  input: {
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  phoneContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  phonePrefix: {
-    paddingLeft: 16,
-    color: COLORS.textSecondary,
-  },
-  phoneInput: {
-    flex: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: COLORS.text,
-  },
-  eyeButton: {
-    paddingHorizontal: 16,
-  },
-  eyeText: {
-    fontSize: 18,
-  },
-  registerButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  registerButtonDisabled: {
-    backgroundColor: COLORS.primaryDark,
-  },
-  registerButtonText: {
-    color: COLORS.background,
-    fontSize: 18,
-    fontWeight: '600',
+  buttonContainer: {
+    marginTop: 12,
   },
   termsText: {
     color: COLORS.textMuted,
@@ -518,18 +371,21 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 12,
     paddingHorizontal: 16,
+    lineHeight: 18,
   },
   signInContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
-    marginBottom: 24,
+    marginTop: 16,
+    marginBottom: 32,
   },
   signInText: {
     color: COLORS.textSecondary,
+    fontSize: 14,
   },
   signInLink: {
     color: COLORS.primary,
     fontWeight: '600',
+    fontSize: 14,
   },
 });

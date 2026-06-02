@@ -4,15 +4,14 @@
 // Premium futuristic design matching login page
 // Glassmorphism + animated background + neon accents
 // Sends reset link via Resend email (admin API)
+// Uses shared design-system components & constants
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
-  TextInput, 
   TouchableOpacity, 
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -22,26 +21,12 @@ import {
   Easing,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { forgotPassword } from '../../services/auth';
+import { COLORS } from '../../src/constants';
+import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
 
 const { height } = Dimensions.get('window');
-
-const COLORS = {
-  primary: '#00FF88',          // Neon Green - Smart Ride brand
-  primaryDark: '#00CC6D',
-  accent: '#00FFF3',           // Cyan - Secondary accent
-  background: '#0D0D12',       // Dark background
-  backgroundElevated: '#1A1A24',
-  backgroundSurface: '#252530',
-  text: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textMuted: 'rgba(255, 255, 255, 0.5)',
-  textDim: 'rgba(255, 255, 255, 0.3)',
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderGlow: 'rgba(0, 255, 136, 0.3)',
-  error: '#F43F5E',
-  success: '#00FF88',
-};
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -165,118 +150,105 @@ export default function ForgotPasswordScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header with Logo */}
+        {/* Header with GlowHeader */}
         <Animated.View 
           style={[
-            styles.header,
             {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
             }
           ]}
         >
-          {/* Floating Logo */}
-          <Animated.View style={{ transform: [{ translateY: logoFloat }] }}>
-            <View style={styles.logoContainer}>
-              <Animated.View style={[styles.logoGlow, { opacity: glowOpacity }]} />
-              <Text style={styles.logoText}>SR</Text>
-            </View>
-          </Animated.View>
-
-          <Text style={styles.headerTitle}>Forgot Password</Text>
-          <Text style={styles.headerSubtitle}>
-            Enter your email and we'll send you a reset link
-          </Text>
+          <GlowHeader 
+            title="Forgot Password"
+            subtitle="Enter your email and we'll send you a reset link"
+          >
+            {/* Floating Logo as children */}
+            <Animated.View style={{ alignItems: 'center', marginTop: 16, transform: [{ translateY: logoFloat }] }}>
+              <View style={styles.logoContainer}>
+                <Animated.View style={[styles.logoGlow, { opacity: glowOpacity }]} />
+                <Text style={styles.logoText}>SR</Text>
+              </View>
+            </Animated.View>
+          </GlowHeader>
         </Animated.View>
 
         {/* Form Card */}
         <Animated.View 
           style={[
-            styles.formCard,
             {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
             }
           ]}
         >
-          {success ? (
-            /* Success State */
-            <View style={styles.successContainer}>
-              <View style={styles.successIconContainer}>
-                <Text style={styles.successIcon}>✓</Text>
-              </View>
-              <Text style={styles.successTitle}>Check Your Email</Text>
-              <Text style={styles.successMessage}>
-                If an account with that email exists, a reset link has been sent.
-              </Text>
-              <Text style={styles.successHint}>
-                Didn't receive the email? Check your spam folder.
-              </Text>
-              <TouchableOpacity 
-                style={styles.backToLoginButton}
-                onPress={() => router.replace('/auth/login')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.backToLoginButtonText}>Back to Login</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            /* Forgot Password Form */
-            <>
-              {/* Info Banner */}
-              <View style={styles.infoContainer}>
-                <Text style={styles.infoIcon}>🔑</Text>
-                <Text style={styles.infoText}>
-                  We'll send a password reset link to your registered email address
+          <GlassCard variant="elevated" padding={24} borderRadius={24} style={styles.formCard}>
+            {success ? (
+              /* Success State */
+              <View style={styles.successContainer}>
+                <View style={styles.successIconContainer}>
+                  <Ionicons name="checkmark-circle" size={36} color={COLORS.success} />
+                </View>
+                <Text style={styles.successTitle}>Check Your Email</Text>
+                <Text style={styles.successMessage}>
+                  If an account with that email exists, a reset link has been sent.
                 </Text>
+                <Text style={styles.successHint}>
+                  Didn't receive the email? Check your spam folder.
+                </Text>
+                <GradientButton
+                  title="Back to Login"
+                  onPress={() => router.replace('/auth/login')}
+                  variant="primary"
+                  size="md"
+                  style={{ marginTop: 8 }}
+                />
               </View>
-
-              {error && (
-                <View style={styles.errorContainer}>
-                  <Text style={styles.errorIcon}>⚠</Text>
-                  <Text style={styles.errorText}>{error}</Text>
+            ) : (
+              /* Forgot Password Form */
+              <>
+                {/* Info Banner */}
+                <View style={styles.infoContainer}>
+                  <Ionicons name="key-outline" size={18} color={COLORS.primary} />
+                  <Text style={styles.infoText}>
+                    We'll send a password reset link to your registered email address
+                  </Text>
                 </View>
-              )}
 
-              {/* Email Input */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email Address</Text>
-                <View style={styles.inputWrapper}>
-                  <Text style={styles.inputIcon}>✉</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter your email"
-                    placeholderTextColor={COLORS.textDim}
-                    value={email}
-                    onChangeText={(text) => {
-                      setEmail(text);
-                      if (error) setError(null);
-                    }}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    autoCorrect={false}
-                    editable={!isLoading}
-                    returnKeyType="go"
-                    onSubmitEditing={handleSubmit}
-                  />
-                </View>
-              </View>
-
-              {/* Submit Button */}
-              <TouchableOpacity 
-                style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
-                onPress={handleSubmit}
-                disabled={isLoading}
-                activeOpacity={0.8}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color={COLORS.background} size="small" />
-                ) : (
-                  <Text style={styles.submitButtonText}>Send Reset Link</Text>
+                {error && (
+                  <View style={styles.errorContainer}>
+                    <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
                 )}
-              </TouchableOpacity>
-            </>
-          )}
+
+                {/* Email Input */}
+                <IconInput
+                  label="Email Address"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    if (error) setError(null);
+                  }}
+                  icon="mail-outline"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!isLoading}
+                />
+
+                {/* Submit Button */}
+                <GradientButton
+                  title="Send Reset Link"
+                  onPress={handleSubmit}
+                  variant="primary"
+                  loading={isLoading}
+                  disabled={isLoading}
+                  size="lg"
+                />
+              </>
+            )}
+          </GlassCard>
         </Animated.View>
 
         {/* Back to Login Link */}
@@ -298,8 +270,9 @@ export default function ForgotPasswordScreen() {
 
         {/* Security Notice */}
         <Animated.View style={[styles.securityNotice, { opacity: fadeAnim }]}>
+          <Ionicons name="lock-closed-outline" size={12} color={COLORS.textDim} />
           <Text style={styles.securityText}>
-            🔒 Secure reset • Link expires in 1 hour
+            Secure reset • Link expires in 1 hour
           </Text>
         </Animated.View>
       </ScrollView>
@@ -350,12 +323,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     paddingBottom: 24,
   },
-  header: {
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
-  },
   logoContainer: {
     width: 80,
     height: 80,
@@ -365,7 +332,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 255, 136, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
     overflow: 'hidden',
   },
   logoGlow: {
@@ -383,31 +349,9 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     letterSpacing: -1,
   },
-  headerTitle: {
-    color: COLORS.text,
-    fontSize: 28,
-    fontWeight: 'bold',
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    color: COLORS.textMuted,
-    fontSize: 15,
-    marginTop: 8,
-    textAlign: 'center',
-  },
   formCard: {
     marginHorizontal: 20,
-    marginTop: -8,
-    backgroundColor: 'rgba(26, 26, 36, 0.8)',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    marginTop: 8,
   },
   infoContainer: {
     backgroundColor: 'rgba(0, 255, 136, 0.06)',
@@ -420,9 +364,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
-  infoIcon: {
-    fontSize: 16,
-  },
   infoText: {
     color: COLORS.textSecondary,
     fontSize: 13,
@@ -430,8 +371,8 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   errorContainer: {
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
-    borderColor: 'rgba(244, 63, 94, 0.2)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -440,63 +381,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  errorIcon: {
-    fontSize: 14,
-  },
   errorText: {
     color: COLORS.error,
     fontSize: 13,
     flex: 1,
-  },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    color: COLORS.textSecondary,
-    marginBottom: 8,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    overflow: 'hidden',
-  },
-  inputIcon: {
-    paddingLeft: 14,
-    fontSize: 14,
-    opacity: 0.5,
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 15,
-    fontSize: 15,
-    color: COLORS.text,
-  },
-  submitButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  submitButtonDisabled: {
-    backgroundColor: COLORS.primaryDark,
-    opacity: 0.7,
-  },
-  submitButtonText: {
-    color: COLORS.background,
-    fontSize: 16,
-    fontWeight: '700',
   },
   successContainer: {
     alignItems: 'center',
@@ -510,11 +398,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
-  },
-  successIcon: {
-    fontSize: 28,
-    color: COLORS.success,
-    fontWeight: 'bold',
   },
   successTitle: {
     color: COLORS.text,
@@ -536,23 +419,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 24,
   },
-  backToLoginButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  backToLoginButtonText: {
-    color: COLORS.background,
-    fontSize: 16,
-    fontWeight: '700',
-  },
   backContainer: {
     alignItems: 'center',
     marginTop: 24,
@@ -563,7 +429,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   securityNotice: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     marginTop: 16,
     marginBottom: 8,
   },

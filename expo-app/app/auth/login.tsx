@@ -4,15 +4,14 @@
 // Premium futuristic design matching admin page
 // Glassmorphism + animated background + neon accents
 // Email/Password PRIMARY (gradient CTA), Google SECONDARY
+// Uses shared design-system components & constants
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
-  TextInput, 
   TouchableOpacity, 
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -23,32 +22,17 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes } from '@react-native-google-signin/google-signin';
 import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
 import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData } from '../../services/auth';
 import { useAuthStore } from '../../src/store/authStore';
+import { COLORS } from '../../src/constants';
+import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
 
-const { width, height } = Dimensions.get('window');
+const { height } = Dimensions.get('window');
 
-const COLORS = {
-  primary: '#00FF88',          // Neon Green - Smart Ride brand
-  primaryDark: '#00CC6D',
-  accent: '#00FFF3',           // Cyan - Secondary accent
-  background: '#0D0D12',       // Dark background
-  backgroundElevated: '#1A1A24',
-  backgroundSurface: '#252530',
-  text: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textMuted: 'rgba(255, 255, 255, 0.5)',
-  textDim: 'rgba(255, 255, 255, 0.3)',
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderLight: 'rgba(255, 255, 255, 0.1)',
-  borderGlow: 'rgba(0, 255, 136, 0.3)',
-  error: '#F43F5E',
-  googleBlue: '#4285F4',
-};
+const GOOGLE_BLUE = '#4285F4';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api';
 
@@ -62,8 +46,6 @@ export default function LoginScreen() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [emailFocused, setEmailFocused] = useState(false);
-  const [passwordFocused, setPasswordFocused] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -257,7 +239,7 @@ export default function LoginScreen() {
     >
       {/* Animated Background */}
       <View style={styles.backgroundGradient}>
-        {/* Ambient gradient circles - subtle, not overlapping UI */}
+        {/* Ambient gradient circles */}
         <View style={styles.ambientGreen} />
         <View style={styles.ambientCyan} />
         <View style={styles.ambientPurple} />
@@ -268,168 +250,114 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header with Logo */}
+        {/* Header with GlowHeader */}
         <Animated.View 
           style={[
-            styles.header,
             {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
             }
           ]}
         >
-          {/* Floating Logo */}
-          <Animated.View style={{ transform: [{ translateY: logoFloat }] }}>
-            <View style={styles.logoContainer}>
-              <Animated.View style={[styles.logoGlow, { opacity: glowOpacity }]} />
-              <Text style={styles.logoText}>SR</Text>
-            </View>
-          </Animated.View>
-
-          <Text style={styles.headerTitle}>Welcome Back</Text>
-          <Text style={styles.headerSubtitle}>Sign in to continue to Smart Ride</Text>
+          <GlowHeader 
+            title="Welcome Back"
+            subtitle="Sign in to continue to Smart Ride"
+          >
+            {/* Floating Logo as children */}
+            <Animated.View style={{ alignItems: 'center', marginTop: 16, transform: [{ translateY: logoFloat }] }}>
+              <View style={styles.logoContainer}>
+                <Animated.View style={[styles.logoGlow, { opacity: glowOpacity }]} />
+                <Text style={styles.logoText}>SR</Text>
+              </View>
+            </Animated.View>
+          </GlowHeader>
         </Animated.View>
 
         {/* Form Card */}
         <Animated.View 
           style={[
-            styles.formCard,
             {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
             }
           ]}
         >
-          {error && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={18} color={COLORS.error} />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-
-          {/* Email Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <View style={[
-              styles.inputWrapper,
-              emailFocused && styles.inputWrapperFocused,
-            ]}>
-              <Ionicons 
-                name="mail-outline" 
-                size={20} 
-                color={emailFocused ? COLORS.primary : COLORS.textDim} 
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.input}
-                placeholder="Enter your email"
-                placeholderTextColor={COLORS.textDim}
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading && !googleLoading}
-                onFocus={() => setEmailFocused(true)}
-                onBlur={() => setEmailFocused(false)}
-              />
-            </View>
-          </View>
-
-          {/* Password Input */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <View style={[
-              styles.inputWrapper,
-              passwordFocused && styles.inputWrapperFocused,
-            ]}>
-              <Ionicons 
-                name="lock-closed-outline" 
-                size={20} 
-                color={passwordFocused ? COLORS.primary : COLORS.textDim} 
-                style={styles.inputIcon}
-              />
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Enter your password"
-                placeholderTextColor={COLORS.textDim}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                editable={!isLoading && !googleLoading}
-                onFocus={() => setPasswordFocused(true)}
-                onBlur={() => setPasswordFocused(false)}
-              />
-              <TouchableOpacity 
-                onPress={() => setShowPassword(!showPassword)}
-                style={styles.eyeButton}
-                activeOpacity={0.7}
-              >
-                <Ionicons 
-                  name={showPassword ? 'eye-off-outline' : 'eye-outline'} 
-                  size={20} 
-                  color={COLORS.textDim} 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Forgot Password */}
-          <TouchableOpacity 
-            style={styles.forgotButton}
-            onPress={() => router.push('/auth/forgot-password')}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.forgotText}>Forgot Password?</Text>
-          </TouchableOpacity>
-
-          {/* PRIMARY: Email Sign In Button - Gradient CTA */}
-          <TouchableOpacity 
-            style={styles.loginButton}
-            onPress={handleEmailLogin}
-            disabled={isLoading || googleLoading}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={[COLORS.primary, COLORS.accent]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.loginButtonGradient}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={COLORS.background} size="small" />
-              ) : (
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              )}
-            </LinearGradient>
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.dividerContainer}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or continue with</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* SECONDARY: Google Sign-In Button */}
-          <TouchableOpacity 
-            style={styles.googleButton}
-            onPress={handleGoogleSignIn}
-            disabled={isLoading || googleLoading}
-            activeOpacity={0.7}
-          >
-            {googleLoading ? (
-              <ActivityIndicator color={COLORS.textSecondary} size="small" />
-            ) : (
-              <>
-                <View style={styles.googleIconContainer}>
-                  <Text style={styles.googleIcon}>G</Text>
-                </View>
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </>
+          <GlassCard variant="elevated" padding={24} borderRadius={24} style={styles.formCard}>
+            {error && (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={18} color={COLORS.error} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
             )}
-          </TouchableOpacity>
+
+            {/* Email Input */}
+            <IconInput
+              label="Email"
+              placeholder="Enter your email"
+              value={email}
+              onChangeText={setEmail}
+              icon="mail-outline"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!isLoading && !googleLoading}
+            />
+
+            {/* Password Input */}
+            <IconInput
+              label="Password"
+              placeholder="Enter your password"
+              value={password}
+              onChangeText={setPassword}
+              icon="lock-closed-outline"
+              secureTextEntry={!showPassword}
+              rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+              onRightIconPress={() => setShowPassword(!showPassword)}
+              autoCapitalize="none"
+              editable={!isLoading && !googleLoading}
+            />
+
+            {/* Forgot Password */}
+            <TouchableOpacity 
+              style={styles.forgotButton}
+              onPress={() => router.push('/auth/forgot-password')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.forgotText}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            {/* PRIMARY: Email Sign In Button */}
+            <GradientButton
+              title="Sign In"
+              onPress={handleEmailLogin}
+              variant="primary"
+              loading={isLoading}
+              disabled={googleLoading}
+              size="lg"
+            />
+
+            {/* Divider */}
+            <View style={styles.dividerContainer}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or continue with</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* SECONDARY: Google Sign-In Button */}
+            <GradientButton
+              title="Continue with Google"
+              onPress={handleGoogleSignIn}
+              variant="secondary"
+              loading={googleLoading}
+              disabled={isLoading}
+              icon={
+                !googleLoading ? (
+                  <View style={styles.googleIconContainer}>
+                    <Text style={styles.googleIcon}>G</Text>
+                  </View>
+                ) : undefined
+              }
+            />
+          </GlassCard>
         </Animated.View>
 
         {/* Sign Up Link */}
@@ -501,12 +429,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
-  header: {
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 28,
-    paddingHorizontal: 24,
-  },
   logoContainer: {
     width: 80,
     height: 80,
@@ -516,7 +438,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 255, 136, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
     overflow: 'hidden',
   },
   logoGlow: {
@@ -534,34 +455,13 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     letterSpacing: -1,
   },
-  headerTitle: {
-    color: COLORS.text,
-    fontSize: 24,
-    fontWeight: 'bold',
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    marginTop: 8,
-  },
   formCard: {
     marginHorizontal: 20,
-    backgroundColor: 'rgba(26, 26, 31, 0.7)',
-    borderRadius: 24,
-    padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    // Deep multi-layer shadow
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 24,
-    elevation: 12,
+    marginTop: 8,
   },
   errorContainer: {
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
-    borderColor: 'rgba(244, 63, 94, 0.2)',
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
     borderWidth: 1,
     borderRadius: 12,
     padding: 16,
@@ -576,57 +476,6 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: 18,
   },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    color: COLORS.textSecondary,
-    marginBottom: 8,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 48,
-    backgroundColor: 'rgba(37, 37, 48, 0.8)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    overflow: 'hidden',
-  },
-  inputWrapperFocused: {
-    borderColor: COLORS.primary,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  inputIcon: {
-    paddingLeft: 16,
-    paddingRight: 12,
-  },
-  input: {
-    flex: 1,
-    paddingRight: 16,
-    fontSize: 15,
-    color: COLORS.text,
-    height: 48,
-  },
-  passwordInput: {
-    flex: 1,
-    paddingRight: 4,
-    fontSize: 15,
-    color: COLORS.text,
-    height: 48,
-  },
-  eyeButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   forgotButton: {
     alignItems: 'flex-end',
     marginBottom: 20,
@@ -636,27 +485,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '500',
     fontSize: 13,
-  },
-  loginButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    height: 48,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 4,
-  },
-  loginButtonGradient: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 12,
-  },
-  loginButtonText: {
-    color: COLORS.background,
-    fontSize: 16,
-    fontWeight: '600',
   },
   dividerContainer: {
     flexDirection: 'row',
@@ -673,34 +501,18 @@ const styles = StyleSheet.create({
     marginHorizontal: 14,
     fontSize: 13,
   },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(37, 37, 48, 0.6)',
-    borderRadius: 12,
-    height: 48,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-  },
   googleIconContainer: {
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: COLORS.googleBlue,
+    backgroundColor: GOOGLE_BLUE,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
   },
   googleIcon: {
     color: 'white',
     fontWeight: 'bold',
     fontSize: 12,
-  },
-  googleButtonText: {
-    color: COLORS.textSecondary,
-    fontSize: 15,
-    fontWeight: '500',
   },
   signUpContainer: {
     flexDirection: 'row',

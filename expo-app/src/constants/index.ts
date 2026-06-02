@@ -44,8 +44,36 @@ export const COLORS = {
   black: '#000000',
   transparent: 'transparent',
 
+  // Text dim (for icons, placeholders)
+  textDim: 'rgba(255, 255, 255, 0.3)',
+
   // Legacy compatibility
   accent: '#F59E0B',
+};
+
+// Gradients
+export const GRADIENTS = {
+  primary: ['#00FF88', '#00D4FF'],
+  danger: ['#EF4444', '#DC2626'],
+  accent: ['#00D4FF', '#00FF88'],
+};
+
+// Glass styles
+export const GLASS = {
+  background: 'rgba(19, 19, 26, 0.7)',
+  border: 'rgba(255, 255, 255, 0.05)',
+  shadow: 'rgba(0, 0, 0, 0.3)',
+  elevated: 'rgba(30, 30, 40, 0.8)',
+};
+
+// Services config for ServiceIcon component
+export const SERVICES: Record<string, { icon: string; color: string; colorDim: string; colorBorder: string }> = {
+  BODA: { icon: 'bicycle', color: '#00FF88', colorDim: 'rgba(0, 255, 136, 0.08)', colorBorder: 'rgba(0, 255, 136, 0.15)' },
+  CAR: { icon: 'car', color: '#00D4FF', colorDim: 'rgba(0, 212, 255, 0.08)', colorBorder: 'rgba(0, 212, 255, 0.15)' },
+  FOOD: { icon: 'restaurant', color: '#F59E0B', colorDim: 'rgba(245, 158, 11, 0.08)', colorBorder: 'rgba(245, 158, 11, 0.15)' },
+  DELIVERY: { icon: 'cube', color: '#14B8A6', colorDim: 'rgba(20, 184, 166, 0.08)', colorBorder: 'rgba(20, 184, 166, 0.15)' },
+  SHOPPING: { icon: 'bag', color: '#8B5CF6', colorDim: 'rgba(139, 92, 246, 0.08)', colorBorder: 'rgba(139, 92, 246, 0.15)' },
+  HEALTH: { icon: 'medkit', color: '#F43F5E', colorDim: 'rgba(244, 63, 94, 0.08)', colorBorder: 'rgba(244, 63, 94, 0.15)' },
 };
 
 // Kampala Default Location

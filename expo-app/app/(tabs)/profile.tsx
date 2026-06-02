@@ -1,7 +1,7 @@
 // ============================================
 // SMART RIDE MOBILE - PROFILE SCREEN
 // ============================================
-// Dark Theme with Smart Ride Branding
+// Dark Theme with GlowHeader & Custom Components
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -10,16 +10,12 @@ import {
   Text, 
   ScrollView, 
   TouchableOpacity, 
-  ActivityIndicator,
   Alert,
   Switch,
   StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
   FadeIn,
   FadeInUp,
   FadeInDown,
@@ -29,6 +25,7 @@ import Animated, {
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS } from '@/src/constants';
+import { GlowHeader, GlassCard, GradientButton } from '@/src/components';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -123,92 +120,93 @@ export default function ProfileScreen() {
   ];
 
   return (
-    <ScrollView style={styles.container}>
-      {/* Header */}
-      <Animated.View 
-        entering={FadeInDown.duration(400).springify()}
-        style={styles.header}
-      >
-        <Text style={styles.headerTitle}>Profile</Text>
-        
-        {/* User Info */}
-        <View style={styles.userInfo}>
-          <Animated.View 
-            entering={ZoomIn.delay(200).duration(300)}
-            style={styles.avatar}
+    <View style={styles.screenContainer}>
+      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Header - GlowHeader replaces solid green header */}
+        <Animated.View entering={FadeInDown.duration(400).springify()}>
+          <GlowHeader
+            title="Profile"
+            rightAction={{ icon: 'settings-outline', onPress: () => {} }}
           >
-            <Text style={styles.avatarText}>👤</Text>
-          </Animated.View>
-          <View style={styles.userDetails}>
-            <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
-            <Text style={styles.userEmail}>{user?.email || ''}</Text>
-            <Text style={styles.userPhone}>{user?.phone || ''}</Text>
-          </View>
-        </View>
-      </Animated.View>
-
-      {/* Stats */}
-      <Animated.View 
-        entering={FadeInUp.duration(400).delay(200).springify()}
-        style={styles.statsContainer}
-      >
-        <StatItem label="Total Rides" value={String(stats.totalRides)} delay={300} />
-        <View style={styles.statDivider} />
-        <StatItem label="Orders" value={String(stats.orders)} delay={350} />
-        <View style={styles.statDivider} />
-        <StatItem label="Rating" value={stats.rating} delay={400} />
-      </Animated.View>
-
-      {/* Menu Items */}
-      {menuItems.map((section, sectionIndex) => (
-        <Animated.View 
-          key={sectionIndex} 
-          entering={FadeInUp.duration(400).delay(300 + sectionIndex * 100).springify()}
-          style={styles.section}
-        >
-          <Text style={styles.sectionTitle}>{section.section}</Text>
-          <View style={styles.menuCard}>
-            {section.items.map((item, itemIndex) => (
-              <Animated.View
-                key={itemIndex}
-                entering={SlideInRight.duration(300).delay(350 + sectionIndex * 100 + itemIndex * 50).springify()}
+            {/* User Info as children of GlowHeader */}
+            <View style={styles.userInfo}>
+              <Animated.View 
+                entering={ZoomIn.delay(200).duration(300)}
+                style={styles.avatar}
               >
-                <MenuItem 
-                  item={item} 
-                  isLast={itemIndex === section.items.length - 1} 
-                />
+                <Text style={styles.avatarText}>👤</Text>
               </Animated.View>
-            ))}
-          </View>
+              <View style={styles.userDetails}>
+                <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
+                <Text style={styles.userEmail}>{user?.email || ''}</Text>
+                <Text style={styles.userPhone}>{user?.phone || ''}</Text>
+              </View>
+            </View>
+          </GlowHeader>
         </Animated.View>
-      ))}
 
-      {/* App Version */}
-      <Animated.Text 
-        entering={FadeIn.duration(400).delay(800)}
-        style={styles.version}
-      >
-        Smart Ride v1.0.0
-      </Animated.Text>
-
-      {/* Logout Button */}
-      <Animated.View entering={FadeInUp.duration(400).delay(900).springify()} style={styles.logoutContainer}>
-        <TouchableOpacity
-          style={styles.logoutButton}
-          onPress={handleLogout}
-          disabled={isLoading}
-          activeOpacity={0.8}
+        {/* Stats - Overlapping header bottom edge with negative margin */}
+        <Animated.View 
+          entering={FadeInUp.duration(400).delay(200).springify()}
+          style={styles.statsWrapper}
         >
-          {isLoading ? (
-            <ActivityIndicator color="#FF4757" />
-          ) : (
-            <Text style={styles.logoutText}>Sign Out</Text>
-          )}
-        </TouchableOpacity>
-      </Animated.View>
+          <GlassCard variant="elevated" style={styles.statsCard}>
+            <View style={styles.statsRow}>
+              <StatItem label="Total Rides" value={String(stats.totalRides)} delay={300} />
+              <View style={styles.statDivider} />
+              <StatItem label="Orders" value={String(stats.orders)} delay={350} />
+              <View style={styles.statDivider} />
+              <StatItem label="Rating" value={stats.rating} delay={400} />
+            </View>
+          </GlassCard>
+        </Animated.View>
 
-      <View style={{ height: 40 }} />
-    </ScrollView>
+        {/* Menu Items - Using GlassCard instead of raw View */}
+        {menuItems.map((section, sectionIndex) => (
+          <Animated.View 
+            key={sectionIndex} 
+            entering={FadeInUp.duration(400).delay(300 + sectionIndex * 100).springify()}
+            style={styles.section}
+          >
+            <Text style={styles.sectionTitle}>{section.section}</Text>
+            <GlassCard variant="default" style={styles.menuCard}>
+              {section.items.map((item, itemIndex) => (
+                <Animated.View
+                  key={itemIndex}
+                  entering={SlideInRight.duration(300).delay(350 + sectionIndex * 100 + itemIndex * 50).springify()}
+                >
+                  <MenuItem 
+                    item={item} 
+                    isLast={itemIndex === section.items.length - 1} 
+                  />
+                </Animated.View>
+              ))}
+            </GlassCard>
+          </Animated.View>
+        ))}
+
+        {/* App Version */}
+        <Animated.Text 
+          entering={FadeIn.duration(400).delay(800)}
+          style={styles.version}
+        >
+          Smart Ride v1.0.0
+        </Animated.Text>
+
+        {/* Logout Button - Using GradientButton variant="danger" */}
+        <Animated.View entering={FadeInUp.duration(400).delay(900).springify()} style={styles.logoutContainer}>
+          <GradientButton
+            title="Sign Out"
+            onPress={handleLogout}
+            variant="danger"
+            loading={isLoading}
+            disabled={isLoading}
+          />
+        </Animated.View>
+
+        <View style={{ height: 40 }} />
+      </ScrollView>
+    </View>
   );
 }
 
@@ -253,36 +251,29 @@ function MenuItem({ item, isLast }: { item: any; isLast: boolean }) {
 }
 
 const styles = StyleSheet.create({
+  screenContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
   },
-  header: {
-    backgroundColor: COLORS.primary,
-    paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.background,
-    marginBottom: 20,
-  },
   userInfo: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 16,
   },
   avatar: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.backgroundSurface,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 16,
+    borderWidth: 2,
+    borderColor: COLORS.primary,
   },
   avatarText: {
     fontSize: 32,
@@ -293,27 +284,29 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.background,
+    color: COLORS.text,
   },
   userEmail: {
     fontSize: 14,
-    color: 'rgba(13, 13, 18, 0.7)',
+    color: COLORS.textSecondary,
     marginTop: 2,
   },
   userPhone: {
     fontSize: 14,
-    color: 'rgba(13, 13, 18, 0.7)',
+    color: COLORS.textSecondary,
     marginTop: 2,
   },
-  statsContainer: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.backgroundElevated,
+  statsWrapper: {
     marginHorizontal: 20,
-    marginTop: -16,
-    borderRadius: 16,
+    marginTop: -20,
+    zIndex: 10,
+  },
+  statsCard: {
     padding: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   statItem: {
     flex: 1,
@@ -323,7 +316,7 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.primary,
   },
   statLabel: {
     fontSize: 12,
@@ -332,6 +325,7 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
+    height: 32,
     backgroundColor: COLORS.border,
   },
   section: {
@@ -345,16 +339,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   menuCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.border,
     overflow: 'hidden',
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    paddingHorizontal: 4,
     paddingVertical: 16,
   },
   menuIcon: {
@@ -377,7 +367,7 @@ const styles = StyleSheet.create({
   },
   menuDivider: {
     position: 'absolute',
-    left: 48,
+    left: 36,
     right: 0,
     bottom: 0,
     height: 1,
@@ -392,18 +382,5 @@ const styles = StyleSheet.create({
   logoutContainer: {
     paddingHorizontal: 20,
     marginTop: 24,
-  },
-  logoutButton: {
-    backgroundColor: 'rgba(255, 71, 87, 0.1)',
-    borderRadius: 16,
-    paddingVertical: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 71, 87, 0.3)',
-  },
-  logoutText: {
-    color: '#FF4757',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

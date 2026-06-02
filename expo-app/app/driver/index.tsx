@@ -2,6 +2,9 @@
 // ============================================
 // SMART RIDE MOBILE - DRIVER HOME SCREEN
 // ============================================
+// Dark theme with StyleSheet, GlassCard, GlowHeader,
+// GradientButton, StatusBadge, Reanimated animations
+// ============================================
 
 import React, { useState, useEffect, useCallback, Component, ReactNode } from 'react';
 import {
@@ -11,7 +14,8 @@ import {
   Switch,
   ActivityIndicator,
   Alert,
-  Platform
+  Platform,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 // Conditional import for web compatibility
@@ -40,6 +44,10 @@ import Animated, {
 import { useAuthStore, useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS, DEFAULT_LOCATION, API_CONFIG } from '@/src/constants';
+import { GlassCard } from '@/src/components/GlassCard';
+import { GradientButton } from '@/src/components/GradientButton';
+import { GlowHeader } from '@/src/components/GlowHeader';
+import { StatusBadge } from '@/src/components/StatusBadge';
 import { Task, Rider } from '@/src/types';
 
 // Error Boundary for Map Component
@@ -61,10 +69,12 @@ class MapErrorBoundary extends Component<{ children: ReactNode; fallback: ReactN
 // Safe Map Component with fallback
 function SafeMapView(props: MapViewProps) {
   const fallback = (
-    <View className="flex-1 bg-gray-100 items-center justify-center">
-      <Text className="text-4xl mb-2">🗺️</Text>
-      <Text className="text-gray-500">Map unavailable</Text>
-      <Text className="text-gray-400 text-sm">Location: {props.initialRegion?.latitude?.toFixed(4)}, {props.initialRegion?.longitude?.toFixed(4)}</Text>
+    <View style={styles.mapFallback}>
+      <Text style={styles.mapFallbackEmoji}>🗺️</Text>
+      <Text style={styles.mapFallbackText}>Map unavailable</Text>
+      <Text style={styles.mapFallbackSubtext}>
+        Location: {props.initialRegion?.latitude?.toFixed(4)}, {props.initialRegion?.longitude?.toFixed(4)}
+      </Text>
     </View>
   );
 
@@ -118,11 +128,10 @@ export default function DriverHomeScreen() {
   const loadRiderProfile = useCallback(async () => {
     setIsLoading(true);
     setProfileError(null);
-    
+
     try {
       const response = await api.getRiderProfile();
       if (response.success && response.data) {
-        // VALIDATE: Ensure we have required fields
         const riderData = response.data;
         const normalizedRider: Rider = {
           id: riderData.id,
@@ -178,17 +187,15 @@ export default function DriverHomeScreen() {
         return;
       }
 
-      // Start watching position
       const subscription = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          distanceInterval: 10, // Update every 10 meters
-          timeInterval: 5000, // Update every 5 seconds
+          distanceInterval: 10,
+          timeInterval: 5000,
         },
         (location) => {
           const { latitude: lat, longitude: lng } = location.coords;
-          
-          // Send location update to server (don't await - fire and forget)
+
           socketService.updateLocation({
             latitude: lat,
             longitude: lng,
@@ -196,7 +203,6 @@ export default function DriverHomeScreen() {
             speed: location.coords.speed,
           });
 
-          // Send heartbeat (don't await - fire and forget)
           api.sendHeartbeat({
             latitude: lat,
             longitude: lng,
@@ -221,12 +227,11 @@ export default function DriverHomeScreen() {
 
   const handleIncomingRequest = (data: any) => {
     setIncomingRequest(data);
-    
-    // Start countdown timer
+
     const expiresAt = new Date(data.expiresAt).getTime();
     const now = Date.now();
     const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
-    
+
     setRequestTimer(secondsLeft);
   };
 
@@ -242,7 +247,6 @@ export default function DriverHomeScreen() {
 
     setIsAccepting(true);
     try {
-      // If we have a matchId, accept via dispatch match endpoint first
       const matchId = (incomingRequest as any).matchId;
       if (matchId) {
         const { accessToken } = useAuthStore.getState();
@@ -260,10 +264,8 @@ export default function DriverHomeScreen() {
           router.push(`/driver/driver-task?taskId=${incomingRequest.task.id}`);
           return;
         }
-        // If dispatch accept fails, fall through to transition API
       }
 
-      // Fallback: Use transition API to accept the task
       const { accessToken } = useAuthStore.getState();
       const response = await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
         method: 'POST',
@@ -295,7 +297,6 @@ export default function DriverHomeScreen() {
     if (!incomingRequest) return;
 
     try {
-      // If we have a matchId, reject via dispatch match endpoint
       const matchId = (incomingRequest as any).matchId;
       if (matchId) {
         const { accessToken } = useAuthStore.getState();
@@ -310,7 +311,6 @@ export default function DriverHomeScreen() {
           }),
         });
       } else {
-        // Fallback: Decline via task transition with reason
         const { accessToken } = useAuthStore.getState();
         await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
           method: 'POST',
@@ -354,9 +354,9 @@ export default function DriverHomeScreen() {
   // Show loading state
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View style={styles.loadingContainer}>
         <PulsingLoader />
-        <Text className="mt-4 text-gray-500">Loading driver profile...</Text>
+        <Text style={styles.loadingText}>Loading driver profile...</Text>
       </View>
     );
   }
@@ -364,25 +364,28 @@ export default function DriverHomeScreen() {
   // Show error state if rider profile failed to load
   if (profileError && !rider) {
     return (
-      <View className="flex-1 items-center justify-center bg-white px-6">
-        <Text className="text-4xl mb-4">⚠️</Text>
-        <Text className="text-lg font-bold text-gray-900 mb-2">Profile Load Error</Text>
-        <Text className="text-gray-500 text-center mb-6">{profileError}</Text>
-        <TouchableOpacity
-          className="bg-primary-500 rounded-xl px-8 py-4"
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorEmoji}>⚠️</Text>
+        <Text style={styles.errorTitle}>Profile Load Error</Text>
+        <Text style={styles.errorSubtitle}>{profileError}</Text>
+        <GradientButton
+          title="Retry"
           onPress={loadRiderProfile}
-        >
-          <Text className="text-white font-semibold">Retry</Text>
-        </TouchableOpacity>
+          variant="primary"
+          size="md"
+          style={{ marginTop: 24, width: 180 }}
+        />
       </View>
     );
   }
 
+  const taskStatus = incomingRequest?.task?.status as string | undefined;
+
   return (
-    <View className="flex-1 bg-white">
+    <View style={styles.root}>
       {/* Map with Error Boundary */}
       <SafeMapView
-        className="flex-1"
+        style={StyleSheet.absoluteFill}
         initialRegion={{
           latitude: latitude || DEFAULT_LOCATION.latitude,
           longitude: longitude || DEFAULT_LOCATION.longitude,
@@ -393,168 +396,233 @@ export default function DriverHomeScreen() {
         showsMyLocationButton={false}
       />
 
-      {/* Top Bar */}
-      <Animated.View 
+      {/* GlowHeader overlay */}
+      <Animated.View
         entering={FadeInDown.duration(500).springify()}
-        className="absolute top-12 left-4 right-4"
+        style={styles.headerOverlay}
       >
-        <View className="bg-white rounded-2xl p-4 shadow-lg flex-row items-center justify-between">
-          <View className="flex-row items-center">
-            <Animated.View entering={ZoomIn.delay(200).duration(300)}>
-              <View className="w-12 h-12 bg-gray-100 rounded-full items-center justify-center mr-3">
-                <Text className="text-2xl">👤</Text>
-              </View>
-            </Animated.View>
-            <Animated.View entering={FadeInRight.delay(300).duration(300)}>
-              <Text className="font-bold text-gray-900">{rider?.fullName || 'Driver'}</Text>
-              <View className="flex-row items-center">
-                <Text className="text-yellow-500 mr-1">⭐</Text>
-                <Text className="text-gray-600">{rider?.rating?.toFixed(1) || '5.0'}</Text>
-              </View>
-            </Animated.View>
+        <GlowHeader
+          title={rider?.fullName || 'Driver'}
+          subtitle={isOnline ? '● Online — Receiving requests' : '● Offline'}
+          rightAction={
+            isOnline
+              ? {
+                  icon: 'notifications-outline' as const,
+                  onPress: () => {},
+                }
+              : undefined
+          }
+        >
+          {/* Online status card inside the header */}
+          <View style={styles.onlineCardRow}>
+            <View style={styles.profileRow}>
+              <Animated.View entering={ZoomIn.delay(200).duration(300)}>
+                <View style={styles.avatarCircle}>
+                  <Text style={styles.avatarEmoji}>👤</Text>
+                </View>
+              </Animated.View>
+              <Animated.View entering={SlideInRight.delay(300).duration(300)}>
+                <View style={styles.ratingRow}>
+                  <Text style={styles.ratingStar}>⭐</Text>
+                  <Text style={styles.ratingText}>{rider?.rating?.toFixed(1) || '5.0'}</Text>
+                </View>
+                {taskStatus && (
+                  <StatusBadge
+                    label={TASK_STATUS_LABELS[taskStatus] || taskStatus}
+                    color={TASK_STATUS_COLORS[taskStatus] || COLORS.primary}
+                    size="sm"
+                  />
+                )}
+              </Animated.View>
+            </View>
+            <View style={styles.switchRow}>
+              <Text style={[styles.switchLabel, { color: isOnline ? COLORS.primary : COLORS.textMuted }]}>
+                {isOnline ? 'Online' : 'Offline'}
+              </Text>
+              <Switch
+                value={isOnline}
+                onValueChange={toggleOnlineStatus}
+                trackColor={{ false: COLORS.backgroundSurface, true: 'rgba(0, 255, 136, 0.3)' }}
+                thumbColor={isOnline ? COLORS.primary : COLORS.textDim}
+              />
+            </View>
           </View>
-          <View className="flex-row items-center">
-            <Text className={`font-medium mr-2 ${isOnline ? 'text-secondary-500' : 'text-gray-500'}`}>
-              {isOnline ? 'Online' : 'Offline'}
-            </Text>
-            <Switch
-              value={isOnline}
-              onValueChange={toggleOnlineStatus}
-              trackColor={{ false: '#D1D5DB', true: '#86EFAC' }}
-              thumbColor={isOnline ? COLORS.secondary : '#F4F4F5'}
-            />
-          </View>
-        </View>
-        
+        </GlowHeader>
+
         {/* Profile Error Banner */}
         {profileError && (
-          <Animated.View 
-            entering={SlideInRight.duration(300)}
-            className="mt-2 bg-yellow-100 rounded-xl p-3 flex-row items-center justify-between"
-          >
-            <Text className="text-yellow-800 text-sm flex-1">{profileError}</Text>
-            <TouchableOpacity onPress={loadRiderProfile}>
-              <Text className="text-yellow-800 font-medium">Retry</Text>
-            </TouchableOpacity>
+          <Animated.View entering={SlideInRight.duration(300)}>
+            <GlassCard variant="accent" style={styles.errorBanner}>
+              <View style={styles.errorBannerRow}>
+                <Text style={styles.errorBannerText}>{profileError}</Text>
+                <TouchableOpacity onPress={loadRiderProfile}>
+                  <Text style={styles.errorBannerAction}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            </GlassCard>
           </Animated.View>
         )}
       </Animated.View>
 
       {/* Incoming Request Modal */}
       {incomingRequest && (
-        <Animated.View 
+        <Animated.View
           entering={SlideInUp.duration(400).springify()}
-          className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-4 shadow-lg"
+          style={styles.requestModal}
         >
-          {/* Timer */}
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-xl font-bold text-gray-900">New Ride Request</Text>
-            <Animated.View 
-              entering={ZoomIn.duration(300)}
-              className={`w-10 h-10 rounded-full items-center justify-center ${
-                (requestTimer || 0) < 10 ? 'bg-red-100' : 'bg-primary-100'
-              }`}
+          <GlassCard variant="elevated" padding={20} borderRadius={24}>
+            {/* Timer & Title */}
+            <View style={styles.requestHeaderRow}>
+              <Text style={styles.requestTitle}>New Ride Request</Text>
+              <Animated.View entering={ZoomIn.duration(300)}>
+                <View
+                  style={[
+                    styles.timerCircle,
+                    {
+                      backgroundColor:
+                        (requestTimer || 0) < 10
+                          ? 'rgba(239, 68, 68, 0.15)'
+                          : 'rgba(0, 255, 136, 0.1)',
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.timerText,
+                      {
+                        color:
+                          (requestTimer || 0) < 10 ? COLORS.error : COLORS.primary,
+                      },
+                    ]}
+                  >
+                    {requestTimer}s
+                  </Text>
+                </View>
+              </Animated.View>
+            </View>
+
+            {/* Route Info */}
+            <GlassCard variant="default" style={styles.routeCard}>
+              <View style={styles.routePointRow}>
+                <Animated.View
+                  entering={ZoomIn.delay(100).duration(200)}
+                  style={styles.pickupDot}
+                />
+                <View style={styles.routePointContent}>
+                  <Text style={styles.routePointLabel}>Pickup</Text>
+                  <Text style={styles.routePointAddress}>
+                    {incomingRequest.pickup?.address || 'Pickup location'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.routeDivider} />
+              <View style={styles.routePointRow}>
+                <Animated.View
+                  entering={ZoomIn.delay(200).duration(200)}
+                  style={styles.dropoffDot}
+                />
+                <View style={styles.routePointContent}>
+                  <Text style={styles.routePointLabel}>Dropoff</Text>
+                  <Text style={styles.routePointAddress}>
+                    {incomingRequest.task?.dropoffAddress || 'Dropoff location'}
+                  </Text>
+                </View>
+              </View>
+            </GlassCard>
+
+            {/* Fare */}
+            <Animated.View
+              entering={FadeIn.delay(300).duration(300)}
+              style={styles.fareRow}
             >
-              <Text className={`font-bold ${
-                (requestTimer || 0) < 10 ? 'text-red-500' : 'text-primary-500'
-              }`}>
-                {requestTimer}s
+              <Text style={styles.fareLabel}>Estimated Earnings</Text>
+              <Text style={styles.fareValue}>
+                UGX {(incomingRequest.task?.totalAmount || 0).toLocaleString()}
               </Text>
             </Animated.View>
-          </View>
 
-          {/* Route Info */}
-          <View className="bg-gray-50 rounded-xl p-4 mb-4">
-            <View className="flex-row items-start mb-3">
-              <Animated.View 
-                entering={ZoomIn.delay(100).duration(200)}
-                className="w-3 h-3 rounded-full bg-secondary-500 mt-1 mr-3" 
-              />
-              <View className="flex-1">
-                <Text className="text-gray-500 text-xs">Pickup</Text>
-                <Text className="text-gray-900">{incomingRequest.pickup?.address || 'Pickup location'}</Text>
-              </View>
+            {/* Actions */}
+            <View style={styles.actionRow}>
+              <AnimatedPressable onPress={handleDeclineRequest}>
+                <View style={styles.declineButtonWrapper}>
+                  <GradientButton
+                    title="Decline"
+                    onPress={handleDeclineRequest}
+                    variant="secondary"
+                    size="lg"
+                    fullWidth
+                  />
+                </View>
+              </AnimatedPressable>
+              <AnimatedPressable onPress={handleAcceptRequest} disabled={isAccepting}>
+                <View style={styles.acceptButtonWrapper}>
+                  <GradientButton
+                    title={isAccepting ? 'Accepting...' : 'Accept'}
+                    onPress={handleAcceptRequest}
+                    variant={isAccepting ? 'secondary' : 'primary'}
+                    loading={isAccepting}
+                    disabled={isAccepting}
+                    size="lg"
+                    fullWidth
+                  />
+                </View>
+              </AnimatedPressable>
             </View>
-            <View className="flex-row items-start">
-              <Animated.View 
-                entering={ZoomIn.delay(200).duration(200)}
-                className="w-3 h-3 rounded-full bg-primary-500 mt-1 mr-3" 
-              />
-              <View className="flex-1">
-                <Text className="text-gray-500 text-xs">Dropoff</Text>
-                <Text className="text-gray-900">{incomingRequest.task?.dropoffAddress || 'Dropoff location'}</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Fare */}
-          <Animated.View 
-            entering={FadeIn.delay(300).duration(300)}
-            className="flex-row justify-between items-center mb-4"
-          >
-            <Text className="text-gray-500">Estimated Earnings</Text>
-            <Text className="text-2xl font-bold text-secondary-500">
-              UGX {(incomingRequest.task?.totalAmount || 0).toLocaleString()}
-            </Text>
-          </Animated.View>
-
-          {/* Actions */}
-          <View className="flex-row gap-3">
-            <AnimatedButton 
-              className="flex-1 bg-gray-100 rounded-xl py-4"
-              onPress={handleDeclineRequest}
-            >
-              <Text className="text-gray-600 text-center font-semibold">Decline</Text>
-            </AnimatedButton>
-            <AnimatedButton 
-              className={`flex-1 rounded-xl py-4 ${isAccepting ? 'bg-secondary-300' : 'bg-secondary-500'}`}
-              onPress={handleAcceptRequest}
-              disabled={isAccepting}
-            >
-              {isAccepting ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white text-center font-semibold">Accept</Text>
-              )}
-            </AnimatedButton>
-          </View>
+          </GlassCard>
         </Animated.View>
       )}
 
       {/* Bottom Stats */}
       {!incomingRequest && (
-        <Animated.View 
+        <Animated.View
           entering={SlideInUp.duration(500).delay(300).springify()}
-          className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-4 shadow-lg"
+          style={styles.bottomStats}
         >
-          <View className="flex-row justify-around">
-            <StatItem 
-              label="Today's Earnings" 
-              value={`UGX ${(rider?.walletBalance || 0).toLocaleString()}`}
-              delay={400}
-            />
-            <StatItem 
-              label="Trips" 
-              value={String(rider?.completedTrips || 0)}
-              delay={500}
-            />
-          </View>
+          <GlassCard variant="elevated" padding={20} borderRadius={24}>
+            <View style={styles.statsRow}>
+              <StatItem
+                label="Today's Earnings"
+                value={`UGX ${(rider?.walletBalance || 0).toLocaleString()}`}
+                delay={400}
+              />
+              <View style={styles.statsDivider} />
+              <StatItem
+                label="Trips"
+                value={String(rider?.completedTrips || 0)}
+                delay={500}
+              />
+            </View>
 
-          {!isOnline && (
-            <Animated.View 
-              entering={FadeIn.delay(600).duration(400)}
-              className="mt-4 bg-primary-50 rounded-xl p-4"
-            >
-              <Text className="text-primary-500 text-center">
-                Go online to start receiving ride requests
-              </Text>
-            </Animated.View>
-          )}
+            {!isOnline && (
+              <Animated.View entering={FadeIn.delay(600).duration(400)}>
+                <GlassCard variant="accent" style={styles.offlineHint}>
+                  <Text style={styles.offlineHintText}>
+                    Go online to start receiving ride requests
+                  </Text>
+                </GlassCard>
+              </Animated.View>
+            )}
+
+            {/* Go Online / Go Offline Button */}
+            <View style={styles.toggleButtonContainer}>
+              <GradientButton
+                title={isOnline ? 'Go Offline' : 'Go Online'}
+                onPress={() => toggleOnlineStatus(!isOnline)}
+                variant={isOnline ? 'danger' : 'primary'}
+                size="lg"
+                fullWidth
+              />
+            </View>
+          </GlassCard>
         </Animated.View>
       )}
     </View>
   );
 }
+
+// ============================================
+// SUB-COMPONENTS
+// ============================================
 
 // Pulsing Loader Component
 function PulsingLoader() {
@@ -585,18 +653,15 @@ function PulsingLoader() {
 // Animated Stat Item
 function StatItem({ label, value, delay }: { label: string; value: string; delay: number }) {
   return (
-    <Animated.View 
-      entering={FadeInUp.delay(delay).duration(400).springify()}
-      className="items-center"
-    >
-      <Text className="text-2xl font-bold text-gray-900">{value}</Text>
-      <Text className="text-gray-500 text-sm">{label}</Text>
+    <Animated.View entering={FadeInUp.delay(delay).duration(400).springify()} style={styles.statItem}>
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </Animated.View>
   );
 }
 
-// Animated Button Component
-function AnimatedButton({ children, onPress, disabled, className }: any) {
+// Animated Pressable Wrapper (for button press scale effect)
+function AnimatedPressable({ children, onPress, disabled }: { children: React.ReactNode; onPress: () => void; disabled?: boolean }) {
   const scale = useSharedValue(1);
 
   const handlePressIn = () => {
@@ -615,12 +680,12 @@ function AnimatedButton({ children, onPress, disabled, className }: any) {
 
   return (
     <TouchableOpacity
-      className={className}
       onPress={onPress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
       activeOpacity={0.95}
+      style={{ flex: 1 }}
     >
       <Animated.View style={animatedStyle}>
         {children}
@@ -629,5 +694,301 @@ function AnimatedButton({ children, onPress, disabled, className }: any) {
   );
 }
 
-// FadeInRight animation helper
-const FadeInRight = SlideInRight.duration(300);
+// ============================================
+// STYLESHEET
+// ============================================
+
+const styles = StyleSheet.create({
+  // Root
+  root: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  loadingText: {
+    marginTop: 16,
+    color: COLORS.textMuted,
+    fontSize: 14,
+  },
+
+  // Error state
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+    paddingHorizontal: 24,
+  },
+  errorEmoji: {
+    fontSize: 40,
+    marginBottom: 16,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  errorSubtitle: {
+    color: COLORS.textMuted,
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+
+  // Map fallback
+  mapFallback: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mapFallbackEmoji: {
+    fontSize: 40,
+    marginBottom: 8,
+  },
+  mapFallbackText: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+  },
+  mapFallbackSubtext: {
+    color: COLORS.textDim,
+    fontSize: 12,
+  },
+
+  // Header overlay
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+
+  // Online card row (inside GlowHeader children)
+  onlineCardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+  },
+  profileRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.backgroundSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  avatarEmoji: {
+    fontSize: 24,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingStar: {
+    fontSize: 12,
+    marginRight: 4,
+  },
+  ratingText: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+  },
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  switchLabel: {
+    fontWeight: '500',
+    marginRight: 8,
+    fontSize: 14,
+  },
+
+  // Error banner
+  errorBanner: {
+    marginTop: 8,
+  },
+  errorBannerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  errorBannerText: {
+    color: COLORS.warning,
+    fontSize: 13,
+    flex: 1,
+  },
+  errorBannerAction: {
+    color: COLORS.warning,
+    fontWeight: '600',
+    fontSize: 13,
+    marginLeft: 12,
+  },
+
+  // Incoming Request Modal
+  requestModal: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+  },
+  requestHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  requestTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  timerCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  timerText: {
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+
+  // Route card
+  routeCard: {
+    marginBottom: 16,
+  },
+  routePointRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  pickupDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.secondary,
+    marginTop: 4,
+    marginRight: 12,
+  },
+  dropoffDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: COLORS.primary,
+    marginTop: 4,
+    marginRight: 12,
+  },
+  routePointContent: {
+    flex: 1,
+  },
+  routePointLabel: {
+    color: COLORS.textMuted,
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  routePointAddress: {
+    color: COLORS.text,
+    fontSize: 15,
+    marginTop: 2,
+  },
+  routeDivider: {
+    width: 1.5,
+    height: 16,
+    backgroundColor: COLORS.textDim,
+    marginLeft: 5,
+    marginVertical: 4,
+  },
+
+  // Fare
+  fareRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  fareLabel: {
+    color: COLORS.textMuted,
+    fontSize: 14,
+  },
+  fareValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+
+  // Action buttons
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  declineButtonWrapper: {
+    flex: 1,
+  },
+  acceptButtonWrapper: {
+    flex: 1,
+  },
+
+  // Bottom Stats
+  bottomStats: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 20,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+  },
+  statsDivider: {
+    width: 1,
+    height: 32,
+    backgroundColor: COLORS.border,
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  statLabel: {
+    color: COLORS.textMuted,
+    fontSize: 13,
+    marginTop: 2,
+  },
+
+  // Offline hint
+  offlineHint: {
+    marginTop: 16,
+  },
+  offlineHintText: {
+    color: COLORS.primary,
+    textAlign: 'center',
+    fontSize: 14,
+  },
+
+  // Toggle button
+  toggleButtonContainer: {
+    marginTop: 16,
+  },
+});

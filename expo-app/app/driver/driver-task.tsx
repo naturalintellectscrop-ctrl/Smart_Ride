@@ -1,31 +1,52 @@
 // ============================================
 // SMART RIDE MOBILE - DRIVER TASK SCREEN
 // ============================================
+// Dark theme with StyleSheet, GlassCard, GradientButton,
+// StatusBadge, and Reanimated animations
+// ============================================
 
-import { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
+import { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
   ActivityIndicator,
   Alert,
   ScrollView,
   Linking,
-  Platform
+  Platform,
+  StyleSheet,
+  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Animated, {
+  FadeInUp,
+  FadeInDown,
+  SlideInDown,
+  withSpring,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from 'react-native-reanimated';
 // Conditional import for web compatibility
-const MapView = Platform.OS === 'web' 
-  ? require('@/src/mocks/react-native-maps').MapView 
+const MapView = Platform.OS === 'web'
+  ? require('@/src/mocks/react-native-maps').MapView
   : require('react-native-maps').default;
-const { Marker, Polyline } = Platform.OS === 'web' 
-  ? require('@/src/mocks/react-native-maps') 
+const { Marker, Polyline } = Platform.OS === 'web'
+  ? require('@/src/mocks/react-native-maps')
   : require('react-native-maps');
 import * as Location from 'expo-location';
 import { useTaskStore, useLocationStore, useAuthStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS, API_CONFIG } from '@/src/constants';
+import { GlassCard } from '@/src/components/GlassCard';
+import { GradientButton } from '@/src/components/GradientButton';
+import { StatusBadge } from '@/src/components/StatusBadge';
 import { Task, TaskStatus } from '@/src/types';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const TASK_FLOW: Record<TaskStatus, TaskStatus | null> = {
   'CREATED': 'MATCHING',
@@ -51,6 +72,22 @@ export default function DriverTaskScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Reanimated shared values
+  const pulseScale = useSharedValue(1);
+  const cardTranslateY = useSharedValue(0);
+
+  useEffect(() => {
+    // Pulsing animation for active status indicator
+    pulseScale.value = withRepeat(
+      withSequence(
+        withTiming(1.2, { duration: 800 }),
+        withTiming(1, { duration: 800 })
+      ),
+      -1, // infinite
+      false
+    );
+  }, []);
+
   useEffect(() => {
     if (params.taskId) {
       loadTask(params.taskId);
@@ -63,6 +100,11 @@ export default function DriverTaskScreen() {
       }
     };
   }, [params.taskId]);
+
+  // Animated style for the pulsing dot
+  const pulseAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pulseScale.value }],
+  }));
 
   const loadTask = async (taskId: string) => {
     setIsLoading(true);
@@ -138,7 +180,7 @@ export default function DriverTaskScreen() {
           style: 'destructive',
           onPress: async () => {
             if (!task) return;
-            
+
             setIsUpdating(true);
             try {
               const response = await api.cancelTask(task.id, 'Cancelled by driver');
@@ -178,17 +220,17 @@ export default function DriverTaskScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text className="mt-4 text-gray-500">Loading task details...</Text>
+        <Text style={styles.loadingText}>Loading task details...</Text>
       </View>
     );
   }
 
   if (!task) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">No task found</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.emptyText}>No task found</Text>
       </View>
     );
   }
@@ -245,11 +287,13 @@ export default function DriverTaskScreen() {
     }
   };
 
+  const isTaskTerminal = task.status === 'COMPLETED' || task.status === 'CANCELLED' || task.status === 'FAILED';
+
   return (
-    <View className="flex-1 bg-white">
+    <View style={styles.container}>
       {/* Map */}
       <MapView
-        className="flex-1"
+        style={styles.map}
         initialRegion={{
           latitude: task.pickupLatitude || 0.3476,
           longitude: task.pickupLongitude || 32.5825,
@@ -283,116 +327,365 @@ export default function DriverTaskScreen() {
       </MapView>
 
       {/* Bottom Card */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-lg px-4 pt-4 pb-8">
-        {/* Status Header */}
-        <View className="flex-row items-center justify-between mb-4">
-          <View>
-            <Text 
-              className="text-lg font-bold"
-              style={{ color: statusColor }}
+      <Animated.View
+        entering={SlideInDown.duration(400).springify()}
+        style={styles.bottomCardWrapper}
+      >
+        <GlassCard variant="elevated" padding={20} borderRadius={24} style={styles.bottomCard}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
+            {/* Status Header */}
+            <Animated.View
+              entering={FadeInDown.duration(300).delay(100)}
+              style={styles.statusHeader}
             >
-              {statusLabel}
-            </Text>
-            <Text className="text-gray-500 text-sm">{task.taskNumber}</Text>
-          </View>
-          <View 
-            className="px-3 py-1 rounded-full"
-            style={{ backgroundColor: `${statusColor}20` }}
-          >
-            <Text className="text-sm font-medium" style={{ color: statusColor }}>
-              {task.taskType.includes('BODA') ? '🏍️ Boda' : '🚗 Car'}
-            </Text>
-          </View>
-        </View>
+              <View style={styles.statusHeaderLeft}>
+                <View style={styles.statusLabelRow}>
+                  {/* Pulsing status dot */}
+                  {!isTaskTerminal && (
+                    <Animated.View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: statusColor },
+                        pulseAnimatedStyle,
+                      ]}
+                    />
+                  )}
+                  <Text style={[styles.statusLabel, { color: statusColor }]}>
+                    {statusLabel}
+                  </Text>
+                </View>
+                <Text style={styles.taskNumber}>{task.taskNumber}</Text>
+              </View>
+              <StatusBadge
+                label={task.taskType.includes('BODA') ? '🏍️ Boda' : '🚗 Car'}
+                color={statusColor}
+                size="md"
+              />
+            </Animated.View>
 
-        {/* Client Info */}
-        {task.client && (
-          <View className="flex-row items-center bg-gray-50 rounded-xl p-4 mb-4">
-            <View className="w-12 h-12 bg-gray-200 rounded-full items-center justify-center mr-3">
-              <Text className="text-xl">👤</Text>
-            </View>
-            <View className="flex-1">
-              <Text className="font-bold text-gray-900">{task.client.name}</Text>
-              <Text className="text-gray-500">{task.client.phone}</Text>
-            </View>
-            <TouchableOpacity 
-              className="w-10 h-10 bg-secondary-500 rounded-full items-center justify-center"
-              onPress={handleCallClient}
-            >
-              <Text>📞</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Route Info */}
-        <View className="mb-4">
-          <View className="flex-row items-start mb-2">
-            <View className="w-3 h-3 rounded-full bg-secondary-500 mt-1 mr-3" />
-            <View className="flex-1">
-              <Text className="text-gray-500 text-xs">Pickup</Text>
-              <Text className="text-gray-900">{task.pickupAddress}</Text>
-            </View>
-          </View>
-          <View className="flex-row items-start">
-            <View className="w-3 h-3 rounded-full bg-primary-500 mt-1 mr-3" />
-            <View className="flex-1">
-              <Text className="text-gray-500 text-xs">Dropoff</Text>
-              <Text className="text-gray-900">{task.dropoffAddress}</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Payment Info */}
-        <View className="flex-row justify-between items-center py-3 border-t border-gray-100 mb-4">
-          <Text className="text-gray-500">Payment: {task.paymentMethod}</Text>
-          <Text className="text-xl font-bold text-secondary-500">
-            UGX {task.totalAmount.toLocaleString()}
-          </Text>
-        </View>
-
-        {/* Actions */}
-        <View className="flex-row gap-3">
-          <TouchableOpacity
-            className="flex-1 bg-red-50 rounded-xl py-4"
-            onPress={handleCancelTask}
-            disabled={isUpdating || task.status === 'COMPLETED'}
-          >
-            <Text className="text-red-500 text-center font-semibold">Cancel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className={`flex-1 rounded-xl py-4 ${
-              isUpdating ? 'bg-primary-300' : 'bg-primary-500'
-            }`}
-            onPress={handleButtonPress}
-            disabled={isUpdating || task.status === 'COMPLETED'}
-          >
-            {isUpdating ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text className="text-white text-center font-semibold">
-                {getButtonLabel()}
-              </Text>
+            {/* Client Info */}
+            {task.client && (
+              <Animated.View
+                entering={FadeInUp.duration(300).delay(200)}
+                style={styles.clientCard}
+              >
+                <View style={styles.clientAvatar}>
+                  <Text style={styles.clientAvatarEmoji}>👤</Text>
+                </View>
+                <View style={styles.clientInfo}>
+                  <Text style={styles.clientName}>{task.client.name}</Text>
+                  <Text style={styles.clientPhone}>{task.client.phone}</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.callButton}
+                  onPress={handleCallClient}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.callButtonEmoji}>📞</Text>
+                </TouchableOpacity>
+              </Animated.View>
             )}
-          </TouchableOpacity>
-        </View>
 
-        {/* Completed Message */}
-        {task.status === 'COMPLETED' && (
-          <View className="mt-4 bg-secondary-50 rounded-xl p-4">
-            <Text className="text-secondary-500 text-center font-semibold">
-              ✅ Trip Completed Successfully!
-            </Text>
-            <TouchableOpacity 
-              className="mt-3 bg-secondary-500 rounded-xl py-3"
-              onPress={() => router.replace('/driver')}
+            {/* Route Info */}
+            <Animated.View
+              entering={FadeInUp.duration(300).delay(300)}
+              style={styles.routeContainer}
             >
-              <Text className="text-white text-center font-semibold">
-                Go to Home
+              <View style={styles.routeRow}>
+                <View style={[styles.routeDot, { backgroundColor: COLORS.secondary }]} />
+                <View style={styles.routeTextContainer}>
+                  <Text style={styles.routeLabel}>Pickup</Text>
+                  <Text style={styles.routeAddress}>{task.pickupAddress}</Text>
+                </View>
+              </View>
+
+              {/* Connecting line */}
+              <View style={styles.routeConnector}>
+                <View style={[styles.routeConnectorLine, { borderLeftColor: COLORS.border }]} />
+              </View>
+
+              <View style={styles.routeRow}>
+                <View style={[styles.routeDot, { backgroundColor: COLORS.primary }]} />
+                <View style={styles.routeTextContainer}>
+                  <Text style={styles.routeLabel}>Dropoff</Text>
+                  <Text style={styles.routeAddress}>{task.dropoffAddress}</Text>
+                </View>
+              </View>
+            </Animated.View>
+
+            {/* Payment Info */}
+            <Animated.View
+              entering={FadeInUp.duration(300).delay(400)}
+              style={styles.paymentRow}
+            >
+              <Text style={styles.paymentMethod}>Payment: {task.paymentMethod}</Text>
+              <Text style={styles.paymentAmount}>
+                UGX {task.totalAmount.toLocaleString()}
               </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+            </Animated.View>
+
+            {/* Actions */}
+            <Animated.View
+              entering={FadeInUp.duration(300).delay(500)}
+              style={styles.actionsRow}
+            >
+              <View style={styles.cancelButtonWrapper}>
+                <GradientButton
+                  title="Cancel"
+                  onPress={handleCancelTask}
+                  variant="outline"
+                  loading={false}
+                  disabled={isUpdating || task.status === 'COMPLETED'}
+                  fullWidth
+                  size="md"
+                />
+              </View>
+              <View style={styles.actionButtonWrapper}>
+                <GradientButton
+                  title={getButtonLabel()}
+                  onPress={handleButtonPress}
+                  variant="primary"
+                  loading={isUpdating}
+                  disabled={isUpdating || task.status === 'COMPLETED'}
+                  fullWidth
+                  size="md"
+                />
+              </View>
+            </Animated.View>
+
+            {/* Completed Message */}
+            {task.status === 'COMPLETED' && (
+              <Animated.View
+                entering={FadeInUp.duration(400)}
+                style={styles.completedCard}
+              >
+                <Text style={styles.completedText}>
+                  ✅ Trip Completed Successfully!
+                </Text>
+                <GradientButton
+                  title="Go to Home"
+                  onPress={() => router.replace('/driver')}
+                  variant="secondary"
+                  fullWidth
+                  size="md"
+                />
+              </Animated.View>
+            )}
+          </ScrollView>
+        </GlassCard>
+      </Animated.View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+
+  // Loading & empty states
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: COLORS.textMuted,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+  },
+
+  // Map
+  map: {
+    flex: 1,
+  },
+
+  // Bottom card
+  bottomCardWrapper: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+  },
+  bottomCard: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+
+  // Status header
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  statusHeaderLeft: {
+    flex: 1,
+  },
+  statusLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusLabel: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  taskNumber: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+
+  // Client info
+  clientCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+  },
+  clientAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.backgroundElevated,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  clientAvatarEmoji: {
+    fontSize: 22,
+  },
+  clientInfo: {
+    flex: 1,
+  },
+  clientName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  clientPhone: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  callButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.backgroundElevated,
+    borderWidth: 1,
+    borderColor: `${COLORS.secondary}30`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  callButtonEmoji: {
+    fontSize: 18,
+  },
+
+  // Route info
+  routeContainer: {
+    marginBottom: 16,
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  routeDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginTop: 3,
+    marginRight: 12,
+  },
+  routeTextContainer: {
+    flex: 1,
+  },
+  routeLabel: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  routeAddress: {
+    fontSize: 14,
+    color: COLORS.text,
+    fontWeight: '500',
+    marginTop: 1,
+  },
+  routeConnector: {
+    paddingLeft: 5,
+    height: 16,
+    justifyContent: 'center',
+  },
+  routeConnectorLine: {
+    borderLeftWidth: 1,
+    height: 10,
+    marginLeft: 1,
+  },
+
+  // Payment
+  paymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    marginBottom: 16,
+  },
+  paymentMethod: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+  },
+  paymentAmount: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.secondary,
+  },
+
+  // Actions
+  actionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelButtonWrapper: {
+    flex: 1,
+  },
+  actionButtonWrapper: {
+    flex: 1.5,
+  },
+
+  // Completed
+  completedCard: {
+    marginTop: 16,
+    backgroundColor: 'rgba(0, 255, 136, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 255, 136, 0.15)',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+  },
+  completedText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.primary,
+    marginBottom: 12,
+  },
+});
