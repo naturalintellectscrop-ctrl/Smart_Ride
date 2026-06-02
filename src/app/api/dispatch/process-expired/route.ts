@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
         entityId: 'dispatch-processor',
         description: `Processed ${processedCount} expired/stuck dispatch entries in ${durationMs}ms`,
         source: 'SYSTEM',
-        metadata: JSON.stringify({
+        newValues: JSON.stringify({
           processedCount,
           durationMs,
           triggeredBy: 'cron',

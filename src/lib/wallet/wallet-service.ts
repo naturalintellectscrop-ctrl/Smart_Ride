@@ -675,20 +675,5 @@ export async function getWalletStats(
   return stats;
 }
 
-// ============================================
-// EXPORTS
-// ============================================
-
-export {
-  getOrCreateWallet,
-  getWalletBalance,
-  hasSufficientBalance,
-  depositToWallet,
-  withdrawFromWallet,
-  payFromWallet,
-  creditRewardToWallet,
-  creditCashbackToWallet,
-  refundToWallet,
-  getWalletTransactions,
-  getWalletStats,
-};
+// All functions are already exported individually above.
+// No additional re-export block needed.
