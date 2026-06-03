@@ -1,194 +1,35 @@
 -- ============================================
--- RLS CLEANUP SCRIPT
+-- RLS CLEANUP SCRIPT (Safe Version)
 -- Run this FIRST if you have partially applied RLS
 -- This drops ALL existing policies and disables RLS
 -- so you can start fresh with rls_complete.sql
+-- Uses IF EXISTS for safety with missing tables
 -- ============================================
 
--- Drop all existing policies on all tables
-DROP POLICY IF EXISTS "service_role_access" ON "User";
-DROP POLICY IF EXISTS "users_read_own" ON "User";
-DROP POLICY IF EXISTS "admin_read_users" ON "User";
-DROP POLICY IF EXISTS "service_role_access" ON "Session";
-DROP POLICY IF EXISTS "users_read_own_sessions" ON "Session";
-DROP POLICY IF EXISTS "service_role_access" ON "OTP";
-DROP POLICY IF EXISTS "service_role_access" ON "PasswordResetToken";
-DROP POLICY IF EXISTS "service_role_access" ON "Rider";
-DROP POLICY IF EXISTS "riders_read_own" ON "Rider";
-DROP POLICY IF EXISTS "admin_read_riders" ON "Rider";
-DROP POLICY IF EXISTS "service_role_access" ON "Vehicle";
-DROP POLICY IF EXISTS "admin_read_vehicles" ON "Vehicle";
-DROP POLICY IF EXISTS "service_role_access" ON "Merchant";
-DROP POLICY IF EXISTS "admin_read_merchants" ON "Merchant";
-DROP POLICY IF EXISTS "public_read_active_merchants" ON "Merchant";
-DROP POLICY IF EXISTS "service_role_access" ON "MenuItem";
-DROP POLICY IF EXISTS "public_read_available_items" ON "MenuItem";
-DROP POLICY IF EXISTS "service_role_access" ON "Order";
-DROP POLICY IF EXISTS "clients_read_own_orders" ON "Order";
-DROP POLICY IF EXISTS "admin_read_orders" ON "Order";
-DROP POLICY IF EXISTS "service_role_access" ON "OrderItem";
-DROP POLICY IF EXISTS "service_role_access" ON "KOT";
-DROP POLICY IF EXISTS "service_role_access" ON "Task";
-DROP POLICY IF EXISTS "clients_read_own_tasks" ON "Task";
-DROP POLICY IF EXISTS "admin_read_tasks" ON "Task";
-DROP POLICY IF EXISTS "service_role_access" ON "Payment";
-DROP POLICY IF EXISTS "users_read_own_payments" ON "Payment";
-DROP POLICY IF EXISTS "admin_read_payments" ON "Payment";
-DROP POLICY IF EXISTS "service_role_access" ON "RiderPayout";
-DROP POLICY IF EXISTS "admin_read_payouts" ON "RiderPayout";
-DROP POLICY IF EXISTS "service_role_access" ON "CashCollection";
-DROP POLICY IF EXISTS "admin_read_cash" ON "CashCollection";
-DROP POLICY IF EXISTS "service_role_access" ON "FinanceLog";
-DROP POLICY IF EXISTS "admin_read_finance" ON "FinanceLog";
-DROP POLICY IF EXISTS "service_role_access" ON "Rating";
-DROP POLICY IF EXISTS "users_read_own_ratings" ON "Rating";
-DROP POLICY IF EXISTS "service_role_access" ON "AuditLog";
-DROP POLICY IF EXISTS "admin_read_audit" ON "AuditLog";
-DROP POLICY IF EXISTS "service_role_access" ON "Notification";
-DROP POLICY IF EXISTS "users_read_own_notifications" ON "Notification";
-DROP POLICY IF EXISTS "service_role_access" ON "NotificationPreference";
-DROP POLICY IF EXISTS "users_read_own_notif_prefs" ON "NotificationPreference";
-DROP POLICY IF EXISTS "service_role_access" ON "NotificationBroadcast";
-DROP POLICY IF EXISTS "public_read_broadcasts" ON "NotificationBroadcast";
-DROP POLICY IF EXISTS "service_role_access" ON "SOSAlert";
-DROP POLICY IF EXISTS "users_read_own_sos" ON "SOSAlert";
-DROP POLICY IF EXISTS "admin_read_sos" ON "SOSAlert";
-DROP POLICY IF EXISTS "service_role_access" ON "SystemConfig";
-DROP POLICY IF EXISTS "admin_read_system_config" ON "SystemConfig";
-DROP POLICY IF EXISTS "service_role_access" ON "SLAConfig";
-DROP POLICY IF EXISTS "admin_read_sla_config" ON "SLAConfig";
-DROP POLICY IF EXISTS "service_role_access" ON "PricingConfig";
-DROP POLICY IF EXISTS "admin_read_pricing_config" ON "PricingConfig";
-DROP POLICY IF EXISTS "service_role_access" ON "HeartbeatLog";
-DROP POLICY IF EXISTS "admin_read_heartbeats" ON "HeartbeatLog";
-DROP POLICY IF EXISTS "service_role_access" ON "ConnectionAlert";
-DROP POLICY IF EXISTS "service_role_access" ON "HealthOrder";
-DROP POLICY IF EXISTS "clients_read_own_health_orders" ON "HealthOrder";
-DROP POLICY IF EXISTS "admin_read_health_orders" ON "HealthOrder";
-DROP POLICY IF EXISTS "service_role_access" ON "HealthOrderItem";
-DROP POLICY IF EXISTS "service_role_access" ON "Prescription";
-DROP POLICY IF EXISTS "clients_read_own_prescriptions" ON "Prescription";
-DROP POLICY IF EXISTS "admin_read_prescriptions" ON "Prescription";
-DROP POLICY IF EXISTS "service_role_access" ON "HealthProvider";
-DROP POLICY IF EXISTS "public_read_verified_providers" ON "HealthProvider";
-DROP POLICY IF EXISTS "admin_read_health_providers" ON "HealthProvider";
-DROP POLICY IF EXISTS "service_role_access" ON "ProviderDocument";
-DROP POLICY IF EXISTS "admin_read_provider_docs" ON "ProviderDocument";
-DROP POLICY IF EXISTS "service_role_access" ON "ProviderOrder";
-DROP POLICY IF EXISTS "service_role_access" ON "Pharmacy";
-DROP POLICY IF EXISTS "public_read_approved_pharmacies" ON "Pharmacy";
-DROP POLICY IF EXISTS "service_role_access" ON "MedicineCatalog";
-DROP POLICY IF EXISTS "public_read_available_medicine" ON "MedicineCatalog";
-DROP POLICY IF EXISTS "service_role_access" ON "PharmacyOrderTicket";
-DROP POLICY IF EXISTS "service_role_access" ON "PrescriptionAccessLog";
-DROP POLICY IF EXISTS "admin_read_prescription_logs" ON "PrescriptionAccessLog";
-DROP POLICY IF EXISTS "service_role_access" ON "FraudAlert";
-DROP POLICY IF EXISTS "admin_read_fraud" ON "FraudAlert";
-DROP POLICY IF EXISTS "service_role_access" ON "ApiRateLimit";
-DROP POLICY IF EXISTS "service_role_access" ON "Conversation";
-DROP POLICY IF EXISTS "service_role_access" ON "ConversationParticipant";
-DROP POLICY IF EXISTS "users_read_own_conversations" ON "ConversationParticipant";
-DROP POLICY IF EXISTS "service_role_access" ON "Message";
-DROP POLICY IF EXISTS "service_role_access" ON "Document";
-DROP POLICY IF EXISTS "service_role_access" ON "RiderCapability";
-DROP POLICY IF EXISTS "service_role_access" ON "TaskStateTransition";
-DROP POLICY IF EXISTS "service_role_access" ON "DispatchMatch";
-DROP POLICY IF EXISTS "service_role_access" ON "Transaction";
-DROP POLICY IF EXISTS "admin_read_transactions" ON "Transaction";
-DROP POLICY IF EXISTS "service_role_access" ON "Settlement";
-DROP POLICY IF EXISTS "admin_read_settlements" ON "Settlement";
-DROP POLICY IF EXISTS "service_role_access" ON "AdminPermission";
-DROP POLICY IF EXISTS "admin_read_own_perms" ON "AdminPermission";
-DROP POLICY IF EXISTS "service_role_access" ON "Dispute";
-DROP POLICY IF EXISTS "admin_read_disputes" ON "Dispute";
-DROP POLICY IF EXISTS "service_role_access" ON "DocumentExpiry";
-DROP POLICY IF EXISTS "service_role_access" ON "NotificationLog";
-DROP POLICY IF EXISTS "service_role_access" ON "OfflineAction";
-DROP POLICY IF EXISTS "service_role_access" ON "TaskAnalytics";
-DROP POLICY IF EXISTS "admin_read_task_analytics" ON "TaskAnalytics";
-DROP POLICY IF EXISTS "service_role_access" ON "PlatformMetrics";
-DROP POLICY IF EXISTS "admin_read_platform_metrics" ON "PlatformMetrics";
-DROP POLICY IF EXISTS "service_role_access" ON "Wallet";
-DROP POLICY IF EXISTS "users_read_own_wallet" ON "Wallet";
-DROP POLICY IF EXISTS "admin_read_wallets" ON "Wallet";
-DROP POLICY IF EXISTS "service_role_access" ON "WalletTransaction";
-DROP POLICY IF EXISTS "admin_read_wallet_txns" ON "WalletTransaction";
-DROP POLICY IF EXISTS "service_role_access" ON "Cart";
-DROP POLICY IF EXISTS "users_read_own_cart" ON "Cart";
-DROP POLICY IF EXISTS "service_role_access" ON "CartItem";
-DROP POLICY IF EXISTS "service_role_access" ON "ProductVariant";
-DROP POLICY IF EXISTS "public_read_variants" ON "ProductVariant";
-DROP POLICY IF EXISTS "service_role_access" ON "InventoryReservation";
-DROP POLICY IF EXISTS "service_role_access" ON "RiderMetrics";
-DROP POLICY IF EXISTS "admin_read_rider_metrics" ON "RiderMetrics";
-DROP POLICY IF EXISTS "service_role_access" ON "MerchantDocument";
-DROP POLICY IF EXISTS "admin_read_merchant_docs" ON "MerchantDocument";
-DROP POLICY IF EXISTS "service_role_access" ON "PaymentStateTransition";
+DO $$
+DECLARE
+  r RECORD;
+BEGIN
+  -- Dynamically drop ALL policies on ALL public tables
+  FOR r IN 
+    SELECT schemaname, tablename, policyname 
+    FROM pg_policies 
+    WHERE schemaname = 'public'
+  LOOP
+    EXECUTE format('DROP POLICY IF EXISTS %I ON %I.%I', r.policyname, r.schemaname, r.tablename);
+    RAISE NOTICE 'Dropped policy % on %.%', r.policyname, r.schemaname, r.tablename;
+  END LOOP;
 
--- Disable RLS on all tables (reset to baseline)
-ALTER TABLE "User" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Session" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "OTP" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "PasswordResetToken" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Rider" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Vehicle" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Merchant" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "MenuItem" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Order" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "OrderItem" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "KOT" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Task" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Payment" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "RiderPayout" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "CashCollection" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "FinanceLog" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Rating" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "AuditLog" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Notification" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "NotificationPreference" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "NotificationBroadcast" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "SOSAlert" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "SystemConfig" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "SLAConfig" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "PricingConfig" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "HeartbeatLog" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "ConnectionAlert" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "HealthOrder" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "HealthOrderItem" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Prescription" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "HealthProvider" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "ProviderDocument" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "ProviderOrder" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Pharmacy" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "MedicineCatalog" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "PharmacyOrderTicket" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "PrescriptionAccessLog" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "FraudAlert" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "ApiRateLimit" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Conversation" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "ConversationParticipant" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Message" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Document" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "RiderCapability" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "TaskStateTransition" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "DispatchMatch" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Transaction" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Settlement" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "AdminPermission" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Dispute" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "DocumentExpiry" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "NotificationLog" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "OfflineAction" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "TaskAnalytics" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "PlatformMetrics" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Wallet" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "WalletTransaction" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "Cart" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "CartItem" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "ProductVariant" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "InventoryReservation" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "RiderMetrics" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "MerchantDocument" DISABLE ROW LEVEL SECURITY;
-ALTER TABLE "PaymentStateTransition" DISABLE ROW LEVEL SECURITY;
+  -- Disable RLS on all public tables that have it enabled
+  FOR r IN 
+    SELECT tablename 
+    FROM pg_tables 
+    WHERE schemaname = 'public' AND rowsecurity = true
+  LOOP
+    EXECUTE format('ALTER TABLE %I.%I DISABLE ROW LEVEL SECURITY', 'public', r.tablename);
+    RAISE NOTICE 'Disabled RLS on %.%', 'public', r.tablename;
+  END LOOP;
 
--- Cleanup complete. Now run rls_complete.sql
+  RAISE NOTICE 'Cleanup complete. All policies dropped and RLS disabled.';
+END
+$$;
