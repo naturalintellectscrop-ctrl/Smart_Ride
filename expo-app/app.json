@@ -61,7 +61,13 @@
           "locationAlwaysAndWhenInUsePermission": "Allow Smart Ride to use your location to find nearby rides."
         }
       ],
-      "@react-native-google-signin/google-signin"
+      "@react-native-google-signin/google-signin",
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsImpl": "mapbox"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
