@@ -883,7 +883,7 @@ BEGIN
   END IF;
 
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthProvider') THEN
-    EXECUTE 'CREATE POLICY "public_read_verified_providers" ON "HealthProvider" FOR SELECT USING ("verificationStatus" = ''VERIFIED'' AND "isOpenNow" = true)';
+    EXECUTE 'CREATE POLICY "public_read_verified_providers" ON "HealthProvider" FOR SELECT USING ("verificationStatus" = ''APPROVED'' AND "isOpenNow" = true)';
   END IF;
 
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'NotificationBroadcast') THEN
