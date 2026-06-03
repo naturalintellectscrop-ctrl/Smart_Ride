@@ -19,6 +19,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, MAPBOX_CONFIG, DEFAULT_LOCATION } from '../constants';
+import MapboxGL from '@rnmapbox/maps';
 
 // ============================================
 // TYPES
@@ -38,20 +39,20 @@ export interface SmartRideMapProps {
 }
 
 // ============================================
-// MAPBOX AVAILABILITY CHECK
+// MAPBOX INITIALIZATION
 // ============================================
 
-// NOTE: @rnmapbox/maps is NOT included in dependencies by default.
-// To enable Mapbox GL maps:
-//   1. Run: npx expo install @rnmapbox/maps
-//   2. Set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN in your .env
-//   3. Replace this block with the dynamic import (see git history)
-// For now, we always use the react-native-maps fallback.
-let MapboxGL: any = null;
-let mapboxAvailable = false;
+const mapboxAvailable = !!MAPBOX_CONFIG.accessToken && Platform.OS !== 'web';
+
+if (mapboxAvailable) {
+  MapboxGL.setAccessToken(MAPBOX_CONFIG.accessToken);
+  console.log('[SmartRideMap] Mapbox GL initialized with access token');
+} else {
+  console.log('[SmartRideMap] No Mapbox token or web platform, using react-native-maps fallback');
+}
 
 // ============================================
-// REACT-NATIVE-MAPS IMPORT
+// REACT-NATIVE-MAPS IMPORT (for fallback)
 // ============================================
 
 let RNMapView: any;
@@ -278,13 +279,13 @@ function MapboxMap(props: SmartRideMapProps) {
   }, [driverLocation]);
 
   return (
-    <MapboxGL.default.MapView
+    <MapboxGL.MapView
       style={[styles.map, style]}
       styleURL={MAPBOX_CONFIG.style.dark}
       compassEnabled={false}
       onPress={handleMapPress}
     >
-      <MapboxGL.default.Camera
+      <MapboxGL.Camera
         ref={cameraRef}
         zoomLevel={14}
         centerCoordinate={[
@@ -297,32 +298,32 @@ function MapboxMap(props: SmartRideMapProps) {
 
       {/* User Location */}
       {showUserLocation && (
-        <MapboxGL.default.UserLocation visible={showUserLocation} />
+        <MapboxGL.UserLocation visible={showUserLocation} />
       )}
 
       {/* Pickup Marker */}
       {pickup && (
-        <MapboxGL.default.PointAnnotation
+        <MapboxGL.PointAnnotation
           id="pickup"
           coordinate={[pickup.longitude, pickup.latitude]}
         >
           <PickupMarker title={pickup.title || 'Pickup'} />
-        </MapboxGL.default.PointAnnotation>
+        </MapboxGL.PointAnnotation>
       )}
 
       {/* Dropoff Marker */}
       {dropoff && (
-        <MapboxGL.default.PointAnnotation
+        <MapboxGL.PointAnnotation
           id="dropoff"
           coordinate={[dropoff.longitude, dropoff.latitude]}
         >
           <DropoffMarker title={dropoff.title || 'Dropoff'} />
-        </MapboxGL.default.PointAnnotation>
+        </MapboxGL.PointAnnotation>
       )}
 
       {/* Driver Marker */}
       {driverLocation && (
-        <MapboxGL.default.PointAnnotation
+        <MapboxGL.PointAnnotation
           id="driver"
           coordinate={[driverLocation.longitude, driverLocation.latitude]}
         >
@@ -330,13 +331,13 @@ function MapboxMap(props: SmartRideMapProps) {
             heading={driverLocation.heading}
             isBoda={false}
           />
-        </MapboxGL.default.PointAnnotation>
+        </MapboxGL.PointAnnotation>
       )}
 
       {/* Route Line */}
       {routeGeoJSON && (
-        <MapboxGL.default.ShapeSource id="routeSource" shape={routeGeoJSON}>
-          <MapboxGL.default.LineLayer
+        <MapboxGL.ShapeSource id="routeSource" shape={routeGeoJSON}>
+          <MapboxGL.LineLayer
             id="routeLine"
             style={{
               lineColor: COLORS.primary,
@@ -346,9 +347,9 @@ function MapboxMap(props: SmartRideMapProps) {
               lineJoin: 'round',
             }}
           />
-        </MapboxGL.default.ShapeSource>
+        </MapboxGL.ShapeSource>
       )}
-    </MapboxGL.default.MapView>
+    </MapboxGL.MapView>
   );
 }
 
@@ -574,8 +575,8 @@ function SmartRideMapImpl(props: SmartRideMapProps) {
     );
   }
 
-  // Use Mapbox if token is available and package loaded
-  if (mapboxAvailable && MapboxGL) {
+  // Use Mapbox if token is available and platform is native
+  if (mapboxAvailable) {
     return <MapboxMap {...props} />;
   }
 

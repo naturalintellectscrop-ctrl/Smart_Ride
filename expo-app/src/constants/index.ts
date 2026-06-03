@@ -76,6 +76,16 @@ export const SERVICES: Record<string, { icon: string; color: string; colorDim: s
   HEALTH: { icon: 'medkit', color: '#F43F5E', colorDim: 'rgba(244, 63, 94, 0.08)', colorBorder: 'rgba(244, 63, 94, 0.15)' },
 };
 
+// Mapbox Configuration
+export const MAPBOX_CONFIG = {
+  accessToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '',
+  style: {
+    dark: 'mapbox://styles/mapbox/dark-v11',
+    streets: 'mapbox://styles/mapbox/streets-v12',
+    satellite: 'mapbox://styles/mapbox/satellite-streets-v12',
+  },
+};
+
 // Kampala Default Location
 export const DEFAULT_LOCATION = {
   latitude: 0.3476,
