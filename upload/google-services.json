@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "531949209415",
+    "project_id": "smart-ride-774e7",
+    "storage_bucket": "smart-ride-774e7.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:531949209415:android:73229ed013d4d5f507ae62",
+        "android_client_info": {
+          "package_name": "ug.smartride.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "531949209415-ja4espd5h0m6p74esft4iv541os5ertj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ug.smartride.app",
+            "certificate_hash": "d3f559f3c0091dad6914f06975d48c9c1f0504cf"
+          }
+        },
+        {
+          "client_id": "531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6d8SCey9MX_fJy6nXx9ycqtNmPw6fuGg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "ug.smartride.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
