@@ -1,5 +1,5 @@
 -- ============================================
--- SMART RIDE — COMPLETE RLS SETUP
+-- SMART RIDE - COMPLETE RLS SETUP
 -- Copy this ENTIRE file and paste into Supabase SQL Editor
 -- ============================================
 --
@@ -11,7 +11,7 @@
 -- 5. Creates public read policies for browsing
 --
 -- IMPORTANT: Run this as a SINGLE query in Supabase SQL Editor.
--- If it fails, RLS may be partially enabled — see the rollback note below.
+-- If it fails, RLS may be partially enabled - see the rollback note below.
 --
 -- ROLLBACK (if something goes wrong):
 --   ALTER TABLE "TableName" DISABLE ROW LEVEL SECURITY;
@@ -91,7 +91,7 @@ ALTER TABLE "PaymentStateTransition" ENABLE ROW LEVEL SECURITY;
 -- ============================================
 -- These policies allow the API server to access all tables.
 -- The API sets app.is_service_role = 'true' via Prisma middleware.
--- This is the PRIMARY access path — your API routes handle auth/authorization.
+-- This is the PRIMARY access path - your API routes handle auth/authorization.
 
 -- User-own tables
 CREATE POLICY "service_role_access" ON "User" FOR ALL USING (current_setting('app.is_service_role', true) = 'true') WITH CHECK (current_setting('app.is_service_role', true) = 'true');
@@ -213,7 +213,7 @@ CREATE POLICY "users_read_own_ratings" ON "Rating" FOR SELECT USING ("fromUserId
 -- Users can read their own SOS alerts
 CREATE POLICY "users_read_own_sos" ON "SOSAlert" FOR SELECT USING ("userId" = current_setting('app.current_user_id', true));
 
--- Users can read conversations they're part of
+-- Users can read conversations they are part of
 CREATE POLICY "users_read_own_conversations" ON "ConversationParticipant" FOR SELECT USING ("userId" = current_setting('app.current_user_id', true));
 
 -- Users can read their own prescriptions (PHI)
@@ -265,7 +265,7 @@ CREATE POLICY "admin_read_own_perms" ON "AdminPermission" FOR SELECT USING ("use
 -- ============================================
 -- These allow unauthenticated browsing of public-facing data.
 
--- Anyone can browse approved & open merchants
+-- Anyone can browse approved and open merchants
 CREATE POLICY "public_read_active_merchants" ON "Merchant" FOR SELECT USING (status = 'APPROVED' AND "isOpen" = true);
 
 -- Anyone can browse available menu items
@@ -274,7 +274,7 @@ CREATE POLICY "public_read_available_items" ON "MenuItem" FOR SELECT USING ("isA
 -- Anyone can browse available medicine
 CREATE POLICY "public_read_available_medicine" ON "MedicineCatalog" FOR SELECT USING ("isAvailable" = true);
 
--- Anyone can browse approved & open pharmacies
+-- Anyone can browse approved and open pharmacies
 CREATE POLICY "public_read_approved_pharmacies" ON "Pharmacy" FOR SELECT USING (status = 'APPROVED' AND "isOpen" = true);
 
 -- Anyone can browse verified health providers
