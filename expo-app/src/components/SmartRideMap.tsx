@@ -1,25 +1,27 @@
 // ============================================
 // SMART RIDE MOBILE - SMART RIDE MAP
 // ============================================
-// Unified map component that uses @rnmapbox/maps (Mapbox GL)
-// when EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN is available,
-// and falls back to react-native-maps otherwise.
-// Dark themed, custom markers, route lines, Kampala default.
+// Map component using react-native-maps with dark theme.
+// Custom markers, route lines, Kampala default center.
+//
+// To upgrade to Mapbox GL in the future:
+//   1. Run: npx expo install @rnmapbox/maps
+//   2. Add @rnmapbox/maps plugin to app.json
+//   3. Set MAPBOX_DOWNLOAD_TOKEN and EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN
+//   4. Replace this file with the Mapbox version from git history
 // ============================================
 
-import React, { useEffect, useState, useCallback, useRef, Component, ReactNode } from 'react';
+import React, { useEffect, useState, useCallback, Component, ReactNode } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ActivityIndicator,
   Platform,
-  TouchableOpacity,
   ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, MAPBOX_CONFIG, DEFAULT_LOCATION } from '../constants';
-import MapboxGL from '@rnmapbox/maps';
+import { COLORS, DEFAULT_LOCATION } from '../constants';
 
 // ============================================
 // TYPES
@@ -39,20 +41,7 @@ export interface SmartRideMapProps {
 }
 
 // ============================================
-// MAPBOX INITIALIZATION
-// ============================================
-
-const mapboxAvailable = !!MAPBOX_CONFIG.accessToken && Platform.OS !== 'web';
-
-if (mapboxAvailable) {
-  MapboxGL.setAccessToken(MAPBOX_CONFIG.accessToken);
-  console.log('[SmartRideMap] Mapbox GL initialized with access token');
-} else {
-  console.log('[SmartRideMap] No Mapbox token or web platform, using react-native-maps fallback');
-}
-
-// ============================================
-// REACT-NATIVE-MAPS IMPORT (for fallback)
+// REACT-NATIVE-MAPS IMPORT
 // ============================================
 
 let RNMapView: any;
@@ -220,141 +209,7 @@ const markerStyles = StyleSheet.create({
 });
 
 // ============================================
-// MAPBOX MAP IMPLEMENTATION
-// ============================================
-
-function MapboxMap(props: SmartRideMapProps) {
-  const {
-    style,
-    initialLatitude = DEFAULT_LOCATION.latitude,
-    initialLongitude = DEFAULT_LOCATION.longitude,
-    pickup,
-    dropoff,
-    driverLocation,
-    showUserLocation = true,
-    onLocationSelect,
-    isPickupSelectionMode,
-    routeCoordinates,
-  } = props;
-
-  const cameraRef = useRef<any>(null);
-
-  // Build GeoJSON for route line
-  const routeGeoJSON = routeCoordinates && routeCoordinates.length > 1
-    ? {
-        type: 'FeatureCollection' as const,
-        features: [
-          {
-            type: 'Feature' as const,
-            properties: {},
-            geometry: {
-              type: 'LineString' as const,
-              coordinates: routeCoordinates.map(c => [c.longitude, c.latitude]),
-            },
-          },
-        ],
-      }
-    : null;
-
-  // Handle map press for location selection
-  const handleMapPress = useCallback(
-    (feature: any) => {
-      if (!onLocationSelect || !isPickupSelectionMode) return;
-      const coords = feature.geometry?.coordinates;
-      if (coords && coords.length >= 2) {
-        onLocationSelect({ latitude: coords[1], longitude: coords[0] });
-      }
-    },
-    [onLocationSelect, isPickupSelectionMode]
-  );
-
-  // Fly to driver when location changes
-  useEffect(() => {
-    if (driverLocation && cameraRef.current) {
-      cameraRef.current.flyTo(
-        [driverLocation.longitude, driverLocation.latitude],
-        800
-      );
-    }
-  }, [driverLocation]);
-
-  return (
-    <MapboxGL.MapView
-      style={[styles.map, style]}
-      styleURL={MAPBOX_CONFIG.style.dark}
-      compassEnabled={false}
-      onPress={handleMapPress}
-    >
-      <MapboxGL.Camera
-        ref={cameraRef}
-        zoomLevel={14}
-        centerCoordinate={[
-          initialLongitude,
-          initialLatitude,
-        ]}
-        animationMode="flyTo"
-        animationDuration={800}
-      />
-
-      {/* User Location */}
-      {showUserLocation && (
-        <MapboxGL.UserLocation visible={showUserLocation} />
-      )}
-
-      {/* Pickup Marker */}
-      {pickup && (
-        <MapboxGL.PointAnnotation
-          id="pickup"
-          coordinate={[pickup.longitude, pickup.latitude]}
-        >
-          <PickupMarker title={pickup.title || 'Pickup'} />
-        </MapboxGL.PointAnnotation>
-      )}
-
-      {/* Dropoff Marker */}
-      {dropoff && (
-        <MapboxGL.PointAnnotation
-          id="dropoff"
-          coordinate={[dropoff.longitude, dropoff.latitude]}
-        >
-          <DropoffMarker title={dropoff.title || 'Dropoff'} />
-        </MapboxGL.PointAnnotation>
-      )}
-
-      {/* Driver Marker */}
-      {driverLocation && (
-        <MapboxGL.PointAnnotation
-          id="driver"
-          coordinate={[driverLocation.longitude, driverLocation.latitude]}
-        >
-          <DriverMarker
-            heading={driverLocation.heading}
-            isBoda={false}
-          />
-        </MapboxGL.PointAnnotation>
-      )}
-
-      {/* Route Line */}
-      {routeGeoJSON && (
-        <MapboxGL.ShapeSource id="routeSource" shape={routeGeoJSON}>
-          <MapboxGL.LineLayer
-            id="routeLine"
-            style={{
-              lineColor: COLORS.primary,
-              lineWidth: 4,
-              lineOpacity: 0.8,
-              lineCap: 'round',
-              lineJoin: 'round',
-            }}
-          />
-        </MapboxGL.ShapeSource>
-      )}
-    </MapboxGL.MapView>
-  );
-}
-
-// ============================================
-// REACT-NATIVE-MAPS FALLBACK IMPLEMENTATION
+// MAP ERROR BOUNDARY
 // ============================================
 
 class MapErrorBoundary extends Component<
@@ -375,7 +230,11 @@ class MapErrorBoundary extends Component<
   }
 }
 
-function FallbackMap(props: SmartRideMapProps) {
+// ============================================
+// MAP IMPLEMENTATION (react-native-maps)
+// ============================================
+
+function MapViewImpl(props: SmartRideMapProps) {
   const {
     style,
     initialLatitude = DEFAULT_LOCATION.latitude,
@@ -493,7 +352,7 @@ function FallbackMap(props: SmartRideMapProps) {
 }
 
 // ============================================
-// DARK MAP STYLE FOR REACT-NATIVE-MAPS
+// DARK MAP STYLE
 // ============================================
 
 const darkMapStyle = [
@@ -555,14 +414,13 @@ const darkMapStyle = [
 ];
 
 // ============================================
-// MAIN SMART RIDE MAP COMPONENT
+// MAIN COMPONENT
 // ============================================
 
 function SmartRideMapImpl(props: SmartRideMapProps) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Small delay to allow map setup
     const timer = setTimeout(() => setReady(true), 100);
     return () => clearTimeout(timer);
   }, []);
@@ -575,13 +433,7 @@ function SmartRideMapImpl(props: SmartRideMapProps) {
     );
   }
 
-  // Use Mapbox if token is available and platform is native
-  if (mapboxAvailable) {
-    return <MapboxMap {...props} />;
-  }
-
-  // Fallback to react-native-maps
-  return <FallbackMap {...props} />;
+  return <MapViewImpl {...props} />;
 }
 
 // ============================================

@@ -76,7 +76,8 @@ export const SERVICES: Record<string, { icon: string; color: string; colorDim: s
   HEALTH: { icon: 'medkit', color: '#F43F5E', colorDim: 'rgba(244, 63, 94, 0.08)', colorBorder: 'rgba(244, 63, 94, 0.15)' },
 };
 
-// Mapbox Configuration
+// Mapbox Configuration (reserved for future Mapbox GL upgrade)
+// To enable: install @rnmapbox/maps, set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN
 export const MAPBOX_CONFIG = {
   accessToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '',
   style: {

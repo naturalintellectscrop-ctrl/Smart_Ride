@@ -9,8 +9,7 @@
       "distribution": "internal",
       "env": {
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
-        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api",
-        "MAPBOX_DOWNLOAD_TOKEN": "MAPBOX_DOWNLOAD_TOKEN"
+        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
       }
     },
     "preview": {
@@ -20,8 +19,7 @@
       },
       "env": {
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
-        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api",
-        "MAPBOX_DOWNLOAD_TOKEN": "MAPBOX_DOWNLOAD_TOKEN"
+        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
       }
     },
     "production": {
@@ -32,8 +30,7 @@
       },
       "env": {
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
-        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api",
-        "MAPBOX_DOWNLOAD_TOKEN": "MAPBOX_DOWNLOAD_TOKEN"
+        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
       }
     },
     "apk": {
@@ -43,8 +40,7 @@
       },
       "env": {
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
-        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api",
-        "MAPBOX_DOWNLOAD_TOKEN": "MAPBOX_DOWNLOAD_TOKEN"
+        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
       }
     }
   },
