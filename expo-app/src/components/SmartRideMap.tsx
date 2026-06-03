@@ -41,24 +41,14 @@ export interface SmartRideMapProps {
 // MAPBOX AVAILABILITY CHECK
 // ============================================
 
+// NOTE: @rnmapbox/maps is NOT included in dependencies by default.
+// To enable Mapbox GL maps:
+//   1. Run: npx expo install @rnmapbox/maps
+//   2. Set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN in your .env
+//   3. Replace this block with the dynamic import (see git history)
+// For now, we always use the react-native-maps fallback.
 let MapboxGL: any = null;
 let mapboxAvailable = false;
-
-try {
-  // Only attempt import if token is configured
-  if (MAPBOX_CONFIG.accessToken && Platform.OS !== 'web') {
-    MapboxGL = require('@rnmapbox/maps');
-    // Set the access token
-    MapboxGL.default.setAccessToken(MAPBOX_CONFIG.accessToken);
-    mapboxAvailable = true;
-    console.log('[SmartRideMap] Mapbox GL available, using Mapbox maps');
-  } else {
-    console.log('[SmartRideMap] No Mapbox token or web platform, using react-native-maps fallback');
-  }
-} catch (e) {
-  console.log('[SmartRideMap] @rnmapbox/maps not installed, using react-native-maps fallback');
-  mapboxAvailable = false;
-}
 
 // ============================================
 // REACT-NATIVE-MAPS IMPORT
