@@ -444,3 +444,37 @@ Stage Summary:
 - Admin dashboard export buttons now functional for Users, Payments, and Audit tabs
 - Realtime service ready for Fly.io deployment (fly.toml + Dockerfile already in repo)
 - Provided comprehensive Fly.io deployment guide with step-by-step instructions
+---
+Task ID: 9
+Agent: Main Agent
+Task: Migrate Socket.io to Supabase Realtime (eliminate need for Fly.io)
+
+Work Log:
+- Explored full Socket.io usage: 3 mini-services, 2 client libs, 6 hooks, 1 context, 1 store, 4 dashboard tabs, 7+ mobile screens
+- Installed @supabase/supabase-js in both web and mobile packages
+- Rewrote web socket service (src/services/socket.ts) — replaced Socket.io with Supabase Realtime
+  - Same API surface preserved: connect(), disconnect(), on(), off(), emit(), joinTaskRoom(), etc.
+  - Uses Supabase Broadcast channels for real-time event delivery
+  - Uses Supabase Postgres Changes for DB-driven task status updates
+  - Reconnection handled internally with backoff
+- Rewrote mobile socket service (expo-app/src/services/socket.service.ts)
+  - Same API surface — all consuming screens/hooks unchanged
+  - Chat, driver, rider, task rooms all use Supabase channels
+  - Request expiry timers preserved (client-side)
+- Created server-side realtime helper (src/lib/realtime-server.ts)
+  - broadcastEvent(), broadcastToUser(), broadcastToTask(), broadcastToRider()
+  - broadcastTaskStatusUpdate() — most common server-side pattern
+  - broadcastNotification() — for user notifications
+  - Replaces old internal API on port 3002 (no more XTransformPort routing)
+- Updated .env.example with Supabase Realtime config vars
+- Updated expo-app .env.example with EXPO_PUBLIC_SUPABASE_URL and ANON_KEY
+- Updated expo-app/src/constants/index.ts with Supabase config
+- Removed Fly.io / Socket.io hosting references from env config
+- Pushed all changes to GitHub (commit 04742f3)
+
+Stage Summary:
+- Architecture simplified from 3 services (Vercel + Fly.io + Render) to 2 (Vercel + Supabase)
+- No more separate WebSocket hosting needed — Supabase Realtime is built-in
+- Free tier: 200 concurrent connections, 1M messages/month
+- All consuming code (hooks, components, screens) unchanged due to same API surface
+- User needs to provide SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY
