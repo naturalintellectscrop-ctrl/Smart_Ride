@@ -272,7 +272,7 @@ export class RetrySystemService {
         }
 
         // Attempt to dispatch directly via DispatchService
-        // (replaces old HTTP call to /api/dispatch/match with XTransformPort routing)
+        // (replaces old HTTP call to /api/dispatch/match)
         const dispatchResult = await DispatchService.findAndAssign({
           taskId,
           taskType: task.taskType,

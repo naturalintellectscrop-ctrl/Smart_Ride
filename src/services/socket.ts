@@ -121,7 +121,7 @@ type EventCallback<T> = (data: T) => void;
 // CONFIGURATION
 // ============================================
 
-const TOKEN_STORAGE_KEY = 'smart_ride_auth_token';
+const TOKEN_STORAGE_KEY = 'accessToken';
 
 // ============================================
 // REALTIME SERVICE CLASS (Singleton)
@@ -416,15 +416,15 @@ class RealtimeService {
   }
 
   /** Try to auto-connect using a stored token (useful on page load)
-   *  Checks both the dedicated socket token key and the general accessToken key.
+   *  Checks both the primary accessToken key and the legacy smart_ride_auth_token key.
    */
   autoConnect(): boolean {
     try {
-      // First check the dedicated socket token key
+      // Primary key used by auth-api.ts
       let token = localStorage.getItem(TOKEN_STORAGE_KEY);
-      // Fall back to the general accessToken key used by the auth system
+      // Fallback: legacy key from earlier versions
       if (!token) {
-        token = localStorage.getItem('accessToken');
+        token = localStorage.getItem('smart_ride_auth_token');
       }
       if (token) {
         this.connect(token);

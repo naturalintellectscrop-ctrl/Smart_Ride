@@ -134,7 +134,10 @@ export function ClientOrders() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/orders?limit=50');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const response = await fetch('/api/orders?limit=50', { headers });
       if (!response.ok) {
         throw new Error('Failed to fetch orders');
       }
@@ -240,10 +243,10 @@ export function ClientOrders() {
             <div className="w-20 h-20 bg-[#1A1A24] rounded-full flex items-center justify-center mb-4">
               <Filter className="h-10 w-10 text-gray-500" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">No orders found</h3>
+            <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
             <p className="text-gray-500 text-center text-sm">
               {activeFilter === 'all'
-                ? "You haven't placed any orders yet."
+                ? "Book a ride or order food to get started."
                 : `No ${activeFilter} orders to display.`}
             </p>
           </div>

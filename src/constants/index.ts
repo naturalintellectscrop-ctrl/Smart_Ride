@@ -237,7 +237,7 @@ export const DEBOUNCE = {
 
 // Storage Keys
 export const STORAGE_KEYS = {
-  authToken: 'smart_ride_auth_token',
+  authToken: 'accessToken',
   refreshToken: 'smart_ride_refresh_token',
   user: 'smart_ride_user',
   location: 'smart_ride_last_location',

@@ -42,7 +42,7 @@ interface RiderTrackingProps {
   onConnectionStatusChange?: (status: string) => void;
 }
 
-const TOKEN_STORAGE_KEY = 'smart_ride_auth_token';
+const TOKEN_STORAGE_KEY = 'accessToken';
 const UNSTABLE_TIMEOUT_MS = 30_000; // 30s without update → UNSTABLE
 const DISCONNECTED_TIMEOUT_MS = 60_000; // 60s without update → DISCONNECTED
 

@@ -551,10 +551,10 @@ export function RiderTasks() {
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Package className="h-8 w-8 text-gray-400" />
                   </div>
-                  <h3 className="font-semibold text-gray-900 mb-1">No Tasks Found</h3>
+                  <h3 className="font-semibold text-gray-900 mb-1">No active tasks</h3>
                   <p className="text-sm text-gray-500">
                     {filter === 'all' 
-                      ? 'You have no tasks yet. Go online to start receiving requests.'
+                      ? 'No active tasks. Go online to start receiving requests.'
                       : `No ${filter} tasks at the moment.`}
                   </p>
                 </div>

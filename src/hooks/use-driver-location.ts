@@ -56,8 +56,7 @@ export interface UseDriverLocationReturn {
 // ==========================================
 // Hook: useDriverLocation
 // ==========================================
-// Uses the central socketService (port 3001 via XTransformPort)
-// instead of creating a separate socket connection.
+// Uses the central socketService (Supabase Realtime).
 
 export function useDriverLocation({
   driverId,

@@ -139,7 +139,7 @@ export function MerchantRegistration({ onBack, onComplete }: MerchantRegistratio
       }
 
       if (data.tokens?.accessToken) {
-        localStorage.setItem('auth_token', data.tokens.accessToken);
+        localStorage.setItem('accessToken', data.tokens.accessToken);
         localStorage.setItem('user', JSON.stringify(data.user));
       }
 

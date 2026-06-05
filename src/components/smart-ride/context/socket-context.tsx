@@ -36,7 +36,7 @@ const SocketContext = createContext<SocketContextType | undefined>(undefined);
 // TOKEN STORAGE KEY — same as socket service
 // ============================================
 
-const AUTH_TOKEN_KEY = 'smart_ride_auth_token';
+const AUTH_TOKEN_KEY = 'accessToken';
 
 // ============================================
 // PROVIDER

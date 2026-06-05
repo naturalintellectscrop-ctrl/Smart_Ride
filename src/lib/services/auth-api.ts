@@ -76,6 +76,15 @@ async function fetchApi<T>(
   const data = await response.json();
 
   if (!response.ok) {
+    // Handle 401 — clear tokens and redirect to login
+    if (response.status === 401 && typeof window !== 'undefined') {
+      clearTokens();
+      // Only redirect if not already on an auth page
+      const path = window.location.pathname;
+      if (!path.startsWith('/auth') && !path.startsWith('/admin/login')) {
+        window.location.href = '/auth/login';
+      }
+    }
     throw {
       message: data.error || 'An error occurred',
       status: response.status,

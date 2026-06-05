@@ -222,8 +222,7 @@ export function useBatteryStatus() {
 // ==========================================
 // Hook: useHeartbeat (Main Hook)
 // ==========================================
-// Uses the central socketService (port 3001 via XTransformPort)
-// instead of creating a separate socket connection to a non-existent port.
+// Uses the central socketService (Supabase Realtime)
 
 export function useHeartbeat(
   riderId: string | null,

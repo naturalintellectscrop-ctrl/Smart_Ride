@@ -1028,3 +1028,82 @@ Stage Summary:
 - **5 HIGH fixes**: Socket connect before join, XTransformPort cleanup, infinite re-subscription loop, mobile confirm-payment.
 - **5 MEDIUM issues documented** for future work.
 - Food delivery end-to-end flow now functional: browse merchants → add to cart → checkout with auth → confirm payment → merchant notification → order tracking with realtime.
+
+---
+Task ID: 6
+Agent: phase4-production-polish
+Task: Phase 4 — Production polish: error boundaries, loading states, edge cases
+
+Work Log:
+
+### 1. Global Error Boundary
+- Created `/src/app/error.tsx` — Next.js convention error boundary
+  - Catches runtime errors escaping component trees
+  - Shows user-friendly error page with Smart Ride dark theme
+  - "Try Again" button calls Next.js `reset()`, "Go Home" button navigates to `/`
+  - Shows error details (message + digest) in dev mode only
+  - Logs errors to console (ready for error reporting service integration)
+
+### 2. Loading States
+- Created `/src/app/loading.tsx` — Next.js convention loading component
+  - Animated spinner with Smart Ride design system (dark bg, green accent)
+  - Brand text "Smart Ride" with "Loading..." subtitle
+  - Shown automatically by Next.js while route segments load
+
+### 3. Stale XTransformPort References
+- Cleaned up 3 remaining source code references (all were comments):
+  - `src/hooks/use-heartbeat.ts`: Updated comment from "port 3001 via XTransformPort" to "Supabase Realtime"
+  - `src/hooks/use-driver-location.ts`: Updated comment from "port 3001 via XTransformPort" to "Supabase Realtime"
+  - `src/lib/retry/retry-system.service.ts`: Updated comment from "with XTransformPort routing" to simplified version
+- Caddyfile and examples/ left as-is (infrastructure/example code, not source)
+
+### 4. Stale socket.io-client References
+- Removed `socket.io-client` dependency from both `package.json` files:
+  - `package.json` (web): Removed `"socket.io-client": "^4.8.3"` from dependencies
+  - `expo-app/package.json` (mobile): Removed `"socket.io-client": "^4.8.3"` from dependencies
+- All source code already migrated to Supabase Realtime in prior phases
+
+### 5. Auth Token Consistency
+- **Root cause**: The web auth system (`auth-api.ts`) stores tokens under `accessToken`, but socket service and several components used `smart_ride_auth_token` as the key. Merchant registration used yet another key `auth_token`.
+- **Fix — unified to `accessToken` as primary key on web**:
+  - `src/services/socket.ts` line 124: Changed `TOKEN_STORAGE_KEY` from `'smart_ride_auth_token'` to `'accessToken'`
+  - `src/services/socket.ts` autoConnect(): Updated fallback order — primary `accessToken`, legacy fallback `smart_ride_auth_token`
+  - `src/components/smart-ride/context/socket-context.tsx` line 39: Changed `AUTH_TOKEN_KEY` from `'smart_ride_auth_token'` to `'accessToken'`
+  - `src/components/mobile/shared/rider-tracking.tsx` line 45: Changed `TOKEN_STORAGE_KEY` from `'smart_ride_auth_token'` to `'accessToken'`
+  - `src/components/smart-ride/onboarding/merchant-registration.tsx` line 142: Changed `localStorage.setItem('auth_token', ...)` to `localStorage.setItem('accessToken', ...)`
+  - `src/constants/index.ts` line 240: Changed `STORAGE_KEYS.authToken` from `'smart_ride_auth_token'` to `'accessToken'`
+  - `src/components/providers.tsx`: Updated JSDoc comment to reflect primary key as `accessToken`
+- **Backward compatibility**: `autoConnect()` in socket service still falls back to `smart_ride_auth_token` for users with existing sessions
+- **Mobile (expo-app)**: Left as-is — mobile app is internally consistent using `smart_ride_auth_token` via STORAGE_KEYS, and doesn't share localStorage with web
+
+### 6. API Error Handling Pattern
+- Added 401 handler to `src/lib/services/auth-api.ts` `fetchApi()` wrapper:
+  - On 401 response: clears auth tokens via `clearTokens()`
+  - Redirects to `/auth/login` unless already on an auth page (`/auth/*` or `/admin/login`)
+  - Prevents infinite redirect loops on auth pages
+- Verified existing error handling in key components:
+  - `ride-booking.tsx`: Has try/catch, error state display, `fetchWithRetry` — ✅ Good
+  - `checkout-screen.tsx`: Has try/catch, error/success screens, retry button — ✅ Good
+  - `rider-home.tsx`: Has error states with retry buttons, skeleton loading — ✅ Good
+  - `expo-app/src/services/api.ts`: Has 401 token refresh + retry, network error messages — ✅ Good
+
+### 7. Empty States
+- Improved empty state messages in key screens:
+  - `rider-tasks.tsx`: Changed "No Tasks Found" → "No active tasks" with clearer message "No active tasks. Go online to start receiving requests."
+  - `client-orders.tsx`: Changed "No orders found" → "No orders yet" with actionable message "Book a ride or order food to get started."
+  - `client-orders.tsx`: Added auth headers to fetch call (was missing, could cause 401)
+  - `enhanced-messaging-screen.tsx`: Already has empty state "Start chatting during tasks to see messages here." — ✅ No change needed
+  - `checkout-screen.tsx`: Already has cart empty state "Your cart is empty" — ✅ No change needed
+
+### Verification
+- ESLint: All modified files pass lint with no errors
+- TypeScript: No new compilation errors introduced (all errors are pre-existing in service files)
+
+Stage Summary:
+- Global error boundary catches runtime errors with user-friendly UI
+- Loading state shown during route transitions
+- All XTransformPort comment references cleaned from source code
+- socket.io-client removed from both package.json dependencies
+- Auth token key unified to `accessToken` on web (with backward compat fallback)
+- 401 errors handled globally in auth-api.ts with token cleanup + redirect
+- Empty states improved with actionable messages
