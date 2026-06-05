@@ -420,3 +420,27 @@ Stage Summary:
 - Google Client ID updated across codebase and env
 - Critical env vars (JWT_SECRET) added to .env for Vercel deployment
 - Landing page reflects cash-only payment policy
+---
+Task ID: 8
+Agent: Main Agent
+Task: Fix iOS Google Client ID, Mapbox env prefix, admin export buttons, prepare Fly.io deployment
+
+Work Log:
+- Fixed iOS Google Client ID mismatch in expo-app/app.json CFBundleURLSchemes (old h0ri57i233r1l767tnc4i26brdt3asb3 → current 1knt1vf2v8g5fh7rltg31knps9j2otar)
+- Fixed Mapbox env prefix in both web mapbox services (src/lib/maps/mapbox-service.ts and src/lib/mapbox/mapbox-service.ts) to prefer NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN over EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN for server-side compatibility
+- Created shared CSV export utility (src/lib/export.ts) with generateCSV(), csvResponse(), downloadBlob() functions
+- Added CSV export endpoint to /api/admin/users route (?action=export with role/status/search filters)
+- Added CSV export endpoint to /api/payments route (?action=export)
+- Rewrote admin-dashboard.tsx header with contextual export buttons (CSV per tab, DOCX for audit only)
+- Fixed user-management.tsx placeholder Export button → working CSV export with filters
+- Fixed payment-finance.tsx placeholder Export Report button → working CSV export
+- Updated realtime service CORS to include Fly.io domain (https://smartride-realtime.fly.dev)
+- Updated .env with Fly.io production URL comments
+- Pushed all changes to GitHub (commit 92106c2)
+
+Stage Summary:
+- iOS Google Client ID now matches across app.json, google.ts, and google-signin.ts
+- Mapbox token works on both Next.js server-side and client-side
+- Admin dashboard export buttons now functional for Users, Payments, and Audit tabs
+- Realtime service ready for Fly.io deployment (fly.toml + Dockerfile already in repo)
+- Provided comprehensive Fly.io deployment guide with step-by-step instructions
