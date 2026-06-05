@@ -136,7 +136,7 @@ const createTaskSchema = z.object({
   distanceKm: z.number(),
   
   // Payment
-  paymentMethod: z.enum(['CASH', 'MOBILE_MONEY_MTN', 'MOBILE_MONEY_AIRTEL', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD']),
+  paymentMethod: z.enum(['CASH', 'MTN_MOMO', 'AIRTEL_MONEY', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD', 'WALLET']),
   
   // Optional details
   pickupContactName: z.string().optional(),

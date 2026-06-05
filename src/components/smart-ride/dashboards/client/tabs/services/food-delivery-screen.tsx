@@ -112,7 +112,7 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [deliveryAddress, setDeliveryAddress] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MOBILE_MONEY_MTN' | 'MOBILE_MONEY_AIRTEL'>('CASH');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MTN_MOMO' | 'AIRTEL_MONEY'>('CASH');
   const [currentOrder, setCurrentOrder] = useState<OrderResult | null>(null);
 
   // API state
@@ -282,8 +282,8 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
           deliveryFee,
           serviceFee,
           totalAmount,
-          paymentMethod: paymentMethod === 'MOBILE_MONEY_MTN' ? 'MTN_MOMO'
-            : paymentMethod === 'MOBILE_MONEY_AIRTEL' ? 'AIRTEL_MONEY'
+          paymentMethod: paymentMethod === 'MTN_MOMO' ? 'MTN_MOMO'
+            : paymentMethod === 'AIRTEL_MONEY' ? 'AIRTEL_MONEY'
             : 'CASH',
           deliveryAddress,
         }),
@@ -892,8 +892,8 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
               <div className="flex gap-2">
                 {[
                   { id: 'CASH' as const, label: 'Cash', icon: Wallet },
-                  { id: 'MOBILE_MONEY_MTN' as const, label: 'MTN MoMo', icon: Smartphone },
-                  { id: 'MOBILE_MONEY_AIRTEL' as const, label: 'Airtel', icon: Smartphone },
+                  { id: 'MTN_MOMO' as const, label: 'MTN MoMo', icon: Smartphone },
+                  { id: 'AIRTEL_MONEY' as const, label: 'Airtel', icon: Smartphone },
                 ].map((method) => (
                   <button
                     key={method.id}

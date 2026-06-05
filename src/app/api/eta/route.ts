@@ -1,5 +1,5 @@
 // ============================================
-// SMART RIDE - LIVE ETA API (PHASE 9A)
+// SMART RIDE - LIVE ETA API
 // ============================================
 // GET /api/eta?taskId=xxx
 // Calculates live ETA for any active task using:
@@ -13,16 +13,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { TaskStatus, TaskType } from '@prisma/client';
 import {
-  calculateLiveETA,
-  calculateAverageSpeedFromHeartbeats,
-  type ServiceType,
-  type LiveETAResult,
+  calculateETA,
+  calculateDistance,
+  formatDuration,
+  formatDistance,
+  type Location,
+  type RouteInfo,
 } from '@/lib/tracking/eta-calculator';
 import { driverLocationStore } from '@/lib/tracking/driver-location-store';
 
 // ============================================
 // Types
 // ============================================
+
+interface LiveETAResult {
+  phase: 'to_pickup' | 'to_dropoff';
+  toPickup: RouteInfo | null;
+  toDropoff: RouteInfo | null;
+  totalMinutes: number;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  formattedDuration: string;
+  formattedDistance: string;
+}
 
 interface ETAResponse {
   success: boolean;
@@ -56,7 +68,6 @@ const DROPOFF_PHASE_STATUSES: TaskStatus[] = [
   TaskStatus.PICKED_UP,
   TaskStatus.IN_PROGRESS,
   TaskStatus.IN_TRANSIT,
-  TaskStatus.DELIVERING,
 ];
 
 // All active statuses where ETA makes sense
@@ -66,25 +77,72 @@ const ACTIVE_STATUSES: TaskStatus[] = [
 ];
 
 // ============================================
-// Map Prisma TaskType to ServiceType
+// Map TaskType to vehicle type for speed estimation
 // ============================================
 
-function taskTypeToServiceType(taskType: TaskType): ServiceType {
+function taskTypeToVehicleType(taskType: TaskType): 'boda' | 'car' | 'bicycle' | 'walking' {
   switch (taskType) {
     case TaskType.SMART_BODA_RIDE:
+      return 'boda';
     case TaskType.SMART_CAR_RIDE:
-      return 'ride';
+      return 'car';
     case TaskType.FOOD_DELIVERY:
-      return 'food';
     case TaskType.SHOPPING:
-      return 'shopping';
     case TaskType.ITEM_DELIVERY:
-      return 'delivery';
+      return 'boda';
     case TaskType.SMART_HEALTH_DELIVERY:
-      return 'health';
+      return 'boda';
     default:
-      return 'ride';
+      return 'boda';
   }
+}
+
+// ============================================
+// Estimate average speed from heartbeat data
+// ============================================
+
+function estimateSpeedFromHeartbeats(
+  heartbeats: Array<{ latitude: number; longitude: number; speed?: number | null; createdAt: Date }>
+): number | null {
+  if (heartbeats.length < 2) return null;
+
+  // If recent heartbeats have speed data, use that
+  const speeds = heartbeats
+    .map(h => h.speed)
+    .filter((s): s is number => s != null && s > 0);
+  
+  if (speeds.length >= 2) {
+    const avgSpeed = speeds.reduce((sum, s) => sum + s, 0) / speeds.length;
+    // Convert m/s to km/h if the speed appears to be in m/s (typically < 50)
+    return avgSpeed < 50 ? avgSpeed * 3.6 : avgSpeed;
+  }
+
+  // Calculate speed from position changes
+  let totalDistance = 0;
+  let totalTime = 0;
+  
+  for (let i = 1; i < heartbeats.length; i++) {
+    const prev = heartbeats[i - 1];
+    const curr = heartbeats[i];
+    
+    const dist = calculateDistance(
+      { latitude: prev.latitude, longitude: prev.longitude },
+      { latitude: curr.latitude, longitude: curr.longitude }
+    );
+    
+    const timeDiff = (new Date(curr.createdAt).getTime() - new Date(prev.createdAt).getTime()) / 1000 / 3600; // hours
+    
+    if (timeDiff > 0) {
+      totalDistance += dist;
+      totalTime += timeDiff;
+    }
+  }
+
+  if (totalTime > 0) {
+    return totalDistance / totalTime; // km/h
+  }
+
+  return null;
 }
 
 // ============================================
@@ -187,7 +245,6 @@ export async function GET(request: NextRequest) {
     if (driverLocation) {
       riderLat = driverLocation.latitude;
       riderLng = driverLocation.longitude;
-      // Use the speed from the driver location store if available
       if (driverLocation.speed > 0) {
         averageSpeed = driverLocation.speed;
       }
@@ -241,49 +298,97 @@ export async function GET(request: NextRequest) {
     }
 
     // Try to compute average speed from recent heartbeat logs
+    let usingFallbackSpeed = false;
     if (!averageSpeed) {
-      const recentHeartbeats = await db.heartbeatLog.findMany({
-        where: {
-          riderId: task.riderId,
-          taskId: taskId,
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 5,
-        select: {
-          latitude: true,
-          longitude: true,
-          speed: true,
-          createdAt: true,
-        },
-      });
+      try {
+        const recentHeartbeats = await db.heartbeatLog.findMany({
+          where: {
+            riderId: task.riderId,
+            taskId: taskId,
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 5,
+          select: {
+            latitude: true,
+            longitude: true,
+            speed: true,
+            createdAt: true,
+          },
+        });
 
-      if (recentHeartbeats.length >= 2) {
-        // Reverse to get oldest first
-        const heartbeats = recentHeartbeats.reverse().map(hb => ({
-          latitude: hb.latitude,
-          longitude: hb.longitude,
-          timestamp: new Date(hb.createdAt).getTime(),
-          speed: hb.speed ?? undefined,
-        }));
-
-        const computedSpeed = calculateAverageSpeedFromHeartbeats(heartbeats, 5);
-        if (computedSpeed !== null) {
-          averageSpeed = computedSpeed;
+        if (recentHeartbeats.length >= 2) {
+          const computedSpeed = estimateSpeedFromHeartbeats(recentHeartbeats.reverse());
+          if (computedSpeed !== null) {
+            averageSpeed = computedSpeed;
+          }
         }
+      } catch {
+        // HeartbeatLog table might not have data
       }
     }
 
-    // Calculate live ETA
-    const serviceType = taskTypeToServiceType(task.taskType);
-    const etaResult = calculateLiveETA(
-      riderLat,
-      riderLng,
-      destLat,
-      destLng,
+    // Use fallback speed based on vehicle type if no computed speed
+    if (!averageSpeed) {
+      const vehicleType = taskTypeToVehicleType(task.taskType);
+      const fallbackSpeeds: Record<string, number> = {
+        boda: 35,
+        car: 25,
+        bicycle: 15,
+        walking: 5,
+      };
+      averageSpeed = fallbackSpeeds[vehicleType] || 35;
+      usingFallbackSpeed = true;
+    }
+
+    // Calculate ETA using the existing calculateETA function
+    const vehicleType = taskTypeToVehicleType(task.taskType);
+    const toPickup = calculateETA(
+      { latitude: riderLat, longitude: riderLng },
+      { latitude: task.pickupLatitude || riderLat, longitude: task.pickupLongitude || riderLng },
+      vehicleType,
       averageSpeed,
-      serviceType,
-      phase
+      1.0
     );
+
+    let toDropoff: RouteInfo | null = null;
+    if (task.dropoffLatitude && task.dropoffLongitude) {
+      const dropoffOrigin = isPickupPhase
+        ? { latitude: task.pickupLatitude || riderLat, longitude: task.pickupLongitude || riderLng }
+        : { latitude: riderLat, longitude: riderLng };
+      
+      toDropoff = calculateETA(
+        dropoffOrigin,
+        { latitude: task.dropoffLatitude, longitude: task.dropoffLongitude },
+        vehicleType,
+        averageSpeed,
+        1.0
+      );
+    }
+
+    // Calculate total ETA
+    let totalMinutes: number;
+    if (isPickupPhase) {
+      totalMinutes = toPickup.duration + (toDropoff?.duration || 0);
+    } else {
+      totalMinutes = toDropoff?.duration || toPickup.duration;
+    }
+
+    // Determine confidence level
+    const confidence: 'HIGH' | 'MEDIUM' | 'LOW' = usingFallbackSpeed ? 'LOW' :
+      (driverLocation ? 'HIGH' : 'MEDIUM');
+
+    // Build live ETA result
+    const etaResult: LiveETAResult = {
+      phase,
+      toPickup,
+      toDropoff,
+      totalMinutes,
+      confidence,
+      formattedDuration: formatDuration(totalMinutes),
+      formattedDistance: formatDistance(
+        isPickupPhase ? toPickup.distance : (toDropoff?.distance || toPickup.distance)
+      ),
+    };
 
     // Build response
     const response: ETAResponse = {
@@ -298,7 +403,7 @@ export async function GET(request: NextRequest) {
         riderLocation: { latitude: riderLat, longitude: riderLng },
         destination: { latitude: destLat, longitude: destLng, address: destAddress },
         averageSpeedKmh: averageSpeed,
-        usingFallbackSpeed: etaResult.confidence === 'LOW',
+        usingFallbackSpeed,
       },
     };
 

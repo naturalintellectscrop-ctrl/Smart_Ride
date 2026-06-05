@@ -66,8 +66,8 @@ function vehicleTypeToTaskType(v: VehicleType): 'SMART_BODA_RIDE' | 'SMART_CAR_R
 function paymentMethodToApi(method: PaymentMethod): string {
   switch (method) {
     case 'CASH': return 'CASH';
-    case 'MTN_MOMO': return 'MOBILE_MONEY_MTN';
-    case 'AIRTEL_MONEY': return 'MOBILE_MONEY_AIRTEL';
+    case 'MTN_MOMO': return 'MTN_MOMO';
+    case 'AIRTEL_MONEY': return 'AIRTEL_MONEY';
     case 'CARD': return 'VISA';
     default: return 'CASH';
   }

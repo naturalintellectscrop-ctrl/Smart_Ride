@@ -105,9 +105,7 @@ export default function RideTrackingScreen() {
     const paymentMethodLabel: Record<string, string> = {
       'CASH': '💵 Cash',
       'MTN_MOMO': '📱 MTN MoMo',
-      'MOBILE_MONEY_MTN': '📱 MTN MoMo',
       'AIRTEL_MONEY': '📱 Airtel Money',
-      'MOBILE_MONEY_AIRTEL': '📱 Airtel Money',
       'VISA': '💳 Visa',
       'MASTERCARD': '💳 Mastercard',
     };

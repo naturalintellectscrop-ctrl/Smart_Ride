@@ -338,7 +338,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
         deliveryFee: 4000,
         serviceFee: 1000,
         totalAmount: cartTotal + 4000 + 1000,
-        paymentMethod: paymentMethod === 'MOBILE_MONEY' ? 'MOBILE_MONEY_MTN' : paymentMethod === 'CASH' ? 'CASH' : 'MOBILE_MONEY_MTN',
+        paymentMethod: paymentMethod === 'MOBILE_MONEY' ? 'MTN_MOMO' : paymentMethod === 'CASH' ? 'CASH' : 'MTN_MOMO',
         deliveryAddress: deliveryAddress.trim(),
       };
 

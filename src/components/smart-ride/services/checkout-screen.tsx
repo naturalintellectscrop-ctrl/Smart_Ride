@@ -43,8 +43,8 @@ const SERVICE_FEE = 1000;
 // Map PaymentMethod selector enum to API payment method enum
 function mapPaymentMethod(method: PaymentMethod): string {
   switch (method) {
-    case 'MTN_MOMO': return 'MOBILE_MONEY_MTN';
-    case 'AIRTEL_MONEY': return 'MOBILE_MONEY_AIRTEL';
+    case 'MTN_MOMO': return 'MTN_MOMO';
+    case 'AIRTEL_MONEY': return 'AIRTEL_MONEY';
     case 'VISA': return 'VISA';
     case 'MASTERCARD': return 'MASTERCARD';
     case 'CASH': return 'CASH';

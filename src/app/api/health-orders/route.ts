@@ -103,7 +103,7 @@ const createHealthOrderSchema = z.object({
   totalAmount: z.number().min(0),
   
   // Payment
-  paymentMethod: z.enum(['CASH', 'MOBILE_MONEY_MTN', 'MOBILE_MONEY_AIRTEL', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD']),
+  paymentMethod: z.enum(['CASH', 'MTN_MOMO', 'AIRTEL_MONEY', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD']),
   
   // Delivery
   deliveryAddress: z.string(),

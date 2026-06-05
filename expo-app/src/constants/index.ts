@@ -163,12 +163,11 @@ export const API_CONFIG = {
 };
 
 // Payment method mapping: client display values → server enum values
-// The mobile app uses short names (MTN_MOMO, AIRTEL_MONEY) but the backend
-// Zod schema expects MOBILE_MONEY_MTN, MOBILE_MONEY_AIRTEL.
+// Now aligned with Prisma schema (MTN_MOMO, AIRTEL_MONEY).
 export const PAYMENT_METHOD_MAP: Record<string, string> = {
   'CASH': 'CASH',
-  'MTN_MOMO': 'MOBILE_MONEY_MTN',
-  'AIRTEL_MONEY': 'MOBILE_MONEY_AIRTEL',
+  'MTN_MOMO': 'MTN_MOMO',
+  'AIRTEL_MONEY': 'AIRTEL_MONEY',
   'VISA': 'VISA',
   'MASTERCARD': 'MASTERCARD',
   'WALLET': 'WALLET',
@@ -177,8 +176,8 @@ export const PAYMENT_METHOD_MAP: Record<string, string> = {
 // Reverse map for displaying server values in the UI
 export const PAYMENT_METHOD_DISPLAY: Record<string, string> = {
   'CASH': 'CASH',
-  'MOBILE_MONEY_MTN': 'MTN_MOMO',
-  'MOBILE_MONEY_AIRTEL': 'AIRTEL_MONEY',
+  'MTN_MOMO': 'MTN_MOMO',
+  'AIRTEL_MONEY': 'AIRTEL_MONEY',
   'VISA': 'VISA',
   'MASTERCARD': 'MASTERCARD',
   'WALLET': 'WALLET',

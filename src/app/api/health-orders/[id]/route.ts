@@ -231,7 +231,7 @@ async function startRiderMatching(healthOrderId: string, order: { id: string; de
         platformCommission: 500,
         riderEarnings: 4500,
         
-        paymentMethod: order.paymentMethod as 'CASH' | 'MOBILE_MONEY_MTN' | 'MOBILE_MONEY_AIRTEL' | 'VISA' | 'MASTERCARD' | 'CREDIT_CARD' | 'DEBIT_CARD',
+        paymentMethod: order.paymentMethod as 'CASH' | 'MTN_MOMO' | 'AIRTEL_MONEY' | 'VISA' | 'MASTERCARD' | 'CREDIT_CARD' | 'DEBIT_CARD',
         paymentStatus: 'PENDING',
         
         itemDescription: 'Pharmacy order delivery',

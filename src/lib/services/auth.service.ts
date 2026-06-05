@@ -6,7 +6,7 @@
 import { db } from '@/lib/db';
 import { hashPassword, verifyPassword, validatePasswordStrength, generateOTP } from '../auth/password';
 import { generateTokenPair, verifyRefreshToken } from '../auth/jwt';
-import { createSession, revokeAllSessions } from '../auth/session-service';
+import { createSession, refreshSession, revokeAllSessions } from '../auth/session-service';
 import { UserRole, UserStatus } from '@prisma/client';
 import { z } from 'zod';
 
@@ -201,51 +201,40 @@ export async function loginUser(data: z.infer<typeof loginSchema>): Promise<Auth
 
 /**
  * Refresh access token
+ * Delegates to session-service for proper Session-based token validation
  */
-export async function refreshAccessToken(refreshToken: string): Promise<AuthResult> {
+export async function refreshAccessToken(refreshToken: string, deviceId?: string): Promise<AuthResult> {
   try {
-    // Verify refresh token
+    // Use session-service for proper Session-based refresh
+    const sessionResult = await refreshSession(refreshToken, deviceId);
+
+    if (!sessionResult.success) {
+      return { success: false, error: sessionResult.error || 'Invalid refresh token' };
+    }
+
+    // Get user info for the response
+    // Verify the JWT access token to extract user info
     const payload = verifyRefreshToken(refreshToken);
-    if (!payload) {
-      return { success: false, error: 'Invalid refresh token' };
+    
+    let user: { id: string; name: string; email: string; phone: string | null; role: UserRole } | null = null;
+    if (payload) {
+      const dbUser = await db.user.findUnique({
+        where: { id: payload.userId },
+        select: { id: true, name: true, email: true, phone: true, role: true },
+      });
+      if (dbUser) {
+        user = dbUser;
+      }
     }
-    
-    // Find user and verify stored refresh token
-    const user = await db.user.findUnique({
-      where: { id: payload.userId },
-    });
-    
-    if (!user || user.refreshToken !== refreshToken) {
-      return { success: false, error: 'Invalid refresh token' };
-    }
-    
-    // Check if refresh token is expired
-    if (user.refreshTokenExpiresAt && user.refreshTokenExpiresAt < new Date()) {
-      return { success: false, error: 'Refresh token expired' };
-    }
-    
-    // Generate new tokens
-    const tokens = generateTokenPair(user);
-    
-    // Update user with new refresh token
-    await db.user.update({
-      where: { id: user.id },
-      data: {
-        refreshToken: tokens.refreshToken,
-        refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      },
-    });
-    
+
     return {
       success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
+      user: user || undefined,
+      tokens: {
+        accessToken: sessionResult.accessToken!,
+        refreshToken: sessionResult.refreshToken!,
+        expiresIn: sessionResult.expiresIn!,
       },
-      tokens,
     };
   } catch (error) {
     console.error('Token refresh error:', error);

@@ -19,7 +19,7 @@ export interface TaskRequest {
   dropoffLatitude?: number;
   dropoffLongitude?: number;
   distanceKm: number;
-  paymentMethod: 'CASH' | 'MOBILE_MONEY_MTN' | 'MOBILE_MONEY_AIRTEL' | 'VISA' | 'MASTERCARD' | 'WALLET';
+  paymentMethod: 'CASH' | 'MTN_MOMO' | 'AIRTEL_MONEY' | 'VISA' | 'MASTERCARD' | 'WALLET';
   passengerCount?: number;
   passengerNames?: string;
   itemDescription?: string;
@@ -44,7 +44,7 @@ export interface OrderRequest {
   serviceFee?: number;
   discount?: number;
   totalAmount: number;
-  paymentMethod: 'CASH' | 'MOBILE_MONEY_MTN' | 'MOBILE_MONEY_AIRTEL' | 'VISA' | 'MASTERCARD' | 'WALLET';
+  paymentMethod: 'CASH' | 'MTN_MOMO' | 'AIRTEL_MONEY' | 'VISA' | 'MASTERCARD' | 'WALLET';
   deliveryAddress: string;
   deliveryLatitude?: number;
   deliveryLongitude?: number;

@@ -133,7 +133,7 @@ const createOrderSchema = z.object({
   serviceFee: z.number().min(0).optional(),
   discount: z.number().min(0).optional(),
   totalAmount: z.number().min(0),
-  paymentMethod: z.enum(['CASH', 'MOBILE_MONEY_MTN', 'MOBILE_MONEY_AIRTEL', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD']),
+  paymentMethod: z.enum(['CASH', 'MTN_MOMO', 'AIRTEL_MONEY', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD', 'WALLET']),
   deliveryAddress: z.string(),
   deliveryLatitude: z.number().optional(),
   deliveryLongitude: z.number().optional(),

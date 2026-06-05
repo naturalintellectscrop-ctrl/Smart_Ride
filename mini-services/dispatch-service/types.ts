@@ -16,8 +16,8 @@ export type ServiceType =
 
 export type PaymentMethodType =
   | 'CASH'
-  | 'MOBILE_MONEY_MTN'
-  | 'MOBILE_MONEY_AIRTEL'
+  | 'MTN_MOMO'
+  | 'AIRTEL_MONEY'
   | 'VISA'
   | 'MASTERCARD'
   | 'CARD';

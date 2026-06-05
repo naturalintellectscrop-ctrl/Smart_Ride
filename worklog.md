@@ -367,3 +367,36 @@ Stage Summary:
 - Real-time tracking now receives correct socket events
 - Food ordering flow fixed: menu loads, cart sends correct fields, auto-dispatch creates task
 - Lint passes, dev server starts and serves pages correctly
+---
+Task ID: 1
+Agent: main
+Task: Fix Vercel deployment failure and all customer journey blockers
+
+Work Log:
+- Identified Vercel build failure: `/api/eta/route.ts` imports non-existent `calculateLiveETA` and `calculateAverageSpeedFromHeartbeats` from `eta-calculator.ts`
+- Rewrote `/api/eta/route.ts` to use existing exports (`calculateETA`, `calculateDistance`, `formatDuration`, `formatDistance`) and added local `estimateSpeedFromHeartbeats()` function
+- Fixed PaymentMethod enum mismatch: Prisma has `MTN_MOMO`/`AIRTEL_MONEY` but Zod schemas in tasks, orders, health-orders used `MOBILE_MONEY_MTN`/`MOBILE_MONEY_AIRTEL`
+- Updated 11 files to use Prisma-compatible enum values
+- Updated mobile client `PAYMENT_METHOD_MAP` to pass through values directly
+- Fixed `refreshAccessToken()` in auth.service.ts to delegate to `refreshSession()` from session-service instead of using legacy `User.refreshToken` check
+- Added `refreshSession` import to auth.service.ts
+- Created 9 missing API routes:
+  - `/api/tasks/active` (GET) - active task for current user
+  - `/api/tasks/available` (GET) - available tasks for riders
+  - `/api/tasks/[id]/accept` (POST) - accept task
+  - `/api/tasks/[id]/decline` (POST) - decline task
+  - `/api/tasks/[id]/status` (POST) - update task status
+  - `/api/wallet/balance` (GET) - get wallet balance
+  - `/api/wallet/withdraw` (POST) - request withdrawal
+  - `/api/wallet/transactions` (GET) - get transaction history
+  - `/api/mapbox/reverse` (GET) - reverse geocoding
+- Created `/api/merchants/[id]/products/route.ts` as alias to `/menu` route for backward compatibility
+- Verified Next.js build passes cleanly (no errors)
+- Verified ESLint passes with no errors
+
+Stage Summary:
+- Vercel deployment blocker FIXED (eta/route.ts build error)
+- PaymentMethod enum mismatch FIXED across 11 files
+- 9 missing API routes CREATED
+- refreshAccessToken FIXED to use Session-based token validation
+- All customer journey blockers from Phase 1 audit have been addressed
