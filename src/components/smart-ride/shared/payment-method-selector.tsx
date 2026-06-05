@@ -25,6 +25,8 @@ interface PaymentOption {
   icon: React.ReactNode;
   color: string;
   bgColor: string;
+  disabled?: boolean;
+  comingSoon?: boolean;
 }
 
 const paymentOptions: PaymentOption[] = [
@@ -43,6 +45,8 @@ const paymentOptions: PaymentOption[] = [
     icon: <Smartphone className="h-4 w-4" />,
     color: 'text-yellow-600',
     bgColor: 'bg-yellow-100',
+    disabled: true,
+    comingSoon: true,
   },
   {
     id: 'AIRTEL_MONEY',
@@ -51,6 +55,8 @@ const paymentOptions: PaymentOption[] = [
     icon: <Smartphone className="h-4 w-4" />,
     color: 'text-red-600',
     bgColor: 'bg-red-100',
+    disabled: true,
+    comingSoon: true,
   },
   {
     id: 'VISA',
@@ -59,6 +65,8 @@ const paymentOptions: PaymentOption[] = [
     icon: <CreditCard className="h-4 w-4" />,
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
+    disabled: true,
+    comingSoon: true,
   },
   {
     id: 'MASTERCARD',
@@ -67,6 +75,28 @@ const paymentOptions: PaymentOption[] = [
     icon: <CreditCard className="h-4 w-4" />,
     color: 'text-orange-600',
     bgColor: 'bg-orange-100',
+    disabled: true,
+    comingSoon: true,
+  },
+  {
+    id: 'CREDIT_CARD',
+    label: 'Credit Card',
+    shortLabel: 'Credit',
+    icon: <CreditCard className="h-4 w-4" />,
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-100',
+    disabled: true,
+    comingSoon: false,
+  },
+  {
+    id: 'DEBIT_CARD',
+    label: 'Debit Card',
+    shortLabel: 'Debit',
+    icon: <CreditCard className="h-4 w-4" />,
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-100',
+    disabled: true,
+    comingSoon: false,
   },
 ];
 
@@ -103,8 +133,9 @@ export function PaymentMethodSelector({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleSelect = (method: PaymentMethod) => {
-    onSelect(method);
+  const handleSelect = (option: PaymentOption) => {
+    if (option.disabled) return;
+    onSelect(option.id);
     setIsOpen(false);
   };
 
@@ -123,20 +154,38 @@ export function PaymentMethodSelector({
 
         {/* Dropdown Menu */}
         {isOpen && (
-          <div className="absolute top-full left-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+          <div className="absolute top-full left-0 mt-1 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+            {/* Notice */}
+            <div className="px-3 py-2 border-b border-gray-100">
+              <p className="text-xs text-amber-600 font-medium">
+                💡 Only cash payment is available at this time. Mobile money coming soon!
+              </p>
+            </div>
             {paymentOptions.map((option) => (
               <button
                 key={option.id}
-                onClick={() => handleSelect(option.id)}
+                onClick={() => handleSelect(option)}
+                disabled={option.disabled}
                 className={`w-full flex items-center gap-2 px-3 py-2 transition-colors ${
-                  selectedMethod === option.id ? 'bg-gray-50' : 'hover:bg-gray-50'
+                  option.disabled
+                    ? 'opacity-50 cursor-not-allowed'
+                    : selectedMethod === option.id
+                      ? 'bg-gray-50'
+                      : 'hover:bg-gray-50'
                 }`}
               >
                 <div className={`w-7 h-7 ${option.bgColor} rounded-full flex items-center justify-center ${option.color}`}>
                   {option.icon}
                 </div>
-                <span className="flex-1 text-left text-sm text-gray-900">{option.label}</span>
-                {selectedMethod === option.id && (
+                <span className={`flex-1 text-left text-sm ${option.disabled ? 'text-gray-400' : 'text-gray-900'}`}>
+                  {option.label}
+                </span>
+                {option.comingSoon && (
+                  <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap">
+                    Coming Soon
+                  </span>
+                )}
+                {!option.disabled && selectedMethod === option.id && (
                   <Check className="h-4 w-4 text-emerald-500" />
                 )}
               </button>
@@ -170,19 +219,37 @@ export function PaymentMethodSelector({
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50">
+          {/* Notice */}
+          <div className="px-3 py-2.5 border-b border-gray-100">
+            <p className="text-xs text-amber-600 font-medium">
+              💡 Only cash payment is available at this time. Mobile money coming soon!
+            </p>
+          </div>
           {paymentOptions.map((option) => (
             <button
               key={option.id}
-              onClick={() => handleSelect(option.id)}
+              onClick={() => handleSelect(option)}
+              disabled={option.disabled}
               className={`w-full flex items-center gap-2.5 px-3 py-2.5 transition-colors ${
-                selectedMethod === option.id ? 'bg-gray-50' : 'hover:bg-gray-50'
+                option.disabled
+                  ? 'opacity-50 cursor-not-allowed'
+                  : selectedMethod === option.id
+                    ? 'bg-gray-50'
+                    : 'hover:bg-gray-50'
               }`}
             >
               <div className={`w-8 h-8 ${option.bgColor} rounded-full flex items-center justify-center ${option.color}`}>
                 {option.icon}
               </div>
-              <span className="flex-1 text-left text-sm text-gray-900">{option.label}</span>
-              {selectedMethod === option.id && (
+              <span className={`flex-1 text-left text-sm ${option.disabled ? 'text-gray-400' : 'text-gray-900'}`}>
+                {option.label}
+              </span>
+              {option.comingSoon && (
+                <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 whitespace-nowrap">
+                  Coming Soon
+                </span>
+              )}
+              {!option.disabled && selectedMethod === option.id && (
                 <Check className="h-4 w-4 text-emerald-500" />
               )}
             </button>

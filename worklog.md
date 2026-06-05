@@ -400,3 +400,23 @@ Stage Summary:
 - 9 missing API routes CREATED
 - refreshAccessToken FIXED to use Session-based token validation
 - All customer journey blockers from Phase 1 audit have been addressed
+
+---
+Task ID: 7
+Agent: Main
+Task: Disable mobile money payments, update Google Client ID, fix Vercel deployment env vars, update landing page
+
+Work Log:
+- Updated payment-method-selector.tsx (both web and mobile): MTN_MOMO, AIRTEL_MONEY, VISA, MASTERCARD marked as disabled with "Coming Soon" badge; CREDIT_CARD, DEBIT_CARD disabled without badge; CASH is the only active method; added notice text in dropdown
+- Updated Google Client ID from old (531949209415-h0ri57i233r1l767tnc4i26brdt3asb3) to new (531949209415-ja4espd5h0m6p74esft4iv541os5ertj) in: expo-app/src/config/google.ts, src/services/google-signin.ts
+- Added GOOGLE_CLIENT_ID and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID to .env file
+- Added JWT_SECRET to .env (required for production - throws error if missing)
+- Updated .env.example with comprehensive documentation of all env vars
+- Updated landing page: Smart Pay section shows cash as active, MTN/Airtel as coming soon; payment methods section shows cash with "Active" badge, MTN/Airtel grayed out with "Coming Soon"; "How it Works" step 4 updated to "Pay with cash"
+- Lint passes cleanly
+
+Stage Summary:
+- Mobile money payments disabled in UI with "Coming Soon" badges
+- Google Client ID updated across codebase and env
+- Critical env vars (JWT_SECRET) added to .env for Vercel deployment
+- Landing page reflects cash-only payment policy

@@ -333,20 +333,26 @@ export default function LandingPage() {
               </div>
               <h3 className="text-xl font-bold text-white mb-2">Smart Pay</h3>
               <p className="text-white/60 text-sm leading-relaxed mb-4">
-                Seamless payments with MTN MoMo, Airtel Money, or cash. Secure and instant transactions.
+                Seamless payments with cash. Mobile money options coming soon!
               </p>
               <ul className="space-y-2">
                 <li className="flex items-center gap-2 text-white/50 text-sm">
                   <svg className="w-4 h-4 text-[#14B8A6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
-                  MTN MoMo
+                  Cash
                 </li>
                 <li className="flex items-center gap-2 text-white/50 text-sm">
-                  <svg className="w-4 h-4 text-[#14B8A6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Airtel Money
+                  MTN MoMo — Coming Soon
+                </li>
+                <li className="flex items-center gap-2 text-white/50 text-sm">
+                  <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Airtel Money — Coming Soon
                 </li>
               </ul>
             </div>
@@ -438,7 +444,7 @@ export default function LandingPage() {
               </div>
               <h3 className="text-lg font-semibold text-white mb-2">Pay</h3>
               <p className="text-white/60 text-sm max-w-xs mx-auto">
-                Pay seamlessly with MTN MoMo, Airtel Money, or cash. Rate your experience!
+                Pay with cash (mobile money coming soon!). Rate your experience!
               </p>
             </div>
           </div>
@@ -532,30 +538,39 @@ export default function LandingPage() {
           </h2>
           
           <div className="flex flex-wrap justify-center gap-6 sm:gap-8">
-            {/* MTN MoMo */}
-            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 flex items-center gap-4 hover:border-[#FFCC00]/30 transition-all duration-300 hover:-translate-y-1">
-              <div className="w-14 h-14 bg-[#FFCC00] rounded-xl flex items-center justify-center">
-                <span className="text-[#0D0D12] font-bold text-sm">MTN</span>
-              </div>
-              <span className="text-white font-medium">MTN MoMo</span>
-            </div>
-            
-            {/* Airtel Money */}
-            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 flex items-center gap-4 hover:border-[#ED1C24]/30 transition-all duration-300 hover:-translate-y-1">
-              <div className="w-14 h-14 bg-[#ED1C24] rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg">A</span>
-              </div>
-              <span className="text-white font-medium">Airtel Money</span>
-            </div>
-            
-            {/* Cash */}
-            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 flex items-center gap-4 hover:border-[#00FF88]/30 transition-all duration-300 hover:-translate-y-1">
+            {/* Cash - Active */}
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-[#00FF88]/20 flex items-center gap-4 hover:border-[#00FF88]/40 transition-all duration-300 hover:-translate-y-1">
               <div className="w-14 h-14 bg-gradient-to-br from-[#00FF88] to-[#00FFF3] rounded-xl flex items-center justify-center">
                 <svg className="w-7 h-7 text-[#0D0D12]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <span className="text-white font-medium">Cash</span>
+              <div>
+                <span className="text-white font-medium block">Cash</span>
+                <span className="text-[#00FF88] text-xs font-medium">Active</span>
+              </div>
+            </div>
+            
+            {/* MTN MoMo - Coming Soon */}
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 flex items-center gap-4 opacity-60">
+              <div className="w-14 h-14 bg-[#FFCC00] rounded-xl flex items-center justify-center">
+                <span className="text-[#0D0D12] font-bold text-sm">MTN</span>
+              </div>
+              <div>
+                <span className="text-white/70 font-medium block">MTN MoMo</span>
+                <span className="text-amber-400 text-xs font-medium">Coming Soon</span>
+              </div>
+            </div>
+            
+            {/* Airtel Money - Coming Soon */}
+            <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 flex items-center gap-4 opacity-60">
+              <div className="w-14 h-14 bg-[#ED1C24] rounded-xl flex items-center justify-center">
+                <span className="text-white font-bold text-lg">A</span>
+              </div>
+              <div>
+                <span className="text-white/70 font-medium block">Airtel Money</span>
+                <span className="text-amber-400 text-xs font-medium">Coming Soon</span>
+              </div>
             </div>
           </div>
         </div>
