@@ -1,22 +1,25 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { 
-  MapPin, 
-  Navigation, 
-  Battery, 
-  BatteryLow, 
-  Wifi, 
+import {
+  MapPin,
+  Navigation,
+  Wifi,
   WifiOff,
   Clock,
   AlertTriangle,
   RefreshCw
 } from 'lucide-react';
+import {
+  useSocketConnection,
+  useDriverLocation,
+  useTaskStatus,
+} from '@/hooks/useSocket';
+import type { LocationData, TaskStatusUpdateData } from '@/services/socket';
 
 // ==========================================
 // Types
@@ -39,7 +42,9 @@ interface RiderTrackingProps {
   onConnectionStatusChange?: (status: string) => void;
 }
 
-const HEARTBEAT_MONITOR_PORT = 3004;
+const TOKEN_STORAGE_KEY = 'smart_ride_auth_token';
+const UNSTABLE_TIMEOUT_MS = 30_000; // 30s without update → UNSTABLE
+const DISCONNECTED_TIMEOUT_MS = 60_000; // 60s without update → DISCONNECTED
 
 // ==========================================
 // Component: RiderTracking
@@ -56,113 +61,111 @@ export function RiderTracking({
   const [connectionStatus, setConnectionStatus] = useState<string>('ACTIVE');
   const [isTracking, setIsTracking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
-  const socketRef = useRef<Socket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const startTrackingRef = useRef<() => void>(() => {});
 
-  // Initialize tracking function stored in ref to avoid circular dependency
-  startTrackingRef.current = () => {
-    if (socketRef.current?.connected) return;
+  // Read auth token from localStorage for socket connection
+  const [authToken, setAuthToken] = useState<string | null>(null);
 
-    setError(null);
+  useEffect(() => {
+    try {
+      const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      setAuthToken(token);
+    } catch {
+      // localStorage unavailable (SSR)
+    }
+  }, []);
 
-    socketRef.current = io(`/?XTransformPort=${HEARTBEAT_MONITOR_PORT}`, {
-      transports: ['websocket'],
-    });
+  // Connect to Supabase Realtime
+  const { isConnected } = useSocketConnection(authToken);
 
-    socketRef.current.on('connect', () => {
-      console.log('Connected to tracking service');
-      setIsTracking(true);
-      
-      // Subscribe to rider and task
-      socketRef.current?.emit('subscribe:rider', { riderId });
-      socketRef.current?.emit('subscribe:task', { taskId });
-    });
-
-    socketRef.current.on('disconnect', () => {
-      console.log('Disconnected from tracking service');
-      setIsTracking(false);
-      setError('Connection lost. Reconnecting...');
-      
-      // Auto-reconnect using ref
-      reconnectTimeoutRef.current = setTimeout(() => {
-        startTrackingRef.current();
-      }, 3000);
-    });
-
-    // Receive rider location updates
-    socketRef.current.on('rider:location', (data: any) => {
+  // Handle rider location updates
+  const handleLocationUpdate = useCallback(
+    (data: LocationData) => {
       const newLocation: RiderLocation = {
         latitude: data.latitude,
         longitude: data.longitude,
         speed: data.speed,
         heading: data.heading,
-        timestamp: new Date(data.timestamp),
-        connectionStatus: data.connectionStatus || 'ACTIVE',
-      };
-      
-      setLocation(newLocation);
-      setConnectionStatus(newLocation.connectionStatus);
-      onLocationUpdate?.(newLocation);
-      onConnectionStatusChange?.(newLocation.connectionStatus);
-    });
-
-    // Receive task location updates
-    socketRef.current.on('task:location', (data: any) => {
-      const newLocation: RiderLocation = {
-        latitude: data.latitude,
-        longitude: data.longitude,
-        timestamp: new Date(data.timestamp),
+        timestamp: data.timestamp ? new Date(data.timestamp) : new Date(),
         connectionStatus: 'ACTIVE',
       };
-      
-      setLocation(prev => prev ? { ...newLocation, connectionStatus: prev.connectionStatus } : newLocation);
-    });
 
-    // Receive status updates
-    socketRef.current.on(`rider:${riderId}:status`, (data: any) => {
-      setConnectionStatus(data.connectionStatus);
-      onConnectionStatusChange?.(data.connectionStatus);
-    });
+      setLocation(newLocation);
+      setConnectionStatus('ACTIVE');
+      setIsTracking(true);
+      setError(null);
+      onLocationUpdate?.(newLocation);
+      onConnectionStatusChange?.('ACTIVE');
+    },
+    [onLocationUpdate, onConnectionStatusChange]
+  );
 
-    socketRef.current.on('error', (err: any) => {
-      console.error('Tracking error:', err);
-      setError('Failed to connect to tracking service');
-    });
-  };
+  useDriverLocation(riderId, handleLocationUpdate);
 
-  // Initialize tracking
-  const startTracking = useCallback(() => {
-    startTrackingRef.current();
+  // Handle task status changes
+  const handleStatusChange = useCallback(
+    (data: TaskStatusUpdateData) => {
+      // Task completion/cancellation ends tracking
+      if (
+        data.status === 'CANCELLED' ||
+        data.status === 'COMPLETED' ||
+        data.status === 'CLOSED'
+      ) {
+        setIsTracking(false);
+      }
+    },
+    []
+  );
+
+  useTaskStatus(taskId, handleStatusChange);
+
+  // Monitor connection health based on location update recency
+  const lastUpdateRef = useRef<Date>(new Date());
+
+  useEffect(() => {
+    if (location) {
+      lastUpdateRef.current = location.timestamp;
+    }
+  }, [location]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - lastUpdateRef.current.getTime();
+
+      if (elapsed > DISCONNECTED_TIMEOUT_MS) {
+        setConnectionStatus('DISCONNECTED');
+        onConnectionStatusChange?.('DISCONNECTED');
+      } else if (elapsed > UNSTABLE_TIMEOUT_MS) {
+        setConnectionStatus('UNSTABLE');
+        onConnectionStatusChange?.('UNSTABLE');
+      }
+    }, 5_000);
+
+    return () => clearInterval(interval);
+  }, [onConnectionStatusChange]);
+
+  // Update tracking/error state based on socket connection
+  useEffect(() => {
+    if (isConnected && authToken) {
+      setIsTracking(true);
+      setError(null);
+    } else if (!isConnected && authToken) {
+      setError('Connection lost. Reconnecting...');
+      setIsTracking(false);
+    }
+  }, [isConnected, authToken]);
+
+  // Retry handler — re-read token and force reconnect
+  const handleRetry = useCallback(() => {
+    try {
+      const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      if (token) {
+        // Setting a new token value triggers useSocketConnection reconnect
+        setAuthToken(token);
+      }
+    } catch {
+      // ignore
+    }
   }, []);
-
-  // Stop tracking
-  const stopTracking = useCallback(() => {
-    if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-    }
-    
-    if (socketRef.current) {
-      socketRef.current.emit('unsubscribe:rider', { riderId });
-      socketRef.current.disconnect();
-      socketRef.current = null;
-    }
-    
-    setIsTracking(false);
-  }, [riderId]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      stopTracking();
-    };
-  }, [stopTracking]);
-
-  // Auto-start tracking
-  useEffect(() => {
-    startTracking();
-  }, [startTracking]);
 
   // Get connection status color
   const getStatusColor = () => {
@@ -189,7 +192,7 @@ export function RiderTracking({
         <div className="h-48 bg-gradient-to-br from-green-100 to-green-200 dark:from-green-900 dark:to-green-800 relative">
           {/* Connection status overlay */}
           <div className="absolute top-2 right-2">
-            <Badge 
+            <Badge
               variant={connectionStatus === 'ACTIVE' ? 'default' : 'destructive'}
               className="flex items-center gap-1"
             >
@@ -217,12 +220,12 @@ export function RiderTracking({
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="relative">
                 <div className={`w-8 h-8 rounded-full ${getStatusColor()} flex items-center justify-center shadow-lg`}>
-                  <Navigation 
-                    className="h-4 w-4 text-white" 
-                    style={{ 
-                      transform: location.heading 
-                        ? `rotate(${location.heading}deg)` 
-                        : undefined 
+                  <Navigation
+                    className="h-4 w-4 text-white"
+                    style={{
+                      transform: location.heading
+                        ? `rotate(${location.heading}deg)`
+                        : undefined
                     }}
                   />
                 </div>
@@ -251,7 +254,7 @@ export function RiderTracking({
               <div className="text-center text-white">
                 <WifiOff className="h-6 w-6 mx-auto mb-1" />
                 <p className="text-sm">{error}</p>
-                <Button size="sm" variant="outline" className="mt-2" onClick={startTracking}>
+                <Button size="sm" variant="outline" className="mt-2" onClick={handleRetry}>
                   Retry
                 </Button>
               </div>
@@ -266,7 +269,7 @@ export function RiderTracking({
               <div className={`w-2 h-2 rounded-full ${getStatusColor()} animate-pulse`} />
               <span className="font-medium">{riderName}</span>
             </div>
-            
+
             {location && (
               <div className="flex items-center gap-3 text-sm text-muted-foreground">
                 <div className="flex items-center gap-1">
@@ -288,11 +291,11 @@ export function RiderTracking({
             <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
               <span>Connection Quality</span>
               <span>
-                {connectionStatus === 'ACTIVE' ? 'Excellent' : 
+                {connectionStatus === 'ACTIVE' ? 'Excellent' :
                  connectionStatus === 'UNSTABLE' ? 'Poor' : 'Lost'}
               </span>
             </div>
-            <Progress 
+            <Progress
               value={
                 connectionStatus === 'ACTIVE' ? 100 :
                 connectionStatus === 'UNSTABLE' ? 40 : 0
@@ -323,29 +326,35 @@ export function RiderTrackingMini({
   riderName = 'Rider',
 }: RiderTrackingMiniProps) {
   const [connectionStatus, setConnectionStatus] = useState<string>('ACTIVE');
-  const socketRef = useRef<Socket | null>(null);
+  const lastUpdateRef = useRef<Date>(new Date());
 
+  // Track rider location to infer connection status
+  const handleLocationUpdate = useCallback(
+    (data: LocationData) => {
+      lastUpdateRef.current = data.timestamp ? new Date(data.timestamp) : new Date();
+      setConnectionStatus('ACTIVE');
+    },
+    []
+  );
+
+  useDriverLocation(riderId, handleLocationUpdate);
+
+  // Also listen on task status for completeness
+  useTaskStatus(taskId, undefined);
+
+  // Monitor connection health based on update recency
   useEffect(() => {
-    socketRef.current = io(`/?XTransformPort=${HEARTBEAT_MONITOR_PORT}`, {
-      transports: ['websocket'],
-    });
+    const interval = setInterval(() => {
+      const elapsed = Date.now() - lastUpdateRef.current.getTime();
+      if (elapsed > DISCONNECTED_TIMEOUT_MS) {
+        setConnectionStatus('DISCONNECTED');
+      } else if (elapsed > UNSTABLE_TIMEOUT_MS) {
+        setConnectionStatus('UNSTABLE');
+      }
+    }, 10_000);
 
-    socketRef.current.on('connect', () => {
-      socketRef.current?.emit('subscribe:rider', { riderId });
-    });
-
-    socketRef.current.on('rider:location', (data: any) => {
-      setConnectionStatus(data.connectionStatus || 'ACTIVE');
-    });
-
-    socketRef.current.on(`rider:${riderId}:status`, (data: any) => {
-      setConnectionStatus(data.connectionStatus);
-    });
-
-    return () => {
-      socketRef.current?.disconnect();
-    };
-  }, [riderId]);
+    return () => clearInterval(interval);
+  }, []);
 
   const getStatusColor = () => {
     switch (connectionStatus) {

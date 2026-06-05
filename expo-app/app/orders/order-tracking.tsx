@@ -163,7 +163,7 @@ export default function OrderTrackingScreen() {
         socketService.leaveTaskRoom(taskId);
       }
     };
-  }, [params.orderId, order]);
+  }, [params.orderId, order?.id]);
 
   const loadOrder = async (orderId: string) => {
     setIsLoading(true);

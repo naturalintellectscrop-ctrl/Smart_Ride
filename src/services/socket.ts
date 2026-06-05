@@ -235,14 +235,11 @@ class RealtimeService {
     this.isConnected = false;
     this.isConnecting = false;
 
-    // Clear all local listeners on intentional disconnect
-    this.listeners.clear();
-
-    try {
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-    } catch {
-      // ignore
-    }
+    // NOTE: Do NOT clear listeners on disconnect. Components register
+    // listeners independently of connection state. Clearing them here
+    // means that after a reconnect, components lose their subscriptions.
+    // Listeners are cleaned up via individual `off()` calls in component
+    // useEffect cleanup functions, or via `destroy()` for full teardown.
 
     this.emitLocal('disconnect', 'intentional');
   }
@@ -418,10 +415,17 @@ class RealtimeService {
     });
   }
 
-  /** Try to auto-connect using a stored token (useful on page load) */
+  /** Try to auto-connect using a stored token (useful on page load)
+   *  Checks both the dedicated socket token key and the general accessToken key.
+   */
   autoConnect(): boolean {
     try {
-      const token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      // First check the dedicated socket token key
+      let token = localStorage.getItem(TOKEN_STORAGE_KEY);
+      // Fall back to the general accessToken key used by the auth system
+      if (!token) {
+        token = localStorage.getItem('accessToken');
+      }
       if (token) {
         this.connect(token);
         return true;

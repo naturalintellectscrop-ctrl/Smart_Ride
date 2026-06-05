@@ -94,7 +94,30 @@ export default function DriverTaskScreen() {
       socketService.joinTaskRoom(params.taskId);
     }
 
+    // Listen for real-time task status updates (e.g. client cancellation)
+    const unsubscribe = socketService.on('task:status:update', (data: { taskId: string; status: string }) => {
+      if (data.taskId === params.taskId) {
+        if (data.status === 'CANCELLED') {
+          Alert.alert(
+            'Task Cancelled',
+            'This task has been cancelled by the client.',
+            [{ text: 'OK', onPress: () => router.replace('/driver') }]
+          );
+        } else if (data.status === 'FAILED') {
+          Alert.alert(
+            'Task Failed',
+            'This task has failed.',
+            [{ text: 'OK', onPress: () => router.replace('/driver') }]
+          );
+        } else {
+          // For other status updates, reload the task to get fresh data
+          loadTask(params.taskId);
+        }
+      }
+    });
+
     return () => {
+      unsubscribe();
       if (params.taskId) {
         socketService.leaveTaskRoom(params.taskId);
       }

@@ -60,6 +60,8 @@ class SocketService {
   private supabase: SupabaseClient | null = null;
   private isConnected: boolean = false;
   private reconnectAttempts: number = 0;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private intentionalDisconnect: boolean = false;
   private listeners: Map<string, Set<Function>> = new Map();
   private channels: Map<string, RealtimeChannel> = new Map();
 
@@ -226,8 +228,10 @@ class SocketService {
         console.log(`[Realtime] Subscribed to: ${name}`);
       } else if (status === 'CHANNEL_ERROR') {
         console.error(`[Realtime] Channel error: ${name}`);
+        this.scheduleReconnect();
       } else if (status === 'TIMED_OUT') {
         console.warn(`[Realtime] Channel timed out: ${name}`);
+        this.scheduleReconnect();
       }
     });
 
@@ -236,6 +240,8 @@ class SocketService {
   }
 
   disconnect(): void {
+    this.intentionalDisconnect = true;
+    this.clearReconnectTimer();
     this.clearAllRequestExpiryTimers();
 
     for (const [name, channel] of this.channels.entries()) {
@@ -249,7 +255,6 @@ class SocketService {
     this.currentTaskRoom = null;
     this.currentDriverRoom = null;
     this.currentRiderRoom = null;
-    this.listeners.clear();
 
     this.emitLocal('connection:changed', { connected: false, reason: 'intentional' });
     console.log('[Realtime] Disconnected');
@@ -611,8 +616,54 @@ class SocketService {
   // ==========================================
 
   async reconnect(): Promise<void> {
-    this.disconnect();
+    this.intentionalDisconnect = false;
+
+    // Clean up channels without clearing listeners
+    for (const [name, channel] of this.channels.entries()) {
+      this.supabase?.removeChannel(channel);
+    }
+    this.channels.clear();
+    this.isConnected = false;
+    this.currentToken = null;
+    this.currentUserId = null;
+
     await this.connect();
+  }
+
+  /** Schedule a reconnect attempt with exponential backoff */
+  private scheduleReconnect(): void {
+    if (this.intentionalDisconnect) return;
+    if (this.reconnectTimer) return; // Already scheduling
+
+    const INITIAL_DELAY = 1000;
+    const MAX_DELAY = 30000;
+    const MULTIPLIER = 2;
+
+    this.reconnectAttempts++;
+    const delay = Math.min(
+      INITIAL_DELAY * Math.pow(MULTIPLIER, this.reconnectAttempts - 1),
+      MAX_DELAY
+    );
+
+    console.log(`[Realtime] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+
+    this.reconnectTimer = setTimeout(async () => {
+      this.reconnectTimer = null;
+      if (!this.intentionalDisconnect) {
+        await this.reconnect();
+        if (this.isConnected) {
+          this.reconnectAttempts = 0;
+        }
+      }
+    }, delay);
+  }
+
+  /** Clear the reconnect timer */
+  private clearReconnectTimer(): void {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
   }
 }
 

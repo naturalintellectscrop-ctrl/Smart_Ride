@@ -144,16 +144,7 @@ export function useDriverLocation({
         accuracy: location.accuracy,
       };
 
-      // Emit via the central socketService (which connects to port 3001 via XTransformPort)
-      socketService.updateLocation({
-        riderId: driverId,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        speed: location.speed,
-        heading: location.heading,
-      });
-
-      // Also emit via the alias event name for compatibility
+      // Emit via the central socketService (updateDriverLocation handles riderId internally)
       socketService.updateDriverLocation({
         latitude: location.latitude,
         longitude: location.longitude,

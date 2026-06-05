@@ -247,8 +247,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
         }));
 
         // Also send via socket for real-time
-        socketService.chatSend({
-          conversationId,
+        socketService.chatSend(conversationId, {
           content: data.content,
           type: data.type || 'TEXT',
           imageUrl: data.imageUrl,
@@ -334,7 +333,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       api.markMessagesRead(conversationId).catch(() => {});
 
       // Emit read receipt via socket
-      socketService.chatSend({ conversationId, type: 'READ' });
+      socketService.chatSend(conversationId, { type: 'READ' });
     } catch (error) {
       console.log('[CHAT-STORE] Error marking as read:', error);
     }
@@ -358,7 +357,7 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   },
 
   sendTyping: (conversationId: string) => {
-    socketService.chatTyping({ conversationId, isTyping: true });
+    socketService.chatTyping(conversationId, true);
   },
 
   clearError: () => set({ error: null }),

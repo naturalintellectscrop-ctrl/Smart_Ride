@@ -160,9 +160,13 @@ export function useRiderDispatch(
   /** Accept a dispatch match via the dispatch accept API */
   const acceptRequest = useCallback(async (matchId: string) => {
     try {
-      const response = await fetch(`/api/dispatch/${matchId}/accept?XTransformPort=3000`, {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('smart_ride_auth_token');
+      const response = await fetch(`/api/dispatch/${matchId}/accept`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
       });
       return response.ok;
     } catch (error) {
@@ -174,9 +178,13 @@ export function useRiderDispatch(
   /** Reject a dispatch match via the dispatch reject API */
   const rejectRequest = useCallback(async (matchId: string, reason?: string) => {
     try {
-      const response = await fetch(`/api/dispatch/${matchId}/reject?XTransformPort=3000`, {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('smart_ride_auth_token');
+      const response = await fetch(`/api/dispatch/${matchId}/reject`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ reason: reason || 'Declined by rider' }),
       });
       return response.ok;
