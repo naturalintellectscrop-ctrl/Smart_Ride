@@ -1,30 +1,37 @@
 /**
  * Smart Ride Real-time Communication Service
  * Socket.io server for real-time updates
+ * Compatible with both Bun (local dev) and Node.js (Fly.io production)
  */
 
 import { Server } from 'socket.io';
+import { createServer } from 'http';
 import jwt from 'jsonwebtoken';
 
-const PORT = 3001;
+const SOCKET_PORT = parseInt(process.env.SOCKET_PORT || '3001', 10);
+const API_PORT = parseInt(process.env.API_PORT || '3002', 10);
 const JWT_SECRET = process.env.JWT_SECRET || 'smart-ride-jwt-secret-prod-2024-ug-kampala';
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
 
+// Allowed CORS origins (add your production domains here)
+const CORS_ORIGINS = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'https://smartrideug.vercel.app',
+  // Add any other domains you need
+];
+
 // Create Socket.io server
-const io = new Server(PORT, {
+const io = new Server(SOCKET_PORT, {
   cors: {
-    origin: [
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'https://smartrideug.vercel.app',
-    ],
+    origin: CORS_ORIGINS,
     methods: ['GET', 'POST'],
     credentials: true,
   },
   transports: ['websocket', 'polling'],
 });
 
-console.log(`🚀 Real-time service running on port ${PORT}`);
+console.log(`🚀 Real-time service running on port ${SOCKET_PORT}`);
 
 // Maximum number of tracked users to prevent unbounded memory growth
 const MAX_CONNECTED_USERS = 10_000;
@@ -36,7 +43,6 @@ const userRooms = new Map<string, string>(); // socketId -> current room
 /** Enforce max size on connectedUsers map — evicts oldest entry if limit exceeded */
 function enforceConnectedUsersLimit() {
   if (connectedUsers.size > MAX_CONNECTED_USERS) {
-    // Evict the first (oldest) entry to stay within limit
     const firstKey = connectedUsers.keys().next().value;
     if (firstKey) {
       const socketIds = connectedUsers.get(firstKey);
@@ -54,7 +60,6 @@ io.use((socket, next) => {
   const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.split(' ')[1];
 
   if (!token) {
-    // Allow connection without auth for public channels
     socket.data.isAnonymous = true;
     return next();
   }
@@ -82,7 +87,7 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`);
 
-    // Track authenticated users
+  // Track authenticated users
   if (socket.data.userId) {
     if (!connectedUsers.has(socket.data.userId)) {
       connectedUsers.set(socket.data.userId, new Set());
@@ -94,7 +99,6 @@ io.on('connection', (socket) => {
     socket.join(`user:${socket.data.userId}`);
     console.log(`User ${socket.data.userId} joined their room`);
 
-    // Notify user about their active connections
     socket.emit('connection:established', {
       socketId: socket.id,
       userId: socket.data.userId,
@@ -106,8 +110,6 @@ io.on('connection', (socket) => {
   // TASK EVENTS
   // ============================================
 
-  // Join task room for real-time updates
-  // Accepts both plain string (web) and { taskId } object (Expo mobile)
   socket.on('task:join', (data: string | { taskId: string }) => {
     const taskId = typeof data === 'string' ? data : data?.taskId;
     if (!taskId) return;
@@ -117,8 +119,6 @@ io.on('connection', (socket) => {
     socket.emit('task:joined', { taskId });
   });
 
-  // Leave task room
-  // Accepts both plain string (web) and { taskId } object (Expo mobile)
   socket.on('task:leave', (data: string | { taskId: string }) => {
     const taskId = typeof data === 'string' ? data : data?.taskId;
     if (!taskId) return;
@@ -127,7 +127,6 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} left task room: ${taskId}`);
   });
 
-  // Task status update
   socket.on('task:status', (data: { taskId: string; status: string; metadata?: unknown }) => {
     io.to(`task:${data.taskId}`).emit('task:status:update', {
       taskId: data.taskId,
@@ -141,17 +140,15 @@ io.on('connection', (socket) => {
   // RIDER TRACKING
   // ============================================
 
-  // Rider location update
-  socket.on('rider:location', (data: { 
-    riderId: string; 
+  socket.on('rider:location', (data: {
+    riderId: string;
     taskId?: string;
-    latitude: number; 
+    latitude: number;
     longitude: number;
     speed?: number;
     heading?: number;
     battery?: number;
   }) => {
-    // Update location for task room if active task
     if (data.taskId) {
       io.to(`task:${data.taskId}`).emit('rider:location:update', {
         riderId: data.riderId,
@@ -164,7 +161,6 @@ io.on('connection', (socket) => {
       });
     }
 
-    // Also emit to rider's room for admin monitoring
     io.to(`rider:${data.riderId}`).emit('rider:location:update', {
       latitude: data.latitude,
       longitude: data.longitude,
@@ -172,8 +168,6 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Driver location update (alias for rider:location, emitted by expo app)
-  // CRITICAL FIX: Broadcast to task room (customer) instead of echoing back to the driver
   socket.on('driver:location:update', (data: {
     latitude: number;
     longitude: number;
@@ -181,11 +175,9 @@ io.on('connection', (socket) => {
     speed?: number | null;
   }) => {
     if (socket.data.userId) {
-      // Look up which task room this driver/socket is in
       const currentRoom = userRooms.get(socket.id);
 
       if (currentRoom && currentRoom.startsWith('task:')) {
-        // Broadcast to the task room (customer is in this room) — excluding the sender (driver)
         socket.to(currentRoom).emit('rider:location:update', {
           riderId: socket.data.userId,
           latitude: data.latitude,
@@ -196,7 +188,6 @@ io.on('connection', (socket) => {
         });
       }
 
-      // Also broadcast to the rider's user room for admin monitoring
       socket.to(`user:${socket.data.userId}`).emit('rider:location:update', {
         riderId: socket.data.userId,
         latitude: data.latitude,
@@ -208,13 +199,11 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Join rider tracking room
   socket.on('rider:track', (riderId: string) => {
     socket.join(`rider:${riderId}`);
     console.log(`Socket ${socket.id} tracking rider: ${riderId}`);
   });
 
-  // Stop tracking rider
   socket.on('rider:untrack', (riderId: string) => {
     socket.leave(`rider:${riderId}`);
   });
@@ -223,7 +212,6 @@ io.on('connection', (socket) => {
   // DRIVER ROOM EVENTS (Expo mobile app)
   // ============================================
 
-  // Driver joins their dedicated room for receiving dispatch requests
   socket.on('driver:join', (data: { driverId: string } | string) => {
     const driverId = typeof data === 'string' ? data : data?.driverId;
     if (!driverId) return;
@@ -231,7 +219,6 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} joined driver room: ${driverId}`);
   });
 
-  // Driver leaves their dedicated room
   socket.on('driver:leave', (data: { driverId: string } | string) => {
     const driverId = typeof data === 'string' ? data : data?.driverId;
     if (!driverId) return;
@@ -243,7 +230,6 @@ io.on('connection', (socket) => {
   // RIDER ROOM EVENTS (Expo mobile app)
   // ============================================
 
-  // Rider joins their dedicated room for receiving dispatch requests
   socket.on('rider:join', (data: { riderId: string } | string) => {
     const riderId = typeof data === 'string' ? data : data?.riderId;
     if (!riderId) return;
@@ -251,7 +237,6 @@ io.on('connection', (socket) => {
     console.log(`Socket ${socket.id} joined rider room: ${riderId}`);
   });
 
-  // Rider leaves their dedicated room
   socket.on('rider:leave', (data: { riderId: string } | string) => {
     const riderId = typeof data === 'string' ? data : data?.riderId;
     if (!riderId) return;
@@ -263,10 +248,8 @@ io.on('connection', (socket) => {
   // DISPATCH EVENTS
   // ============================================
 
-  // New task request (for riders/drivers)
-  // Emits BOTH event names for backward compatibility
-  socket.on('dispatch:request', (data: { 
-    riderId: string; 
+  socket.on('dispatch:request', (data: {
+    riderId: string;
     task: unknown;
     expiresIn: number;
   }) => {
@@ -275,12 +258,10 @@ io.on('connection', (socket) => {
       expiresIn: data.expiresIn,
       timestamp: new Date().toISOString(),
     };
-    // Emit with both event names for backward compatibility
     io.to(`user:${data.riderId}`).emit('dispatch:new-task', payload);
     io.to(`user:${data.riderId}`).emit('driver:request', payload);
   });
 
-  // Task assignment broadcast
   socket.on('dispatch:assigned', (data: { taskId: string; riderId: string }) => {
     io.to(`task:${data.taskId}`).emit('dispatch:assignment', {
       taskId: data.taskId,
@@ -293,8 +274,6 @@ io.on('connection', (socket) => {
   // ORDER EVENTS
   // ============================================
 
-  // Join order room
-  // Accepts both plain string (web) and { orderId } object (Expo mobile)
   socket.on('order:join', (data: string | { orderId: string }) => {
     const orderId = typeof data === 'string' ? data : data?.orderId;
     if (!orderId) return;
@@ -302,15 +281,12 @@ io.on('connection', (socket) => {
     socket.emit('order:joined', { orderId });
   });
 
-  // Leave order room
-  // Accepts both plain string (web) and { orderId } object (Expo mobile)
   socket.on('order:leave', (data: string | { orderId: string }) => {
     const orderId = typeof data === 'string' ? data : data?.orderId;
     if (!orderId) return;
     socket.leave(`order:${orderId}`);
   });
 
-  // Order status update
   socket.on('order:status', (data: { orderId: string; status: string; metadata?: unknown }) => {
     io.to(`order:${data.orderId}`).emit('order:status:update', {
       orderId: data.orderId,
@@ -320,21 +296,15 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Merchant order events - merchant joins their room to receive order notifications
-  // (Already handled by auto-join to user:${userId} room on connection)
-  // The /emit endpoint sends merchant:order:new and merchant:order:cancelled events to user:${merchantUserId}
-
   // ============================================
   // CHAT/MESSAGING
   // ============================================
 
-  // Join chat room
   socket.on('chat:join', (roomId: string) => {
     socket.join(`chat:${roomId}`);
     socket.emit('chat:joined', { roomId });
   });
 
-  // Send message
   socket.on('chat:message', (data: { roomId: string; message: unknown }) => {
     io.to(`chat:${data.roomId}`).emit('chat:message:received', {
       ...data.message,
@@ -342,7 +312,6 @@ io.on('connection', (socket) => {
     });
   });
 
-  // Typing indicator
   socket.on('chat:typing', (data: { roomId: string; isTyping: boolean }) => {
     socket.to(`chat:${data.roomId}`).emit('chat:typing', {
       userId: socket.data.userId,
@@ -354,7 +323,6 @@ io.on('connection', (socket) => {
   // ADMIN MONITORING
   // ============================================
 
-  // Admin dashboard room
   socket.on('admin:dashboard', () => {
     if (['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN'].includes(socket.data.role)) {
       socket.join('admin:dashboard');
@@ -364,7 +332,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // SOS Alert broadcast
   socket.on('sos:alert', (data: unknown) => {
     io.to('admin:dashboard').emit('sos:new', data);
   });
@@ -373,15 +340,13 @@ io.on('connection', (socket) => {
   // HEARTBEAT
   // ============================================
 
-  // Heartbeat from riders
-  socket.on('heartbeat', (data: { 
-    riderId: string; 
+  socket.on('heartbeat', (data: {
+    riderId: string;
     taskId?: string;
     latitude: number;
     longitude: number;
     battery?: number;
   }) => {
-    // Store heartbeat data in userRooms context for tracking
     socket.data.lastHeartbeat = {
       riderId: data.riderId,
       taskId: data.taskId,
@@ -391,9 +356,9 @@ io.on('connection', (socket) => {
       timestamp: new Date().toISOString(),
     };
 
-    socket.emit('heartbeat:ack', { 
-      received: true, 
-      timestamp: new Date().toISOString() 
+    socket.emit('heartbeat:ack', {
+      received: true,
+      timestamp: new Date().toISOString(),
     });
   });
 
@@ -404,7 +369,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`Client disconnected: ${socket.id}`);
 
-    // Remove from connected users
     if (socket.data.userId) {
       const userSockets = connectedUsers.get(socket.data.userId);
       if (userSockets) {
@@ -415,102 +379,110 @@ io.on('connection', (socket) => {
       }
     }
 
-    // Clean up room tracking
     userRooms.delete(socket.id);
   });
 });
 
 // ============================================
 // INTERNAL API FOR EMITTING EVENTS
+// (Node.js compatible HTTP server)
 // ============================================
 
-// Simple HTTP server for internal event emission
-const httpServer = Bun.serve({
-  port: 3002,
-  async fetch(request) {
-    const url = new URL(request.url);
+const apiServer = createServer(async (req, res) => {
+  // CORS headers
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, X-Internal-Key',
+  };
 
-    // CORS headers
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-Internal-Key',
-    };
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, corsHeaders);
+    res.end();
+    return;
+  }
 
-    // Handle preflight
-    if (request.method === 'OPTIONS') {
-      return new Response(null, { headers: corsHeaders });
+  const url = new URL(req.url || '/', `http://localhost:${API_PORT}`);
+
+  // Emit event endpoint
+  if (url.pathname === '/emit' && req.method === 'POST') {
+    const authKey = req.headers['x-internal-key'];
+    if (authKey !== INTERNAL_API_KEY) {
+      res.writeHead(401, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
     }
 
-    // Emit event endpoint
-    if (url.pathname === '/emit' && request.method === 'POST') {
-      const authKey = request.headers.get('X-Internal-Key');
-      if (authKey !== INTERNAL_API_KEY) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    try {
+      const body = await parseBody(req);
+      io.to(body.room).emit(body.event, body.data);
 
-      try {
-        const body = await request.json() as { room: string; event: string; data: unknown };
-        io.to(body.room).emit(body.event, body.data);
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
+    } catch {
+      res.writeHead(400, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid request' }));
+    }
+    return;
+  }
 
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } catch (error) {
-        return new Response(JSON.stringify({ error: 'Invalid request' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+  // Broadcast endpoint
+  if (url.pathname === '/broadcast' && req.method === 'POST') {
+    const authKey = req.headers['x-internal-key'];
+    if (authKey !== INTERNAL_API_KEY) {
+      res.writeHead(401, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Unauthorized' }));
+      return;
     }
 
-    // Broadcast endpoint
-    if (url.pathname === '/broadcast' && request.method === 'POST') {
-      const authKey = request.headers.get('X-Internal-Key');
-      if (authKey !== INTERNAL_API_KEY) {
-        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-          status: 401,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+    try {
+      const body = await parseBody(req);
+      io.emit(body.event, body.data);
 
-      try {
-        const body = await request.json() as { event: string; data: unknown };
-        io.emit(body.event, body.data);
-
-        return new Response(JSON.stringify({ success: true }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      } catch (error) {
-        return new Response(JSON.stringify({ error: 'Invalid request' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
+      res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
+    } catch {
+      res.writeHead(400, { ...corsHeaders, 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Invalid request' }));
     }
+    return;
+  }
 
-    // Health check
-    if (url.pathname === '/health') {
-      return new Response(JSON.stringify({
-        status: 'ok',
-        connections: io.sockets.sockets.size,
-        connectedUsers: connectedUsers.size,
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
+  // Health check
+  if (url.pathname === '/health') {
+    res.writeHead(200, { ...corsHeaders, 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({
+      status: 'ok',
+      connections: io.sockets.sockets.size,
+      connectedUsers: connectedUsers.size,
+    }));
+    return;
+  }
 
-    return new Response(JSON.stringify({ error: 'Not found' }), {
-      status: 404,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  },
+  res.writeHead(404, { ...corsHeaders, 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ error: 'Not found' }));
 });
 
-console.log(`📡 Internal API running on port ${httpServer.port}`);
+apiServer.listen(API_PORT, () => {
+  console.log(`📡 Internal API running on port ${API_PORT}`);
+});
+
+// Helper: Parse request body as JSON
+function parseBody(req: import('http').IncomingMessage): Promise<{ room?: string; event: string; data: unknown }> {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(body));
+      } catch {
+        reject(new Error('Invalid JSON'));
+      }
+    });
+    req.on('error', reject);
+  });
+}
 
 // Periodic cleanup of stale connections
 setInterval(() => {
