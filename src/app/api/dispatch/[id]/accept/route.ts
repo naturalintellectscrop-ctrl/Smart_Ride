@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 
 interface RouteParams {
@@ -24,6 +24,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     // SECURITY: Verify user is a rider
     if (user.role !== 'RIDER') {
@@ -228,5 +230,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

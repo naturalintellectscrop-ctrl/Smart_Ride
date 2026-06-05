@@ -5,7 +5,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 
 interface RouteParams {
@@ -18,6 +18,7 @@ interface RouteParams {
  * Public endpoint - no authentication required
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -96,5 +97,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error fetching merchant menu:', error);
     return serverErrorResponse('Failed to fetch menu');
+  } finally {
+    await resetRLSContext();
   }
 }

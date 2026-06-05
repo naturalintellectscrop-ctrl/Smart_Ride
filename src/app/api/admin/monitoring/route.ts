@@ -13,7 +13,7 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { TaskStatus, DispatchMatchStatus, OrderStatus, ConnectionStatus } from '@prisma/client';
 
@@ -58,11 +58,12 @@ function verifyAdmin(request: NextRequest): {
 // ============================================
 
 export async function GET(request: NextRequest) {
-  try {
-    // Verify admin access
-    const { error: authError } = verifyAdmin(request);
-    if (authError) return authError;
+  // Verify admin access
+  const { decoded, error: authError } = verifyAdmin(request);
+  if (authError) return authError;
 
+  await setRLSContext(decoded);
+  try {
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
 
@@ -316,5 +317,7 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch monitoring metrics' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

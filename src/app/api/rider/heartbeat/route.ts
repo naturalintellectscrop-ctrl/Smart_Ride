@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 
 // Heartbeat configuration
 const HEARTBEAT_CONFIG = {
@@ -154,6 +154,8 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -237,5 +239,7 @@ export async function GET(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

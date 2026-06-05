@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Live Parcel Tracking - Smart Ride</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .timeline-line {
+            width: 2px;
+            background: repeating-linear-gradient(to bottom, #bec9bf 0, #bec9bf 4px, transparent 4px, transparent 8px);
+        }
+        .timeline-line-active {
+            background: #005f3a;
+        }
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: .5; transform: scale(1.1); }
+        }
+        .map-gradient-overlay {
+            background: linear-gradient(to bottom, rgba(248, 249, 250, 0.8) 0%, rgba(248, 249, 250, 0) 20%, rgba(248, 249, 250, 0) 80%, rgba(248, 249, 250, 1) 100%);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e1e3e4",
+                        "on-surface-variant": "#3f4941",
+                        "surface-container-low": "#f3f4f5",
+                        "primary-container": "#0e7a4d",
+                        "surface-container-highest": "#e1e3e4",
+                        "secondary-fixed": "#6bff8f",
+                        "on-background": "#191c1d",
+                        "inverse-on-surface": "#f0f1f2",
+                        "surface-container": "#edeeef",
+                        "on-secondary-fixed": "#002109",
+                        "tertiary": "#4b5264",
+                        "on-tertiary-fixed": "#141b2b",
+                        "on-secondary-fixed-variant": "#005321",
+                        "background": "#f8f9fa",
+                        "on-tertiary-container": "#e6ebff",
+                        "on-primary-fixed-variant": "#005231",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#e7e8e9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#007432",
+                        "outline-variant": "#bec9bf",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#dce2f7",
+                        "error-container": "#ffdad6",
+                        "surface-tint": "#006d43",
+                        "surface-bright": "#f8f9fa",
+                        "secondary-container": "#6bff8f",
+                        "surface-dim": "#d9dadb",
+                        "on-tertiary-fixed-variant": "#404758",
+                        "primary-fixed-dim": "#7cd9a4",
+                        "on-primary-fixed": "#002111",
+                        "on-error-container": "#93000a",
+                        "on-surface": "#191c1d",
+                        "on-primary": "#ffffff",
+                        "outline": "#6f7a71",
+                        "inverse-primary": "#7cd9a4",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#4ae176",
+                        "primary": "#005f3a",
+                        "on-primary-container": "#a6ffc9",
+                        "tertiary-container": "#636a7c",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#c0c6db",
+                        "primary-fixed": "#98f6be",
+                        "surface": "#f8f9fa",
+                        "secondary": "#006e2f",
+                        "inverse-surface": "#2e3132"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "container-margin": "16px",
+                        "gutter": "12px",
+                        "sm": "8px",
+                        "xl": "32px",
+                        "lg": "24px",
+                        "md": "16px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "label-lg": ["Inter"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md text-body-md overflow-x-hidden">
+<!-- Top AppBar (from Shared Components) -->
+<header class="fixed top-0 w-full z-50 shadow-sm bg-surface flex items-center justify-between px-container-margin h-14">
+<div class="flex items-center gap-md">
+<button class="active:scale-95 transition-transform hover:bg-surface-container-high p-sm rounded-full">
+<span class="material-symbols-outlined text-primary" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Live Tracking</h1>
+</div>
+<div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden border-2 border-primary-container active:scale-95 transition-transform">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="A close-up high-quality portrait of a professional African man in a clean, modern corporate setting. He is smiling warmly, conveying reliability and success. The lighting is bright and natural, fitting a high-end tech application aesthetic. The background is softly blurred to keep focus on the individual, using the brand's clean light-mode palette." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDEMocjd8fMqNKAd8phuh480IRx2hJoUT3eG6KWXwEdx_GYBG_7CIkxAOiASHR0tujF8kEn3pcVSV6IdvSZjRscndM-2Os2XdqN29BjMmSEd3RyO_cF2Lt_K0DGzfAfdeAHDr76odu9dD8UOfroyvtxrVuAcX3of8b7hBjO2ZR9v-iqSyN6XF9amI2iKux9kbiFW7SqKmTG2k374CjIhvIQHTJ-ayqZJ2yUwZzjMxlHkr3eMwamH4r8zgRG9y400_9OwLCTC_eN7h5i"/>
+</div>
+</header>
+<main class="pt-14 pb-24">
+<!-- Map Canvas Section -->
+<section class="relative w-full h-[397px] bg-surface-container overflow-hidden">
+<div class="absolute inset-0 z-0">
+<img alt="Map of Kampala" class="w-full h-full object-cover filter saturate-[0.8] contrast-[1.1]" data-alt="A highly detailed aerial satellite view of a bustling African city street network during broad daylight. The map shows clear road arteries with green spaces and residential blocks. A prominent digital green line overlays the route, tracing a path through the grid. The visual style is crisp and clean, utilizing a professional navigation interface aesthetic with soft tonal shadows." data-location="Kampala" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUdcwcQAjjPPP1MTpURakR4EgSWwmr0jEedgiOkw896rcRp1L8c5OkSl_LL5dj0SaLfITljtqhdWb0iVPtigfb-PwYWTfr_kqZNoLoABKT1cGzrfCKwN_reZf9VJve28O2ktgX9U1JrIx9yjF88Nc5G8y9M9XTO2GVWeFqY79JmmjfTnnlsKNU9WhftmI8L2Cr1dQEkG8pS2bBrUR-q05JP0zC4t3oPc8-cf2E5bbO_3SnKV_POkxAzNdaliTZ6wMvaujntBF-6NtC"/>
+<div class="map-gradient-overlay absolute inset-0 pointer-events-none"></div>
+</div>
+<!-- Live Indicators on Map -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center">
+<div class="relative">
+<div class="absolute inset-0 bg-primary opacity-20 rounded-full scale-[2.5] pulse-animation"></div>
+<div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center shadow-lg border-2 border-surface">
+<span class="material-symbols-outlined text-white text-[20px]" data-icon="moped" style="font-variation-settings: 'FILL' 1;">moped</span>
+</div>
+</div>
+<div class="mt-sm bg-surface py-xs px-md rounded-full shadow-md">
+<span class="font-label-md text-label-md text-primary font-bold">Alex is here</span>
+</div>
+</div>
+<!-- Pickup/Dropoff Markers -->
+<div class="absolute top-1/3 left-1/4 z-10">
+<div class="w-4 h-4 bg-primary rounded-full border-2 border-surface shadow-sm"></div>
+</div>
+<div class="absolute bottom-1/4 right-1/3 z-10">
+<div class="w-4 h-4 bg-error rounded-full border-2 border-surface shadow-sm"></div>
+</div>
+</section>
+<!-- Content Canvas -->
+<div class="px-container-margin -mt-lg relative z-20 space-y-lg">
+<!-- Rider Profile Floating Card -->
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_8px_20px_rgba(0,0,0,0.08)] p-md">
+<div class="flex items-center justify-between mb-md">
+<div class="flex items-center gap-md">
+<div class="w-14 h-14 rounded-xl bg-surface-container overflow-hidden">
+<img alt="Alex Mukasa Profile" class="w-full h-full object-cover" data-alt="A friendly and professional portrait of a Ugandan delivery rider named Alex Mukasa. He is wearing a clean, branded green safety vest. The background is a soft-focus urban Kampala setting with bright, morning daylight. His expression is confident and helpful, embodying the reliable and tech-forward brand personality of Smart Ride." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDRgzDbS7WiThR9PEZQ42DeeFgMFgJvvkF9Ou8Ru4eEiJwsLNGWEMshDAkqEPzxRf9eSZ3lijkeshzOKXL3w_zkIVuYFCynNB4ozPAn8gQv76fkjt8d-DzxxJ5yfZhMPmTbaHtjtnv9bOGRhyuEJppFdCUxIEC6Czf5YZuJHMAu8_aMZjVJjtaKzmUyqvOPMxw_V1Gv0SCy_bebaK9tzQHRYw2Fn7XApe07VSmVTiAtrNGtKEUor3XVY19tY86kZDXJuDj8LssPcP4O"/>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Alex Mukasa</h2>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-amber-500 text-[16px]" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-md text-label-md text-on-surface">4.9 • Green Boda</span>
+</div>
+</div>
+</div>
+<div class="text-right">
+<span class="font-display-lg text-display-lg text-primary block">8 <span class="text-label-lg font-label-lg text-on-surface-variant">mins</span></span>
+<span class="font-label-md text-label-md text-on-surface-variant">Estimated arrival</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-md">
+<button class="flex items-center justify-center gap-sm h-[56px] bg-secondary-container text-on-secondary-container font-label-lg text-label-lg rounded-xl active:scale-[0.98] transition-all hover:bg-opacity-90">
+<span class="material-symbols-outlined" data-icon="call" style="font-variation-settings: 'FILL' 1;">call</span>
+                        Call
+                    </button>
+<button class="flex items-center justify-center gap-sm h-[56px] bg-surface-container-high text-on-surface-variant font-label-lg text-label-lg rounded-xl active:scale-[0.98] transition-all hover:bg-surface-variant">
+<span class="material-symbols-outlined" data-icon="chat" style="font-variation-settings: 'FILL' 1;">chat</span>
+                        Chat
+                    </button>
+</div>
+</div>
+<!-- Delivery Timeline Section -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-lg space-y-lg">
+<div class="flex items-center justify-between border-b border-outline-variant pb-md">
+<div>
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Package Summary</p>
+<h3 class="font-headline-md text-headline-md text-on-surface">Small Box to Ntinda</h3>
+</div>
+<div class="w-12 h-12 bg-surface-container-low rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="package_2">package_2</span>
+</div>
+</div>
+<div class="space-y-0">
+<!-- Step 1: Completed -->
+<div class="flex gap-lg">
+<div class="flex flex-col items-center">
+<div class="w-6 h-6 bg-primary rounded-full flex items-center justify-center z-10 border-4 border-surface shadow-sm">
+<span class="material-symbols-outlined text-white text-[14px]" data-icon="check">check</span>
+</div>
+<div class="timeline-line timeline-line-active h-10 -my-1"></div>
+</div>
+<div class="pb-lg">
+<h4 class="font-label-lg text-label-lg text-on-surface">Order Picked Up</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">10:15 AM • Kabalagala Market</p>
+</div>
+</div>
+<!-- Step 2: Current -->
+<div class="flex gap-lg">
+<div class="flex flex-col items-center">
+<div class="w-6 h-6 bg-surface-container-lowest rounded-full flex items-center justify-center z-10 border-2 border-primary shadow-sm">
+<div class="w-2.5 h-2.5 bg-primary rounded-full pulse-animation"></div>
+</div>
+<div class="timeline-line h-10 -my-1"></div>
+</div>
+<div class="pb-lg">
+<h4 class="font-label-lg text-label-lg text-primary font-bold">In Transit</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Rider is near Jinja Road</p>
+</div>
+</div>
+<!-- Step 3: Upcoming -->
+<div class="flex gap-lg">
+<div class="flex flex-col items-center">
+<div class="w-6 h-6 bg-surface-container-variant rounded-full flex items-center justify-center z-10 border-2 border-outline-variant">
+</div>
+</div>
+<div>
+<h4 class="font-label-lg text-label-lg text-on-surface-variant">Arriving Soon</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Expected at 10:45 AM</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Safety Card -->
+<div class="bg-primary-container/10 border border-primary-container/20 rounded-xl p-md flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary-container" data-icon="verified_user">verified_user</span>
+</div>
+<div>
+<p class="font-label-lg text-label-lg text-primary">Safe Delivery Guaranteed</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Your parcel is insured up to 500k UGX.</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (from Shared Components) -->
+<nav class="fixed bottom-0 w-full rounded-t-xl z-50 bg-surface shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex justify-around items-center h-20 pb-safe px-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="history" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-md text-label-md">Activity</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-label-md text-label-md">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<script>
+        // Micro-interaction for smooth scrolling/reveals
+        document.addEventListener('DOMContentLoaded', () => {
+            const observerOptions = {
+                threshold: 0.1
+            };
+            
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('opacity-100', 'translate-y-0');
+                        entry.target.classList.remove('opacity-0', 'translate-y-4');
+                    }
+                });
+            }, observerOptions);
+
+            document.querySelectorAll('.space-y-lg > div').forEach(el => {
+                el.classList.add('transition-all', 'duration-500', 'opacity-0', 'translate-y-4');
+                observer.observe(el);
+            });
+        });
+    </script>
+</body></html>

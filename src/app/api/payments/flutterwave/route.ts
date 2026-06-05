@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { z } from 'zod';
 
 // Flutterwave API configuration
@@ -184,6 +184,8 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to initiate payment' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -303,5 +305,7 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to verify payment' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

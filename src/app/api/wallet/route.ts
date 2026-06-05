@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, resetRLSContext } from '@/lib/db';
 import { requireAuth, requireOwnershipOrAdmin } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
@@ -28,9 +28,9 @@ export async function GET(request: NextRequest) {
 
     const userId = requestedUserId || user.userId;
 
-    // Get or create wallet
-    let wallet = await db.wallet.findUnique({
-      where: { userId },
+    // Get or create wallet (Wallet model uses ownerId/ownerType)
+    let wallet = await db.wallet.findFirst({
+      where: { ownerId: userId, ownerType: 'USER' },
       include: {
         transactions: {
           orderBy: { createdAt: 'desc' },
@@ -43,13 +43,15 @@ export async function GET(request: NextRequest) {
       // Create wallet if it doesn't exist
       wallet = await db.wallet.create({
         data: {
-          userId,
+          ownerId: userId,
+          ownerType: 'USER',
           balance: 0,
           pendingBalance: 0,
           status: 'ACTIVE',
           totalDeposited: 0,
           totalWithdrawn: 0,
           totalSpent: 0,
+          totalReceived: 0,
         },
         include: {
           transactions: true,
@@ -58,10 +60,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user payment methods
-    const paymentMethods = await db.userPaymentMethod.findMany({
-      where: { userId, isActive: true },
-      orderBy: { isDefault: 'desc' },
-    });
+    let paymentMethods: unknown[] = [];
+    try {
+      paymentMethods = await db.userPaymentMethod.findMany({
+        where: { userId, isActive: true },
+        orderBy: { isDefault: 'desc' },
+      });
+    } catch {
+      // UserPaymentMethod table may not exist yet
+    }
 
     return NextResponse.json({
       wallet: {
@@ -96,6 +103,8 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch wallet' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -120,16 +129,21 @@ export async function POST(request: NextRequest) {
     // Users can only top up their own wallet
     const userId = user.userId;
 
-    // Get or create wallet
-    let wallet = await db.wallet.findUnique({ where: { userId } });
+    // Get or create wallet (Wallet model uses ownerId/ownerType)
+    let wallet = await db.wallet.findFirst({ where: { ownerId: userId, ownerType: 'USER' } });
     
     if (!wallet) {
       wallet = await db.wallet.create({
         data: {
-          userId,
+          ownerId: userId,
+          ownerType: 'USER',
           balance: 0,
           pendingBalance: 0,
           status: 'ACTIVE',
+          totalDeposited: 0,
+          totalWithdrawn: 0,
+          totalSpent: 0,
+          totalReceived: 0,
         },
       });
     }
@@ -162,8 +176,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Refetch updated wallet
-    const updatedWallet = await db.wallet.findUnique({
-      where: { userId },
+    const updatedWallet = await db.wallet.findFirst({
+      where: { ownerId: userId, ownerType: 'USER' },
       include: {
         transactions: {
           orderBy: { createdAt: 'desc' },
@@ -194,5 +208,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to top up wallet' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }

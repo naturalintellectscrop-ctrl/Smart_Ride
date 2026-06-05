@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { hashPassword, validatePasswordStrength } from '@/lib/auth/password';
 import { getAuthUser } from '@/lib/auth/middleware';
 import { z } from 'zod';
@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    await setRLSContext(user);
 
     const body = await request.json();
     
@@ -129,5 +131,7 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Failed to create admin user' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

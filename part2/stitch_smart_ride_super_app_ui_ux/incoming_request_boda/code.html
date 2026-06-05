@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Smart Ride - Incoming Request</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .timer-svg {
+            transform: rotate(-90deg);
+        }
+        .timer-circle {
+            stroke-dasharray: 283;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 1s linear;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 1; }
+            100% { transform: scale(1.4); opacity: 0; }
+        }
+        .pulse-effect {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 4px solid #6bff8f;
+            animation: pulse-ring 2s infinite;
+        }
+        .glass-blur {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "on-primary-container": "#a6ffc9",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#7cd9a4",
+                        "secondary-container": "#6bff8f",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#007432",
+                        "on-primary": "#ffffff",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-primary-fixed-variant": "#005231",
+                        "surface-dim": "#d9dadb",
+                        "primary-fixed-dim": "#7cd9a4",
+                        "on-secondary": "#ffffff",
+                        "surface": "#f8f9fa",
+                        "on-background": "#191c1d",
+                        "surface-bright": "#f8f9fa",
+                        "primary-fixed": "#98f6be",
+                        "on-secondary-fixed-variant": "#005321",
+                        "secondary-fixed": "#6bff8f",
+                        "inverse-on-surface": "#f0f1f2",
+                        "primary-container": "#0e7a4d",
+                        "primary": "#005f3a",
+                        "inverse-surface": "#2e3132",
+                        "surface-container-high": "#e7e8e9",
+                        "surface-container": "#edeeef",
+                        "tertiary": "#4b5264",
+                        "on-primary-fixed": "#002111",
+                        "surface-variant": "#e1e3e4",
+                        "secondary-fixed-dim": "#4ae176",
+                        "secondary": "#006e2f",
+                        "outline": "#6f7a71",
+                        "surface-tint": "#006d43",
+                        "outline-variant": "#bec9bf",
+                        "background": "#f8f9fa",
+                        "tertiary-fixed": "#dce2f7",
+                        "on-tertiary-fixed": "#141b2b",
+                        "on-surface": "#191c1d",
+                        "on-error-container": "#93000a",
+                        "on-error": "#ffffff",
+                        "on-tertiary-fixed-variant": "#404758",
+                        "on-secondary-fixed": "#002109",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#c0c6db",
+                        "surface-container-low": "#f3f4f5",
+                        "on-surface-variant": "#3f4941",
+                        "tertiary-container": "#636a7c",
+                        "on-tertiary-container": "#e6ebff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "base": "4px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "gutter": "12px",
+                        "xl": "32px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "container-margin": "16px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "label-lg": ["Inter"],
+                        "headline-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface min-h-screen flex flex-col font-body-md overflow-hidden">
+<!-- Map Background Placeholder -->
+<div class="fixed inset-0 z-0">
+<img class="w-full h-full object-cover filter brightness-75 grayscale-[0.2]" data-alt="A detailed, high-resolution aerial view of a vibrant African city street map at dusk. The scene features glowing orange street lights and deep navy shadows, creating a high-contrast urban landscape. A primary green route line is highlighted on the road, with a small 3D boda-boda icon moving through the traffic. The visual style is premium and tech-forward, emphasizing modern GPS navigation interfaces." data-location="Kampala, Uganda" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzEZEy2TP-2rbX5vOzHHiQ2XDbD26Hu721bVfjmWbptexMR_TPLrfgIMl129bwebgpvZ-9lwHtNwYyWN7HwCwgeLR9Qo5r7VaWZZ14jXfSo6QocRHKX8ZywP1B44OvbC89PwXDLa9vXMp3pikHRXs651J1ZJQWlDoiIbn5gaeGIs2FSgVZlsLEj5-5wOQ3BMdeWyQZenlaQa3EBBfkhpki8vJMZX9jbivd88qpVftbRkrqO-l6rbsHCjVIJr3_VIGFKsh_wUcfioPi"/>
+</div>
+<!-- Top App Bar (Shared Component Anchor) -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin h-16 bg-surface/90 dark:bg-surface-dim/90 backdrop-blur-md shadow-sm">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden border-2 border-primary">
+<img alt="Alex M." class="w-full h-full object-cover" data-alt="A close-up professional portrait of a smiling African man in his late 20s wearing a clean, modern green cycling jacket. He has a friendly and reliable expression, perfectly captured in soft, natural daylight. The background is a blurred urban setting, suggesting a professional ride-hailing driver. The overall lighting is bright and optimistic, aligned with a high-end corporate brand aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJBmXI2Sfue2AqY8GtuDXyahb2BVyaG9MNE2dkUxsfY89y2M4sAf8bluiWwT4qhg2xvnXWH8N16DXdIvMIiUOD050LOjncq_Gi4Zno0rPZtEbIV4lnI_aXP7sAk8Lix-zi61TLCAUK4r7qEj7SDU8ww5xpPxpYmAr-c3-aFKfnPykfJ9aFW5xiG4RAMuZ6e3AMiL3-17ndll_ZtykH5qd3br6_cGjP7ZxofJuexRgaJ3DkT2syAEqI8LWjDAaIO3dG5ySbnJNDUrLC"/>
+</div>
+<h1 class="font-headline-md text-headline-md-mobile text-primary tracking-tight">Smart Ride</h1>
+</div>
+<div class="flex items-center gap-sm bg-secondary-container px-sm py-xs rounded-full">
+<div class="w-2 h-2 bg-secondary rounded-full animate-pulse"></div>
+<span class="font-label-lg text-on-secondary-container">Online</span>
+</div>
+</header>
+<!-- Overlay Content -->
+<main class="relative z-10 flex-1 flex flex-col items-center justify-end pb-xl px-container-margin">
+<!-- Priority Request Modal -->
+<div class="w-full max-w-md bg-surface-container-lowest rounded-3xl shadow-2xl p-lg flex flex-col items-center gap-lg border border-outline-variant/30 animate-in slide-in-from-bottom-10 duration-500">
+<!-- Header: New Request & Distance -->
+<div class="w-full flex justify-between items-center">
+<div class="bg-primary/10 px-md py-xs rounded-full">
+<span class="text-primary font-label-lg uppercase tracking-wider">New Ride Request</span>
+</div>
+<div class="flex items-center gap-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-primary">distance</span>
+<span class="font-label-lg">2 mins away</span>
+</div>
+</div>
+<!-- Central Countdown Visual -->
+<div class="relative w-40 h-40 flex items-center justify-center">
+<div class="pulse-effect"></div>
+<svg class="timer-svg w-36 h-36">
+<circle class="text-surface-container-high" cx="72" cy="72" fill="transparent" r="68" stroke="currentColor" stroke-width="8"></circle>
+<circle class="timer-circle text-primary" cx="72" cy="72" fill="transparent" id="countdown-circle" r="68" stroke="currentColor" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center">
+<span class="font-display-lg text-display-lg text-primary" id="countdown-text">15</span>
+<span class="font-label-md text-on-surface-variant uppercase tracking-tighter">Seconds</span>
+</div>
+</div>
+<!-- Destination & Earning Info -->
+<div class="w-full bg-surface-container-low rounded-2xl p-md flex flex-col gap-md">
+<div class="flex items-start gap-md">
+<div class="flex flex-col items-center gap-1 mt-1">
+<div class="w-2.5 h-2.5 rounded-full bg-secondary"></div>
+<div class="w-0.5 h-8 bg-outline-variant"></div>
+<div class="w-2.5 h-2.5 rounded-full bg-error"></div>
+</div>
+<div class="flex-1 flex flex-col gap-3">
+<div class="flex flex-col">
+<span class="text-label-md font-label-md text-on-surface-variant">Pickup</span>
+<span class="text-body-md font-body-md font-bold">Current Location</span>
+</div>
+<div class="flex flex-col">
+<span class="text-label-md font-label-md text-on-surface-variant">Destination</span>
+<span class="text-body-md font-body-md font-bold">Acacia Mall, Kololo</span>
+</div>
+</div>
+</div>
+<div class="h-px bg-outline-variant/30 w-full"></div>
+<div class="flex justify-between items-center">
+<div class="flex flex-col">
+<span class="text-label-md font-label-md text-on-surface-variant">Estimated Earnings</span>
+<span class="text-headline-md font-headline-md text-primary">UGX 8,500</span>
+</div>
+<div class="bg-secondary-container text-on-secondary-container px-md py-xs rounded-lg flex items-center gap-xs">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">payments</span>
+<span class="font-label-lg">Cash</span>
+</div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="w-full grid grid-cols-2 gap-md">
+<button class="h-14 rounded-xl border-2 border-outline text-outline font-label-lg flex items-center justify-center gap-sm active:scale-95 transition-all" onclick="declineRide()">
+<span class="material-symbols-outlined">close</span>
+                    Decline
+                </button>
+<button class="h-14 rounded-xl bg-primary text-on-primary font-label-lg flex items-center justify-center gap-sm shadow-lg active:scale-95 transition-all" onclick="acceptRide()">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                    Accept
+                </button>
+</div>
+</div>
+</main>
+<!-- Navigation Drawer (Side) - Suppressed but defined for hierarchy -->
+<div class="fixed inset-y-0 left-0 z-[60] flex flex-col p-lg w-80 bg-surface shadow-2xl -translate-x-full transition-transform duration-300" id="side-drawer">
+<div class="flex items-center gap-md mb-xl">
+<div class="w-12 h-12 rounded-full bg-primary-fixed border-2 border-primary overflow-hidden">
+<img alt="Driver Profile" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDtBTFaFgBhipGCL_9R6CFVO2XjGNcZFL_NPOJklwjNd4ApsAjwJBVgBJvVa6kVVHkEViXINoLToND_HtolqxieDwRq38sOI--w7vjoPQT_2TMbmDsYQk0yQP5g1XHVLQ3GR4UM4R6aaCE-s_8u81ykdcIaHQTAj2FSeQPb0IA4aFny2dWsPrBYUbfgnn7tdZGtqq3JJj9h9YcSjwvHeBHzkS1EH_9s2jcqwLFvP21DLDnGi5QstI7NMT1e9hrVRiHQByNkwGeGHxMo"/>
+</div>
+<div>
+<h3 class="font-headline-md text-on-surface">Alex M.</h3>
+<p class="text-label-md text-on-surface-variant">Gold Partner • 4.9★</p>
+</div>
+</div>
+<nav class="flex flex-col gap-sm">
+<div class="flex items-center gap-md p-md hover:bg-surface-container-high rounded-lg cursor-pointer">
+<span class="material-symbols-outlined">swap_horiz</span>
+<span class="font-body-md">Switch Role</span>
+</div>
+<div class="flex items-center gap-md p-md hover:bg-surface-container-high rounded-lg cursor-pointer">
+<span class="material-symbols-outlined">payments</span>
+<span class="font-body-md">Earnings History</span>
+</div>
+<div class="flex items-center gap-md p-md hover:bg-surface-container-high rounded-lg cursor-pointer">
+<span class="material-symbols-outlined">shield</span>
+<span class="font-body-md">Safety Toolkit</span>
+</div>
+</nav>
+</div>
+<script>
+        // Countdown Timer Logic
+        let timeLeft = 15;
+        const totalTime = 15;
+        const countdownCircle = document.getElementById('countdown-circle');
+        const countdownText = document.getElementById('countdown-text');
+        
+        const timer = setInterval(() => {
+            timeLeft--;
+            if (timeLeft <= 0) {
+                clearInterval(timer);
+                declineRide();
+            }
+            
+            // Update Text
+            countdownText.textContent = timeLeft;
+            
+            // Update Circle Offset (283 is the max dashoffset)
+            const offset = 283 - (283 * timeLeft / totalTime);
+            countdownCircle.style.strokeDashoffset = offset;
+            
+            // Visual Warning for Low Time
+            if (timeLeft <= 5) {
+                countdownText.classList.remove('text-primary');
+                countdownText.classList.add('text-error');
+                countdownCircle.classList.remove('text-primary');
+                countdownCircle.classList.add('text-error');
+            }
+        }, 1000);
+
+        function acceptRide() {
+            clearInterval(timer);
+            alert("Ride Accepted! Navigating to Pickup...");
+            // Real app would navigate here
+        }
+
+        function declineRide() {
+            clearInterval(timer);
+            const modal = document.querySelector('main > div');
+            modal.style.transition = 'all 0.4s ease';
+            modal.style.opacity = '0';
+            modal.style.transform = 'translateY(100px)';
+            setTimeout(() => {
+                alert("Request Declined");
+            }, 400);
+        }
+    </script>
+</body></html>

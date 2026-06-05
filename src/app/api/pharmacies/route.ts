@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -16,6 +16,7 @@ import { z } from 'zod';
  * List all pharmacies with pagination
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -75,6 +76,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching pharmacies:', error);
     return serverErrorResponse('Failed to fetch pharmacies');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -96,6 +99,7 @@ const createPharmacySchema = z.object({
  * Create a new pharmacy (register as pharmacy merchant)
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const validatedData = createPharmacySchema.parse(body);
@@ -146,5 +150,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error creating pharmacy:', error);
     return serverErrorResponse('Failed to create pharmacy');
+  } finally {
+    await resetRLSContext();
   }
 }

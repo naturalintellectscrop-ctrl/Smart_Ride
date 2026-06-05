@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService, DispatchRequest } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 // POST /api/dispatch/assign - Find and assign rider
@@ -17,6 +18,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     const body = await request.json();
     const { taskId, taskType, pickupLatitude, pickupLongitude, excludeRiderIds, priority } = body;
@@ -72,5 +75,7 @@ export async function POST(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

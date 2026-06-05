@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { hashPassword } from '@/lib/auth/password';
 import { z } from 'zod';
 
@@ -24,6 +24,7 @@ const setupAdminSchema = z.object({
 });
 
 export async function GET() {
+  await setServiceRoleContext();
   const diagnostics: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
@@ -134,9 +135,11 @@ export async function GET() {
     success: true,
     diagnostics,
   });
+  await resetRLSContext();
 }
 
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const validationResult = setupAdminSchema.safeParse(body);
@@ -213,5 +216,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

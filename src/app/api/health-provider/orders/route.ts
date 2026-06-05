@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/health-provider/orders - Get orders for provider
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const providerId = searchParams.get('providerId');
@@ -89,11 +90,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch orders' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST /api/health-provider/orders - Create new order
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const {
@@ -216,11 +220,14 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create order' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // PATCH /api/health-provider/orders - Update order status
 export async function PATCH(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { orderId, action, notes, rejectionReason, riderId } = body;
@@ -349,5 +356,7 @@ export async function PATCH(request: NextRequest) {
       { error: 'Failed to update order' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

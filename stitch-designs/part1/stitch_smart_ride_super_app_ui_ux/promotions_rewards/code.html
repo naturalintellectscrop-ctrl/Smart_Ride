@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Rewards &amp; Offers</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#4ae176",
+                        "secondary-container": "#6bff8f",
+                        "primary-container": "#0e7a4d",
+                        "on-error-container": "#93000a",
+                        "background": "#f8f9fa",
+                        "tertiary": "#4b5264",
+                        "on-tertiary-fixed-variant": "#404758",
+                        "tertiary-container": "#636a7c",
+                        "surface-dim": "#d9dadb",
+                        "on-tertiary-fixed": "#141b2b",
+                        "surface-container-low": "#f3f4f5",
+                        "on-tertiary": "#ffffff",
+                        "primary": "#005f3a",
+                        "on-primary-fixed-variant": "#005231",
+                        "on-primary-container": "#a6ffc9",
+                        "tertiary-fixed": "#dce2f7",
+                        "primary-fixed": "#98f6be",
+                        "surface": "#f8f9fa",
+                        "inverse-primary": "#7cd9a4",
+                        "surface-tint": "#006d43",
+                        "on-background": "#191c1d",
+                        "tertiary-fixed-dim": "#c0c6db",
+                        "surface-bright": "#f8f9fa",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-variant": "#e1e3e4",
+                        "surface-container-high": "#e7e8e9",
+                        "on-tertiary-container": "#e6ebff",
+                        "on-surface-variant": "#3f4941",
+                        "on-surface": "#191c1d",
+                        "on-primary": "#ffffff",
+                        "on-secondary": "#ffffff",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-secondary-fixed-variant": "#005321",
+                        "on-primary-fixed": "#002111",
+                        "on-secondary-fixed": "#002109",
+                        "inverse-on-surface": "#f0f1f2",
+                        "surface-container": "#edeeef",
+                        "primary-fixed-dim": "#7cd9a4",
+                        "outline-variant": "#bec9bf",
+                        "secondary-fixed": "#6bff8f",
+                        "secondary": "#006e2f",
+                        "on-error": "#ffffff",
+                        "error": "#ba1a1a",
+                        "outline": "#6f7a41",
+                        "on-secondary-container": "#007432",
+                        "inverse-surface": "#2e3132",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "gutter": "12px",
+                        "container-margin": "16px",
+                        "xs": "4px",
+                        "sm": "8px",
+                        "md": "16px",
+                        "lg": "24px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "label-md": ["Inter"],
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-lg": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "body-md": ["Inter"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "label-lg": ["Inter"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"]
+                    },
+                    "fontSize": {
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                        "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-40 bg-surface shadow-sm transition-colors duration-200">
+<div class="flex items-center justify-between px-container-margin h-16 w-full max-w-7xl mx-auto">
+<button class="transition-colors duration-200 active:scale-95 hover:bg-surface-container-low p-2 rounded-full">
+<span class="material-symbols-outlined text-primary" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md-mobile md:text-headline-md text-primary font-bold">Rewards &amp; Offers</h1>
+<button class="transition-colors duration-200 active:scale-95 hover:bg-surface-container-low p-2 rounded-full">
+<span class="material-symbols-outlined text-primary" data-icon="help">help</span>
+</button>
+</div>
+</header>
+<main class="max-w-7xl mx-auto px-container-margin pt-md space-y-lg">
+<!-- Loyalty Status Card -->
+<section class="relative overflow-hidden rounded-xl bg-primary-container p-lg shadow-lg text-on-primary-container">
+<div class="absolute top-0 right-0 -mt-8 -mr-8 w-48 h-48 bg-on-primary-container/10 rounded-full blur-3xl"></div>
+<div class="relative z-10 flex flex-col gap-md">
+<div class="flex justify-between items-start">
+<div>
+<p class="font-label-md text-label-md opacity-90 uppercase tracking-wider">Current Status</p>
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-white mt-xs">Gold Member</h2>
+</div>
+<div class="text-right">
+<p class="font-label-md text-label-md opacity-90 uppercase tracking-wider">Points Balance</p>
+<p class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-secondary-fixed">2,450 pts</p>
+</div>
+</div>
+<div class="space-y-sm mt-md">
+<div class="flex justify-between font-label-md text-label-md text-white">
+<span>Progress to Platinum</span>
+<span>550 pts to go</span>
+</div>
+<div class="w-full bg-black/20 h-2.5 rounded-full overflow-hidden">
+<div class="bg-secondary-fixed h-full w-[78%] rounded-full shadow-[0_0_8px_rgba(107,255,143,0.5)]"></div>
+</div>
+</div>
+<div class="mt-md flex gap-sm">
+<button class="flex-1 py-md bg-secondary-fixed text-on-secondary-container font-label-lg text-label-lg rounded-xl transition-all duration-300 active:scale-95">
+                        View Benefits
+                    </button>
+<button class="flex-1 py-md border border-white/30 text-white font-label-lg text-label-lg rounded-xl backdrop-blur-sm transition-all duration-300 active:scale-95">
+                        Point History
+                    </button>
+</div>
+</div>
+</section>
+<!-- Active Promo Codes -->
+<section class="space-y-md">
+<div class="flex justify-between items-center">
+<h3 class="font-headline-md text-headline-md text-on-surface">Your Active Promos</h3>
+<button class="text-primary font-label-lg text-label-lg">See all</button>
+</div>
+<div class="flex gap-md overflow-x-auto hide-scrollbar -mx-container-margin px-container-margin pb-2">
+<!-- Promo Card 1 -->
+<div class="min-w-[280px] bg-surface-container-lowest p-md rounded-xl shadow-sm border border-outline-variant flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div class="w-12 h-12 bg-secondary-container flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="local_taxi">local_taxi</span>
+</div>
+<span class="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-full">EXPIRES SOON</span>
+</div>
+<div class="mt-md">
+<h4 class="font-headline-md text-headline-md text-on-background">20% Off Next Ride</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">Valid for Boda and Car rides up to UGX 5,000</p>
+</div>
+<div class="mt-md pt-md border-t border-dashed border-outline-variant flex justify-between items-center">
+<span class="font-label-md text-label-md text-primary font-bold">RIDEFAST20</span>
+<button class="text-primary font-label-lg text-label-lg flex items-center gap-1">
+                            Use <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- Promo Card 2 -->
+<div class="min-w-[280px] bg-surface-container-lowest p-md rounded-xl shadow-sm border border-outline-variant flex flex-col justify-between">
+<div class="flex justify-between items-start">
+<div class="w-12 h-12 bg-tertiary-fixed flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-on-tertiary-fixed" data-icon="restaurant">restaurant</span>
+</div>
+</div>
+<div class="mt-md">
+<h4 class="font-headline-md text-headline-md text-on-background">Free Food Delivery</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">No delivery fee on orders above UGX 20,000</p>
+</div>
+<div class="mt-md pt-md border-t border-dashed border-outline-variant flex justify-between items-center">
+<span class="font-label-md text-label-md text-primary font-bold">SMARTFOOD</span>
+<button class="text-primary font-label-lg text-label-lg flex items-center gap-1">
+                            Use <span class="material-symbols-outlined text-sm" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Refer & Earn Section -->
+<section class="rounded-xl overflow-hidden bg-surface-container shadow-sm border border-outline-variant">
+<div class="relative h-32 w-full">
+<img class="w-full h-full object-cover" data-alt="A diverse group of cheerful friends in Kampala, Uganda, laughing together outdoors in a sun-drenched urban park. The setting is vibrant and modern with soft sunlight filtering through tropical trees. The overall mood is joyful, community-focused, and reflects a high-end corporate tech aesthetic with natural warm tones and sharp focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKFlMzlBFHEHa7sRilVk5GVDw-PG_qNRyMGixWXMkcS2uu0WJcqU9qcwRX90pv9c76LIpxgpmf6RNSf-NZNmw-WRIGsJpMiq7N-ROguBSdDKdMb6ezTmz8dirWYHHN1ljLGeACndbj3hAFMMA6sqC9BzJ6s9gAFXQkCk42m26xNEJv5sxRA9XTzKiOP0KhsaTNgaLq6rpbBOZDP39AKFBqLmrw8c33hg0kHPYZoq5LIFSOvr7yvLFg_SorVr2LmrHyXHSjrbhf1b9i"/>
+<div class="absolute inset-0 bg-gradient-to-r from-primary/80 to-transparent flex items-center px-lg">
+<h3 class="text-white font-headline-md text-headline-md w-1/2">Invite Friends, Get UGX 5,000</h3>
+</div>
+</div>
+<div class="p-lg flex flex-col md:flex-row md:items-center justify-between gap-md">
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-sm">
+                    Earn rewards for every friend who completes their first ride or order using your unique code.
+                </p>
+<div class="flex gap-sm">
+<div class="bg-surface-container-highest px-md py-sm rounded-lg flex items-center gap-md border border-outline-variant">
+<span class="font-label-lg text-label-lg text-on-background font-bold tracking-widest uppercase">ALEXM256</span>
+<button class="text-primary hover:bg-primary/5 p-1 rounded transition-colors">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+<button class="bg-primary text-white p-sm rounded-lg flex items-center justify-center transition-all duration-300 active:scale-90">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Redeem Rewards Grid -->
+<section class="space-y-md">
+<h3 class="font-headline-md text-headline-md text-on-surface">Redeem Points</h3>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-md">
+<!-- Reward Item 1 -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant hover:border-primary transition-all duration-300 cursor-pointer group">
+<div class="w-full aspect-square bg-surface-container rounded-lg mb-md flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="confirmation_number">confirmation_number</span>
+</div>
+<h5 class="font-label-lg text-label-lg text-on-background">Ride Voucher</h5>
+<p class="font-label-md text-label-md text-on-surface-variant mt-xs">UGX 2,000 off</p>
+<div class="mt-sm flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-sm" data-icon="stars" data-weight="fill" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="font-bold text-sm">500 pts</span>
+</div>
+</div>
+<!-- Reward Item 2 -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant hover:border-primary transition-all duration-300 cursor-pointer group">
+<div class="w-full aspect-square bg-surface-container rounded-lg mb-md flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="phone_iphone">phone_iphone</span>
+</div>
+<h5 class="font-label-lg text-label-lg text-on-background">Airtime Top-up</h5>
+<p class="font-label-md text-label-md text-on-surface-variant mt-xs">UGX 5,000 MTN/Airtel</p>
+<div class="mt-sm flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-sm" data-icon="stars" data-weight="fill" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="font-bold text-sm">1,200 pts</span>
+</div>
+</div>
+<!-- Reward Item 3 -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant hover:border-primary transition-all duration-300 cursor-pointer group">
+<div class="w-full aspect-square bg-surface-container rounded-lg mb-md flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="shopping_bag">shopping_bag</span>
+</div>
+<h5 class="font-label-lg text-label-lg text-on-background">Partner Coupon</h5>
+<p class="font-label-md text-label-md text-on-surface-variant mt-xs">Cafe Javas 10% Off</p>
+<div class="mt-sm flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-sm" data-icon="stars" data-weight="fill" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="font-bold text-sm">800 pts</span>
+</div>
+</div>
+<!-- Reward Item 4 -->
+<div class="bg-surface-container-lowest p-md rounded-xl border border-outline-variant hover:border-primary transition-all duration-300 cursor-pointer group">
+<div class="w-full aspect-square bg-surface-container rounded-lg mb-md flex items-center justify-center group-hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="local_gas_station">local_gas_station</span>
+</div>
+<h5 class="font-label-lg text-label-lg text-on-background">Fuel Voucher</h5>
+<p class="font-label-md text-label-md text-on-surface-variant mt-xs">UGX 10,000 Shell</p>
+<div class="mt-sm flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-sm" data-icon="stars" data-weight="fill" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="font-bold text-sm">2,000 pts</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Apply Code Section -->
+<section class="bg-surface-container-lowest p-lg rounded-xl border border-outline-variant shadow-sm mb-12">
+<h4 class="font-headline-md text-headline-md text-on-surface mb-md">Have a promo code?</h4>
+<div class="flex gap-md">
+<div class="flex-1 relative">
+<input class="w-full h-14 bg-surface-container px-md rounded-xl border-none focus:ring-2 focus:ring-primary text-on-surface placeholder:text-outline" placeholder="Enter code here" type="text"/>
+</div>
+<button class="bg-primary text-white px-xl h-14 rounded-xl font-label-lg text-label-lg transition-all duration-300 active:scale-95 shadow-md">
+                    Apply
+                </button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface shadow-[0_-4px_12px_rgba(0,0,0,0.08)]">
+<a class="flex flex-col items-center justify-center text-outline p-2 transition-all duration-300 ease-in-out active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline p-2 transition-all duration-300 ease-in-out active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-md text-label-md">Activity</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-xl px-4 py-1 transition-all duration-300 ease-in-out active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="card_giftcard" data-weight="fill" style="font-variation-settings: 'FILL' 1;">card_giftcard</span>
+<span class="font-label-md text-label-md">Rewards</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline p-2 transition-all duration-300 ease-in-out active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<!-- Floating Action Button (Supressed as per logic rules for Details/Rewards screens) -->
+<script>
+        // Micro-interaction for code copy
+        document.querySelector('[data-icon="content_copy"]').parentElement.addEventListener('click', function() {
+            const code = this.previousElementSibling.textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                const icon = this.querySelector('.material-symbols-outlined');
+                icon.textContent = 'check';
+                setTimeout(() => {
+                    icon.textContent = 'content_copy';
+                }, 2000);
+            });
+        });
+
+        // Hover effects for redemption cards
+        const rewardCards = document.querySelectorAll('.grid > div');
+        rewardCards.forEach(card => {
+            card.addEventListener('mousedown', () => card.style.transform = 'scale(0.95)');
+            card.addEventListener('mouseup', () => card.style.transform = 'scale(1)');
+            card.addEventListener('mouseleave', () => card.style.transform = 'scale(1)');
+        });
+    </script>
+</body></html>

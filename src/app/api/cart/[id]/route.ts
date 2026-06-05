@@ -12,7 +12,7 @@ import {
   clearCart,
   validateCart,
 } from '@/lib/cart/cart-service';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // ============================================
 // GET /api/cart/[id] — Get specific cart with items
@@ -21,6 +21,7 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
 
@@ -58,6 +59,8 @@ export async function GET(
     return serverErrorResponse(
       err instanceof Error ? err.message : 'Failed to get cart'
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -68,6 +71,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await setServiceRoleContext();
   try {
     const { id: cartId } = await params;
     const body = await request.json();
@@ -146,6 +150,8 @@ export async function PATCH(
     }
 
     return serverErrorResponse('Failed to update cart');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -156,6 +162,7 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await setServiceRoleContext();
   try {
     const { id: cartId } = await params;
     const { searchParams } = new URL(request.url);
@@ -186,5 +193,7 @@ export async function DELETE(
     return serverErrorResponse(
       err instanceof Error ? err.message : 'Failed to delete cart'
     );
+  } finally {
+    await resetRLSContext();
   }
 }

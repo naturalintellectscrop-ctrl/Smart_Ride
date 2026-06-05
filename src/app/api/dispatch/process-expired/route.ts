@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
 
@@ -32,6 +32,7 @@ const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'smart-ride-internal-ap
  * - timestamp: When the processing ran
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     // Verify internal API key
     const providedKey = request.headers.get('X-Internal-Key');
@@ -79,6 +80,8 @@ export async function POST(request: NextRequest) {
       { success: false, error: error.message || 'Failed to process expired matches' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -87,6 +90,7 @@ export async function POST(request: NextRequest) {
  * Health check endpoint - returns processing stats without actually processing
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     // Verify internal API key
     const providedKey = request.headers.get('X-Internal-Key');
@@ -129,5 +133,7 @@ export async function GET(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

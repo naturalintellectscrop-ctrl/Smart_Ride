@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ const rejectSchema = z.object({
  * Reject a pending rider application
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const validatedData = rejectSchema.parse(body);
@@ -71,5 +72,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error rejecting rider:', error);
     return serverErrorResponse('Failed to reject rider');
+  } finally {
+    await resetRLSContext();
   }
 }

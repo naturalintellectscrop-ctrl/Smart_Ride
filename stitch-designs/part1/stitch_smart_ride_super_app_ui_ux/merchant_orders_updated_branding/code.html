@@ -1,0 +1,321 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>SafeLink Merchant - Order Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-high": "#e7e8e9",
+                    "secondary-container": "#6bff8f",
+                    "outline": "#6f7a71",
+                    "tertiary-container": "#636a7c",
+                    "error-container": "#ffdad6",
+                    "surface": "#f8f9fa",
+                    "on-surface-variant": "#3f4941",
+                    "secondary-fixed-dim": "#4ae176",
+                    "primary": "#005f3a",
+                    "on-primary-fixed": "#002111",
+                    "inverse-surface": "#2e3132",
+                    "on-error-container": "#93000a",
+                    "on-secondary-fixed": "#002109",
+                    "surface-dim": "#d9dadb",
+                    "tertiary": "#4b5264",
+                    "surface-bright": "#f8f9fa",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-secondary": "#ffffff",
+                    "surface-container-low": "#f3f4f5",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-tertiary": "#ffffff",
+                    "surface-container": "#edeeef",
+                    "secondary": "#006e2f",
+                    "surface-variant": "#e1e3e4",
+                    "on-primary-fixed-variant": "#005231",
+                    "secondary-fixed": "#6bff8f",
+                    "surface-tint": "#006d43",
+                    "inverse-primary": "#7cd9a4",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-container": "#e6ebff",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "on-error": "#ffffff",
+                    "on-background": "#191c1d",
+                    "primary-container": "#0e7a4d",
+                    "primary-fixed": "#98f6be",
+                    "tertiary-fixed": "#dce2f7",
+                    "on-primary-container": "#a6ffc9",
+                    "on-surface": "#191c1d",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#005321",
+                    "background": "#f8f9fa",
+                    "outline-variant": "#bec9bf",
+                    "on-primary": "#ffffff",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "on-secondary-container": "#007432",
+                    "on-tertiary-fixed": "#141b2b",
+                    "on-tertiary-fixed-variant": "#404758"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "16px",
+                    "xl": "32px",
+                    "lg": "24px",
+                    "sm": "8px",
+                    "base": "4px",
+                    "gutter": "12px",
+                    "container-margin": "16px",
+                    "xs": "4px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .active-tab-indicator {
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background-color: #005f3a;
+            border-radius: 4px 4px 0 0;
+        }
+        .order-card {
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .order-card:active {
+            transform: scale(0.98);
+        }
+        body {
+            min-height: max(884px, 100dvh);
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md min-h-screen">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-container-margin py-md w-full sticky top-0 z-50 bg-surface dark:bg-surface">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container overflow-hidden">
+<img alt="Merchant Logo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUyBUww0Q2dHWDe12OE9U06CrEa5xkspKOxiTln82ga49P7dbx5NRBJLBYyBohd2BAOdonfE3QpshIGxJLN7r2B_9PvoblJ_i1qA7RgSv4lHYqbX9HF4WI5WcuNYYrKqA1NVumXk5EHHkX9-pZ3tTdmTMqnAs8XqaguIzC8xhsnEp-oUVyiwE2EOSLDlBcH4WewKvbPB7ZpCT-0i4wtdgQeqXJkdlZcNIhjHNQag46H9NUPOWltLWjku6yfUgvQMtnLDMDssbttj6J">
+</div>
+<div>
+<h1 class="text-headline-lg-mobile font-headline-lg-mobile font-bold text-primary dark:text-primary-fixed-dim">The Java House - Kampala</h1>
+<div class="flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary-fixed"></span>
+<span class="text-label-md font-label-md text-on-surface-variant">Live • Accepting Orders</span>
+</div>
+</div>
+</div>
+<button class="p-2 rounded-full hover:bg-surface-container-low transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-primary">notifications</span>
+</button>
+</header>
+<!-- Main Content -->
+<main class="max-w-4xl mx-auto px-container-margin pb-32">
+<!-- Order Status Tabs -->
+<nav class="flex border-b border-outline-variant mb-lg overflow-x-auto no-scrollbar">
+<button class="relative flex-1 py-md px-lg text-center font-label-lg text-primary bg-surface-container-low transition-all">
+<div class="flex flex-col items-center">
+<span class="text-headline-md font-bold">3</span>
+<span class="text-label-lg">New</span>
+</div>
+<div class="active-tab-indicator"></div>
+</button>
+<button class="flex-1 py-md px-lg text-center font-label-lg text-on-surface-variant hover:bg-surface-container-low transition-all">
+<div class="flex flex-col items-center">
+<span class="text-headline-md font-bold">5</span>
+<span class="text-label-lg">Preparing</span>
+</div>
+</button>
+<button class="flex-1 py-md px-lg text-center font-label-lg text-on-surface-variant hover:bg-surface-container-low transition-all">
+<div class="flex flex-col items-center">
+<span class="text-headline-md font-bold">2</span>
+<span class="text-label-lg">Ready</span>
+</div>
+</button>
+</nav>
+<!-- Section Title -->
+<div class="flex items-center justify-between mb-md">
+<h2 class="text-headline-md font-headline-md">New Incoming Orders</h2>
+<span class="text-label-md bg-primary-fixed text-on-primary-fixed px-3 py-1 rounded-full">Auto-refresh: 30s</span>
+</div>
+<!-- Orders List -->
+<div class="space-y-md">
+<!-- Order #SR-9021 -->
+<div class="order-card bg-surface-container-lowest p-lg rounded-xl shadow-[0_4px_12px_0_rgba(0,0,0,0.08)] border border-surface-container">
+<div class="flex justify-between items-start mb-md">
+<div>
+<span class="text-label-md font-bold text-primary tracking-wider">ORDER #SR-9021</span>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">schedule</span>
+<span class="text-body-md font-semibold">Estimated pickup: <span class="text-error">15 mins</span></span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-headline-md font-bold">UGX 42,000</span>
+<p class="text-label-md text-on-surface-variant">Mobile Money Paid</p>
+</div>
+</div>
+<!-- Items -->
+<div class="bg-surface-container-low rounded-lg p-md mb-lg">
+<ul class="space-y-sm">
+<li class="flex justify-between items-center">
+<div class="flex items-center gap-md">
+<span class="bg-primary text-on-primary w-8 h-8 flex items-center justify-center rounded-lg font-bold">2x</span>
+<span class="text-body-lg font-medium">Beef Burger</span>
+</div>
+<span class="text-body-md text-on-surface-variant">+ Extra Cheese</span>
+</li>
+<li class="flex justify-between items-center">
+<div class="flex items-center gap-md">
+<span class="bg-primary text-on-primary w-8 h-8 flex items-center justify-center rounded-lg font-bold">1x</span>
+<span class="text-body-lg font-medium">Passion Juice</span>
+</div>
+<span class="text-body-md text-on-surface-variant">Large, No Ice</span>
+</li>
+</ul>
+</div>
+<!-- Actions -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<button class="bg-primary text-on-primary h-14 rounded-xl font-bold text-body-lg flex items-center justify-center gap-2 active:scale-95 transition-transform hover:opacity-90" onclick="acceptOrder(this)">
+<span class="material-symbols-outlined">check_circle</span>
+                    Accept Order
+                </button>
+<button class="bg-secondary-container text-on-secondary-container h-14 rounded-xl font-bold text-body-lg flex items-center justify-center gap-2 active:scale-95 transition-transform hover:opacity-90">
+<span class="material-symbols-outlined">call</span>
+                    In-app Call Rider
+                </button>
+</div>
+</div>
+<!-- Mocked Order #SR-9022 -->
+<div class="order-card bg-surface-container-lowest p-lg rounded-xl shadow-[0_4px_12px_0_rgba(0,0,0,0.08)] border border-surface-container opacity-90">
+<div class="flex justify-between items-start mb-md">
+<div>
+<span class="text-label-md font-bold text-primary tracking-wider">ORDER #SR-9022</span>
+<div class="flex items-center gap-2 mt-1">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">schedule</span>
+<span class="text-body-md font-semibold">Estimated pickup: <span class="text-on-surface">22 mins</span></span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-headline-md font-bold">UGX 18,500</span>
+<p class="text-label-md text-on-surface-variant">Pay on Delivery</p>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-lg p-md mb-lg">
+<div class="flex items-center gap-md">
+<span class="bg-primary text-on-primary w-8 h-8 flex items-center justify-center rounded-lg font-bold">1x</span>
+<span class="text-body-lg font-medium">Club Sandwich &amp; Chips</span>
+</div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md">
+<button class="bg-primary text-on-primary h-14 rounded-xl font-bold text-body-lg flex items-center justify-center gap-2">
+                    Accept Order
+                </button>
+<button class="bg-secondary-container text-on-secondary-container h-14 rounded-xl font-bold text-body-lg flex items-center justify-center gap-2">
+<span class="material-symbols-outlined">chat</span>
+                    Online Message Rider
+                </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Navigation Shell (BottomNavBar) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0_-4px_12px_0_rgba(0,0,0,0.08)] md:hidden rounded-t-xl">
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-2xl px-4 py-1 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="text-label-md font-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-label-md font-label-md">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-label-md font-label-md">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-label-md font-label-md">Profile</span>
+</a>
+</nav>
+<script>
+    function acceptOrder(btn) {
+        const card = btn.closest('.order-card');
+        btn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Processing...';
+        btn.classList.add('opacity-75', 'pointer-events-none');
+        
+        setTimeout(() => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateX(100%)';
+            card.style.transition = 'all 0.4s ease-out';
+            setTimeout(() => {
+                card.remove();
+                // Add micro-interaction notification
+                const toast = document.createElement('div');
+                toast.className = 'fixed top-20 left-1/2 -translate-x-1/2 bg-inverse-surface text-inverse-on-surface px-6 py-3 rounded-full shadow-lg z-[100] font-semibold flex items-center gap-2';
+                toast.innerHTML = '<span class="material-symbols-outlined text-secondary-fixed">check_circle</span> Order Moved to Preparing';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+            }, 400);
+        }, 800);
+    }
+
+    // Tab Switching Logic (Visual only)
+    document.querySelectorAll('nav button').forEach(tab => {
+        tab.addEventListener('click', () => {
+            document.querySelectorAll('nav button').forEach(t => {
+                t.classList.remove('text-primary', 'bg-surface-container-low');
+                t.classList.add('text-on-surface-variant');
+                const indicator = t.querySelector('.active-tab-indicator');
+                if(indicator) indicator.remove();
+            });
+            tab.classList.add('text-primary', 'bg-surface-container-low');
+            tab.classList.remove('text-on-surface-variant');
+            const indicator = document.createElement('div');
+            indicator.className = 'active-tab-indicator';
+            tab.appendChild(indicator);
+        });
+    });
+</script>
+
+
+</body></html>

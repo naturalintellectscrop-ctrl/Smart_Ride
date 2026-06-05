@@ -9,11 +9,12 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { FinanceLedgerService } from '@/lib/services/finance-ledger.service';
 
 // GET /api/admin/finance-integrity — Finance integrity and reconciliation data
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     // Verify admin access
     const authHeader = request.headers.get('authorization');
@@ -75,6 +76,8 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to get finance integrity data' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 

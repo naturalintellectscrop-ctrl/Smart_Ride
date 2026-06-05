@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -18,6 +18,7 @@ interface RouteParams {
  * Get a single admin user by ID
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
 
@@ -44,6 +45,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error fetching admin user:', error);
     return serverErrorResponse('Failed to fetch admin user');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -62,6 +65,7 @@ const updateSchema = z.object({
  * Update an admin user
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     const body = await request.json();
@@ -137,6 +141,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
     console.error('Error updating admin user:', error);
     return serverErrorResponse('Failed to update admin user');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -145,6 +151,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  * Delete an admin user
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
 
@@ -188,5 +195,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error deleting admin user:', error);
     return serverErrorResponse('Failed to delete admin user');
+  } finally {
+    await resetRLSContext();
   }
 }

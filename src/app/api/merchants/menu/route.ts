@@ -7,24 +7,25 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 
 // GET - Fetch menu items for a merchant
 export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded) {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  }
+
+  await setRLSContext(decoded);
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = verifyAccessToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
     // Get merchant for this user
     const merchant = await db.merchant.findFirst({
       where: {
@@ -51,24 +52,27 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch menu items' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST - Create a new menu item
 export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded) {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  }
+
+  await setRLSContext(decoded);
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = verifyAccessToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
     // Get merchant for this user
     const merchant = await db.merchant.findFirst({
       where: {
@@ -125,24 +129,27 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create menu item' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // PUT - Update a menu item
 export async function PUT(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded) {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  }
+
+  await setRLSContext(decoded);
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = verifyAccessToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
     // Get merchant for this user
     const merchant = await db.merchant.findFirst({
       where: {
@@ -205,24 +212,27 @@ export async function PUT(request: NextRequest) {
       { error: 'Failed to update menu item' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // DELETE - Delete a menu item
 export async function DELETE(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded) {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  }
+
+  await setRLSContext(decoded);
   try {
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-    
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = verifyAccessToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
     // Get merchant for this user
     const merchant = await db.merchant.findFirst({
       where: {
@@ -273,5 +283,7 @@ export async function DELETE(request: NextRequest) {
       { error: 'Failed to delete menu item' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

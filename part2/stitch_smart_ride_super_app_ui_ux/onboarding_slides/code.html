@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Smart Ride Onboarding</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#006d43",
+                    "on-secondary": "#ffffff",
+                    "secondary-container": "#6bff8f",
+                    "outline-variant": "#bec9bf",
+                    "on-tertiary-fixed-variant": "#404758",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed-variant": "#005231",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-container": "#007432",
+                    "on-primary-container": "#a6ffc9",
+                    "on-background": "#191c1d",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "secondary-fixed-dim": "#4ae176",
+                    "tertiary-container": "#636a7c",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "surface-variant": "#e1e3e4",
+                    "on-secondary-fixed-variant": "#005321",
+                    "surface-bright": "#f8f9fa",
+                    "primary": "#005f3a",
+                    "surface-container-highest": "#e1e3e4",
+                    "secondary-fixed": "#6bff8f",
+                    "outline": "#6f7a71",
+                    "surface": "#f8f9fa",
+                    "inverse-primary": "#7cd9a4",
+                    "on-primary": "#ffffff",
+                    "inverse-surface": "#2e3132",
+                    "on-surface": "#191c1d",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed": "#002111",
+                    "surface-container-high": "#e7e8e9",
+                    "primary-container": "#0e7a4d",
+                    "surface-container-low": "#f3f4f5",
+                    "on-tertiary-container": "#e6ebff",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-tertiary-fixed": "#141b2b",
+                    "surface-dim": "#d9dadb",
+                    "surface-container": "#edeeef",
+                    "tertiary-fixed": "#dce2f7",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-surface-variant": "#3f4941",
+                    "on-secondary-fixed": "#002109",
+                    "tertiary": "#4b5264",
+                    "primary-fixed": "#98f6be",
+                    "background": "#f8f9fa",
+                    "secondary": "#006e2f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "8px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "base": "4px",
+                    "container-margin": "16px",
+                    "xl": "32px",
+                    "xs": "4px",
+                    "gutter": "12px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            display: inline-block;
+            line-height: 1;
+            text-transform: none;
+            letter-spacing: normal;
+            word-wrap: normal;
+            white-space: nowrap;
+            direction: ltr;
+        }
+        .slide-container {
+            display: none;
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+        .slide-container.active {
+            display: flex;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .pagination-dot {
+            transition: all 0.3s ease;
+        }
+        .pagination-dot.active {
+            width: 24px;
+            background-color: #005f3a;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface font-body-md text-on-surface antialiased overflow-hidden">
+<!-- Onboarding Shell -->
+<main class="relative h-screen w-full max-w-md mx-auto flex flex-col bg-background shadow-2xl">
+<!-- Header / Skip Button -->
+<header class="flex justify-end items-center p-md z-10">
+<button class="text-primary font-label-lg px-md py-sm hover:bg-surface-container-low rounded-full transition-colors" onclick="window.location.reload()">
+                Skip
+            </button>
+</header>
+<!-- Slides Wrapper -->
+<div class="flex-1 relative overflow-hidden">
+<!-- Slide 1: Fast & Safe Rides -->
+<section class="slide-container active flex-col items-center justify-center p-xl text-center h-full" id="slide-1">
+<div class="relative w-full aspect-square mb-xl flex items-center justify-center">
+<div class="absolute inset-0 bg-secondary-container opacity-20 rounded-full blur-3xl"></div>
+<img alt="Fast &amp; Safe Rides" class="w-4/5 h-4/5 object-contain z-10 relative drop-shadow-2xl" data-alt="A professional high-quality 3D render of a modern green motorcycle taxi or boda-boda driver wearing a sleek safety helmet and professional uniform. The scene is set on a stylized sun-drenched Kampala street with soft bokeh city background. The lighting is high-key and bright, creating a clean, tech-forward corporate look with vibrant green accents. The overall mood is reliable, safe, and efficient, reflecting a premium transport service." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAuKthA2xabyPmsKDJBeRW1ktKAQ3ejEjDxTStnVNouy2pf-jGq61sAGGSOgYeLc-tyCGPItRoO_lRJNZ_N83CQFmbTDmBudA-rV0h2VsiZsWcolCkwUu2Q5MnSbB8bOdzdbYe6IKFSvKn4C2HXqv5jcfPW_uNyNhQcIX0AHjaBRI66gFbtdhnzizqjVBWiMSq1h4hViG9dkuesACaLllLiBHCyUfEBDSKCQuoywFK0aNiLLz442-J5tlDxQ4Jq3eK-k5SDNi6n1Avy"/>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background mb-md">Fast &amp; Safe Rides</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[280px]">
+                    Reliable boda and car rides at your fingertips. Get where you need to go safely and on time.
+                </p>
+</section>
+<!-- Slide 2: Fresh Food & Groceries -->
+<section class="slide-container flex-col items-center justify-center p-xl text-center h-full" id="slide-2">
+<div class="relative w-full aspect-square mb-xl flex items-center justify-center">
+<div class="absolute inset-0 bg-primary-container opacity-10 rounded-full blur-3xl"></div>
+<img alt="Fresh Food &amp; Groceries" class="w-4/5 h-4/5 object-cover rounded-3xl z-10 relative shadow-xl" data-alt="A vibrant, professional close-up of a delivery box containing fresh tropical fruits and groceries with a minimalist green brand logo. The image uses soft, natural sunlight to emphasize freshness and quality. The color palette is dominated by healthy greens and warm earthy tones against a clean, white background. This high-end commercial aesthetic conveys reliability and the convenience of modern logistics technology." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAl2NaBcPwjCdO2lxRL55Txi6stIDhbSt-A8scZARwBQVmkpfwgtfXicNolfY9tFvdukgHa4JDy0wdZALOfYT9UUn8Jx_LxkOHKi5ADQHbn0ujDtR522nGnLqn4yTgxDCNrYT2EF1vvUzX9D2xlZYOsBiefOT_EuO1b51geH-hOfqO86v-a2Vwm7DsMYKPUdIWMxmb-Gdg5HLuH0E5x7i9FEqTLCmg7n8wiq_i9oQ6oo6Tc6Y_6tes4pcYRq0cSJFVlZQMctWHupTCI"/>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background mb-md">Fresh Food &amp; Groceries</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[280px]">
+                    Order your favorite meals and daily essentials from local vendors delivered right to your doorstep.
+                </p>
+</section>
+<!-- Slide 3: Secure Payments -->
+<section class="slide-container flex-col items-center justify-center p-xl text-center h-full" id="slide-3">
+<div class="relative w-full aspect-square mb-xl flex items-center justify-center">
+<div class="absolute inset-0 bg-secondary-container opacity-20 rounded-full blur-3xl"></div>
+<div class="grid grid-cols-2 gap-md z-10 p-md bg-white rounded-3xl shadow-lg border border-outline-variant/30">
+<!-- Simulated Payment Badges -->
+<div class="flex flex-col items-center p-md bg-surface-container-low rounded-xl">
+<div class="w-12 h-12 rounded-full bg-[#FFCC00] flex items-center justify-center mb-xs font-bold text-black text-xs shadow-sm">MTN</div>
+<span class="text-label-md font-label-md">MTN MoMo</span>
+</div>
+<div class="flex flex-col items-center p-md bg-surface-container-low rounded-xl">
+<div class="w-12 h-12 rounded-full bg-[#FF0000] flex items-center justify-center mb-xs font-bold text-white text-xs shadow-sm">Airtel</div>
+<span class="text-label-md font-label-md">Airtel Money</span>
+</div>
+<div class="col-span-2 flex items-center justify-center p-md bg-primary-container/10 rounded-xl mt-sm">
+<span class="material-symbols-outlined text-primary mr-sm" data-icon="shield_checked" style="font-variation-settings: 'FILL' 1;">shield</span>
+<span class="text-label-lg font-label-lg text-primary">100% Secure Encrypted</span>
+</div>
+</div>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background mb-md">Secure Payments</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-[280px]">
+                    Cashless and hassle-free. Pay securely using MTN or Airtel Mobile Money with instant confirmation.
+                </p>
+</section>
+</div>
+<!-- Footer: Pagination & Actions -->
+<footer class="p-xl bg-background">
+<div class="flex flex-col items-center gap-xl">
+<!-- Pagination Dots -->
+<div class="flex gap-sm">
+<div class="pagination-dot active h-2 w-2 rounded-full bg-outline-variant" id="dot-1"></div>
+<div class="pagination-dot h-2 w-2 rounded-full bg-outline-variant" id="dot-2"></div>
+<div class="pagination-dot h-2 w-2 rounded-full bg-outline-variant" id="dot-3"></div>
+</div>
+<!-- Primary CTA -->
+<button class="w-full bg-primary text-on-primary font-label-lg text-label-lg py-md rounded-full flex items-center justify-center gap-sm shadow-md active:scale-95 transition-all" id="next-btn">
+<span id="next-text">Next</span>
+<span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+</footer>
+</main>
+<script>
+        let currentSlide = 1;
+        const totalSlides = 3;
+        
+        const nextBtn = document.getElementById('next-btn');
+        const nextText = document.getElementById('next-text');
+        const slides = [
+            document.getElementById('slide-1'),
+            document.getElementById('slide-2'),
+            document.getElementById('slide-3')
+        ];
+        const dots = [
+            document.getElementById('dot-1'),
+            document.getElementById('dot-2'),
+            document.getElementById('dot-3')
+        ];
+
+        nextBtn.addEventListener('click', () => {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                updateUI();
+            } else {
+                // Final slide action - e.g., redirect to home
+                nextBtn.classList.add('opacity-50');
+                nextText.innerText = "Launching...";
+                setTimeout(() => {
+                    alert("Welcome to Smart Ride!");
+                }, 500);
+            }
+        });
+
+        function updateUI() {
+            // Update Slides
+            slides.forEach((slide, index) => {
+                slide.classList.remove('active');
+                if (index === currentSlide - 1) {
+                    slide.classList.add('active');
+                }
+            });
+
+            // Update Dots
+            dots.forEach((dot, index) => {
+                dot.classList.remove('active');
+                if (index === currentSlide - 1) {
+                    dot.classList.add('active');
+                }
+            });
+
+            // Update Button Text
+            if (currentSlide === totalSlides) {
+                nextText.innerText = "Get Started";
+            } else {
+                nextText.innerText = "Next";
+            }
+        }
+    </script>
+</body></html>

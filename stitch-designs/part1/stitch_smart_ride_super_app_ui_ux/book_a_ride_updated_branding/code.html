@@ -1,0 +1,363 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>SmartRide - Book a Ride</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-high": "#e7e8e9",
+                    "secondary-container": "#6bff8f",
+                    "outline": "#6f7a71",
+                    "tertiary-container": "#636a7c",
+                    "error-container": "#ffdad6",
+                    "surface": "#f8f9fa",
+                    "on-surface-variant": "#3f4941",
+                    "secondary-fixed-dim": "#4ae176",
+                    "primary": "#005f3a",
+                    "on-primary-fixed": "#002111",
+                    "inverse-surface": "#2e3132",
+                    "on-error-container": "#93000a",
+                    "on-secondary-fixed": "#002109",
+                    "surface-dim": "#d9dadb",
+                    "tertiary": "#4b5264",
+                    "surface-bright": "#f8f9fa",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-secondary": "#ffffff",
+                    "surface-container-low": "#f3f4f5",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-tertiary": "#ffffff",
+                    "surface-container": "#edeeef",
+                    "secondary": "#006e2f",
+                    "surface-variant": "#e1e3e4",
+                    "on-primary-fixed-variant": "#005231",
+                    "secondary-fixed": "#6bff8f",
+                    "surface-tint": "#006d43",
+                    "inverse-primary": "#7cd9a4",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-container": "#e6ebff",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "on-error": "#ffffff",
+                    "on-background": "#191c1d",
+                    "primary-container": "#0e7a4d",
+                    "primary-fixed": "#98f6be",
+                    "tertiary-fixed": "#dce2f7",
+                    "on-primary-container": "#a6ffc9",
+                    "on-surface": "#191c1d",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#005321",
+                    "background": "#f8f9fa",
+                    "outline-variant": "#bec9bf",
+                    "on-primary": "#ffffff",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "on-secondary-container": "#007432",
+                    "on-tertiary-fixed": "#141b2b",
+                    "on-tertiary-fixed-variant": "#404758"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "16px",
+                    "xl": "32px",
+                    "lg": "24px",
+                    "sm": "8px",
+                    "base": "4px",
+                    "gutter": "12px",
+                    "container-margin": "16px",
+                    "xs": "4px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .active-pill { font-variation-settings: 'FILL' 1; }
+        
+        /* Map Markers Animation */
+        @keyframes pulse-ring {
+            0% { transform: scale(.33); }
+            80%, 100% { opacity: 0; }
+        }
+        .marker-pulse::before {
+            content: '';
+            position: absolute;
+            width: 300%;
+            height: 300%;
+            border-radius: 100%;
+            background-color: #6bff8f;
+            animation: pulse-ring 1.25s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+
+        .bottom-sheet {
+            transition: transform 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-surface overflow-hidden">
+<!-- Main Map Canvas -->
+<div class="relative h-screen w-full bg-surface-dim">
+<img class="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[20%]" data-alt="A highly detailed overhead satellite view of a vibrant African city landscape, specifically Kampala Uganda, featuring winding urban streets and lush green pockets. The visual style is a modern tech-focused map interface with soft grey roads and deep green park areas, maintaining a bright and clean light-mode aesthetic. Subtle digital overlays of traffic paths and glowing green nodes create a sense of a live, intelligent logistics network." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBKCoxXnkxLd14VHP86rrvJLGEj_Ydz5EVWli0p0NelyaIjl9EJbg4z9SDc0wnEB9oSBmR85a32IrQMDLCrLC5ffbZY7PCvSPW4Ao3YI33XQWgTvRj1Z_qSlHq3nrCAVOV3hZMmDky0OQZK-XkQJ2poqSlmt0jfFn7n2ogUtpG3enY_7s8XPn97fmBGbm9KdyiCbSH_JWx7eGBuPnpZpS8bcp6X61lqOvZRMtAd1GNtjneQ_XBJWlVlGcIZCS_GCrypuu2RLyvdhU4p">
+<!-- Live Markers -->
+<!-- Boda Marker 1 -->
+<div class="absolute top-[35%] left-[40%] flex flex-col items-center">
+<div class="marker-pulse relative flex items-center justify-center w-8 h-8 bg-primary rounded-full shadow-lg border-2 border-white">
+<span class="material-symbols-outlined text-white text-[18px]">motorcycle</span>
+</div>
+</div>
+<!-- Car Marker 1 -->
+<div class="absolute top-[45%] left-[60%] flex flex-col items-center">
+<div class="relative flex items-center justify-center w-10 h-10 bg-secondary rounded-full shadow-lg border-2 border-white">
+<span class="material-symbols-outlined text-white text-[22px]">directions_car</span>
+</div>
+</div>
+<!-- Boda Marker 2 -->
+<div class="absolute top-[20%] left-[25%] flex flex-col items-center">
+<div class="relative flex items-center justify-center w-8 h-8 bg-primary rounded-full shadow-lg border-2 border-white">
+<span class="material-symbols-outlined text-white text-[18px]">motorcycle</span>
+</div>
+</div>
+<!-- Top App Bar Content (Transparent background overlay) -->
+<div class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin py-md">
+<button class="w-12 h-12 flex items-center justify-center bg-surface rounded-full shadow-md text-on-surface hover:bg-surface-container-low transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<div class="flex items-center gap-2 bg-surface px-4 py-2 rounded-full shadow-md">
+<div class="w-2 h-2 bg-secondary-fixed-dim rounded-full"></div>
+<span class="text-label-lg font-label-lg text-on-surface">Live in Kampala</span>
+</div>
+<button class="w-12 h-12 flex items-center justify-center bg-surface rounded-full shadow-md text-on-surface hover:bg-surface-container-low transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+<!-- Floating Destination Search -->
+<div class="absolute top-24 left-0 right-0 px-container-margin z-40">
+<div class="bg-surface rounded-xl shadow-lg p-md flex flex-col gap-base border border-outline-variant/20">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-secondary-container bg-primary-container/10 p-2 rounded-full">my_location</span>
+<div class="flex-1">
+<p class="text-label-md font-label-md text-outline">Current Location</p>
+<p class="text-body-md font-body-md text-on-surface truncate">Nakasero Hill Road, Kampala</p>
+</div>
+</div>
+<div class="h-[1px] bg-surface-container-high w-full my-1"></div>
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-error bg-error-container/20 p-2 rounded-full">location_on</span>
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-body-lg font-body-lg text-on-surface placeholder:text-outline p-0" placeholder="Where to?" type="text">
+</div>
+</div>
+</div>
+<!-- Bottom Sheet UI -->
+<div class="fixed bottom-0 left-0 right-0 z-50 bg-surface rounded-t-[32px] shadow-[0_-8px_32px_rgba(0,0,0,0.12)] bottom-sheet translate-y-0" id="bottomSheet">
+<!-- Handle -->
+<div class="w-full flex justify-center pt-3 pb-2">
+<div class="w-12 h-1.5 bg-surface-container-highest rounded-full"></div>
+</div>
+<!-- Content Container -->
+<div class="px-container-margin pb-container-margin">
+<div class="flex justify-between items-center mb-md">
+<h2 class="text-headline-md font-headline-md text-on-surface">Available Rides</h2>
+<span class="text-label-md font-label-md text-primary bg-primary-fixed px-3 py-1 rounded-full">3 mins away</span>
+</div>
+<!-- Vehicle Options Grid -->
+<div class="flex flex-col gap-sm mb-lg">
+<!-- Boda Card -->
+<button class="ride-card flex items-center justify-between p-md rounded-2xl border-2 border-transparent bg-surface-container-low transition-all duration-200 ring-2 ring-primary border-primary" id="ride-boda" onclick="selectRide('boda')">
+<div class="flex items-center gap-md">
+<div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-primary text-[32px]">motorcycle</span>
+</div>
+<div class="text-left">
+<p class="text-body-md font-bold text-on-surface">Boda</p>
+<p class="text-label-md font-label-md text-outline">Safe &amp; Fast • 2 mins</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-body-lg font-bold text-on-surface">UGX 3,500</p>
+</div>
+</button>
+<!-- Smart Car Card -->
+<button class="ride-card flex items-center justify-between p-md rounded-2xl border-2 border-transparent bg-surface-container-low transition-all duration-200" id="ride-car" onclick="selectRide('car')">
+<div class="flex items-center gap-md">
+<div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-secondary text-[32px]">directions_car</span>
+</div>
+<div class="text-left">
+<p class="text-body-md font-bold text-on-surface">Smart Car</p>
+<p class="text-label-md font-label-md text-outline">Comfort • AC • 5 mins</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-body-lg font-bold text-on-surface">UGX 12,000</p>
+</div>
+</button>
+<!-- XL Card -->
+<button class="ride-card flex items-center justify-between p-md rounded-2xl border-2 border-transparent bg-surface-container-low transition-all duration-200" id="ride-xl" onclick="selectRide('xl')">
+<div class="flex items-center gap-md">
+<div class="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-tertiary text-[32px]">airport_shuttle</span>
+</div>
+<div class="text-left">
+<p class="text-body-md font-bold text-on-surface">SmartRide XL</p>
+<p class="text-label-md font-label-md text-outline">Group • 6 Seats • 8 mins</p>
+</div>
+</div>
+<div class="text-right">
+<p class="text-body-lg font-bold text-on-surface">UGX 18,000</p>
+</div>
+</button>
+</div>
+<!-- Payment Method Tray -->
+<div class="flex items-center justify-between bg-surface-container-low p-md rounded-xl mb-md border border-outline-variant/30">
+<div class="flex items-center gap-md">
+<div class="w-10 h-6 bg-[#ffcb05] rounded flex items-center justify-center font-bold text-[8px] text-black">MTN</div>
+<span class="text-label-lg font-label-lg text-on-surface">MTN MoMo (****32)</span>
+</div>
+<button class="text-primary font-bold text-label-lg px-2">Change</button>
+</div>
+<!-- CTA Button -->
+<button class="w-full bg-primary text-on-primary py-lg rounded-2xl font-headline-md text-headline-md flex items-center justify-center gap-sm shadow-lg active:scale-[0.98] transition-all hover:bg-primary-container">
+                    Book Ride
+                    <span class="material-symbols-outlined">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Navigation Drawer (Hidden initially) -->
+<div class="fixed inset-y-0 left-0 z-[100] w-80 bg-surface transform -translate-x-full transition-transform duration-300 ease-in-out shadow-20px rounded-r-xl" id="drawer">
+<div class="flex flex-col h-full p-md">
+<div class="flex items-center gap-md mb-xl">
+<div class="w-16 h-16 rounded-full overflow-hidden bg-primary-container flex items-center justify-center">
+<img alt="SmartRide Logo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUyBUww0Q2dHWDe12OE9U06CrEa5xkspKOxiTln82ga49P7dbx5NRBJLBYyBohd2BAOdonfE3QpshIGxJLN7r2B_9PvoblJ_i1qA7RgSv4lHYqbX9HF4WI5WcuNYYrKqA1NVumXk5EHHkX9-pZ3tTdmTMqnAs8XqaguIzC8xhsnEp-oUVyiwE2EOSLDlBcH4WewKvbPB7ZpCT-0i4wtdgQeqXJkdlZcNIhjHNQag46H9NUPOWltLWjku6yfUgvQMtnLDMDssbttj6J">
+</div>
+<div class="flex flex-col">
+<h3 class="text-headline-md font-headline-md text-on-surface">Alex Mutesasira</h3>
+<p class="text-body-sm font-body-sm text-outline">Gold Member • 4.9 ★</p>
+</div>
+</div>
+<nav class="flex flex-col gap-sm flex-1">
+<a class="flex items-center gap-md p-md bg-primary-container text-on-primary-container font-semibold rounded-full" href="#">
+<span class="material-symbols-outlined">local_offer</span>
+<span class="">Promotions</span>
+</a>
+<a class="flex items-center gap-md p-md text-on-surface-variant hover:bg-surface-container-high transition-all rounded-full" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="">History</span>
+</a>
+<a class="flex items-center gap-md p-md text-on-surface-variant hover:bg-surface-container-high transition-all rounded-full" href="#">
+<span class="material-symbols-outlined">support_agent</span>
+<span class="">In-app Support Call</span>
+</a>
+<a class="flex items-center gap-md p-md text-on-surface-variant hover:bg-surface-container-high transition-all rounded-full" href="#">
+<span class="material-symbols-outlined">chat</span>
+<span class="">Online Messaging</span>
+</a>
+<a class="flex items-center gap-md p-md text-on-surface-variant hover:bg-surface-container-high transition-all rounded-full" href="#">
+<span class="material-symbols-outlined">security</span>
+<span class="">Safety Center</span>
+</a>
+<a class="flex items-center gap-md p-md text-on-surface-variant hover:bg-surface-container-high transition-all rounded-full" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="">Settings</span>
+</a>
+</nav>
+<div class="pt-md border-t border-surface-container-high">
+<button class="flex items-center gap-md p-md text-error w-full">
+<span class="material-symbols-outlined">logout</span>
+<span class="font-semibold">Sign Out</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Backdrop for Drawer -->
+<div class="fixed inset-0 bg-black/40 z-[90] hidden transition-opacity duration-300" id="backdrop"></div>
+<script>
+        function selectRide(rideType) {
+            // Remove active classes from all cards
+            document.querySelectorAll('.ride-card').forEach(card => {
+                card.classList.remove('ring-2', 'ring-primary', 'border-primary');
+            });
+            
+            // Add active classes to selected card
+            const selectedCard = document.getElementById('ride-' + rideType);
+            selectedCard.classList.add('ring-2', 'ring-primary', 'border-primary');
+        }
+
+        // Drawer Logic
+        const drawer = document.getElementById('drawer');
+        const backdrop = document.getElementById('backdrop');
+
+        const buttons = document.querySelectorAll('button');
+        const sideMenuTrigger = buttons[0]; 
+
+        sideMenuTrigger.addEventListener('click', () => {
+            drawer.classList.remove('-translate-x-full');
+            backdrop.classList.remove('hidden');
+            backdrop.classList.add('opacity-100');
+        });
+
+        backdrop.addEventListener('click', () => {
+            drawer.classList.add('-translate-x-full');
+            backdrop.classList.add('hidden');
+            backdrop.classList.remove('opacity-100');
+        });
+
+        // Simple Drag Simulation for Bottom Sheet
+        let startY;
+        const sheet = document.getElementById('bottomSheet');
+        sheet.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+        });
+
+        sheet.addEventListener('touchmove', (e) => {
+            const currentY = e.touches[0].clientY;
+            const diff = currentY - startY;
+            if (diff > 0) {
+                sheet.style.transform = `translateY(${diff}px)`;
+            }
+        });
+
+        sheet.addEventListener('touchend', (e) => {
+            sheet.style.transform = `translateY(0)`;
+        });
+    </script>
+
+
+</body></html>

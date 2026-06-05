@@ -6,7 +6,7 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { CacheManager } from '@/lib/offline/cache-manager';
 import { authGuard } from '@/lib/auth/guards';
 
@@ -20,6 +20,8 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     const searchParams = request.nextUrl.searchParams;
     const scope = searchParams.get('scope') || 'minimal'; // minimal, standard, full
@@ -159,5 +161,7 @@ export async function GET(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

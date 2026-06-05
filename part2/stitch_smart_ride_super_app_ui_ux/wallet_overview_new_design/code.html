@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#006d43",
+                    "on-secondary": "#ffffff",
+                    "secondary-container": "#6bff8f",
+                    "outline-variant": "#bec9bf",
+                    "on-tertiary-fixed-variant": "#404758",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed-variant": "#005231",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-container": "#007432",
+                    "on-primary-container": "#a6ffc9",
+                    "on-background": "#191c1d",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "secondary-fixed-dim": "#4ae176",
+                    "tertiary-container": "#636a7c",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "surface-variant": "#e1e3e4",
+                    "on-secondary-fixed-variant": "#005321",
+                    "surface-bright": "#f8f9fa",
+                    "primary": "#005f3a",
+                    "surface-container-highest": "#e1e3e4",
+                    "secondary-fixed": "#6bff8f",
+                    "outline": "#6f7a71",
+                    "surface": "#f8f9fa",
+                    "inverse-primary": "#7cd9a4",
+                    "on-primary": "#ffffff",
+                    "inverse-surface": "#2e3132",
+                    "on-surface": "#191c1d",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed": "#002111",
+                    "surface-container-high": "#e7e8e9",
+                    "primary-container": "#0e7a4d",
+                    "surface-container-low": "#f3f4f5",
+                    "on-tertiary-container": "#e6ebff",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-tertiary-fixed": "#141b2b",
+                    "surface-dim": "#d9dadb",
+                    "surface-container": "#edeeef",
+                    "tertiary-fixed": "#dce2f7",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-surface-variant": "#3f4941",
+                    "on-secondary-fixed": "#002109",
+                    "tertiary": "#4b5264",
+                    "primary-fixed": "#98f6be",
+                    "background": "#f8f9fa",
+                    "secondary": "#006e2f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "8px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "base": "4px",
+                    "container-margin": "16px",
+                    "xl": "32px",
+                    "xs": "4px",
+                    "gutter": "12px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen pb-32">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface-dim shadow-sm flex items-center justify-between px-container-margin h-14">
+<div class="flex items-center gap-md">
+<button class="active:scale-95 transition-transform hover:bg-surface-container-high transition-colors p-2 rounded-full">
+<span class="material-symbols-outlined text-primary">menu</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Smart Ride</h1>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-high overflow-hidden border border-outline-variant">
+<img alt="User" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAbeD3LbJOLeLIkso65W6_cweEN7q9MS2DJm_TklTAE0PoPgADSH2U-8jQNtRGGh4I3cW4zn8gyChU-cTslPGGyE3lw7WModbIYqToXPchTC8keVM-isdumHqFN3eUFGTRls5VdU15eyIBbQ3tPamy4-vvvg97IJq4TwJiy_ptUz4_FknNCGSyx6sS_bCX7rcUErlVPCLNK9GEFRHBuA9xkqFb5yxMobHRVINXjDdYh9S67cFSXsq9Ix4CXa5g3lfOKlsxMSRWDxyRV"/>
+</div>
+</header>
+<main class="pt-20 px-container-margin space-y-lg">
+<!-- Wallet Hero Section (Bento Inspired) -->
+<section class="grid grid-cols-1 gap-md">
+<div class="bg-primary text-on-primary p-lg rounded-xl shadow-lg relative overflow-hidden">
+<!-- Abstract visual element -->
+<div class="absolute -right-10 -top-10 w-40 h-40 bg-secondary rounded-full opacity-20 blur-3xl"></div>
+<div class="absolute -left-10 -bottom-10 w-32 h-32 bg-primary-fixed-dim rounded-full opacity-10 blur-2xl"></div>
+<div class="relative z-10">
+<p class="font-label-md text-label-md opacity-80 uppercase tracking-wider mb-xs">Available Balance</p>
+<div class="flex items-baseline gap-xs">
+<span class="font-display-lg text-display-lg font-bold">UGX 45,000</span>
+<span class="font-label-lg text-label-lg opacity-70">.00</span>
+</div>
+<div class="mt-lg flex gap-md">
+<button class="flex-1 bg-secondary-fixed text-on-secondary-fixed font-label-lg py-md rounded-lg flex items-center justify-center gap-sm active:scale-[0.98] transition-transform shadow-md">
+<span class="material-symbols-outlined">add_circle</span>
+                            Add Money
+                        </button>
+<button class="flex-1 bg-white/10 backdrop-blur-sm border border-white/20 text-white font-label-lg py-md rounded-lg flex items-center justify-center gap-sm active:scale-[0.98] transition-transform">
+<span class="material-symbols-outlined">account_balance</span>
+                            Withdraw
+                        </button>
+</div>
+</div>
+</div>
+</section>
+<!-- Payment Methods -->
+<section class="space-y-md">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-md text-headline-md text-on-surface">Payment Methods</h2>
+<button class="text-primary font-label-lg">View All</button>
+</div>
+<div class="flex gap-md overflow-x-auto pb-sm no-scrollbar -mx-container-margin px-container-margin">
+<!-- MTN MoMo -->
+<div class="flex-shrink-0 w-40 p-md rounded-xl bg-surface-container border border-outline-variant hover:border-primary transition-colors cursor-pointer group">
+<div class="w-10 h-10 bg-[#FFCC00] rounded-lg mb-md flex items-center justify-center shadow-sm">
+<span class="font-bold text-black text-xs">MTN</span>
+</div>
+<p class="font-label-lg text-label-lg mb-xs">MTN MoMo</p>
+<p class="text-[10px] text-on-surface-variant font-medium">077 •••• 821</p>
+</div>
+<!-- Airtel Money -->
+<div class="flex-shrink-0 w-40 p-md rounded-xl bg-surface-container border border-outline-variant hover:border-primary transition-colors cursor-pointer group">
+<div class="w-10 h-10 bg-[#FF0000] rounded-lg mb-md flex items-center justify-center shadow-sm">
+<span class="font-bold text-white text-xs">airtel</span>
+</div>
+<p class="font-label-lg text-label-lg mb-xs">Airtel Money</p>
+<p class="text-[10px] text-on-surface-variant font-medium">070 •••• 442</p>
+</div>
+<!-- Card -->
+<div class="flex-shrink-0 w-40 p-md rounded-xl bg-surface-container border border-outline-variant hover:border-primary transition-colors cursor-pointer group">
+<div class="w-10 h-10 bg-surface-container-highest rounded-lg mb-md flex items-center justify-center shadow-sm border border-outline-variant">
+<span class="material-symbols-outlined text-primary">credit_card</span>
+</div>
+<p class="font-label-lg text-label-lg mb-xs">Visa Card</p>
+<p class="text-[10px] text-on-surface-variant font-medium">•••• 5590</p>
+</div>
+<!-- Add New -->
+<div class="flex-shrink-0 w-20 p-md rounded-xl bg-surface-container-low border border-dashed border-outline flex flex-col items-center justify-center hover:bg-surface-container transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-outline">add</span>
+<span class="text-[10px] font-semibold text-outline mt-sm">Add</span>
+</div>
+</div>
+</section>
+<!-- Transaction History -->
+<section class="space-y-md">
+<div class="flex items-center justify-between">
+<h2 class="font-headline-md text-headline-md text-on-surface">Recent Activity</h2>
+<button class="text-primary font-label-lg">See History</button>
+</div>
+<div class="space-y-sm">
+<!-- Transaction Item 1 -->
+<div class="flex items-center justify-between p-md bg-surface-container-low rounded-xl active:scale-[0.99] transition-transform">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container">directions_car</span>
+</div>
+<div>
+<p class="font-label-lg text-label-lg text-on-surface">Ride to Kampala Road</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Today, 02:45 PM</p>
+</div>
+</div>
+<p class="font-label-lg text-label-lg text-error">- UGX 8,500</p>
+</div>
+<!-- Transaction Item 2 -->
+<div class="flex items-center justify-between p-md bg-surface-container-low rounded-xl active:scale-[0.99] transition-transform">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-primary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-fixed">add</span>
+</div>
+<div>
+<p class="font-label-lg text-label-lg text-on-surface">Wallet Top-up</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Yesterday, 09:12 AM</p>
+</div>
+</div>
+<p class="font-label-lg text-label-lg text-secondary">+ UGX 25,000</p>
+</div>
+<!-- Transaction Item 3 -->
+<div class="flex items-center justify-between p-md bg-surface-container-low rounded-xl active:scale-[0.99] transition-transform">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-container">electric_moped</span>
+</div>
+<div>
+<p class="font-label-lg text-label-lg text-on-surface">Boda Ride</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Yesterday, 08:30 AM</p>
+</div>
+</div>
+<p class="font-label-lg text-label-lg text-error">- UGX 3,000</p>
+</div>
+<!-- Transaction Item 4 -->
+<div class="flex items-center justify-between p-md bg-surface-container-low rounded-xl active:scale-[0.99] transition-transform">
+<div class="flex items-center gap-md">
+<div class="w-12 h-12 rounded-full bg-tertiary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-on-tertiary-fixed">restaurant</span>
+</div>
+<div>
+<p class="font-label-lg text-label-lg text-on-surface">Smart Food Delivery</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant">22 Oct, 12:30 PM</p>
+</div>
+</div>
+<p class="font-label-lg text-label-lg text-error">- UGX 12,000</p>
+</div>
+</div>
+</section>
+<!-- Promotional Card -->
+<section class="bg-surface-container-highest rounded-xl p-lg flex items-center gap-lg border-l-4 border-primary shadow-sm">
+<div class="flex-1">
+<h3 class="font-label-lg text-label-lg text-primary mb-xs">Save on every ride!</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Get 10% cashback when you pay with your wallet balance.</p>
+</div>
+<span class="material-symbols-outlined text-primary text-3xl">savings</span>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full rounded-t-xl z-50 bg-surface dark:bg-surface-dim shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex justify-around items-center h-20 pb-safe px-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined">history</span>
+<span class="font-label-md text-label-md">Activity</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">account_balance_wallet</span>
+<span class="font-label-md text-label-md">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Profile</span>
+</a>
+</nav>
+<script>
+        // Simple ripple effect or touch interaction feedback
+        document.querySelectorAll('button, a, .cursor-pointer').forEach(element => {
+            element.addEventListener('touchstart', () => {
+                element.classList.add('opacity-80');
+            });
+            element.addEventListener('touchend', () => {
+                element.classList.remove('opacity-80');
+            });
+        });
+
+        // Dynamic balance animator (micro-interaction)
+        window.addEventListener('DOMContentLoaded', () => {
+            const balanceEl = document.querySelector('.font-display-lg');
+            if (balanceEl) {
+                let current = 0;
+                const target = 45000;
+                const duration = 1000;
+                const startTime = performance.now();
+                
+                function update(now) {
+                    const elapsed = now - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    const easeOutQuad = t => t * (2 - t);
+                    const value = Math.floor(easeOutQuad(progress) * target);
+                    balanceEl.textContent = `UGX ${value.toLocaleString()}`;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(update);
+                    }
+                }
+                requestAnimationFrame(update);
+            }
+        });
+    </script>
+</body></html>

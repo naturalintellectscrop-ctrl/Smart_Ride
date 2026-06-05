@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // Flutterwave webhook secret for signature verification
 const WEBHOOK_SECRET = process.env.FLUTTERWAVE_WEBHOOK_SECRET || '';
@@ -52,6 +52,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    await setServiceRoleContext();
     
     const payload = JSON.parse(rawBody);
     
@@ -153,13 +155,20 @@ export async function POST(request: NextRequest) {
       { error: 'Processing failed' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // Reject other methods
 export async function GET() {
-  return NextResponse.json(
-    { error: 'Method not allowed' },
-    { status: 405 }
-  );
+  await setServiceRoleContext();
+  try {
+    return NextResponse.json(
+      { error: 'Method not allowed' },
+      { status: 405 }
+    );
+  } finally {
+    await resetRLSContext();
+  }
 }

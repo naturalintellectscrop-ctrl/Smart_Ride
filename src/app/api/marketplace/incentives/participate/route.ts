@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { 
   enrollInIncentive, 
@@ -19,6 +19,7 @@ const enrollSchema = z.object({
  * Query params: riderId
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const riderId = searchParams.get('riderId');
@@ -67,6 +68,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching incentive progress:', error);
     return serverErrorResponse('Failed to fetch incentive progress');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -75,6 +78,7 @@ export async function GET(request: NextRequest) {
  * Enroll a driver in an incentive
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const validatedData = enrollSchema.parse(body);
@@ -99,6 +103,8 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error enrolling in incentive:', error);
     return serverErrorResponse('Failed to enroll in incentive');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -107,6 +113,7 @@ export async function POST(request: NextRequest) {
  * Opt out of an incentive
  */
 export async function DELETE(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const participationId = searchParams.get('participationId');
@@ -149,5 +156,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Error opting out of incentive:', error);
     return serverErrorResponse('Failed to opt out of incentive');
+  } finally {
+    await resetRLSContext();
   }
 }

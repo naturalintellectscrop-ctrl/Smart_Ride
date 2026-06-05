@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -17,6 +17,7 @@ interface RouteParams {
  * Get a specific prescription
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     
@@ -53,6 +54,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error fetching prescription:', error);
     return serverErrorResponse('Failed to fetch prescription');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -72,6 +75,7 @@ const verifySchema = z.object({
  * Verify or reject a prescription
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     const body = await request.json();
@@ -135,6 +139,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
     console.error('Error updating prescription:', error);
     return serverErrorResponse('Failed to update prescription');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -143,6 +149,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  * Delete a prescription (soft delete by setting status to expired)
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     
@@ -164,5 +171,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error deleting prescription:', error);
     return serverErrorResponse('Failed to delete prescription');
+  } finally {
+    await resetRLSContext();
   }
 }

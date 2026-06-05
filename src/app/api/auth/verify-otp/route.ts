@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validateOTP, isPhoneVerified } from '@/lib/auth/otp-service';
 import { createSession } from '@/lib/auth/session-service';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { z } from 'zod';
 import { UserRole, UserStatus } from '@prisma/client';
@@ -29,6 +29,7 @@ const verifyOTPSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     
@@ -152,5 +153,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('[VERIFY-OTP] Error:', error);
     return serverErrorResponse('Failed to verify OTP');
+  } finally {
+    await resetRLSContext();
   }
 }

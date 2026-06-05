@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Smart Ride - Driver Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-container": "#a6ffc9",
+                    "error-container": "#ffdad6",
+                    "inverse-primary": "#7cd9a4",
+                    "secondary-container": "#6bff8f",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-container": "#007432",
+                    "on-primary": "#ffffff",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-primary-fixed-variant": "#005231",
+                    "surface-dim": "#d9dadb",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "on-secondary": "#ffffff",
+                    "surface": "#f8f9fa",
+                    "on-background": "#191c1d",
+                    "surface-bright": "#f8f9fa",
+                    "primary-fixed": "#98f6be",
+                    "on-secondary-fixed-variant": "#005321",
+                    "secondary-fixed": "#6bff8f",
+                    "inverse-on-surface": "#f0f1f2",
+                    "primary-container": "#0e7a4d",
+                    "primary": "#005f3a",
+                    "inverse-surface": "#2e3132",
+                    "surface-container-high": "#e7e8e9",
+                    "surface-container": "#edeeef",
+                    "tertiary": "#4b5264",
+                    "on-primary-fixed": "#002111",
+                    "surface-variant": "#e1e3e4",
+                    "secondary-fixed-dim": "#4ae176",
+                    "secondary": "#006e2f",
+                    "outline": "#6f7a71",
+                    "surface-tint": "#006d43",
+                    "outline-variant": "#bec9bf",
+                    "background": "#f8f9fa",
+                    "tertiary-fixed": "#dce2f7",
+                    "on-tertiary-fixed": "#141b2b",
+                    "on-surface": "#191c1d",
+                    "on-error-container": "#93000a",
+                    "on-error": "#ffffff",
+                    "on-tertiary-fixed-variant": "#404758",
+                    "on-secondary-fixed": "#002109",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "surface-container-low": "#f3f4f5",
+                    "on-surface-variant": "#3f4941",
+                    "tertiary-container": "#636a7c",
+                    "on-tertiary-container": "#e6ebff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "base": "4px",
+                    "xs": "4px",
+                    "sm": "8px",
+                    "gutter": "12px",
+                    "xl": "32px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "container-margin": "16px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "body-lg": ["Inter"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "label-lg": ["Inter"],
+                    "headline-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        ::-webkit-scrollbar { width: 0; background: transparent; }
+        .glass-effect { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .map-gradient { background: linear-gradient(to bottom, rgba(248, 249, 250, 0) 60%, rgba(248, 249, 250, 1) 100%); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body-md overflow-hidden">
+<!-- Top App Bar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin h-16 bg-surface/90 backdrop-blur-md shadow-sm transition-all duration-200">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container-highest overflow-hidden">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="A professional headshot of a friendly African man in his late 20s, wearing a clean smart-casual shirt. The lighting is warm and natural, suggesting an outdoor urban environment in Kampala. The image has a modern light-mode aesthetic with high clarity and a shallow depth of field, focusing on the driver's trustworthy expression." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAReMMWrY_JpROwEkhb207Ag2_dM9SqWwCg8V_oea-zGfzzaNTIvsvRRMvOwF8L4xQNOMBEjNJnJN655AR24begMtmGZ-Y9Me3qVkl_E1r40MXaQeAsPjkNg-3LONWePqu89S7rpT_5s256BFIUSrguAoxi7R9zHIBIHpxyl1x1WLyoKT2sD1vsKnIvTDULB0rRoiqL5YDpOVhBkeRC02PUA41P01cMve15YWyPtbwlsphFiCX19RfgVjViG7QF17dlUkcrApQh70l_"/>
+</div>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">Smart Ride</h1>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex items-center gap-xs px-md py-sm bg-primary rounded-full transition-all duration-200 active:scale-95 shadow-md" id="statusToggle">
+<span class="w-2.5 h-2.5 bg-secondary-container rounded-full animate-pulse"></span>
+<span class="text-on-primary font-label-lg text-label-lg">Online</span>
+</button>
+</div>
+</header>
+<!-- Map Canvas Layer -->
+<main class="relative h-screen w-full">
+<div class="absolute inset-0 z-0">
+<img alt="Map showing Kampala" class="w-full h-full object-cover grayscale-[20%]" data-location="Kampala" src="https://lh3.googleusercontent.com/aida-public/AB6AXuALdgXY4HJdjsDddVA3ihN86Ngp-Tv9HY66SrpA87Hg-3G2hUJcgNTbyfjSbR8Tdtv26ZAYlmyifCWZDPy30Zkb-FBwkn6rfEXNo2lWuUeq1_hLwCV2G4MJSCGEmaMFaaIimd-GesefYLrS5dzNWrOTPmdnMhHNiiEaEnwRwKVOSKW61ZQa_wmpVSpldwp9975erayROL9KSZysknf5UkR0uem8AS4FeTAKOvxOATHx-Nwmr7Z0CPXTDdsKNCzC72Hg7c2zeH8yU4iz"/>
+<div class="absolute inset-0 map-gradient pointer-events-none"></div>
+<!-- Floating Marker (Driver Location) -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
+<div class="relative flex items-center justify-center">
+<div class="absolute w-12 h-12 bg-primary/20 rounded-full animate-ping"></div>
+<div class="w-8 h-8 bg-primary rounded-full border-4 border-surface-container-lowest shadow-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[18px]">directions_car</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Earnings Bento Header (Floating Card) -->
+<div class="absolute top-20 left-container-margin right-container-margin z-20">
+<div class="bg-surface-container-lowest/95 backdrop-blur-md rounded-xl p-md shadow-lg border border-white/20">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-on-surface-variant font-label-md text-label-md">Today's Earnings</p>
+<h2 class="text-primary font-display-lg text-display-lg mt-xs">UGX 125,000</h2>
+</div>
+<div class="p-sm bg-primary-container/10 rounded-lg">
+<span class="material-symbols-outlined text-primary" data-icon="payments">payments</span>
+</div>
+</div>
+<div class="flex gap-md mt-md">
+<div class="flex-1 flex flex-col">
+<span class="text-on-surface-variant font-label-md text-label-md">Trips</span>
+<span class="font-headline-md text-headline-md text-on-surface">14</span>
+</div>
+<div class="flex-1 flex flex-col">
+<span class="text-on-surface-variant font-label-md text-label-md">Online Time</span>
+<span class="font-headline-md text-headline-md text-on-surface">6h 12m</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Sheet Wrapper -->
+<div class="fixed bottom-0 left-0 w-full z-40 transition-transform duration-500 ease-in-out transform translate-y-[60%]" id="bottomSheet">
+<div class="bg-surface-container-lowest rounded-t-xl shadow-[0_-8px_30px_rgb(0,0,0,0.12)] max-h-[751px] overflow-y-auto pb-32">
+<!-- Drag Handle -->
+<div class="w-full flex justify-center py-md cursor-grab active:cursor-grabbing" id="dragHandle">
+<div class="w-12 h-1.5 bg-outline-variant rounded-full"></div>
+</div>
+<div class="px-container-margin">
+<!-- Weekly Goal Section -->
+<div class="mb-lg">
+<div class="flex justify-between items-center mb-sm">
+<h3 class="font-headline-md text-headline-md text-on-surface">Weekly Goal</h3>
+<span class="text-primary font-label-lg text-label-lg">UGX 450,000 / 600,000</span>
+</div>
+<div class="w-full h-3 bg-surface-container-high rounded-full overflow-hidden">
+<div class="h-full bg-primary rounded-full transition-all duration-1000" style="width: 75%;"></div>
+</div>
+<p class="mt-sm text-on-surface-variant font-body-sm text-body-sm">You are 75% there! Keep it up, Alex.</p>
+</div>
+<!-- Recent Trips Section -->
+<div class="flex justify-between items-center mb-md">
+<h3 class="font-headline-md text-headline-md text-on-surface">Recent Trips</h3>
+<button class="text-primary font-label-lg text-label-lg hover:underline transition-all">View All</button>
+</div>
+<!-- Trip Cards Grid -->
+<div class="space-y-md pb-lg">
+<!-- Trip 1 -->
+<div class="flex items-center gap-md p-md bg-surface-container-low rounded-xl border border-surface-container-high hover:bg-surface-container transition-colors">
+<div class="w-12 h-12 bg-secondary-container/20 flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="local_taxi">local_taxi</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="font-label-lg text-label-lg text-on-surface">Kololo → Wandegeya</span>
+<span class="font-label-lg text-label-lg text-primary">UGX 8,500</span>
+</div>
+<div class="flex items-center gap-xs text-on-surface-variant mt-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+<span class="text-body-sm font-body-sm">14:32 • 12 mins</span>
+</div>
+</div>
+</div>
+<!-- Trip 2 -->
+<div class="flex items-center gap-md p-md bg-surface-container-low rounded-xl border border-surface-container-high hover:bg-surface-container transition-colors">
+<div class="w-12 h-12 bg-primary-container/10 flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-primary" data-icon="two_wheeler">two_wheeler</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="font-label-lg text-label-lg text-on-surface">Makerere → Ntinda</span>
+<span class="font-label-lg text-label-lg text-primary">UGX 12,000</span>
+</div>
+<div class="flex items-center gap-xs text-on-surface-variant mt-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+<span class="text-body-sm font-body-sm">13:15 • 22 mins</span>
+</div>
+</div>
+</div>
+<!-- Trip 3 -->
+<div class="flex items-center gap-md p-md bg-surface-container-low rounded-xl border border-surface-container-high hover:bg-surface-container transition-colors">
+<div class="w-12 h-12 bg-secondary-container/20 flex items-center justify-center rounded-lg">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="local_taxi">local_taxi</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between">
+<span class="font-label-lg text-label-lg text-on-surface">Entebbe Rd → City Center</span>
+<span class="font-label-lg text-label-lg text-primary">UGX 25,000</span>
+</div>
+<div class="flex items-center gap-xs text-on-surface-variant mt-xs">
+<span class="material-symbols-outlined text-[14px]" data-icon="schedule">schedule</span>
+<span class="text-body-sm font-body-sm">11:45 • 45 mins</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 pb-6 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0_-4px_12px_0_rgba(0,0,0,0.08)] rounded-t-xl">
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 transition-transform duration-300 scale-110" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-md text-label-md">Activity</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-label-md text-label-md">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">Account</span>
+</a>
+</nav>
+<script>
+        // Toggle Online/Offline Status
+        const statusToggle = document.getElementById('statusToggle');
+        let isOnline = true;
+
+        statusToggle.addEventListener('click', () => {
+            isOnline = !isOnline;
+            const dot = statusToggle.querySelector('span:first-child');
+            const text = statusToggle.querySelector('span:last-child');
+            
+            if (isOnline) {
+                statusToggle.classList.replace('bg-surface-variant', 'bg-primary');
+                dot.classList.replace('bg-outline', 'bg-secondary-container');
+                dot.classList.add('animate-pulse');
+                text.innerText = 'Online';
+                text.classList.replace('text-on-surface-variant', 'text-on-primary');
+            } else {
+                statusToggle.classList.replace('bg-primary', 'bg-surface-variant');
+                dot.classList.replace('bg-secondary-container', 'bg-outline');
+                dot.classList.remove('animate-pulse');
+                text.innerText = 'Offline';
+                text.classList.replace('text-on-primary', 'text-on-surface-variant');
+            }
+        });
+
+        // Bottom Sheet Expand Logic
+        const bottomSheet = document.getElementById('bottomSheet');
+        const dragHandle = document.getElementById('dragHandle');
+        let isExpanded = false;
+
+        dragHandle.addEventListener('click', () => {
+            isExpanded = !isExpanded;
+            if (isExpanded) {
+                bottomSheet.classList.replace('translate-y-[60%]', 'translate-y-[20%]');
+            } else {
+                bottomSheet.classList.replace('translate-y-[20%]', 'translate-y-[60%]');
+            }
+        });
+
+        // Optional touch gesture emulation for drag handle
+        let startY = 0;
+        dragHandle.addEventListener('touchstart', (e) => {
+            startY = e.touches[0].clientY;
+        });
+
+        dragHandle.addEventListener('touchend', (e) => {
+            const endY = e.changedTouches[0].clientY;
+            if (startY > endY + 50) { // Swiped Up
+                bottomSheet.classList.replace('translate-y-[60%]', 'translate-y-[20%]');
+                isExpanded = true;
+            } else if (startY < endY - 50) { // Swiped Down
+                bottomSheet.classList.replace('translate-y-[20%]', 'translate-y-[60%]');
+                isExpanded = false;
+            }
+        });
+    </script>
+</body></html>

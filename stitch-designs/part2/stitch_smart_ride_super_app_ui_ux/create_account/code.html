@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Create Account | Smart Ride</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind Configuration -->
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-tint": "#006d43",
+                    "on-secondary": "#ffffff",
+                    "secondary-container": "#6bff8f",
+                    "outline-variant": "#bec9bf",
+                    "on-error-container": "#93000a",
+                    "on-primary-fixed-variant": "#005231",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-secondary-container": "#007432",
+                    "on-primary-container": "#a6ffc9",
+                    "on-background": "#191c1d",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "secondary-fixed-dim": "#4ae176",
+                    "tertiary-container": "#636a7c",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "surface-variant": "#e1e3e4",
+                    "on-secondary-fixed-variant": "#005321",
+                    "surface-bright": "#f8f9fa",
+                    "primary": "#005f3a",
+                    "surface-container-highest": "#e1e3e4",
+                    "secondary-fixed": "#6bff8f",
+                    "outline": "#6f7a71",
+                    "surface": "#f8f9fa",
+                    "inverse-primary": "#7cd9a4",
+                    "on-primary": "#ffffff",
+                    "inverse-surface": "#2e3132",
+                    "on-surface": "#191c1d",
+                    "error": "#ba1a1a",
+                    "on-primary-fixed": "#002111",
+                    "surface-container-high": "#e7e8e9",
+                    "primary-container": "#0e7a4d",
+                    "surface-container-low": "#f3f4f5",
+                    "on-tertiary-container": "#e6ebff",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-tertiary-fixed": "#141b2b",
+                    "surface-dim": "#d9dadb",
+                    "surface-container": "#edeeef",
+                    "tertiary-fixed": "#dce2f7",
+                    "on-error": "#ffffff",
+                    "error-container": "#ffdad6",
+                    "on-surface-variant": "#3f4941",
+                    "on-secondary-fixed": "#002109",
+                    "tertiary": "#4b5264",
+                    "primary-fixed": "#98f6be",
+                    "background": "#f8f9fa",
+                    "secondary": "#006e2f"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "sm": "8px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "base": "4px",
+                    "container-margin": "16px",
+                    "xl": "32px",
+                    "xs": "4px",
+                    "gutter": "12px"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bg-mesh {
+            background-color: #f8f9fa;
+            background-image: radial-gradient(at 0% 0%, rgba(107, 255, 143, 0.05) 0px, transparent 50%),
+                              radial-gradient(at 100% 100%, rgba(0, 107, 67, 0.03) 0px, transparent 50%);
+        }
+        .input-focus-ring:focus-within {
+            box-shadow: 0 0 0 2px #005f3a;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-mesh min-h-screen font-body-md text-on-background selection:bg-secondary-container selection:text-on-secondary-container">
+<!-- TopAppBar - Suppressed FAB but kept Header for Contextual Identity -->
+<header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface-dim shadow-sm flex items-center justify-between px-container-margin h-14 w-full">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95 transition-transform">arrow_back</button>
+<span class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Smart Ride</span>
+<div class="w-10"></div> <!-- Spacer for symmetry -->
+</header>
+<main class="pt-14 pb-12 min-h-screen flex flex-col items-center justify-start px-container-margin">
+<!-- Hero Section / Brand Context -->
+<section class="w-full max-w-md mt-xl mb-xl text-center">
+<h1 class="font-display-lg text-display-lg text-primary mb-sm">Join the ride</h1>
+<p class="font-body-md text-body-md text-on-surface-variant px-md">Experience the most reliable ride-hailing service in Uganda. Secure, fast, and tech-forward.</p>
+</section>
+<!-- Form Container - Level 1 Elevation -->
+<div class="w-full max-w-md bg-surface p-lg rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
+<form class="space-y-lg" id="createAccountForm">
+<!-- Full Name Field -->
+<div class="space-y-xs">
+<label class="font-label-lg text-label-lg text-on-surface px-1" for="fullName">Full Name</label>
+<div class="flex items-center bg-surface-container-low rounded-lg p-md input-focus-ring transition-all group border border-transparent focus-within:border-primary">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors mr-sm">person</span>
+<input class="bg-transparent border-none focus:ring-0 w-full p-0 text-body-md placeholder:text-outline-variant text-on-surface" id="fullName" name="fullName" placeholder="Enter your full name" required="" type="text"/>
+</div>
+</div>
+<!-- Email Address Field -->
+<div class="space-y-xs">
+<label class="font-label-lg text-label-lg text-on-surface px-1" for="email">Email Address (Optional)</label>
+<div class="flex items-center bg-surface-container-low rounded-lg p-md input-focus-ring transition-all group border border-transparent focus-within:border-primary">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors mr-sm">mail</span>
+<input class="bg-transparent border-none focus:ring-0 w-full p-0 text-body-md placeholder:text-outline-variant text-on-surface" id="email" name="email" placeholder="email@example.com" type="email"/>
+</div>
+</div>
+<!-- Referral Code Field -->
+<div class="space-y-xs">
+<label class="font-label-lg text-label-lg text-on-surface px-1" for="referral">Referral Code (Optional)</label>
+<div class="flex items-center bg-surface-container-low rounded-lg p-md input-focus-ring transition-all group border border-transparent focus-within:border-primary">
+<span class="material-symbols-outlined text-outline group-focus-within:text-primary transition-colors mr-sm">redeem</span>
+<input class="bg-transparent border-none focus:ring-0 w-full p-0 text-body-md placeholder:text-outline-variant text-on-surface" id="referral" name="referral" placeholder="Enter code" type="text"/>
+</div>
+</div>
+<!-- Terms & Conditions -->
+<div class="flex items-start gap-sm px-1 py-sm">
+<div class="relative flex items-center">
+<input class="w-6 h-6 rounded border-outline text-primary focus:ring-primary focus:ring-offset-0 transition-all cursor-pointer" id="terms" name="terms" required="" type="checkbox"/>
+</div>
+<label class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed" for="terms">
+                        By creating an account, you agree to our <a class="text-primary font-semibold hover:underline" href="#">Terms of Service</a> and <a class="text-primary font-semibold hover:underline" href="#">Privacy Policy</a>.
+                    </label>
+</div>
+<!-- CTA Button -->
+<button class="w-full h-14 bg-primary text-on-primary font-label-lg text-label-lg rounded-full shadow-lg hover:bg-primary-container transition-all active:scale-[0.98] flex items-center justify-center gap-sm mt-xl" type="submit">
+                    Create Account
+                    <span class="material-symbols-outlined">chevron_right</span>
+</button>
+</form>
+</div>
+<!-- Decorative Illustration Element -->
+<div class="mt-xl w-full max-w-md overflow-hidden rounded-xl h-48 relative group shadow-sm">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" data-alt="A cinematic, high-angle shot of a vibrant urban street scene in Kampala, Uganda, at dusk. The warm glow of streetlights and golden-hour sunlight illuminates a mix of modern cars and traditional boda bodas navigating a clean, wide road. The overall aesthetic is professional, sleek, and high-tech, using a lush palette of deep greens and soft neutral greys to reflect a modern corporate identity that feels reliable and safe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKzLdr_1u-hcdFrNI4ySG17AxDirok-R9pnRTNbLgeK0AFnB6HuW-3pu6Gkm97JmaJVzrlFclq5ck7cRwsjq_bLEDvl2Ya3XglrvvHfBRcye3tRH9xNFtgeJz03ub4NcW3SG33Km33yRDzzuJUvoOumRBq4cK6ns8b9R0C4vSO_03p8Eb6cFOesD5l3cqJhviD515s9-_MWrX9LaK2o7-jxL0gmApmikNtsSfg8qIGVvBGue37fNAjc3VbYiSWFSXtLrVPMBwgRdvA"/>
+<div class="absolute inset-0 bg-gradient-to-t from-primary/60 to-transparent flex items-end p-lg">
+<span class="text-on-primary font-headline-md text-headline-md">Reliable trips, every time.</span>
+</div>
+</div>
+<!-- Footer Help -->
+<p class="mt-xl font-body-sm text-body-sm text-on-surface-variant">
+            Already have an account? <a class="text-primary font-semibold hover:underline" href="#">Sign In</a>
+</p>
+</main>
+<script>
+        // Micro-interaction for form submission
+        document.getElementById('createAccountForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button[type="submit"]');
+            const originalContent = btn.innerHTML;
+            
+            // Visual feedback
+            btn.disabled = true;
+            btn.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Creating...';
+            btn.classList.add('opacity-80');
+            
+            setTimeout(() => {
+                btn.innerHTML = '<span class="material-symbols-outlined">check_circle</span> Welcome!';
+                btn.classList.remove('bg-primary');
+                btn.classList.add('bg-secondary');
+                
+                // Simulate navigation or success splash
+                setTimeout(() => {
+                   console.log("Account Created Successfully");
+                   // reset for demo
+                   btn.disabled = false;
+                   btn.innerHTML = originalContent;
+                   btn.classList.remove('bg-secondary', 'opacity-80');
+                   btn.classList.add('bg-primary');
+                }, 2000);
+            }, 1500);
+        });
+
+        // Subtle input interaction effects
+        const inputs = document.querySelectorAll('input');
+        inputs.forEach(input => {
+            input.addEventListener('focus', () => {
+                input.parentElement.classList.add('shadow-md');
+            });
+            input.addEventListener('blur', () => {
+                input.parentElement.classList.remove('shadow-md');
+            });
+        });
+    </script>
+</body></html>

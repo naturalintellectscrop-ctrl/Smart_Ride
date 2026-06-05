@@ -54,10 +54,12 @@ export async function POST(request: NextRequest) {
       await securityAudit.log({
         action: 'LOGIN_FAILED',
         entityType: 'user',
+        entityId: 'unknown',
+        actorType: 'SYSTEM',
         ipAddress,
         userAgent,
-        details: { email: email?.substring(0, 3) + '***', reason: result.error },
-        success: false,
+        description: `Failed login attempt for ${email?.substring(0, 3) + '***'}`,
+        newValues: { reason: result.error },
       });
       
       return errorResponse(result.error || 'Login failed', 401);
@@ -82,11 +84,13 @@ export async function POST(request: NextRequest) {
       action: 'LOGIN_SUCCESS',
       entityType: 'user',
       entityId: result.user!.id,
+      actorType: 'USER',
+      actorId: result.user!.id,
       userId: result.user!.id,
       ipAddress,
       userAgent,
-      details: { deviceType, deviceName },
-      success: true,
+      description: `User ${result.user!.email} logged in`,
+      newValues: { deviceType, deviceName },
     });
 
     // Return tokens - BOTH accessToken AND refreshToken for mobile

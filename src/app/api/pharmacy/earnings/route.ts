@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET - Fetch pharmacy earnings and financial data
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'summary';
@@ -35,11 +36,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch pharmacy earnings' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST - Record payout or update earnings
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { action } = body;
@@ -60,6 +64,8 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to process request' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 

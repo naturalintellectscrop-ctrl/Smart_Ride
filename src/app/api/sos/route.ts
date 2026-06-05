@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth, requireAdmin } from '@/lib/auth-utils';
+import { requireAuth, requireAdmin, resetRLSContext } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
@@ -47,6 +47,8 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch SOS alerts' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -157,5 +159,7 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create SOS alert' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/emergency-contacts - List emergency contacts for a user
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -34,11 +35,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch emergency contacts' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST /api/emergency-contacts - Add new emergency contact
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const {
@@ -106,11 +110,14 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create emergency contact' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // PUT /api/emergency-contacts - Update emergency contact
 export async function PUT(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { id, ...updateData } = body;
@@ -151,11 +158,14 @@ export async function PUT(request: NextRequest) {
       { error: 'Failed to update emergency contact' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // DELETE /api/emergency-contacts - Delete emergency contact
 export async function DELETE(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -178,5 +188,7 @@ export async function DELETE(request: NextRequest) {
       { error: 'Failed to delete emergency contact' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -20,7 +20,7 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { TaskStatus, DispatchMatchStatus } from '@prisma/client';
 
@@ -596,11 +596,12 @@ async function fixDuplicateNotifications(): Promise<FixResult> {
 // ============================================
 
 export async function GET(request: NextRequest) {
-  try {
-    // Verify admin access
-    const { error: authError } = verifyAdmin(request);
-    if (authError) return authError;
+  // Verify admin access
+  const { decoded, error: authError } = verifyAdmin(request);
+  if (authError) return authError;
 
+  await setRLSContext(decoded);
+  try {
     const shouldFix = request.nextUrl.searchParams.get('fix') === 'true';
 
     // Run all checks in parallel for efficiency
@@ -671,5 +672,7 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to run data integrity checks' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

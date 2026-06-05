@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/fraud/dashboard - Get fraud dashboard statistics
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') || '7d'; // 24h, 7d, 30d
@@ -193,5 +194,7 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch dashboard data' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

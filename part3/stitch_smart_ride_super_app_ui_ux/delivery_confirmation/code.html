@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Delivery Confirmation | Smart Ride</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-variant": "#e1e3e4",
+                        "on-surface-variant": "#3f4941",
+                        "surface-container-low": "#f3f4f5",
+                        "primary-container": "#0e7a4d",
+                        "surface-container-highest": "#e1e3e4",
+                        "secondary-fixed": "#6bff8f",
+                        "on-background": "#191c1d",
+                        "inverse-on-surface": "#f0f1f2",
+                        "surface-container": "#edeeef",
+                        "on-secondary-fixed": "#002109",
+                        "tertiary": "#4b5264",
+                        "on-tertiary-fixed": "#141b2b",
+                        "on-secondary-fixed-variant": "#005321",
+                        "background": "#f8f9fa",
+                        "on-tertiary-container": "#e6ebff",
+                        "on-primary-fixed-variant": "#005231",
+                        "error": "#ba1a1a",
+                        "surface-container-high": "#e7e8e9",
+                        "surface-container-lowest": "#ffffff",
+                        "on-secondary-container": "#007432",
+                        "outline-variant": "#bec9bf",
+                        "on-tertiary": "#ffffff",
+                        "tertiary-fixed": "#dce2f7",
+                        "error-container": "#ffdad6",
+                        "surface-tint": "#006d43",
+                        "surface-bright": "#f8f9fa",
+                        "secondary-container": "#6bff8f",
+                        "surface-dim": "#d9dadb",
+                        "on-tertiary-fixed-variant": "#404758",
+                        "primary-fixed-dim": "#7cd9a4",
+                        "on-primary-fixed": "#002111",
+                        "on-error-container": "#93000a",
+                        "on-surface": "#191c1d",
+                        "on-primary": "#ffffff",
+                        "outline": "#6f7a71",
+                        "inverse-primary": "#7cd9a4",
+                        "on-error": "#ffffff",
+                        "secondary-fixed-dim": "#4ae176",
+                        "primary": "#005f3a",
+                        "on-primary-container": "#a6ffc9",
+                        "tertiary-container": "#636a7c",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#c0c6db",
+                        "primary-fixed": "#98f6be",
+                        "surface": "#f8f9fa",
+                        "secondary": "#006e2f",
+                        "inverse-surface": "#2e3132"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xs": "4px",
+                        "container-margin": "16px",
+                        "gutter": "12px",
+                        "sm": "8px",
+                        "xl": "32px",
+                        "lg": "24px",
+                        "md": "16px",
+                        "base": "4px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Plus Jakarta Sans"],
+                        "body-md": ["Inter"],
+                        "display-lg": ["Plus Jakarta Sans"],
+                        "label-lg": ["Inter"],
+                        "headline-lg-mobile": ["Plus Jakarta Sans"],
+                        "headline-md": ["Plus Jakarta Sans"],
+                        "body-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "body-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                        "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                        "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                        "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .star-active {
+            font-variation-settings: 'FILL' 1;
+            color: #FFD700;
+        }
+        .confetti {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(360deg); }
+        }
+        .success-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen pb-20 relative overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 shadow-sm flex items-center justify-between px-container-margin h-14 w-full bg-surface">
+<button class="active:scale-95 transition-transform p-2">
+<span class="material-symbols-outlined text-primary">close</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Smart Ride</h1>
+<div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden">
+<img alt="Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB-Sj8K_GHZV9_D7yxj4tBHFVqAUXHKYLM_lextbRXJpRO54pAGbXrAgEFrjZSgZt5VHYf8WOxtIbGXDVaAJqgiPGMu7pxeimIUjEyQNzVE5f8hZb8eavy5z2pmeH8w1ZNrWIBo6uWe9l3I2pYODMmSj-oo5CUCgo-ySHkgbPUphgya8_TcWQ9Sk7TqDVun2uibiC3WhkBeMwM049xjIEeK_SQG77_dohviYvFcuPXYp9YFzm1Fd4LnyjozouN_SJxdh8yE9XJAgP7K"/>
+</div>
+</header>
+<main class="mt-14 px-container-margin pt-lg space-y-lg">
+<!-- Success State Header -->
+<section class="flex flex-col items-center text-center space-y-md">
+<div class="relative">
+<div class="w-24 h-24 rounded-full bg-primary-container flex items-center justify-center success-pulse">
+<span class="material-symbols-outlined text-on-primary-container text-[48px]" style="font-variation-settings: 'wght' 700;">check_circle</span>
+</div>
+<!-- Mini Confetti Effect (Client side JS) -->
+<div class="absolute inset-0 pointer-events-none" id="confetti-container"></div>
+</div>
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">Package Delivered!</h2>
+<p class="font-body-md text-on-surface-variant">Your delivery is now complete.</p>
+</div>
+</section>
+<!-- Delivery Details Card -->
+<section class="bg-surface-container-lowest rounded-xl p-md shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-outline-variant/30">
+<div class="flex items-start gap-md">
+<div class="mt-1">
+<span class="material-symbols-outlined text-primary">location_on</span>
+</div>
+<div>
+<h3 class="font-label-lg text-label-lg text-on-surface">Delivered at 2:45 PM</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Ntinda Complex, Block B Entrance</p>
+</div>
+</div>
+</section>
+<!-- Proof of Delivery Section -->
+<section class="space-y-sm">
+<h3 class="font-headline-md text-headline-md px-1">Proof of Delivery</h3>
+<div class="relative h-64 rounded-xl overflow-hidden shadow-lg border-2 border-white">
+<img class="w-full h-full object-cover" data-alt="A professional, high-resolution photo showing a medium-sized cardboard delivery box placed neatly in front of a modern dark wooden door. The lighting is bright and natural, suggesting a sunny afternoon in a clean residential setting. The visual style is crisp and premium, with the lush green Ugandan vegetation visible in the soft-focus background, maintaining the reliable and trustworthy brand identity of Smart Ride." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDf5JT3Cy4c9s5r7pYwEY5IuwrH4wYO8uMMdnLQ08PPnEAYOZ8E509wPOSURqcEJKsSAzsRiPSaiLBLsdi3z9CcBzz-Rr1xKqEqKuJ0MN-xO1vLOeQNJqwO2zjWd0kNhsIEn47mQL7zBbdMyKML8u85ct54A6Ky7GiRI40fYktWoZBqYHYZVZn9zOm__4L1S8K3UQsl-m9epZmVMzTxSm8pdSwqaqLynStw7CoxzOFbUoLCiUTZoPYw4hl_gZgXPEw7j-6rHbqLE_az"/>
+<div class="absolute bottom-sm right-sm bg-black/50 backdrop-blur-md px-sm py-xs rounded-lg text-white font-label-md flex items-center gap-xs">
+<span class="material-symbols-outlined text-sm">photo_camera</span>
+                    Photo by Courier
+                </div>
+</div>
+</section>
+<!-- Rate Your Experience -->
+<section class="bg-primary/5 rounded-xl p-md space-y-md border border-primary/10">
+<div class="text-center">
+<h3 class="font-headline-md text-headline-md text-primary">Rate your Experience</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">How was your delivery service today?</p>
+</div>
+<div class="flex justify-center gap-sm" id="star-rating">
+<button class="active:scale-90 transition-transform"><span class="material-symbols-outlined text-[32px] star-active">star</span></button>
+<button class="active:scale-90 transition-transform"><span class="material-symbols-outlined text-[32px] star-active">star</span></button>
+<button class="active:scale-90 transition-transform"><span class="material-symbols-outlined text-[32px] star-active">star</span></button>
+<button class="active:scale-90 transition-transform"><span class="material-symbols-outlined text-[32px] star-active">star</span></button>
+<button class="active:scale-90 transition-transform"><span class="material-symbols-outlined text-[32px] text-outline">star</span></button>
+</div>
+<textarea class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg p-md font-body-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-on-surface-variant/50" placeholder="Add a comment (optional)..." rows="2"></textarea>
+</section>
+<!-- Summary & Action -->
+<section class="space-y-md pb-lg">
+<div class="flex justify-between items-center px-1">
+<span class="font-body-lg text-body-lg text-on-surface-variant">Final Cost</span>
+<span class="font-headline-lg text-headline-lg text-primary">UGX 8,500</span>
+</div>
+<div class="space-y-sm">
+<button class="w-full bg-primary text-on-primary h-[56px] rounded-xl font-label-lg text-label-lg flex items-center justify-center gap-md hover:bg-primary-container transition-colors shadow-md active:scale-[0.98]">
+<span class="material-symbols-outlined">receipt_long</span>
+                    Download E-Receipt
+                </button>
+<button class="w-full bg-surface-container-high text-on-surface h-[56px] rounded-xl font-label-lg text-label-lg flex items-center justify-center hover:bg-surface-variant transition-colors active:scale-[0.98]">
+                    Back to Home
+                </button>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Contextually hidden as per Destination Rule for Confirmation screens) -->
+<script>
+        // Micro-interaction for Star Rating
+        const stars = document.querySelectorAll('#star-rating span');
+        stars.forEach((star, index) => {
+            star.parentElement.addEventListener('click', () => {
+                stars.forEach((s, i) => {
+                    if (i <= index) {
+                        s.classList.add('star-active');
+                        s.classList.remove('text-outline');
+                    } else {
+                        s.classList.remove('star-active');
+                        s.classList.add('text-outline');
+                    }
+                });
+            });
+        });
+
+        // Small Atmospheric Confetti Effect
+        const container = document.getElementById('confetti-container');
+        const colors = ['#005f3a', '#6bff8f', '#0e7a4d', '#7cd9a4'];
+        
+        function createConfetti() {
+            for (let i = 0; i < 20; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                confetti.style.animationDuration = (Math.random() * 2 + 1) + 's';
+                confetti.style.opacity = Math.random();
+                container.appendChild(confetti);
+                
+                setTimeout(() => confetti.remove(), 3000);
+            }
+        }
+        
+        // Trigger on load
+        window.onload = () => {
+            setTimeout(createConfetti, 500);
+        };
+    </script>
+</body></html>

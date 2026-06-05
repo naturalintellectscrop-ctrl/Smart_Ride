@@ -7,29 +7,30 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken, extractTokenFromHeader, JWTPayload } from '@/lib/auth/jwt';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
+  // Try to get token from admin-session cookie (admin dashboard)
+  const cookieToken = request.cookies.get('admin-session')?.value;
+  // Also check Authorization header (mobile/API clients)
+  const authHeader = request.headers.get('authorization');
+  const headerToken = extractTokenFromHeader(authHeader);
+
+  const token = cookieToken || headerToken;
+
+  if (!token) {
+    return NextResponse.json({ authenticated: false, user: null });
+  }
+
+  // Verify token using the SAME method as all other auth checks
+  const payload: JWTPayload | null = verifyAccessToken(token);
+
+  if (!payload) {
+    return NextResponse.json({ authenticated: false, user: null });
+  }
+
+  await setRLSContext(payload);
   try {
-    // Try to get token from admin-session cookie (admin dashboard)
-    const cookieToken = request.cookies.get('admin-session')?.value;
-    // Also check Authorization header (mobile/API clients)
-    const authHeader = request.headers.get('authorization');
-    const headerToken = extractTokenFromHeader(authHeader);
-
-    const token = cookieToken || headerToken;
-
-    if (!token) {
-      return NextResponse.json({ authenticated: false, user: null });
-    }
-
-    // Verify token using the SAME method as all other auth checks
-    const payload: JWTPayload | null = verifyAccessToken(token);
-
-    if (!payload) {
-      return NextResponse.json({ authenticated: false, user: null });
-    }
-
     // Get fresh user data (only essential fields)
     const user = await db.user.findUnique({
       where: { id: payload.userId },
@@ -54,5 +55,7 @@ export async function GET(request: NextRequest) {
     });
   } catch {
     return NextResponse.json({ authenticated: false, user: null });
+  } finally {
+    await resetRLSContext();
   }
 }

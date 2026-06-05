@@ -9,22 +9,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MerchantOnboardingService } from '@/lib/merchant/merchant-onboarding.service';
 import { verifyAccessToken } from '@/lib/auth/jwt';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
+  // Verify admin authentication
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
+    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+  }
+
+  await setRLSContext(decoded);
   try {
-    // Verify admin authentication
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = verifyAccessToken(token);
-    if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
-    }
-
     const body = await request.json();
     const { merchantId, action, notes, reason } = body;
 
@@ -65,5 +67,7 @@ export async function POST(request: NextRequest) {
       { success: false, error: message },
       { status }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { 
   calculateDemandSupplyRatio, 
@@ -20,6 +20,7 @@ interface RouteParams {
  * Get all zones with current balance status
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -145,6 +146,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching zones:', error);
     return serverErrorResponse('Failed to fetch zones');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -153,6 +156,7 @@ export async function GET(request: NextRequest) {
  * Create a new geographic zone
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     
@@ -173,5 +177,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error creating zone:', error);
     return serverErrorResponse('Failed to create zone');
+  } finally {
+    await resetRLSContext();
   }
 }

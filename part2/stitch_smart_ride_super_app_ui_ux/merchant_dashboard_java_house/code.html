@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-container": "#a6ffc9",
+                    "error-container": "#ffdad6",
+                    "inverse-primary": "#7cd9a4",
+                    "secondary-container": "#6bff8f",
+                    "on-tertiary": "#ffffff",
+                    "on-secondary-container": "#007432",
+                    "on-primary": "#ffffff",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-primary-fixed-variant": "#005231",
+                    "surface-dim": "#d9dadb",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "on-secondary": "#ffffff",
+                    "surface": "#f8f9fa",
+                    "on-background": "#191c1d",
+                    "surface-bright": "#f8f9fa",
+                    "primary-fixed": "#98f6be",
+                    "on-secondary-fixed-variant": "#005321",
+                    "secondary-fixed": "#6bff8f",
+                    "inverse-on-surface": "#f0f1f2",
+                    "primary-container": "#0e7a4d",
+                    "primary": "#005f3a",
+                    "inverse-surface": "#2e3132",
+                    "surface-container-high": "#e7e8e9",
+                    "surface-container": "#edeeef",
+                    "tertiary": "#4b5264",
+                    "on-primary-fixed": "#002111",
+                    "surface-variant": "#e1e3e4",
+                    "secondary-fixed-dim": "#4ae176",
+                    "secondary": "#006e2f",
+                    "outline": "#6f7a71",
+                    "surface-tint": "#006d43",
+                    "outline-variant": "#bec9bf",
+                    "background": "#f8f9fa",
+                    "tertiary-fixed": "#dce2f7",
+                    "on-tertiary-fixed": "#141b2b",
+                    "on-surface": "#191c1d",
+                    "on-error-container": "#93000a",
+                    "on-error": "#ffffff",
+                    "on-tertiary-fixed-variant": "#404758",
+                    "on-secondary-fixed": "#002109",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "surface-container-low": "#f3f4f5",
+                    "on-surface-variant": "#3f4941",
+                    "tertiary-container": "#636a7c",
+                    "on-tertiary-container": "#e6ebff"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "base": "4px",
+                    "xs": "4px",
+                    "sm": "8px",
+                    "gutter": "12px",
+                    "xl": "32px",
+                    "md": "16px",
+                    "lg": "24px",
+                    "container-margin": "16px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "body-lg": ["Inter"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "label-lg": ["Inter"],
+                    "headline-md": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #bec9bf;
+            border-radius: 10px;
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary/20">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin h-16 bg-surface/90 dark:bg-surface-dim/90 backdrop-blur-md shadow-sm">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-surface-container overflow-hidden border border-outline-variant">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="A high-end professional headshot of a restaurant manager in a clean, modern cafe setting. The lighting is warm and natural, emphasizing a friendly yet professional atmosphere. The background shows blurred coffee machines and warm wooden textures, consistent with a premium Java House brand aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBkNSfgiQ1tdV_ImWR7b-Q_N6Wtsa0YKxz2kluLAdghFg1r2DBRHDK-0j1oTEay7GbVcs5Re-6-9m_YshzUTtpCEEvsHhURGBG2JwJe2KtIY-B80bc5nr1x0Jzs2peb977clDfnSzXxIO1END4N-VtY08YHwD5s_ota6TTjWodzUPY-1_I2Ed3CJA8f3k7KXDuqbmDJ4u4H--JNdpp2xZILqGFC5iutnfSkS7Kqxg-LJMGcUR0nJpWLRwVStK3t26ndCtEwA1BxRYxv"/>
+</div>
+<h1 class="font-headline-md text-headline-md-mobile text-primary">Smart Ride</h1>
+</div>
+<div class="flex items-center gap-sm">
+<span class="px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full font-label-md text-label-md flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+                Online
+            </span>
+</div>
+</header>
+<main class="pt-20 pb-24 px-container-margin max-w-5xl mx-auto">
+<!-- Store Header & Status Toggle -->
+<section class="mb-lg flex flex-col md:flex-row md:items-center justify-between gap-md">
+<div>
+<h2 class="font-headline-lg text-headline-lg text-on-background">Java House - Lugogo</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Merchant ID: JH-29402 • Kampala, Uganda</p>
+</div>
+<div class="flex items-center gap-md bg-surface-container-low p-sm rounded-xl border border-outline-variant">
+<span class="font-label-lg text-label-lg text-on-surface">Store Status</span>
+<button class="relative inline-flex h-8 w-14 items-center rounded-full bg-primary transition-colors duration-300 focus:outline-none" onclick="toggleStore(this)">
+<span class="inline-block h-6 w-6 transform rounded-full bg-white transition-transform duration-300 translate-x-7" id="status-thumb"></span>
+</button>
+<span class="font-label-lg text-label-lg text-primary font-bold" id="status-label">Open</span>
+</div>
+</section>
+<!-- Bento Grid Stats -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-md mb-xl">
+<!-- Active Orders -->
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-surface-variant flex flex-col justify-between hover:shadow-md transition-all duration-300 group">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-primary bg-primary-fixed p-2 rounded-lg" data-icon="restaurant">restaurant</span>
+<span class="text-secondary font-label-md text-label-md">+2 from last hour</span>
+</div>
+<div class="mt-lg">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Active Orders</p>
+<h3 class="font-display-lg text-display-lg text-primary">5</h3>
+</div>
+</div>
+<!-- Revenue -->
+<div class="bg-primary p-lg rounded-xl shadow-lg border border-primary-container flex flex-col justify-between text-on-primary hover:scale-[1.02] transition-transform duration-300">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-on-primary bg-primary-container p-2 rounded-lg" data-icon="payments">payments</span>
+<span class="text-on-primary-container font-label-md text-label-md">Daily Target: 80%</span>
+</div>
+<div class="mt-lg">
+<p class="font-label-md text-label-md opacity-80 uppercase tracking-wider">Today's Revenue</p>
+<h3 class="font-display-lg text-display-lg">UGX 450,000</h3>
+</div>
+</div>
+<!-- Rating/Performance -->
+<div class="bg-surface-container-lowest p-lg rounded-xl shadow-sm border border-surface-variant flex flex-col justify-between hover:shadow-md transition-all duration-300">
+<div class="flex justify-between items-start">
+<span class="material-symbols-outlined text-tertiary bg-tertiary-fixed p-2 rounded-lg" data-icon="star">star</span>
+<span class="font-label-md text-label-md text-on-surface-variant">Top 5% in Kampala</span>
+</div>
+<div class="mt-lg">
+<p class="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Merchant Rating</p>
+<div class="flex items-center gap-xs">
+<h3 class="font-display-lg text-display-lg text-on-background">4.9</h3>
+<span class="text-secondary material-symbols-outlined text-[24px]" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Incoming Orders Section -->
+<section class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-variant overflow-hidden flex flex-col">
+<div class="px-lg py-md border-b border-surface-variant flex justify-between items-center bg-surface-container-low/50">
+<div class="flex items-center gap-sm">
+<h3 class="font-headline-md text-headline-md text-on-background">Incoming Orders</h3>
+<span class="bg-error-container text-on-error-container px-2 py-0.5 rounded-full text-label-md font-bold animate-pulse">New</span>
+</div>
+<button class="text-primary font-label-lg text-label-lg hover:underline transition-all">Refresh</button>
+</div>
+<div class="custom-scrollbar overflow-y-auto max-h-[500px]">
+<!-- Order Item 1 -->
+<div class="p-lg border-b border-surface-variant flex flex-col md:flex-row md:items-center justify-between gap-md hover:bg-surface-container-low transition-colors duration-200">
+<div class="flex gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[32px]" data-icon="person">person</span>
+</div>
+<div>
+<div class="flex items-center gap-sm">
+<h4 class="font-label-lg text-label-lg text-on-background">John Doe</h4>
+<span class="text-on-surface-variant font-label-md text-label-md">• Order #8291</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">2x Java House Burger, 1x Large Fries, 1x Iced Tea</p>
+<span class="text-primary font-label-md text-label-md font-bold mt-sm block">UGX 64,000</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex-1 md:flex-none px-lg py-3 rounded-full border border-outline text-primary font-label-lg text-label-lg hover:bg-surface-container-high transition-all active:scale-95">View Details</button>
+<button class="flex-1 md:flex-none px-lg py-3 rounded-full bg-primary text-on-primary font-label-lg text-label-lg shadow-md hover:shadow-lg transition-all active:scale-95">Accept</button>
+</div>
+</div>
+<!-- Order Item 2 -->
+<div class="p-lg border-b border-surface-variant flex flex-col md:flex-row md:items-center justify-between gap-md hover:bg-surface-container-low transition-colors duration-200">
+<div class="flex gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[32px]" data-icon="person">person</span>
+</div>
+<div>
+<div class="flex items-center gap-sm">
+<h4 class="font-label-lg text-label-lg text-on-background">Sarah Nakato</h4>
+<span class="text-on-surface-variant font-label-md text-label-md">• Order #8292</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">1x Beef Samosa (3pcs), 1x Cappuccino</p>
+<span class="text-primary font-label-md text-label-md font-bold mt-sm block">UGX 22,500</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex-1 md:flex-none px-lg py-3 rounded-full border border-outline text-primary font-label-lg text-label-lg hover:bg-surface-container-high transition-all active:scale-95">View Details</button>
+<button class="flex-1 md:flex-none px-lg py-3 rounded-full bg-primary text-on-primary font-label-lg text-label-lg shadow-md hover:shadow-lg transition-all active:scale-95">Accept</button>
+</div>
+</div>
+<!-- Order Item 3 -->
+<div class="p-lg border-b border-surface-variant flex flex-col md:flex-row md:items-center justify-between gap-md hover:bg-surface-container-low transition-colors duration-200">
+<div class="flex gap-md">
+<div class="w-12 h-12 rounded-lg bg-surface-container-high flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[32px]" data-icon="person">person</span>
+</div>
+<div>
+<div class="flex items-center gap-sm">
+<h4 class="font-label-lg text-label-lg text-on-background">Moses B.</h4>
+<span class="text-on-surface-variant font-label-md text-label-md">• Order #8293</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-xs">4x Lunch Special: Grilled Chicken</p>
+<span class="text-primary font-label-md text-label-md font-bold mt-sm block">UGX 120,000</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex-1 md:flex-none px-lg py-3 rounded-full border border-outline text-primary font-label-lg text-label-lg hover:bg-surface-container-high transition-all active:scale-95">View Details</button>
+<button class="flex-1 md:flex-none px-lg py-3 rounded-full bg-primary text-on-primary font-label-lg text-label-lg shadow-md hover:shadow-lg transition-all active:scale-95">Accept</button>
+</div>
+</div>
+</div>
+<div class="p-md text-center bg-surface-container-low/30">
+<button class="font-label-lg text-label-lg text-on-surface-variant hover:text-primary transition-colors">View All History</button>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 pb-6 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0_-4px_12px_0_rgba(0,0,0,0.08)] rounded-t-xl">
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-primary-container text-on-secondary-container dark:text-on-primary-container rounded-full px-4 py-1 transition-transform duration-300 scale-110" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="font-label-md text-label-md">Activity</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-label-md text-label-md">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant hover:bg-surface-container-high dark:hover:bg-surface-variant transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md text-label-md">Account</span>
+</a>
+</nav>
+<script>
+        function toggleStore(button) {
+            const thumb = document.getElementById('status-thumb');
+            const label = document.getElementById('status-label');
+            const isOpen = thumb.classList.contains('translate-x-7');
+
+            if (isOpen) {
+                // Change to Closed
+                thumb.classList.remove('translate-x-7');
+                thumb.classList.add('translate-x-1');
+                button.classList.remove('bg-primary');
+                button.classList.add('bg-outline');
+                label.innerText = 'Closed';
+                label.classList.remove('text-primary');
+                label.classList.add('text-on-surface-variant');
+            } else {
+                // Change to Open
+                thumb.classList.add('translate-x-7');
+                thumb.classList.remove('translate-x-1');
+                button.classList.add('bg-primary');
+                button.classList.remove('bg-outline');
+                label.innerText = 'Open';
+                label.classList.add('text-primary');
+                label.classList.remove('text-on-surface-variant');
+            }
+        }
+
+        // Add some atmospheric shimmer to the stats
+        document.querySelectorAll('.group').forEach(card => {
+            card.addEventListener('mousemove', e => {
+                const rect = card.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                card.style.setProperty('--mouse-x', `${x}px`);
+                card.style.setProperty('--mouse-y', `${y}px`);
+            });
+        });
+    </script>
+</body></html>

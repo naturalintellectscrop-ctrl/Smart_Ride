@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { TaskStatus } from '@prisma/client';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { isValidTransition, canRiderPerformTask, EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
@@ -26,6 +26,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
     const user = authResult.user!;
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     const { id } = await params;
     const task = await db.task.findUnique({
@@ -84,6 +86,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error fetching task:', error);
     return serverErrorResponse('Failed to fetch task');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -495,6 +499,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
     const user = authResult.user!;
 
+    await setRLSContext({ userId: user.userId, role: user.role });
+
     const { id } = await params;
     const body = await request.json();
     
@@ -516,5 +522,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error handling task action:', error);
     return serverErrorResponse('Failed to handle task action');
+  } finally {
+    await resetRLSContext();
   }
 }

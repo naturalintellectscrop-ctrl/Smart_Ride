@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/wallet/payment-methods - Get user payment methods
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -20,11 +21,14 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching payment methods:', error);
     return NextResponse.json({ error: 'Failed to fetch payment methods' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST /api/wallet/payment-methods - Add new payment method
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { userId, type, name, accountNumber, cardLastFour, cardBrand, phoneNumber } = body;
@@ -56,11 +60,14 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error adding payment method:', error);
     return NextResponse.json({ error: 'Failed to add payment method' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // PUT /api/wallet/payment-methods - Set default payment method
 export async function PUT(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { userId, paymentMethodId } = body;
@@ -96,11 +103,14 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Error setting default payment method:', error);
     return NextResponse.json({ error: 'Failed to set default payment method' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // DELETE /api/wallet/payment-methods - Remove payment method
 export async function DELETE(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get('userId');
@@ -143,5 +153,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Error removing payment method:', error);
     return NextResponse.json({ error: 'Failed to remove payment method' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }

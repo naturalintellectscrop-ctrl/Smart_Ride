@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logoutUser } from '@/lib/services/auth.service';
 import { getAuthUser } from '@/lib/auth/middleware';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse } from '@/lib/api/response';
 
 export async function POST(request: NextRequest) {
@@ -13,6 +14,8 @@ export async function POST(request: NextRequest) {
     const user = getAuthUser(request);
     
     if (user) {
+      // Set RLS context before DB operations
+      await setRLSContext(user);
       // Invalidate refresh token in database
       await logoutUser(user.userId);
     }
@@ -29,5 +32,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Logout error:', error);
     return errorResponse('Failed to logout', 500);
+  } finally {
+    await resetRLSContext();
   }
 }

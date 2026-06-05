@@ -12,6 +12,7 @@ import { OfflineQueue } from '@/lib/offline/offline-queue';
 import { CacheManager } from '@/lib/offline/cache-manager';
 import { ConnectionManager } from '@/lib/offline/connection-manager';
 import { authGuard } from '@/lib/auth/guards';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 
 // POST /api/offline/sync - Batch sync endpoint
 export async function POST(request: NextRequest) {
@@ -23,6 +24,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     const body = await request.json();
     const { 
@@ -73,6 +76,8 @@ export async function POST(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -86,6 +91,8 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     const searchParams = request.nextUrl.searchParams;
     const action = searchParams.get('action');
@@ -133,6 +140,8 @@ export async function GET(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -146,6 +155,8 @@ export async function DELETE(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     const searchParams = request.nextUrl.searchParams;
     const action = searchParams.get('action');
@@ -183,5 +194,7 @@ export async function DELETE(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

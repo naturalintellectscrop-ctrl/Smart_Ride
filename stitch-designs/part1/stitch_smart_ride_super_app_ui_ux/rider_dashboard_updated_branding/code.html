@@ -1,0 +1,296 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>SmartRide Rider Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-high": "#e7e8e9",
+                      "secondary-container": "#6bff8f",
+                      "outline": "#6f7a71",
+                      "tertiary-container": "#636a7c",
+                      "error-container": "#ffdad6",
+                      "surface": "#f8f9fa",
+                      "on-surface-variant": "#3f4941",
+                      "secondary-fixed-dim": "#4ae176",
+                      "primary": "#005f3a",
+                      "on-primary-fixed": "#002111",
+                      "inverse-surface": "#2e3132",
+                      "on-error-container": "#93000a",
+                      "on-secondary-fixed": "#002109",
+                      "surface-dim": "#d9dadb",
+                      "tertiary": "#4b5264",
+                      "surface-bright": "#f8f9fa",
+                      "inverse-on-surface": "#f0f1f2",
+                      "on-secondary": "#ffffff",
+                      "surface-container-low": "#f3f4f5",
+                      "surface-container-highest": "#e1e3e4",
+                      "on-tertiary": "#ffffff",
+                      "surface-container": "#edeeef",
+                      "secondary": "#006e2f",
+                      "surface-variant": "#e1e3e4",
+                      "on-primary-fixed-variant": "#005231",
+                      "secondary-fixed": "#6bff8f",
+                      "surface-tint": "#006d43",
+                      "inverse-primary": "#7cd9a4",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#e6ebff",
+                      "tertiary-fixed-dim": "#c0c6db",
+                      "on-error": "#ffffff",
+                      "on-background": "#191c1d",
+                      "primary-container": "#0e7a4d",
+                      "primary-fixed": "#98f6be",
+                      "tertiary-fixed": "#dce2f7",
+                      "on-primary-container": "#a6ffc9",
+                      "on-surface": "#191c1d",
+                      "error": "#ba1a1a",
+                      "on-secondary-fixed-variant": "#005321",
+                      "background": "#f8f9fa",
+                      "outline-variant": "#bec9bf",
+                      "on-primary": "#ffffff",
+                      "primary-fixed-dim": "#7cd9a4",
+                      "on-secondary-container": "#007432",
+                      "on-tertiary-fixed": "#141b2b",
+                      "on-tertiary-fixed-variant": "#404758"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "xl": "32px",
+                      "lg": "24px",
+                      "sm": "8px",
+                      "base": "4px",
+                      "gutter": "12px",
+                      "container-margin": "16px",
+                      "xs": "4px"
+              },
+              "fontFamily": {
+                      "display-lg": ["Plus Jakarta Sans"],
+                      "body-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "label-lg": ["Inter"],
+                      "headline-lg": ["Plus Jakarta Sans"],
+                      "headline-lg-mobile": ["Plus Jakarta Sans"],
+                      "headline-md": ["Plus Jakarta Sans"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                      "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .heatmap-pulse {
+            animation: pulse-ring 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.5; }
+            50% { transform: scale(1.1); opacity: 0.2; }
+            100% { transform: scale(0.95); opacity: 0.5; }
+        }
+        .timer-ring {
+            transition: stroke-dashoffset 0.1s linear;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .glass-blur {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background text-on-background font-body-md overflow-hidden h-screen flex flex-col">
+<!-- Live Map & Heatmap Layer -->
+<div class="fixed inset-0 z-0">
+<img class="w-full h-full object-cover" data-alt="A sophisticated digital map visualization of Kampala city streets during a vibrant sunset. Overlaid on the map are semi-transparent, pulsing organic heat zones in shades of emerald green and soft amber, indicating high ride demand. The aesthetic is tech-forward and clean, with a minimalist UI-friendly contrast and smooth gradients that feel premium and modern." data-location="Kampala, Uganda" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIBhcvzNbHe8y8uMCZoWL-VXCDn10lmb5L3QjqyumPuxIQYJSXjgHsbbCKA5xN46a17kaBkMdAzJS_EZTPBwIZPnRJARDq_t8ZtUijDqfYNoGOzYZO_JnApokEagKc06SNU_yPU9dKv84uOev14iqJ5kO61uw4A_zzhBq10BfwFkcf_yFtlY5c20QiAoeDiGxDn27RzaEpfH_XcT0Xmq4wafM9UzRgGTW-noUSmCRIpriH4T1msRyoxSUwhdyLFBTV3ylFbLtAPeyk">
+<!-- Interactive Heatmap Mockup Elements -->
+<div class="absolute top-1/2 left-1/3 w-32 h-32 bg-primary/20 rounded-full heatmap-pulse blur-xl"></div>
+<div class="absolute top-1/4 right-1/4 w-48 h-48 bg-secondary-fixed/30 rounded-full heatmap-pulse blur-2xl" style="animation-delay: 1s;"></div>
+<div class="absolute bottom-1/3 left-1/2 w-40 h-40 bg-primary-container/20 rounded-full heatmap-pulse blur-xl" style="animation-delay: 2s;"></div>
+</div>
+<!-- Header: TopAppBar -->
+<header class="bg-surface dark:bg-surface flex justify-between items-center px-container-margin py-md w-full sticky top-0 z-50">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary-fixed">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuACFHuGKBhvynAXy4WyQCF_UF-r2B1a47Kh2KmSQEItjF_mxu06PQd3hn6FXt8CHKb1wiU8WiWZzij37XZOPkRjrOjiblqUSg0x1bcYgYU4avra2HU2bTSVWlaL1uWRp4Dm-im9pDb4aSPF4FCHcZnam9GaBVC-AML0tOqLe9kiz_l-vqwj7mmcxczWR8h_VwbFHGo6q5Qr-8omTJwS49KGh2fovAYPtnZ1WSo3dfozAQifl8NiZt6AyMABEYN1a517q1_e7Y5hpPSa">
+</div>
+<div class="flex items-center gap-2">
+<img alt="Rounded Smart Ride Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUyBUww0Q2dHWDe12OE9U06CrEa5xkspKOxiTln82ga49P7dbx5NRBJLBYyBohd2BAOdonfE3QpshIGxJLN7r2B_9PvoblJ_i1qA7RgSv4lHYqbX9HF4WI5WcuNYYrKqA1NVumXk5EHHkX9-pZ3tTdmTMqnAs8XqaguIzC8xhsnEp-oUVyiwE2EOSLDlBcH4WewKvbPB7ZpCT-0i4wtdgQeqXJkdlZcNIhjHNQag46H9NUPOWltLWjku6yfUgvQMtnLDMDssbttj6J">
+<div class="flex flex-col">
+<div class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px] text-primary" style="font-variation-settings: 'FILL' 1;">stars</span>
+<span class="text-label-md font-label-md text-on-surface-variant">4.9 Gold Member</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Online/Offline Toggle -->
+<div class="flex items-center bg-surface-container-high rounded-full p-1 cursor-pointer transition-all duration-300 w-32 relative overflow-hidden" id="status-toggle" onclick="toggleOnline()">
+<div class="absolute inset-y-1 left-1 w-1/2 bg-primary rounded-full transition-all duration-300 transform translate-x-0" id="toggle-pill"></div>
+<div class="z-10 w-1/2 text-center transition-colors duration-300 text-on-primary font-semibold text-label-md">ONLINE</div>
+<div class="z-10 w-1/2 text-center transition-colors duration-300 text-on-surface-variant font-semibold text-label-md">OFFLINE</div>
+</div>
+</header>
+<main class="relative z-10 flex-1 flex flex-col px-container-margin pb-32">
+<!-- Today's Earnings Summary -->
+<div class="mt-md bg-surface-container-lowest/90 glass-blur p-lg rounded-xl shadow-md border border-white/20 flex justify-between items-center animate-in fade-in slide-in-from-top duration-700">
+<div>
+<p class="text-label-md font-label-md text-on-surface-variant mb-1 uppercase tracking-wider">Today's Earnings</p>
+<h2 class="text-headline-lg font-headline-lg text-primary">UGX 82,000</h2>
+</div>
+<div class="text-right">
+<div class="bg-primary-fixed/30 px-3 py-1 rounded-full mb-1 inline-block">
+<span class="text-label-lg font-label-lg text-primary font-bold">14 Trips</span>
+</div>
+<p class="text-label-md font-label-md text-on-surface-variant">8.2 hrs online</p>
+</div>
+</div>
+<!-- Incoming Request Card (Floating) -->
+<div class="mt-auto mb-lg bg-surface-container-lowest glass-blur p-lg rounded-2xl shadow-lg border-2 border-primary/10 animate-bounce-subtle opacity-0 translate-y-10" id="incoming-request" style="display: none;">
+<div class="flex justify-between items-start mb-md">
+<div class="flex gap-md">
+<div class="bg-secondary-fixed text-on-secondary-fixed p-3 rounded-xl">
+<span class="material-symbols-outlined text-[32px]">two_wheeler</span>
+</div>
+<div>
+<h3 class="text-headline-md font-headline-md text-on-surface">Boda Ride</h3>
+<p class="text-body-md font-body-md text-on-surface-variant">1.2km away • 4 min</p>
+<!-- Secure Call Action -->
+<button class="mt-2 flex items-center gap-1 text-primary font-semibold text-label-md">
+<span class="material-symbols-outlined text-sm">verified_user</span>
+                            Secure In-app Call
+                        </button>
+</div>
+</div>
+<div class="relative w-12 h-12 flex items-center justify-center">
+<svg class="w-12 h-12">
+<circle cx="24" cy="24" fill="none" r="20" stroke="#e7e8e9" stroke-width="4"></circle>
+<circle class="timer-ring" cx="24" cy="24" fill="none" id="timer-circle" r="20" stroke="#005f3a" stroke-dasharray="125.6" stroke-dashoffset="0" stroke-width="4" style="stroke-dashoffset: 126.501;"></circle>
+</svg>
+<span class="absolute text-label-lg font-bold text-primary" id="countdown">0</span>
+</div>
+</div>
+<div class="bg-surface-container-low rounded-xl p-md flex justify-between items-center mb-lg">
+<div class="flex flex-col">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase">Est. Earning</span>
+<span class="text-headline-md font-headline-md text-primary">UGX 4,500</span>
+</div>
+<div class="text-right flex flex-col">
+<span class="text-label-md font-label-md text-on-surface-variant uppercase">Destination</span>
+<span class="text-label-lg font-label-lg font-semibold text-on-surface">Wandegeya Market</span>
+</div>
+</div>
+<div class="flex gap-md">
+<button class="flex-1 py-4 rounded-xl border border-outline text-outline font-semibold active:scale-95 transition-all hover:bg-surface-container-high">
+                    Decline
+                </button>
+<button class="flex-[2] py-4 rounded-xl bg-primary text-on-primary font-bold shadow-md active:scale-95 transition-all hover:bg-primary-container" onclick="acceptRide()">
+                    Accept Ride
+                </button>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0_-4px_12px_0_rgba(0,0,0,0.08)] rounded-t-xl">
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-2xl px-4 py-1 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-label-md font-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-label-md font-label-md">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-label-md font-label-md">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high transition-all" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-label-md font-label-md">Profile</span>
+</a>
+</nav>
+<script>
+        // Online/Offline Toggle Logic
+        let isOnline = true;
+        function toggleOnline() {
+            const pill = document.getElementById('toggle-pill');
+            const container = document.getElementById('status-toggle');
+            isOnline = !isOnline;
+            
+            if (isOnline) {
+                pill.style.transform = 'translateX(0)';
+                pill.classList.remove('bg-gray-400');
+                pill.classList.add('bg-primary');
+            } else {
+                pill.style.transform = 'translateX(100%)';
+                pill.classList.remove('bg-primary');
+                pill.classList.add('bg-gray-400');
+                // Hide request card when offline
+                document.getElementById('incoming-request').style.display = 'none';
+            }
+        }
+
+        // Timer Logic for Incoming Request
+        let timeLeft = 15;
+        const totalTime = 15;
+        const timerCircle = document.getElementById('timer-circle');
+        const countdownEl = document.getElementById('countdown');
+        const circumference = 2 * Math.PI * 20;
+
+        const timerInterval = setInterval(() => {
+            if (!isOnline) return;
+            
+            timeLeft -= 0.1;
+            const offset = circumference - (timeLeft / totalTime) * circumference;
+            if(timerCircle) timerCircle.style.strokeDashoffset = offset;
+            if(countdownEl) countdownEl.textContent = Math.ceil(timeLeft);
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                const reqCard = document.getElementById('incoming-request');
+                if(reqCard) {
+                    reqCard.classList.add('opacity-0', 'translate-y-10');
+                    setTimeout(() => {
+                        reqCard.style.display = 'none';
+                    }, 500);
+                }
+            }
+        }, 100);
+
+        function acceptRide() {
+            alert('Ride Accepted! Initializing Navigation and Secure In-app Channel...');
+        }
+    </script>
+
+
+</body></html>

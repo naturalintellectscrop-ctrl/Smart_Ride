@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Transaction Details | Smart Ride</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .font-plus-jakarta {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "error-container": "#ffdad6",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary-fixed-variant": "#005231",
+                      "on-surface-variant": "#3f4941",
+                      "error": "#ba1a1a",
+                      "secondary-fixed": "#6bff8f",
+                      "primary-container": "#0e7a4d",
+                      "surface": "#f8f9fa",
+                      "tertiary-container": "#636a7c",
+                      "surface-dim": "#d9dadb",
+                      "on-primary": "#ffffff",
+                      "inverse-on-surface": "#f0f1f2",
+                      "on-tertiary-fixed": "#141b2b",
+                      "surface-bright": "#f8f9fa",
+                      "secondary-fixed-dim": "#4ae176",
+                      "on-background": "#191c1d",
+                      "surface-variant": "#e1e3e4",
+                      "surface-container": "#edeeef",
+                      "outline-variant": "#bec9bf",
+                      "secondary-container": "#6bff8f",
+                      "secondary": "#006e2f",
+                      "on-surface": "#191c1d",
+                      "inverse-primary": "#7cd9a4",
+                      "surface-container-highest": "#e1e3e4",
+                      "on-secondary-fixed": "#002109",
+                      "on-secondary": "#ffffff",
+                      "on-primary-container": "#a6ffc9",
+                      "on-tertiary": "#ffffff",
+                      "tertiary": "#4b5264",
+                      "on-tertiary-container": "#e6ebff",
+                      "on-secondary-container": "#007432",
+                      "on-error-container": "#93000a",
+                      "surface-container-low": "#f3f4f5",
+                      "primary": "#005f3a",
+                      "on-secondary-fixed-variant": "#005321",
+                      "on-error": "#ffffff",
+                      "tertiary-fixed-dim": "#c0c6db",
+                      "on-tertiary-fixed-variant": "#404758",
+                      "on-primary-fixed": "#002111",
+                      "inverse-surface": "#2e3132",
+                      "surface-container-high": "#e7e8e9",
+                      "tertiary-fixed": "#dce2f7",
+                      "surface-tint": "#006d43",
+                      "primary-fixed-dim": "#7cd9a4",
+                      "primary-fixed": "#98f6be",
+                      "outline": "#6f7a71",
+                      "background": "#f8f9fa"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "gutter": "12px",
+                      "sm": "8px",
+                      "xs": "4px",
+                      "xl": "32px",
+                      "container-margin": "16px",
+                      "base": "4px",
+                      "lg": "24px"
+              },
+              "fontFamily": {
+                      "headline-lg": ["Plus Jakarta Sans"],
+                      "headline-md": ["Plus Jakarta Sans"],
+                      "body-sm": ["Inter"],
+                      "headline-lg-mobile": ["Plus Jakarta Sans"],
+                      "label-lg": ["Inter"],
+                      "label-md": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "display-lg": ["Plus Jakarta Sans"]
+              },
+              "fontSize": {
+                      "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                      "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface antialiased pb-24">
+<!-- TopAppBar from JSON -->
+<header class="w-full sticky top-0 bg-surface z-40 flex justify-between items-center px-container-margin h-16 active:scale-95 transition-transform duration-200">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high rounded-full p-2" data-icon="arrow_back">arrow_back</button>
+<h1 class="font-headline-md-mobile text-headline-md-mobile text-primary">Transaction Details</h1>
+</div>
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high rounded-full p-2" data-icon="help_outline">help_outline</button>
+</header>
+<main class="max-w-md mx-auto px-container-margin py-lg space-y-lg">
+<!-- Status Section -->
+<section class="flex flex-col items-center text-center space-y-md animate-in fade-in slide-in-from-bottom-4 duration-700">
+<div class="w-20 h-20 bg-secondary-container text-on-secondary-container rounded-full flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-[48px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div class="space-y-xs">
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-primary">Transaction Successful</h2>
+<p class="font-body-md text-on-surface-variant">Oct 24, 2:45 PM</p>
+</div>
+</section>
+<!-- Summary Card (Level 1 Elevation) -->
+<div class="bg-surface-container-lowest rounded-xl p-lg shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-surface-variant/50 relative overflow-hidden">
+<div class="absolute top-0 right-0 p-4 opacity-10">
+<span class="material-symbols-outlined text-6xl">payments</span>
+</div>
+<p class="font-label-lg text-on-surface-variant uppercase tracking-wider mb-xs">Total Amount Paid</p>
+<div class="flex items-baseline gap-2">
+<span class="font-headline-lg text-primary">UGX</span>
+<span class="font-display-lg text-on-surface">12,500</span>
+</div>
+</div>
+<!-- Details Breakdown (Card-First Architecture) -->
+<section class="space-y-md">
+<h3 class="font-label-lg text-on-surface-variant px-1">Service Details</h3>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] border border-surface-variant/50">
+<!-- Map Context Hint -->
+<div class="h-32 w-full bg-surface-container relative">
+<img class="w-full h-full object-cover opacity-60" data-alt="A stylized minimalist digital map of Kampala, Uganda showing a highlighted green transit route winding through city streets. The map uses a clean light mode aesthetic with soft grey roads and subtle green markers, reflecting a modern corporate and reliable tech-forward super-app interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAWWJlSyPkHGY2vnQV3XCZqefIWZJSQ5hK1l7i0r4X4uXXWXW3y-ZGPZRWiadAQ5ejP0xPrr8aG0vMNClwZL7tdPJrnfYly0e_jdHsD6T4z5daBSR258ahn4WCB7Hdn6GnVUmSixPysiHnpPWY7F9kMDqM3cKYInYjDoGYakY2EY1JngeY9f9NodsbnTUovi27qGnR0oNOeEeW-ppfXtR3Ygr1-K3O_FLDK26mn8YZwcRXS3V3Uo0NnGF5wabU6G4bFGvOuSDDw35U"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest to-transparent"></div>
+<div class="absolute bottom-3 left-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<span class="font-label-md text-on-surface">Acacia Mall, Kampala</span>
+</div>
+</div>
+<div class="p-md space-y-md">
+<div class="flex items-start gap-md">
+<div class="w-12 h-12 bg-surface-container-high rounded-lg flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-primary">directions_car</span>
+</div>
+<div class="flex-1">
+<p class="font-headline-md-mobile text-on-surface">Ride to Acacia Mall</p>
+<p class="font-body-sm text-on-surface-variant">Transaction ID: #SR-99821</p>
+</div>
+</div>
+<div class="h-px bg-outline-variant/30"></div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<img class="w-6 h-6 rounded-sm object-contain" data-alt="A macro close-up of a mobile money payment logo on a clean white background. The focus is on a vibrant yellow and red color palette representing local Ugandan telecommunications branding, designed to look professional and integrated into a modern payment application UI." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJB9n67XOq4hbkEizcw9YDz4ZDO-zdoilz6eFFNlMC5TaLvmd6L8_RkwTzByE4tfm-W5gjCBya4c8PALVywQFRMN-1YLlWxV87gT0FOA84T_Lxr7dg12mT_ASqLpqsUMNY3pkGE8TN2gdo6cGmxavvHDA3QgKM9O3hIZpTToi32TwL6cE4ORQfTJYXEInuloy_H_OMdsTeLwts5eR5YkOGG8XnpnJr4JA1c-q8BvIV5fu-BHoHaI2kPnXCy8su_rlDmOwRpWJZlaD5"/>
+<span class="font-body-md text-on-surface">MTN MoMo (****32)</span>
+</div>
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Fare Breakdown (Tonal Layers) -->
+<section class="bg-surface-container-low rounded-xl p-md space-y-md">
+<h3 class="font-label-lg text-on-surface-variant">Fare Breakdown</h3>
+<div class="space-y-sm">
+<div class="flex justify-between font-body-md text-on-surface-variant">
+<span>Base Fare</span>
+<span>UGX 2,500</span>
+</div>
+<div class="flex justify-between font-body-md text-on-surface-variant">
+<span>Distance (4.2 km)</span>
+<span>UGX 8,400</span>
+</div>
+<div class="flex justify-between font-body-md text-on-surface-variant">
+<span>Time (12 mins)</span>
+<span>UGX 1,100</span>
+</div>
+<div class="flex justify-between font-body-md text-on-surface-variant">
+<span>Service Fee</span>
+<span>UGX 500</span>
+</div>
+<div class="h-px bg-outline-variant/30 my-md"></div>
+<div class="flex justify-between font-headline-md-mobile text-primary">
+<span>Total Paid</span>
+<span>UGX 12,500</span>
+</div>
+</div>
+</section>
+<!-- Support Action (Level 2 Elevation) -->
+<section class="space-y-md">
+<button class="w-full bg-surface-container-highest hover:bg-surface-variant p-md rounded-xl flex items-center justify-between transition-all duration-200 group shadow-sm border border-outline-variant/20">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">support_agent</span>
+</div>
+<div class="text-left">
+<p class="font-label-lg text-on-surface">Need help with this transaction?</p>
+<p class="font-body-sm text-on-surface-variant">Get support in under 2 minutes</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+<button class="w-full h-14 bg-primary hover:bg-primary-container text-on-primary font-label-lg rounded-xl flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all">
+<span class="material-symbols-outlined">receipt</span>
+                Download E-Receipt
+            </button>
+</section>
+<!-- Security Badge -->
+<footer class="flex flex-col items-center gap-2 py-md opacity-60">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">lock</span>
+<span class="font-label-md">Secure End-to-End Encryption</span>
+</div>
+<p class="font-label-md text-center px-lg">This transaction was processed securely through Smart Ride Payment Gateway in partnership with licensed financial institutions.</p>
+</footer>
+</main>
+<!-- BottomNavBar from JSON -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-3 bg-surface-container shadow-lg rounded-t-xl">
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-variant/50 active:scale-90 transition-all duration-150">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-md">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-2xl px-4 py-2 active:scale-90 transition-all duration-150">
+<span class="material-symbols-outlined" data-icon="receipt_long" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<span class="font-label-md">Activity</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-variant/50 active:scale-90 transition-all duration-150">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-label-md">Payments</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant px-4 py-2 hover:bg-surface-variant/50 active:scale-90 transition-all duration-150">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-md">Profile</span>
+</button>
+</nav>
+<script>
+        // Simple micro-interaction for the back button
+        document.querySelector('[data-icon="arrow_back"]').addEventListener('click', () => {
+            window.history.back();
+        });
+
+        // Atmospheric fade-in for cards on scroll
+        const observerOptions = {
+            threshold: 0.1
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('opacity-100', 'translate-y-0');
+                    entry.target.classList.remove('opacity-0', 'translate-y-4');
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.rounded-xl').forEach(card => {
+            card.classList.add('transition-all', 'duration-500', 'opacity-0', 'translate-y-4');
+            observer.observe(card);
+        });
+    </script>
+</body></html>

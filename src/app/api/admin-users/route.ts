@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -17,6 +17,7 @@ const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADM
  * List all admin users (non-CLIENT roles)
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -68,6 +69,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching admin users:', error);
     return serverErrorResponse('Failed to fetch admin users');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -85,6 +88,7 @@ const adminUserSchema = z.object({
  * Create a new admin user
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const validatedData = adminUserSchema.parse(body);
@@ -154,5 +158,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error creating admin user:', error);
     return serverErrorResponse('Failed to create admin user');
+  } finally {
+    await resetRLSContext();
   }
 }

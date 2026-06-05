@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { PaymentStatus } from '@prisma/client';
 import { verifyMtnSignature } from '@/lib/auth/guards';
 import { isWebhookProcessed, recordWebhookProcessed } from '@/lib/security/webhook-protection';
@@ -38,6 +38,8 @@ export async function POST(request: NextRequest) {
     } else {
       console.warn('MTN MoMo callback: Signature verification skipped (development mode)');
     }
+
+    await setServiceRoleContext();
 
     // Extract callback data
     const {
@@ -184,5 +186,7 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to process callback' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 
 export async function POST(request: NextRequest) {
@@ -128,6 +128,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error updating rider status:', error);
     return serverErrorResponse('Failed to update rider status');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -167,5 +169,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching rider status:', error);
     return serverErrorResponse('Failed to fetch rider status');
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -16,13 +16,14 @@ import {
   DEFAULT_TRAINING_CONFIG,
   TrainingConfig,
 } from '@/lib/fraud/ml-training-pipeline';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // ============================================
 // POST - Start Training
 // ============================================
 
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json().catch(() => ({}));
     
@@ -77,6 +78,8 @@ export async function POST(request: NextRequest) {
       { error: error instanceof Error ? error.message : 'Failed to start training' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -85,6 +88,7 @@ export async function POST(request: NextRequest) {
 // ============================================
 
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const searchParams = request.nextUrl.searchParams;
     const action = searchParams.get('action');
@@ -123,6 +127,8 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to get training information' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -131,6 +137,7 @@ export async function GET(request: NextRequest) {
 // ============================================
 
 export async function PUT(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { action, intervalDays, config } = body;
@@ -218,6 +225,8 @@ export async function PUT(request: NextRequest) {
       { error: 'Failed to process request' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 

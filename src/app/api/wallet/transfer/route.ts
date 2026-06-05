@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
@@ -195,5 +195,7 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to process transfer' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

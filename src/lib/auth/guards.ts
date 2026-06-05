@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken, extractTokenFromHeader, JWTPayload, isAdmin as isAdminCheck, hasRole } from './jwt';
 import { UserRole } from '@prisma/client';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext, setServiceRoleContext } from '@/lib/db';
 import crypto from 'crypto';
 
 // Re-export isAdmin for convenience
@@ -87,8 +87,10 @@ export function getAuthUser(req: NextRequest): JWTPayload | null {
 }
 
 /**
- * Require authentication - returns error response if not authenticated
- * Use this in API routes that require authentication
+ * Require authentication - returns error response if not authenticated.
+ * NOTE: This is synchronous and does NOT set RLS context.
+ * For RLS-protected routes, use requireAuthWithRLS() instead, or
+ * wrap your handler with withAuth().
  */
 export function requireAuth(req: NextRequest): AuthResult {
   const user = getAuthUser(req);
@@ -105,6 +107,30 @@ export function requireAuth(req: NextRequest): AuthResult {
     success: true,
     user,
   };
+}
+
+/**
+ * Require authentication AND set RLS context.
+ * Async version that sets PostgreSQL session variables for RLS policies.
+ * 
+ * IMPORTANT: You MUST call resetRLSContext() in a finally block:
+ * 
+ *   const authResult = await requireAuthWithRLS(req);
+ *   if (!authResult.success) return error;
+ *   try {
+ *     // ... DB queries (RLS is active)
+ *   } finally {
+ *     await resetRLSContext();
+ *   }
+ */
+export async function requireAuthWithRLS(req: NextRequest): Promise<AuthResult> {
+  const authResult = requireAuth(req);
+  
+  if (authResult.success && authResult.user) {
+    await setRLSContext(authResult.user);
+  }
+  
+  return authResult;
 }
 
 /**
@@ -448,7 +474,13 @@ export function forbiddenResponse(message: string = 'Insufficient permissions'):
 // ============================================================================
 
 /**
- * Wrap API handler with authentication
+ * Wrap API handler with authentication + RLS context
+ *
+ * Automatically sets PostgreSQL session variables for RLS policies:
+ *   - Regular users → is_service_role = 'false' (RLS enforces user-scoped access)
+ *   - Admin users → is_service_role = 'true' (full access via service_role policy)
+ *
+ * RLS context is reset after the handler completes (even on error).
  */
 export function withAuth(
   handler: (req: AuthenticatedRequest, context?: unknown) => Promise<NextResponse>,
@@ -462,7 +494,7 @@ export function withAuth(
     
     if (!authResult.success) {
       if (options?.allowUnauthenticated) {
-        // Continue without user context
+        // Continue without user context (no RLS set)
         return handler(req as AuthenticatedRequest, context);
       }
       return unauthorizedResponse(authResult.error);
@@ -478,12 +510,23 @@ export function withAuth(
     // Attach user to request
     (req as AuthenticatedRequest).user = authResult.user!;
     
-    return handler(req as AuthenticatedRequest, context);
+    // Set RLS context for this request
+    // Admin users get is_service_role = true (full DB access)
+    // Regular users get is_service_role = false (RLS enforces user-scoped access)
+    await setRLSContext(authResult.user!);
+    
+    try {
+      return await handler(req as AuthenticatedRequest, context);
+    } finally {
+      // Always reset RLS context to prevent leaking between requests
+      await resetRLSContext();
+    }
   };
 }
 
 /**
- * Wrap API handler with admin-only access
+ * Wrap API handler with admin-only access + RLS context
+ * Sets is_service_role = 'true' for full DB access.
  */
 export function withAdminOnly(
   handler: (req: AuthenticatedRequest, context?: unknown) => Promise<NextResponse>
@@ -500,12 +543,20 @@ export function withAdminOnly(
     
     (req as AuthenticatedRequest).user = authResult.user!;
     
-    return handler(req as AuthenticatedRequest, context);
+    // Admin gets service role access (full DB access)
+    await setRLSContext(authResult.user!, { isServiceRole: true });
+    
+    try {
+      return await handler(req as AuthenticatedRequest, context);
+    } finally {
+      await resetRLSContext();
+    }
   };
 }
 
 /**
  * Wrap API handler with system-only access (for internal webhooks)
+ * Sets is_service_role = 'true' for full DB access.
  */
 export function withSystemOnly(
   handler: (req: AuthenticatedRequest, context?: unknown) => Promise<NextResponse>
@@ -522,12 +573,19 @@ export function withSystemOnly(
     
     (req as AuthenticatedRequest).user = authResult.user!;
     
-    return handler(req as AuthenticatedRequest, context);
+    // System/webhook routes get service role access (full DB access)
+    await setServiceRoleContext();
+    
+    try {
+      return await handler(req as AuthenticatedRequest, context);
+    } finally {
+      await resetRLSContext();
+    }
   };
 }
 
 /**
- * Wrap API handler with resource ownership verification
+ * Wrap API handler with resource ownership verification + RLS context
  */
 export function withResourceOwnership(
   handler: (req: AuthenticatedRequest, context?: unknown) => Promise<NextResponse>,
@@ -546,7 +604,14 @@ export function withResourceOwnership(
     
     (req as AuthenticatedRequest).user = authResult.user!;
     
-    return handler(req as AuthenticatedRequest, context);
+    // Set RLS context based on user role
+    await setRLSContext(authResult.user!);
+    
+    try {
+      return await handler(req as AuthenticatedRequest, context);
+    } finally {
+      await resetRLSContext();
+    }
   };
 }
 

@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/fraud/activity - Get suspicious activity logs
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get('entityType');
@@ -42,11 +43,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch activities' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST /api/fraud/activity - Log suspicious activity
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const {
@@ -118,6 +122,8 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to log activity' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 

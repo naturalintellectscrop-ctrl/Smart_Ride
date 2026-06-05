@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { generateResetToken } from '@/lib/auth/password';
 import { sendEmail, generatePasswordResetEmail } from '@/lib/email';
 import { z } from 'zod';
@@ -17,6 +17,7 @@ const forgotPasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const validationResult = forgotPasswordSchema.safeParse(body);
@@ -103,5 +104,7 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'If an account with that email exists, a reset link has been sent.',
     });
+  } finally {
+    await resetRLSContext();
   }
 }

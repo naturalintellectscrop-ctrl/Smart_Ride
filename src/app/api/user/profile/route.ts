@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 
 export async function GET(request: NextRequest) {
@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching user profile:', error);
     return serverErrorResponse('Failed to fetch user profile');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -83,5 +85,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Error updating user profile:', error);
     return serverErrorResponse('Failed to update user profile');
+  } finally {
+    await resetRLSContext();
   }
 }

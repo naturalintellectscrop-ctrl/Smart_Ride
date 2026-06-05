@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -17,6 +17,7 @@ import { z } from 'zod';
  * List all prescriptions with pagination
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -60,6 +61,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching prescriptions:', error);
     return serverErrorResponse('Failed to fetch prescriptions');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -88,6 +91,7 @@ const uploadPrescriptionSchema = z.object({
  * Upload a new prescription
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const validatedData = uploadPrescriptionSchema.parse(body);
@@ -125,6 +129,8 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error uploading prescription:', error);
     return serverErrorResponse('Failed to upload prescription');
+  } finally {
+    await resetRLSContext();
   }
 }
 

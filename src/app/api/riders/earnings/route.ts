@@ -1,0 +1,154 @@
+/**
+ * GET /api/riders/earnings
+ * Returns earnings breakdown for the authenticated rider
+ * Supports period filter: today, week, month, lifetime
+ *
+ * Calculates earnings from completed tasks using actual riderEarnings
+ * and platformCommission fields.
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth-utils';
+import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
+import { db } from '@/lib/db';
+
+// Commission rates by service type
+const COMMISSION_RATES: Record<string, { riderPercent: number; platformPercent: number }> = {
+  SMART_BODA_RIDE: { riderPercent: 85, platformPercent: 15 },
+  SMART_CAR_RIDE: { riderPercent: 80, platformPercent: 20 },
+  FOOD_DELIVERY: { riderPercent: 85, platformPercent: 15 },
+  SHOPPING: { riderPercent: 88, platformPercent: 12 },
+  ITEM_DELIVERY: { riderPercent: 90, platformPercent: 10 },
+  SMART_HEALTH_DELIVERY: { riderPercent: 85, platformPercent: 15 },
+};
+
+interface PeriodEarnings {
+  totalEarnings: number;
+  totalCommission: number;
+  totalRevenue: number;
+  tripCount: number;
+  rides: number;
+  deliveries: number;
+  health: number;
+}
+
+function calcEarnings(tasks: { riderEarnings: number | null; platformCommission: number | null; totalAmount: number | null; taskType: string }[]): PeriodEarnings {
+  const totalEarnings = tasks.reduce((sum, t) => sum + (t.riderEarnings || 0), 0);
+  const totalCommission = tasks.reduce((sum, t) => sum + (t.platformCommission || 0), 0);
+  const totalRevenue = tasks.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
+  const rides = tasks.filter(t => t.taskType === 'SMART_BODA_RIDE' || t.taskType === 'SMART_CAR_RIDE').length;
+  const deliveries = tasks.filter(t => t.taskType === 'FOOD_DELIVERY' || t.taskType === 'SHOPPING' || t.taskType === 'ITEM_DELIVERY').length;
+  const health = tasks.filter(t => t.taskType === 'SMART_HEALTH_DELIVERY').length;
+  return { totalEarnings, totalCommission, totalRevenue, tripCount: tasks.length, rides, deliveries, health };
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    // Verify authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const userId = authResult.userId;
+    const { searchParams } = new URL(request.url);
+    const period = searchParams.get('period') || 'today';
+
+    // Get rider profile
+    const rider = await db.rider.findFirst({
+      where: { userId },
+    });
+
+    if (!rider) {
+      return errorResponse('Rider profile not found', 404);
+    }
+
+    // Calculate date ranges
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart = new Date(todayStart);
+    weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Sunday
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // Base where clause for completed tasks by this rider
+    const whereBase = {
+      riderId: rider.id,
+      status: 'COMPLETED' as const,
+    };
+
+    // Query all periods in parallel
+    const [todayTasks, weekTasks, monthTasks, allTasks] = await Promise.all([
+      db.task.findMany({
+        where: { ...whereBase, completedAt: { gte: todayStart } },
+        select: { totalAmount: true, platformCommission: true, riderEarnings: true, taskType: true, completedAt: true },
+      }),
+      db.task.findMany({
+        where: { ...whereBase, completedAt: { gte: weekStart } },
+        select: { totalAmount: true, platformCommission: true, riderEarnings: true, taskType: true, completedAt: true },
+      }),
+      db.task.findMany({
+        where: { ...whereBase, completedAt: { gte: monthStart } },
+        select: { totalAmount: true, platformCommission: true, riderEarnings: true, taskType: true, completedAt: true },
+      }),
+      db.task.findMany({
+        where: whereBase,
+        select: { totalAmount: true, platformCommission: true, riderEarnings: true, taskType: true, completedAt: true },
+      }),
+    ]);
+
+    // Calculate earnings by period
+    const today = calcEarnings(todayTasks);
+    const week = calcEarnings(weekTasks);
+    const month = calcEarnings(monthTasks);
+    const lifetime = calcEarnings(allTasks);
+
+    // Get wallet balance
+    const wallet = await db.wallet.findUnique({
+      where: { ownerId_ownerType: { ownerId: rider.id, ownerType: 'RIDER' } },
+    });
+
+    // Determine the active period earnings for quick access
+    let activePeriod: PeriodEarnings;
+    switch (period) {
+      case 'week':
+        activePeriod = week;
+        break;
+      case 'month':
+        activePeriod = month;
+        break;
+      case 'lifetime':
+        activePeriod = lifetime;
+        break;
+      default:
+        activePeriod = today;
+    }
+
+    return successResponse({
+      earnings: {
+        today,
+        week,
+        month,
+        lifetime,
+      },
+      activePeriod,
+      wallet: {
+        balance: wallet?.balance || 0,
+        pendingBalance: wallet?.pendingBalance || 0,
+        totalDeposited: wallet?.totalDeposited || 0,
+        totalWithdrawn: wallet?.totalWithdrawn || 0,
+      },
+      rider: {
+        totalEarnings: rider.totalEarnings,
+        totalTrips: rider.totalTrips,
+        completedTrips: rider.completedTrips,
+        cancelledTrips: rider.cancelledTrips,
+        rating: rider.rating,
+      },
+      commissionRates: COMMISSION_RATES,
+      period,
+    });
+  } catch (error) {
+    console.error('Error fetching rider earnings:', error);
+    return serverErrorResponse('Failed to fetch rider earnings');
+  }
+}

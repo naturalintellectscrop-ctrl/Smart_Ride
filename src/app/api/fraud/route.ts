@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FraudDetectionService } from '@/lib/fraud/fraud-detection.service';
 import { db } from '@/lib/db';
-import { requireAdmin } from '@/lib/auth-utils';
+import { requireAdmin, resetRLSContext } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
 
 // ============================================
@@ -43,6 +43,8 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -76,6 +78,8 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -105,6 +109,8 @@ export async function PUT(request: NextRequest) {
     }
   } catch (error) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }
 

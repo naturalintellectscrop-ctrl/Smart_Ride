@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { z } from 'zod';
@@ -18,17 +18,18 @@ const approveSchema = z.object({
  * SECURITY: Admin-only access required
  */
 export async function POST(request: NextRequest) {
-  try {
-    // SECURITY: Require admin authentication
-    const authResult = requireAdmin(request);
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: authResult.statusCode }
-      );
-    }
-    const admin = authResult.user!;
+  // SECURITY: Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
 
+  await setRLSContext(admin);
+  try {
     const body = await request.json();
     const validatedData = approveSchema.parse(body);
     const { searchParams } = new URL(request.url);
@@ -93,5 +94,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error approving rider:', error);
     return serverErrorResponse('Failed to approve rider');
+  } finally {
+    await resetRLSContext();
   }
 }

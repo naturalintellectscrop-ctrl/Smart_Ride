@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { refreshSession } from '@/lib/auth/session-service';
 import { errorResponse, serverErrorResponse } from '@/lib/api/response';
+import { setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { z } from 'zod';
 
 const refreshRequestSchema = z.object({
@@ -16,6 +17,7 @@ const refreshRequestSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     // Get refresh token from cookies (web/admin) or body (mobile)
     const mobileRefreshToken = request.cookies.get('refreshToken')?.value;
@@ -107,5 +109,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Token refresh error:', error);
     return serverErrorResponse('Failed to refresh token');
+  } finally {
+    await resetRLSContext();
   }
 }

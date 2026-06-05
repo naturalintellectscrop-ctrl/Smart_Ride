@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/incident-reports - List incident reports
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -53,11 +54,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch incident reports' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST /api/incident-reports - Update incident report (add notes, recordings)
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const {
@@ -106,5 +110,7 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to update incident report' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

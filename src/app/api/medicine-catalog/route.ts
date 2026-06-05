@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -16,6 +16,7 @@ import { z } from 'zod';
  * List all medicines with pagination and filtering
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -59,6 +60,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching medicine catalog:', error);
     return serverErrorResponse('Failed to fetch medicine catalog');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -88,6 +91,7 @@ const createMedicineSchema = z.object({
  * Add a new medicine to catalog
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const validatedData = createMedicineSchema.parse(body);
@@ -131,6 +135,8 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error creating medicine:', error);
     return serverErrorResponse('Failed to create medicine');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -139,6 +145,7 @@ export async function POST(request: NextRequest) {
  * Update stock quantity
  */
 export async function PUT(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { medicineId, stockQuantity, isAvailable } = body;
@@ -168,5 +175,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     console.error('Error updating medicine:', error);
     return serverErrorResponse('Failed to update medicine');
+  } finally {
+    await resetRLSContext();
   }
 }

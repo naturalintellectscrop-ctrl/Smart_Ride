@@ -1,0 +1,688 @@
+// ============================================
+// SMART RIDE MOBILE - PHARMACIST PRESCRIPTIONS
+// ============================================
+// Prescription verification screen
+// ============================================
+
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  RefreshControl,
+  Alert,
+  Modal,
+  Image,
+  StyleSheet,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { api } from '@/src/services';
+import { COLORS } from '@/src/constants';
+import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
+import { LinearGradient } from 'expo-linear-gradient';
+
+type PrescriptionTab = 'ALL' | 'PENDING' | 'VERIFIED' | 'REJECTED';
+
+const PRESCRIPTION_TABS: { key: PrescriptionTab; label: string }[] = [
+  { key: 'ALL', label: 'All' },
+  { key: 'PENDING', label: 'Pending' },
+  { key: 'VERIFIED', label: 'Verified' },
+  { key: 'REJECTED', label: 'Rejected' },
+];
+
+const STATUS_COLORS: Record<string, string> = {
+  PENDING: COLORS.warning,
+  VERIFIED: COLORS.success,
+  REJECTED: COLORS.error,
+  EXPIRED: COLORS.textMuted,
+};
+
+export default function PrescriptionsScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState<PrescriptionTab>('PENDING');
+  const [prescriptions, setPrescriptions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Rejection modal
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectingPrescriptionId, setRejectingPrescriptionId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
+
+  // Verify modal
+  const [verifyModalVisible, setVerifyModalVisible] = useState(false);
+  const [verifyingPrescriptionId, setVerifyingPrescriptionId] = useState<string | null>(null);
+  const [verificationNotes, setVerificationNotes] = useState('');
+
+  // Image viewer modal
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [viewingImageUrl, setViewingImageUrl] = useState('');
+
+  // Processing
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const loadPrescriptions = useCallback(async () => {
+    try {
+      const statusFilter = activeTab === 'ALL' ? undefined : activeTab;
+      const response = await api.getPrescriptions(statusFilter);
+      if (response.success && response.data) {
+        const prescriptionData = response.data.prescriptions || response.data.data || response.data;
+        setPrescriptions(Array.isArray(prescriptionData) ? prescriptionData : []);
+      } else {
+        setPrescriptions([]);
+      }
+    } catch (error) {
+      console.error('Failed to load prescriptions:', error);
+      setPrescriptions([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    loadPrescriptions();
+  }, [loadPrescriptions]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await loadPrescriptions();
+    setRefreshing(false);
+  };
+
+  const handleVerify = async () => {
+    if (!verifyingPrescriptionId) return;
+    setIsProcessing(true);
+    try {
+      const response = await api.verifyPrescription(verifyingPrescriptionId, {
+        notes: verificationNotes,
+      });
+      if (response.success) {
+        Alert.alert('Success', 'Prescription verified successfully');
+        setVerifyModalVisible(false);
+        setVerificationNotes('');
+        setVerifyingPrescriptionId(null);
+        await loadPrescriptions();
+      } else {
+        Alert.alert('Error', response.error || 'Failed to verify prescription');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!rejectingPrescriptionId) return;
+    if (!rejectionReason.trim()) {
+      Alert.alert('Error', 'Please provide a rejection reason');
+      return;
+    }
+    setIsProcessing(true);
+    try {
+      const response = await api.rejectPrescription(rejectingPrescriptionId, rejectionReason);
+      if (response.success) {
+        Alert.alert('Success', 'Prescription rejected');
+        setRejectModalVisible(false);
+        setRejectionReason('');
+        setRejectingPrescriptionId(null);
+        await loadPrescriptions();
+      } else {
+        Alert.alert('Error', response.error || 'Failed to reject prescription');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <LinearGradient
+        colors={[COLORS.background, COLORS.backgroundElevated]}
+        style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
+      >
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backText}>←</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Prescriptions</Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <LinearGradient
+          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.glowBorder}
+        />
+      </LinearGradient>
+
+      {/* Tabs */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsContainer} contentContainerStyle={styles.tabsContent}>
+        {PRESCRIPTION_TABS.map(tab => (
+          <TouchableOpacity
+            key={tab.key}
+            style={[styles.tab, activeTab === tab.key && styles.activeTab]}
+            onPress={() => setActiveTab(tab.key)}
+          >
+            <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Prescriptions List */}
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading prescriptions...</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+        >
+          {prescriptions.length > 0 ? (
+            prescriptions.map((prescription) => (
+              <GlassCard key={prescription.id} style={styles.prescriptionCard}>
+                <View style={styles.prescriptionHeader}>
+                  <Text style={styles.prescriptionId}>#{prescription.id?.slice(-6)}</Text>
+                  <StatusBadge
+                    label={prescription.status || 'UNKNOWN'}
+                    color={STATUS_COLORS[prescription.status] || COLORS.textMuted}
+                    size="sm"
+                  />
+                </View>
+
+                {/* Patient Info */}
+                <View style={styles.prescriptionInfo}>
+                  <Text style={styles.infoLabel}>Patient</Text>
+                  <Text style={styles.infoValue}>
+                    {prescription.patientName || prescription.client?.name || 'N/A'}
+                  </Text>
+                </View>
+
+                {prescription.patientPhone && (
+                  <View style={styles.prescriptionInfo}>
+                    <Text style={styles.infoLabel}>Phone</Text>
+                    <Text style={styles.infoValue}>{prescription.patientPhone}</Text>
+                  </View>
+                )}
+
+                {/* Medicines */}
+                {prescription.medicines && Array.isArray(prescription.medicines) && prescription.medicines.length > 0 && (
+                  <View style={styles.medicinesSection}>
+                    <Text style={styles.medicinesLabel}>Medicines:</Text>
+                    {prescription.medicines.map((med: any, idx: number) => (
+                      <Text key={med.id || idx} style={styles.medicineText}>
+                        • {med.medicineName || med.name} {med.dosage ? `(${med.dosage})` : ''} x{med.quantity || 1}
+                      </Text>
+                    ))}
+                  </View>
+                )}
+
+                {/* Prescription Image */}
+                {prescription.imageUrl && (
+                  <TouchableOpacity
+                    style={styles.imageButton}
+                    onPress={() => {
+                      setViewingImageUrl(prescription.imageUrl);
+                      setImageModalVisible(true);
+                    }}
+                  >
+                    <Text style={styles.imageButtonText}>View Prescription Image</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Notes */}
+                {prescription.notes && (
+                  <View style={styles.notesSection}>
+                    <Text style={styles.infoLabel}>Notes</Text>
+                    <Text style={styles.notesText}>{prescription.notes}</Text>
+                  </View>
+                )}
+
+                {/* Rejection Reason */}
+                {prescription.status === 'REJECTED' && prescription.rejectionReason && (
+                  <View style={styles.rejectionSection}>
+                    <Text style={styles.rejectionLabel}>Rejection Reason</Text>
+                    <Text style={styles.rejectionText}>{prescription.rejectionReason}</Text>
+                  </View>
+                )}
+
+                {/* Date */}
+                <Text style={styles.prescriptionDate}>{formatDate(prescription.createdAt)}</Text>
+
+                {/* Action Buttons (only for PENDING) */}
+                {prescription.status === 'PENDING' && (
+                  <View style={styles.actionButtons}>
+                    <GradientButton
+                      title="Verify"
+                      onPress={() => {
+                        setVerifyingPrescriptionId(prescription.id);
+                        setVerifyModalVisible(true);
+                      }}
+                      size="sm"
+                      style={styles.actionBtn}
+                    />
+                    <GradientButton
+                      title="Reject"
+                      variant="danger"
+                      onPress={() => {
+                        setRejectingPrescriptionId(prescription.id);
+                        setRejectModalVisible(true);
+                      }}
+                      size="sm"
+                      style={styles.actionBtn}
+                    />
+                  </View>
+                )}
+              </GlassCard>
+            ))
+          ) : (
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>📋</Text>
+              <Text style={styles.emptyTitle}>No prescriptions found</Text>
+              <Text style={styles.emptySubtitle}>
+                {activeTab === 'ALL'
+                  ? 'Prescriptions will appear here when patients upload them'
+                  : `No ${activeTab.toLowerCase()} prescriptions`}
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
+
+      {/* Verify Modal */}
+      <Modal visible={verifyModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Verify Prescription</Text>
+            <Text style={styles.modalSubtitle}>Add any verification notes (optional)</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="Verification notes..."
+              placeholderTextColor={COLORS.textMuted}
+              value={verificationNotes}
+              onChangeText={setVerificationNotes}
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+            <View style={styles.modalButtons}>
+              <GradientButton
+                title="Cancel"
+                variant="outline"
+                onPress={() => {
+                  setVerifyModalVisible(false);
+                  setVerificationNotes('');
+                  setVerifyingPrescriptionId(null);
+                }}
+                size="sm"
+                style={styles.modalBtn}
+              />
+              <GradientButton
+                title="Verify"
+                onPress={handleVerify}
+                loading={isProcessing}
+                size="sm"
+                style={styles.modalBtn}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Reject Modal */}
+      <Modal visible={rejectModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Reject Prescription</Text>
+            <Text style={styles.modalSubtitle}>Please provide a reason for rejection</Text>
+            <TextInput
+              style={[styles.modalInput, styles.rejectionInput]}
+              placeholder="Reason for rejection..."
+              placeholderTextColor={COLORS.textMuted}
+              value={rejectionReason}
+              onChangeText={setRejectionReason}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              autoFocus
+            />
+            <View style={styles.modalButtons}>
+              <GradientButton
+                title="Cancel"
+                variant="outline"
+                onPress={() => {
+                  setRejectModalVisible(false);
+                  setRejectionReason('');
+                  setRejectingPrescriptionId(null);
+                }}
+                size="sm"
+                style={styles.modalBtn}
+              />
+              <GradientButton
+                title="Reject"
+                variant="danger"
+                onPress={handleReject}
+                loading={isProcessing}
+                size="sm"
+                style={styles.modalBtn}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Image Viewer Modal */}
+      <Modal visible={imageModalVisible} animationType="fade" transparent>
+        <View style={styles.imageModalOverlay}>
+          <TouchableOpacity
+            style={styles.imageModalClose}
+            onPress={() => setImageModalVisible(false)}
+          >
+            <Text style={styles.imageModalCloseText}>✕</Text>
+          </TouchableOpacity>
+          {viewingImageUrl ? (
+            <Image
+              source={{ uri: viewingImageUrl }}
+              style={styles.prescriptionImage}
+              resizeMode="contain"
+            />
+          ) : null}
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: COLORS.textMuted,
+    marginTop: 12,
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+  },
+  backText: {
+    fontSize: 24,
+    color: COLORS.text,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  },
+  glowBorder: {
+    height: 1,
+    marginTop: 16,
+  },
+  tabsContainer: {
+    maxHeight: 52,
+    backgroundColor: COLORS.backgroundElevated,
+  },
+  tabsContent: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  tab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: COLORS.backgroundSurface,
+    marginRight: 8,
+  },
+  activeTab: {
+    backgroundColor: `${COLORS.primary}20`,
+    borderColor: `${COLORS.primary}40`,
+    borderWidth: 1,
+  },
+  tabText: {
+    fontSize: 13,
+    color: COLORS.textMuted,
+    fontWeight: '500',
+  },
+  activeTabText: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 40,
+  },
+  prescriptionCard: {
+    marginBottom: 12,
+  },
+  prescriptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  prescriptionId: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  prescriptionInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 3,
+  },
+  infoLabel: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+  },
+  infoValue: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  medicinesSection: {
+    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: 8,
+    padding: 10,
+    marginTop: 8,
+  },
+  medicinesLabel: {
+    fontSize: 11,
+    color: COLORS.textMuted,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  medicineText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    paddingVertical: 2,
+  },
+  imageButton: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: `${COLORS.info}15`,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  imageButtonText: {
+    color: COLORS.info,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  notesSection: {
+    marginTop: 8,
+  },
+  notesText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  rejectionSection: {
+    marginTop: 8,
+    padding: 10,
+    backgroundColor: `${COLORS.error}10`,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: `${COLORS.error}20`,
+  },
+  rejectionLabel: {
+    fontSize: 11,
+    color: COLORS.error,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  rejectionText: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+  prescriptionDate: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 8,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+  },
+  actionBtn: {
+    flex: 1,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 80,
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    textAlign: 'center',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    marginBottom: 16,
+  },
+  modalInput: {
+    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: 10,
+    padding: 12,
+    color: COLORS.text,
+    fontSize: 14,
+    minHeight: 80,
+    marginBottom: 16,
+  },
+  rejectionInput: {
+    minHeight: 100,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  modalBtn: {
+    flex: 1,
+  },
+  // Image modal
+  imageModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalClose: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    zIndex: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageModalCloseText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  prescriptionImage: {
+    width: '90%',
+    height: '70%',
+    borderRadius: 12,
+  },
+});

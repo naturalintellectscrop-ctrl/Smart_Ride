@@ -5,7 +5,7 @@
  */
 
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { PaymentStatus } from '@prisma/client';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { checkPaymentStatus } from '@/lib/payments';
@@ -19,6 +19,7 @@ interface RouteParams {
  * Get payment details and current status
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     
@@ -100,6 +101,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error fetching payment:', error);
     return serverErrorResponse('Failed to fetch payment');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -108,6 +111,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * Update payment status (admin only)
  */
 export async function PUT(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     const body = await request.json();
@@ -157,5 +161,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error updating payment:', error);
     return serverErrorResponse('Failed to update payment');
+  } finally {
+    await resetRLSContext();
   }
 }

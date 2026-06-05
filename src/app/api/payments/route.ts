@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -15,6 +15,7 @@ import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
  * List all payments with pagination and filtering
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
@@ -52,5 +53,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching payments:', error);
     return serverErrorResponse('Failed to fetch payments');
+  } finally {
+    await resetRLSContext();
   }
 }

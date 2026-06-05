@@ -13,6 +13,7 @@ import { generateOrderNumber, generateKOTNumber } from '@/lib/services/enhanced-
 import { OrderType, OrderStatus, PaymentStatus } from '@prisma/client';
 import { z } from 'zod';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
+import { resetRLSContext } from '@/lib/auth-utils';
 
 /**
  * GET /api/orders
@@ -109,6 +110,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching orders:', error);
     return serverErrorResponse('Failed to fetch orders');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -247,5 +250,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error creating order:', error);
     return serverErrorResponse('Failed to create order');
+  } finally {
+    await resetRLSContext();
   }
 }

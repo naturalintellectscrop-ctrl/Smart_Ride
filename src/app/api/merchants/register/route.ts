@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { generateAccessToken, generateRefreshToken } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
@@ -10,6 +10,7 @@ import { DocumentType, DocumentStatus, MerchantStatus, UserRole, UserStatus } fr
  * Register a new merchant with documents stored in database
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const {
@@ -240,6 +241,8 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Failed to register merchant' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -248,6 +251,7 @@ export async function POST(request: NextRequest) {
  * Get registration status for a merchant
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const merchantId = searchParams.get('merchantId');
@@ -286,5 +290,7 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch registration status' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

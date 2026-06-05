@@ -83,19 +83,22 @@ function repairDatabaseUrl(url: string): string {
 }
 
 function resolveDatabaseUrl(): string {
-  const builtUrl = buildDatabaseUrl({ port: process.env.DB_PORT || '6543' })
+  // Priority 1: Build from individual DB_ env vars (preferred for RLS)
+  const builtUrl = buildDatabaseUrl()
   if (builtUrl) return builtUrl
+  // Priority 2: DATABASE_URL from system environment
   const systemUrl = process.env.DATABASE_URL
   if (systemUrl) {
     if (systemUrl.startsWith('postgresql://') || systemUrl.startsWith('postgres://')) return repairDatabaseUrl(systemUrl)
     if (systemUrl.startsWith('file:')) return systemUrl
   }
+  // Priority 3: DATABASE_URL from .env file
   const envFileUrl = readEnvFileVar('DATABASE_URL')
   if (envFileUrl) {
     if (envFileUrl.startsWith('postgresql://') || envFileUrl.startsWith('postgres://')) return envFileUrl
     if (envFileUrl.startsWith('file:')) return envFileUrl
   }
-  throw new Error('DATABASE_URL must be a PostgreSQL connection string.')
+  throw new Error('DATABASE_URL must be a PostgreSQL connection string. Set DB_HOST, DB_USER, DB_PASSWORD or DATABASE_URL.')
 }
 
 function isPostgres(): boolean {
@@ -122,37 +125,79 @@ function getDb(): PrismaClient {
 // When RLS is enabled on Supabase, these session variables tell
 // the RLS policies who is making the request.
 //
-// Usage in API routes:
-//   import { db, setRLSContext, resetRLSContext } from '@/lib/db'
-//   const user = getAuthUser(req)
-//   await setRLSContext(user)
-//   try { ... } finally { await resetRLSContext() }
+// IMPORTANT: This is automatically called by withAuth() and
+// withAdminOnly() in @/lib/auth/guards. You do NOT need to
+// call this manually in most routes.
+//
+// How it works:
+//   1. We connect as postgres (superuser) via Supabase pooler
+//   2. SET ROLE smart_ride_api — switches to non-BYPASSRLS role so RLS enforces
+//   3. SET app.is_service_role / current_user_id / current_user_role — RLS policy checks
+//
+// Access levels:
+//   - Regular users (CLIENT, RIDER, etc.): is_service_role = 'false'
+//     → RLS enforces user-scoped access (users see their own data)
+//   - Admin users (ADMIN, SUPER_ADMIN, etc.): is_service_role = 'true'
+//     → Full access via service_role_access policy (API-level auth
+//       already restricts admin routes to admin roles only)
+//   - System/webhook calls: is_service_role = 'true'
+//     → Full access for internal operations
 // ============================================
 
-export async function setRLSContext(user: { userId: string; role: string } | null): Promise<void> {
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN']
+
+const RLS_ROLE = 'smart_ride_api'
+
+export async function setRLSContext(
+  user: { userId: string; role: string } | null,
+  options?: { isServiceRole?: boolean }
+): Promise<void> {
   if (!isPostgres()) return
   const client = getDb()
   const userId = user?.userId || ''
   const userRole = user?.role || ''
+  // Determine service role: explicit override, or auto-detect from admin role
+  const isAdmin = userRole ? ADMIN_ROLES.includes(userRole) : false
+  const isServiceRole = options?.isServiceRole ?? isAdmin
   try {
-    await client.$executeRawUnsafe(
-      `SET app.is_service_role = 'true'; ` +
-      `SET app.current_user_id = '${userId.replace(/'/g, "''")}'; ` +
-      `SET app.current_user_role = '${userRole}';`
-    )
-  } catch { /* Silently ignore if SET fails (e.g., SQLite) */ }
+    // Switch to smart_ride_api role so RLS policies are enforced
+    // (postgres has BYPASSRLS, smart_ride_api does NOT)
+    // NOTE: We must use $executeRawUnsafe for SET commands because PostgreSQL
+    // SET does not support parameterized ($1) values via Prisma's tagged template.
+    // Values are sanitized to prevent injection: userId is a cuid, role is an enum.
+    await client.$executeRawUnsafe(`SET ROLE ${RLS_ROLE}`)
+    await client.$executeRawUnsafe(`SET app.is_service_role = '${isServiceRole ? 'true' : 'false'}'`)
+    await client.$executeRawUnsafe(`SET app.current_user_id = '${userId.replace(/'/g, "''")}'`)
+    await client.$executeRawUnsafe(`SET app.current_user_role = '${userRole.replace(/'/g, "''")}'`)
+  } catch (e) { console.error('[RLS] setRLSContext error:', e) }
 }
 
 export async function resetRLSContext(): Promise<void> {
   if (!isPostgres()) return
   const client = getDb()
   try {
-    await client.$executeRawUnsafe(
-      `RESET app.is_service_role; ` +
-      `RESET app.current_user_id; ` +
-      `RESET app.current_user_role;`
-    )
-  } catch { /* Silently ignore */ }
+    // Reset role back to postgres (superuser, no RLS)
+    await client.$executeRawUnsafe('RESET ROLE')
+    // Reset session variables
+    await client.$executeRawUnsafe('RESET app.is_service_role')
+    await client.$executeRawUnsafe('RESET app.current_user_id')
+    await client.$executeRawUnsafe('RESET app.current_user_role')
+  } catch (e) { console.error('[RLS] resetRLSContext error:', e) }
+}
+
+/**
+ * Set RLS context for service role (system/webhook operations).
+ * Use this for routes that need full DB access without a user context.
+ */
+export async function setServiceRoleContext(): Promise<void> {
+  if (!isPostgres()) return
+  const client = getDb()
+  try {
+    await client.$executeRawUnsafe(`SET ROLE ${RLS_ROLE}`)
+    await client.$executeRawUnsafe(`SET app.is_service_role = 'true'`)
+    await client.$executeRawUnsafe(`SET app.current_user_id = ''`)
+    await client.$executeRawUnsafe(`SET app.current_user_role = 'SYSTEM'`)
+  } catch (e) { console.error('[RLS] setServiceRoleContext error:', e) }
 }
 
 export const db = new Proxy({} as PrismaClient, {

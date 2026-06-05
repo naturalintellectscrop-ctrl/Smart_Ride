@@ -7,10 +7,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { RecoveryService } from '@/lib/services/recovery-service';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/admin/recovery — Get recovery status
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     // Verify admin access
     const authHeader = request.headers.get('authorization');
@@ -37,11 +38,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to get recovery status' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST /api/admin/recovery — Trigger recovery checks
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     // Verify admin access
     const authHeader = request.headers.get('authorization');
@@ -62,5 +66,7 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to run recovery checks' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

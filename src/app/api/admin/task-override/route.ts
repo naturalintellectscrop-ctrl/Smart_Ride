@@ -10,7 +10,7 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
@@ -859,11 +859,12 @@ async function handleForceAssign(
 // ============================================
 
 export async function POST(request: NextRequest) {
-  try {
-    // Verify admin access
-    const { decoded, error: authError } = verifyAdmin(request);
-    if (authError || !decoded) return authError!;
+  // Verify admin access
+  const { decoded, error: authError } = verifyAdmin(request);
+  if (authError || !decoded) return authError!;
 
+  await setRLSContext(decoded);
+  try {
     // Parse and validate request body
     const body: TaskOverrideRequest = await request.json();
     const { taskId, action, reason, riderId } = body;
@@ -955,5 +956,7 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error during task override' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

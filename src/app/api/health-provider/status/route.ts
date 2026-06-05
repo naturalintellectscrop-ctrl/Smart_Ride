@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const providerId = searchParams.get('providerId');
@@ -92,6 +93,8 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch provider status' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Notifications - Smart Ride</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-tint": "#006d43",
+                      "on-secondary": "#ffffff",
+                      "secondary-container": "#6bff8f",
+                      "outline-variant": "#bec9bf",
+                      "on-tertiary-fixed-variant": "#404758",
+                      "on-error-container": "#93000a",
+                      "on-primary-fixed-variant": "#005231",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-secondary-container": "#007432",
+                      "on-primary-container": "#a6ffc9",
+                      "on-background": "#191c1d",
+                      "primary-fixed-dim": "#7cd9a4",
+                      "secondary-fixed-dim": "#4ae176",
+                      "tertiary-container": "#636a7c",
+                      "tertiary-fixed-dim": "#c0c6db",
+                      "surface-variant": "#e1e3e4",
+                      "on-secondary-fixed-variant": "#005321",
+                      "surface-bright": "#f8f9fa",
+                      "primary": "#005f3a",
+                      "surface-container-highest": "#e1e3e4",
+                      "secondary-fixed": "#6bff8f",
+                      "outline": "#6f7a71",
+                      "surface": "#f8f9fa",
+                      "inverse-primary": "#7cd9a4",
+                      "on-primary": "#ffffff",
+                      "inverse-surface": "#2e3132",
+                      "on-surface": "#191c1d",
+                      "error": "#ba1a1a",
+                      "on-primary-fixed": "#002111",
+                      "surface-container-high": "#e7e8e9",
+                      "primary-container": "#0e7a4d",
+                      "surface-container-low": "#f3f4f5",
+                      "on-tertiary-container": "#e6ebff",
+                      "inverse-on-surface": "#f0f1f2",
+                      "on-tertiary-fixed": "#141b2b",
+                      "surface-dim": "#d9dadb",
+                      "surface-container": "#edeeef",
+                      "tertiary-fixed": "#dce2f7",
+                      "on-error": "#ffffff",
+                      "error-container": "#ffdad6",
+                      "on-surface-variant": "#3f4941",
+                      "on-secondary-fixed": "#002109",
+                      "tertiary": "#4b5264",
+                      "primary-fixed": "#98f6be",
+                      "background": "#f8f9fa",
+                      "secondary": "#006e2f"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "sm": "8px",
+                      "md": "16px",
+                      "lg": "24px",
+                      "base": "4px",
+                      "container-margin": "16px",
+                      "xl": "32px",
+                      "xs": "4px",
+                      "gutter": "12px"
+              },
+              "fontFamily": {
+                      "body-md": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "label-lg": ["Inter"],
+                      "headline-lg-mobile": ["Plus Jakarta Sans"],
+                      "label-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "display-lg": ["Plus Jakarta Sans"],
+                      "headline-lg": ["Plus Jakarta Sans"],
+                      "headline-md": ["Plus Jakarta Sans"]
+              },
+              "fontSize": {
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                      "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md selection:bg-secondary-container/30">
+<!-- Top App Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface shadow-sm flex items-center justify-between px-container-margin h-14 w-full">
+<div class="flex items-center gap-md">
+<button class="material-symbols-outlined text-primary hover:bg-surface-container-high transition-colors p-2 rounded-full active:scale-95 transition-transform">menu</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Smart Ride</h1>
+</div>
+<div class="flex items-center gap-sm">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a friendly young African male entrepreneur in a bright, modern office setting. The lighting is soft and natural, emphasizing a professional yet approachable look consistent with a high-end tech-forward mobile application. The background is slightly blurred with hints of corporate green accents to match the Smart Ride brand identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCcOsSIE_Nbe4nW_bilxkQ_ZtDgs3GtIsGIVPbEvWNVAJbvLOt64pyNsC9QFEmLK4-NQzQMTRhZ12GAyiPuGfykOVcv4-tPhbdiMEFzJJ8kNbhFB9i8hdeNWTygrFOSxUj-x2Lj241ImAc1qidwGQbQokUeSR_HYQ1YpnP1jh3d_R4TgltQPLrAoa1JQGPqVb-4-MyzSkSparZL8oMN7tKnLPxgmt1TtNXdwWM6ndErG0iohSVUOe2q1H9GbERXqinPN1JXisD0ZzgZ"/>
+</div>
+</div>
+</header>
+<main class="pt-20 pb-24 px-container-margin max-w-2xl mx-auto">
+<!-- Tab Filter Section -->
+<section class="sticky top-14 bg-background/95 backdrop-blur-md z-40 py-md mb-md">
+<h2 class="font-headline-md text-headline-md mb-md">Notifications</h2>
+<div class="flex gap-sm overflow-x-auto hide-scrollbar">
+<button class="category-tab px-lg py-sm rounded-full bg-primary-container text-on-primary-container font-label-lg whitespace-nowrap transition-all active:scale-95" onclick="filterNotifications('all')">All</button>
+<button class="category-tab px-lg py-sm rounded-full bg-surface-container-high text-on-surface-variant font-label-lg whitespace-nowrap transition-all active:scale-95" onclick="filterNotifications('orders')">Orders</button>
+<button class="category-tab px-lg py-sm rounded-full bg-surface-container-high text-on-surface-variant font-label-lg whitespace-nowrap transition-all active:scale-95" onclick="filterNotifications('payments')">Payments</button>
+<button class="category-tab px-lg py-sm rounded-full bg-surface-container-high text-on-surface-variant font-label-lg whitespace-nowrap transition-all active:scale-95" onclick="filterNotifications('promotions')">Promotions</button>
+</div>
+</section>
+<!-- Notification List -->
+<div class="space-y-sm" id="notification-container">
+<!-- Category: Orders -->
+<div class="notification-item" data-category="orders">
+<div class="bg-surface rounded-xl p-md shadow-sm border border-surface-container-highest flex gap-md hover:bg-surface-container-low transition-colors cursor-pointer active:scale-[0.98]">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-secondary-container">local_taxi</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-label-lg text-on-surface">Ride Completed</h3>
+<span class="text-label-md text-on-surface-variant">2m ago</span>
+</div>
+<p class="text-body-sm text-on-surface-variant mt-xs">Your trip to Entebbe Airport is complete. We hope you enjoyed the ride!</p>
+</div>
+</div>
+</div>
+<div class="notification-item" data-category="promotions">
+<div class="bg-surface rounded-xl p-md shadow-sm border border-surface-container-highest flex gap-md hover:bg-surface-container-low transition-colors cursor-pointer active:scale-[0.98]">
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary-container">local_offer</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-label-lg text-on-surface">20% Off Food Promo</h3>
+<span class="text-label-md text-on-surface-variant">45m ago</span>
+</div>
+<p class="text-body-sm text-on-surface-variant mt-xs">Hungry? Get 20% off your next lunch order from local favorites.</p>
+</div>
+</div>
+</div>
+<div class="notification-item" data-category="payments">
+<div class="bg-surface rounded-xl p-md shadow-sm border border-surface-container-highest flex gap-md hover:bg-surface-container-low transition-colors cursor-pointer active:scale-[0.98]">
+<div class="w-12 h-12 rounded-full bg-tertiary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-tertiary-container">wallet</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-label-lg text-on-surface">Payment Successful</h3>
+<span class="text-label-md text-on-surface-variant">1h ago</span>
+</div>
+<p class="text-body-sm text-on-surface-variant mt-xs">UGX 15,000 has been charged via MTN Mobile Money for your ride.</p>
+</div>
+</div>
+</div>
+<!-- Divider -->
+<div class="py-sm px-md">
+<span class="text-label-md font-bold uppercase tracking-wider text-outline">Earlier Today</span>
+</div>
+<div class="notification-item" data-category="orders">
+<div class="bg-surface rounded-xl p-md shadow-sm border border-surface-container-highest flex gap-md hover:bg-surface-container-low transition-colors cursor-pointer active:scale-[0.98]">
+<div class="w-12 h-12 rounded-full bg-secondary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-secondary-container">moped</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-label-lg text-on-surface">Boda Booking Confirmed</h3>
+<span class="text-label-md text-on-surface-variant">4h ago</span>
+</div>
+<p class="text-body-sm text-on-surface-variant mt-xs">Driver Kato is arriving in 3 minutes for your morning commute.</p>
+</div>
+</div>
+</div>
+<div class="notification-item" data-category="promotions">
+<div class="bg-surface rounded-xl p-md shadow-sm border border-surface-container-highest flex gap-md hover:bg-surface-container-low transition-colors cursor-pointer active:scale-[0.98]">
+<div class="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary-container">stars</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-label-lg text-on-surface">Gold Member Perks</h3>
+<span class="text-label-md text-on-surface-variant">8h ago</span>
+</div>
+<p class="text-body-sm text-on-surface-variant mt-xs">You've unlocked exclusive priority booking for this weekend!</p>
+</div>
+</div>
+</div>
+<div class="notification-item" data-category="payments">
+<div class="bg-surface rounded-xl p-md shadow-sm border border-surface-container-highest flex gap-md hover:bg-surface-container-low transition-colors cursor-pointer active:scale-[0.98]">
+<div class="w-12 h-12 rounded-full bg-error-container flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-error-container">warning</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h3 class="font-label-lg text-on-surface">Payment Failed</h3>
+<span class="text-label-md text-on-surface-variant">10h ago</span>
+</div>
+<p class="text-body-sm text-on-surface-variant mt-xs">Transaction failed for ride #4432. Please check your card balance.</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Empty State (Hidden) -->
+<div class="hidden flex flex-col items-center justify-center py-20 text-center" id="empty-state">
+<div class="w-24 h-24 bg-surface-container-high rounded-full flex items-center justify-center mb-lg">
+<span class="material-symbols-outlined text-outline text-[48px]">notifications_off</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-on-surface">No notifications</h3>
+<p class="text-body-md text-on-surface-variant mt-sm">We'll let you know when something important arrives.</p>
+</div>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 w-full rounded-t-xl z-50 bg-surface shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex justify-around items-center h-20 pb-safe px-2">
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low p-2 rounded-lg transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined">home</span>
+<span>Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-full px-4 py-1 font-label-md text-label-md active:scale-90 transition-all" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">history</span>
+<span>Activity</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low p-2 rounded-lg transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span>Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label-md text-label-md hover:bg-surface-container-low p-2 rounded-lg transition-all active:scale-90" href="#">
+<span class="material-symbols-outlined">person</span>
+<span>Profile</span>
+</a>
+</nav>
+<script>
+        function filterNotifications(category) {
+            const items = document.querySelectorAll('.notification-item');
+            const tabs = document.querySelectorAll('.category-tab');
+            const emptyState = document.getElementById('empty-state');
+            let visibleCount = 0;
+
+            // Update tab styles
+            tabs.forEach(tab => {
+                if(tab.innerText.toLowerCase() === category) {
+                    tab.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+                    tab.classList.add('bg-primary-container', 'text-on-primary-container');
+                } else if (category === 'all' && tab.innerText.toLowerCase() === 'all') {
+                    tab.classList.remove('bg-surface-container-high', 'text-on-surface-variant');
+                    tab.classList.add('bg-primary-container', 'text-on-primary-container');
+                } else {
+                    tab.classList.add('bg-surface-container-high', 'text-on-surface-variant');
+                    tab.classList.remove('bg-primary-container', 'text-on-primary-container');
+                }
+            });
+
+            // Filter items
+            items.forEach(item => {
+                if (category === 'all' || item.getAttribute('data-category') === category) {
+                    item.style.display = 'block';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+
+            // Show/hide empty state
+            if (visibleCount === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+            }
+        }
+
+        // Click interaction for cards
+        document.querySelectorAll('.notification-item div').forEach(card => {
+            card.addEventListener('click', () => {
+                card.classList.add('opacity-50');
+                setTimeout(() => card.classList.remove('opacity-50'), 300);
+            });
+        });
+    </script>
+</body></html>

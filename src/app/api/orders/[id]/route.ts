@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import {
@@ -75,6 +75,7 @@ async function emitSocketEvent(room: string, event: string, data: Record<string,
  * Get a specific order by ID
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     const order = await db.order.findUnique({
@@ -104,6 +105,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error fetching order:', error);
     return serverErrorResponse('Failed to fetch order');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -113,6 +116,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * Actions: confirm-payment, accept, reject, preparing, ready, pickup, deliver, cancel
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     const { searchParams } = new URL(request.url);
@@ -142,6 +146,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error updating order:', error);
     return serverErrorResponse('Failed to update order');
+  } finally {
+    await resetRLSContext();
   }
 }
 

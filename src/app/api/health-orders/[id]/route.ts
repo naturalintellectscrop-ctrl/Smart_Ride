@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -25,6 +25,7 @@ interface RouteParams {
  * Get a specific health order
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     
@@ -64,6 +65,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error) {
     console.error('Error fetching health order:', error);
     return serverErrorResponse('Failed to fetch health order');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -85,6 +88,7 @@ const updateStatusSchema = z.object({
  * Update health order status
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     const body = await request.json();
@@ -180,6 +184,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
     console.error('Error updating health order:', error);
     return serverErrorResponse('Failed to update health order');
+  } finally {
+    await resetRLSContext();
   }
 }
 

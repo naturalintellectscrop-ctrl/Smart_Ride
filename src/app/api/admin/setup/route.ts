@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 12;
@@ -20,6 +20,7 @@ const DEFAULT_ADMIN = {
 };
 
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     // Only allow in development or with secret key
     const setupKey = request.nextUrl.searchParams.get('key');
@@ -106,5 +107,7 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

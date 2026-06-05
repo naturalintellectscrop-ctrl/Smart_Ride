@@ -1,0 +1,317 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>SmartRide - Marketplace Discovery</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-container-high": "#e7e8e9",
+                      "secondary-container": "#6bff8f",
+                      "outline": "#6f7a71",
+                      "tertiary-container": "#636a7c",
+                      "error-container": "#ffdad6",
+                      "surface": "#f8f9fa",
+                      "on-surface-variant": "#3f4941",
+                      "secondary-fixed-dim": "#4ae176",
+                      "primary": "#005f3a",
+                      "on-primary-fixed": "#002111",
+                      "inverse-surface": "#2e3132",
+                      "on-error-container": "#93000a",
+                      "on-secondary-fixed": "#002109",
+                      "surface-dim": "#d9dadb",
+                      "tertiary": "#4b5264",
+                      "surface-bright": "#f8f9fa",
+                      "inverse-on-surface": "#f0f1f2",
+                      "on-secondary": "#ffffff",
+                      "surface-container-low": "#f3f4f5",
+                      "surface-container-highest": "#e1e3e4",
+                      "on-tertiary": "#ffffff",
+                      "surface-container": "#edeeef",
+                      "secondary": "#006e2f",
+                      "surface-variant": "#e1e3e4",
+                      "on-primary-fixed-variant": "#005231",
+                      "secondary-fixed": "#6bff8f",
+                      "surface-tint": "#006d43",
+                      "inverse-primary": "#7cd9a4",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#e6ebff",
+                      "tertiary-fixed-dim": "#c0c6db",
+                      "on-error": "#ffffff",
+                      "on-background": "#191c1d",
+                      "primary-container": "#0e7a4d",
+                      "primary-fixed": "#98f6be",
+                      "tertiary-fixed": "#dce2f7",
+                      "on-primary-container": "#a6ffc9",
+                      "on-surface": "#191c1d",
+                      "error": "#ba1a1a",
+                      "on-secondary-fixed-variant": "#005321",
+                      "background": "#f8f9fa",
+                      "outline-variant": "#bec9bf",
+                      "on-primary": "#ffffff",
+                      "primary-fixed-dim": "#7cd9a4",
+                      "on-secondary-container": "#007432",
+                      "on-tertiary-fixed": "#141b2b",
+                      "on-tertiary-fixed-variant": "#404758"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "md": "16px",
+                      "xl": "32px",
+                      "lg": "24px",
+                      "sm": "8px",
+                      "base": "4px",
+                      "gutter": "12px",
+                      "container-margin": "16px",
+                      "xs": "4px"
+              },
+              "fontFamily": {
+                      "display-lg": ["Plus Jakarta Sans"],
+                      "body-sm": ["Inter"],
+                      "body-md": ["Inter"],
+                      "body-lg": ["Inter"],
+                      "label-lg": ["Inter"],
+                      "headline-lg": ["Plus Jakarta Sans"],
+                      "headline-lg-mobile": ["Plus Jakarta Sans"],
+                      "headline-md": ["Plus Jakarta Sans"],
+                      "label-md": ["Inter"]
+              },
+              "fontSize": {
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                      "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md antialiased">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-container-margin py-md w-full sticky top-0 z-50 bg-surface dark:bg-surface">
+<div class="flex items-center gap-sm">
+<div class="w-12 h-12 rounded-xl bg-primary overflow-hidden flex items-center justify-center">
+<img alt="SmartRide Logo" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUyBUww0Q2dHWDe12OE9U06CrEa5xkspKOxiTln82ga49P7dbx5NRBJLBYyBohd2BAOdonfE3QpshIGxJLN7r2B_9PvoblJ_i1qA7RgSv4lHYqbX9HF4WI5WcuNYYrKqA1NVumXk5EHHkX9-pZ3tTdmTMqnAs8XqaguIzC8xhsnEp-oUVyiwE2EOSLDlBcH4WewKvbPB7ZpCT-0i4wtdgQeqXJkdlZcNIhjHNQag46H9NUPOWltLWjku6yfUgvQMtnLDMDssbttj6J">
+</div>
+<span class="text-headline-lg-mobile font-headline-lg-mobile font-bold text-primary dark:text-primary-fixed-dim">SmartRide</span>
+</div>
+<div class="flex items-center gap-xs">
+<button class="p-sm rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:scale-95 duration-150 relative">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim" data-icon="chat">forum</span>
+<span class="absolute top-1 right-1 w-2 h-2 bg-error rounded-full border-2 border-surface"></span>
+</button>
+<button class="p-sm rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-primary dark:text-primary-fixed-dim" data-icon="notifications">notifications</span>
+</button>
+</div>
+</header>
+<main class="pb-32">
+<!-- Search Bar Section -->
+<section class="px-container-margin py-md">
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-4 text-outline" data-icon="search">search</span>
+<input class="w-full h-14 pl-12 pr-4 rounded-xl border-none bg-surface-container text-body-md focus:ring-2 focus:ring-primary shadow-sm transition-all" placeholder="Search for food, medicine, or groceries..." type="text">
+<button class="absolute right-2 p-2 text-primary">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+</button>
+</div>
+</section>
+<!-- Categories Scrollable -->
+<section class="py-md overflow-hidden">
+<div class="flex gap-md overflow-x-auto px-container-margin hide-scrollbar">
+<div class="flex flex-col items-center gap-xs min-w-[80px] group cursor-pointer">
+<div class="w-16 h-16 rounded-2xl bg-primary-container flex items-center justify-center text-on-primary-container group-active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="fastfood">fastfood</span>
+</div>
+<span class="text-label-md font-label-md text-on-surface">Fast Food</span>
+</div>
+<div class="flex flex-col items-center gap-xs min-w-[80px] group cursor-pointer">
+<div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center text-primary group-active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="medical_services">medical_services</span>
+</div>
+<span class="text-label-md font-label-md text-on-surface">Pharmacy</span>
+</div>
+<div class="flex flex-col items-center gap-xs min-w-[80px] group cursor-pointer">
+<div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center text-primary group-active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="local_grocery_store">local_grocery_store</span>
+</div>
+<span class="text-label-md font-label-md text-on-surface">Groceries</span>
+</div>
+<div class="flex flex-col items-center gap-xs min-w-[80px] group cursor-pointer">
+<div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center text-primary group-active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="devices">devices</span>
+</div>
+<span class="text-label-md font-label-md text-on-surface">Electronics</span>
+</div>
+<div class="flex flex-col items-center gap-xs min-w-[80px] group cursor-pointer">
+<div class="w-16 h-16 rounded-2xl bg-surface-container-high flex items-center justify-center text-primary group-active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="local_shipping">local_shipping</span>
+</div>
+<span class="text-label-md font-label-md text-on-surface">Courier</span>
+</div>
+</div>
+</section>
+<!-- Featured Restaurants -->
+<section class="py-lg">
+<div class="px-container-margin mb-md flex justify-between items-end">
+<div>
+<h2 class="text-headline-md font-headline-md text-on-surface">Featured Stores</h2>
+<p class="text-body-sm text-outline">Reliable picks with In-app Call support</p>
+</div>
+<button class="text-primary text-label-lg font-label-lg">View All</button>
+</div>
+<div class="flex gap-md overflow-x-auto px-container-margin hide-scrollbar">
+<!-- Large Card 1 -->
+<div class="min-w-[280px] w-[280px] bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] group active:scale-[0.98] transition-all">
+<div class="h-40 relative">
+<img alt="Restaurant Interior" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBMYDU50PfWAm8JTKv1zCjgfxiR0x1cRhLEWDxn3RlDavb2qG-8h5MnaLBsAONTTb46E9jVvGnTT-X7rEHS48SCgOhN3OITbFU6ZnWT2LqE8exVKg-RqKHcAFUNFzW_IAC8mXDrIH6Ln_qhQ5r19TkSCSpi-xd8Eovf2vIfZ4sWKgU38nNIMXyfplpZSlOmy7NMieKbrfqKf_t_VWaLRHZqW_dG0DXkjkeCdd2aAmzmfTxT5-GfXr0GwdVBpea9hVQ56I47bXuPbUnz">
+<div class="absolute top-2 right-2 bg-secondary-container px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px]" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-md font-bold text-on-secondary-container">4.8</span>
+</div>
+</div>
+<div class="p-md">
+<h3 class="text-headline-md font-bold text-on-surface truncate">The Kampala Grill</h3>
+<div class="flex items-center gap-sm mt-xs text-outline">
+<span class="material-symbols-outlined text-[18px]" data-icon="forum">forum</span>
+<span class="text-label-md">Secure Chat available</span>
+</div>
+</div>
+</div>
+<!-- Large Card 2 -->
+<div class="min-w-[280px] w-[280px] bg-surface-container-lowest rounded-xl overflow-hidden shadow-[0_4px_12px_rgba(0,0,0,0.08)] group active:scale-[0.98] transition-all">
+<div class="h-40 relative">
+<img alt="Pharmacy Concept" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAhouGDM9SrtRjf6qFmNo4GINVELhHeNUOgq5yGFlyb_WIPQNfzwa3_cuLH_X2ZVr1wwfBQ3E5WUVbsAQyJU0U3h3cu1_bu2xKGcXeUGqquLOaOMh42-aaLe0m5yqoqg_GWXdrUwiacQQRrew6K92NXFF1tXR9L4-owpj7XohrjFhm0UuGxJgd4pT_rOnE6erqqPP_BoB9nI732IjId9-sPEJeWgsy3VC0TT5zi8B-CoMan3kjpitLauOLe_tCbmiiIg9Thi1SnVEHu">
+<div class="absolute top-2 right-2 bg-secondary-container px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+<span class="material-symbols-outlined text-[14px]" data-icon="star" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="text-label-md font-bold text-on-secondary-container">4.9</span>
+</div>
+</div>
+<div class="p-md">
+<h3 class="text-headline-md font-bold text-on-surface truncate">Quick-Cure Pharmacy</h3>
+<div class="flex items-center gap-sm mt-xs text-outline">
+<span class="material-symbols-outlined text-[18px]" data-icon="call">call</span>
+<span class="text-label-md">In-app Call enabled</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Trending Deals Bento Grid -->
+<section class="py-md px-container-margin">
+<h2 class="text-headline-md font-headline-md text-on-surface mb-md">Trending Deals</h2>
+<div class="grid grid-cols-2 gap-md">
+<!-- Deal 1 -->
+<div class="bg-surface-container-low p-sm rounded-xl flex flex-col gap-sm">
+<div class="aspect-square rounded-lg overflow-hidden bg-white">
+<img alt="Fresh Groceries" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBZ08CRsYzo6IFbp-UbBChse9ek5uCwxTOTtIYOcd2miBLSOr0uZeoN7TD9AsbbA4IjWP7XaTTXzbZDQ9E5U0whW4shwpu2NvnFeMfkTVWKyCWIfsmfVH-eUgmXvKR1WKoRoVGobjgaFJivOMH_QqCxZf-nzXgzVypjxAT4Z7MHRB--tPdc-_i91lE_ug9zmDSFtxGvxN3U-1wGGHvTxCZFwURZd6Ukn6wN7xDplwvYoBk7vD8Eh49S4Nc1FoJMIQ8YUO8Mgu9jFvDM">
+</div>
+<div>
+<span class="text-primary font-bold text-label-lg">UGX 12,000</span>
+<h4 class="text-label-md font-semibold text-on-surface truncate">Organic Fruit Basket</h4>
+<span class="text-[10px] uppercase font-bold text-error">30% OFF</span>
+</div>
+</div>
+<!-- Deal 2 -->
+<div class="bg-surface-container-low p-sm rounded-xl flex flex-col gap-sm">
+<div class="aspect-square rounded-lg overflow-hidden bg-white">
+<img alt="Tech Deal" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuChfZcsSbmrxDl_9Gc5FCVPzX1ucaafpRjHp0QoA0SMbThefUGrJ9GPnF2OzsrbJy_BfSfljVK_gwKh3rXhXsOCrUOY6Xvk_2evidFWBH1l4MBQCmW-Ac3lRi6KUQ6Iol4BVqpZ-HHG8ghg0teGObNjuttyApkVxiBxxlkuPjs1wN2AcDY6GESKPtLugs4icw3LINxb2soiZa2QtsT9x5nYZjuHNsWkhp53h53b1pf6J06js-v2_VahY6_RJA3Io4OaZnZtqTUHY4zk">
+</div>
+<div>
+<span class="text-primary font-bold text-label-lg">UGX 850,000</span>
+<h4 class="text-label-md font-semibold text-on-surface truncate">Smart Connect Pro</h4>
+<span class="text-[10px] uppercase font-bold text-error">Limited Stock</span>
+</div>
+</div>
+<!-- Deal 3 - Horizontal span -->
+<div class="col-span-2 bg-primary-container text-on-primary-container p-md rounded-xl flex justify-between items-center relative overflow-hidden">
+<div class="z-10">
+<h4 class="text-headline-md font-bold">Secure Delivery</h4>
+<p class="text-body-sm opacity-90">All coordination via Secure Chat.</p>
+<button class="mt-md bg-secondary-container text-on-secondary-container px-lg py-sm rounded-full text-label-lg font-bold shadow-md">Learn More</button>
+</div>
+<span class="material-symbols-outlined text-[120px] absolute -right-4 -bottom-4 opacity-10 rotate-12" data-icon="security">security</span>
+</div>
+</div>
+</section>
+<!-- Floating Action Button -->
+<button class="fixed bottom-24 right-container-margin w-14 h-14 bg-primary text-on-primary rounded-2xl shadow-lg flex items-center justify-center z-40 active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-[32px]" data-icon="shopping_cart">shopping_cart</span>
+<div class="absolute -top-1 -right-1 w-5 h-5 bg-error text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-surface">2</div>
+</button>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0_-4px_12px_0_rgba(0,0,0,0.08)] rounded-t-xl">
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-2xl px-4 py-1 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="home" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="text-label-md font-label-md">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span class="text-label-md font-label-md">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="text-label-md font-label-md">Wallet</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="text-label-md font-label-md">Profile</span>
+</a>
+</nav>
+<script>
+        const navItems = document.querySelectorAll('nav a');
+        navItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                navItems.forEach(i => {
+                    i.classList.remove('bg-secondary-container', 'dark:bg-on-secondary-fixed-variant', 'text-on-secondary-container', 'dark:text-secondary-fixed', 'rounded-2xl', 'px-4', 'py-1');
+                    i.classList.add('text-on-surface-variant', 'dark:text-outline', 'p-2');
+                    const icon = i.querySelector('.material-symbols-outlined');
+                    if(icon) icon.style.fontVariationSettings = "'FILL' 0";
+                });
+                item.classList.remove('text-on-surface-variant', 'dark:text-outline', 'p-2');
+                item.classList.add('bg-secondary-container', 'dark:bg-on-secondary-fixed-variant', 'text-on-secondary-container', 'dark:text-secondary-fixed', 'rounded-2xl', 'px-4', 'py-1');
+                const icon = item.querySelector('.material-symbols-outlined');
+                if(icon) icon.style.fontVariationSettings = "'FILL' 1";
+            });
+        });
+    </script>
+
+
+</body></html>

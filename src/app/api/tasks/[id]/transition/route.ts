@@ -11,7 +11,7 @@ import { EnhancedTaskStateMachine, TransitionContext } from '@/lib/services/enha
 import { authGuard } from '@/lib/auth/guards';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -60,6 +60,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     // SECURITY: Ownership validation - verify user is authorized to transition this task
     const task = await db.task.findUnique({
@@ -256,5 +258,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

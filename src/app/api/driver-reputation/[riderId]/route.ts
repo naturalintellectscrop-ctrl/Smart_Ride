@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/driver-reputation/[riderId] - Get detailed reputation for a specific driver
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ riderId: string }> }
 ) {
+  await setServiceRoleContext();
   try {
     const { riderId } = await params;
 
@@ -138,6 +139,8 @@ export async function GET(
       { success: false, error: 'Failed to fetch driver reputation' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -146,6 +149,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ riderId: string }> }
 ) {
+  await setServiceRoleContext();
   try {
     const { riderId } = await params;
     const body = await request.json();
@@ -223,5 +227,7 @@ export async function PATCH(
       { success: false, error: 'Failed to adjust trust score' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

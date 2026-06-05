@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType, BorderStyle, ShadingType } from 'docx';
 
 // GET - Fetch audit logs with filtering
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'list';
@@ -42,11 +43,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch audit logs' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST - Log mobile app activity
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { action, entityType, entityId, actorType, actorId, description, oldValues, newValues, userId, riderId, merchantId, orderId, taskId } = body;
@@ -91,6 +95,8 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create audit log' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 

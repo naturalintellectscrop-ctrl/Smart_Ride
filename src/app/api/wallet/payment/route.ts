@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { payFromWallet, refundToWallet, hasSufficientBalance, getWalletBalance } from '@/lib/wallet/wallet-service';
 import { requireAuth } from '@/lib/auth/guards';
+import { resetRLSContext } from '@/lib/auth-utils';
 import { z } from 'zod';
 
 // ============================================
@@ -97,6 +98,8 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error in wallet payment:', error);
     return serverErrorResponse('Failed to process wallet payment');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -146,5 +149,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error validating wallet payment:', error);
     return serverErrorResponse('Failed to validate wallet payment');
+  } finally {
+    await resetRLSContext();
   }
 }

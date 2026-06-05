@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { randomUUID } from 'crypto';
 
 // GET /api/alerts - Get connection alerts
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const riderId = searchParams.get('rider_id');
@@ -56,11 +57,14 @@ export async function GET(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST /api/alerts - Create a new alert (usually done by monitoring service)
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     
@@ -99,11 +103,14 @@ export async function POST(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // PATCH /api/alerts - Acknowledge an alert
 export async function PATCH(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { alertId, acknowledgedBy, resolutionNotes, isResolved } = body;
@@ -145,5 +152,7 @@ export async function PATCH(request: NextRequest) {
       { error: 'Internal server error' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

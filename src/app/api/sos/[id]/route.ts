@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/sos/[id] - Get single SOS alert
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
 
@@ -85,6 +86,8 @@ export async function GET(
       { error: 'Failed to fetch SOS alert' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -93,6 +96,7 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  await setServiceRoleContext();
   try {
     const { id } = await params;
     const body = await request.json();
@@ -169,5 +173,7 @@ export async function PATCH(
       { error: 'Failed to update SOS alert' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

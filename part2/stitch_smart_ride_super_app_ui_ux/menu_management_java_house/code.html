@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Java House - Menu Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .font-headline { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #bec9bf; border-radius: 10px; }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "secondary-fixed-dim": "#4ae176",
+                        "primary-fixed": "#98f6be",
+                        "on-secondary-fixed-variant": "#005321",
+                        "surface-variant": "#e1e3e4",
+                        "on-primary-fixed": "#002111",
+                        "surface-bright": "#f8f9fa",
+                        "on-secondary-container": "#007432",
+                        "secondary-fixed": "#6bff8f",
+                        "surface-container-low": "#f3f4f5",
+                        "outline": "#6f7a71",
+                        "on-secondary": "#ffffff",
+                        "secondary": "#006e2f",
+                        "primary-container": "#0e7a4d",
+                        "error-container": "#ffdad6",
+                        "on-error": "#ffffff",
+                        "primary": "#005f3a",
+                        "on-tertiary": "#ffffff",
+                        "background": "#f8f9fa",
+                        "inverse-primary": "#7cd9a4",
+                        "surface-container-highest": "#e1e3e4",
+                        "on-primary-fixed-variant": "#005231",
+                        "on-tertiary-fixed": "#141b2b",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#7cd9a4",
+                        "secondary-container": "#6bff8f",
+                        "on-secondary-fixed": "#002109",
+                        "on-error-container": "#93000a",
+                        "surface-container-lowest": "#ffffff",
+                        "outline-variant": "#bec9bf",
+                        "surface-container-high": "#e7e8e9",
+                        "on-tertiary-fixed-variant": "#404758",
+                        "on-background": "#191c1d",
+                        "inverse-surface": "#2e3132",
+                        "on-surface": "#191c1d",
+                        "tertiary-fixed": "#dce2f7",
+                        "on-surface-variant": "#3f4941",
+                        "inverse-on-surface": "#f0f1f2",
+                        "surface-dim": "#d9dadb",
+                        "surface": "#f8f9fa",
+                        "on-primary-container": "#a6ffc9",
+                        "on-tertiary-container": "#e6ebff",
+                        "tertiary": "#4b5264",
+                        "surface-container": "#edeeef",
+                        "tertiary-container": "#636a7c",
+                        "tertiary-fixed-dim": "#c0c6db",
+                        "error": "#ba1a1a",
+                        "surface-tint": "#006d43"
+                    },
+                    "spacing": {
+                        "container-margin": "16px",
+                        "xs": "4px",
+                        "xl": "32px",
+                        "gutter": "12px",
+                        "md": "16px",
+                        "sm": "8px",
+                        "base": "4px",
+                        "lg": "24px"
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen pb-32">
+<!-- Top App Bar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin h-16 bg-surface/90 dark:bg-surface-dim/90 backdrop-blur-md shadow-sm">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-primary text-[28px]">restaurant_menu</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-primary font-bold">Smart Ride</h1>
+</div>
+<div class="flex items-center gap-sm">
+<span class="text-label-md font-label-md text-primary bg-primary-container/20 px-3 py-1 rounded-full">Online</span>
+<div class="w-10 h-10 rounded-full bg-surface-container-high overflow-hidden border-2 border-primary">
+<img class="w-full h-full object-cover" data-alt="Professional portrait of a male restaurant manager wearing a crisp white shirt, set in a brightly lit modern office environment with warm wooden accents. The lighting is soft and high-key, reflecting a reliable and smart professional aesthetic that aligns with the clean corporate identity of the app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1LfMskDuiaeKIkmBwdFDAV7krExuxvajlCEDnc-wBdiSk5p62QABGoNoEOX6_FU3Y6Q4B8plMIl_nwH62OQYisbW5NYWA5NbwyAryWGJN5VcXhteiBgKyb5BE3ZuaFl264C_k01vHRG84IzzFfrP6LsKaa9OJRyUYlXqbejSuJNJhnBCWiI4i0IGSUYM42J5aT5NNrUEJLpN0K0LLKr5rhd-CbL6k1BudWvAptMfIZ_3RbJn1zwU-Kwu48Lvi7_ZGT6y35WEBGKsV"/>
+</div>
+</div>
+</header>
+<main class="pt-20 px-container-margin max-w-2xl mx-auto">
+<!-- Merchant Info Card -->
+<section class="mb-lg">
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-sm border border-outline-variant/30 flex items-center gap-md">
+<div class="w-16 h-16 rounded-lg overflow-hidden bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Close-up of a high-end restaurant branding with the Java House logo visible on a coffee cup. The setting is a modern cafe interior with golden hour sunlight streaming through large windows, creating a warm, premium, and inviting atmosphere with soft bokeh in the background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBABqo_m1UVX7nPHAbZ4VFDBa3L6ldjhxcZo50zWkbxlPp9Gt9L8TBKqYwSa-m92G4dfSRFID7EPngwIvQtzWLOeSurRIYF6zoRyAJJR3giD4IhS8hRyWnQaFUX4iSF6Dd3woX01WPsWKg9KxQ4mIkkHm6_pEsIlJ_b98j3-v2dpr3DUwqT6EhimgoWGD9u-O1B2JuMS1SKZppHinKmClgDrElyLXxfzR3ByX7e19sBYb8Wo6hQ6LW25TvM4E8xTeyfSMj8TgJ9vvMm"/>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Java House</h2>
+<p class="text-body-sm font-body-sm text-on-surface-variant">Lubowa Branch • 4.8 ★</p>
+</div>
+</div>
+</section>
+<!-- Search & Categories -->
+<section class="mb-lg sticky top-[72px] z-40 bg-background/95 backdrop-blur-sm py-2">
+<div class="relative mb-md">
+<span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline">search</span>
+<input class="w-full pl-12 pr-4 py-4 bg-surface-container-low border-none rounded-xl focus:ring-2 focus:ring-primary text-body-md font-body-md placeholder:text-outline" placeholder="Search menu items..." type="text"/>
+</div>
+<div class="flex gap-sm overflow-x-auto pb-2 custom-scrollbar no-scrollbar">
+<button class="whitespace-nowrap px-lg py-2 rounded-full bg-primary text-on-primary font-label-lg text-label-lg transition-all active:scale-95">All Items</button>
+<button class="whitespace-nowrap px-lg py-2 rounded-full bg-surface-container-highest text-on-surface-variant font-label-lg text-label-lg hover:bg-surface-variant transition-all active:scale-95">Burgers</button>
+<button class="whitespace-nowrap px-lg py-2 rounded-full bg-surface-container-highest text-on-surface-variant font-label-lg text-label-lg hover:bg-surface-variant transition-all active:scale-95">Breakfast</button>
+<button class="whitespace-nowrap px-lg py-2 rounded-full bg-surface-container-highest text-on-surface-variant font-label-lg text-label-lg hover:bg-surface-variant transition-all active:scale-95">Drinks</button>
+<button class="whitespace-nowrap px-lg py-2 rounded-full bg-surface-container-highest text-on-surface-variant font-label-lg text-label-lg hover:bg-surface-variant transition-all active:scale-95">Salads</button>
+</div>
+</section>
+<!-- Menu List -->
+<section class="space-y-gutter">
+<!-- Item 1 -->
+<div class="bg-surface-container-lowest rounded-xl p-sm flex gap-md shadow-sm border border-outline-variant/20 hover:shadow-md transition-shadow">
+<div class="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A gourmet cheeseburger with melting cheddar, fresh lettuce, and tomatoes on a toasted brioche bun. The lighting is studio-quality with soft shadows, highlighting the juicy textures and vibrant colors. The style is premium food photography with a focus on appetite appeal and professional presentation." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwNdAKsLqO5wi5S8HzF2JUwMVhd-6I8gDl0lLLRCbg0hYqGthmEYhpOa5yiYBjfJjRNqPxRVN7X6FMPJ2W1HUuv57NLMx-hB6cqsWS52vlhg0TOKQxdLp9y8ATcg0wvTpq9WjYUR9M8iJCtIjbikwPyAdHIUCiK-5xU5V3e9PpWSYV2DFm0tbW-Ck-rSBlC5FRZStqb-eHbxSPHPoVbpsvTFo0o06h4vJmPaXCSjd1ov9BlspguAU5AfaysyhR-V0BmRNxv-Lyfj_C"/>
+</div>
+<div class="flex-grow flex flex-col justify-between py-1">
+<div>
+<div class="flex justify-between items-start">
+<h3 class="font-headline-md text-headline-md text-on-surface">Double Beef Burger</h3>
+<span class="text-primary font-bold text-label-lg">UGX 28,000</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant line-clamp-1">Double patty, caramelized onions, house sauce.</p>
+</div>
+<div class="flex justify-between items-center mt-2">
+<span class="text-label-md font-label-md text-secondary bg-secondary-container/30 px-2 py-0.5 rounded">Burgers</span>
+<div class="flex items-center gap-2">
+<span class="text-label-md font-label-md text-on-surface-variant">In Stock</span>
+<button class="w-10 h-6 bg-primary rounded-full relative transition-colors duration-200" onclick="toggleStock(this)">
+<span class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full transition-all"></span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="bg-surface-container-lowest rounded-xl p-sm flex gap-md shadow-sm border border-outline-variant/20 hover:shadow-md transition-shadow">
+<div class="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A classic English breakfast platter featuring sunny-side-up eggs, grilled sausages, sautéed mushrooms, and buttered toast on a white ceramic plate. The morning light is bright and natural, giving the scene a fresh and energetic feel. The high-quality composition emphasizes the rich textures of the various breakfast components." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBmuSRhD9zwfwxP45mgaFtMDfXJZb2mGabvdDozz-Vr7jqxJni-NNF8MpdsMSkUfXGQ4wr1uFmUV9hNYGJy1TJxcDP_1VZoZTYyZkJtclzoffw32KQ7RxODB6XTsXcApiRzJ2KSpbTGmlmNa3i9YjsaBZLlI53CQQl7RbXVu_ECTar7BS33YWAnAq6iwPhFG2eOV3v9PtMHM8Li9fKOR2kPNUpVOzHcwRGdS_J0FMCDIOIIEM93ezeDgEN0yYP-5nhdM_1KIRcv7Flj"/>
+</div>
+<div class="flex-grow flex flex-col justify-between py-1">
+<div>
+<div class="flex justify-between items-start">
+<h3 class="font-headline-md text-headline-md text-on-surface">Java Breakfast</h3>
+<span class="text-primary font-bold text-label-lg">UGX 32,000</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant line-clamp-1">Two eggs, beef sausages, bacon, toast.</p>
+</div>
+<div class="flex justify-between items-center mt-2">
+<span class="text-label-md font-label-md text-secondary bg-secondary-container/30 px-2 py-0.5 rounded">Breakfast</span>
+<div class="flex items-center gap-2">
+<span class="text-label-md font-label-md text-on-surface-variant">In Stock</span>
+<button class="w-10 h-6 bg-primary rounded-full relative transition-colors duration-200" onclick="toggleStock(this)">
+<span class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full transition-all"></span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Item 3 (Out of stock example) -->
+<div class="bg-surface-container-lowest rounded-xl p-sm flex gap-md shadow-sm border border-outline-variant/20 hover:shadow-md transition-shadow opacity-75">
+<div class="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0 grayscale">
+<img class="w-full h-full object-cover" data-alt="An artfully crafted latte with intricate foam art on top, served in a glass cup on a wooden table. The lighting is warm and moody, suggesting a cozy cafe environment. The aesthetic is sophisticated and minimalist, focusing on the detail of the coffee's surface and the creamy texture of the milk." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDmbNlRuRYMMzcccttMaCJxYXL0twzeQt6Vi6n20s3gE6n8rhl8ygirwgW5lMwfBFTcRKRQ-Q1c5qSQEIcUogHQCukYVWqeW-MEkou5jUnijTLE0399ZxtJbu1gIiwXd7rrQ1ll2sa65D42Xo4Jf0XbD8LpDT2Gv4HNkre7u7xMn8TlL7QGQl9I0J-wFfmmcwk6kqPkW3UJO6G5Ed3BCpVh9qicTVtEobYyCIntIhtzDJIfNCTCzUzuhptVyMMHQi5qFRemqakM9NN-"/>
+</div>
+<div class="flex-grow flex flex-col justify-between py-1">
+<div>
+<div class="flex justify-between items-start">
+<h3 class="font-headline-md text-headline-md text-on-surface">Caffè Latte</h3>
+<span class="text-primary font-bold text-label-lg">UGX 12,500</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant line-clamp-1">Double shot espresso with steamed milk.</p>
+</div>
+<div class="flex justify-between items-center mt-2">
+<span class="text-label-md font-label-md text-secondary bg-secondary-container/30 px-2 py-0.5 rounded">Drinks</span>
+<div class="flex items-center gap-2">
+<span class="text-label-md font-label-md text-on-surface-variant">In Stock</span>
+<button class="w-10 h-6 bg-outline-variant rounded-full relative transition-colors duration-200" onclick="toggleStock(this)">
+<span class="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all"></span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="bg-surface-container-lowest rounded-xl p-sm flex gap-md shadow-sm border border-outline-variant/20 hover:shadow-md transition-shadow">
+<div class="w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="A vibrant and healthy garden salad featuring avocado slices, cherry tomatoes, cucumbers, and mixed greens, drizzled with a light balsamic vinaigrette. The lighting is crisp and natural, highlighting the freshness of the vegetables. The visual style is clean, modern, and high-quality, emphasizing wellness and nutrition." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAlJ3YORq5iW9gFUECzdvGO-vlIG9NTqVqgkhi5Kmx1qc2S0-LyffLoU38TRlcVqIxE4GLS-Ljp1YAgpbs2UwToAWRw9lCAcbJCDUPu-oeS5PvB65ZqYL_GDMWvSQ3rOnS_DFAS78X40smkn6xWTyP6hYPuD1O57WMm81dJ8Woh4xzy9WNdifEo4O1iCdTaEIlf9Tqs9xbw7HbG-qspR5JfFTUVmKY4CfC4DxTtGXnlHVcCQhCNrOKwiQsQfuPwWfdJ0BImykryn78f"/>
+</div>
+<div class="flex-grow flex flex-col justify-between py-1">
+<div>
+<div class="flex justify-between items-start">
+<h3 class="font-headline-md text-headline-md text-on-surface">Avocado Garden Salad</h3>
+<span class="text-primary font-bold text-label-lg">UGX 22,000</span>
+</div>
+<p class="text-body-sm font-body-sm text-on-surface-variant line-clamp-1">Fresh greens, avocado, cherry tomatoes, lemon dressing.</p>
+</div>
+<div class="flex justify-between items-center mt-2">
+<span class="text-label-md font-label-md text-secondary bg-secondary-container/30 px-2 py-0.5 rounded">Salads</span>
+<div class="flex items-center gap-2">
+<span class="text-label-md font-label-md text-on-surface-variant">In Stock</span>
+<button class="w-10 h-6 bg-primary rounded-full relative transition-colors duration-200" onclick="toggleStock(this)">
+<span class="absolute right-1 top-1 w-4 h-4 bg-white rounded-full transition-all"></span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- FAB: Add Item -->
+<button class="fixed bottom-24 right-6 w-14 h-14 bg-primary text-on-primary rounded-xl shadow-lg flex items-center justify-center transition-all hover:scale-105 active:scale-95 z-50">
+<span class="material-symbols-outlined text-[32px]">add</span>
+</button>
+<!-- Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 pb-6 bg-surface-container-lowest dark:bg-inverse-surface shadow-[0_-4px_12px_0_rgba(0,0,0,0.08)]">
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</div>
+<div class="flex flex-col items-center justify-center bg-secondary-container dark:bg-primary-container text-on-secondary-container dark:text-on-primary-container rounded-full px-4 py-1">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">receipt_long</span>
+<span class="font-label-md text-label-md">Activity</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-md text-label-md">Wallet</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline-variant">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Account</span>
+</div>
+</nav>
+<script>
+        function toggleStock(btn) {
+            const dot = btn.querySelector('span');
+            const parentCard = btn.closest('.bg-surface-container-lowest');
+            const imgContainer = parentCard.querySelector('.flex-shrink-0');
+            
+            if (btn.classList.contains('bg-primary')) {
+                // Turn OFF
+                btn.classList.remove('bg-primary');
+                btn.classList.add('bg-outline-variant');
+                dot.classList.remove('right-1');
+                dot.classList.add('left-1');
+                parentCard.classList.add('opacity-75');
+                imgContainer.classList.add('grayscale');
+            } else {
+                // Turn ON
+                btn.classList.add('bg-primary');
+                btn.classList.remove('bg-outline-variant');
+                dot.classList.add('right-1');
+                dot.classList.remove('left-1');
+                parentCard.classList.remove('opacity-75');
+                imgContainer.classList.remove('grayscale');
+            }
+        }
+        
+        // Horizontal scroll animation for categories
+        const categoryScroll = document.querySelector('.overflow-x-auto');
+        categoryScroll.addEventListener('wheel', (evt) => {
+            evt.preventDefault();
+            categoryScroll.scrollLeft += evt.deltaY;
+        });
+    </script>
+</body></html>

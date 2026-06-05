@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -18,17 +18,18 @@ import { requireAuth, requireAdmin, isAdmin } from '@/lib/auth/guards';
  * SECURITY: Requires authentication. Non-admins can only see their own profile.
  */
 export async function GET(request: NextRequest) {
-  try {
-    // SECURITY: Require authentication
-    const authResult = requireAuth(request);
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: authResult.statusCode }
-      );
-    }
-    const user = authResult.user!;
+  // SECURITY: Require authentication
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const user = authResult.user!;
 
+  await setRLSContext(user);
+  try {
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
     
@@ -81,6 +82,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching riders:', error);
     return serverErrorResponse('Failed to fetch riders');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -114,17 +117,18 @@ const riderRegisterSchema = z.object({
  * SECURITY: Requires authentication. Users can only register themselves as riders.
  */
 export async function POST(request: NextRequest) {
-  try {
-    // SECURITY: Require authentication
-    const authResult = requireAuth(request);
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: authResult.statusCode }
-      );
-    }
-    const user = authResult.user!;
+  // SECURITY: Require authentication
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const user = authResult.user!;
 
+  await setRLSContext(user);
+  try {
     const body = await request.json();
     const validatedData = riderRegisterSchema.parse(body);
 
@@ -220,5 +224,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error registering rider:', error);
     return serverErrorResponse('Failed to register rider');
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -22,11 +22,12 @@ import {
 import { TaskType, TaskStatus } from '@prisma/client';
 import { z } from 'zod';
 import { 
-  requireAuth, 
+  requireAuthWithRLS, 
   isAdmin, 
   getAuthUser,
   AuthenticatedRequest 
 } from '@/lib/auth/guards';
+import { resetRLSContext } from '@/lib/db';
 import { UserRole } from '@prisma/client';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
@@ -38,8 +39,8 @@ import { sendTaskUpdateNotification } from '@/lib/services/notification.service'
  */
 export async function GET(request: NextRequest) {
   try {
-    // SECURITY: Require authentication
-    const authResult = requireAuth(request);
+    // SECURITY: Require authentication + set RLS context
+    const authResult = await requireAuthWithRLS(request);
     if (!authResult.success) {
       return NextResponse.json(
         { success: false, error: authResult.error },
@@ -113,6 +114,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching tasks:', error);
     return serverErrorResponse('Failed to fetch tasks');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -161,8 +164,8 @@ const createTaskSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    // SECURITY: Require authentication
-    const authResult = requireAuth(request);
+    // SECURITY: Require authentication + set RLS context
+    const authResult = await requireAuthWithRLS(request);
     if (!authResult.success) {
       return NextResponse.json(
         { success: false, error: authResult.error },
@@ -321,5 +324,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error creating task:', error);
     return serverErrorResponse('Failed to create task');
+  } finally {
+    await resetRLSContext();
   }
 }

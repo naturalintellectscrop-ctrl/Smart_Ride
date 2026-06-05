@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { 
   calculateDemandSupplyRatio, 
@@ -17,6 +17,7 @@ import {
  * Get all active surge pricing zones
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const activeOnly = searchParams.get('active') === 'true';
@@ -80,6 +81,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching surge records:', error);
     return serverErrorResponse('Failed to fetch surge records');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -88,6 +91,7 @@ export async function GET(request: NextRequest) {
  * Manually start surge pricing for a zone
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { zoneId, multiplier, reason } = body;
@@ -198,6 +202,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error starting surge:', error);
     return serverErrorResponse('Failed to start surge pricing');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -206,6 +212,7 @@ export async function POST(request: NextRequest) {
  * End surge pricing for a zone
  */
 export async function PATCH(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { surgeId, reason } = body;
@@ -257,5 +264,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Error ending surge:', error);
     return serverErrorResponse('Failed to end surge pricing');
+  } finally {
+    await resetRLSContext();
   }
 }

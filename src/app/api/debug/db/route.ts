@@ -4,9 +4,10 @@
  */
 
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 export async function GET() {
+  await setServiceRoleContext();
   try {
     // Get the database host from the URL (hide password)
     const dbUrl = process.env.DATABASE_URL || 'not set';
@@ -37,5 +38,7 @@ export async function GET() {
           ? 'Using Render URL but connection failed - check if DB is running'
           : 'Unknown host',
     }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MetricsService } from '@/lib/analytics/metrics-service';
 import { authGuard } from '@/lib/auth/guards';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 import { financeAdminGuard } from '@/lib/auth/admin-guards';
 
 // GET /api/analytics/revenue
@@ -17,6 +18,8 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     // Revenue analytics requires finance admin access
     const financeResult = financeAdminGuard(request);
@@ -55,5 +58,7 @@ export async function GET(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

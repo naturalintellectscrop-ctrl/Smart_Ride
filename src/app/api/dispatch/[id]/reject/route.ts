@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -25,6 +25,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     // Get rider ID from user
     const rider = await db.rider.findFirst({
@@ -146,5 +148,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

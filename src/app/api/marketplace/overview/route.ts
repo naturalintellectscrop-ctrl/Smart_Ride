@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, serverErrorResponse } from '@/lib/api/response';
 import { 
   calculateDemandSupplyRatio, 
@@ -15,6 +15,7 @@ import {
  * Get overall marketplace balance overview
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     // Get all active zones with latest metrics
     const zones = await db.geographicZone.findMany({
@@ -129,5 +130,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching marketplace overview:', error);
     return serverErrorResponse('Failed to fetch marketplace overview');
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MetricsService } from '@/lib/analytics/metrics-service';
 import { authGuard, adminGuard } from '@/lib/auth/guards';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/analytics/metrics
 export async function GET(request: NextRequest) {
@@ -16,6 +17,8 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     const searchParams = request.nextUrl.searchParams;
     const metric = searchParams.get('metric');
@@ -118,5 +121,7 @@ export async function GET(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

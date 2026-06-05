@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface": "#f8f9fa",
+                    "error": "#ba1a1a",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "secondary": "#006e2f",
+                    "outline": "#6f7a71",
+                    "on-primary-container": "#a6ffc9",
+                    "on-tertiary-fixed-variant": "#404758",
+                    "outline-variant": "#bec9bf",
+                    "primary-container": "#0e7a4d",
+                    "inverse-surface": "#2e3132",
+                    "surface-container-lowest": "#ffffff",
+                    "secondary-fixed": "#6bff8f",
+                    "secondary-fixed-dim": "#4ae176",
+                    "on-secondary": "#ffffff",
+                    "inverse-primary": "#7cd9a4",
+                    "tertiary": "#4b5264",
+                    "primary": "#005f3a",
+                    "tertiary-container": "#636a7c",
+                    "on-surface-variant": "#3f4941",
+                    "on-secondary-fixed-variant": "#005321",
+                    "on-surface": "#191c1d",
+                    "on-primary-fixed": "#002111",
+                    "secondary-container": "#6bff8f",
+                    "surface-container-highest": "#e1e3e4",
+                    "surface-tint": "#006d43",
+                    "on-secondary-fixed": "#002109",
+                    "surface-container": "#edeeef",
+                    "on-primary-fixed-variant": "#005231",
+                    "tertiary-fixed": "#dce2f7",
+                    "error-container": "#ffdad6",
+                    "on-tertiary-container": "#e6ebff",
+                    "on-error-container": "#93000a",
+                    "on-tertiary-fixed": "#141b2b",
+                    "on-secondary-container": "#007432",
+                    "surface-dim": "#d9dadb",
+                    "surface-bright": "#f8f9fa",
+                    "surface-container-low": "#f3f4f5",
+                    "on-background": "#191c1d",
+                    "surface-variant": "#e1e3e4",
+                    "surface-container-high": "#e7e8e9",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "on-tertiary": "#ffffff",
+                    "inverse-on-surface": "#f0f1f2",
+                    "primary-fixed": "#98f6be",
+                    "on-primary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "background": "#f8f9fa"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "xs": "4px",
+                    "sm": "8px",
+                    "container-margin": "16px",
+                    "gutter": "12px",
+                    "xl": "32px",
+                    "base": "4px",
+                    "md": "16px",
+                    "lg": "24px"
+            },
+            "fontFamily": {
+                    "label-md": ["Inter"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "body-lg": ["Inter"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "body-md": ["Inter"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "body-sm": ["Inter"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "label-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            background-color: #f8f9fa;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-header {
+            backdrop-filter: blur(12px);
+            background-color: rgba(248, 249, 250, 0.8);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-md text-on-surface">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 flex justify-between items-center w-full px-md h-14 bg-surface/80 backdrop-blur-md">
+<div class="flex items-center gap-md">
+<button class="transition-colors duration-200 active:scale-95 text-primary p-xs hover:bg-surface-container-low rounded-full">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">Settings</h1>
+</div>
+<button class="transition-colors duration-200 active:scale-95 text-primary p-xs hover:bg-surface-container-low rounded-full">
+<span class="material-symbols-outlined">search</span>
+</button>
+</header>
+<main class="max-w-3xl mx-auto px-container-margin pb-32 pt-md space-y-lg">
+<!-- User Profile Quick Card -->
+<div class="bg-surface-container-lowest rounded-xl p-md shadow-[0_4px_12px_rgba(0,0,0,0.06)] flex items-center gap-md border border-outline-variant/30">
+<div class="relative">
+<img alt="Kato Emmanuel" class="w-16 h-16 rounded-full object-cover" data-alt="A professional close-up portrait of a Ugandan man with a warm, confident expression. He is wearing a clean, modern white linen shirt against a soft, out-of-focus urban background with greenery. The lighting is bright and natural morning sun, emphasizing a smart and reliable tech-forward personality. The image maintains a high-quality, corporate aesthetic with a shallow depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUjhOvOpYHS212hdzcmRR9LimuHUE4pTKakAgAJFmZ_2cYy5WphFo4Qh11qQA_Jt8zMEuXrgj43KAzNDbCKyR94rVXtByun08XjpX58yiEZg2ws2dcomOYjTG4XyLM80cCQuopirL5YKTnRO8413UIinFUQQiNxN6ogywIYq1gHveEUObIjDYOzJMfWZ2c9pzfoeO0elgaEOkxoMXY6qERllVey5SXkfsjGOcqP5sIQ_b8nXQlzVL-sAStLyWl99lntpZqIJQg3x3g"/>
+<div class="absolute bottom-0 right-0 w-4 h-4 bg-secondary-fixed rounded-full border-2 border-surface-container-lowest"></div>
+</div>
+<div>
+<h2 class="font-headline-md text-headline-md text-on-surface">Kato Emmanuel</h2>
+<p class="font-label-md text-label-md text-on-surface-variant">Gold Member • ID: 293847</p>
+</div>
+</div>
+<!-- Settings Category: Account -->
+<section class="space-y-sm">
+<h3 class="font-label-lg text-label-lg text-primary px-sm">Account</h3>
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden border border-outline-variant/20">
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">person</span>
+<span class="font-body-md text-body-md text-on-surface">Personal Info</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+<div class="h-[1px] bg-outline-variant/20 mx-md"></div>
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">lock</span>
+<span class="font-body-md text-body-md text-on-surface">Password</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Settings Category: Payment -->
+<section class="space-y-sm">
+<h3 class="font-label-lg text-label-lg text-primary px-sm">Payment</h3>
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden border border-outline-variant/20">
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">credit_card</span>
+<span class="font-body-md text-body-md text-on-surface">Manage Cards</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+<div class="h-[1px] bg-outline-variant/20 mx-md"></div>
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">account_balance_wallet</span>
+<span class="font-body-md text-body-md text-on-surface">MoMo Accounts</span>
+</div>
+<div class="flex items-center gap-sm">
+<div class="flex -space-x-2">
+<div class="w-5 h-5 rounded-full bg-[#FFCC00] border border-white flex items-center justify-center text-[8px] font-bold">MTN</div>
+<div class="w-5 h-5 rounded-full bg-[#ED1C24] border border-white flex items-center justify-center text-[8px] font-bold text-white">Air</div>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</button>
+</div>
+</section>
+<!-- Settings Category: Preferences -->
+<section class="space-y-sm">
+<h3 class="font-label-lg text-label-lg text-primary px-sm">Preferences</h3>
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden border border-outline-variant/20">
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">language</span>
+<span class="font-body-md text-body-md text-on-surface">Language</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="text-label-md text-on-surface-variant">English (UG)</span>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</button>
+<div class="h-[1px] bg-outline-variant/20 mx-md"></div>
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">notifications</span>
+<span class="font-body-md text-body-md text-on-surface">Notifications</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+<div class="h-[1px] bg-outline-variant/20 mx-md"></div>
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">dark_mode</span>
+<span class="font-body-md text-body-md text-on-surface">Theme</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="text-label-md text-on-surface-variant">System Default</span>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</button>
+</div>
+</section>
+<!-- Settings Category: Security -->
+<section class="space-y-sm">
+<h3 class="font-label-lg text-label-lg text-primary px-sm">Security</h3>
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden border border-outline-variant/20">
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">face</span>
+<span class="font-body-md text-body-md text-on-surface">Face ID/Pin</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+<div class="h-[1px] bg-outline-variant/20 mx-md"></div>
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">enhanced_encryption</span>
+<span class="font-body-md text-body-md text-on-surface">Two-Factor Auth</span>
+</div>
+<div class="flex items-center gap-xs">
+<span class="px-2 py-0.5 bg-secondary-container text-on-secondary-container text-[10px] rounded-full font-bold">ACTIVE</span>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</div>
+</button>
+</div>
+</section>
+<!-- Settings Category: Legal -->
+<section class="space-y-sm">
+<h3 class="font-label-lg text-label-lg text-primary px-sm">Legal</h3>
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.04)] overflow-hidden border border-outline-variant/20">
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">policy</span>
+<span class="font-body-md text-body-md text-on-surface">Privacy Policy</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+<div class="h-[1px] bg-outline-variant/20 mx-md"></div>
+<button class="w-full flex items-center justify-between p-md hover:bg-surface-container-low transition-colors duration-200 group">
+<div class="flex items-center gap-md">
+<span class="material-symbols-outlined text-tertiary">description</span>
+<span class="font-body-md text-body-md text-on-surface">Terms of Service</span>
+</div>
+<span class="material-symbols-outlined text-outline-variant group-hover:text-primary transition-colors">chevron_right</span>
+</button>
+</div>
+</section>
+<!-- Danger Zone / Log Out -->
+<section class="pt-lg">
+<button class="w-full h-14 bg-error-container text-on-error-container font-headline-md rounded-xl flex items-center justify-center gap-sm active:scale-95 transition-transform duration-200 hover:brightness-95">
+<span class="material-symbols-outlined">logout</span>
+                Log Out
+            </button>
+<p class="text-center mt-md text-label-md text-outline">App Version 2.4.1 (Build 450)</p>
+</section>
+</main>
+<!-- Bottom Navigation Shell (Persistent Context) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-container-margin py-sm mb-safe shadow-[0_-4px_12px_rgba(0,0,0,0.08)] bg-surface-container-lowest rounded-t-xl">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-label-md text-label-md">Activity</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-md text-label-md">Wallet</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:text-primary transition-all active:scale-90">
+<span class="material-symbols-outlined">chat_bubble</span>
+<span class="font-label-md text-label-md">Messages</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 transition-all active:scale-90">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-md text-label-md">Account</span>
+</button>
+</nav>
+<script>
+        // Micro-interaction for settings list items
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const icon = btn.querySelector('.group-hover\\:text-primary');
+                if (icon) {
+                    icon.style.transform = 'translateX(4px)';
+                    setTimeout(() => {
+                        icon.style.transform = 'translateX(0)';
+                    }, 200);
+                }
+            });
+        });
+    </script>
+</body></html>

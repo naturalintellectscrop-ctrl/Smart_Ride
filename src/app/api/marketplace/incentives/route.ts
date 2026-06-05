@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { notifyNewIncentive } from '@/lib/services/notification.service';
 import { z } from 'zod';
@@ -43,6 +43,7 @@ const incentiveSchema = z.object({
  * Get all driver incentives
  */
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
@@ -124,6 +125,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching incentives:', error);
     return serverErrorResponse('Failed to fetch incentives');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -132,6 +135,7 @@ export async function GET(request: NextRequest) {
  * Create a new driver incentive
  */
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const validatedData = incentiveSchema.parse(body);
@@ -221,6 +225,8 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error creating incentive:', error);
     return serverErrorResponse('Failed to create incentive');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -229,6 +235,7 @@ export async function POST(request: NextRequest) {
  * Update an incentive status
  */
 export async function PATCH(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { incentiveId, status, currentParticipants, currentPayout, totalRidesCompleted, totalRewardsPaid } = body;
@@ -259,5 +266,7 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     console.error('Error updating incentive:', error);
     return serverErrorResponse('Failed to update incentive');
+  } finally {
+    await resetRLSContext();
   }
 }

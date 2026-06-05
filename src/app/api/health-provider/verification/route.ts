@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/health-provider/verification - Get providers pending verification
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'PENDING';
@@ -42,11 +43,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch providers' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // PATCH /api/health-provider/verification - Update verification status
 export async function PATCH(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { providerId, action, adminId, notes, rejectionReason } = body;
@@ -169,5 +173,7 @@ export async function PATCH(request: NextRequest) {
       { error: 'Failed to update verification status' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

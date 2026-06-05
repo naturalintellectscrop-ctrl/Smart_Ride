@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { hashPassword, validatePasswordStrength } from '@/lib/auth/password';
 import { isAdminRole } from '@/lib/config/mobile-access';
 import { z } from 'zod';
@@ -17,6 +17,7 @@ const resetPasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const validationResult = resetPasswordSchema.safeParse(body);
@@ -124,5 +125,7 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Failed to reset password. Please try again.' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { DocumentStatus } from '@prisma/client';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse, paginatedResponse } from '@/lib/api/response';
 import { createAuditLog } from '@/lib/api/audit';
@@ -33,16 +33,17 @@ const setExpirySchema = z.object({
 // ============================================================================
 
 export async function GET(request: NextRequest) {
-  try {
-    // SECURITY: Require admin authentication
-    const authResult = requireAdmin(request);
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: authResult.statusCode }
-      );
-    }
+  // SECURITY: Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
 
+  await setRLSContext(authResult.user!);
+  try {
     const { searchParams } = new URL(request.url);
     const riderId = searchParams.get('riderId');
     const documentId = searchParams.get('documentId');
@@ -134,6 +135,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error getting documents:', error);
     return serverErrorResponse('Failed to get documents');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -142,17 +145,18 @@ export async function GET(request: NextRequest) {
 // ============================================================================
 
 export async function POST(request: NextRequest) {
-  try {
-    // SECURITY: Require admin authentication
-    const authResult = requireAdmin(request);
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: authResult.statusCode }
-      );
-    }
-    const admin = authResult.user!;
+  // SECURITY: Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
 
+  await setRLSContext(admin);
+  try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
     const riderId = searchParams.get('riderId');
@@ -217,6 +221,8 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error processing document request:', error);
     return serverErrorResponse('Failed to process document request');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -225,17 +231,18 @@ export async function POST(request: NextRequest) {
 // ============================================================================
 
 export async function PATCH(request: NextRequest) {
-  try {
-    // SECURITY: Require admin authentication
-    const authResult = requireAdmin(request);
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: authResult.statusCode }
-      );
-    }
-    const admin = authResult.user!;
+  // SECURITY: Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
 
+  await setRLSContext(admin);
+  try {
     const { searchParams } = new URL(request.url);
     const documentId = searchParams.get('documentId');
 
@@ -302,6 +309,8 @@ export async function PATCH(request: NextRequest) {
     }
     console.error('Error updating document:', error);
     return serverErrorResponse('Failed to update document');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -310,17 +319,18 @@ export async function PATCH(request: NextRequest) {
 // ============================================================================
 
 export async function DELETE(request: NextRequest) {
-  try {
-    // SECURITY: Require admin authentication
-    const authResult = requireAdmin(request);
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: authResult.statusCode }
-      );
-    }
-    const admin = authResult.user!;
+  // SECURITY: Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
 
+  await setRLSContext(admin);
+  try {
     const { searchParams } = new URL(request.url);
     const documentId = searchParams.get('documentId');
 
@@ -361,5 +371,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error('Error deleting document:', error);
     return serverErrorResponse('Failed to delete document');
+  } finally {
+    await resetRLSContext();
   }
 }

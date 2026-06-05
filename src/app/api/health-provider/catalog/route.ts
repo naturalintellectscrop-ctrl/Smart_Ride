@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/health-provider/catalog - Get medicine catalog for provider
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const providerId = searchParams.get('providerId');
@@ -73,11 +74,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch medicine catalog' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST /api/health-provider/catalog - Add medicine to catalog
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const {
@@ -188,11 +192,14 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to add medicine to catalog' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // PATCH /api/health-provider/catalog - Update medicine in catalog
 export async function PATCH(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { medicineId, ...updateData } = body;
@@ -254,11 +261,14 @@ export async function PATCH(request: NextRequest) {
       { error: 'Failed to update medicine' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // DELETE /api/health-provider/catalog - Remove medicine from catalog
 export async function DELETE(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const medicineId = searchParams.get('medicineId');
@@ -301,5 +311,7 @@ export async function DELETE(request: NextRequest) {
       { error: 'Failed to delete medicine' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

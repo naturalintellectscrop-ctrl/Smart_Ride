@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { hash, compare } from 'bcryptjs';
 import { z } from 'zod';
 
@@ -21,6 +21,7 @@ const changePasswordSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     // Get token from cookie
     const token = request.cookies.get('admin-session')?.value;
@@ -84,5 +85,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Change password error:', error);
     return NextResponse.json({ error: 'Failed to change password' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }

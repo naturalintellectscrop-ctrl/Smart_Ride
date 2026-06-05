@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { TrustTier } from '@prisma/client';
 
 // GET /api/driver-reputation - Get all driver reputations with filters
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const searchParams = request.nextUrl.searchParams;
     const tier = searchParams.get('tier') as TrustTier | null;
@@ -132,5 +133,7 @@ export async function GET(request: NextRequest) {
       { success: false, error: 'Failed to fetch driver reputations' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

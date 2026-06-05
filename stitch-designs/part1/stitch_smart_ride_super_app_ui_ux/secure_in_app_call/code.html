@@ -1,0 +1,247 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700;800&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-primary-container": "#a6ffc9",
+                "on-secondary-fixed-variant": "#005321",
+                "on-secondary": "#ffffff",
+                "primary-container": "#0e7a4d",
+                "on-primary": "#ffffff",
+                "surface-bright": "#f8f9fa",
+                "secondary": "#006e2f",
+                "error": "#ba1a1a",
+                "surface-variant": "#e1e3e4",
+                "on-secondary-fixed": "#002109",
+                "on-primary-fixed": "#002111",
+                "error-container": "#ffdad6",
+                "surface": "#f8f9fa",
+                "tertiary-fixed": "#dce2f7",
+                "on-error": "#ffffff",
+                "secondary-fixed": "#6bff8f",
+                "on-primary-fixed-variant": "#005231",
+                "inverse-primary": "#7cd9a4",
+                "inverse-surface": "#2e3132",
+                "on-tertiary-fixed": "#141b2b",
+                "tertiary-container": "#636a7c",
+                "secondary-container": "#6bff8f",
+                "outline-variant": "#bec9bf",
+                "tertiary": "#4b5264",
+                "on-background": "#191c1d",
+                "background": "#f8f9fa",
+                "on-tertiary-fixed-variant": "#404758",
+                "on-surface": "#191c1d",
+                "on-secondary-container": "#007432",
+                "surface-dim": "#d9dadb",
+                "tertiary-fixed-dim": "#c0c6db",
+                "primary-fixed-dim": "#7cd9a4",
+                "surface-container-lowest": "#ffffff",
+                "surface-container-high": "#e7e8e9",
+                "inverse-on-surface": "#f0f1f2",
+                "secondary-fixed-dim": "#4ae176",
+                "outline": "#6f7a71",
+                "on-tertiary-container": "#e6ebff",
+                "on-surface-variant": "#3f4941",
+                "surface-container": "#edeeef",
+                "primary": "#005f3a",
+                "on-error-container": "#93000a",
+                "surface-container-highest": "#e1e3e4",
+                "on-tertiary": "#ffffff",
+                "primary-fixed": "#98f6be",
+                "surface-container-low": "#f3f4f5",
+                "surface-tint": "#006d43"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "container-margin": "16px",
+                "xs": "4px",
+                "sm": "8px",
+                "xl": "32px",
+                "md": "16px",
+                "gutter": "12px",
+                "lg": "24px",
+                "base": "4px"
+            },
+            "fontFamily": {
+                "body-md": ["Inter"],
+                "label-md": ["Inter"],
+                "headline-lg-mobile": ["Plus Jakarta Sans"],
+                "body-sm": ["Inter"],
+                "headline-md": ["Plus Jakarta Sans"],
+                "label-lg": ["Inter"],
+                "display-lg": ["Plus Jakarta Sans"],
+                "headline-lg": ["Plus Jakarta Sans"],
+                "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .call-pulsate {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.05); }
+        }
+        .blur-overlay {
+            backdrop-filter: blur(12px);
+            background-color: rgba(17, 24, 39, 0.85);
+        }
+    </style>
+</head>
+<body class="bg-inverse-surface text-on-primary-fixed-variant selection:bg-primary-container h-screen w-full overflow-hidden flex flex-col">
+<!-- Background Layer: Map + Overlay -->
+<div class="fixed inset-0 z-0">
+<img class="w-full h-full object-cover" data-alt="A detailed aerial satellite map view of a modern urban city with intricate road networks and green spaces. The map serves as a blurred background for a mobile interface, featuring high contrast between the dark roads and the lush landscape of Kampala, Uganda. The lighting is soft and diffused to ensure UI elements on top remain legible and prominent." data-location="Kampala" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRkwcLUdMfZUVgCzFxnsbkwh9u1dX31U-HD_UlocB3egcJzk40Aytbq45lbznPw58ovRruPsMj-v4nBjVB27ZvJoYlsKnhFKf0CFMmv3ZFJkE26EZeTAKnXZQEW7L0YxRqppzQZ8Sb9rBcXugZzuERQ6X4GetSWDSQ2SBtzN5-CnneCnvLPjOeSu1bNsY3sNNo5cJ7h_-XfHy3zshHDkCEqRzj9p-ntirk7mfoXTCq--ih8cSklYO1vF8BE7YH3RXD8SZ1m40LuRBz">
+<div class="absolute inset-0 blur-overlay"></div>
+</div>
+<!-- Main Content Canvas -->
+<main class="relative z-10 flex-1 flex flex-col px-container-margin pt-xl pb-xl max-w-md mx-auto w-full">
+<!-- Top App Bar Content (Embedded) -->
+<header class="flex justify-between items-center mb-xl">
+<div class="flex flex-col gap-xs">
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile text-on-primary-fixed leading-tight">Secure In-app Call</h1>
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-secondary-fixed text-[18px]" style="font-variation-settings: 'FILL' 1;">verified_user</span>
+<p class="font-label-md text-label-md text-secondary-fixed">End-to-end encrypted</p>
+</div>
+</div>
+<div class="w-12 h-12 rounded-full overflow-hidden border-2 border-primary-fixed-dim/30">
+<img alt="Rounded Smart Ride Logo" class="w-full h-full object-contain p-2 bg-surface-container-lowest" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUyBUww0Q2dHWDe12OE9U06CrEa5xkspKOxiTln82ga49P7dbx5NRBJLBYyBohd2BAOdonfE3QpshIGxJLN7r2B_9PvoblJ_i1qA7RgSv4lHYqbX9HF4WI5WcuNYYrKqA1NVumXk5EHHkX9-pZ3tTdmTMqnAs8XqaguIzC8xhsnEp-oUVyiwE2EOSLDlBcH4WewKvbPB7ZpCT-0i4wtdgQeqXJkdlZcNIhjHNQag46H9NUPOWltLWjku6yfUgvQMtnLDMDssbttj6J">
+</div>
+</header>
+<!-- Caller Profile Section -->
+<section class="flex-1 flex flex-col items-center justify-center gap-lg">
+<div class="relative">
+<!-- Pulse Rings -->
+<div class="absolute inset-0 bg-primary-container/20 rounded-full call-pulsate scale-150"></div>
+<div class="absolute inset-0 bg-primary-container/10 rounded-full call-pulsate scale-[2] delay-700"></div>
+<div class="w-48 h-48 rounded-full overflow-hidden border-4 border-primary-container shadow-20px relative z-10">
+<img class="w-full h-full object-cover" data-alt="A friendly and professional portrait of a Ugandan driver named Brian, smiling warmly at the camera. He is wearing a clean, modern polo shirt. The lighting is bright and natural, reflecting a high-quality, trustworthy service persona. The background is a soft-focus urban environment, maintaining the smart and reliable brand aesthetic of the Smart Ride app." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSQ3m6NUqP-7tLmLyYSNPB6aGyTmugdl5ooUnp2WfhUCSrJZX8jeOKChsEwpuyfhYU7nooBHsVfwuuSzocLTTmTXxBYJDo2lyEx0Ie939JJKpFmgExAJLNliTaJF9HK0dg_YfCU97iqmHP5OB8IHyOI6dCqZ8TtdoBf3grCXBZayCd1hpI8_IDo2FD646jOzwFHuztEEK4MLgd6M5pBWKLpvVCDcdRzWxbTl-zXGsko9kwIdC-UT8ikI6rFwimRy2Ks_cQPCDL4FZ_">
+</div>
+</div>
+<div class="text-center">
+<h2 class="font-headline-lg text-headline-lg text-white mb-xs">Driver: Brian</h2>
+<p class="font-body-md text-body-md text-white" id="call-timer">00:03</p>
+</div>
+<!-- Privacy Reinforcement -->
+<div class="mt-md bg-surface-container-highest/10 backdrop-blur-sm px-md py-sm rounded-full flex items-center gap-sm">
+<span class="material-symbols-outlined text-white text-[16px]">lock</span>
+<span class="font-label-md text-label-md text-white/80">Phone number protected</span>
+</div>
+</section>
+<!-- Call Controls Section -->
+<footer class="mt-auto pt-xl">
+<div class="flex items-center justify-around w-full max-w-xs mx-auto">
+<!-- Mute Button -->
+<button class="flex flex-col items-center gap-sm group" onclick="toggleControl(this)">
+<div class="w-16 h-16 rounded-full flex items-center justify-center bg-surface-container-highest/20 hover:bg-surface-container-highest/40 transition-all active:scale-90 border border-white/10">
+<span class="material-symbols-outlined text-white text-[28px]">mic_off</span>
+</div>
+<span class="font-label-md text-label-md text-white/70">Mute</span>
+</button>
+<!-- End Call Button (Center Primary) -->
+<button class="flex flex-col items-center gap-sm group" onclick="endCall()">
+<div class="w-20 h-20 rounded-full flex items-center justify-center bg-error hover:bg-red-700 shadow-lg shadow-error/30 transition-all active:scale-95">
+<span class="material-symbols-outlined text-white text-[36px]" style="font-variation-settings: 'FILL' 1;">call_end</span>
+</div>
+<span class="font-label-md text-label-md text-white font-bold">End Call</span>
+</button>
+<!-- Speaker Button -->
+<button class="flex flex-col items-center gap-sm group" onclick="toggleControl(this)">
+<div class="w-16 h-16 rounded-full flex items-center justify-center bg-surface-container-highest/20 hover:bg-surface-container-highest/40 transition-all active:scale-90 border border-white/10">
+<span class="material-symbols-outlined text-white text-[28px]">volume_up</span>
+</div>
+<span class="font-label-md text-label-md text-white/70">Speaker</span>
+</button>
+</div>
+</footer>
+</main>
+<!-- Success/End Overlay (Hidden by default) -->
+<div class="fixed inset-0 z-[100] bg-inverse-surface flex flex-col items-center justify-center opacity-0 pointer-events-none transition-opacity duration-500 px-container-margin text-center" id="end-screen">
+<div class="w-24 h-24 bg-primary-container rounded-full flex items-center justify-center mb-lg">
+<span class="material-symbols-outlined text-white text-[48px]">check</span>
+</div>
+<h3 class="font-headline-lg text-headline-lg text-white mb-sm">Call Ended</h3>
+<p class="font-body-md text-body-md text-primary-fixed-dim">Your connection was secure and private.</p>
+<button class="mt-xl px-xl py-md bg-white text-primary font-bold rounded-xl active:scale-95 transition-transform" onclick="window.location.reload()">
+            Return to Trip
+        </button>
+</div>
+<script>
+        // Simple Call Timer Simulation
+        let seconds = 0;
+        let timerDisplay = document.getElementById('call-timer');
+        
+        const startTimer = () => {
+            setInterval(() => {
+                seconds++;
+                let mins = Math.floor(seconds / 60);
+                let secs = seconds % 60;
+                timerDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                timerDisplay.classList.remove('text-primary-fixed-dim');
+                timerDisplay.classList.add('text-white');
+            }, 1000);
+        };
+
+        // Simulated delay for "Connecting..." to "Active"
+        setTimeout(() => {
+            startTimer();
+        }, 1500);
+
+        // Interaction Handlers
+        function toggleControl(btn) {
+            const container = btn.querySelector('div');
+            const isActive = container.classList.contains('bg-white');
+            
+            if (isActive) {
+                container.classList.remove('bg-white');
+                container.classList.add('bg-surface-container-highest/20');
+                container.querySelector('span').classList.remove('text-primary');
+                container.querySelector('span').classList.add('text-white');
+            } else {
+                container.classList.add('bg-white');
+                container.classList.remove('bg-surface-container-highest/20');
+                container.querySelector('span').classList.add('text-primary');
+                container.querySelector('span').classList.remove('text-white');
+            }
+        }
+
+        function endCall() {
+            const screen = document.getElementById('end-screen');
+            screen.classList.remove('opacity-0', 'pointer-events-none');
+            screen.classList.add('opacity-100');
+        }
+    </script>
+
+
+</body></html>

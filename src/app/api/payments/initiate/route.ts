@@ -6,28 +6,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { PaymentService } from '@/lib/payments/payment-service';
 import { verifyAccessToken } from '@/lib/auth/jwt';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
+  // Verify authentication
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
+  const token = authHeader.split(' ')[1];
+  const decoded = verifyAccessToken(token);
+  
+  if (!decoded) {
+    return NextResponse.json(
+      { error: 'Invalid token' },
+      { status: 401 }
+    );
+  }
+
+  await setRLSContext(decoded);
   try {
-    // Verify authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyAccessToken(token);
-    
-    if (!decoded) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      );
-    }
-
     // Parse request body
     const body = await request.json();
     const {
@@ -90,30 +92,33 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to initiate payment' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 export async function GET(request: NextRequest) {
+  // Verify authentication
+  const authHeader = request.headers.get('authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
+  }
+
+  const token = authHeader.split(' ')[1];
+  const decoded = verifyAccessToken(token);
+  
+  if (!decoded) {
+    return NextResponse.json(
+      { error: 'Invalid token' },
+      { status: 401 }
+    );
+  }
+
+  await setRLSContext(decoded);
   try {
-    // Verify authentication
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split(' ')[1];
-    const decoded = verifyAccessToken(token);
-    
-    if (!decoded) {
-      return NextResponse.json(
-        { error: 'Invalid token' },
-        { status: 401 }
-      );
-    }
-
     // Get payment ID from query params
     const { searchParams } = new URL(request.url);
     const paymentId = searchParams.get('paymentId');
@@ -143,5 +148,7 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to check payment status' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -1,0 +1,310 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>SmartRide Super-App</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "surface-container-high": "#e7e8e9",
+                    "secondary-container": "#6bff8f",
+                    "outline": "#6f7a71",
+                    "tertiary-container": "#636a7c",
+                    "error-container": "#ffdad6",
+                    "surface": "#f8f9fa",
+                    "on-surface-variant": "#3f4941",
+                    "secondary-fixed-dim": "#4ae176",
+                    "primary": "#005f3a",
+                    "on-primary-fixed": "#002111",
+                    "inverse-surface": "#2e3132",
+                    "on-error-container": "#93000a",
+                    "on-secondary-fixed": "#002109",
+                    "surface-dim": "#d9dadb",
+                    "tertiary": "#4b5264",
+                    "surface-bright": "#f8f9fa",
+                    "inverse-on-surface": "#f0f1f2",
+                    "on-secondary": "#ffffff",
+                    "surface-container-low": "#f3f4f5",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-tertiary": "#ffffff",
+                    "surface-container": "#edeeef",
+                    "secondary": "#006e2f",
+                    "surface-variant": "#e1e3e4",
+                    "on-primary-fixed-variant": "#005231",
+                    "secondary-fixed": "#6bff8f",
+                    "surface-tint": "#006d43",
+                    "inverse-primary": "#7cd9a4",
+                    "surface-container-lowest": "#ffffff",
+                    "on-tertiary-container": "#e6ebff",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "on-error": "#ffffff",
+                    "on-background": "#191c1d",
+                    "primary-container": "#0e7a4d",
+                    "primary-fixed": "#98f6be",
+                    "tertiary-fixed": "#dce2f7",
+                    "on-primary-container": "#a6ffc9",
+                    "on-surface": "#191c1d",
+                    "error": "#ba1a1a",
+                    "on-secondary-fixed-variant": "#005321",
+                    "background": "#f8f9fa",
+                    "outline-variant": "#bec9bf",
+                    "on-primary": "#ffffff",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "on-secondary-container": "#007432",
+                    "on-tertiary-fixed": "#141b2b",
+                    "on-tertiary-fixed-variant": "#404758"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "md": "16px",
+                    "xl": "32px",
+                    "lg": "24px",
+                    "sm": "8px",
+                    "base": "4px",
+                    "gutter": "12px",
+                    "container-margin": "16px",
+                    "xs": "4px"
+            },
+            "fontFamily": {
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "body-sm": ["Inter"],
+                    "body-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-lg": ["Inter"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "label-md": ["Inter"]
+            },
+            "fontSize": {
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .fill-icon {
+            font-variation-settings: 'FILL' 1;
+        }
+        ::-webkit-scrollbar {
+            display: none;
+        }
+        body {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+        body {
+          min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface min-h-screen pb-24 font-body-md">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center px-container-margin py-md w-full sticky top-0 z-50 bg-surface dark:bg-surface">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary">
+<img alt="User Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCeG2SXoD1Xg6I6EiN4__MEm_01ZTgf-C9KVtZYxZu88ze0ScpWCNQ6-ufnNlHNnFOpsfN72u-G1_ANPhHPcq11vpsu_HSbWW_T9HczS9N--yKm2pnEbZU8CyYZVMHlJEgl5Ijp3tVvKdFuuydbrE90i-WwXIqRNwxut5jN_t4ijFgZdhB0GK_M-dBx41JwI4aX77_oZgXY_05HyBOkVUfGdVnaq_pqZlG-zMa-v1OEEg1uExeoZ0Twp6hUUJa7bUWg4bkDnzx_CxeK">
+</div>
+<div class="flex flex-col">
+<span class="text-label-md font-label-md text-on-surface-variant">Location</span>
+<div class="flex items-center gap-xs">
+<span class="text-label-lg font-label-lg font-semibold">Kampala, Uganda</span>
+<span class="material-symbols-outlined text-primary text-[18px]">keyboard_arrow_down</span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-on-surface-variant">headset_mic</span>
+</button>
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low dark:hover:bg-surface-container-highest transition-colors active:scale-95 duration-150">
+<span class="material-symbols-outlined text-on-surface-variant">notifications</span>
+</button>
+</div>
+</header>
+<main class="px-container-margin space-y-lg pt-sm">
+<!-- Logo Section -->
+<section class="flex justify-center">
+<img alt="SmartRide Logo" class="h-16 object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUyBUww0Q2dHWDe12OE9U06CrEa5xkspKOxiTln82ga49P7dbx5NRBJLBYyBohd2BAOdonfE3QpshIGxJLN7r2B_9PvoblJ_i1qA7RgSv4lHYqbX9HF4WI5WcuNYYrKqA1NVumXk5EHHkX9-pZ3tTdmTMqnAs8XqaguIzC8xhsnEp-oUVyiwE2EOSLDlBcH4WewKvbPB7ZpCT-0i4wtdgQeqXJkdlZcNIhjHNQag46H9NUPOWltLWjku6yfUgvQMtnLDMDssbttj6J">
+</section>
+<!-- Greeting Section -->
+<section>
+<h1 class="text-headline-lg-mobile font-headline-lg-mobile text-on-surface">Good morning, Alex!</h1>
+<div class="flex justify-between items-center">
+<p class="text-body-md font-body-md text-on-surface-variant">Where are we going today?</p>
+<button class="flex items-center gap-xs text-primary font-label-lg text-label-lg bg-primary-container/10 px-sm py-1 rounded-full border border-primary/20">
+<span class="material-symbols-outlined text-[18px]">support_agent</span>
+                    In-app Support
+                </button>
+</div>
+</section>
+<!-- Wallet Balance Card -->
+<section class="bg-primary text-on-primary p-lg rounded-xl shadow-[0_12px_24px_0_rgba(0,95,58,0.15)] flex justify-between items-center relative overflow-hidden">
+<!-- Decorative Pattern -->
+<div class="absolute -right-8 -top-8 w-32 h-32 bg-primary-container rounded-full opacity-20"></div>
+<div class="z-10">
+<p class="text-label-md font-label-md text-on-primary-container uppercase tracking-wider">Wallet Balance</p>
+<h2 class="text-display-lg font-display-lg mt-xs">UGX 45,000</h2>
+</div>
+<button class="z-10 bg-secondary-fixed text-on-secondary-fixed px-lg py-sm rounded-full font-label-lg text-label-lg hover:bg-secondary-fixed-dim transition-colors active:scale-95">
+                Top Up
+            </button>
+</section>
+<!-- Quick Services Grid (2x2) -->
+<section>
+<div class="grid grid-cols-2 gap-md">
+<!-- Service 1: Ride -->
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-[0_4px_12px_0_rgba(0,0,0,0.08)] flex flex-col items-center justify-center text-center hover:bg-surface-container transition-all cursor-pointer border border-transparent hover:border-primary-fixed">
+<div class="w-16 h-16 bg-primary-fixed rounded-full flex items-center justify-center mb-sm">
+<span class="material-symbols-outlined text-primary text-[32px]">motorcycle</span>
+</div>
+<span class="text-label-lg font-label-lg text-on-surface">Ride</span>
+</div>
+<!-- Service 2: Food -->
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-[0_4px_12px_0_rgba(0,0,0,0.08)] flex flex-col items-center justify-center text-center hover:bg-surface-container transition-all cursor-pointer border border-transparent hover:border-primary-fixed">
+<div class="w-16 h-16 bg-secondary-fixed rounded-full flex items-center justify-center mb-sm">
+<span class="material-symbols-outlined text-on-secondary-container text-[32px]">restaurant</span>
+</div>
+<span class="text-label-lg font-label-lg text-on-surface">Food</span>
+</div>
+<!-- Service 3: Shopping -->
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-[0_4px_12px_0_rgba(0,0,0,0.08)] flex flex-col items-center justify-center text-center hover:bg-surface-container transition-all cursor-pointer border border-transparent hover:border-primary-fixed">
+<div class="w-16 h-16 bg-tertiary-fixed rounded-full flex items-center justify-center mb-sm">
+<span class="material-symbols-outlined text-on-tertiary-fixed text-[32px]">shopping_bag</span>
+</div>
+<span class="text-label-lg font-label-lg text-on-surface">Shopping</span>
+</div>
+<!-- Service 4: Parcel -->
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-[0_4px_12px_0_rgba(0,0,0,0.08)] flex flex-col items-center justify-center text-center hover:bg-surface-container transition-all cursor-pointer border border-transparent hover:border-primary-fixed">
+<div class="w-16 h-16 bg-primary-fixed-dim rounded-full flex items-center justify-center mb-sm">
+<span class="material-symbols-outlined text-on-primary-fixed-variant text-[32px]">package_2</span>
+</div>
+<span class="text-label-lg font-label-lg text-on-surface">Parcel</span>
+</div>
+</div>
+</section>
+<!-- Support Prompt -->
+<section class="bg-surface-container p-md rounded-xl flex items-center gap-md border border-outline-variant">
+<div class="w-12 h-12 bg-primary rounded-full flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-on-primary">call</span>
+</div>
+<div class="flex-grow">
+<h4 class="font-semibold text-on-surface">Need assistance?</h4>
+<p class="text-label-md text-on-surface-variant">Request an Online Call for help.</p>
+</div>
+<button class="bg-primary text-on-primary px-md py-xs rounded-full text-label-md font-semibold active:scale-95 transition-transform">Call Now</button>
+</section>
+<!-- Promo Banner -->
+<section class="relative h-40 rounded-xl overflow-hidden shadow-md group">
+<img alt="Promo Banner" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyqFKHYMDSs9lKUo44Yb7WytDQuUsR1vBPWJs20nAuloeW42aputZhD7mfU1w37FeXW75arSqRqeYI5sTQ6g3mCp0z2yFTQ232VRYKRasOtzi-cTxd5nKOlhDGgHFM1IOrpTPbLx0TIEuyUDq2WyK7ge5AOovhlOBHl3FHI0SFKO2FkeLXcH4HXM5mBbPn9saeDOhM8ZenvbcRcQQcdg0JGbmJMuQBr8OPDZZAxQLyioAFWDrJjBrolFPOfwBW9T9X4Nc2mo9hTxa4">
+<div class="absolute inset-0 bg-gradient-to-r from-primary/90 via-primary/40 to-transparent flex flex-col justify-center p-lg">
+<span class="bg-secondary-fixed text-on-secondary-fixed text-[10px] font-bold uppercase tracking-widest px-sm py-[2px] rounded-full w-fit mb-xs">Limited Offer</span>
+<h3 class="text-headline-md font-headline-md text-on-primary max-w-[200px]">50% off your first 3 SmartRide rides!</h3>
+<button class="mt-sm text-label-lg font-label-lg text-secondary-fixed flex items-center gap-xs">
+                    Claim now <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- Recent Orders / Recommended -->
+<section class="pb-10">
+<div class="flex justify-between items-center mb-md">
+<h3 class="text-headline-md font-headline-md text-on-surface">Nearby Favorites</h3>
+<button class="text-primary font-label-lg text-label-lg">View all</button>
+</div>
+<div class="flex gap-md overflow-x-auto pb-4 -mx-container-margin px-container-margin no-scrollbar">
+<!-- Restaurant 1 -->
+<div class="min-w-[240px] bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden">
+<div class="h-32 relative">
+<img alt="Restaurant" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBBHicplEpMcCP9eEumxkEz_qwkKoNj50UdBBJcD4ukbv6Xo_TIqmEq6aff_uo0QJbgl6ij4MmmLHgxcqrlKhv-qfOOKLJyiQE1T7G2M1Qdd95Jz5kuZ5Nw8TYbzur6Vmje3pizdToVTokYyy___sJYIj5UGLXh0qRv95uciCIdgqrIt7FII2oPxqS6qDzWFIobIkfybcNHHZebTByDC0ZgAAtm3254gGNzaMwPS-_U9AWlT-tPv5nx_qc51lm0_rPwTEeSeU8m8xeh">
+<div class="absolute top-2 right-2 bg-surface-container-lowest/90 px-xs py-[2px] rounded-lg flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px] text-primary fill-icon">star</span>
+<span class="text-label-md font-label-md text-on-surface">4.8</span>
+</div>
+</div>
+<div class="p-md">
+<h4 class="font-semibold text-on-surface">The Rolex Hub</h4>
+<p class="text-label-md font-label-md text-on-surface-variant">25-35 mins • UGX 3,000 delivery</p>
+</div>
+</div>
+<!-- Restaurant 2 -->
+<div class="min-w-[240px] bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant overflow-hidden">
+<div class="h-32 relative">
+<img alt="Pizza" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqF2_eQz_WrboJ28gzqC5rjMu75kWgdo9W4gP0GbSsbrwLMbWWH53LAKlHvH6tDtQ6dwWQzh_IcxR9g80mmB2j8AGhDWZJzmei5PqM_J7-z4PYsf_ubyGrK2brb0TyTwv5SGs2I1fKcdYLjzghKKiMkO2gQpb-oeYtY21wAxYnlQksiolhsvaLDugM5l0PNoKVyoQgbuFkyFF246OrDKl5G7A81NHHTaKlvT5zSaEM7RE-8C0UjSNd5_CtC3EhLTa2tKnzbd1iCMab">
+<div class="absolute top-2 right-2 bg-surface-container-lowest/90 px-xs py-[2px] rounded-lg flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px] text-primary fill-icon">star</span>
+<span class="text-label-md font-label-md text-on-surface">4.5</span>
+</div>
+</div>
+<div class="p-md">
+<h4 class="font-semibold text-on-surface">Pizza Corner</h4>
+<p class="text-label-md font-label-md text-on-surface-variant">15-20 mins • Free delivery</p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-4 pt-2 bg-surface-container-lowest dark:bg-inverse-surface rounded-t-xl shadow-[0_-4px_12px_0_rgba(0,0,0,0.08)]">
+<!-- Home (Active) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-on-secondary-fixed-variant text-on-secondary-container dark:text-secondary-fixed rounded-2xl px-4 py-1 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined fill-icon">home</span>
+<span class="text-label-md font-label-md">Home</span>
+</a>
+<!-- Orders -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="text-label-md font-label-md">Orders</span>
+</a>
+<!-- Wallet -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="text-label-md font-label-md">Wallet</span>
+</a>
+<!-- Profile -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant dark:text-outline p-2 hover:bg-surface-container-high dark:hover:bg-tertiary-container transition-all active:scale-90 duration-200" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="text-label-md font-label-md">Profile</span>
+</a>
+</nav>
+<!-- FAB (Contextual for Home: Quick Booking) -->
+<button class="fixed right-md bottom-24 w-14 h-14 bg-primary text-on-primary rounded-2xl shadow-lg flex items-center justify-center active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[28px]">add_location</span>
+</button>
+<script>
+        // Simple micro-interaction for cards
+        document.querySelectorAll('.cursor-pointer').forEach(card => {
+            card.addEventListener('mousedown', () => {
+                card.style.transform = 'scale(0.97)';
+            });
+            card.addEventListener('mouseup', () => {
+                card.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+
+
+</body></html>

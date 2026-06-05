@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { requireAdmin } from '@/lib/auth/guards';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 import { documentTracker, getExpiryUrgency } from '@/lib/compliance/document-tracker';
 
 // ============================================================================
@@ -19,16 +20,17 @@ const suspendExpiredSchema = z.object({
 // ============================================================================
 
 export async function GET(request: NextRequest) {
-  try {
-    // SECURITY: Require admin authentication
-    const authResult = requireAdmin(request);
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: authResult.statusCode }
-      );
-    }
+  // SECURITY: Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
 
+  await setRLSContext(authResult.user!);
+  try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'expiring';
     const withinDays = parseInt(searchParams.get('withinDays') || '30', 10);
@@ -149,6 +151,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error getting expiring documents:', error);
     return serverErrorResponse('Failed to get expiring documents');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -157,17 +161,18 @@ export async function GET(request: NextRequest) {
 // ============================================================================
 
 export async function POST(request: NextRequest) {
-  try {
-    // SECURITY: Require admin authentication
-    const authResult = requireAdmin(request);
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: authResult.statusCode }
-      );
-    }
-    const admin = authResult.user!;
+  // SECURITY: Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
 
+  await setRLSContext(admin);
+  try {
     const body = await request.json();
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
@@ -191,5 +196,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error processing expiring documents action:', error);
     return serverErrorResponse('Failed to process action');
+  } finally {
+    await resetRLSContext();
   }
 }

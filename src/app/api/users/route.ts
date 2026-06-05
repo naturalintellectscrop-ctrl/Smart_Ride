@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -18,16 +18,17 @@ import { UserRole } from '@prisma/client';
  * SECURITY: Admin-only access
  */
 export async function GET(request: NextRequest) {
-  try {
-    // SECURITY: Require admin authentication
-    const authResult = requireAdmin(request);
-    if (!authResult.success) {
-      return NextResponse.json(
-        { success: false, error: authResult.error },
-        { status: authResult.statusCode }
-      );
-    }
+  // SECURITY: Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
 
+  await setRLSContext(authResult.user!);
+  try {
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
     
@@ -80,6 +81,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching users:', error);
     return serverErrorResponse('Failed to fetch users');
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -111,6 +114,7 @@ export async function POST(request: NextRequest) {
           { status: 403 }
         );
       }
+      await setRLSContext(authResult.user!);
     } else {
       // Regular user creation requires admin access
       const authResult = requireAdmin(request);
@@ -120,6 +124,7 @@ export async function POST(request: NextRequest) {
           { status: authResult.statusCode }
         );
       }
+      await setRLSContext(authResult.user!);
     }
 
     // Check for existing user
@@ -151,5 +156,7 @@ export async function POST(request: NextRequest) {
     }
     console.error('Error creating user:', error);
     return serverErrorResponse('Failed to create user');
+  } finally {
+    await resetRLSContext();
   }
 }

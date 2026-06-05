@@ -6,9 +6,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { InventoryService } from '@/lib/inventory/inventory-service';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const menuItemId = searchParams.get('menuItemId');
@@ -36,10 +37,13 @@ export async function GET(request: NextRequest) {
       { error: message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json() as {
       menuItemId?: string;
@@ -102,5 +106,7 @@ export async function POST(request: NextRequest) {
       { error: message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

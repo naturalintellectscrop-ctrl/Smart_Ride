@@ -1,13 +1,32 @@
 /**
  * Authentication utilities for API routes
  * 
- * Provides reusable functions for verifying authentication in API endpoints
+ * Provides reusable functions for verifying authentication in API endpoints.
+ * RLS context is automatically set when requireAuth succeeds.
+ * 
+ * IMPORTANT: When using requireAuth from this module, you MUST call
+ * resetRLSContext() in a finally block to prevent RLS context leaking
+ * between requests on the same database connection.
+ * 
+ * Example:
+ *   export async function GET(req: NextRequest) {
+ *     const user = await requireAuth(req);
+ *     if (user instanceof NextResponse) return user;
+ *     try {
+ *       // ... your DB queries (RLS is active)
+ *     } finally {
+ *       await resetRLSContext();
+ *     }
+ *   }
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAccessToken, extractTokenFromHeader, JWTPayload, isAdmin, hasRole } from './auth/jwt';
-import { db } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext as _resetRLSContext, setServiceRoleContext } from '@/lib/db';
 import { UserRole } from '@prisma/client';
+
+// Re-export for convenience
+export const resetRLSContext = _resetRLSContext;
 
 export interface AuthResult {
   success: true;
@@ -86,7 +105,11 @@ export async function verifyActiveUser(userId: string): Promise<{ success: true;
 }
 
 /**
- * Require authentication - returns error response if not authenticated
+ * Require authentication - returns error response if not authenticated.
+ * Also sets RLS context so subsequent DB queries are filtered by RLS policies.
+ * 
+ * IMPORTANT: You MUST call resetRLSContext() in a finally block after your
+ * DB queries to prevent RLS context leaking between requests.
  */
 export async function requireAuth(request: NextRequest): Promise<JWTPayload | NextResponse> {
   const authResult = await verifyAuth(request);
@@ -107,11 +130,18 @@ export async function requireAuth(request: NextRequest): Promise<JWTPayload | Ne
     );
   }
   
+  // Set RLS context for this request
+  // Admin users get is_service_role = true (full access)
+  // Regular users get is_service_role = false (user-scoped access)
+  await setRLSContext(authResult.user);
+  
   return authResult.user;
 }
 
 /**
- * Require admin role - returns error response if not admin
+ * Require admin role - returns error response if not admin.
+ * Sets is_service_role = true for full DB access.
+ * Remember to call resetRLSContext() in your finally block.
  */
 export async function requireAdmin(request: NextRequest): Promise<JWTPayload | NextResponse> {
   const user = await requireAuth(request);
@@ -127,6 +157,7 @@ export async function requireAdmin(request: NextRequest): Promise<JWTPayload | N
     );
   }
   
+  // Admin already has RLS context set by requireAuth above (is_service_role = true for admins)
   return user;
 }
 

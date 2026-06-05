@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserSessions, revokeAllSessions, revokeSession } from '@/lib/auth/session-service';
 import { getAuthUser } from '@/lib/auth/middleware';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { z } from 'zod';
 
@@ -18,15 +19,20 @@ export async function GET(request: NextRequest) {
       return errorResponse('Unauthorized', 401);
     }
 
-    // Get current session ID from header (optional)
-    const currentSessionId = request.headers.get('x-session-id') || undefined;
+    await setRLSContext(user);
+    try {
+      // Get current session ID from header (optional)
+      const currentSessionId = request.headers.get('x-session-id') || undefined;
 
-    const sessions = await getUserSessions(user.userId, currentSessionId);
+      const sessions = await getUserSessions(user.userId, currentSessionId);
 
-    return NextResponse.json({
-      success: true,
-      data: sessions,
-    });
+      return NextResponse.json({
+        success: true,
+        data: sessions,
+      });
+    } finally {
+      await resetRLSContext();
+    }
   } catch (error) {
     console.error('[SESSIONS] GET error:', error);
     return serverErrorResponse('Failed to get sessions');
@@ -46,31 +52,36 @@ export async function DELETE(request: NextRequest) {
       return errorResponse('Unauthorized', 401);
     }
 
-    const body = await request.json().catch(() => ({}));
-    const { sessionId } = revokeSchema.parse(body);
+    await setRLSContext(user);
+    try {
+      const body = await request.json().catch(() => ({}));
+      const { sessionId } = revokeSchema.parse(body);
 
-    if (sessionId) {
-      // Revoke specific session
-      const result = await revokeSession(sessionId, 'User logout');
-      
-      if (!result.success) {
-        return errorResponse('Failed to revoke session');
+      if (sessionId) {
+        // Revoke specific session
+        const result = await revokeSession(sessionId, 'User logout');
+        
+        if (!result.success) {
+          return errorResponse('Failed to revoke session');
+        }
+        
+        return NextResponse.json({
+          success: true,
+          message: 'Session revoked successfully',
+        });
+      } else {
+        // Revoke all other sessions
+        const currentSessionId = request.headers.get('x-session-id') || undefined;
+        const result = await revokeAllSessions(user.userId, currentSessionId);
+        
+        return NextResponse.json({
+          success: true,
+          message: `Logged out from ${result.revokedCount} other devices`,
+          revokedCount: result.revokedCount,
+        });
       }
-      
-      return NextResponse.json({
-        success: true,
-        message: 'Session revoked successfully',
-      });
-    } else {
-      // Revoke all other sessions
-      const currentSessionId = request.headers.get('x-session-id') || undefined;
-      const result = await revokeAllSessions(user.userId, currentSessionId);
-      
-      return NextResponse.json({
-        success: true,
-        message: `Logged out from ${result.revokedCount} other devices`,
-        revokedCount: result.revokedCount,
-      });
+    } finally {
+      await resetRLSContext();
     }
   } catch (error) {
     console.error('[SESSIONS] DELETE error:', error);

@@ -1,373 +1,54 @@
 -- ============================================
--- SMART RIDE - COMPLETE RLS SETUP (Safe Version)
+-- SMART RIDE - COMPLETE RLS SETUP (v3 - Fully Idempotent)
 -- Copy this ENTIRE file and paste into Supabase SQL Editor
 -- ============================================
 --
--- This version checks if each table exists before
--- applying RLS, so it works even with missing tables.
---
 -- WHAT THIS DOES:
--- 1. Enables RLS on all tables that exist (locks them down)
--- 2. Creates policies so the API server can still access all tables
--- 3. Creates user-scoped policies (defense in depth)
--- 4. Creates admin read policies for dashboard
--- 5. Creates public read policies for browsing
--- 6. Creates the smart_ride_api role
+-- 1. Enables RLS on ALL existing public tables (locks them down)
+-- 2. Creates service_role_access policy on ALL tables (if not exists)
+-- 3. Creates user-scoped policies on relevant tables (if not exists)
+-- 4. Creates admin read policies (if not exists)
+-- 5. Creates public read policies for browsing (if not exists)
+-- 6. Creates the smart_ride_api role with GRANTs
+--
+-- IDEMPOTENT: Safe to run unlimited times. Every operation checks
+-- existence before creating, so re-running is a no-op for anything
+-- that already exists.
 --
 -- ROLLBACK: Run rls_cleanup.sql to remove everything
 -- ============================================
 
+
 -- ============================================
 -- PART 1: ENABLE RLS ON ALL EXISTING TABLES
 -- ============================================
--- Each ALTER TABLE is wrapped in a DO block that checks existence
+-- Dynamically enables RLS on every table in public schema that
+-- does not already have it enabled.
 
 DO $$
+DECLARE
+  tbl RECORD;
+  already_enabled BOOLEAN;
+  count_updated INTEGER := 0;
+  count_skipped INTEGER := 0;
 BEGIN
-  -- Core Auth tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'User') THEN
-    ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on User';
-  ELSE RAISE NOTICE 'SKIPPED User (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Session') THEN
-    ALTER TABLE "Session" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Session';
-  ELSE RAISE NOTICE 'SKIPPED Session (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'OTP') THEN
-    ALTER TABLE "OTP" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on OTP';
-  ELSE RAISE NOTICE 'SKIPPED OTP (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PasswordResetToken') THEN
-    ALTER TABLE "PasswordResetToken" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on PasswordResetToken';
-  ELSE RAISE NOTICE 'SKIPPED PasswordResetToken (does not exist)'; END IF;
-
-  -- Rider/Vehicle tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Rider') THEN
-    ALTER TABLE "Rider" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Rider';
-  ELSE RAISE NOTICE 'SKIPPED Rider (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Vehicle') THEN
-    ALTER TABLE "Vehicle" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Vehicle';
-  ELSE RAISE NOTICE 'SKIPPED Vehicle (does not exist)'; END IF;
-
-  -- Merchant/Food tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Merchant') THEN
-    ALTER TABLE "Merchant" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Merchant';
-  ELSE RAISE NOTICE 'SKIPPED Merchant (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MenuItem') THEN
-    ALTER TABLE "MenuItem" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on MenuItem';
-  ELSE RAISE NOTICE 'SKIPPED MenuItem (does not exist)'; END IF;
-
-  -- Order tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Order') THEN
-    ALTER TABLE "Order" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Order';
-  ELSE RAISE NOTICE 'SKIPPED Order (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'OrderItem') THEN
-    ALTER TABLE "OrderItem" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on OrderItem';
-  ELSE RAISE NOTICE 'SKIPPED OrderItem (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'KOT') THEN
-    ALTER TABLE "KOT" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on KOT';
-  ELSE RAISE NOTICE 'SKIPPED KOT (does not exist)'; END IF;
-
-  -- Task/Dispatch tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Task') THEN
-    ALTER TABLE "Task" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Task';
-  ELSE RAISE NOTICE 'SKIPPED Task (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'TaskStateTransition') THEN
-    ALTER TABLE "TaskStateTransition" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on TaskStateTransition';
-  ELSE RAISE NOTICE 'SKIPPED TaskStateTransition (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'DispatchMatch') THEN
-    ALTER TABLE "DispatchMatch" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on DispatchMatch';
-  ELSE RAISE NOTICE 'SKIPPED DispatchMatch (does not exist)'; END IF;
-
-  -- Payment/Finance tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Payment') THEN
-    ALTER TABLE "Payment" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Payment';
-  ELSE RAISE NOTICE 'SKIPPED Payment (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PaymentStateTransition') THEN
-    ALTER TABLE "PaymentStateTransition" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on PaymentStateTransition';
-  ELSE RAISE NOTICE 'SKIPPED PaymentStateTransition (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'RiderPayout') THEN
-    ALTER TABLE "RiderPayout" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on RiderPayout';
-  ELSE RAISE NOTICE 'SKIPPED RiderPayout (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'CashCollection') THEN
-    ALTER TABLE "CashCollection" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on CashCollection';
-  ELSE RAISE NOTICE 'SKIPPED CashCollection (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'FinanceLog') THEN
-    ALTER TABLE "FinanceLog" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on FinanceLog';
-  ELSE RAISE NOTICE 'SKIPPED FinanceLog (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Transaction') THEN
-    ALTER TABLE "Transaction" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Transaction';
-  ELSE RAISE NOTICE 'SKIPPED Transaction (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Settlement') THEN
-    ALTER TABLE "Settlement" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Settlement';
-  ELSE RAISE NOTICE 'SKIPPED Settlement (does not exist)'; END IF;
-
-  -- Rating table
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Rating') THEN
-    ALTER TABLE "Rating" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Rating';
-  ELSE RAISE NOTICE 'SKIPPED Rating (does not exist)'; END IF;
-
-  -- Audit/Logging tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'AuditLog') THEN
-    ALTER TABLE "AuditLog" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on AuditLog';
-  ELSE RAISE NOTICE 'SKIPPED AuditLog (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'NotificationLog') THEN
-    ALTER TABLE "NotificationLog" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on NotificationLog';
-  ELSE RAISE NOTICE 'SKIPPED NotificationLog (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'DocumentExpiry') THEN
-    ALTER TABLE "DocumentExpiry" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on DocumentExpiry';
-  ELSE RAISE NOTICE 'SKIPPED DocumentExpiry (does not exist)'; END IF;
-
-  -- Notification tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Notification') THEN
-    ALTER TABLE "Notification" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Notification';
-  ELSE RAISE NOTICE 'SKIPPED Notification (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'NotificationPreference') THEN
-    ALTER TABLE "NotificationPreference" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on NotificationPreference';
-  ELSE RAISE NOTICE 'SKIPPED NotificationPreference (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'NotificationBroadcast') THEN
-    ALTER TABLE "NotificationBroadcast" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on NotificationBroadcast';
-  ELSE RAISE NOTICE 'SKIPPED NotificationBroadcast (does not exist)'; END IF;
-
-  -- SOS table
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SOSAlert') THEN
-    ALTER TABLE "SOSAlert" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on SOSAlert';
-  ELSE RAISE NOTICE 'SKIPPED SOSAlert (does not exist)'; END IF;
-
-  -- Config tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SystemConfig') THEN
-    ALTER TABLE "SystemConfig" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on SystemConfig';
-  ELSE RAISE NOTICE 'SKIPPED SystemConfig (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SLAConfig') THEN
-    ALTER TABLE "SLAConfig" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on SLAConfig';
-  ELSE RAISE NOTICE 'SKIPPED SLAConfig (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PricingConfig') THEN
-    ALTER TABLE "PricingConfig" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on PricingConfig';
-  ELSE RAISE NOTICE 'SKIPPED PricingConfig (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'AdminPermission') THEN
-    ALTER TABLE "AdminPermission" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on AdminPermission';
-  ELSE RAISE NOTICE 'SKIPPED AdminPermission (does not exist)'; END IF;
-
-  -- Heartbeat/Connection tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HeartbeatLog') THEN
-    ALTER TABLE "HeartbeatLog" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on HeartbeatLog';
-  ELSE RAISE NOTICE 'SKIPPED HeartbeatLog (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ConnectionAlert') THEN
-    ALTER TABLE "ConnectionAlert" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on ConnectionAlert';
-  ELSE RAISE NOTICE 'SKIPPED ConnectionAlert (does not exist)'; END IF;
-
-  -- Health/Pharmacy tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthOrder') THEN
-    ALTER TABLE "HealthOrder" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on HealthOrder';
-  ELSE RAISE NOTICE 'SKIPPED HealthOrder (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthOrderItem') THEN
-    ALTER TABLE "HealthOrderItem" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on HealthOrderItem';
-  ELSE RAISE NOTICE 'SKIPPED HealthOrderItem (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Prescription') THEN
-    ALTER TABLE "Prescription" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Prescription';
-  ELSE RAISE NOTICE 'SKIPPED Prescription (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthProvider') THEN
-    ALTER TABLE "HealthProvider" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on HealthProvider';
-  ELSE RAISE NOTICE 'SKIPPED HealthProvider (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ProviderDocument') THEN
-    ALTER TABLE "ProviderDocument" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on ProviderDocument';
-  ELSE RAISE NOTICE 'SKIPPED ProviderDocument (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ProviderOrder') THEN
-    ALTER TABLE "ProviderOrder" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on ProviderOrder';
-  ELSE RAISE NOTICE 'SKIPPED ProviderOrder (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Pharmacy') THEN
-    ALTER TABLE "Pharmacy" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Pharmacy';
-  ELSE RAISE NOTICE 'SKIPPED Pharmacy (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MedicineCatalog') THEN
-    ALTER TABLE "MedicineCatalog" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on MedicineCatalog';
-  ELSE RAISE NOTICE 'SKIPPED MedicineCatalog (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PharmacyOrderTicket') THEN
-    ALTER TABLE "PharmacyOrderTicket" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on PharmacyOrderTicket';
-  ELSE RAISE NOTICE 'SKIPPED PharmacyOrderTicket (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PrescriptionAccessLog') THEN
-    ALTER TABLE "PrescriptionAccessLog" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on PrescriptionAccessLog';
-  ELSE RAISE NOTICE 'SKIPPED PrescriptionAccessLog (does not exist)'; END IF;
-
-  -- Fraud/Security tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'FraudAlert') THEN
-    ALTER TABLE "FraudAlert" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on FraudAlert';
-  ELSE RAISE NOTICE 'SKIPPED FraudAlert (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ApiRateLimit') THEN
-    ALTER TABLE "ApiRateLimit" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on ApiRateLimit';
-  ELSE RAISE NOTICE 'SKIPPED ApiRateLimit (does not exist)'; END IF;
-
-  -- Messaging tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Conversation') THEN
-    ALTER TABLE "Conversation" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Conversation';
-  ELSE RAISE NOTICE 'SKIPPED Conversation (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ConversationParticipant') THEN
-    ALTER TABLE "ConversationParticipant" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on ConversationParticipant';
-  ELSE RAISE NOTICE 'SKIPPED ConversationParticipant (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Message') THEN
-    ALTER TABLE "Message" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Message';
-  ELSE RAISE NOTICE 'SKIPPED Message (does not exist)'; END IF;
-
-  -- Document tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Document') THEN
-    ALTER TABLE "Document" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Document';
-  ELSE RAISE NOTICE 'SKIPPED Document (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MerchantDocument') THEN
-    ALTER TABLE "MerchantDocument" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on MerchantDocument';
-  ELSE RAISE NOTICE 'SKIPPED MerchantDocument (does not exist)'; END IF;
-
-  -- Rider extension tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'RiderCapability') THEN
-    ALTER TABLE "RiderCapability" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on RiderCapability';
-  ELSE RAISE NOTICE 'SKIPPED RiderCapability (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'RiderMetrics') THEN
-    ALTER TABLE "RiderMetrics" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on RiderMetrics';
-  ELSE RAISE NOTICE 'SKIPPED RiderMetrics (does not exist)'; END IF;
-
-  -- Dispute table
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Dispute') THEN
-    ALTER TABLE "Dispute" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Dispute';
-  ELSE RAISE NOTICE 'SKIPPED Dispute (does not exist)'; END IF;
-
-  -- Offline table
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'OfflineAction') THEN
-    ALTER TABLE "OfflineAction" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on OfflineAction';
-  ELSE RAISE NOTICE 'SKIPPED OfflineAction (does not exist)'; END IF;
-
-  -- Analytics tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'TaskAnalytics') THEN
-    ALTER TABLE "TaskAnalytics" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on TaskAnalytics';
-  ELSE RAISE NOTICE 'SKIPPED TaskAnalytics (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PlatformMetrics') THEN
-    ALTER TABLE "PlatformMetrics" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on PlatformMetrics';
-  ELSE RAISE NOTICE 'SKIPPED PlatformMetrics (does not exist)'; END IF;
-
-  -- Wallet tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Wallet') THEN
-    ALTER TABLE "Wallet" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Wallet';
-  ELSE RAISE NOTICE 'SKIPPED Wallet (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'WalletTransaction') THEN
-    ALTER TABLE "WalletTransaction" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on WalletTransaction';
-  ELSE RAISE NOTICE 'SKIPPED WalletTransaction (does not exist)'; END IF;
-
-  -- Cart tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Cart') THEN
-    ALTER TABLE "Cart" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on Cart';
-  ELSE RAISE NOTICE 'SKIPPED Cart (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'CartItem') THEN
-    ALTER TABLE "CartItem" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on CartItem';
-  ELSE RAISE NOTICE 'SKIPPED CartItem (does not exist)'; END IF;
-
-  -- Inventory tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ProductVariant') THEN
-    ALTER TABLE "ProductVariant" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on ProductVariant';
-  ELSE RAISE NOTICE 'SKIPPED ProductVariant (does not exist)'; END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'InventoryReservation') THEN
-    ALTER TABLE "InventoryReservation" ENABLE ROW LEVEL SECURITY;
-    RAISE NOTICE 'RLS enabled on InventoryReservation';
-  ELSE RAISE NOTICE 'SKIPPED InventoryReservation (does not exist)'; END IF;
-
-  RAISE NOTICE 'Part 1 complete - RLS enabled on all existing tables';
+  FOR tbl IN
+    SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+  LOOP
+    SELECT relrowsecurity INTO already_enabled
+    FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = tbl.tablename;
+
+    IF NOT already_enabled THEN
+      EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', tbl.tablename);
+      count_updated := count_updated + 1;
+      RAISE NOTICE 'RLS enabled on %', tbl.tablename;
+    ELSE
+      count_skipped := count_skipped + 1;
+    END IF;
+  END LOOP;
+
+  RAISE NOTICE 'Part 1 complete - RLS enabled on % tables, % already had RLS', count_updated, count_skipped;
 END
 $$;
 
@@ -375,346 +56,220 @@ $$;
 -- ============================================
 -- PART 2: SERVICE ROLE POLICIES (ALL TABLES)
 -- ============================================
--- Each CREATE POLICY is wrapped to check table existence first.
+-- Creates "service_role_access" policy on every table that exists
+-- and does not already have this policy.
 -- The API sets app.is_service_role = 'true' via Prisma middleware.
 
 DO $$
+DECLARE
+  tbl RECORD;
+  policy_exists BOOLEAN;
+  count_created INTEGER := 0;
+  count_skipped INTEGER := 0;
 BEGIN
-  -- Core User tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'User') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "User" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Session') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Session" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'OTP') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "OTP" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PasswordResetToken') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "PasswordResetToken" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Rider') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Rider" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Order') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Order" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'OrderItem') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "OrderItem" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Task') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Task" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Payment') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Payment" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Notification') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Notification" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'NotificationPreference') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "NotificationPreference" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Wallet') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Wallet" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'WalletTransaction') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "WalletTransaction" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Cart') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Cart" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'CartItem') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "CartItem" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Rating') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Rating" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SOSAlert') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "SOSAlert" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Conversation') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Conversation" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ConversationParticipant') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "ConversationParticipant" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Message') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Message" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Prescription') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Prescription" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthOrder') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "HealthOrder" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthOrderItem') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "HealthOrderItem" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Dispute') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Dispute" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  -- Business/merchant tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Merchant') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Merchant" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MenuItem') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "MenuItem" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'KOT') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "KOT" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Pharmacy') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Pharmacy" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MedicineCatalog') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "MedicineCatalog" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PharmacyOrderTicket') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "PharmacyOrderTicket" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthProvider') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "HealthProvider" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ProviderDocument') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "ProviderDocument" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ProviderOrder') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "ProviderOrder" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ProductVariant') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "ProductVariant" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'InventoryReservation') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "InventoryReservation" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MerchantDocument') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "MerchantDocument" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  -- Rider/vehicle tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Vehicle') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Vehicle" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'RiderPayout') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "RiderPayout" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'CashCollection') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "CashCollection" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HeartbeatLog') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "HeartbeatLog" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ConnectionAlert') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "ConnectionAlert" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'RiderCapability') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "RiderCapability" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'RiderMetrics') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "RiderMetrics" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'DispatchMatch') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "DispatchMatch" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'TaskStateTransition') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "TaskStateTransition" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  -- Finance tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'FinanceLog') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "FinanceLog" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Transaction') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Transaction" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Settlement') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Settlement" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  -- Audit/logging tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'AuditLog') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "AuditLog" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PrescriptionAccessLog') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "PrescriptionAccessLog" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'FraudAlert') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "FraudAlert" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'NotificationLog') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "NotificationLog" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'NotificationBroadcast') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "NotificationBroadcast" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PaymentStateTransition') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "PaymentStateTransition" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Document') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "Document" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'DocumentExpiry') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "DocumentExpiry" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'OfflineAction') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "OfflineAction" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  -- Config tables
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SystemConfig') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "SystemConfig" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SLAConfig') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "SLAConfig" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PricingConfig') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "PricingConfig" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'AdminPermission') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "AdminPermission" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'TaskAnalytics') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "TaskAnalytics" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PlatformMetrics') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "PlatformMetrics" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ApiRateLimit') THEN
-    EXECUTE 'CREATE POLICY "service_role_access" ON "ApiRateLimit" FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')';
-  END IF;
-
-  RAISE NOTICE 'Part 2 complete - service_role_access policies created';
+  FOR tbl IN
+    SELECT tablename FROM pg_tables WHERE schemaname = 'public'
+  LOOP
+    SELECT EXISTS (
+      SELECT 1 FROM pg_policies
+      WHERE schemaname = 'public' AND tablename = tbl.tablename AND policyname = 'service_role_access'
+    ) INTO policy_exists;
+
+    IF NOT policy_exists THEN
+      EXECUTE format(
+        'CREATE POLICY "service_role_access" ON %I FOR ALL USING (current_setting(''app.is_service_role'', true) = ''true'') WITH CHECK (current_setting(''app.is_service_role'', true) = ''true'')',
+        tbl.tablename
+      );
+      count_created := count_created + 1;
+      RAISE NOTICE 'Created service_role_access on %', tbl.tablename;
+    ELSE
+      count_skipped := count_skipped + 1;
+    END IF;
+  END LOOP;
+
+  RAISE NOTICE 'Part 2 complete - service_role_access: % created, % already existed', count_created, count_skipped;
 END
 $$;
 
 
 -- ============================================
--- PART 3: USER-SCOPED POLICIES (Defense in Depth)
+-- PART 3: USER-SCOPED POLICIES
 -- ============================================
--- These policies let users access ONLY their own data.
+-- Users can only see/modify their own data.
+-- Each policy checks for existence before creating.
 
 DO $$
+DECLARE
+  policy_exists BOOLEAN;
+  count_created INTEGER := 0;
+  count_skipped INTEGER := 0;
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'User') THEN
-    EXECUTE 'CREATE POLICY "users_read_own" ON "User" FOR SELECT USING (id = current_setting(''app.current_user_id'', true))';
+  -- Helper function: create a user-scoped SELECT policy if table + policy don't exist
+  -- User table
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'User') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'User' AND policyname = 'users_read_own') THEN
+      CREATE POLICY "users_read_own" ON "User" FOR SELECT USING ("id" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'User' AND policyname = 'users_update_own') THEN
+      CREATE POLICY "users_update_own" ON "User" FOR UPDATE USING ("id" = current_setting('app.current_user_id')::text) WITH CHECK ("id" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Session') THEN
-    EXECUTE 'CREATE POLICY "users_read_own_sessions" ON "Session" FOR SELECT USING ("userId" = current_setting(''app.current_user_id'', true))';
+  -- Session
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Session') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Session' AND policyname = 'users_read_own_sessions') THEN
+      CREATE POLICY "users_read_own_sessions" ON "Session" FOR SELECT USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Session' AND policyname = 'users_delete_own_sessions') THEN
+      CREATE POLICY "users_delete_own_sessions" ON "Session" FOR DELETE USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Rider') THEN
-    EXECUTE 'CREATE POLICY "riders_read_own" ON "Rider" FOR SELECT USING ("userId" = current_setting(''app.current_user_id'', true))';
+  -- Notification
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Notification') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Notification' AND policyname = 'users_read_own_notifications') THEN
+      CREATE POLICY "users_read_own_notifications" ON "Notification" FOR SELECT USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Notification' AND policyname = 'users_update_own_notifications') THEN
+      CREATE POLICY "users_update_own_notifications" ON "Notification" FOR UPDATE USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Order') THEN
-    EXECUTE 'CREATE POLICY "clients_read_own_orders" ON "Order" FOR SELECT USING ("clientId" = current_setting(''app.current_user_id'', true))';
+  -- NotificationPreference
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'NotificationPreference') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'NotificationPreference' AND policyname = 'users_read_own_notif_prefs') THEN
+      CREATE POLICY "users_read_own_notif_prefs" ON "NotificationPreference" FOR SELECT USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'NotificationPreference' AND policyname = 'users_update_own_notif_prefs') THEN
+      CREATE POLICY "users_update_own_notif_prefs" ON "NotificationPreference" FOR UPDATE USING ("userId" = current_setting('app.current_user_id')::text) WITH CHECK ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Task') THEN
-    EXECUTE 'CREATE POLICY "clients_read_own_tasks" ON "Task" FOR SELECT USING ("clientId" = current_setting(''app.current_user_id'', true))';
+  -- Task (user is client)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Task') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Task' AND policyname = 'users_read_own_tasks') THEN
+      CREATE POLICY "users_read_own_tasks" ON "Task" FOR SELECT USING ("clientId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Payment') THEN
-    EXECUTE 'CREATE POLICY "users_read_own_payments" ON "Payment" FOR SELECT USING ("userId" = current_setting(''app.current_user_id'', true))';
+  -- Order (user is client)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Order') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Order' AND policyname = 'users_read_own_orders') THEN
+      CREATE POLICY "users_read_own_orders" ON "Order" FOR SELECT USING ("clientId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Notification') THEN
-    EXECUTE 'CREATE POLICY "users_read_own_notifications" ON "Notification" FOR SELECT USING ("userId" = current_setting(''app.current_user_id'', true))';
+  -- Payment (user is the payer)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Payment') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Payment' AND policyname = 'users_read_own_payments') THEN
+      CREATE POLICY "users_read_own_payments" ON "Payment" FOR SELECT USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'NotificationPreference') THEN
-    EXECUTE 'CREATE POLICY "users_read_own_notif_prefs" ON "NotificationPreference" FOR SELECT USING ("userId" = current_setting(''app.current_user_id'', true))';
+  -- Rating (user gave the rating)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Rating') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Rating' AND policyname = 'users_read_own_ratings') THEN
+      CREATE POLICY "users_read_own_ratings" ON "Rating" FOR SELECT USING ("fromUserId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Wallet') THEN
-    EXECUTE 'CREATE POLICY "users_read_own_wallet" ON "Wallet" FOR SELECT USING ("ownerId" = current_setting(''app.current_user_id'', true))';
+  -- ConversationParticipant (user is participant)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'ConversationParticipant') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'ConversationParticipant' AND policyname = 'users_read_own_conversations') THEN
+      CREATE POLICY "users_read_own_conversations" ON "ConversationParticipant" FOR SELECT USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Cart') THEN
-    EXECUTE 'CREATE POLICY "users_read_own_cart" ON "Cart" FOR SELECT USING ("userId" = current_setting(''app.current_user_id'', true))';
+  -- Wallet (owner is user)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Wallet') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Wallet' AND policyname = 'users_read_own_wallet') THEN
+      CREATE POLICY "users_read_own_wallet" ON "Wallet" FOR SELECT USING ("ownerId" = current_setting('app.current_user_id')::text AND "ownerType" = 'USER');
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Rating') THEN
-    EXECUTE 'CREATE POLICY "users_read_own_ratings" ON "Rating" FOR SELECT USING ("fromUserId" = current_setting(''app.current_user_id'', true) OR "toUserId" = current_setting(''app.current_user_id'', true))';
+  -- Cart (user's cart)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Cart') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Cart' AND policyname = 'users_read_own_cart') THEN
+      CREATE POLICY "users_read_own_cart" ON "Cart" FOR SELECT USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SOSAlert') THEN
-    EXECUTE 'CREATE POLICY "users_read_own_sos" ON "SOSAlert" FOR SELECT USING ("userId" = current_setting(''app.current_user_id'', true))';
+  -- HealthOrder (user is client)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'HealthOrder') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'HealthOrder' AND policyname = 'users_read_own_health_orders') THEN
+      CREATE POLICY "users_read_own_health_orders" ON "HealthOrder" FOR SELECT USING ("clientId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ConversationParticipant') THEN
-    EXECUTE 'CREATE POLICY "users_read_own_conversations" ON "ConversationParticipant" FOR SELECT USING ("userId" = current_setting(''app.current_user_id'', true))';
+  -- Prescription (user is client)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Prescription') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Prescription' AND policyname = 'users_read_own_prescriptions') THEN
+      CREATE POLICY "users_read_own_prescriptions" ON "Prescription" FOR SELECT USING ("clientId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Prescription') THEN
-    EXECUTE 'CREATE POLICY "clients_read_own_prescriptions" ON "Prescription" FOR SELECT USING ("clientId" = current_setting(''app.current_user_id'', true))';
+  -- Dispute (user is client)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Dispute') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Dispute' AND policyname = 'users_read_own_disputes') THEN
+      CREATE POLICY "users_read_own_disputes" ON "Dispute" FOR SELECT USING ("clientId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthOrder') THEN
-    EXECUTE 'CREATE POLICY "clients_read_own_health_orders" ON "HealthOrder" FOR SELECT USING ("clientId" = current_setting(''app.current_user_id'', true))';
+  -- NotificationLog
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'NotificationLog') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'NotificationLog' AND policyname = 'users_read_own_notif_logs') THEN
+      CREATE POLICY "users_read_own_notif_logs" ON "NotificationLog" FOR SELECT USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  RAISE NOTICE 'Part 3 complete - user-scoped policies created';
+  -- OfflineAction
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'OfflineAction') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'OfflineAction' AND policyname = 'users_read_own_offline_actions') THEN
+      CREATE POLICY "users_read_own_offline_actions" ON "OfflineAction" FOR SELECT USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
+  END IF;
+
+  -- SOSAlert (user is reporter)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'SOSAlert') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'SOSAlert' AND policyname = 'users_read_own_sos_alerts') THEN
+      CREATE POLICY "users_read_own_sos_alerts" ON "SOSAlert" FOR SELECT USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
+  END IF;
+
+  -- Rider: riders can read/update their own profile
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Rider') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Rider' AND policyname = 'riders_read_own') THEN
+      CREATE POLICY "riders_read_own" ON "Rider" FOR SELECT USING ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Rider' AND policyname = 'riders_update_own') THEN
+      CREATE POLICY "riders_update_own" ON "Rider" FOR UPDATE USING ("userId" = current_setting('app.current_user_id')::text) WITH CHECK ("userId" = current_setting('app.current_user_id')::text);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
+  END IF;
+
+  RAISE NOTICE 'Part 3 complete - user-scoped policies: % created, % already existed', count_created, count_skipped;
 END
 $$;
 
@@ -722,139 +277,135 @@ $$;
 -- ============================================
 -- PART 4: ADMIN READ POLICIES
 -- ============================================
--- Admin users can read all data for the dashboard.
+-- Admins (SUPER_ADMIN, ADMIN) can read all data.
+-- Uses app.current_user_role session variable.
 
 DO $$
+DECLARE
+  count_created INTEGER := 0;
+  count_skipped INTEGER := 0;
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'User') THEN
-    EXECUTE 'CREATE POLICY "admin_read_users" ON "User" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN'', ''COMPLIANCE_ADMIN'', ''FINANCE_ADMIN''))';
+  -- User
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'User') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'User' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "User" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Rider') THEN
-    EXECUTE 'CREATE POLICY "admin_read_riders" ON "Rider" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN'', ''COMPLIANCE_ADMIN'', ''FINANCE_ADMIN''))';
+  -- Rider
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Rider') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Rider' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "Rider" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Vehicle') THEN
-    EXECUTE 'CREATE POLICY "admin_read_vehicles" ON "Vehicle" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN''))';
+  -- Task
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Task') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Task' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "Task" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Order') THEN
-    EXECUTE 'CREATE POLICY "admin_read_orders" ON "Order" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN'', ''FINANCE_ADMIN''))';
+  -- Order
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Order') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Order' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "Order" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Task') THEN
-    EXECUTE 'CREATE POLICY "admin_read_tasks" ON "Task" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN'', ''COMPLIANCE_ADMIN'', ''FINANCE_ADMIN''))';
+  -- Payment
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Payment') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Payment' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "Payment" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Payment') THEN
-    EXECUTE 'CREATE POLICY "admin_read_payments" ON "Payment" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''FINANCE_ADMIN''))';
+  -- Merchant
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Merchant') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Merchant' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "Merchant" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'RiderPayout') THEN
-    EXECUTE 'CREATE POLICY "admin_read_payouts" ON "RiderPayout" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''FINANCE_ADMIN''))';
+  -- Dispute
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Dispute') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Dispute' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "Dispute" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'CashCollection') THEN
-    EXECUTE 'CREATE POLICY "admin_read_cash" ON "CashCollection" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''FINANCE_ADMIN''))';
+  -- SOSAlert
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'SOSAlert') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'SOSAlert' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "SOSAlert" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'FinanceLog') THEN
-    EXECUTE 'CREATE POLICY "admin_read_finance" ON "FinanceLog" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''FINANCE_ADMIN''))';
+  -- FraudAlert
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'FraudAlert') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'FraudAlert' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "FraudAlert" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'AuditLog') THEN
-    EXECUTE 'CREATE POLICY "admin_read_audit" ON "AuditLog" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''COMPLIANCE_ADMIN''))';
+  -- AuditLog
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'AuditLog') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'AuditLog' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "AuditLog" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SOSAlert') THEN
-    EXECUTE 'CREATE POLICY "admin_read_sos" ON "SOSAlert" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN''))';
+  -- HealthOrder
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'HealthOrder') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'HealthOrder' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "HealthOrder" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Merchant') THEN
-    EXECUTE 'CREATE POLICY "admin_read_merchants" ON "Merchant" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN'', ''COMPLIANCE_ADMIN'', ''FINANCE_ADMIN''))';
+  -- Transaction
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Transaction') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Transaction' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "Transaction" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Transaction') THEN
-    EXECUTE 'CREATE POLICY "admin_read_transactions" ON "Transaction" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''FINANCE_ADMIN''))';
+  -- Wallet
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Wallet') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Wallet' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "Wallet" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Settlement') THEN
-    EXECUTE 'CREATE POLICY "admin_read_settlements" ON "Settlement" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''FINANCE_ADMIN''))';
+  -- Settlement
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Settlement') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Settlement' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "Settlement" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Dispute') THEN
-    EXECUTE 'CREATE POLICY "admin_read_disputes" ON "Dispute" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN''))';
+  -- HealthProvider
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'HealthProvider') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'HealthProvider' AND policyname = 'admin_read') THEN
+      CREATE POLICY "admin_read" ON "HealthProvider" FOR SELECT USING (current_setting('app.current_user_role', true) IN ('SUPER_ADMIN', 'ADMIN'));
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'FraudAlert') THEN
-    EXECUTE 'CREATE POLICY "admin_read_fraud" ON "FraudAlert" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''COMPLIANCE_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Prescription') THEN
-    EXECUTE 'CREATE POLICY "admin_read_prescriptions" ON "Prescription" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''COMPLIANCE_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthOrder') THEN
-    EXECUTE 'CREATE POLICY "admin_read_health_orders" ON "HealthOrder" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''COMPLIANCE_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthProvider') THEN
-    EXECUTE 'CREATE POLICY "admin_read_health_providers" ON "HealthProvider" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''COMPLIANCE_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ProviderDocument') THEN
-    EXECUTE 'CREATE POLICY "admin_read_provider_docs" ON "ProviderDocument" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''COMPLIANCE_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PrescriptionAccessLog') THEN
-    EXECUTE 'CREATE POLICY "admin_read_prescription_logs" ON "PrescriptionAccessLog" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''COMPLIANCE_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Wallet') THEN
-    EXECUTE 'CREATE POLICY "admin_read_wallets" ON "Wallet" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''FINANCE_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'WalletTransaction') THEN
-    EXECUTE 'CREATE POLICY "admin_read_wallet_txns" ON "WalletTransaction" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''FINANCE_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HeartbeatLog') THEN
-    EXECUTE 'CREATE POLICY "admin_read_heartbeats" ON "HeartbeatLog" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'RiderMetrics') THEN
-    EXECUTE 'CREATE POLICY "admin_read_rider_metrics" ON "RiderMetrics" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'TaskAnalytics') THEN
-    EXECUTE 'CREATE POLICY "admin_read_task_analytics" ON "TaskAnalytics" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PlatformMetrics') THEN
-    EXECUTE 'CREATE POLICY "admin_read_platform_metrics" ON "PlatformMetrics" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SystemConfig') THEN
-    EXECUTE 'CREATE POLICY "admin_read_system_config" ON "SystemConfig" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'SLAConfig') THEN
-    EXECUTE 'CREATE POLICY "admin_read_sla_config" ON "SLAConfig" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'PricingConfig') THEN
-    EXECUTE 'CREATE POLICY "admin_read_pricing_config" ON "PricingConfig" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''OPERATIONS_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MerchantDocument') THEN
-    EXECUTE 'CREATE POLICY "admin_read_merchant_docs" ON "MerchantDocument" FOR SELECT USING (current_setting(''app.current_user_role'', true) IN (''ADMIN'', ''SUPER_ADMIN'', ''COMPLIANCE_ADMIN''))';
-  END IF;
-
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'AdminPermission') THEN
-    EXECUTE 'CREATE POLICY "admin_read_own_perms" ON "AdminPermission" FOR SELECT USING ("userId" = current_setting(''app.current_user_id'', true))';
-  END IF;
-
-  RAISE NOTICE 'Part 4 complete - admin read policies created';
+  RAISE NOTICE 'Part 4 complete - admin_read policies: % created, % already existed', count_created, count_skipped;
 END
 $$;
 
@@ -862,70 +413,143 @@ $$;
 -- ============================================
 -- PART 5: PUBLIC READ POLICIES
 -- ============================================
--- These allow unauthenticated browsing of public-facing data.
+-- Certain data should be publicly readable (no auth required)
+-- for browsing/discovery purposes.
 
 DO $$
+DECLARE
+  count_created INTEGER := 0;
+  count_skipped INTEGER := 0;
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Merchant') THEN
-    EXECUTE 'CREATE POLICY "public_read_active_merchants" ON "Merchant" FOR SELECT USING (status = ''APPROVED'' AND "isOpen" = true)';
+  -- HealthProvider: only APPROVED providers are publicly visible
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'HealthProvider') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'HealthProvider' AND policyname = 'public_read_verified') THEN
+      CREATE POLICY "public_read_verified" ON "HealthProvider" FOR SELECT USING ("verificationStatus" = 'APPROVED');
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MenuItem') THEN
-    EXECUTE 'CREATE POLICY "public_read_available_items" ON "MenuItem" FOR SELECT USING ("isAvailable" = true)';
+  -- Merchant: only approved/open merchants are publicly visible
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Merchant') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Merchant' AND policyname = 'public_read_approved') THEN
+      CREATE POLICY "public_read_approved" ON "Merchant" FOR SELECT USING ("status" = 'APPROVED');
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'MedicineCatalog') THEN
-    EXECUTE 'CREATE POLICY "public_read_available_medicine" ON "MedicineCatalog" FOR SELECT USING ("isAvailable" = true)';
+  -- MenuItem: publicly readable (so users can browse menus)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'MenuItem') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'MenuItem' AND policyname = 'public_read') THEN
+      CREATE POLICY "public_read" ON "MenuItem" FOR SELECT USING (true);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'Pharmacy') THEN
-    EXECUTE 'CREATE POLICY "public_read_approved_pharmacies" ON "Pharmacy" FOR SELECT USING (status = ''APPROVED'' AND "isOpen" = true)';
+  -- MedicineCatalog: publicly readable (so users can browse medicines)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'MedicineCatalog') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'MedicineCatalog' AND policyname = 'public_read') THEN
+      CREATE POLICY "public_read" ON "MedicineCatalog" FOR SELECT USING (true);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'HealthProvider') THEN
-    EXECUTE 'CREATE POLICY "public_read_verified_providers" ON "HealthProvider" FOR SELECT USING ("verificationStatus" = ''APPROVED'' AND "isOpenNow" = true)';
+  -- ProductVariant: publicly readable
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'ProductVariant') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'ProductVariant' AND policyname = 'public_read') THEN
+      CREATE POLICY "public_read" ON "ProductVariant" FOR SELECT USING (true);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'NotificationBroadcast') THEN
-    EXECUTE 'CREATE POLICY "public_read_broadcasts" ON "NotificationBroadcast" FOR SELECT USING (status = ''SENT'')';
+  -- PricingConfig: publicly readable (so users can see pricing)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'PricingConfig') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'PricingConfig' AND policyname = 'public_read') THEN
+      CREATE POLICY "public_read" ON "PricingConfig" FOR SELECT USING (true);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'ProductVariant') THEN
-    EXECUTE 'CREATE POLICY "public_read_variants" ON "ProductVariant" FOR SELECT USING (true)';
+  -- Pharmacy: publicly readable (so users can find pharmacies)
+  IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = 'Pharmacy') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'Pharmacy' AND policyname = 'public_read') THEN
+      CREATE POLICY "public_read" ON "Pharmacy" FOR SELECT USING (true);
+      count_created := count_created + 1;
+    ELSE count_skipped := count_skipped + 1; END IF;
   END IF;
 
-  RAISE NOTICE 'Part 5 complete - public read policies created';
+  RAISE NOTICE 'Part 5 complete - public_read policies: % created, % already existed', count_created, count_skipped;
 END
 $$;
 
 
 -- ============================================
--- PART 6: CREATE API ROLE (for true RLS enforcement)
+-- PART 6: CREATE smart_ride_api ROLE AND GRANT PERMISSIONS
 -- ============================================
--- The postgres superuser BYPASSES RLS. To make RLS actually work,
--- connect as smart_ride_api instead.
+-- This role will be used by the API server (without BYPASSRLS,
+-- so RLS policies actually enforce).
+-- If the role already exists, skip creation.
 
 DO $$
 BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'smart_ride_api') THEN
-    CREATE ROLE smart_ride_api LOGIN NOBYPASSRLS NOCREATEDB NOCREATEROLE NOSUPERUSER;
+  -- Create role if not exists
+  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'smart_ride_api') THEN
+    CREATE ROLE smart_ride_api WITH LOGIN PASSWORD 'smart_ride_secure_2024';
     RAISE NOTICE 'Created smart_ride_api role';
   ELSE
-    RAISE NOTICE 'smart_ride_api role already exists';
+    RAISE NOTICE 'smart_ride_api role already exists, skipping creation';
   END IF;
+
+  -- Grant USAGE on all enum types in public schema
+  EXECUTE (
+    SELECT string_agg(
+      format('GRANT USAGE ON TYPE %I.%I TO smart_ride_api', n.nspname, t.typname),
+      '; '
+    )
+    FROM pg_type t
+    JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public' AND t.typtype = 'e'
+  );
+
+  -- Grant ALL on all existing tables
+  EXECUTE (
+    SELECT string_agg(
+      format('GRANT ALL ON TABLE %I.%I TO smart_ride_api', schemaname, tablename),
+      '; '
+    )
+    FROM pg_tables WHERE schemaname = 'public'
+  );
+
+  -- Grant USAGE on all sequences (in case any exist)
+  EXECUTE (
+    SELECT string_agg(
+      format('GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA %I TO smart_ride_api', n.nspname),
+      '; '
+    )
+    FROM pg_namespace n WHERE n.nspname = 'public'
+    LIMIT 1
+  );
+
+  -- Set default privileges so future tables also get grants
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO smart_ride_api;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE ON TYPES TO smart_ride_api;
+
+  RAISE NOTICE 'Part 6 complete - smart_ride_api role configured with GRANTs';
 END
 $$;
 
-GRANT USAGE ON SCHEMA public TO smart_ride_api;
-GRANT ALL ON ALL TABLES IN SCHEMA public TO smart_ride_api;
-GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO smart_ride_api;
-GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO smart_ride_api;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO smart_ride_api;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO smart_ride_api;
 
 -- ============================================
--- DONE! Verify with these queries:
+-- DONE!
 -- ============================================
--- SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;
--- SELECT tablename, COUNT(*) as policy_count FROM pg_policies WHERE schemaname = 'public' GROUP BY tablename ORDER BY policy_count DESC;
--- SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = 'smart_ride_api';
+-- All tables now have:
+--   - RLS enabled (locked down by default)
+--   - service_role_access policy (API can do everything when is_service_role=true)
+--   - User-scoped policies (users see their own data)
+--   - Admin read policies (admins can read all data)
+--   - Public read policies (browsing data visible to everyone)
+--   - smart_ride_api role with full table access
+--
+-- To verify, run in SQL Editor:
+--   SELECT tablename, rowsecurity FROM pg_tables WHERE schemaname = 'public';
+--   SELECT * FROM pg_policies WHERE schemaname = 'public';
+-- ============================================

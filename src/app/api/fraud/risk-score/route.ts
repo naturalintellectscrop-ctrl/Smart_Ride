@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/fraud/risk-score - Get risk score for an entity
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get('entityType') as 'CLIENT' | 'RIDER' | 'MERCHANT' | 'PHARMACY';
@@ -44,11 +45,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch risk score' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST /api/fraud/risk-score - Calculate and update risk score
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { entityType, entityId } = body;
@@ -111,6 +115,8 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to calculate risk score' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 

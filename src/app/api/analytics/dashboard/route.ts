@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DashboardService } from '@/lib/analytics/dashboard-service';
 import { authGuard, adminGuard } from '@/lib/auth/guards';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/analytics/dashboard
 export async function GET(request: NextRequest) {
@@ -16,6 +17,8 @@ export async function GET(request: NextRequest) {
         { status: 401 }
       );
     }
+
+    await setRLSContext({ userId: user.userId, role: user.role });
 
     const searchParams = request.nextUrl.searchParams;
     const type = searchParams.get('type') || 'admin';
@@ -91,6 +94,8 @@ export async function GET(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -105,6 +110,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    await setRLSContext({ userId: admin.userId, role: admin.role });
+
     DashboardService.invalidateCache();
     return NextResponse.json({ success: true, message: 'Dashboard cache invalidated' });
   } catch (error: any) {
@@ -112,5 +119,7 @@ export async function DELETE(request: NextRequest) {
       { success: false, error: error.message },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

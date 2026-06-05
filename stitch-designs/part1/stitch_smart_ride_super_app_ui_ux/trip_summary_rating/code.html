@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Trip Summary | Smart Ride</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed-dim": "#4ae176",
+                    "primary": "#005f3a",
+                    "on-primary-container": "#a6ffc9",
+                    "on-primary": "#ffffff",
+                    "outline": "#6f7a71",
+                    "inverse-primary": "#7cd9a4",
+                    "on-error": "#ffffff",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "on-primary-fixed": "#002111",
+                    "on-error-container": "#93000a",
+                    "on-surface": "#191c1d",
+                    "surface-dim": "#d9dadb",
+                    "on-tertiary-fixed-variant": "#404758",
+                    "secondary": "#006e2f",
+                    "inverse-surface": "#2e3132",
+                    "primary-fixed": "#98f6be",
+                    "surface": "#f8f9fa",
+                    "tertiary-container": "#636a7c",
+                    "on-secondary": "#ffffff",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "background": "#f8f9fa",
+                    "on-tertiary-container": "#e6ebff",
+                    "surface-container": "#edeeef",
+                    "on-secondary-fixed": "#002109",
+                    "tertiary": "#4b5264",
+                    "on-tertiary-fixed": "#141b2b",
+                    "on-secondary-fixed-variant": "#005321",
+                    "surface-container-highest": "#e1e3e4",
+                    "secondary-fixed": "#6bff8f",
+                    "on-background": "#191c1d",
+                    "inverse-on-surface": "#f0f1f2",
+                    "surface-variant": "#e1e3e4",
+                    "on-surface-variant": "#3f4941",
+                    "surface-container-low": "#f3f4f5",
+                    "primary-container": "#0e7a4d",
+                    "tertiary-fixed": "#dce2f7",
+                    "error-container": "#ffdad6",
+                    "surface-tint": "#006d43",
+                    "surface-bright": "#f8f9fa",
+                    "secondary-container": "#6bff8f",
+                    "on-secondary-container": "#007432",
+                    "outline-variant": "#bec9bf",
+                    "on-tertiary": "#ffffff",
+                    "surface-container-lowest": "#ffffff",
+                    "on-primary-fixed-variant": "#005231",
+                    "error": "#ba1a1a",
+                    "surface-container-high": "#e7e8e9"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "12px",
+                    "xs": "4px",
+                    "container-margin": "16px",
+                    "md": "16px",
+                    "base": "4px",
+                    "sm": "8px",
+                    "xl": "32px",
+                    "lg": "24px"
+            },
+            "fontFamily": {
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "label-lg": ["Inter"],
+                    "body-sm": ["Inter"],
+                    "label-md": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "display-lg": ["Plus Jakarta Sans"]
+            },
+            "fontSize": {
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8f9fa;
+        }
+        .bento-card {
+            background-color: white;
+            border-radius: 1.5rem;
+            transition: transform 0.2s ease;
+        }
+        .bento-card:active {
+            transform: scale(0.98);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen pb-24">
+<!-- Top Navigation Bar -->
+<header class="w-full top-0 sticky z-50 bg-surface dark:bg-on-background flex items-center justify-between px-md h-14 transition-colors duration-200">
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-high dark:hover:bg-inverse-surface transition-colors">
+<span class="material-symbols-outlined text-primary dark:text-inverse-primary" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md text-primary dark:text-inverse-primary">Trip Summary</h1>
+<button class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface-container-high dark:hover:bg-inverse-surface transition-colors">
+<span class="material-symbols-outlined text-primary dark:text-inverse-primary" data-icon="security">security</span>
+</button>
+</header>
+<main class="max-w-md mx-auto px-container-margin py-md space-y-lg">
+<!-- Map View Section -->
+<section class="relative overflow-hidden bento-card h-48 shadow-sm">
+<div class="absolute inset-0 bg-surface-container-highest">
+<img alt="Route Map" class="w-full h-full object-cover" data-location="Kampala" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDQ-6f28ZvC1WoRzetMMzrYNU3ZroJ3zn_o5aSDxLeUD6Hn2sSXvveNMQkH8O6n_Lgb08jq5Lv9Mu8HrfZQQHBKwF2sV6KvYBslkkA0cp5S1Z6Bk1KguQbb1r_kF8_ADUKVSgJyZINPxvHSqadeWdEftK1B2qZpRANmLNCWVWBZ98RIt2PYIGh4gTDvxD8xF6JG4cjJp7Hxw9QkwvoNJuRLIw-EM9Ki6I4nAKxl25xz91Kgb-09GSD38RFeIWCaJkfo7IL34BWc1Fb8"/>
+</div>
+<div class="absolute top-sm left-sm bg-white/90 backdrop-blur px-sm py-xs rounded-full shadow-sm flex items-center gap-xs">
+<span class="material-symbols-outlined text-[18px] text-primary" data-icon="route">route</span>
+<span class="font-label-md text-label-md text-primary">Nakasero → Acacia Mall</span>
+</div>
+</section>
+<!-- Fare Breakdown Section -->
+<section class="bento-card p-md shadow-sm border border-surface-variant">
+<div class="flex justify-between items-end mb-md">
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">Total Amount</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Transaction ID: #SR-99821</p>
+</div>
+<div class="text-right">
+<span class="font-display-lg text-display-lg text-primary">UGX 12,000</span>
+</div>
+</div>
+<div class="space-y-sm border-t border-surface-variant pt-md">
+<div class="flex justify-between font-body-md text-body-md text-on-surface-variant">
+<span>Base Fare</span>
+<span class="text-on-surface">UGX 3,000</span>
+</div>
+<div class="flex justify-between font-body-md text-body-md text-on-surface-variant">
+<span>Distance (4.2 km)</span>
+<span class="text-on-surface">UGX 7,000</span>
+</div>
+<div class="flex justify-between font-body-md text-body-md text-on-surface-variant">
+<span>Time (12 mins)</span>
+<span class="text-on-surface">UGX 2,000</span>
+</div>
+</div>
+<div class="mt-md p-sm bg-surface-container-low rounded-xl flex items-center justify-between">
+<div class="flex items-center gap-sm">
+<div class="w-10 h-10 bg-yellow-400 rounded-lg flex items-center justify-center font-bold text-white text-[10px] leading-tight">
+                        MTN<br/>MoMo
+                    </div>
+<div>
+<p class="font-label-lg text-label-lg text-on-surface">MTN MoMo</p>
+<p class="font-label-md text-label-md text-on-surface-variant">****32</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-secondary" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</section>
+<!-- Driver Rating Section -->
+<section class="bento-card p-md shadow-sm border border-surface-variant space-y-md">
+<div class="flex items-center gap-md">
+<div class="relative">
+<img alt="Driver Brian" class="w-16 h-16 rounded-full object-cover border-2 border-primary" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1pq2yqgYIxx7b4l_IxY-JuSd3CDAEHsbFYJ-VxV104Gl34Awyl5eEcCLki6fikQ0KyGdLJTX6A4zuayeyRamPWH9tWCTN_5Vq6KRJw6S6QCmiE3KUlH8-Na9m8bh01WEg0tznCC8MxaMTM2oisTuC2btV4NgI3MzVwWLCHG4b0IFa5ghLi0oodC132aRdva_SmyYY7ksOlY6tPXvD1pQPCv6GD2cJU8hhtCyVrhEKMaQhrZoelD27oKcf_vYySi1Dsi-PZCbVKl7r"/>
+<div class="absolute -bottom-1 -right-1 bg-primary text-white p-1 rounded-full border-2 border-white">
+<span class="material-symbols-outlined text-[14px]" data-icon="verified" data-weight="fill" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+</div>
+<div>
+<h3 class="font-headline-md text-headline-md text-on-surface">Driver: Brian</h3>
+<div class="flex items-center text-secondary">
+<span class="material-symbols-outlined text-[18px]" data-icon="star" data-weight="fill" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-lg text-label-lg ml-1">4.9 • 1,240 trips</span>
+</div>
+</div>
+</div>
+<div class="text-center py-sm">
+<p class="font-label-lg text-label-lg text-on-surface-variant mb-sm">How was your trip?</p>
+<div class="flex justify-center gap-sm" id="star-rating">
+<button class="text-surface-container-highest transition-colors" onclick="setRating(1)"><span class="material-symbols-outlined text-4xl" data-icon="star">star</span></button>
+<button class="text-surface-container-highest transition-colors" onclick="setRating(2)"><span class="material-symbols-outlined text-4xl" data-icon="star">star</span></button>
+<button class="text-surface-container-highest transition-colors" onclick="setRating(3)"><span class="material-symbols-outlined text-4xl" data-icon="star">star</span></button>
+<button class="text-surface-container-highest transition-colors" onclick="setRating(4)"><span class="material-symbols-outlined text-4xl" data-icon="star">star</span></button>
+<button class="text-surface-container-highest transition-colors" onclick="setRating(5)"><span class="material-symbols-outlined text-4xl" data-icon="star">star</span></button>
+</div>
+</div>
+<div class="space-y-sm">
+<p class="font-label-lg text-label-lg text-on-surface">Add a tip</p>
+<div class="grid grid-cols-4 gap-xs">
+<button class="tip-btn border border-outline-variant py-2 rounded-lg font-label-md text-label-md hover:bg-primary-container hover:text-on-primary-container transition-all" onclick="selectTip(this)">No Tip</button>
+<button class="tip-btn border border-outline-variant py-2 rounded-lg font-label-md text-label-md hover:bg-primary-container hover:text-on-primary-container transition-all" onclick="selectTip(this)">1,000</button>
+<button class="tip-btn border border-outline-variant py-2 rounded-lg font-label-md text-label-md hover:bg-primary-container hover:text-on-primary-container transition-all" onclick="selectTip(this)">2,000</button>
+<button class="tip-btn border border-outline-variant py-2 rounded-lg font-label-md text-label-md hover:bg-primary-container hover:text-on-primary-container transition-all" onclick="selectTip(this)">Custom</button>
+</div>
+</div>
+<div class="space-y-sm">
+<p class="font-label-lg text-label-lg text-on-surface">Leave a comment</p>
+<textarea class="w-full border-surface-variant bg-surface-container-low rounded-xl p-md font-body-sm text-body-sm focus:ring-primary focus:border-primary placeholder:text-outline-variant" placeholder="Tell us more about your ride..." rows="3"></textarea>
+</div>
+</section>
+<!-- Privacy Note -->
+<div class="flex items-center justify-center gap-sm p-sm bg-secondary-container/20 rounded-full border border-secondary-container/30">
+<span class="material-symbols-outlined text-secondary text-[20px]" data-icon="lock_person">lock_person</span>
+<p class="font-label-md text-label-md text-on-secondary-fixed-variant">Your contact details remained private throughout this trip.</p>
+</div>
+</main>
+<!-- Fixed Bottom Action -->
+<div class="fixed bottom-0 left-0 w-full bg-surface-container-lowest p-md shadow-[0_-8px_30px_rgb(0,0,0,0.06)] flex gap-md">
+<button class="flex-1 bg-primary text-white h-[56px] rounded-xl font-headline-md text-headline-md flex items-center justify-center shadow-lg active:scale-[0.98] transition-transform">
+            Done
+        </button>
+</div>
+<script>
+        function setRating(rating) {
+            const stars = document.querySelectorAll('#star-rating button span');
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.style.fontVariationSettings = "'FILL' 1";
+                    star.parentElement.classList.add('text-yellow-500');
+                    star.parentElement.classList.remove('text-surface-container-highest');
+                } else {
+                    star.style.fontVariationSettings = "'FILL' 0";
+                    star.parentElement.classList.remove('text-yellow-500');
+                    star.parentElement.classList.add('text-surface-container-highest');
+                }
+            });
+        }
+
+        function selectTip(btn) {
+            document.querySelectorAll('.tip-btn').forEach(b => {
+                b.classList.remove('bg-primary-container', 'text-on-primary-container', 'border-primary');
+                b.classList.add('border-outline-variant');
+            });
+            btn.classList.add('bg-primary-container', 'text-on-primary-container', 'border-primary');
+            btn.classList.remove('border-outline-variant');
+        }
+    </script>
+</body></html>

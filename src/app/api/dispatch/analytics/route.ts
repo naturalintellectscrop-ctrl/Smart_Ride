@@ -3,43 +3,48 @@
 // Queries the DispatchMatch model directly from the database
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/dispatch/analytics
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
-  const action = searchParams.get('action');
+  await setServiceRoleContext();
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const action = searchParams.get('action');
 
-  switch (action) {
-    case 'summary':
-      return getSummary();
+    switch (action) {
+      case 'summary':
+        return await getSummary();
 
-    case 'by-service':
-      return getByServiceType();
+      case 'by-service':
+        return await getByServiceType();
 
-    case 'by-provider':
-      const providerId = searchParams.get('providerId');
-      return getByProvider(providerId);
+      case 'by-provider':
+        const providerId = searchParams.get('providerId');
+        return await getByProvider(providerId);
 
-    case 'recent':
-      const limit = parseInt(searchParams.get('limit') || '50');
-      return getRecentDispatches(limit);
+      case 'recent':
+        const limit = parseInt(searchParams.get('limit') || '50');
+        return await getRecentDispatches(limit);
 
-    case 'performance':
-      return getPerformanceMetrics();
+      case 'performance':
+        return await getPerformanceMetrics();
 
-    default:
-      return NextResponse.json({
-        success: true,
-        message: 'Smart Ride Dispatch Analytics API',
-        endpoints: [
-          'GET /api/dispatch/analytics?action=summary - Get overall summary',
-          'GET /api/dispatch/analytics?action=by-service - Get metrics by service type',
-          'GET /api/dispatch/analytics?action=by-provider&providerId=xxx - Get provider metrics',
-          'GET /api/dispatch/analytics?action=recent&limit=50 - Get recent dispatches',
-          'GET /api/dispatch/analytics?action=performance - Get performance metrics',
-        ],
-      });
+      default:
+        return NextResponse.json({
+          success: true,
+          message: 'Smart Ride Dispatch Analytics API',
+          endpoints: [
+            'GET /api/dispatch/analytics?action=summary - Get overall summary',
+            'GET /api/dispatch/analytics?action=by-service - Get metrics by service type',
+            'GET /api/dispatch/analytics?action=by-provider&providerId=xxx - Get provider metrics',
+            'GET /api/dispatch/analytics?action=recent&limit=50 - Get recent dispatches',
+            'GET /api/dispatch/analytics?action=performance - Get performance metrics',
+          ],
+        });
+    }
+  } finally {
+    await resetRLSContext();
   }
 }
 

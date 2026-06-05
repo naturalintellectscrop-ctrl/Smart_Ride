@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // GET /api/admin/health-providers - List all health providers
 export async function GET(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -48,11 +49,14 @@ export async function GET(request: NextRequest) {
       { error: 'Failed to fetch health providers' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // POST /api/admin/health-providers - Create a new health provider (admin action)
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const {
@@ -172,5 +176,7 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to create health provider' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

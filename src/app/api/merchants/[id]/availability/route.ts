@@ -10,35 +10,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { MerchantOnboardingService } from '@/lib/merchant/merchant-onboarding.service';
 import { verifyAccessToken } from '@/lib/auth/jwt';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify authentication
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded) {
+    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+  }
+
+  // Allow merchants to update their own availability, or admins
+  const isMerchant = decoded.role === 'MERCHANT';
+  const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'].includes(decoded.role);
+
+  if (!isMerchant && !isAdmin) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  await setRLSContext(decoded);
   try {
     const { id } = await params;
-
-    // Verify authentication
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = verifyAccessToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
-    // Allow merchants to update their own availability, or admins
-    const isMerchant = decoded.role === 'MERCHANT';
-    const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'].includes(decoded.role);
-
-    if (!isMerchant && !isAdmin) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
     const body = await request.json();
 
     let updatedMerchant;
@@ -79,5 +80,7 @@ export async function PATCH(
       { success: false, error: message },
       { status }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

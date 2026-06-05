@@ -8,25 +8,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RiderOnboardingService } from '@/lib/rider/rider-onboarding.service';
 import { verifyAccessToken } from '@/lib/auth/jwt';
+import { setRLSContext, resetRLSContext } from '@/lib/db';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  // Verify admin authentication
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+
+  if (!token) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
+    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+  }
+
+  await setRLSContext(decoded);
   try {
-    // Verify admin authentication
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
-
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = verifyAccessToken(token);
-    if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
-      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
-    }
-
     const { id } = await params;
     const body = await request.json();
     const { action, notes, reason } = body;
@@ -72,5 +74,7 @@ export async function POST(
       { success: false, error: message },
       { status }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

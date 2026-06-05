@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 export async function GET(req: NextRequest) {
+  await setServiceRoleContext();
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -27,10 +28,13 @@ export async function GET(req: NextRequest) {
       { success: false, error: 'Failed to fetch rides' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 export async function POST(req: NextRequest) {
+  await setServiceRoleContext();
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -89,5 +93,7 @@ export async function POST(req: NextRequest) {
       { success: false, error: 'Failed to create ride' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

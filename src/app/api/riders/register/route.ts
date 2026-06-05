@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { hashPassword } from '@/lib/auth/password';
 import { generateTokenPair } from '@/lib/auth/jwt';
 import { UserRole, UserStatus, RiderRole, RiderStatus, VehicleType } from '@prisma/client';
@@ -28,6 +28,7 @@ const VEHICLE_TYPE_MAP: Record<string, VehicleType> = {
 };
 
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     
@@ -260,5 +261,7 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Registration failed. Please try again.' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { PaymentStatus } from '@prisma/client';
 import { isWebhookProcessed, recordWebhookProcessed } from '@/lib/security/webhook-protection';
 import { sendPaymentNotification } from '@/lib/services/notification.service';
@@ -29,6 +29,8 @@ export async function POST(request: NextRequest) {
     } else {
       console.warn('Airtel callback: No webhook secret configured, signature verification skipped');
     }
+
+    await setServiceRoleContext();
 
     // Extract callback data
     const {
@@ -184,5 +186,7 @@ export async function POST(request: NextRequest) {
       { error: 'Failed to process callback' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

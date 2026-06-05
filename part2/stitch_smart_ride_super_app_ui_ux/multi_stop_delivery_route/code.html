@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Trip Summary - Courier Multi-stop</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Plus+Jakarta+Sans:wght@600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed-dim": "#4ae176",
+                    "primary-fixed": "#98f6be",
+                    "on-secondary-fixed-variant": "#005321",
+                    "surface-variant": "#e1e3e4",
+                    "on-primary-fixed": "#002111",
+                    "surface-bright": "#f8f9fa",
+                    "on-secondary-container": "#007432",
+                    "secondary-fixed": "#6bff8f",
+                    "surface-container-low": "#f3f4f5",
+                    "outline": "#6f7a71",
+                    "on-secondary": "#ffffff",
+                    "secondary": "#006e2f",
+                    "primary-container": "#0e7a4d",
+                    "error-container": "#ffdad6",
+                    "on-error": "#ffffff",
+                    "primary": "#005f3a",
+                    "on-tertiary": "#ffffff",
+                    "background": "#f8f9fa",
+                    "inverse-primary": "#7cd9a4",
+                    "surface-container-highest": "#e1e3e4",
+                    "on-primary-fixed-variant": "#005231",
+                    "on-tertiary-fixed": "#141b2b",
+                    "on-primary": "#ffffff",
+                    "primary-fixed-dim": "#7cd9a4",
+                    "secondary-container": "#6bff8f",
+                    "on-secondary-fixed": "#002109",
+                    "on-error-container": "#93000a",
+                    "surface-container-lowest": "#ffffff",
+                    "outline-variant": "#bec9bf",
+                    "surface-container-high": "#e7e8e9",
+                    "on-tertiary-fixed-variant": "#404758",
+                    "on-background": "#191c1d",
+                    "inverse-surface": "#2e3132",
+                    "on-surface": "#191c1d",
+                    "tertiary-fixed": "#dce2f7",
+                    "on-surface-variant": "#3f4941",
+                    "inverse-on-surface": "#f0f1f2",
+                    "surface-dim": "#d9dadb",
+                    "surface": "#f8f9fa",
+                    "on-primary-container": "#a6ffc9",
+                    "on-tertiary-container": "#e6ebff",
+                    "tertiary": "#4b5264",
+                    "surface-container": "#edeeef",
+                    "tertiary-container": "#636a7c",
+                    "tertiary-fixed-dim": "#c0c6db",
+                    "error": "#ba1a1a",
+                    "surface-tint": "#006d43"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "container-margin": "16px",
+                    "xs": "4px",
+                    "xl": "32px",
+                    "gutter": "12px",
+                    "md": "16px",
+                    "sm": "8px",
+                    "base": "4px",
+                    "lg": "24px"
+            },
+            "fontFamily": {
+                    "label-lg": ["Inter"],
+                    "headline-md": ["Plus Jakarta Sans"],
+                    "display-lg": ["Plus Jakarta Sans"],
+                    "body-sm": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-lg-mobile": ["Plus Jakarta Sans"],
+                    "body-md": ["Inter"],
+                    "headline-lg": ["Plus Jakarta Sans"],
+                    "body-lg": ["Inter"]
+            },
+            "fontSize": {
+                    "label-lg": ["14px", {"lineHeight": "20px", "letterSpacing": "0.02em", "fontWeight": "600"}],
+                    "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                    "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                    "label-md": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                    "headline-lg-mobile": ["22px", {"lineHeight": "28px", "fontWeight": "700"}],
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "headline-lg": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .map-gradient-overlay {
+            background: linear-gradient(to bottom, transparent 60%, rgba(248, 249, 250, 1) 100%);
+        }
+        .timeline-line {
+            width: 2px;
+            background: repeating-linear-gradient(to bottom, #bec9bf 0, #bec9bf 4px, transparent 4px, transparent 8px);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background font-body-md min-h-screen pb-24">
+<!-- Top App Bar -->
+<header class="w-full top-0 sticky z-50 bg-surface flex items-center justify-between px-md h-14 transition-colors duration-200">
+<div class="flex items-center gap-md">
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined text-primary" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md text-primary">Trip Summary</h1>
+</div>
+<button class="p-2 hover:bg-surface-container-high rounded-full transition-colors">
+<span class="material-symbols-outlined text-primary" data-icon="security">security</span>
+</button>
+</header>
+<main class="flex flex-col">
+<!-- Map Visualization -->
+<div class="relative w-full h-[320px] bg-surface-dim overflow-hidden">
+<img class="w-full h-full object-cover grayscale-[0.2]" data-alt="A sophisticated digital map visualization of Kampala city streets during daytime. The map features a professional, high-contrast light mode aesthetic with clean white roads and soft grey building footprints. A vibrant deep green route line weaves through the urban grid, connecting three distinct marker points. The overall atmosphere is modern, efficient, and technologically advanced, consistent with a premium courier logistics application." data-location="Kampala" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN_it33fkp-4hjSGvNzLvmq_jYFyKTfKVyCA1NT5zqrzI6IsNSt9bv4bazXj2qMCr0rJ20NUKpNDzctg2oRq85SpCZf3b3M4N7IJi7znMBW_m6FbZvN6BHXDLnIWDYngO4oBey4EFm0Ul7Jj0PQuQ06ZG5m-h21XpkNW5OoUA722Opjg1wC-KcYCV_Nl8i8RH3cgTJubDYdEEsf_0Y6s94vn13Lvtl5YkYevEOgaAQXaAQ7bTWPddK1Pe7_zboJW_QBfkW18IKUELP"/>
+<div class="absolute inset-0 map-gradient-overlay"></div>
+<!-- Floating Map Pins -->
+<div class="absolute top-[20%] left-[30%] flex flex-col items-center">
+<div class="bg-secondary p-1 rounded-full shadow-lg">
+<span class="material-symbols-outlined text-white text-[16px]" style="font-variation-settings: 'FILL' 1;">restaurant</span>
+</div>
+<div class="bg-white/90 backdrop-blur px-2 py-1 rounded-lg mt-1 shadow-md border border-outline-variant">
+<p class="text-[10px] font-bold text-on-surface">Merchant</p>
+</div>
+</div>
+<div class="absolute top-[50%] right-[25%] flex flex-col items-center">
+<div class="bg-primary p-1 rounded-full shadow-lg border-2 border-white">
+<span class="material-symbols-outlined text-white text-[16px]" style="font-variation-settings: 'FILL' 1;">work</span>
+</div>
+<div class="bg-white/90 backdrop-blur px-2 py-1 rounded-lg mt-1 shadow-md border border-outline-variant">
+<p class="text-[10px] font-bold text-on-surface">Stop 1</p>
+</div>
+</div>
+<div class="absolute bottom-[25%] left-[45%] flex flex-col items-center">
+<div class="bg-primary p-1 rounded-full shadow-lg border-2 border-white animate-pulse">
+<span class="material-symbols-outlined text-white text-[16px]" style="font-variation-settings: 'FILL' 1;">home</span>
+</div>
+<div class="bg-white/90 backdrop-blur px-2 py-1 rounded-lg mt-1 shadow-md border border-outline-variant">
+<p class="text-[10px] font-bold text-on-surface">Stop 2</p>
+</div>
+</div>
+</div>
+<!-- Timeline Content Section -->
+<div class="px-container-margin -mt-8 relative z-10">
+<div class="bg-surface-container-lowest rounded-xl shadow-lg p-md mb-lg border border-surface-variant">
+<div class="flex justify-between items-center mb-lg">
+<div>
+<h2 class="font-headline-lg-mobile text-headline-lg-mobile text-on-background">Delivery Sequence</h2>
+<p class="text-on-surface-variant text-label-md">Estimated completion: 12:45 PM</p>
+</div>
+<div class="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">speed</span>
+<span class="text-label-md">On Schedule</span>
+</div>
+</div>
+<!-- Vertical Timeline -->
+<div class="space-y-xl relative">
+<!-- Vertical Line Connector -->
+<div class="absolute left-4 top-4 bottom-4 timeline-line"></div>
+<!-- Step 1: Merchant -->
+<div class="flex gap-md relative">
+<div class="z-10 w-8 h-8 rounded-full bg-secondary-fixed-dim border-2 border-white shadow-md flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-fixed-variant text-[18px]">check</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-label-md text-secondary uppercase tracking-wider">Completed</p>
+<h3 class="font-headline-md text-headline-md text-on-surface">Merchant (Java House)</h3>
+<p class="text-body-sm text-on-surface-variant">Lugogo Mall, Kampala</p>
+</div>
+<span class="text-label-md text-on-surface-variant">11:50 AM</span>
+</div>
+</div>
+</div>
+<!-- Step 2: Stop 1 -->
+<div class="flex gap-md relative">
+<div class="z-10 w-8 h-8 rounded-full bg-primary-container border-2 border-white shadow-md flex items-center justify-center">
+<div class="w-2 h-2 bg-white rounded-full animate-ping"></div>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-label-md text-primary font-bold uppercase tracking-wider">Current</p>
+<h3 class="font-headline-md text-headline-md text-on-surface">Stop 1 (Office Park)</h3>
+<p class="text-body-sm text-on-surface-variant">Acacia Avenue, Block B</p>
+</div>
+<span class="text-label-md text-primary font-bold">In Progress</span>
+</div>
+<div class="mt-md flex gap-sm">
+<button class="flex-1 h-12 bg-primary text-on-primary rounded-lg font-label-lg flex items-center justify-center gap-2 active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[20px]">how_to_reg</span>
+                                    Arrived
+                                </button>
+<button class="h-12 w-12 bg-surface-container-high text-primary rounded-lg flex items-center justify-center active:scale-95 transition-transform">
+<span class="material-symbols-outlined">call</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Step 3: Stop 2 -->
+<div class="flex gap-md relative">
+<div class="z-10 w-8 h-8 rounded-full bg-surface-container-highest border-2 border-white shadow-md flex items-center justify-center">
+<span class="material-symbols-outlined text-outline text-[18px]">schedule</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<div>
+<p class="text-label-md text-on-surface-variant uppercase tracking-wider">Remaining</p>
+<h3 class="font-headline-md text-headline-md text-on-surface opacity-60">Stop 2 (Residential Complex)</h3>
+<p class="text-body-sm text-on-surface-variant opacity-60">Kiwatule Rd, Apartment 4C</p>
+</div>
+<span class="text-label-md text-on-surface-variant opacity-60">~12:25 PM</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Ride Stats Bento-style -->
+<div class="grid grid-cols-2 gap-md mb-xl">
+<div class="bg-surface-container rounded-xl p-md flex items-center gap-md">
+<div class="w-10 h-10 bg-primary-container/20 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-primary">route</span>
+</div>
+<div>
+<p class="text-label-md text-on-surface-variant">Distance</p>
+<p class="font-headline-md text-headline-md text-on-surface">4.2 km</p>
+</div>
+</div>
+<div class="bg-surface-container rounded-xl p-md flex items-center gap-md">
+<div class="w-10 h-10 bg-tertiary-container/20 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-tertiary">payments</span>
+</div>
+<div>
+<p class="text-label-md text-on-surface-variant">Earning</p>
+<p class="font-headline-md text-headline-md text-on-surface">UGX 12k</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Nav Bar -->
+<nav class="fixed bottom-0 w-full z-50 bg-surface-container rounded-t-xl shadow-[0_-4px_12px_rgba(0,0,0,0.08)] flex justify-around items-center px-4 py-2">
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 active:scale-95 transition-transform">
+<span class="material-symbols-outlined">home</span>
+<span class="font-label-md text-label-md">Home</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-primary-container text-on-primary-container rounded-full px-4 py-1 active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">history</span>
+<span class="font-label-md text-label-md">Activity</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 active:scale-95 transition-transform">
+<span class="material-symbols-outlined">account_balance_wallet</span>
+<span class="font-label-md text-label-md">Wallet</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant hover:opacity-80 active:scale-95 transition-transform">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-md text-label-md">Account</span>
+</button>
+</nav>
+<script>
+        // Simple micro-interaction for the map items
+        document.querySelectorAll('.active\\:scale-95').forEach(button => {
+            button.addEventListener('mousedown', () => {
+                button.style.transform = 'scale(0.95)';
+            });
+            button.addEventListener('mouseup', () => {
+                button.style.transform = 'scale(1)';
+            });
+            button.addEventListener('mouseleave', () => {
+                button.style.transform = 'scale(1)';
+            });
+        });
+    </script>
+</body></html>

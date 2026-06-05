@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { generateTokenPair } from '@/lib/auth/jwt';
 import { UserRole, UserStatus } from '@prisma/client';
 import { errorResponse, serverErrorResponse } from '@/lib/api/response';
@@ -47,6 +47,7 @@ async function verifyGoogleToken(idToken: string): Promise<GoogleUserInfo | null
 }
 
 export async function POST(request: NextRequest) {
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { idToken } = body;
@@ -138,5 +139,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Google auth error:', error);
     return serverErrorResponse('Failed to authenticate with Google');
+  } finally {
+    await resetRLSContext();
   }
 }
