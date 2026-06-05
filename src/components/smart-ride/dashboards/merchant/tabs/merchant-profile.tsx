@@ -170,10 +170,10 @@ export function MerchantProfile({ onLogout, onSwitchRole, onContactSupport }: Me
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] pb-4">
+    <div className="min-h-screen bg-[#f8f9fa] pb-4">
       {/* Header */}
-      <div className="bg-[#13131A] px-4 py-4 border-b border-white/5 sticky top-6 z-40">
-        <h1 className="text-xl font-bold text-white">Profile</h1>
+      <div className="bg-white px-4 py-4 border-b border-[#bec9bf]/30 sticky top-6 z-40">
+        <h1 className="text-xl font-bold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">Profile</h1>
       </div>
 
       {/* Business Profile Card */}
@@ -198,7 +198,7 @@ export function MerchantProfile({ onLogout, onSwitchRole, onContactSupport }: Me
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-white">{businessData.name}</h2>
+                <h2 className="text-xl font-bold text-[#191c1d]">{businessData.name}</h2>
                 <div className={cn(
                   "px-2 py-0.5 rounded-full text-xs font-medium",
                   businessData.isOpen 
@@ -210,9 +210,9 @@ export function MerchantProfile({ onLogout, onSwitchRole, onContactSupport }: Me
               </div>
               <p className="text-orange-100 text-sm">{businessData.type}</p>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-white/80">⭐ {businessData.rating}</span>
-                <span className="text-white/60">•</span>
-                <span className="text-sm text-white/80">{businessData.totalOrders} orders</span>
+                <span className="text-sm text-[#3f4941]">⭐ {businessData.rating}</span>
+                <span className="text-[#6f7a71]">•</span>
+                <span className="text-sm text-[#3f4941]">{businessData.totalOrders} orders</span>
               </div>
             </div>
             <button 
@@ -227,42 +227,42 @@ export function MerchantProfile({ onLogout, onSwitchRole, onContactSupport }: Me
 
       {/* Business Information */}
       <div className="px-4 mt-6">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+        <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3">
           Business Information
         </h2>
-        <Card className="bg-[#13131A] border-white/5 divide-y divide-white/5">
+        <Card className="bg-white border-[#bec9bf]/30 divide-y divide-[#bec9bf]/30">
           <button 
             onClick={handleEditBusinessInfo}
-            className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors"
+            className="w-full p-4 flex items-center gap-3 hover:bg-[#f3f4f5] transition-colors"
           >
-            <Store className="h-5 w-5 text-gray-400" />
+            <Store className="h-5 w-5 text-[#6f7a71]" />
             <div className="flex-1 text-left">
-              <p className="text-gray-500 text-xs">Business Name</p>
-              <p className="text-white">{businessData.name}</p>
+              <p className="text-[#6f7a71] text-xs">Business Name</p>
+              <p className="text-[#191c1d]">{businessData.name}</p>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
+            <ChevronRight className="h-5 w-5 text-[#6f7a71]" />
           </button>
           <button 
             onClick={handleEditBusinessInfo}
-            className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors"
+            className="w-full p-4 flex items-center gap-3 hover:bg-[#f3f4f5] transition-colors"
           >
-            <MapPin className="h-5 w-5 text-gray-400" />
+            <MapPin className="h-5 w-5 text-[#6f7a71]" />
             <div className="flex-1 text-left">
-              <p className="text-gray-500 text-xs">Location</p>
-              <p className="text-white">{businessData.location}</p>
+              <p className="text-[#6f7a71] text-xs">Location</p>
+              <p className="text-[#191c1d]">{businessData.location}</p>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
+            <ChevronRight className="h-5 w-5 text-[#6f7a71]" />
           </button>
           <button 
             onClick={handleEditOperatingHours}
-            className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors"
+            className="w-full p-4 flex items-center gap-3 hover:bg-[#f3f4f5] transition-colors"
           >
-            <Clock className="h-5 w-5 text-gray-400" />
+            <Clock className="h-5 w-5 text-[#6f7a71]" />
             <div className="flex-1 text-left">
-              <p className="text-gray-500 text-xs">Operating Hours</p>
-              <p className="text-white">Mon-Fri: 8AM - 10PM</p>
+              <p className="text-[#6f7a71] text-xs">Operating Hours</p>
+              <p className="text-[#191c1d]">Mon-Fri: 8AM - 10PM</p>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
+            <ChevronRight className="h-5 w-5 text-[#6f7a71]" />
           </button>
         </Card>
       </div>
@@ -270,22 +270,22 @@ export function MerchantProfile({ onLogout, onSwitchRole, onContactSupport }: Me
       {/* Operating Hours */}
       <div className="px-4 mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
+          <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider">
             Operating Hours
           </h2>
           <button 
             onClick={handleEditOperatingHours}
-            className="text-[#00FF88] text-sm font-medium flex items-center gap-1"
+            className="text-[#005f3a] text-sm font-medium flex items-center gap-1"
           >
             <Edit className="h-4 w-4" />
             Edit
           </button>
         </div>
-        <Card className="bg-[#13131A] border-white/5 divide-y divide-white/5">
+        <Card className="bg-white border-[#bec9bf]/30 divide-y divide-[#bec9bf]/30">
           {Object.entries(operatingHours).map(([day, hours]) => (
             <div key={day} className="p-3 flex items-center justify-between">
-              <span className="text-gray-300 capitalize">{day}</span>
-              <span className="text-gray-500 text-sm">{hours}</span>
+              <span className="text-[#191c1d] capitalize">{day}</span>
+              <span className="text-[#6f7a71] text-sm">{hours}</span>
             </div>
           ))}
         </Card>
@@ -293,11 +293,11 @@ export function MerchantProfile({ onLogout, onSwitchRole, onContactSupport }: Me
 
       {/* Documents & Licenses */}
       <div className="px-4 mt-6">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3 flex items-center gap-2">
           <FileText className="h-4 w-4" />
           Documents & Licenses
         </h2>
-        <Card className="bg-[#13131A] border-white/5 divide-y divide-white/5">
+        <Card className="bg-white border-[#bec9bf]/30 divide-y divide-[#bec9bf]/30">
           {documents.map((doc) => (
             <div key={doc.id} className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -306,7 +306,7 @@ export function MerchantProfile({ onLogout, onSwitchRole, onContactSupport }: Me
                 ) : (
                   <AlertCircle className="h-5 w-5 text-yellow-500" />
                 )}
-                <span className="text-gray-300">{doc.name}</span>
+                <span className="text-[#191c1d]">{doc.name}</span>
               </div>
               <span className={cn(
                 "text-xs font-medium",
@@ -321,14 +321,14 @@ export function MerchantProfile({ onLogout, onSwitchRole, onContactSupport }: Me
 
       {/* Verification Status */}
       <div className="px-4 mt-6">
-        <Card className="p-4 bg-[#00FF88]/10 border-[#00FF88]/20">
+        <Card className="p-4 bg-[#98f6be]/30 border-[#98f6be]/50">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#00FF88]/20 rounded-full flex items-center justify-center">
-              <Shield className="h-5 w-5 text-[#00FF88]" />
+            <div className="w-10 h-10 bg-[#98f6be]/40 rounded-full flex items-center justify-center">
+              <Shield className="h-5 w-5 text-[#005f3a]" />
             </div>
             <div>
-              <p className="font-semibold text-[#00FF88]">Business Verified</p>
-              <p className="text-sm text-gray-400">All documents verified • Accepting orders</p>
+              <p className="font-semibold text-[#005f3a]">Business Verified</p>
+              <p className="text-sm text-[#6f7a71]">All documents verified • Accepting orders</p>
             </div>
           </div>
         </Card>
@@ -336,74 +336,74 @@ export function MerchantProfile({ onLogout, onSwitchRole, onContactSupport }: Me
 
       {/* Role Switching */}
       <div className="px-4 mt-6">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+        <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3">
           Switch Role
         </h2>
-        <Card className="bg-[#13131A] border-white/5 overflow-hidden">
+        <Card className="bg-white border-[#bec9bf]/30 overflow-hidden">
           <button
             onClick={() => onSwitchRole('CLIENT')}
-            className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors border-b border-white/5"
+            className="w-full p-4 flex items-center gap-3 hover:bg-[#f3f4f5] transition-colors border-b border-[#bec9bf]/30"
           >
             <div className="w-12 h-12 bg-emerald-500/15 rounded-xl flex items-center justify-center">
               <User className="h-6 w-6 text-emerald-400" />
             </div>
             <div className="flex-1 text-left">
-              <p className="font-medium text-white">Switch to Client</p>
-              <p className="text-sm text-gray-500">Order rides and deliveries</p>
+              <p className="font-medium text-[#191c1d]">Switch to Client</p>
+              <p className="text-sm text-[#6f7a71]">Order rides and deliveries</p>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
+            <ChevronRight className="h-5 w-5 text-[#6f7a71]" />
           </button>
           <button
             onClick={() => onSwitchRole('RIDER')}
-            className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors border-b border-white/5"
+            className="w-full p-4 flex items-center gap-3 hover:bg-[#f3f4f5] transition-colors border-b border-[#bec9bf]/30"
           >
             <div className="w-12 h-12 bg-orange-500/15 rounded-xl flex items-center justify-center">
               <Bike className="h-6 w-6 text-orange-400" />
             </div>
             <div className="flex-1 text-left">
-              <p className="font-medium text-white">Switch to Rider</p>
-              <p className="text-sm text-gray-500">Deliver orders and earn money</p>
+              <p className="font-medium text-[#191c1d]">Switch to Rider</p>
+              <p className="text-sm text-[#6f7a71]">Deliver orders and earn money</p>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
+            <ChevronRight className="h-5 w-5 text-[#6f7a71]" />
           </button>
           <button
             onClick={() => onSwitchRole('PHARMACIST')}
-            className="w-full p-4 flex items-center gap-3 hover:bg-white/5 transition-colors"
+            className="w-full p-4 flex items-center gap-3 hover:bg-[#f3f4f5] transition-colors"
           >
             <div className="w-12 h-12 bg-rose-500/15 rounded-xl flex items-center justify-center">
               <Heart className="h-6 w-6 text-rose-400" />
             </div>
             <div className="flex-1 text-left">
-              <p className="font-medium text-white">Switch to Pharmacist</p>
-              <p className="text-sm text-gray-500">Manage pharmacy and dispense medicines</p>
+              <p className="font-medium text-[#191c1d]">Switch to Pharmacist</p>
+              <p className="text-sm text-[#6f7a71]">Manage pharmacy and dispense medicines</p>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
+            <ChevronRight className="h-5 w-5 text-[#6f7a71]" />
           </button>
         </Card>
       </div>
 
       {/* Quick Links */}
       <div className="px-4 mt-6">
-        <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+        <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3">
           Quick Links
         </h2>
-        <Card className="bg-[#13131A] border-white/5 divide-y divide-white/5">
-          <button className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+        <Card className="bg-white border-[#bec9bf]/30 divide-y divide-[#bec9bf]/30">
+          <button className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors">
             <div className="flex items-center gap-3">
-              <Settings className="h-5 w-5 text-gray-400" />
-              <span className="text-gray-300">Settings</span>
+              <Settings className="h-5 w-5 text-[#6f7a71]" />
+              <span className="text-[#191c1d]">Settings</span>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
+            <ChevronRight className="h-5 w-5 text-[#6f7a71]" />
           </button>
           <button 
             onClick={onContactSupport}
-            className="w-full p-4 flex items-center justify-between hover:bg-white/5 transition-colors"
+            className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors"
           >
             <div className="flex items-center gap-3">
               <Headphones className="h-5 w-5 text-gray-400" />
-              <span className="text-gray-300">Help & Support</span>
+              <span className="text-[#191c1d]">Help & Support</span>
             </div>
-            <ChevronRight className="h-5 w-5 text-gray-400" />
+            <ChevronRight className="h-5 w-5 text-[#6f7a71]" />
           </button>
         </Card>
       </div>
@@ -412,7 +412,7 @@ export function MerchantProfile({ onLogout, onSwitchRole, onContactSupport }: Me
       <div className="px-4 mt-6">
         <Button
           variant="outline"
-          className="w-full border-[#FF3B5C]/30 text-[#FF3B5C] hover:bg-[#FF3B5C]/10 hover:text-[#FF3B5C] hover:border-[#FF3B5C]/50"
+          className="w-full border-[#ba1a1a]/30 text-[#ba1a1a] hover:bg-[#ba1a1a]/10 hover:text-[#ba1a1a] hover:border-[#ba1a1a]/50"
           onClick={onLogout}
         >
           <LogOut className="h-5 w-5 mr-2" />

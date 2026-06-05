@@ -367,10 +367,10 @@ export function RiderEarnings() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-gradient-to-br from-emerald-600 to-teal-700 px-4 pt-4 pb-8">
-        <h1 className="text-xl font-bold text-white mb-4">Earnings</h1>
+        <h1 className="text-xl font-bold text-white mb-4 font-[family-name:var(--font-plus-jakarta)]">Earnings</h1>
 
         {/* Available Balance */}
-        <Card className="p-6 bg-white/10 border-white/20 backdrop-blur">
+        <Card className="p-6 bg-[#f3f4f5] border-[#bec9bf]/50 backdrop-blur">
           <p className="text-emerald-100 text-sm">Available Balance</p>
           {loading ? (
             <Skeleton className="h-10 w-40 mt-1 bg-white/20" />

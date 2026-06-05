@@ -62,10 +62,10 @@ function ClientDashboardContent() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] max-w-md mx-auto relative">
+    <div className="min-h-screen bg-[#f8f9fa] max-w-md mx-auto relative">
       {/* Status Bar */}
-      <div className="bg-gradient-to-r from-[#00FF88] to-[#00CC6E] h-6 flex items-center justify-center sticky top-0 z-50">
-        <span className="text-[#0D0D12] text-xs font-bold">Smart Ride</span>
+      <div className="bg-[#005f3a] h-6 flex items-center justify-center sticky top-0 z-50">
+        <span className="text-white text-xs font-bold">Smart Ride</span>
       </div>
 
       {/* Main Content */}
@@ -73,8 +73,8 @@ function ClientDashboardContent() {
         {renderContent()}
       </main>
 
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#13131A]/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-50 max-w-md mx-auto">
+      {/* Bottom Navigation — Stitch style */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-[#bec9bf]/30 px-2 py-2 z-50 max-w-md mx-auto shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
         <div className="flex justify-around items-center">
           {tabs.map((tab) => (
             <button
@@ -83,15 +83,15 @@ function ClientDashboardContent() {
               className={cn(
                 "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[56px] relative",
                 activeTab === tab.id
-                  ? "text-[#00FF88] bg-[#00FF88]/15"
-                  : "text-gray-500 hover:bg-white/5"
+                  ? "text-[#005f3a] bg-[#005f3a]/10"
+                  : "text-[#6f7a71] hover:bg-[#f3f4f5]"
               )}
             >
               {tab.icon}
               <span className="text-xs font-medium">{tab.label}</span>
               {/* Only show badge when there are unread messages */}
               {tab.id === 'messages' && unreadCount > 0 && (
-                <span className="absolute -top-1 right-1 w-5 h-5 bg-[#FF3B5C] rounded-full text-xs flex items-center justify-center text-white font-bold">
+                <span className="absolute -top-1 right-1 w-5 h-5 bg-[#ba1a1a] rounded-full text-xs flex items-center justify-center text-white font-bold">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}

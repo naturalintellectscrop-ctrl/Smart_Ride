@@ -97,15 +97,15 @@ function getDisplayStatus(status: string): string {
 
 function getStatusColor(status: string): string {
   if (ACTIVE_STATUSES.includes(status)) {
-    return 'bg-[#00FF88]/15 text-[#00FF88] border-[#00FF88]/30';
+    return 'bg-[#005f3a]/10 text-[#005f3a] border-[#005f3a]/30';
   }
   if (COMPLETED_STATUSES.includes(status)) {
-    return 'bg-blue-500/15 text-blue-400 border-blue-500/30';
+    return 'bg-[#4b5264]/10 text-[#4b5264] border-[#4b5264]/30';
   }
   if (CANCELLED_STATUSES.includes(status)) {
-    return 'bg-[#FF3B5C]/15 text-[#FF3B5C] border-[#FF3B5C]/30';
+    return 'bg-[#ba1a1a]/10 text-[#ba1a1a] border-[#ba1a1a]/30';
   }
-  return 'bg-gray-500/15 text-gray-400 border-gray-500/30';
+  return 'bg-[#6f7a71]/10 text-[#6f7a71] border-[#6f7a71]/30';
 }
 
 function formatTimeAgo(dateStr: string): string {
@@ -196,14 +196,14 @@ export function ClientOrders() {
   const hasOrders = filteredActiveOrders.length > 0 || filteredPastOrders.length > 0;
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] pb-4">
+    <div className="min-h-screen bg-[#f8f9fa] pb-4">
       {/* Header */}
-      <div className="bg-[#13131A] px-4 py-4 border-b border-white/5 sticky top-6 z-40">
-        <h1 className="text-xl font-bold text-white">My Orders</h1>
+      <div className="bg-white px-4 py-4 border-b border-[#bec9bf]/30 sticky top-6 z-40 shadow-sm">
+        <h1 className="text-xl font-bold text-[#191c1d]">My Orders</h1>
       </div>
 
       {/* Filter Tabs */}
-      <div className="bg-[#13131A] px-4 py-3 border-b border-white/5 overflow-x-auto">
+      <div className="bg-white px-4 py-3 border-b border-[#bec9bf]/30 overflow-x-auto">
         <div className="flex gap-2 min-w-max">
           {filterOptions.map((filter) => (
             <button
@@ -212,8 +212,8 @@ export function ClientOrders() {
               className={cn(
                 "px-4 py-2 rounded-full text-sm font-medium transition-all",
                 activeFilter === filter.id
-                  ? "bg-[#00FF88] text-[#0D0D12]"
-                  : "bg-[#1A1A24] text-gray-400 hover:bg-white/10"
+                  ? "bg-[#005f3a] text-white"
+                  : "bg-[#edeeef] text-[#3f4941] hover:bg-[#e7e8e9]"
               )}
             >
               {filter.label}
@@ -226,25 +226,25 @@ export function ClientOrders() {
       <div className="px-4 pt-4">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <Loader2 className="h-10 w-10 text-[#00FF88] animate-spin mb-4" />
-            <p className="text-gray-400">Loading your orders...</p>
+            <Loader2 className="h-10 w-10 text-[#005f3a] animate-spin mb-4" />
+            <p className="text-[#3f4941]">Loading your orders...</p>
           </div>
         ) : error ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <AlertCircle className="h-10 w-10 text-red-400 mb-4" />
-            <p className="text-white font-medium mb-2">Failed to load orders</p>
-            <p className="text-gray-500 text-sm mb-4">{error}</p>
-            <Button onClick={fetchOrders} variant="outline" className="border-[#00FF88]/30 text-[#00FF88]">
+            <AlertCircle className="h-10 w-10 text-[#ba1a1a] mb-4" />
+            <p className="text-[#191c1d] font-medium mb-2">Failed to load orders</p>
+            <p className="text-[#6f7a71] text-sm mb-4">{error}</p>
+            <Button onClick={fetchOrders} variant="outline" className="border-[#005f3a]/30 text-[#005f3a]">
               Retry
             </Button>
           </div>
         ) : !hasOrders ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-20 h-20 bg-[#1A1A24] rounded-full flex items-center justify-center mb-4">
-              <Filter className="h-10 w-10 text-gray-500" />
+            <div className="w-20 h-20 bg-[#edeeef] rounded-full flex items-center justify-center mb-4">
+              <Filter className="h-10 w-10 text-[#6f7a71]" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">No orders yet</h3>
-            <p className="text-gray-500 text-center text-sm">
+            <h3 className="text-lg font-semibold text-[#191c1d] mb-2">No orders yet</h3>
+            <p className="text-[#6f7a71] text-center text-sm">
               {activeFilter === 'all'
                 ? "Book a ride or order food to get started."
                 : `No ${activeFilter} orders to display.`}
@@ -255,40 +255,40 @@ export function ClientOrders() {
             {/* Active Orders */}
             {filteredActiveOrders.length > 0 && (
               <div className="mb-6">
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3">
                   Active Orders
                 </h2>
                 <div className="space-y-3">
                   {filteredActiveOrders.map((order) => {
                     const Icon = order.icon;
                     return (
-                      <Card key={order.id} className="p-4 bg-[#13131A] border-white/5 border-l-4 border-l-[#00FF88] hover:border-[#00FF88]/30 transition-all cursor-pointer">
+                      <Card key={order.id} className="p-4 bg-white border border-[#bec9bf]/30 border-l-4 border-l-[#005f3a] hover:border-[#005f3a]/30 transition-all cursor-pointer shadow-sm rounded-2xl">
                         <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 bg-[#00FF88]/15 rounded-xl flex items-center justify-center">
-                            <Icon className="h-6 w-6 text-[#00FF88]" />
+                          <div className="w-12 h-12 bg-[#005f3a]/10 rounded-xl flex items-center justify-center">
+                            <Icon className="h-6 w-6 text-[#005f3a]" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                              <h3 className="font-medium text-white">{order.type}</h3>
+                              <h3 className="font-medium text-[#191c1d]">{order.type}</h3>
                               <Badge className={cn("text-xs border", getStatusColor(order.status))}>
                                 {getDisplayStatus(order.status)}
                               </Badge>
                             </div>
-                            <div className="mt-1 flex items-center gap-2 text-sm text-gray-400">
+                            <div className="mt-1 flex items-center gap-2 text-sm text-[#3f4941]">
                               <MapPin className="h-3 w-3 flex-shrink-0" />
                               <span className="truncate">{order.from} → {order.to}</span>
                             </div>
                             <div className="mt-2 flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <div className="flex items-center gap-2 text-xs text-[#6f7a71]">
                                 <Clock className="h-3 w-3" />
                                 <span>{order.time}</span>
                               </div>
-                              <span className="font-semibold text-white">
+                              <span className="font-semibold text-[#191c1d]">
                                 UGX {order.amount.toLocaleString()}
                               </span>
                             </div>
                             {order.riderName && (
-                              <p className="text-xs text-gray-400 mt-2">
+                              <p className="text-xs text-[#3f4941] mt-2">
                                 Rider: {order.riderName}
                               </p>
                             )}
@@ -304,45 +304,45 @@ export function ClientOrders() {
             {/* Past Orders */}
             {filteredPastOrders.length > 0 && (
               <div>
-                <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3">
                   Past Orders
                 </h2>
                 <div className="space-y-3 max-h-96 overflow-y-auto">
                   {filteredPastOrders.map((order) => {
                     const Icon = order.icon;
                     return (
-                      <Card key={order.id} className="p-4 bg-[#13131A] border-white/5 hover:border-[#00FF88]/30 transition-all cursor-pointer">
+                      <Card key={order.id} className="p-4 bg-white border border-[#bec9bf]/30 hover:border-[#005f3a]/30 transition-all cursor-pointer shadow-sm rounded-2xl">
                         <div className="flex items-start gap-4">
-                          <div className="w-12 h-12 bg-[#1A1A24] rounded-xl flex items-center justify-center">
-                            <Icon className="h-6 w-6 text-gray-400" />
+                          <div className="w-12 h-12 bg-[#edeeef] rounded-xl flex items-center justify-center">
+                            <Icon className="h-6 w-6 text-[#6f7a71]" />
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between">
-                              <h3 className="font-medium text-white">{order.type}</h3>
+                              <h3 className="font-medium text-[#191c1d]">{order.type}</h3>
                               <Badge className={cn("text-xs border", getStatusColor(order.status))}>
                                 {getDisplayStatus(order.status)}
                               </Badge>
                             </div>
-                            <div className="mt-1 flex items-center gap-2 text-sm text-gray-400">
+                            <div className="mt-1 flex items-center gap-2 text-sm text-[#3f4941]">
                               <MapPin className="h-3 w-3 flex-shrink-0" />
                               <span className="truncate">{order.from} → {order.to}</span>
                             </div>
                             <div className="mt-2 flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <div className="flex items-center gap-2 text-xs text-[#6f7a71]">
                                 <Clock className="h-3 w-3" />
                                 <span>{order.time}</span>
                               </div>
-                              <span className="font-semibold text-white">
+                              <span className="font-semibold text-[#191c1d]">
                                 UGX {order.amount.toLocaleString()}
                               </span>
                             </div>
                             {order.merchantName && (
-                              <p className="text-xs text-gray-400 mt-2">
+                              <p className="text-xs text-[#3f4941] mt-2">
                                 Merchant: {order.merchantName}
                               </p>
                             )}
                           </div>
-                          <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0" />
+                          <ChevronRight className="h-5 w-5 text-[#bec9bf] flex-shrink-0" />
                         </div>
                       </Card>
                     );

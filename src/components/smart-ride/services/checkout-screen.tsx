@@ -33,9 +33,9 @@ type CheckoutStep = 'cart' | 'address' | 'payment' | 'confirm' | 'success' | 'er
 // Theme colors based on cart type
 const themeColors: Record<CartType, { primary: string; gradient: string; light: string }> = {
   food: { primary: 'bg-orange-600', gradient: 'from-orange-500 to-red-500', light: 'bg-orange-100 text-orange-600' },
-  grocery: { primary: 'bg-purple-600', gradient: 'from-purple-500 to-pink-500', light: 'bg-purple-100 text-purple-600' },
-  health: { primary: 'bg-emerald-600', gradient: 'from-emerald-500 to-teal-500', light: 'bg-emerald-100 text-emerald-600' },
-  shopping: { primary: 'bg-blue-600', gradient: 'from-blue-500 to-indigo-500', light: 'bg-blue-100 text-blue-600' },
+  grocery: { primary: 'bg-[#005f3a]', gradient: 'from-[#005f3a] to-[#0e7a4d]', light: 'bg-[#98f6be]/30 text-[#005f3a]' },
+  health: { primary: 'bg-[#005f3a]', gradient: 'from-[#005f3a] to-[#0e7a4d]', light: 'bg-[#98f6be]/30 text-[#005f3a]' },
+  shopping: { primary: 'bg-[#005f3a]', gradient: 'from-[#005f3a] to-[#0e7a4d]', light: 'bg-[#98f6be]/30 text-[#005f3a]' },
 };
 
 const SERVICE_FEE = 1000;
@@ -195,24 +195,24 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
   // Error Screen
   if (step === 'error') {
     return (
-      <div className="min-h-screen bg-[#0D0D12] flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-[#f8f9fa] flex flex-col items-center justify-center p-6">
         <div className="text-center">
           <div className="w-24 h-24 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
             <AlertCircle className="h-12 w-12 text-red-400" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Order Failed</h1>
-          <p className="text-gray-400 mb-6">{errorMessage || 'Something went wrong'}</p>
+          <h1 className="text-2xl font-bold text-[#191c1d] mb-2">Order Failed</h1>
+          <p className="text-[#6f7a71] mb-6">{errorMessage || 'Something went wrong'}</p>
           <div className="flex gap-3">
             <Button
               onClick={() => setStep('confirm')}
               variant="outline"
-              className="border-white/10 text-white"
+              className="border-[#bec9bf]/40 text-[#191c1d]"
             >
               Try Again
             </Button>
             <Button
               onClick={onBack}
-              className="bg-gradient-to-r from-[#00FF88] to-emerald-500 text-black font-semibold"
+              className="bg-gradient-to-r from-[#005f3a] to-[#0e7a4d] text-white font-semibold"
             >
               Go Back
             </Button>
@@ -225,30 +225,30 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
   // Success Screen
   if (step === 'success') {
     return (
-      <div className="min-h-screen bg-[#0D0D12] flex flex-col items-center justify-center p-6">
+      <div className="min-h-screen bg-[#f8f9fa] flex flex-col items-center justify-center p-6">
         <div className="text-center">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#00FF88] to-emerald-500 flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="h-12 w-12 text-white" />
+          <div className="w-24 h-24 rounded-full bg-[#005f3a] flex items-center justify-center mx-auto mb-6">
+            <CheckCircle className="h-12 w-12 text-[#191c1d]" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Order Placed!</h1>
-          <p className="text-gray-400 mb-2">Your order has been placed successfully</p>
+          <h1 className="text-2xl font-bold text-[#191c1d] mb-2">Order Placed!</h1>
+          <p className="text-[#6f7a71] mb-2">Your order has been placed successfully</p>
           {createdOrder && (
-            <p className="text-gray-500 text-sm mb-8">Order: {createdOrder.orderNumber}</p>
+            <p className="text-[#6f7a71] text-sm mb-8">Order: {createdOrder.orderNumber}</p>
           )}
 
-          <div className="bg-[#13131A] rounded-2xl p-4 mb-6 max-w-xs mx-auto">
+          <div className="bg-white rounded-2xl p-4 mb-6 max-w-xs mx-auto">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-[#1A1A24] rounded-xl flex items-center justify-center">
-                <Clock className="h-6 w-6 text-[#00FF88]" />
+              <div className="w-12 h-12 bg-[#f3f4f5] rounded-xl flex items-center justify-center">
+                <Clock className="h-6 w-6 text-[#005f3a]" />
               </div>
               <div className="text-left">
-                <p className="text-gray-400 text-sm">Next Step</p>
-                <p className="text-white font-semibold">Awaiting merchant confirmation</p>
+                <p className="text-[#6f7a71] text-sm">Next Step</p>
+                <p className="text-[#191c1d] font-semibold">Awaiting merchant confirmation</p>
               </div>
             </div>
           </div>
 
-          <p className="text-gray-500 text-xs mb-6">
+          <p className="text-[#6f7a71] text-xs mb-6">
             You will receive notifications as your order progresses
           </p>
 
@@ -257,7 +257,7 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
               clearCart(cartType);
               onOrderComplete();
             }}
-            className="w-full bg-gradient-to-r from-[#00FF88] to-emerald-500 text-black font-semibold py-4 rounded-xl"
+            className="w-full bg-gradient-to-r from-[#005f3a] to-[#0e7a4d] text-white font-semibold py-4 rounded-xl"
           >
             Done
           </Button>
@@ -269,37 +269,37 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
   // Confirmation Screen
   if (step === 'confirm') {
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-32">
-        <header className="sticky top-0 z-40 bg-[#13131A] border-b border-white/5 px-4 py-3">
+      <div className="min-h-screen bg-[#f8f9fa] pb-32">
+        <header className="sticky top-0 z-40 bg-white border-b border-[#bec9bf]/30 px-4 py-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setStep('payment')}
-              className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-white/5 active:scale-95 transition-transform"
+              className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-[#f3f4f5] active:scale-95 transition-transform"
             >
-              <ArrowLeft className="h-5 w-5 text-white" />
+              <ArrowLeft className="h-5 w-5 text-[#191c1d]" />
             </button>
-            <h1 className="text-lg font-semibold text-white">Confirm Order</h1>
+            <h1 className="text-lg font-semibold text-[#191c1d]">Confirm Order</h1>
           </div>
         </header>
 
         <div className="px-4 pt-4">
           {/* Order Summary */}
-          <Card className="bg-[#13131A] border-white/5 mb-4">
+          <Card className="bg-white border-[#bec9bf]/30 mb-4">
             <CardContent className="p-4">
-              <h3 className="font-semibold text-white mb-3">Order Summary</h3>
+              <h3 className="font-semibold text-[#191c1d] mb-3">Order Summary</h3>
               <div className="space-y-3 max-h-48 overflow-y-auto">
                 {cart.items.map((item) => (
                   <div key={item.id} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-[#1A1A24] rounded-lg flex items-center justify-center">
-                        <Package className="h-5 w-5 text-gray-400" />
+                      <div className="w-10 h-10 bg-[#f3f4f5] rounded-lg flex items-center justify-center">
+                        <Package className="h-5 w-5 text-[#6f7a71]" />
                       </div>
                       <div>
-                        <p className="text-white text-sm font-medium">{item.name}</p>
-                        <p className="text-gray-500 text-xs">Qty: {item.quantity}</p>
+                        <p className="text-[#191c1d] text-sm font-medium">{item.name}</p>
+                        <p className="text-[#6f7a71] text-xs">Qty: {item.quantity}</p>
                       </div>
                     </div>
-                    <p className="text-white font-medium">UGX {(item.price * item.quantity).toLocaleString()}</p>
+                    <p className="text-[#191c1d] font-medium">UGX {(item.price * item.quantity).toLocaleString()}</p>
                   </div>
                 ))}
               </div>
@@ -308,15 +308,15 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
 
           {/* Merchant Info */}
           {cart.merchantName && (
-            <Card className="bg-[#13131A] border-white/5 mb-4">
+            <Card className="bg-white border-[#bec9bf]/30 mb-4">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
                     <Truck className="h-5 w-5 text-purple-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-gray-400 text-xs">Store</p>
-                    <p className="text-white font-medium">{cart.merchantName}</p>
+                    <p className="text-[#6f7a71] text-xs">Store</p>
+                    <p className="text-[#191c1d] font-medium">{cart.merchantName}</p>
                   </div>
                 </div>
               </CardContent>
@@ -324,54 +324,54 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
           )}
 
           {/* Delivery Address */}
-          <Card className="bg-[#13131A] border-white/5 mb-4">
+          <Card className="bg-white border-[#bec9bf]/30 mb-4">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-emerald-500/20 rounded-full flex items-center justify-center">
                   <MapPin className="h-5 w-5 text-emerald-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-gray-400 text-xs">Delivery Address</p>
-                  <p className="text-white font-medium">{deliveryAddress}</p>
+                  <p className="text-[#6f7a71] text-xs">Delivery Address</p>
+                  <p className="text-[#191c1d] font-medium">{deliveryAddress}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Payment Method */}
-          <Card className="bg-[#13131A] border-white/5 mb-4">
+          <Card className="bg-white border-[#bec9bf]/30 mb-4">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-yellow-500/20 rounded-full flex items-center justify-center">
                   <CreditCard className="h-5 w-5 text-yellow-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-gray-400 text-xs">Payment Method</p>
-                  <p className="text-white font-medium">{paymentMethodLabels[paymentMethod]}</p>
+                  <p className="text-[#6f7a71] text-xs">Payment Method</p>
+                  <p className="text-[#191c1d] font-medium">{paymentMethodLabels[paymentMethod]}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
           {/* Pricing Breakdown */}
-          <Card className="bg-[#13131A] border-white/5">
+          <Card className="bg-white border-[#bec9bf]/30">
             <CardContent className="p-4">
-              <h3 className="font-semibold text-white mb-3">Price Details</h3>
+              <h3 className="font-semibold text-[#191c1d] mb-3">Price Details</h3>
               <div className="space-y-2">
-                <div className="flex justify-between text-gray-400">
+                <div className="flex justify-between text-[#6f7a71]">
                   <span>Subtotal</span>
                   <span>UGX {total.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-gray-400">
+                <div className="flex justify-between text-[#6f7a71]">
                   <span>Delivery Fee</span>
                   <span>UGX {cart.deliveryFee.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-gray-400">
+                <div className="flex justify-between text-[#6f7a71]">
                   <span>Service Fee</span>
                   <span>UGX {SERVICE_FEE.toLocaleString()}</span>
                 </div>
-                <div className="border-t border-white/5 pt-2 mt-2">
-                  <div className="flex justify-between text-white font-bold text-lg">
+                <div className="border-t border-[#bec9bf]/30 pt-2 mt-2">
+                  <div className="flex justify-between text-[#191c1d] font-bold text-lg">
                     <span>Total</span>
                     <span>UGX {(grandTotal + SERVICE_FEE).toLocaleString()}</span>
                   </div>
@@ -382,12 +382,12 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
         </div>
 
         {/* Place Order Button */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12] border-t border-white/5 max-w-md mx-auto">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#f8f9fa] border-t border-[#bec9bf]/30 max-w-md mx-auto">
           <Button
             onClick={handlePlaceOrder}
             disabled={isProcessing}
             className={cn(
-              "w-full py-4 rounded-xl font-semibold text-white",
+              "w-full py-4 rounded-2xl font-semibold text-white",
               "bg-gradient-to-r",
               theme.gradient,
               isProcessing && "opacity-70"
@@ -412,16 +412,16 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
   // Payment Step
   if (step === 'payment') {
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-32">
-        <header className="sticky top-0 z-40 bg-[#13131A] border-b border-white/5 px-4 py-3">
+      <div className="min-h-screen bg-[#f8f9fa] pb-32">
+        <header className="sticky top-0 z-40 bg-white border-b border-[#bec9bf]/30 px-4 py-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setStep('address')}
-              className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-white/5 active:scale-95 transition-transform"
+              className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-[#f3f4f5] active:scale-95 transition-transform"
             >
-              <ArrowLeft className="h-5 w-5 text-white" />
+              <ArrowLeft className="h-5 w-5 text-[#191c1d]" />
             </button>
-            <h1 className="text-lg font-semibold text-white">Payment Method</h1>
+            <h1 className="text-lg font-semibold text-[#191c1d]">Payment Method</h1>
           </div>
         </header>
 
@@ -432,10 +432,10 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
           />
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12] border-t border-white/5 max-w-md mx-auto">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#f8f9fa] border-t border-[#bec9bf]/30 max-w-md mx-auto">
           <Button
             onClick={handleContinue}
-            className="w-full bg-gradient-to-r from-[#00FF88] to-emerald-500 text-black font-semibold py-4 rounded-xl"
+            className="w-full bg-gradient-to-r from-[#005f3a] to-[#0e7a4d] text-white font-semibold py-4 rounded-xl"
           >
             Continue
             <ChevronRight className="h-5 w-5 ml-2" />
@@ -448,45 +448,45 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
   // Address Step
   if (step === 'address') {
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-32">
-        <header className="sticky top-0 z-40 bg-[#13131A] border-b border-white/5 px-4 py-3">
+      <div className="min-h-screen bg-[#f8f9fa] pb-32">
+        <header className="sticky top-0 z-40 bg-white border-b border-[#bec9bf]/30 px-4 py-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setStep('cart')}
-              className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-white/5 active:scale-95 transition-transform"
+              className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-[#f3f4f5] active:scale-95 transition-transform"
             >
-              <ArrowLeft className="h-5 w-5 text-white" />
+              <ArrowLeft className="h-5 w-5 text-[#191c1d]" />
             </button>
-            <h1 className="text-lg font-semibold text-white">Delivery Address</h1>
+            <h1 className="text-lg font-semibold text-[#191c1d]">Delivery Address</h1>
           </div>
         </header>
 
         <div className="px-4 pt-4">
-          <h3 className="text-white font-semibold mb-3">Enter delivery address</h3>
-          <div className="bg-[#13131A] rounded-xl p-3 flex items-center gap-3 border border-white/5 mb-4">
-            <MapPin className="h-5 w-5 text-gray-500" />
+          <h3 className="text-[#191c1d] font-semibold mb-3">Enter delivery address</h3>
+          <div className="bg-white rounded-xl p-3 flex items-center gap-3 border border-[#bec9bf]/30 mb-4">
+            <MapPin className="h-5 w-5 text-[#6f7a71]" />
             <input
               type="text"
               placeholder="e.g. Ntinda, Kampala"
               value={deliveryAddress}
               onChange={(e) => setDeliveryAddress(e.target.value)}
-              className="flex-1 bg-transparent outline-none text-white placeholder-gray-500"
+              className="flex-1 bg-transparent outline-none text-[#191c1d] placeholder-[#6f7a71]"
             />
           </div>
-          <p className="text-gray-500 text-xs">
+          <p className="text-[#6f7a71] text-xs">
             Please provide a detailed address including area, street, and building/plot number for easy delivery.
           </p>
         </div>
 
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12] border-t border-white/5 max-w-md mx-auto">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#f8f9fa] border-t border-[#bec9bf]/30 max-w-md mx-auto">
           <Button
             onClick={handleContinue}
             disabled={!deliveryAddress.trim()}
             className={cn(
               "w-full font-semibold py-4 rounded-xl",
               deliveryAddress.trim()
-                ? "bg-gradient-to-r from-[#00FF88] to-emerald-500 text-black"
-                : "bg-gray-700 text-gray-400"
+                ? "bg-gradient-to-r from-[#005f3a] to-[#0e7a4d] text-white"
+                : "bg-[#bec9bf] text-[#6f7a71]"
             )}
           >
             Continue
@@ -499,17 +499,17 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
 
   // Cart View (Default)
   return (
-    <div className="min-h-screen bg-[#0D0D12] pb-32">
+    <div className="min-h-screen bg-[#f8f9fa] pb-32">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#13131A] border-b border-white/5 px-4 py-3">
+      <header className="sticky top-0 z-40 bg-white border-b border-[#bec9bf]/30 px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-white/5 active:scale-95 transition-transform"
+            className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-[#f3f4f5] active:scale-95 transition-transform"
           >
-            <ArrowLeft className="h-5 w-5 text-white" />
+            <ArrowLeft className="h-5 w-5 text-[#191c1d]" />
           </button>
-          <h1 className="text-lg font-semibold text-white">Your Cart</h1>
+          <h1 className="text-lg font-semibold text-[#191c1d]">Your Cart</h1>
           <span className={cn("ml-auto text-sm px-2 py-1 rounded-full", theme.light)}>
             {cart.items.length} items
           </span>
@@ -519,25 +519,25 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
       <div className="px-4 pt-4">
         {cart.items.length === 0 ? (
           <div className="text-center py-16">
-            <div className="w-20 h-20 bg-[#13131A] rounded-full flex items-center justify-center mx-auto mb-4">
-              <ShoppingBag className="h-10 w-10 text-gray-500" />
+            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShoppingBag className="h-10 w-10 text-[#6f7a71]" />
             </div>
-            <p className="text-gray-400 mb-2">Your cart is empty</p>
-            <p className="text-gray-500 text-sm">Add items to get started</p>
+            <p className="text-[#6f7a71] mb-2">Your cart is empty</p>
+            <p className="text-[#6f7a71] text-sm">Add items to get started</p>
           </div>
         ) : (
           <>
             {/* Service Info */}
             {cart.serviceName && (
-              <Card className="bg-[#13131A] border-white/5 mb-4">
+              <Card className="bg-white border-[#bec9bf]/30 mb-4">
                 <CardContent className="p-3">
                   <div className="flex items-center gap-3">
                     <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", theme.light)}>
                       <Truck className="h-5 w-5" />
                     </div>
                     <div>
-                      <p className="text-white font-medium">{cart.serviceName}</p>
-                      <p className="text-gray-500 text-sm">Delivery: UGX {cart.deliveryFee.toLocaleString()}</p>
+                      <p className="text-[#191c1d] font-medium">{cart.serviceName}</p>
+                      <p className="text-[#6f7a71] text-sm">Delivery: UGX {cart.deliveryFee.toLocaleString()}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -547,24 +547,24 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
             {/* Cart Items */}
             <div className="space-y-3">
               {cart.items.map((item) => (
-                <Card key={item.id} className="bg-[#13131A] border-white/5">
+                <Card key={item.id} className="bg-white border-[#bec9bf]/30">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-16 h-16 bg-[#1A1A24] rounded-xl flex items-center justify-center flex-shrink-0">
+                      <div className="w-16 h-16 bg-[#f3f4f5] rounded-xl flex items-center justify-center flex-shrink-0">
                         {item.image ? (
                           <div
                             className="w-full h-full rounded-xl bg-cover bg-center"
                             style={{ backgroundImage: `url(${item.image})` }}
                           />
                         ) : (
-                          <Package className="h-8 w-8 text-gray-500" />
+                          <Package className="h-8 w-8 text-[#6f7a71]" />
                         )}
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <p className="text-white font-medium truncate">{item.name}</p>
+                        <p className="text-[#191c1d] font-medium truncate">{item.name}</p>
                         {item.description && (
-                          <p className="text-gray-500 text-sm truncate">{item.description}</p>
+                          <p className="text-[#6f7a71] text-sm truncate">{item.description}</p>
                         )}
                         <p className={cn("font-semibold mt-1", theme.light.replace('bg-', 'text-').split(' ')[1])}>
                           UGX {item.price.toLocaleString()}
@@ -579,21 +579,21 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
                       </button>
                     </div>
 
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-                      <p className="text-gray-400 text-sm">Quantity</p>
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#bec9bf]/30">
+                      <p className="text-[#6f7a71] text-sm">Quantity</p>
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                          className="w-8 h-8 rounded-full bg-[#1A1A24] flex items-center justify-center hover:bg-white/10 transition-colors"
+                          className="w-8 h-8 rounded-full bg-[#f3f4f5] flex items-center justify-center hover:bg-[#e8ebe8] transition-colors"
                         >
-                          <span className="text-white text-lg">-</span>
+                          <span className="text-[#191c1d] text-lg">-</span>
                         </button>
-                        <span className="text-white font-medium w-8 text-center">{item.quantity}</span>
+                        <span className="text-[#191c1d] font-medium w-8 text-center">{item.quantity}</span>
                         <button
                           onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
                           className={cn("w-8 h-8 rounded-full flex items-center justify-center", theme.primary)}
                         >
-                          <span className="text-white text-lg">+</span>
+                          <span className="text-[#191c1d] text-lg">+</span>
                         </button>
                       </div>
                     </div>
@@ -603,23 +603,23 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
             </div>
 
             {/* Pricing Summary */}
-            <Card className="bg-[#13131A] border-white/5 mt-4">
+            <Card className="bg-white border-[#bec9bf]/30 mt-4">
               <CardContent className="p-4">
                 <div className="space-y-2">
-                  <div className="flex justify-between text-gray-400">
+                  <div className="flex justify-between text-[#6f7a71]">
                     <span>Subtotal</span>
                     <span>UGX {total.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-gray-400">
+                  <div className="flex justify-between text-[#6f7a71]">
                     <span>Delivery Fee</span>
                     <span>UGX {cart.deliveryFee.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-gray-400">
+                  <div className="flex justify-between text-[#6f7a71]">
                     <span>Service Fee</span>
                     <span>UGX {SERVICE_FEE.toLocaleString()}</span>
                   </div>
-                  <div className="border-t border-white/5 pt-2 mt-2">
-                    <div className="flex justify-between text-white font-bold text-lg">
+                  <div className="border-t border-[#bec9bf]/30 pt-2 mt-2">
+                    <div className="flex justify-between text-[#191c1d] font-bold text-lg">
                       <span>Total</span>
                       <span>UGX {(grandTotal + SERVICE_FEE).toLocaleString()}</span>
                     </div>
@@ -633,11 +633,11 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
 
       {/* Continue Button */}
       {cart.items.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12] border-t border-white/5 max-w-md mx-auto">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#f8f9fa] border-t border-[#bec9bf]/30 max-w-md mx-auto">
           <Button
             onClick={handleContinue}
             className={cn(
-              "w-full py-4 rounded-xl font-semibold text-white",
+              "w-full py-4 rounded-2xl font-semibold text-white",
               "bg-gradient-to-r",
               theme.gradient
             )}

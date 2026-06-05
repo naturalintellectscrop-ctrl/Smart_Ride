@@ -183,9 +183,9 @@ export function MapboxMap({
       const mapboxgl = (await import('mapbox-gl')).default;
       
       const colors = {
-        pickup: '#00FF88',
+        pickup: '#005f3a',
         destination: '#FF6B35',
-        rider: '#00FF88',
+        rider: '#005f3a',
         user: '#3B82F6',
       };
 
@@ -203,7 +203,7 @@ export function MapboxMap({
           box-shadow: 0 2px 10px ${colors[type]}40;
           cursor: pointer;
         ">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${type === 'pickup' || type === 'rider' ? '#0D0D12' : 'white'}" stroke-width="2">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="${type === 'pickup' || type === 'rider' ? '#ffffff' : 'white'}" stroke-width="2">
             ${type === 'pickup' ? '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>' : ''}
             ${type === 'destination' ? '<polygon points="3 11 22 2 13 21 11 13 3 11"/>' : ''}
             ${type === 'rider' ? '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>' : ''}
@@ -257,11 +257,11 @@ export function MapboxMap({
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn("relative bg-[#1A1A24] rounded-2xl overflow-hidden", className)}>
+      <div className={cn("relative bg-[#f3f4f5] rounded-2xl overflow-hidden", className)}>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center">
-            <Loader2 className="h-8 w-8 text-[#00FF88] animate-spin mx-auto mb-2" />
-            <p className="text-gray-400 text-sm">Loading map...</p>
+            <Loader2 className="h-8 w-8 text-[#005f3a] animate-spin mx-auto mb-2" />
+            <p className="text-[#6f7a71] text-sm">Loading map...</p>
           </div>
         </div>
       </div>
@@ -271,7 +271,7 @@ export function MapboxMap({
   // Error state
   if (mapError) {
     return (
-      <div className={cn("relative bg-[#1A1A24] rounded-2xl overflow-hidden", className)}>
+      <div className={cn("relative bg-[#f3f4f5] rounded-2xl overflow-hidden", className)}>
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center p-4">
             <MapPin className="h-8 w-8 text-gray-500 mx-auto mb-2" />
@@ -289,7 +289,7 @@ export function MapboxMap({
 
       {/* Style Toggle */}
       <div className="absolute top-4 left-4 z-10">
-        <div className="bg-[#13131A]/90 backdrop-blur-sm rounded-lg p-1 flex gap-1">
+        <div className="bg-white/90 backdrop-blur-sm rounded-lg p-1 flex gap-1">
           {(['streets', 'dark', 'satellite'] as const).map((style) => (
             <button
               key={style}
@@ -297,8 +297,8 @@ export function MapboxMap({
               className={cn(
                 "px-3 py-1.5 rounded-md text-xs font-medium transition-colors",
                 currentStyle === style
-                  ? "bg-[#00FF88] text-[#0D0D12]"
-                  : "text-gray-400 hover:text-white"
+                  ? "bg-[#005f3a] text-white"
+                  : "text-[#3f4941] hover:text-[#191c1d]"
               )}
             >
               {style.charAt(0).toUpperCase() + style.slice(1)}
@@ -310,9 +310,9 @@ export function MapboxMap({
       {/* Location Selection Indicator */}
       {interactive && onLocationSelect && (
         <div className="absolute bottom-4 left-4 right-4 z-10">
-          <Card className="bg-[#13131A]/90 backdrop-blur-sm border-white/10 p-3">
+          <Card className="bg-white/90 backdrop-blur-sm border-[#bec9bf]/30 p-3">
             <div className="flex items-center gap-2 text-sm text-gray-300">
-              <MapPin className="h-4 w-4 text-[#00FF88]" />
+              <MapPin className="h-4 w-4 text-[#005f3a]" />
               <span>Tap on map to select location</span>
             </div>
           </Card>
@@ -399,7 +399,7 @@ async function drawRoute(map: any, pickup: MapLocation, destination: MapLocation
         type: 'line',
         source: 'route',
         paint: {
-          'line-color': '#00FF88',
+          'line-color': '#005f3a',
           'line-width': 4,
           'line-opacity': 0.8,
         },

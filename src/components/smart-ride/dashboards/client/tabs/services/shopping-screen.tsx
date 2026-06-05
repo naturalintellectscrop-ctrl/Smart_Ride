@@ -108,7 +108,7 @@ function QuantityControl({ quantity, onIncrease, onDecrease, size = 'md' }: Quan
           "rounded-full flex items-center justify-center transition-all",
           sizeClasses,
           quantity <= 0 
-            ? "bg-white/10 text-white/30" 
+            ? "bg-white/10 text-[#bec9bf]" 
             : "bg-[#8B5CF6]/20 text-[#8B5CF6] hover:bg-[#8B5CF6]/30"
         )}
       >
@@ -117,7 +117,7 @@ function QuantityControl({ quantity, onIncrease, onDecrease, size = 'md' }: Quan
       <span className={cn(
         "font-semibold min-w-[2rem] text-center",
         size === 'sm' ? "text-sm" : "text-lg",
-        "text-white"
+        "text-[#191c1d]"
       )}>
         {quantity}
       </span>
@@ -126,7 +126,7 @@ function QuantityControl({ quantity, onIncrease, onDecrease, size = 'md' }: Quan
         className={cn(
           "rounded-full bg-[#8B5CF6] flex items-center justify-center hover:bg-[#7C3AED] transition-all",
           sizeClasses,
-          "text-white"
+          "text-[#191c1d]"
         )}
         style={{ boxShadow: '0 0 15px rgba(139, 92, 246, 0.4)' }}
       >
@@ -428,25 +428,25 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
     const currentStatusIndex = statusSteps.findIndex(s => s.id === currentOrder.status);
     
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div 
           className="px-4 pt-4 pb-6"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
         >
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={onBack} className="text-[#191c1d] hover:bg-[#e7e8e9]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Order Tracking</h1>
-              <p className="text-white/60 text-sm font-mono">{currentOrder.orderNumber}</p>
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Order Tracking</h1>
+              <p className="text-[#6f7a71] text-sm font-mono">{currentOrder.orderNumber}</p>
             </div>
           </div>
         </div>
         
         <div className="px-4 -mt-4 space-y-4">
           {/* Status Progress */}
-          <Card className="p-4 bg-[#1A1A24]/90 border-white/5 glass-panel">
+          <Card className="p-4 bg-[#f3f4f5]/90 border-[#bec9bf]/20 glass-panel">
             <div className="flex items-center justify-between mb-4">
               {statusSteps.map((status, index) => {
                 const isCompleted = index <= currentStatusIndex;
@@ -460,7 +460,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                         "w-10 h-10 rounded-full flex items-center justify-center transition-all",
                         isCompleted 
                           ? "bg-[#8B5CF6] text-white" 
-                          : "bg-white/10 text-white/30"
+                          : "bg-white/10 text-[#bec9bf]"
                       )}
                       style={isCurrent ? { boxShadow: '0 0 20px rgba(139, 92, 246, 0.5)' } : undefined}
                     >
@@ -468,7 +468,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                     </div>
                     <span className={cn(
                       "text-xs mt-1 text-center",
-                      isCompleted ? "text-[#8B5CF6]" : "text-white/30"
+                      isCompleted ? "text-[#8B5CF6]" : "text-[#bec9bf]"
                     )}>
                       {status.label}
                     </span>
@@ -480,22 +480,22 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
             {currentOrder.status !== 'DELIVERED' && (
               <div className="flex items-center gap-2 justify-center text-sm">
                 <Clock className="h-4 w-4 text-[#8B5CF6]" />
-                <span className="text-white/70">Estimated delivery: </span>
-                <span className="text-white font-semibold">{currentOrder.estimatedDelivery}</span>
+                <span className="text-[#3f4941]">Estimated delivery: </span>
+                <span className="text-[#191c1d] font-semibold">{currentOrder.estimatedDelivery}</span>
               </div>
             )}
           </Card>
           
           {/* Rider Info */}
           {currentOrder.riderName && (
-            <Card className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
+            <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 glass-card">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-[#8B5CF6]/20 flex items-center justify-center">
                   <Truck className="h-6 w-6 text-[#8B5CF6]" />
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-white">{currentOrder.riderName}</p>
-                  <p className="text-sm text-white/50">Your delivery rider</p>
+                  <p className="font-semibold text-[#191c1d]">{currentOrder.riderName}</p>
+                  <p className="text-sm text-[#6f7a71]">Your delivery rider</p>
                 </div>
                 <div className="flex gap-2">
                   <button className="w-10 h-10 rounded-full bg-[#8B5CF6]/20 flex items-center justify-center">
@@ -503,10 +503,10 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                   </button>
                   {currentOrder.riderPhone && (
                     <button 
-                      className="w-10 h-10 rounded-full bg-[#00FF88]/20 flex items-center justify-center"
+                      className="w-10 h-10 rounded-full bg-[#005f3a]/20 flex items-center justify-center"
                       onClick={() => window.location.href = `tel:${currentOrder.riderPhone}`}
                     >
-                      <Phone className="h-5 w-5 text-[#00FF88]" />
+                      <Phone className="h-5 w-5 text-[#005f3a]" />
                     </button>
                   )}
                 </div>
@@ -515,38 +515,38 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
           )}
           
           {/* Delivery Address */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 glass-card">
             <div className="flex items-start gap-3">
               <MapPin className="h-5 w-5 text-[#8B5CF6] mt-0.5" />
               <div>
-                <p className="text-sm text-white/50">Delivery Address</p>
-                <p className="font-medium text-white">{currentOrder.deliveryAddress}</p>
+                <p className="text-sm text-[#6f7a71]">Delivery Address</p>
+                <p className="font-medium text-[#191c1d]">{currentOrder.deliveryAddress}</p>
               </div>
             </div>
           </Card>
           
           {/* Order Items */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
-            <p className="text-sm text-white/50 mb-3">Order from {currentOrder.merchantName}</p>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 glass-card">
+            <p className="text-sm text-[#6f7a71] mb-3">Order from {currentOrder.merchantName}</p>
             <div className="space-y-2">
               {currentOrder.items.map(item => (
                 <div key={item.product.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-white">{item.product.name}</span>
-                    <span className="text-white/40 text-sm">x{item.quantity}</span>
+                    <span className="text-[#191c1d]">{item.product.name}</span>
+                    <span className="text-[#bec9bf] text-sm">x{item.quantity}</span>
                   </div>
-                  <span className="text-white font-medium">
+                  <span className="text-[#191c1d] font-medium">
                     UGX {(item.product.price * item.quantity).toLocaleString()}
                   </span>
                 </div>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-white/10 flex justify-between">
-              <span className="text-white/50">Delivery Fee</span>
-              <span className="text-white">UGX {currentOrder.deliveryFee.toLocaleString()}</span>
+            <div className="mt-3 pt-3 border-t border-[#bec9bf]/30 flex justify-between">
+              <span className="text-[#6f7a71]">Delivery Fee</span>
+              <span className="text-[#191c1d]">UGX {currentOrder.deliveryFee.toLocaleString()}</span>
             </div>
             <div className="mt-2 flex justify-between">
-              <span className="text-white font-semibold">Total</span>
+              <span className="text-[#191c1d] font-semibold">Total</span>
               <span className="text-[#8B5CF6] font-bold text-lg">
                 UGX {(currentOrder.total + currentOrder.deliveryFee).toLocaleString()}
               </span>
@@ -555,17 +555,17 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
           
           {/* Delivered / Cancelled State */}
           {(currentOrder.status === 'DELIVERED' || currentOrder.status === 'CANCELLED') && (
-            <Card className="p-6 bg-[#1A1A24]/80 border-2 border-[#8B5CF6]/30 glass-panel text-center">
+            <Card className="p-6 bg-[#f3f4f5]/80 border-2 border-[#8B5CF6]/30 glass-panel text-center">
               <div 
                 className="w-16 h-16 rounded-full bg-[#8B5CF6]/20 flex items-center justify-center mx-auto mb-4"
                 style={{ boxShadow: '0 0 30px rgba(139, 92, 246, 0.4)' }}
               >
                 <Check className="h-8 w-8 text-[#8B5CF6]" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-2">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] mb-2 ">
                 {currentOrder.status === 'DELIVERED' ? 'Order Delivered!' : 'Order Cancelled'}
               </h3>
-              <p className="text-white/60 mb-4">
+              <p className="text-[#6f7a71] mb-4">
                 {currentOrder.status === 'DELIVERED' 
                   ? 'Your order has been delivered successfully' 
                   : 'Your order was cancelled'}
@@ -590,84 +590,84 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
 
   if (step === 'checkout') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div 
           className="px-4 pt-4 pb-6"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
         >
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => setStep('cart')} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={() => setStep('cart')} className="text-[#191c1d] hover:bg-[#e7e8e9]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Checkout</h1>
-              <p className="text-white/60 text-sm">Complete your order</p>
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Checkout</h1>
+              <p className="text-[#6f7a71] text-sm">Complete your order</p>
             </div>
           </div>
         </div>
         
         <div className="px-4 -mt-4 space-y-4 pb-32">
           {/* Delivery Address */}
-          <Card className="p-4 bg-[#1A1A24]/90 border-white/5 glass-panel">
-            <p className="text-sm text-white/50 mb-2">Delivery Address</p>
-            <div className="bg-[#252530] rounded-xl p-3 flex items-center gap-3 border border-white/10">
+          <Card className="p-4 bg-[#f3f4f5]/90 border-[#bec9bf]/20 glass-panel">
+            <p className="text-sm text-[#6f7a71] mb-2">Delivery Address</p>
+            <div className="bg-[#edeeef] rounded-xl p-3 flex items-center gap-3 border border-[#bec9bf]/30">
               <MapPin className="h-5 w-5 text-[#8B5CF6]" />
               <input
                 type="text"
                 value={deliveryAddress}
                 onChange={(e) => setDeliveryAddress(e.target.value)}
                 placeholder="Enter delivery address..."
-                className="flex-1 bg-transparent outline-none text-white placeholder:text-white/30"
+                className="flex-1 bg-transparent outline-none text-[#191c1d] placeholder:text-[#6f7a71]"
               />
             </div>
           </Card>
           
           {/* Store Info */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 glass-card">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl bg-[#8B5CF6]/20 flex items-center justify-center">
                 <Store className="h-6 w-6 text-[#8B5CF6]" />
               </div>
               <div>
-                <p className="font-semibold text-white">{selectedStore?.name}</p>
-                <p className="text-sm text-white/50">{selectedStore?.address}</p>
+                <p className="font-semibold text-[#191c1d]">{selectedStore?.name}</p>
+                <p className="text-sm text-[#6f7a71]">{selectedStore?.address}</p>
               </div>
             </div>
           </Card>
           
           {/* Order Summary */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
-            <p className="text-sm text-white/50 mb-3">Order Summary</p>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 glass-card">
+            <p className="text-sm text-[#6f7a71] mb-3">Order Summary</p>
             <div className="space-y-3">
               {cart.map(item => (
                 <div key={item.product.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div>
-                      <p className="text-white text-sm">{item.product.name}</p>
-                      <p className="text-white/40 text-xs">x{item.quantity}</p>
+                      <p className="text-[#191c1d] text-sm">{item.product.name}</p>
+                      <p className="text-[#bec9bf] text-xs">x{item.quantity}</p>
                     </div>
                   </div>
-                  <p className="text-white font-medium">
+                  <p className="text-[#191c1d] font-medium">
                     UGX {(item.product.price * item.quantity).toLocaleString()}
                   </p>
                 </div>
               ))}
             </div>
-            <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+            <div className="mt-4 pt-4 border-t border-[#bec9bf]/30 space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Subtotal</span>
-                <span className="text-white">UGX {cartTotal.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Subtotal</span>
+                <span className="text-[#191c1d]">UGX {cartTotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Delivery Fee</span>
-                <span className="text-white">UGX 4,000</span>
+                <span className="text-[#6f7a71]">Delivery Fee</span>
+                <span className="text-[#191c1d]">UGX 4,000</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Service Fee</span>
-                <span className="text-white">UGX 1,000</span>
+                <span className="text-[#6f7a71]">Service Fee</span>
+                <span className="text-[#191c1d]">UGX 1,000</span>
               </div>
               <div className="flex justify-between pt-2">
-                <span className="text-white font-semibold">Total</span>
+                <span className="text-[#191c1d] font-semibold">Total</span>
                 <span className="text-[#8B5CF6] font-bold text-xl">
                   UGX {(cartTotal + 4000 + 1000).toLocaleString()}
                 </span>
@@ -676,8 +676,8 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
           </Card>
           
           {/* Payment Method */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
-            <p className="text-sm text-white/50 mb-3">Payment Method</p>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 glass-card">
+            <p className="text-sm text-[#6f7a71] mb-3">Payment Method</p>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'CASH' as const, label: 'Cash', icon: 'cash', disabled: false },
@@ -693,19 +693,19 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                     paymentMethod === method.id
                       ? "border-[#8B5CF6] bg-[#8B5CF6]/10"
                       : method.disabled
-                        ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed"
-                        : "border-white/10 bg-white/5 hover:border-white/20"
+                        ? "border-[#bec9bf]/20 bg-white/[0.02] opacity-50 cursor-not-allowed"
+                        : "border-[#bec9bf]/30 bg-white/5 hover:border-[#bec9bf]/40"
                   )}
                 >
-                  {method.icon === 'cash' && <Wallet className="h-5 w-5 text-white/60" />}
-                  {method.icon === 'momo' && <Smartphone className="h-5 w-5 text-white/60" />}
-                  {method.icon === 'wallet' && <CreditCard className="h-5 w-5 text-white/60" />}
+                  {method.icon === 'cash' && <Wallet className="h-5 w-5 text-[#6f7a71]" />}
+                  {method.icon === 'momo' && <Smartphone className="h-5 w-5 text-[#6f7a71]" />}
+                  {method.icon === 'wallet' && <CreditCard className="h-5 w-5 text-[#6f7a71]" />}
                   <span className={cn(
                     "text-xs font-medium",
-                    paymentMethod === method.id ? "text-[#8B5CF6]" : method.disabled ? "text-white/30" : "text-white/60"
+                    paymentMethod === method.id ? "text-[#8B5CF6]" : method.disabled ? "text-[#bec9bf]" : "text-[#6f7a71]"
                   )}>{method.label}</span>
                   {method.badge && (
-                    <span className="absolute -top-1 -right-1 text-[8px] bg-white/10 text-white/40 px-1 rounded">{method.badge}</span>
+                    <span className="absolute -top-1 -right-1 text-[8px] bg-white/10 text-[#bec9bf] px-1 rounded">{method.badge}</span>
                   )}
                 </button>
               ))}
@@ -724,7 +724,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
         </div>
         
         {/* Place Order Button */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12]/90 backdrop-blur-xl border-t border-white/5">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#f8f9fa]/90 backdrop-blur-xl border-t border-[#bec9bf]/20">
           <Button 
             onClick={handlePlaceOrder}
             disabled={isPlacingOrder || !deliveryAddress.trim()}
@@ -751,18 +751,18 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
 
   if (step === 'cart') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div 
           className="px-4 pt-4 pb-6"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
         >
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => setStep('products')} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={() => setStep('products')} className="text-[#191c1d] hover:bg-[#e7e8e9]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Your Cart</h1>
-              <p className="text-white/60 text-sm">{cartItemCount} items</p>
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Your Cart</h1>
+              <p className="text-[#6f7a71] text-sm">{cartItemCount} items</p>
             </div>
           </div>
         </div>
@@ -770,10 +770,10 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
         {cart.length === 0 ? (
           <div className="px-4 pt-16 text-center">
             <div className="w-24 h-24 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-              <ShoppingCart className="h-12 w-12 text-white/20" />
+              <ShoppingCart className="h-12 w-12 text-[#bec9bf]" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">Your cart is empty</h3>
-            <p className="text-white/50 mb-6">Add items from a store to start shopping</p>
+            <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-[#191c1d] mb-2 ">Your cart is empty</h3>
+            <p className="text-[#6f7a71] mb-6">Add items from a store to start shopping</p>
             <Button 
               onClick={() => setStep('stores')}
               className="bg-[#8B5CF6] text-white hover:bg-[#7C3AED]"
@@ -785,16 +785,16 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
           <>
             <div className="px-4 -mt-4 space-y-3 pb-48">
               {/* Store Info */}
-              <Card className="p-3 bg-[#1A1A24]/80 border-white/5 glass-card">
+              <Card className="p-3 bg-[#f3f4f5]/80 border-[#bec9bf]/20 glass-card">
                 <div className="flex items-center gap-3">
                   <Store className="h-5 w-5 text-[#8B5CF6]" />
-                  <span className="text-white font-medium">{selectedStore?.name}</span>
+                  <span className="text-[#191c1d] font-medium">{selectedStore?.name}</span>
                 </div>
               </Card>
               
               {/* Cart Items */}
               {cart.map(item => (
-                <Card key={item.product.id} className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
+                <Card key={item.product.id} className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 glass-card">
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center overflow-hidden">
                       {item.product.imageUrl ? (
@@ -807,12 +807,12 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                           }}
                         />
                       ) : (
-                        <Package className="h-6 w-6 text-white/30" />
+                        <Package className="h-6 w-6 text-[#bec9bf]" />
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className="font-medium text-white">{item.product.name}</p>
-                      {item.product.category && <p className="text-sm text-white/50">{item.product.category}</p>}
+                      <p className="font-medium text-[#191c1d]">{item.product.name}</p>
+                      {item.product.category && <p className="text-sm text-[#6f7a71]">{item.product.category}</p>}
                       <p className="text-[#8B5CF6] font-semibold mt-1">
                         UGX {item.product.price.toLocaleString()}
                       </p>
@@ -836,18 +836,18 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
               ))}
               
               {/* Order Summary */}
-              <Card className="p-4 border-2 border-[#8B5CF6]/30 bg-[#1A1A24]/80 glass-panel">
+              <Card className="p-4 border-2 border-[#8B5CF6]/30 bg-[#f3f4f5]/80 glass-panel">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/50">Subtotal</span>
-                    <span className="text-white">UGX {cartTotal.toLocaleString()}</span>
+                    <span className="text-[#6f7a71]">Subtotal</span>
+                    <span className="text-[#191c1d]">UGX {cartTotal.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-white/50">Delivery Fee</span>
-                    <span className="text-white">UGX 4,000</span>
+                    <span className="text-[#6f7a71]">Delivery Fee</span>
+                    <span className="text-[#191c1d]">UGX 4,000</span>
                   </div>
-                  <div className="pt-2 mt-2 border-t border-white/10 flex justify-between">
-                    <span className="text-white font-semibold">Total</span>
+                  <div className="pt-2 mt-2 border-t border-[#bec9bf]/30 flex justify-between">
+                    <span className="text-[#191c1d] font-semibold">Total</span>
                     <span className="text-xl font-bold text-[#8B5CF6]">
                       UGX {(cartTotal + 4000).toLocaleString()}
                     </span>
@@ -857,7 +857,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
             </div>
             
             {/* Checkout Button */}
-            <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12]/90 backdrop-blur-xl border-t border-white/5">
+            <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#f8f9fa]/90 backdrop-blur-xl border-t border-[#bec9bf]/20">
               <Button 
                 onClick={() => setStep('checkout')}
                 className="w-full h-14 text-lg font-semibold rounded-xl bg-[#8B5CF6] text-white hover:bg-[#7C3AED]"
@@ -878,21 +878,21 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
 
   if (step === 'products' && selectedStore) {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div 
           className="px-4 pt-4 pb-6"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
         >
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => setStep('stores')} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={() => setStep('stores')} className="text-[#191c1d] hover:bg-[#e7e8e9]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
-              <h1 className="text-xl font-bold text-white">{selectedStore.name}</h1>
-              <div className="flex items-center gap-2 text-sm text-white/60">
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">{selectedStore.name}</h1>
+              <div className="flex items-center gap-2 text-sm text-[#6f7a71]">
                 <Clock className="h-3 w-3" />
                 <span>{selectedStore.averagePrepTime} min</span>
-                <span className="text-white/30">|</span>
+                <span className="text-[#bec9bf]">|</span>
                 <Star className="h-3 w-3 text-yellow-500" />
                 <span>{selectedStore.rating.toFixed(1)}</span>
               </div>
@@ -902,7 +902,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                 variant="ghost"
                 size="icon"
                 onClick={() => setStep('cart')}
-                className="text-white hover:bg-white/10 relative"
+                className="text-[#191c1d] hover:bg-[#e7e8e9] relative"
               >
                 <ShoppingCart className="h-5 w-5" />
                 <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#8B5CF6] rounded-full text-white text-[10px] flex items-center justify-center font-bold">
@@ -914,13 +914,13 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
           
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#bec9bf]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products..."
-              className="w-full h-12 pl-10 pr-4 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#8B5CF6]/50 focus:outline-none transition-colors"
+              className="w-full h-12 pl-10 pr-4 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#8B5CF6]/50 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -929,7 +929,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
           {isLoadingProducts ? (
             <div className="flex flex-col items-center justify-center py-16">
               <Loader2 className="h-8 w-8 text-[#8B5CF6] animate-spin mb-3" />
-              <p className="text-white/50">Loading products...</p>
+              <p className="text-[#6f7a71]">Loading products...</p>
             </div>
           ) : (
             <>
@@ -942,7 +942,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                       "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
                       !productCategory 
                         ? "bg-[#8B5CF6] text-white" 
-                        : "bg-white/5 text-white/60 hover:bg-white/10"
+                        : "bg-white/5 text-[#6f7a71] hover:bg-[#e7e8e9]"
                     )}
                   >
                     All
@@ -955,7 +955,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                         "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
                         productCategory === cat 
                           ? "bg-[#8B5CF6] text-white" 
-                          : "bg-white/5 text-white/60 hover:bg-white/10"
+                          : "bg-white/5 text-[#6f7a71] hover:bg-[#e7e8e9]"
                       )}
                     >
                       {cat}
@@ -967,9 +967,9 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
               {/* Products Grid */}
               {storeProducts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16">
-                  <Package className="h-12 w-12 text-white/20 mb-3" />
-                  <p className="text-white/50">No products available</p>
-                  <p className="text-white/30 text-sm mt-1">This store has not added products yet</p>
+                  <Package className="h-12 w-12 text-[#bec9bf] mb-3" />
+                  <p className="text-[#6f7a71]">No products available</p>
+                  <p className="text-[#bec9bf] text-sm mt-1">This store has not added products yet</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3 pb-32">
@@ -977,7 +977,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                     const quantity = getProductQuantity(product.id);
                     
                     return (
-                      <Card key={product.id} className="p-3 bg-[#1A1A24]/80 border-white/5 glass-card">
+                      <Card key={product.id} className="p-3 bg-[#f3f4f5]/80 border-[#bec9bf]/20 glass-card">
                         <div className="w-full h-20 rounded-lg bg-white/5 flex items-center justify-center mb-2 overflow-hidden">
                           {product.imageUrl ? (
                             <img 
@@ -989,12 +989,12 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                               }}
                             />
                           ) : (
-                            <Package className="h-8 w-8 text-white/20" />
+                            <Package className="h-8 w-8 text-[#bec9bf]" />
                           )}
                         </div>
-                        <p className="text-white text-sm font-medium truncate">{product.name}</p>
+                        <p className="text-[#191c1d] text-sm font-medium truncate">{product.name}</p>
                         {product.category && (
-                          <p className="text-white/40 text-xs">{product.category}</p>
+                          <p className="text-[#bec9bf] text-xs">{product.category}</p>
                         )}
                         <div className="flex items-center justify-between mt-2">
                           <p className="text-[#8B5CF6] font-semibold text-sm">UGX {product.price.toLocaleString()}</p>
@@ -1002,11 +1002,11 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                             <div className="flex items-center gap-1">
                               <button
                                 onClick={() => updateQuantity(product.id, -1)}
-                                className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-white"
+                                className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center text-[#191c1d]"
                               >
                                 <Minus className="h-3 w-3" />
                               </button>
-                              <span className="text-white text-sm w-5 text-center">{quantity}</span>
+                              <span className="text-[#191c1d] text-sm w-5 text-center">{quantity}</span>
                               <button
                                 onClick={() => addToCart(product)}
                                 className="w-6 h-6 rounded-full bg-[#8B5CF6] flex items-center justify-center text-white"
@@ -1034,7 +1034,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
         
         {/* Cart Float Button */}
         {cartItemCount > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12]/90 backdrop-blur-xl border-t border-white/5">
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#f8f9fa]/90 backdrop-blur-xl border-t border-[#bec9bf]/20">
             <Button 
               onClick={() => setStep('cart')}
               className="w-full h-14 text-lg font-semibold rounded-xl bg-[#8B5CF6] text-white hover:bg-[#7C3AED]"
@@ -1054,31 +1054,31 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
   // ============================================
 
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
+    <div className="min-h-screen bg-[#f8f9fa]">
       {/* Header */}
       <div 
         className="px-4 pt-4 pb-6"
         style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
       >
         <div className="flex items-center gap-3 mb-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10">
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-[#191c1d] hover:bg-[#e7e8e9]">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-white">Shopping</h1>
-            <p className="text-white/60 text-sm">Browse stores and order items</p>
+            <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Shopping</h1>
+            <p className="text-[#6f7a71] text-sm">Browse stores and order items</p>
           </div>
         </div>
         
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#bec9bf]" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search stores..."
-            className="w-full h-12 pl-10 pr-4 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#8B5CF6]/50 focus:outline-none transition-colors"
+            className="w-full h-12 pl-10 pr-4 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#8B5CF6]/50 focus:outline-none transition-colors"
           />
         </div>
       </div>
@@ -1087,20 +1087,20 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
         {isLoadingMerchants ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-10 w-10 text-[#8B5CF6] animate-spin mb-4" />
-            <p className="text-white/50">Loading stores...</p>
+            <p className="text-[#6f7a71]">Loading stores...</p>
           </div>
         ) : filteredStores.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Store className="h-12 w-12 text-white/20 mb-4" />
-            <p className="text-white/50 font-medium mb-2">No stores available yet</p>
-            <p className="text-white/30 text-sm text-center">Shopping stores will appear here once they are registered and approved</p>
+            <Store className="h-12 w-12 text-[#bec9bf] mb-4" />
+            <p className="text-[#6f7a71] font-medium mb-2">No stores available yet</p>
+            <p className="text-[#bec9bf] text-sm text-center">Shopping stores will appear here once they are registered and approved</p>
           </div>
         ) : (
           <div className="space-y-3 pb-6">
             {filteredStores.map((store) => (
               <Card
                 key={store.id}
-                className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card cursor-pointer hover:border-[#8B5CF6]/30 transition-all"
+                className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 glass-card cursor-pointer hover:border-[#8B5CF6]/30 transition-all"
                 onClick={() => handleSelectStore(store)}
               >
                 <div className="flex items-center gap-4">
@@ -1120,29 +1120,29 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="text-white font-semibold truncate">{store.name}</p>
+                      <p className="text-[#191c1d] font-semibold truncate">{store.name}</p>
                       {store.isOpen ? (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400">Open</span>
                       ) : (
                         <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400">Closed</span>
                       )}
                     </div>
-                    <p className="text-white/50 text-sm truncate">{store.address}</p>
+                    <p className="text-[#6f7a71] text-sm truncate">{store.address}</p>
                     <div className="flex items-center gap-3 mt-1">
                       <div className="flex items-center gap-1">
                         <Star className="h-3 w-3 text-yellow-500" />
-                        <span className="text-white/40 text-xs">{store.rating.toFixed(1)}</span>
+                        <span className="text-[#bec9bf] text-xs">{store.rating.toFixed(1)}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3 text-white/30" />
-                        <span className="text-white/40 text-xs">{store.averagePrepTime} min</span>
+                        <Clock className="h-3 w-3 text-[#bec9bf]" />
+                        <span className="text-[#bec9bf] text-xs">{store.averagePrepTime} min</span>
                       </div>
                       {store._count && (
-                        <span className="text-white/30 text-xs">{store._count.menuItems} items</span>
+                        <span className="text-[#bec9bf] text-xs">{store._count.menuItems} items</span>
                       )}
                     </div>
                   </div>
-                  <ChevronRight className="h-5 w-5 text-white/20 flex-shrink-0" />
+                  <ChevronRight className="h-5 w-5 text-[#bec9bf] flex-shrink-0" />
                 </div>
               </Card>
             ))}

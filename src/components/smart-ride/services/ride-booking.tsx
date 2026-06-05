@@ -472,7 +472,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
 
   // Render step header
   const renderHeader = () => (
-    <div className="bg-gradient-to-br from-[#13131A] to-[#1A1A24] px-4 py-4 flex items-center gap-4 sticky top-0 z-20 border-b border-white/5">
+    <div className="bg-gradient-to-br from-white to-[#f3f4f5] px-4 py-4 flex items-center gap-4 sticky top-0 z-20 border-b border-[#bec9bf]/30">
       <button
         onClick={() => {
           if (step === 'location') {
@@ -490,12 +490,12 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
             }
           }
         }}
-        className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+        className="w-10 h-10 bg-[#f3f4f5] rounded-full flex items-center justify-center hover:bg-[#e8ebe8] transition-colors"
       >
-        <ArrowLeft className="h-5 w-5 text-white" />
+        <ArrowLeft className="h-5 w-5 text-[#191c1d]" />
       </button>
       <div>
-        <h1 className="text-lg font-bold text-white">
+        <h1 className="text-lg font-bold text-[#191c1d]">
           {step === 'location' && 'Book a Ride'}
           {step === 'passengers' && 'Passengers'}
           {step === 'vehicle' && 'Choose Ride'}
@@ -505,7 +505,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
           {step === 'matched' && 'Rider Found!'}
           {step === 'no_riders' && 'No Riders Available'}
         </h1>
-        <p className="text-gray-400 text-sm">
+        <p className="text-[#6f7a71] text-sm">
           {step === 'location' && 'Enter pickup and destination'}
           {step === 'passengers' && 'How many passengers?'}
           {step === 'vehicle' && `${distanceKm.toFixed(1)} km - ~${estimatedTimeMinutes} min`}
@@ -522,7 +522,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
   // Location step
   if (step === 'location') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         {renderHeader()}
         <div className="p-4 space-y-4">
           <LocationPicker
@@ -540,8 +540,8 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
             className={cn(
               'w-full py-4 rounded-xl font-semibold text-base transition-all',
               canProceedFromLocation && !routeLoading
-                ? 'bg-[#00FF88] text-black hover:bg-[#00CC6E]'
-                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                ? 'bg-[#005f3a] text-white hover:bg-[#0e7a4d]'
+                : 'bg-[#bec9bf] text-[#6f7a71] cursor-not-allowed'
             )}
           >
             {routeLoading ? (
@@ -559,19 +559,19 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
 
           {/* Price hint */}
           {canProceedFromLocation && distanceKm > 0 && (
-            <Card className="bg-[#13131A] border-white/5 p-4">
+            <Card className="bg-white border-[#bec9bf]/30 p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-400 text-sm">Estimated fare range</p>
-                  <p className="text-white font-semibold">
+                  <p className="text-[#6f7a71] text-sm">Estimated fare range</p>
+                  <p className="text-[#191c1d] font-semibold">
                     {formatCurrency(Math.min(...Object.values(pricing).filter(Boolean).map(p => p?.totalFare || Infinity)))}
                     {' - '}
                     {formatCurrency(Math.max(...Object.values(pricing).filter(Boolean).map(p => p?.totalFare || 0)))}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-gray-400 text-sm">Distance</p>
-                  <p className="text-white font-semibold">{distanceKm.toFixed(1)} km</p>
+                  <p className="text-[#6f7a71] text-sm">Distance</p>
+                  <p className="text-[#191c1d] font-semibold">{distanceKm.toFixed(1)} km</p>
                 </div>
               </div>
             </Card>
@@ -584,51 +584,51 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
   // Passengers step
   if (step === 'passengers') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         {renderHeader()}
         <div className="p-4 space-y-6">
           {/* Route summary */}
-          <Card className="bg-[#13131A] border-white/5 p-4">
+          <Card className="bg-white border-[#bec9bf]/30 p-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-[#00FF88] rounded-full" />
-                <p className="text-white">{pickup?.address}</p>
+                <div className="w-3 h-3 bg-[#005f3a] rounded-full" />
+                <p className="text-[#191c1d]">{pickup?.address}</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-orange-500 rounded-full" />
-                <p className="text-white">{destination?.address}</p>
+                <div className="w-3 h-3 bg-red-500 rounded-full" />
+                <p className="text-[#191c1d]">{destination?.address}</p>
               </div>
             </div>
           </Card>
 
           {/* Passenger selector */}
-          <Card className="bg-[#13131A] border-white/5 p-6">
-            <h3 className="text-white font-medium mb-6">Number of Passengers</h3>
+          <Card className="bg-white border-[#bec9bf]/30 p-6">
+            <h3 className="text-[#191c1d] font-medium mb-6">Number of Passengers</h3>
             <div className="flex items-center justify-center gap-8">
               <button
                 onClick={() => setPassengers(Math.max(1, passengers - 1))}
-                className="w-14 h-14 rounded-full bg-[#1A1A24] border border-white/10 flex items-center justify-center hover:border-[#00FF88]/50 transition-colors"
+                className="w-14 h-14 rounded-full bg-[#f3f4f5] border border-[#bec9bf]/40 flex items-center justify-center hover:border-[#005f3a]/50 transition-colors"
               >
-                <Minus className="h-6 w-6 text-white" />
+                <Minus className="h-6 w-6 text-[#191c1d]" />
               </button>
               <div className="text-center">
-                <span className="text-5xl font-bold text-white">{passengers}</span>
-                <p className="text-gray-400 text-sm mt-1">
+                <span className="text-5xl font-bold text-[#191c1d]">{passengers}</span>
+                <p className="text-[#6f7a71] text-sm mt-1">
                   {passengers === 1 ? 'passenger' : 'passengers'}
                 </p>
               </div>
               <button
                 onClick={() => setPassengers(Math.min(6, passengers + 1))}
-                className="w-14 h-14 rounded-full bg-[#1A1A24] border border-white/10 flex items-center justify-center hover:border-[#00FF88]/50 transition-colors"
+                className="w-14 h-14 rounded-full bg-[#f3f4f5] border border-[#bec9bf]/40 flex items-center justify-center hover:border-[#005f3a]/50 transition-colors"
               >
-                <Plus className="h-6 w-6 text-white" />
+                <Plus className="h-6 w-6 text-[#191c1d]" />
               </button>
             </div>
 
             {/* Passenger hints */}
             <div className="mt-6 space-y-2">
               {passengers === 1 && (
-                <p className="text-[#00FF88] text-sm text-center">
+                <p className="text-[#005f3a] text-sm text-center">
                   Available: Smart Boda, Economy Car, Premium Car
                 </p>
               )}
@@ -648,7 +648,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
           {/* Continue button */}
           <Button
             onClick={() => setStep('vehicle')}
-            className="w-full py-4 rounded-xl font-semibold text-base bg-[#00FF88] text-black hover:bg-[#00CC6E]"
+            className="w-full py-4 rounded-2xl font-semibold text-base bg-[#005f3a] text-white hover:bg-[#0e7a4d]"
           >
             Continue
             <ArrowRight className="h-5 w-5 ml-2" />
@@ -661,17 +661,17 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
   // Vehicle selection step
   if (step === 'vehicle') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         {renderHeader()}
         <div className="p-4 space-y-4">
           {/* Route summary mini */}
-          <Card className="bg-[#13131A] border-white/5 p-3">
+          <Card className="bg-white border-[#bec9bf]/30 p-3">
             <div className="flex items-center gap-3">
-              <MapPin className="h-4 w-4 text-[#00FF88]" />
-              <p className="text-gray-400 text-sm flex-1 truncate">{pickup?.address}</p>
-              <ArrowRight className="h-4 w-4 text-gray-600" />
-              <Navigation className="h-4 w-4 text-orange-500" />
-              <p className="text-gray-400 text-sm flex-1 truncate text-right">{destination?.address}</p>
+              <MapPin className="h-4 w-4 text-[#005f3a]" />
+              <p className="text-[#6f7a71] text-sm flex-1 truncate">{pickup?.address}</p>
+              <ArrowRight className="h-4 w-4 text-[#bec9bf]" />
+              <Navigation className="h-4 w-4 text-red-500" />
+              <p className="text-[#6f7a71] text-sm flex-1 truncate text-right">{destination?.address}</p>
             </div>
           </Card>
 
@@ -692,8 +692,8 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
             className={cn(
               'w-full py-4 rounded-xl font-semibold text-base transition-all mt-4',
               selectedVehicle
-                ? 'bg-[#00FF88] text-black hover:bg-[#00CC6E]'
-                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                ? 'bg-[#005f3a] text-white hover:bg-[#0e7a4d]'
+                : 'bg-[#bec9bf] text-[#6f7a71] cursor-not-allowed'
             )}
           >
             {selectedVehicle ? (
@@ -713,20 +713,20 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
   // Payment step
   if (step === 'payment') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         {renderHeader()}
         <div className="p-4 space-y-4">
           {/* Selected vehicle */}
-          <Card className="bg-[#13131A] border-white/5 p-4">
+          <Card className="bg-white border-[#bec9bf]/30 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-sm">Selected ride</p>
-                <p className="text-white font-medium">
+                <p className="text-[#6f7a71] text-sm">Selected ride</p>
+                <p className="text-[#191c1d] font-medium">
                   {selectedVehicle && VEHICLE_CONFIGS[selectedVehicle].name}
                 </p>
               </div>
               {selectedPricing && (
-                <p className="text-[#00FF88] font-bold text-xl">
+                <p className="text-[#005f3a] font-bold text-xl">
                   {selectedPricing.formattedFare}
                 </p>
               )}
@@ -735,7 +735,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
 
           {/* Payment method selector */}
           <div>
-            <h3 className="text-white font-medium mb-3">Select Payment Method</h3>
+            <h3 className="text-[#191c1d] font-medium mb-3">Select Payment Method</h3>
             <PaymentMethodSelector
               selectedMethod={paymentMethod}
               onSelect={setPaymentMethod}
@@ -745,7 +745,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
           {/* Continue button */}
           <Button
             onClick={() => setStep('confirm')}
-            className="w-full py-4 rounded-xl font-semibold text-base bg-[#00FF88] text-black hover:bg-[#00CC6E] mt-4"
+            className="w-full py-4 rounded-2xl font-semibold text-base bg-[#005f3a] text-white hover:bg-[#0e7a4d] mt-4"
           >
             Continue
             <ArrowRight className="h-5 w-5 ml-2" />
@@ -758,50 +758,50 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
   // Confirmation step
   if (step === 'confirm') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         {renderHeader()}
         <div className="p-4 space-y-4">
           {/* Trip summary */}
-          <Card className="bg-[#13131A] border-white/5 overflow-hidden">
-            <div className="p-4 border-b border-white/5">
-              <h3 className="text-white font-medium">Trip Summary</h3>
+          <Card className="bg-white border-[#bec9bf]/30 overflow-hidden">
+            <div className="p-4 border-b border-[#bec9bf]/30">
+              <h3 className="text-[#191c1d] font-medium">Trip Summary</h3>
             </div>
             <div className="p-4 space-y-4">
               {/* Route */}
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <div className="w-3 h-3 bg-[#00FF88] rounded-full mt-1" />
+                  <div className="w-3 h-3 bg-[#005f3a] rounded-full mt-1" />
                   <div>
-                    <p className="text-gray-400 text-xs">Pickup</p>
-                    <p className="text-white">{pickup?.address}</p>
+                    <p className="text-[#6f7a71] text-xs">Pickup</p>
+                    <p className="text-[#191c1d]">{pickup?.address}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <div className="w-3 h-3 bg-orange-500 rounded-full mt-1" />
+                  <div className="w-3 h-3 bg-red-500 rounded-full mt-1" />
                   <div>
-                    <p className="text-gray-400 text-xs">Destination</p>
-                    <p className="text-white">{destination?.address}</p>
+                    <p className="text-[#6f7a71] text-xs">Destination</p>
+                    <p className="text-[#191c1d]">{destination?.address}</p>
                   </div>
                 </div>
               </div>
 
               {/* Details grid */}
-              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+              <div className="grid grid-cols-2 gap-4 pt-4 border-t border-[#bec9bf]/30">
                 <div>
-                  <p className="text-gray-400 text-xs">Distance</p>
-                  <p className="text-white font-medium">{distanceKm.toFixed(1)} km</p>
+                  <p className="text-[#6f7a71] text-xs">Distance</p>
+                  <p className="text-[#191c1d] font-medium">{distanceKm.toFixed(1)} km</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-xs">Est. Time</p>
-                  <p className="text-white font-medium">~{estimatedTimeMinutes} min</p>
+                  <p className="text-[#6f7a71] text-xs">Est. Time</p>
+                  <p className="text-[#191c1d] font-medium">~{estimatedTimeMinutes} min</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-xs">Passengers</p>
-                  <p className="text-white font-medium">{passengers}</p>
+                  <p className="text-[#6f7a71] text-xs">Passengers</p>
+                  <p className="text-[#191c1d] font-medium">{passengers}</p>
                 </div>
                 <div>
-                  <p className="text-gray-400 text-xs">Vehicle</p>
-                  <p className="text-white font-medium">
+                  <p className="text-[#6f7a71] text-xs">Vehicle</p>
+                  <p className="text-[#191c1d] font-medium">
                     {selectedVehicle && VEHICLE_CONFIGS[selectedVehicle].name}
                   </p>
                 </div>
@@ -811,39 +811,39 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
 
           {/* Fare breakdown */}
           {selectedPricing && (
-            <Card className="bg-[#13131A] border-white/5 p-4">
-              <h3 className="text-white font-medium mb-3">Fare Breakdown</h3>
+            <Card className="bg-white border-[#bec9bf]/30 p-4">
+              <h3 className="text-[#191c1d] font-medium mb-3">Fare Breakdown</h3>
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Base fare</span>
-                  <span className="text-white">{formatCurrency(selectedPricing.baseFare)}</span>
+                  <span className="text-[#6f7a71]">Base fare</span>
+                  <span className="text-[#191c1d]">{formatCurrency(selectedPricing.baseFare)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Distance ({distanceKm.toFixed(1)} km)</span>
-                  <span className="text-white">{formatCurrency(selectedPricing.distanceFare)}</span>
+                  <span className="text-[#6f7a71]">Distance ({distanceKm.toFixed(1)} km)</span>
+                  <span className="text-[#191c1d]">{formatCurrency(selectedPricing.distanceFare)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Time ({estimatedTimeMinutes} min)</span>
-                  <span className="text-white">{formatCurrency(selectedPricing.timeFare)}</span>
+                  <span className="text-[#6f7a71]">Time ({estimatedTimeMinutes} min)</span>
+                  <span className="text-[#191c1d]">{formatCurrency(selectedPricing.timeFare)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-400">Booking fee</span>
-                  <span className="text-white">{formatCurrency(selectedPricing.bookingFee)}</span>
+                  <span className="text-[#6f7a71]">Booking fee</span>
+                  <span className="text-[#191c1d]">{formatCurrency(selectedPricing.bookingFee)}</span>
                 </div>
                 {selectedPricing.multiplierApplied !== 0 && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">Vehicle rate adjustment</span>
+                    <span className="text-[#6f7a71]">Vehicle rate adjustment</span>
                     <span className={cn(
-                      selectedPricing.multiplierApplied > 0 ? 'text-orange-400' : 'text-[#00FF88]'
+                      selectedPricing.multiplierApplied > 0 ? 'text-orange-400' : 'text-[#005f3a]'
                     )}>
                       {selectedPricing.multiplierApplied > 0 ? '+' : ''}
                       {formatCurrency(selectedPricing.multiplierApplied)}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between pt-2 border-t border-white/5">
-                  <span className="text-white font-medium">Total</span>
-                  <span className="text-[#00FF88] font-bold text-lg">
+                <div className="flex justify-between pt-2 border-t border-[#bec9bf]/30">
+                  <span className="text-[#191c1d] font-medium">Total</span>
+                  <span className="text-[#005f3a] font-bold text-lg">
                     {selectedPricing.formattedFare}
                   </span>
                 </div>
@@ -852,15 +852,15 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
           )}
 
           {/* Payment method */}
-          <Card className="bg-[#13131A] border-white/5 p-4">
+          <Card className="bg-white border-[#bec9bf]/30 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-gray-400 text-xs">Payment Method</p>
-                <p className="text-white font-medium">{paymentMethodLabels[paymentMethod]}</p>
+                <p className="text-[#6f7a71] text-xs">Payment Method</p>
+                <p className="text-[#191c1d] font-medium">{paymentMethodLabels[paymentMethod]}</p>
               </div>
               <button
                 onClick={() => setStep('payment')}
-                className="text-[#00FF88] text-sm"
+                className="text-[#005f3a] text-sm"
               >
                 Change
               </button>
@@ -878,7 +878,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
           <Button
             onClick={handleConfirmBooking}
             disabled={creating}
-            className="w-full py-4 rounded-xl font-semibold text-base bg-[#00FF88] text-black hover:bg-[#00CC6E] mt-4"
+            className="w-full py-4 rounded-2xl font-semibold text-base bg-[#005f3a] text-white hover:bg-[#0e7a4d] mt-4"
           >
             {creating ? (
               <>
@@ -894,7 +894,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
           </Button>
 
           {/* Disclaimer */}
-          <p className="text-gray-500 text-xs text-center">
+          <p className="text-[#6f7a71] text-xs text-center">
             Final fare may vary based on actual route and traffic conditions
           </p>
         </div>
@@ -905,47 +905,47 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
   // Searching step
   if (step === 'searching') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         {renderHeader()}
         <div className="p-4">
           {/* Animated searching */}
-          <div className="bg-gradient-to-br from-[#13131A] to-[#1A1A24] rounded-3xl h-72 flex items-center justify-center relative overflow-hidden">
+          <div className="bg-gradient-to-br from-white to-[#f3f4f5] rounded-3xl h-72 flex items-center justify-center relative overflow-hidden">
             {/* Animated dots */}
             <div className="absolute inset-0 opacity-30">
-              <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-[#00FF88] rounded-full animate-ping" />
-              <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-[#00FF88] rounded-full animate-pulse" />
-              <div className="absolute bottom-1/4 left-1/2 w-5 h-5 bg-[#00FF88] rounded-full animate-ping" />
-              <div className="absolute top-1/2 right-1/4 w-4 h-4 bg-[#00FF88] rounded-full animate-pulse" />
+              <div className="absolute top-1/4 left-1/4 w-4 h-4 bg-[#005f3a] rounded-full animate-ping" />
+              <div className="absolute top-1/3 right-1/3 w-3 h-3 bg-[#005f3a] rounded-full animate-pulse" />
+              <div className="absolute bottom-1/4 left-1/2 w-5 h-5 bg-[#005f3a] rounded-full animate-ping" />
+              <div className="absolute top-1/2 right-1/4 w-4 h-4 bg-[#005f3a] rounded-full animate-pulse" />
             </div>
             
             <div className="text-center z-10">
-              <div className="w-24 h-24 bg-[#00FF88]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-24 h-24 bg-[#98f6be]/30 rounded-full flex items-center justify-center mx-auto mb-4">
                 {selectedVehicle === 'smart_boda' ? (
-                  <Bike className="h-12 w-12 text-[#00FF88] animate-bounce" />
+                  <Bike className="h-12 w-12 text-[#005f3a] animate-bounce" />
                 ) : (
-                  <Car className="h-12 w-12 text-[#00FF88] animate-bounce" />
+                  <Car className="h-12 w-12 text-[#005f3a] animate-bounce" />
                 )}
               </div>
-              <p className="text-white font-medium text-lg">Finding nearby riders...</p>
-              <p className="text-gray-400 text-sm mt-1">
+              <p className="text-[#191c1d] font-medium text-lg">Finding nearby riders...</p>
+              <p className="text-[#6f7a71] text-sm mt-1">
                 {matchTimer < 30 ? 'This usually takes 1-2 minutes' : matchTimer < 60 ? 'Still searching...' : 'Taking longer than usual'}
               </p>
               {taskNumber && (
-                <p className="text-gray-500 text-xs mt-2">Ride #{taskNumber}</p>
+                <p className="text-[#6f7a71] text-xs mt-2">Ride #{taskNumber}</p>
               )}
             </div>
           </div>
 
           {/* Route reminder */}
-          <Card className="bg-[#13131A] border-white/5 p-4 mt-4">
+          <Card className="bg-white border-[#bec9bf]/30 p-4 mt-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-[#00FF88] rounded-full" />
-                <p className="text-white text-sm">{pickup?.address}</p>
+                <div className="w-3 h-3 bg-[#005f3a] rounded-full" />
+                <p className="text-[#191c1d] text-sm">{pickup?.address}</p>
               </div>
               <div className="flex items-center gap-3">
-                <div className="w-3 h-3 bg-orange-500 rounded-full" />
-                <p className="text-white text-sm">{destination?.address}</p>
+                <div className="w-3 h-3 bg-red-500 rounded-full" />
+                <p className="text-[#191c1d] text-sm">{destination?.address}</p>
               </div>
             </div>
           </Card>
@@ -955,7 +955,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
             onClick={handleCancelRide}
             disabled={cancelling}
             variant="outline"
-            className="w-full py-4 rounded-xl font-medium text-base mt-6 border-white/10 text-gray-400 hover:bg-white/5"
+            className="w-full py-4 rounded-xl font-medium text-base mt-6 border-[#bec9bf]/40 text-[#6f7a71] hover:bg-[#f3f4f5]"
           >
             {cancelling ? (
               <Loader2 className="h-5 w-5 mr-2 animate-spin" />
@@ -970,26 +970,26 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
   // No riders available step
   if (step === 'no_riders') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         {renderHeader()}
         <div className="p-4">
-          <div className="bg-gradient-to-br from-[#13131A] to-[#1A1A24] rounded-3xl p-8 flex flex-col items-center justify-center text-center">
+          <div className="bg-gradient-to-br from-white to-[#f3f4f5] rounded-3xl p-8 flex flex-col items-center justify-center text-center">
             <div className="w-24 h-24 bg-orange-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="h-12 w-12 text-orange-500" />
+              <AlertTriangle className="h-12 w-12 text-red-500" />
             </div>
-            <p className="text-white font-medium text-lg">No riders available</p>
-            <p className="text-gray-400 text-sm mt-2">
+            <p className="text-[#191c1d] font-medium text-lg">No riders available</p>
+            <p className="text-[#6f7a71] text-sm mt-2">
               We couldn&apos;t find a nearby rider. Please try again in a moment.
             </p>
             {taskNumber && (
-              <p className="text-gray-500 text-xs mt-2">Ride #{taskNumber}</p>
+              <p className="text-[#6f7a71] text-xs mt-2">Ride #{taskNumber}</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-3 mt-6">
             <Button
               onClick={handleConfirmBooking}
-              className="bg-[#00FF88] text-black py-4 rounded-xl font-semibold hover:bg-[#00CC6E]"
+              className="bg-[#005f3a] text-white py-4 rounded-2xl font-semibold hover:bg-[#0e7a4d]"
             >
               <RefreshCw className="h-5 w-5 mr-2" />
               Try Again
@@ -997,7 +997,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
             <Button
               onClick={onClose}
               variant="outline"
-              className="py-4 rounded-xl font-medium border-white/10 text-gray-400 hover:bg-white/5"
+              className="py-4 rounded-xl font-medium border-[#bec9bf]/40 text-[#6f7a71] hover:bg-[#f3f4f5]"
             >
               Close
             </Button>
@@ -1010,12 +1010,12 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
   // Matched step
   if (step === 'matched') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         {renderHeader()}
         <div className="p-4 space-y-4">
           {/* Success badge */}
           <div className="flex justify-center">
-            <Badge className="bg-[#00FF88]/20 text-[#00FF88] px-4 py-2 text-sm">
+            <Badge className="bg-[#005f3a]/20 text-[#005f3a] px-4 py-2 text-sm">
               <Check className="h-4 w-4 mr-2" />
               Rider Found
             </Badge>
@@ -1023,19 +1023,19 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
 
           {/* Rider card */}
           {matchedRider ? (
-            <Card className="bg-[#13131A] border-[#00FF88]/30 p-4">
+            <Card className="bg-white border-[#005f3a]/30 p-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-[#00FF88]/20 rounded-full flex items-center justify-center">
-                  <User className="h-8 w-8 text-[#00FF88]" />
+                <div className="w-16 h-16 bg-[#98f6be]/40 rounded-full flex items-center justify-center">
+                  <User className="h-8 w-8 text-[#005f3a]" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-bold text-lg text-white">{matchedRider.name}</h3>
+                  <h3 className="font-bold text-lg text-[#191c1d]">{matchedRider.name}</h3>
                   <div className="flex items-center gap-2 mt-1">
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                      <span className="text-sm font-medium text-white">{matchedRider.rating}</span>
+                      <span className="text-sm font-medium text-[#191c1d]">{matchedRider.rating}</span>
                     </div>
-                    <Badge className="bg-[#00FF88]/10 text-[#00FF88] text-xs ml-1">
+                    <Badge className="bg-[#005f3a]/10 text-[#005f3a] text-xs ml-1">
                       <Shield className="h-3 w-3 mr-1" />
                       Verified
                     </Badge>
@@ -1043,30 +1043,30 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-white/5">
+              <div className="mt-4 pt-4 border-t border-[#bec9bf]/30">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-400">Vehicle</p>
-                    <p className="font-medium text-white">{matchedRider.vehicle}</p>
+                    <p className="text-sm text-[#6f7a71]">Vehicle</p>
+                    <p className="font-medium text-[#191c1d]">{matchedRider.vehicle}</p>
                   </div>
                   {matchedRider.plateNumber && (
                     <div className="text-right">
-                      <p className="text-sm text-gray-400">Plate Number</p>
-                      <p className="font-medium text-white">{matchedRider.plateNumber}</p>
+                      <p className="text-sm text-[#6f7a71]">Plate Number</p>
+                      <p className="font-medium text-[#191c1d]">{matchedRider.plateNumber}</p>
                     </div>
                   )}
                 </div>
               </div>
             </Card>
           ) : (
-            <Card className="bg-[#13131A] border-[#00FF88]/30 p-4">
+            <Card className="bg-white border-[#005f3a]/30 p-4">
               <div className="flex items-center gap-4">
-                <div className="w-16 h-16 bg-[#00FF88]/20 rounded-full flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 text-[#00FF88] animate-spin" />
+                <div className="w-16 h-16 bg-[#98f6be]/40 rounded-full flex items-center justify-center">
+                  <Loader2 className="h-8 w-8 text-[#005f3a] animate-spin" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg text-white">Loading rider info...</h3>
-                  <p className="text-gray-400 text-sm">Fetching rider details</p>
+                  <h3 className="font-bold text-lg text-[#191c1d]">Loading rider info...</h3>
+                  <p className="text-[#6f7a71] text-sm">Fetching rider details</p>
                 </div>
               </div>
             </Card>
@@ -1074,44 +1074,44 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
 
           {/* ETA */}
           <div className="text-center py-4">
-            <p className="text-gray-400">Arriving in</p>
-            <p className="text-4xl font-bold text-[#00FF88]">{matchedRider?.eta || '3-5'} min</p>
+            <p className="text-[#6f7a71]">Arriving in</p>
+            <p className="text-4xl font-bold text-[#005f3a]">{matchedRider?.eta || '3-5'} min</p>
           </div>
 
           {/* Route */}
-          <Card className="bg-[#13131A] border-white/5 p-4">
+          <Card className="bg-white border-[#bec9bf]/30 p-4">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-[#00FF88]" />
-                <p className="text-white">{pickup?.address}</p>
+                <MapPin className="h-5 w-5 text-[#005f3a]" />
+                <p className="text-[#191c1d]">{pickup?.address}</p>
               </div>
               <div className="flex items-center gap-3">
-                <Navigation className="h-5 w-5 text-orange-500" />
-                <p className="text-white">{destination?.address}</p>
+                <Navigation className="h-5 w-5 text-red-500" />
+                <p className="text-[#191c1d]">{destination?.address}</p>
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-white/5 flex justify-between">
+            <div className="mt-4 pt-4 border-t border-[#bec9bf]/30 flex justify-between">
               <div>
-                <p className="text-sm text-gray-400">Trip fare</p>
-                <p className="font-bold text-lg text-white">
+                <p className="text-sm text-[#6f7a71]">Trip fare</p>
+                <p className="font-bold text-lg text-[#191c1d]">
                   {selectedPricing?.formattedFare}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-gray-400">Payment</p>
-                <p className="font-medium text-white">{paymentMethodLabels[paymentMethod]}</p>
+                <p className="text-sm text-[#6f7a71]">Payment</p>
+                <p className="font-medium text-[#191c1d]">{paymentMethodLabels[paymentMethod]}</p>
               </div>
             </div>
           </Card>
 
           {/* Actions */}
           <div className="grid grid-cols-2 gap-3">
-            <Button className="bg-[#00FF88] text-black py-4 rounded-xl font-semibold hover:bg-[#00CC6E]">
+            <Button className="bg-[#005f3a] text-white py-4 rounded-2xl font-semibold hover:bg-[#0e7a4d]">
               <Phone className="h-5 w-5 mr-2" />
               Call Rider
             </Button>
-            <Button className="bg-cyan-600 text-white py-4 rounded-xl font-semibold hover:bg-cyan-700">
+            <Button className="bg-cyan-600 text-[#191c1d] py-4 rounded-xl font-semibold hover:bg-cyan-700">
               <MessageSquare className="h-5 w-5 mr-2" />
               Message
             </Button>

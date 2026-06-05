@@ -144,12 +144,12 @@ function RiderDashboardContent({ user }: RiderDashboardProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] max-w-md mx-auto relative">
+    <div className="min-h-screen bg-[#f8f9fa] max-w-md mx-auto relative">
       {/* Status Bar */}
       <div className={cn("h-6 flex items-center justify-center sticky top-0 z-50 bg-gradient-to-r", getRoleGradient())}>
         <div className="flex items-center gap-2">
           <Bike className="h-3 w-3 text-white" />
-          <span className="text-white text-xs font-medium">Smart Ride - Rider</span>
+          <span className="text-white text-xs font-medium font-[family-name:var(--font-plus-jakarta)]">Smart Ride - Rider</span>
         </div>
       </div>
 
@@ -159,7 +159,7 @@ function RiderDashboardContent({ user }: RiderDashboardProps) {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-[#13131A]/95 backdrop-blur-xl border-t border-white/5 px-2 py-2 z-50 max-w-md mx-auto">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-[#bec9bf]/30 px-2 py-2 z-50 max-w-md mx-auto">
         <div className="flex justify-around items-center">
           {tabs.map((tab) => (
             <button
@@ -168,14 +168,14 @@ function RiderDashboardContent({ user }: RiderDashboardProps) {
               className={cn(
                 "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all min-w-[56px] relative",
                 activeTab === tab.id
-                  ? "text-[#00FF88] bg-[#00FF88]/15"
-                  : "text-gray-500 hover:bg-white/5"
+                  ? "text-[#005f3a] bg-[#98f6be]/30"
+                  : "text-[#6f7a71] hover:bg-[#f3f4f5]"
               )}
             >
               {tab.icon}
               <span className="text-xs font-medium">{tab.label}</span>
               {tab.id === 'messages' && unreadCount > 0 && (
-                <span className="absolute -top-1 right-1 w-5 h-5 bg-[#FF3B5C] rounded-full text-xs flex items-center justify-center text-white font-bold">
+                <span className="absolute -top-1 right-1 w-5 h-5 bg-[#ba1a1a] rounded-full text-xs flex items-center justify-center text-white font-bold">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}

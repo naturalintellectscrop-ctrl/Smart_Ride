@@ -122,7 +122,7 @@ export function MerchantFinance() {
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
       <div className="bg-gradient-to-br from-orange-500 to-orange-600 px-4 pt-4 pb-6">
-        <h1 className="text-xl font-bold text-white mb-2">Finance</h1>
+        <h1 className="text-xl font-bold text-white mb-2 font-[family-name:var(--font-plus-jakarta)]">Finance</h1>
         <p className="text-orange-100 text-sm">Track your earnings and payouts</p>
       </div>
 

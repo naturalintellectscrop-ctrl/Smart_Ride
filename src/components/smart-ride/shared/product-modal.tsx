@@ -147,7 +147,7 @@ export function ProductModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md bg-[#13131A] border-white/10 text-white">
+      <DialogContent className="max-w-md bg-white border-[#bec9bf]/30 text-[#191c1d]">
         <DialogHeader>
           <DialogTitle>{getTitle()}</DialogTitle>
         </DialogHeader>
@@ -155,7 +155,7 @@ export function ProductModal({
         <div className="space-y-4 py-4">
           {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-gray-300">
+            <Label htmlFor="name" className="text-[#3f4941]">
               {isHealthProvider ? 'Medicine Name' : 'Item Name'} *
             </Label>
             <Input
@@ -163,14 +163,14 @@ export function ProductModal({
               value={formData.name as string}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder={isHealthProvider ? 'e.g., Paracetamol 500mg' : 'e.g., Margherita Pizza'}
-              className="bg-[#1A1A24] border-white/10 text-white"
+              className="bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]"
             />
           </div>
 
           {/* Generic Name (Health Provider only) */}
           {isHealthProvider && (
             <div className="space-y-2">
-              <Label htmlFor="genericName" className="text-gray-300">
+              <Label htmlFor="genericName" className="text-[#3f4941]">
                 Generic Name
               </Label>
               <Input
@@ -178,14 +178,14 @@ export function ProductModal({
                 value={formData.genericName as string}
                 onChange={(e) => setFormData({ ...formData, genericName: e.target.value })}
                 placeholder="e.g., Acetaminophen"
-                className="bg-[#1A1A24] border-white/10 text-white"
+                className="bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]"
               />
             </div>
           )}
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description" className="text-gray-300">
+            <Label htmlFor="description" className="text-[#3f4941]">
               Description
             </Label>
             <Input
@@ -193,25 +193,25 @@ export function ProductModal({
               value={formData.description as string}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               placeholder="Brief description"
-              className="bg-[#1A1A24] border-white/10 text-white"
+              className="bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]"
             />
           </div>
 
           {/* Category */}
           <div className="space-y-2">
-            <Label htmlFor="category" className="text-gray-300">
+            <Label htmlFor="category" className="text-[#3f4941]">
               Category
             </Label>
             <Select
               value={formData.category as string}
               onValueChange={(value) => setFormData({ ...formData, category: value })}
             >
-              <SelectTrigger className="bg-[#1A1A24] border-white/10 text-white">
+              <SelectTrigger className="bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]">
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
-              <SelectContent className="bg-[#1A1A24] border-white/10">
+              <SelectContent className="bg-[#f3f4f5] border-[#bec9bf]/30">
                 {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id} className="text-white hover:bg-white/10">
+                  <SelectItem key={cat.id} value={cat.id} className="text-[#191c1d] hover:bg-[#e7e8e9]">
                     {cat.label}
                   </SelectItem>
                 ))}
@@ -221,7 +221,7 @@ export function ProductModal({
 
           {/* Price */}
           <div className="space-y-2">
-            <Label htmlFor="price" className="text-gray-300">
+            <Label htmlFor="price" className="text-[#3f4941]">
               Price (UGX) *
             </Label>
             <Input
@@ -230,14 +230,14 @@ export function ProductModal({
               value={formData.price as string}
               onChange={(e) => setFormData({ ...formData, price: e.target.value })}
               placeholder="0"
-              className="bg-[#1A1A24] border-white/10 text-white"
+              className="bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]"
             />
           </div>
 
           {/* Preparation Time (Merchant only) */}
           {!isHealthProvider && (
             <div className="space-y-2">
-              <Label htmlFor="preparationTime" className="text-gray-300">
+              <Label htmlFor="preparationTime" className="text-[#3f4941]">
                 Preparation Time (minutes)
               </Label>
               <Input
@@ -246,14 +246,14 @@ export function ProductModal({
                 value={formData.preparationTime as string}
                 onChange={(e) => setFormData({ ...formData, preparationTime: e.target.value })}
                 placeholder="e.g., 15"
-                className="bg-[#1A1A24] border-white/10 text-white"
+                className="bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]"
               />
             </div>
           )}
 
           {/* Stock Quantity */}
           <div className="space-y-2">
-            <Label htmlFor="stockQuantity" className="text-gray-300">
+            <Label htmlFor="stockQuantity" className="text-[#3f4941]">
               Stock Quantity
             </Label>
             <Input
@@ -262,14 +262,14 @@ export function ProductModal({
               value={formData.stockQuantity as string}
               onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
               placeholder="Available units"
-              className="bg-[#1A1A24] border-white/10 text-white"
+              className="bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]"
             />
           </div>
 
           {/* Manufacturer (Health Provider only) */}
           {isHealthProvider && (
             <div className="space-y-2">
-              <Label htmlFor="manufacturer" className="text-gray-300">
+              <Label htmlFor="manufacturer" className="text-[#3f4941]">
                 Manufacturer
               </Label>
               <Input
@@ -277,7 +277,7 @@ export function ProductModal({
                 value={formData.manufacturer as string}
                 onChange={(e) => setFormData({ ...formData, manufacturer: e.target.value })}
                 placeholder="e.g., J Healthcare"
-                className="bg-[#1A1A24] border-white/10 text-white"
+                className="bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]"
               />
             </div>
           )}
@@ -285,7 +285,7 @@ export function ProductModal({
           {/* Storage Condition (Health Provider only) */}
           {isHealthProvider && (
             <div className="space-y-2">
-              <Label htmlFor="storageCondition" className="text-gray-300">
+              <Label htmlFor="storageCondition" className="text-[#3f4941]">
                 Storage Condition
               </Label>
               <Input
@@ -293,7 +293,7 @@ export function ProductModal({
                 value={formData.storageCondition as string}
                 onChange={(e) => setFormData({ ...formData, storageCondition: e.target.value })}
                 placeholder="e.g., Store below 25°C"
-                className="bg-[#1A1A24] border-white/10 text-white"
+                className="bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]"
               />
             </div>
           )}
@@ -301,7 +301,7 @@ export function ProductModal({
           {/* Requires Prescription (Health Provider only) */}
           {isHealthProvider && (
             <div className="flex items-center justify-between">
-              <Label htmlFor="requiresPrescription" className="text-gray-300">
+              <Label htmlFor="requiresPrescription" className="text-[#3f4941]">
                 Requires Prescription
               </Label>
               <Switch
@@ -314,7 +314,7 @@ export function ProductModal({
 
           {/* Is Available */}
           <div className="flex items-center justify-between">
-            <Label htmlFor="isAvailable" className="text-gray-300">
+            <Label htmlFor="isAvailable" className="text-[#3f4941]">
               Available for Sale
             </Label>
             <Switch
@@ -326,7 +326,7 @@ export function ProductModal({
 
           {/* Image URL */}
           <div className="space-y-2">
-            <Label htmlFor="imageUrl" className="text-gray-300">
+            <Label htmlFor="imageUrl" className="text-[#3f4941]">
               Image URL
             </Label>
             <Input
@@ -334,7 +334,7 @@ export function ProductModal({
               value={formData.imageUrl as string}
               onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
               placeholder="https://..."
-              className="bg-[#1A1A24] border-white/10 text-white"
+              className="bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]"
             />
           </div>
         </div>
@@ -344,14 +344,14 @@ export function ProductModal({
           <Button
             variant="outline"
             onClick={onClose}
-            className="flex-1 border-white/10 text-white hover:bg-white/10"
+            className="flex-1 border-[#bec9bf]/30 text-[#191c1d] hover:bg-[#e7e8e9]"
             disabled={isLoading}
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
-            className="flex-1 bg-gradient-to-r from-[#00FF88] to-[#00CC6E] text-[#0D0D12] font-semibold"
+            className="flex-1 bg-gradient-to-r from-[#005f3a] to-[#0e7a4d] text-white font-semibold"
             disabled={isLoading}
           >
             {isLoading ? (

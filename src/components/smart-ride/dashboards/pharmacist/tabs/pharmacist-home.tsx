@@ -54,9 +54,9 @@ export function PharmacistHome({ isOnline, onToggleOnline, onBellClick }: Pharma
       case 'under_review':
         return 'bg-blue-500/15 text-blue-400 border-blue-500/30';
       case 'verified':
-        return 'bg-[#00FF88]/15 text-[#00FF88] border-[#00FF88]/30';
+        return 'bg-[#005f3a]/15 text-[#005f3a] border-[#005f3a]/30';
       case 'ready':
-        return 'bg-[#00FF88]/15 text-[#00FF88] border-[#00FF88]/30';
+        return 'bg-[#005f3a]/15 text-[#005f3a] border-[#005f3a]/30';
       case 'picked_up':
         return 'bg-purple-500/15 text-purple-400 border-purple-500/30';
       case 'delivered':
@@ -86,7 +86,7 @@ export function PharmacistHome({ isOnline, onToggleOnline, onBellClick }: Pharma
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
+    <div className="min-h-screen bg-[#f8f9fa]">
       {/* Header with Online Toggle */}
       <div className="bg-gradient-to-br from-rose-500 to-pink-500 px-4 pt-4 pb-6 rounded-b-3xl">
         <div className="flex items-center justify-between mb-4">
@@ -97,7 +97,7 @@ export function PharmacistHome({ isOnline, onToggleOnline, onBellClick }: Pharma
           <button className="relative" onClick={onBellClick}>
             <Bell className="h-6 w-6 text-white" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 rounded-full text-xs flex items-center justify-center text-[#0D0D12] font-bold">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 rounded-full text-xs flex items-center justify-center text-white font-bold">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -105,16 +105,16 @@ export function PharmacistHome({ isOnline, onToggleOnline, onBellClick }: Pharma
         </div>
 
         {/* Open/Close Toggle */}
-        <Card className="p-4 bg-white/10 border-white/20 backdrop-blur">
+        <Card className="p-4 bg-[#f3f4f5] border-[#bec9bf]/50 backdrop-blur">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={cn(
                 "w-12 h-12 rounded-full flex items-center justify-center",
-                isOnline ? "bg-[#00FF88]" : "bg-gray-400"
+                isOnline ? "bg-[#005f3a]" : "bg-gray-400"
               )}
-              style={isOnline ? { boxShadow: '0 0 20px rgba(0, 255, 136, 0.5)' } : {}}
+              style={isOnline ? { boxShadow: '0 0 20px rgba(0, 95, 58, 0.15)' } : {}}
               >
-                <Store className="h-6 w-6 text-[#0D0D12]" />
+                <Store className="h-6 w-6 text-white" />
               </div>
               <div>
                 <p className="font-semibold text-white">
@@ -129,9 +129,9 @@ export function PharmacistHome({ isOnline, onToggleOnline, onBellClick }: Pharma
               onClick={onToggleOnline}
               className={cn(
                 "w-14 h-8 rounded-full transition-all relative",
-                isOnline ? "bg-[#00FF88]" : "bg-gray-500"
+                isOnline ? "bg-[#005f3a]" : "bg-gray-500"
               )}
-              style={isOnline ? { boxShadow: '0 0 15px rgba(0, 255, 136, 0.5)' } : {}}
+              style={isOnline ? { boxShadow: '0 0 15px rgba(0, 95, 58, 0.15)' } : {}}
             >
               <div className={cn(
                 "w-6 h-6 bg-white rounded-full transition-transform absolute top-1",
@@ -145,25 +145,25 @@ export function PharmacistHome({ isOnline, onToggleOnline, onBellClick }: Pharma
       <div className="px-4 -mt-2">
         {/* Today's Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <Card className="p-4 bg-[#13131A] border-white/5">
+          <Card className="p-4 bg-white border-[#bec9bf]/30">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-rose-500/15 rounded-full flex items-center justify-center">
                 <Package className="h-5 w-5 text-rose-400" />
               </div>
               <div>
-                <p className="text-gray-400 text-xs">Today&apos;s Orders</p>
-                <p className="text-xl font-bold text-white">{stats.todayOrders}</p>
+                <p className="text-[#6f7a71] text-xs">Today&apos;s Orders</p>
+                <p className="text-xl font-bold text-[#191c1d]">{stats.todayOrders}</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4 bg-[#13131A] border-white/5">
+          <Card className="p-4 bg-white border-[#bec9bf]/30">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#00FF88]/15 rounded-full flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-[#00FF88]" />
+              <div className="w-10 h-10 bg-[#005f3a]/15 rounded-full flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-[#005f3a]" />
               </div>
               <div>
-                <p className="text-gray-400 text-xs">Revenue Today</p>
-                <p className="text-xl font-bold text-white">UGX {(stats.todayRevenue / 1000).toFixed(0)}K</p>
+                <p className="text-[#6f7a71] text-xs">Revenue Today</p>
+                <p className="text-xl font-bold text-[#191c1d]">UGX {(stats.todayRevenue / 1000).toFixed(0)}K</p>
               </div>
             </div>
           </Card>
@@ -187,31 +187,31 @@ export function PharmacistHome({ isOnline, onToggleOnline, onBellClick }: Pharma
 
         {/* Quick Actions */}
         <div className="mt-6">
-          <h3 className="font-semibold text-white mb-3">Quick Actions</h3>
+          <h3 className="font-semibold text-[#191c1d] mb-3 font-[family-name:var(--font-plus-jakarta)]">Quick Actions</h3>
           <div className="grid grid-cols-4 gap-3">
             <button className="flex flex-col items-center gap-2">
               <div className="w-12 h-12 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center">
                 <FileText className="h-5 w-5" />
               </div>
-              <span className="text-xs text-gray-400">Verify Rx</span>
+              <span className="text-xs text-[#6f7a71]">Verify Rx</span>
             </button>
             <button className="flex flex-col items-center gap-2">
               <div className="w-12 h-12 rounded-full bg-blue-500/15 text-blue-400 flex items-center justify-center">
                 <Pill className="h-5 w-5" />
               </div>
-              <span className="text-xs text-gray-400">Stock</span>
+              <span className="text-xs text-[#6f7a71]">Stock</span>
             </button>
             <button className="flex flex-col items-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-[#00FF88]/15 text-[#00FF88] flex items-center justify-center">
+              <div className="w-12 h-12 rounded-full bg-[#005f3a]/15 text-[#005f3a] flex items-center justify-center">
                 <DollarSign className="h-5 w-5" />
               </div>
-              <span className="text-xs text-gray-400">Earnings</span>
+              <span className="text-xs text-[#6f7a71]">Earnings</span>
             </button>
             <button className="flex flex-col items-center gap-2">
               <div className="w-12 h-12 rounded-full bg-purple-500/15 text-purple-400 flex items-center justify-center">
                 <Package className="h-5 w-5" />
               </div>
-              <span className="text-xs text-gray-400">Orders</span>
+              <span className="text-xs text-[#6f7a71]">Orders</span>
             </button>
           </div>
         </div>
@@ -219,26 +219,26 @@ export function PharmacistHome({ isOnline, onToggleOnline, onBellClick }: Pharma
         {/* Pending Prescriptions */}
         <div className="mt-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-white">Pending Prescriptions</h3>
-            <span className="text-sm text-rose-400 font-medium">{stats.pendingPrescriptions} awaiting</span>
+            <h3 className="font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">Pending Prescriptions</h3>
+            <span className="text-sm text-[#005f3a] font-medium">{stats.pendingPrescriptions} awaiting</span>
           </div>
 
           <div className="space-y-3 max-h-72 overflow-y-auto">
             {pendingPrescriptions.map((rx) => (
-              <Card key={rx.id} className="p-4 bg-[#13131A] border-white/5">
+              <Card key={rx.id} className="p-4 bg-white border-[#bec9bf]/30">
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-white">{rx.id}</span>
+                      <span className="font-bold text-[#191c1d]">{rx.id}</span>
                       <Badge className={cn("text-xs border", getStatusColor(rx.status))}>
                         {getStatusLabel(rx.status)}
                       </Badge>
                     </div>
-                    <p className="text-sm text-gray-500">{rx.patient}</p>
+                    <p className="text-sm text-[#6f7a71]">{rx.patient}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-medium text-gray-300">{rx.medicines} items</p>
-                    <p className="text-xs text-gray-500">{rx.time}</p>
+                    <p className="text-sm font-medium text-[#3f4941]">{rx.medicines} items</p>
+                    <p className="text-xs text-[#6f7a71]">{rx.time}</p>
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3">
@@ -255,19 +255,19 @@ export function PharmacistHome({ isOnline, onToggleOnline, onBellClick }: Pharma
         {/* Recent Orders */}
         <div className="mt-6 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-white">Recent Orders</h3>
-            <button className="text-rose-400 text-sm font-medium">View All</button>
+            <h3 className="font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">Recent Orders</h3>
+            <button className="text-[#005f3a] text-sm font-medium">View All</button>
           </div>
 
-          <Card className="bg-[#13131A] border-white/5 divide-y divide-white/5">
+          <Card className="bg-white border-[#bec9bf]/30 divide-y divide-[#bec9bf]/30">
             {recentOrders.map((order) => (
               <div key={order.id} className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">{order.id}</p>
-                  <p className="text-sm text-gray-500">{order.patient} • {order.time}</p>
+                  <p className="font-medium text-[#191c1d]">{order.id}</p>
+                  <p className="text-sm text-[#6f7a71]">{order.patient} • {order.time}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-white">UGX {order.amount.toLocaleString()}</p>
+                  <p className="font-bold text-[#191c1d]">UGX {order.amount.toLocaleString()}</p>
                   <Badge className={cn("text-xs border", getStatusColor(order.status))}>
                     {getStatusLabel(order.status)}
                   </Badge>

@@ -206,7 +206,7 @@ export function PharmacistInventory() {
       <div className="bg-white px-4 py-4 border-b border-gray-100 sticky top-6 z-40">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Inventory</h1>
+            <h1 className="text-xl font-bold text-gray-900 font-[family-name:var(--font-plus-jakarta)]">Inventory</h1>
             <p className="text-sm text-gray-500">{medicines.length} medicines listed</p>
           </div>
           <button 

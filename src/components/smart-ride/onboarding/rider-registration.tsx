@@ -86,7 +86,7 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
 
   const getRoleGradient = () => {
     switch (riderRole) {
-      case 'SMART_BODA': return 'from-emerald-500 to-teal-600';
+      case 'SMART_BODA': return 'from-[#005f3a] to-[#0e7a4d]';
       case 'SMART_CAR': return 'from-blue-500 to-indigo-600';
       case 'DELIVERY_PERSONNEL': return 'from-orange-500 to-red-500';
       default: return 'from-gray-500 to-gray-600';
@@ -170,28 +170,28 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
   const renderPersonalInfo = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-[#00FF88]/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <UserIcon className="h-8 w-8 text-[#00FF88]" />
+        <div className="w-16 h-16 bg-[#98f6be]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <UserIcon className="h-8 w-8 text-[#005f3a]" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Personal Information</h2>
-        <p className="text-gray-400 text-sm">Enter your details as they appear on your ID</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Personal Information</h2>
+        <p className="text-[#3f4941] text-sm">Enter your details as they appear on your ID</p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Full Name *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Full Name *</label>
           <Input
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             placeholder="Enter your full name"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-[#00FF88] focus:ring-[#00FF88]/20"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Phone Number *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Phone Number *</label>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6f7a71] font-medium text-sm">
               +256
             </span>
             <Input
@@ -199,20 +199,20 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
               value={phone}
               onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
               placeholder="7XX XXX XXX"
-              className="pl-16 h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-[#00FF88] focus:ring-[#00FF88]/20"
+              className="pl-16 h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Physical Address *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Physical Address *</label>
           <div className="relative">
-            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
+            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#6f7a71]" />
             <Input
               value={physicalAddress}
               onChange={(e) => setPhysicalAddress(e.target.value)}
               placeholder="Enter your address"
-              className="pl-12 h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-[#00FF88] focus:ring-[#00FF88]/20"
+              className="pl-12 h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
             />
           </div>
         </div>
@@ -221,8 +221,7 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
       <Button
         onClick={() => setStep('documents')}
         disabled={!canProceedPersonal}
-        className="w-full h-14 bg-gradient-to-r from-[#00FF88] to-[#00CC6E] text-[#0D0D12] rounded-xl font-semibold"
-        style={{ boxShadow: '0 4px 20px rgba(0, 255, 136, 0.25)' }}
+        className="w-full h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
       >
         Continue
         <ChevronRight className="h-5 w-5 ml-2" />
@@ -233,11 +232,11 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
   const renderDocuments = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-[#00FF88]/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FileText className="h-8 w-8 text-[#00FF88]" />
+        <div className="w-16 h-16 bg-[#98f6be]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FileText className="h-8 w-8 text-[#005f3a]" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Upload Documents</h2>
-        <p className="text-gray-400 text-sm">We need to verify your identity</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Upload Documents</h2>
+        <p className="text-[#3f4941] text-sm">We need to verify your identity</p>
       </div>
 
       <div className="space-y-3">
@@ -249,32 +248,32 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
           ...(riderRole === 'SMART_BODA' || riderRole === 'SMART_CAR' ? [{ label: "Driver's License", desc: 'Required for passenger transport', value: driversLicense, setter: setDriversLicense, required: true }] : []),
         ].map((doc, i) => (
           <Card key={i} className={cn(
-            "border-2 bg-[#13131A]",
-            doc.value ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/5'
+            "border-2 bg-white shadow-sm",
+            doc.value ? 'border-[#005f3a]/30 bg-[#98f6be]/5' : 'border-[#bec9bf]/30'
           )}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-12 h-12 rounded-full flex items-center justify-center",
-                    doc.value ? 'bg-emerald-500/20' : 'bg-white/5'
+                    doc.value ? 'bg-[#98f6be]/20' : 'bg-[#f3f4f5]'
                   )}>
                     {doc.value ? (
-                      <CheckCircle className="h-6 w-6 text-emerald-400" />
+                      <CheckCircle className="h-6 w-6 text-[#005f3a]" />
                     ) : (
-                      <Camera className="h-6 w-6 text-gray-500" />
+                      <Camera className="h-6 w-6 text-[#6f7a71]" />
                     )}
                   </div>
                   <div>
-                    <p className="font-medium text-white">{doc.label} {doc.required && '*'}</p>
-                    <p className="text-sm text-gray-500">{doc.desc}</p>
+                    <p className="font-medium text-[#191c1d]">{doc.label} {doc.required && '*'}</p>
+                    <p className="text-sm text-[#6f7a71]">{doc.desc}</p>
                   </div>
                 </div>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => handleFileUpload(doc.setter)}
-                  className="shrink-0 bg-[#1A1A24] border-white/10 text-gray-300 hover:bg-[#1E1E28] hover:text-white"
+                  className="shrink-0 bg-white border border-[#bec9bf] text-[#3f4941] hover:bg-[#f3f4f5] hover:text-[#191c1d]"
                 >
                   <Upload className="h-4 w-4 mr-2" />
                   {doc.value ? 'Change' : 'Upload'}
@@ -289,7 +288,7 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
         <Button
           variant="outline"
           onClick={() => setStep('personal')}
-          className="flex-1 h-14 rounded-xl font-semibold bg-[#1A1A24] border-white/10 text-gray-300 hover:bg-[#1E1E28] hover:text-white"
+          className="flex-1 h-14 rounded-xl font-semibold bg-white border border-[#bec9bf] text-[#005f3a] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
@@ -297,8 +296,7 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
         <Button
           onClick={() => setStep('vehicle')}
           disabled={!canProceedDocuments}
-          className="flex-1 h-14 bg-gradient-to-r from-[#00FF88] to-[#00CC6E] text-[#0D0D12] rounded-xl font-semibold"
-          style={{ boxShadow: '0 4px 20px rgba(0, 255, 136, 0.25)' }}
+          className="flex-1 h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           Continue
           <ChevronRight className="h-5 w-5 ml-2" />
@@ -310,38 +308,38 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
   const renderVehicleInfo = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-[#00FF88]/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Car className="h-8 w-8 text-[#00FF88]" />
+        <div className="w-16 h-16 bg-[#98f6be]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Car className="h-8 w-8 text-[#005f3a]" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Vehicle Information</h2>
-        <p className="text-gray-400 text-sm">Tell us about your vehicle</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Vehicle Information</h2>
+        <p className="text-[#3f4941] text-sm">Tell us about your vehicle</p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Vehicle Type *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Vehicle Type *</label>
           <div className="grid grid-cols-2 gap-3">
             {vehicleOptions.map((option) => (
               <Card
                 key={option.type}
                 className={cn(
-                  "cursor-pointer border-2 transition-all bg-[#13131A]",
+                  "cursor-pointer border-2 transition-all bg-white shadow-sm",
                   vehicleType === option.type
-                    ? 'border-[#00FF88] bg-[#00FF88]/10'
-                    : 'border-white/5 hover:border-white/10'
+                    ? 'border-[#005f3a] bg-[#98f6be]/10'
+                    : 'border-[#bec9bf]/30 hover:border-[#005f3a]/20'
                 )}
                 onClick={() => setVehicleType(option.type)}
               >
                 <CardContent className="p-4 flex flex-col items-center">
                   <div className={cn(
                     "mb-2",
-                    vehicleType === option.type ? 'text-[#00FF88]' : 'text-gray-500'
+                    vehicleType === option.type ? 'text-[#005f3a]' : 'text-[#6f7a71]'
                   )}>
                     {option.icon}
                   </div>
                   <span className={cn(
                     "text-sm font-medium",
-                    vehicleType === option.type ? 'text-white' : 'text-gray-400'
+                    vehicleType === option.type ? 'text-[#191c1d]' : 'text-[#3f4941]'
                   )}>
                     {option.label}
                   </span>
@@ -352,32 +350,32 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">License Plate Number *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">License Plate Number *</label>
           <Input
             value={vehiclePlate}
             onChange={(e) => setVehiclePlate(e.target.value.toUpperCase())}
             placeholder="e.g., UAJ 123A"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-[#00FF88]"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Model</label>
+            <label className="block text-sm font-medium text-[#3f4941] mb-2">Model</label>
             <Input
               value={vehicleModel}
               onChange={(e) => setVehicleModel(e.target.value)}
               placeholder="e.g., Bajaj Boxer"
-              className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500"
+              className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71]"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Color</label>
+            <label className="block text-sm font-medium text-[#3f4941] mb-2">Color</label>
             <Input
               value={vehicleColor}
               onChange={(e) => setVehicleColor(e.target.value)}
               placeholder="e.g., Red"
-              className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500"
+              className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71]"
             />
           </div>
         </div>
@@ -387,7 +385,7 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
         <Button
           variant="outline"
           onClick={() => setStep('documents')}
-          className="flex-1 h-14 rounded-xl font-semibold bg-[#1A1A24] border-white/10 text-gray-300"
+          className="flex-1 h-14 rounded-xl font-semibold bg-white border border-[#bec9bf] text-[#005f3a] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
@@ -395,7 +393,7 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
         <Button
           onClick={() => setStep('review')}
           disabled={!canProceedVehicle}
-          className="flex-1 h-14 bg-gradient-to-r from-[#00FF88] to-[#00CC6E] text-[#0D0D12] rounded-xl font-semibold"
+          className="flex-1 h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           Continue
           <ChevronRight className="h-5 w-5 ml-2" />
@@ -407,15 +405,15 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
   const renderReview = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-[#00FF88]/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="h-8 w-8 text-[#00FF88]" />
+        <div className="w-16 h-16 bg-[#98f6be]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="h-8 w-8 text-[#005f3a]" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Review Your Application</h2>
-        <p className="text-gray-400 text-sm">Make sure everything is correct before submitting</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Review Your Application</h2>
+        <p className="text-[#3f4941] text-sm">Make sure everything is correct before submitting</p>
       </div>
 
       {/* Role Badge */}
-      <Card className="bg-gradient-to-r text-white border-0" style={{ background: `linear-gradient(135deg, ${riderRole === 'SMART_BODA' ? '#00FF88, #00CC6E' : riderRole === 'SMART_CAR' ? '#00D4FF, #0088FF' : '#FF6B35, #FF3B5C'})` }}>
+      <Card className="bg-gradient-to-r text-white border-0 shadow-sm" style={{ background: `linear-gradient(135deg, ${riderRole === 'SMART_BODA' ? '#005f3a, #0e7a4d' : riderRole === 'SMART_CAR' ? '#3b82f6, #6366f1' : '#f97316, #ef4444'})` }}>
         <CardContent className="p-4 text-center">
           <p className="text-white/80 text-sm">Applying as</p>
           <p className="text-xl font-bold">{getRoleLabel()}</p>
@@ -423,41 +421,41 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
       </Card>
 
       {/* Personal Info Summary */}
-      <Card className="bg-[#13131A] border-white/5">
+      <Card className="bg-white border border-[#bec9bf]/30 shadow-sm">
         <CardContent className="p-4">
-          <h3 className="font-semibold text-white mb-3">Personal Information</h3>
+          <h3 className="font-semibold text-[#191c1d] mb-3">Personal Information</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Full Name</span>
-              <span className="font-medium text-white">{fullName}</span>
+              <span className="text-[#6f7a71]">Full Name</span>
+              <span className="font-medium text-[#191c1d]">{fullName}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Phone</span>
-              <span className="font-medium text-white">+256 {phone}</span>
+              <span className="text-[#6f7a71]">Phone</span>
+              <span className="font-medium text-[#191c1d]">+256 {phone}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Address</span>
-              <span className="font-medium text-white">{physicalAddress}</span>
+              <span className="text-[#6f7a71]">Address</span>
+              <span className="font-medium text-[#191c1d]">{physicalAddress}</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Documents Summary */}
-      <Card className="bg-[#13131A] border-white/5">
+      <Card className="bg-white border border-[#bec9bf]/30 shadow-sm">
         <CardContent className="p-4">
-          <h3 className="font-semibold text-white mb-3">Documents Uploaded</h3>
+          <h3 className="font-semibold text-[#191c1d] mb-3">Documents Uploaded</h3>
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-sm text-emerald-400">
+            <div className="flex items-center gap-2 text-sm text-[#005f3a]">
               <CheckCircle className="h-4 w-4" />
               <span>Face Photo</span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-emerald-400">
+            <div className="flex items-center gap-2 text-sm text-[#005f3a]">
               <CheckCircle className="h-4 w-4" />
               <span>National ID (Front & Back)</span>
             </div>
             {driversLicense && (
-              <div className="flex items-center gap-2 text-sm text-emerald-400">
+              <div className="flex items-center gap-2 text-sm text-[#005f3a]">
                 <CheckCircle className="h-4 w-4" />
                 <span>Driver&apos;s License</span>
               </div>
@@ -467,29 +465,29 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
       </Card>
 
       {/* Vehicle Summary */}
-      <Card className="bg-[#13131A] border-white/5">
+      <Card className="bg-white border border-[#bec9bf]/30 shadow-sm">
         <CardContent className="p-4">
-          <h3 className="font-semibold text-white mb-3">Vehicle Information</h3>
+          <h3 className="font-semibold text-[#191c1d] mb-3">Vehicle Information</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Type</span>
-              <span className="font-medium text-white">{vehicleType}</span>
+              <span className="text-[#6f7a71]">Type</span>
+              <span className="font-medium text-[#191c1d]">{vehicleType}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Plate</span>
-              <span className="font-medium text-white">{vehiclePlate}</span>
+              <span className="text-[#6f7a71]">Plate</span>
+              <span className="font-medium text-[#191c1d]">{vehiclePlate}</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
       {/* What's Next */}
-      <Card className="bg-amber-500/10 border-amber-500/30">
+      <Card className="bg-amber-50 border-amber-200">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-200/70">
-              <p className="font-medium text-amber-300 mb-1">What happens next?</p>
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-600">
+              <p className="font-medium text-amber-700 mb-1">What happens next?</p>
               <ul className="space-y-1">
                 <li>• Your application will be reviewed</li>
                 <li>• You&apos;ll be contacted for physical verification</li>
@@ -504,7 +502,7 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
         <Button
           variant="outline"
           onClick={() => setStep('vehicle')}
-          className="flex-1 h-14 rounded-xl font-semibold bg-[#1A1A24] border-white/10 text-gray-300"
+          className="flex-1 h-14 rounded-xl font-semibold bg-white border border-[#bec9bf] text-[#005f3a] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
@@ -512,7 +510,7 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
         <Button
           onClick={handleSubmit}
           disabled={isLoading}
-          className="flex-1 h-14 bg-gradient-to-r from-[#00FF88] to-[#00CC6E] text-[#0D0D12] rounded-xl font-semibold"
+          className="flex-1 h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           {isLoading ? (
             <>
@@ -527,13 +525,13 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
 
       {/* Error display */}
       {submitError && (
-        <Card className="bg-red-500/10 border-red-500/30 mt-4">
+        <Card className="bg-red-50 border-red-200 mt-4">
           <CardContent className="p-4">
             <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
               <div>
-                <p className="font-medium text-red-300 text-sm">Registration Failed</p>
-                <p className="text-red-200/70 text-sm">{submitError}</p>
+                <p className="font-medium text-red-600 text-sm">Registration Failed</p>
+                <p className="text-red-500 text-sm">{submitError}</p>
               </div>
             </div>
           </CardContent>
@@ -545,24 +543,24 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
   const renderSubmitted = () => (
     <div className="text-center py-12">
       <div 
-        className="w-20 h-20 bg-[#00FF88]/15 rounded-full flex items-center justify-center mx-auto mb-4"
-        style={{ boxShadow: '0 0 30px rgba(0, 255, 136, 0.3)' }}
+        className="w-20 h-20 bg-[#98f6be]/20 rounded-full flex items-center justify-center mx-auto mb-4"
+        style={{ boxShadow: '0 0 30px rgba(0, 95, 58, 0.15)' }}
       >
-        <CheckCircle className="h-10 w-10 text-[#00FF88]" />
+        <CheckCircle className="h-10 w-10 text-[#005f3a]" />
       </div>
-      <h2 className="text-xl font-bold text-white mb-2">
+      <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">
         Application Submitted!
       </h2>
-      <p className="text-gray-400 text-sm">
+      <p className="text-[#3f4941] text-sm">
         Your application is now pending approval. We&apos;ll contact you soon.
       </p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#f8f9fa] max-w-md mx-auto">
       {/* Header */}
-      <div className="px-4 py-4 flex items-center border-b border-white/5 sticky top-0 z-10 bg-[#0D0D12]">
+      <div className="px-4 py-4 flex items-center border-b border-[#bec9bf]/30 sticky top-0 z-10 bg-white">
         {step !== 'submitted' && (
           <Button 
             variant="ghost" 
@@ -572,19 +570,19 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
               else if (step === 'vehicle') setStep('documents');
               else if (step === 'review') setStep('vehicle');
             }}
-            className="mr-2 text-gray-400 hover:text-white hover:bg-white/5"
+            className="mr-2 text-[#6f7a71] hover:text-[#191c1d] hover:bg-[#f3f4f5]"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
         <div className="flex-1">
-          <h1 className="text-lg font-semibold text-white">
+          <h1 className="text-lg font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">
             {step === 'submitted' ? 'Application Status' : 'Rider Registration'}
           </h1>
           {step !== 'submitted' && (
             <Progress 
               value={getStepProgress()} 
-              className="h-1.5 mt-2 bg-[#1A1A24]"
+              className="h-1.5 mt-2 bg-[#f3f4f5]"
             />
           )}
         </div>

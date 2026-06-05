@@ -187,8 +187,8 @@ const serviceConfig: Record<ServiceType, {
   SERVICE: {
     icon: <Receipt className="h-6 w-6" />,
     label: 'Service',
-    color: 'text-[#00FF88]',
-    bgColor: 'bg-[#00FF88]/15',
+    color: 'text-[#005f3a]',
+    bgColor: 'bg-[#005f3a]/15',
   },
 };
 
@@ -215,7 +215,7 @@ const paymentMethodConfig: Record<PaymentMethodType, {
   WALLET: {
     icon: <Package className="h-4 w-4" />,
     label: 'Smart Ride Wallet',
-    color: 'text-[#00FF88]',
+    color: 'text-[#005f3a]',
   },
   CARD: {
     icon: <DollarSign className="h-4 w-4" />,
@@ -310,20 +310,20 @@ export function ReceiptView({
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#f8f9fa] max-w-md mx-auto">
       {/* Header */}
-      <div className="bg-[#13131A] border-b border-white/5 px-4 py-3 sticky top-0 z-10">
+      <div className="bg-white border-b border-[#bec9bf]/20 px-4 py-3 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             {onClose && (
               <button
                 onClick={onClose}
-                className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-white/5"
+                className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-[#edeeef]"
               >
-                <ArrowLeft className="h-5 w-5 text-gray-400" />
+                <ArrowLeft className="h-5 w-5 text-[#6f7a71]" />
               </button>
             )}
-            <h1 className="text-lg font-semibold text-white">Receipt</h1>
+            <h1 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-[#191c1d] ">Receipt</h1>
           </div>
           <div className="flex items-center gap-2">
             {onShare && (
@@ -331,7 +331,7 @@ export function ReceiptView({
                 variant="ghost"
                 size="icon"
                 onClick={handleShare}
-                className="text-gray-400 hover:text-white"
+                className="text-[#6f7a71] hover:text-[#191c1d]"
               >
                 <Share2 className="h-5 w-5" />
               </Button>
@@ -341,7 +341,7 @@ export function ReceiptView({
                 variant="ghost"
                 size="icon"
                 onClick={onDownload}
-                className="text-gray-400 hover:text-white"
+                className="text-[#6f7a71] hover:text-[#191c1d]"
               >
                 <Download className="h-5 w-5" />
               </Button>
@@ -354,11 +354,11 @@ export function ReceiptView({
       <div ref={receiptRef} className="px-4 py-6 space-y-4">
         {/* Success Header */}
         <div className="text-center py-4">
-          <div className="w-20 h-20 bg-[#00FF88]/15 rounded-full flex items-center justify-center mx-auto mb-4">
-            <CheckCircle className="h-10 w-10 text-[#00FF88]" />
+          <div className="w-20 h-20 bg-[#005f3a]/15 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="h-10 w-10 text-[#005f3a]" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-1">Trip Complete!</h2>
-          <p className="text-gray-400 text-sm">{formatDate(receipt.endTime)}</p>
+          <h2 className="font-[family-name:var(--font-plus-jakarta)] text-2xl font-bold text-[#191c1d] mb-1 ">Trip Complete!</h2>
+          <p className="text-[#6f7a71] text-sm">{formatDate(receipt.endTime)}</p>
         </div>
 
         {/* Service Type Badge */}
@@ -373,17 +373,17 @@ export function ReceiptView({
         </div>
 
         {/* Trip ID & Invoice */}
-        <Card className="bg-[#13131A] border-white/5">
+        <Card className="bg-white border-[#bec9bf]/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-gray-500">Trip ID</p>
-                <p className="font-mono font-semibold text-white">{receipt.taskId}</p>
+                <p className="text-xs text-[#6f7a71]">Trip ID</p>
+                <p className="font-mono font-semibold text-[#191c1d]">{receipt.taskId}</p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-gray-500">Receipt #{receipt.receiptId}</p>
+                <p className="text-xs text-[#6f7a71]">Receipt #{receipt.receiptId}</p>
                 {receipt.invoiceNumber && (
-                  <p className="text-xs text-gray-400">Invoice: {receipt.invoiceNumber}</p>
+                  <p className="text-xs text-[#6f7a71]">Invoice: {receipt.invoiceNumber}</p>
                 )}
               </div>
             </div>
@@ -391,7 +391,7 @@ export function ReceiptView({
         </Card>
 
         {/* Route Details */}
-        <Card className="bg-[#13131A] border-white/5">
+        <Card className="bg-white border-[#bec9bf]/20">
           <CardContent className="p-4 space-y-4">
             {/* Pickup */}
             <div className="flex items-start gap-3">
@@ -399,14 +399,14 @@ export function ReceiptView({
                 <MapPin className="h-5 w-5 text-emerald-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Pickup</p>
-                <p className="font-medium text-white">{receipt.pickup.address}</p>
-                <p className="text-xs text-gray-400">{formatTime(receipt.startTime)}</p>
+                <p className="text-xs text-[#6f7a71]">Pickup</p>
+                <p className="font-medium text-[#191c1d]">{receipt.pickup.address}</p>
+                <p className="text-xs text-[#6f7a71]">{formatTime(receipt.startTime)}</p>
               </div>
             </div>
 
             {/* Route Line */}
-            <div className="ml-5 border-l-2 border-dashed border-[#1A1A24] h-4" />
+            <div className="ml-5 border-l-2 border-dashed border-[#bec9bf]/30 h-4" />
 
             {/* Dropoff */}
             <div className="flex items-start gap-3">
@@ -414,9 +414,9 @@ export function ReceiptView({
                 <Navigation className="h-5 w-5 text-orange-400" />
               </div>
               <div>
-                <p className="text-xs text-gray-500">Dropoff</p>
-                <p className="font-medium text-white">{receipt.dropoff.address}</p>
-                <p className="text-xs text-gray-400">{formatTime(receipt.endTime)}</p>
+                <p className="text-xs text-[#6f7a71]">Dropoff</p>
+                <p className="font-medium text-[#191c1d]">{receipt.dropoff.address}</p>
+                <p className="text-xs text-[#6f7a71]">{formatTime(receipt.endTime)}</p>
               </div>
             </div>
           </CardContent>
@@ -424,58 +424,58 @@ export function ReceiptView({
 
         {/* Trip Stats */}
         <div className="grid grid-cols-3 gap-3">
-          <Card className="bg-[#13131A] border-white/5">
+          <Card className="bg-white border-[#bec9bf]/20">
             <CardContent className="p-3 text-center">
-              <Clock className="h-5 w-5 text-[#00FF88] mx-auto mb-1" />
-              <p className="text-lg font-bold text-white">{formatDuration(receipt.duration)}</p>
-              <p className="text-xs text-gray-500">Duration</p>
+              <Clock className="h-5 w-5 text-[#005f3a] mx-auto mb-1" />
+              <p className="text-lg font-bold text-[#191c1d]">{formatDuration(receipt.duration)}</p>
+              <p className="text-xs text-[#6f7a71]">Duration</p>
             </CardContent>
           </Card>
-          <Card className="bg-[#13131A] border-white/5">
+          <Card className="bg-white border-[#bec9bf]/20">
             <CardContent className="p-3 text-center">
-              <Navigation className="h-5 w-5 text-[#00FF88] mx-auto mb-1" />
-              <p className="text-lg font-bold text-white">{receipt.distance.toFixed(1)} km</p>
-              <p className="text-xs text-gray-500">Distance</p>
+              <Navigation className="h-5 w-5 text-[#005f3a] mx-auto mb-1" />
+              <p className="text-lg font-bold text-[#191c1d]">{receipt.distance.toFixed(1)} km</p>
+              <p className="text-xs text-[#6f7a71]">Distance</p>
             </CardContent>
           </Card>
-          <Card className="bg-[#13131A] border-white/5">
+          <Card className="bg-white border-[#bec9bf]/20">
             <CardContent className="p-3 text-center">
-              <DollarSign className="h-5 w-5 text-[#00FF88] mx-auto mb-1" />
-              <p className="text-lg font-bold text-white">{formatCurrency(receipt.fareBreakdown.total, receipt.currency)}</p>
-              <p className="text-xs text-gray-500">Total</p>
+              <DollarSign className="h-5 w-5 text-[#005f3a] mx-auto mb-1" />
+              <p className="text-lg font-bold text-[#191c1d]">{formatCurrency(receipt.fareBreakdown.total, receipt.currency)}</p>
+              <p className="text-xs text-[#6f7a71]">Total</p>
             </CardContent>
           </Card>
         </div>
 
         {/* Rider Info */}
         {receipt.rider && (
-          <Card className="bg-[#13131A] border-white/5">
+          <Card className="bg-white border-[#bec9bf]/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="w-14 h-14 bg-[#1A1A24] rounded-full flex items-center justify-center">
+                <div className="w-14 h-14 bg-[#f3f4f5] rounded-full flex items-center justify-center">
                   {receipt.rider.profilePhoto ? (
                     <img src={receipt.rider.profilePhoto} alt={receipt.rider.name} className="w-14 h-14 rounded-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-bold text-white">
+                    <span className="text-2xl font-bold text-[#191c1d]">
                       {receipt.rider.name.charAt(0)}
                     </span>
                   )}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="font-semibold text-white">{receipt.rider.name}</p>
+                    <p className="font-semibold text-[#191c1d]">{receipt.rider.name}</p>
                     <div className="flex items-center gap-1 text-xs text-amber-400">
                       <Star className="h-3 w-3 fill-amber-400" />
                       <span>{receipt.rider.rating.toFixed(1)}</span>
                     </div>
                   </div>
                   {receipt.rider.vehicleModel && (
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-[#6f7a71]">
                       {receipt.rider.vehicleModel}
                       {receipt.rider.plateNumber && ` • ${receipt.rider.plateNumber}`}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500">{receipt.rider.totalTrips}+ trips completed</p>
+                  <p className="text-xs text-[#6f7a71]">{receipt.rider.totalTrips}+ trips completed</p>
                 </div>
               </div>
             </CardContent>
@@ -484,7 +484,7 @@ export function ReceiptView({
 
         {/* Merchant Info (for deliveries) */}
         {receipt.merchant && (
-          <Card className="bg-[#13131A] border-white/5">
+          <Card className="bg-white border-[#bec9bf]/20">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 bg-purple-500/15 rounded-xl flex items-center justify-center">
@@ -495,9 +495,9 @@ export function ReceiptView({
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="font-semibold text-white">{receipt.merchant.name}</p>
-                  <p className="text-sm text-gray-400">{receipt.merchant.type}</p>
-                  <p className="text-xs text-gray-500">{receipt.merchant.address}</p>
+                  <p className="font-semibold text-[#191c1d]">{receipt.merchant.name}</p>
+                  <p className="text-sm text-[#6f7a71]">{receipt.merchant.type}</p>
+                  <p className="text-xs text-[#6f7a71]">{receipt.merchant.address}</p>
                 </div>
               </div>
             </CardContent>
@@ -505,25 +505,25 @@ export function ReceiptView({
         )}
 
         {/* Fare Breakdown */}
-        <Card className="bg-[#13131A] border-white/5">
+        <Card className="bg-white border-[#bec9bf]/20">
           <CardContent className="p-4">
-            <h3 className="font-semibold text-white mb-4">Fare Breakdown</h3>
+            <h3 className="font-[family-name:var(--font-plus-jakarta)] font-semibold text-[#191c1d] mb-4 ">Fare Breakdown</h3>
             
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">Base fare</span>
-                <span className="text-white">{formatCurrency(receipt.fareBreakdown.baseFare, receipt.currency)}</span>
+                <span className="text-[#6f7a71]">Base fare</span>
+                <span className="text-[#191c1d]">{formatCurrency(receipt.fareBreakdown.baseFare, receipt.currency)}</span>
               </div>
               
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">Distance ({receipt.distance.toFixed(1)} km)</span>
-                <span className="text-white">{formatCurrency(receipt.fareBreakdown.distanceFare, receipt.currency)}</span>
+                <span className="text-[#6f7a71]">Distance ({receipt.distance.toFixed(1)} km)</span>
+                <span className="text-[#191c1d]">{formatCurrency(receipt.fareBreakdown.distanceFare, receipt.currency)}</span>
               </div>
 
               {receipt.fareBreakdown.timeFare ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Time ({formatDuration(receipt.duration)})</span>
-                  <span className="text-white">{formatCurrency(receipt.fareBreakdown.timeFare, receipt.currency)}</span>
+                  <span className="text-[#6f7a71]">Time ({formatDuration(receipt.duration)})</span>
+                  <span className="text-[#191c1d]">{formatCurrency(receipt.fareBreakdown.timeFare, receipt.currency)}</span>
                 </div>
               ) : null}
 
@@ -537,31 +537,31 @@ export function ReceiptView({
               ) : null}
 
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-400">Service fee</span>
-                <span className="text-white">{formatCurrency(receipt.fareBreakdown.serviceFee, receipt.currency)}</span>
+                <span className="text-[#6f7a71]">Service fee</span>
+                <span className="text-[#191c1d]">{formatCurrency(receipt.fareBreakdown.serviceFee, receipt.currency)}</span>
               </div>
 
               {receipt.fareBreakdown.discount ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-[#00FF88]">
+                  <span className="text-[#005f3a]">
                     Discount {receipt.fareBreakdown.discountCode && `(${receipt.fareBreakdown.discountCode})`}
                   </span>
-                  <span className="text-[#00FF88]">-{formatCurrency(receipt.fareBreakdown.discount, receipt.currency)}</span>
+                  <span className="text-[#005f3a]">-{formatCurrency(receipt.fareBreakdown.discount, receipt.currency)}</span>
                 </div>
               ) : null}
 
               {receipt.fareBreakdown.tips ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-400">Tip</span>
-                  <span className="text-white">{formatCurrency(receipt.fareBreakdown.tips, receipt.currency)}</span>
+                  <span className="text-[#6f7a71]">Tip</span>
+                  <span className="text-[#191c1d]">{formatCurrency(receipt.fareBreakdown.tips, receipt.currency)}</span>
                 </div>
               ) : null}
 
               <Separator className="bg-white/10" />
 
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-white">Total</span>
-                <span className="text-xl font-bold text-[#00FF88]">
+                <span className="font-semibold text-[#191c1d]">Total</span>
+                <span className="text-xl font-bold text-[#005f3a]">
                   {formatCurrency(receipt.fareBreakdown.total, receipt.currency)}
                 </span>
               </div>
@@ -570,19 +570,19 @@ export function ReceiptView({
         </Card>
 
         {/* Payment Method */}
-        <Card className="bg-[#13131A] border-white/5">
+        <Card className="bg-white border-[#bec9bf]/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center bg-[#1A1A24]")}>
+                <div className={cn("w-10 h-10 rounded-full flex items-center justify-center bg-[#f3f4f5]")}>
                   <span className={payment.color}>{payment.icon}</span>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Paid with</p>
-                  <p className="font-medium text-white">{payment.label}</p>
+                  <p className="text-xs text-[#6f7a71]">Paid with</p>
+                  <p className="font-medium text-[#191c1d]">{payment.label}</p>
                 </div>
               </div>
-              <Badge className="bg-[#00FF88]/15 text-[#00FF88] border-[#00FF88]/30">
+              <Badge className="bg-[#005f3a]/15 text-[#005f3a] border-[#005f3a]/30">
                 <CheckCircle className="h-3 w-3 mr-1" />
                 Paid
               </Badge>
@@ -592,9 +592,9 @@ export function ReceiptView({
 
         {/* Rating Section */}
         {showRating && (
-          <Card className="bg-[#13131A] border-white/5">
+          <Card className="bg-white border-[#bec9bf]/20">
             <CardContent className="p-4">
-              <h3 className="font-semibold text-white mb-3 text-center">Rate your trip</h3>
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] font-semibold text-[#191c1d] mb-3 text-center ">Rate your trip</h3>
               <div className="flex items-center justify-center gap-2">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -605,7 +605,7 @@ export function ReceiptView({
                       "w-12 h-12 rounded-full flex items-center justify-center transition-all",
                       selectedRating >= star
                         ? "bg-amber-500/20 scale-110"
-                        : "bg-[#1A1A24] hover:bg-[#1E1E28]"
+                        : "bg-[#f3f4f5] hover:bg-[#e7e8e9]"
                     )}
                   >
                     <Star
@@ -613,14 +613,14 @@ export function ReceiptView({
                         "h-6 w-6 transition-all",
                         selectedRating >= star
                           ? "text-amber-400 fill-amber-400"
-                          : "text-gray-500"
+                          : "text-[#6f7a71]"
                       )}
                     />
                   </button>
                 ))}
               </div>
               {selectedRating > 0 && (
-                <p className="text-center text-sm text-gray-400 mt-3">
+                <p className="text-center text-sm text-[#6f7a71] mt-3">
                   {selectedRating === 5 ? "Excellent! Thank you!" :
                    selectedRating === 4 ? "Great! Thanks for your feedback!" :
                    selectedRating === 3 ? "Thanks for your honest feedback." :
@@ -633,19 +633,19 @@ export function ReceiptView({
         )}
 
         {/* QR Code Section */}
-        <Card className="bg-[#13131A] border-white/5">
+        <Card className="bg-white border-[#bec9bf]/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center">
-                  <QrCode className="h-8 w-8 text-[#0D0D12]" />
+                  <QrCode className="h-8 w-8 text-[#191c1d]" />
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Digital Receipt</p>
-                  <p className="font-medium text-white text-sm">View in app</p>
+                  <p className="text-xs text-[#6f7a71]">Digital Receipt</p>
+                  <p className="font-medium text-[#191c1d] text-sm">View in app</p>
                 </div>
               </div>
-              <Button variant="outline" size="sm" className="border-white/10 bg-[#1A1A24] text-white">
+              <Button variant="outline" size="sm" className="border-[#bec9bf]/30 bg-[#f3f4f5] text-[#191c1d]">
                 <ExternalLink className="h-4 w-4 mr-2" />
                 Open
               </Button>
@@ -654,12 +654,12 @@ export function ReceiptView({
         </Card>
 
         {/* Safety Info */}
-        <div className="bg-[#00FF88]/5 border border-[#00FF88]/20 rounded-2xl p-4">
+        <div className="bg-[#005f3a]/5 border border-[#005f3a]/20 rounded-2xl p-4">
           <div className="flex items-start gap-3">
-            <Shield className="h-5 w-5 text-[#00FF88] flex-shrink-0 mt-0.5" />
+            <Shield className="h-5 w-5 text-[#005f3a] flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-[#00FF88] text-sm">Your Safety Matters</p>
-              <p className="text-xs text-gray-400 mt-1">
+              <p className="font-medium text-[#005f3a] text-sm">Your Safety Matters</p>
+              <p className="text-xs text-[#6f7a71] mt-1">
                 All trips are GPS tracked. For any concerns about this trip, contact our support team within 24 hours.
               </p>
             </div>
@@ -669,15 +669,15 @@ export function ReceiptView({
         {/* Footer */}
         <div className="text-center pt-4 pb-8">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <div className="w-8 h-8 bg-[#00FF88] rounded-lg flex items-center justify-center">
-              <Bike className="h-4 w-4 text-[#0D0D12]" />
+            <div className="w-8 h-8 bg-[#005f3a] rounded-lg flex items-center justify-center">
+              <Bike className="h-4 w-4 text-white" />
             </div>
-            <span className="font-bold text-white">Smart Ride</span>
+            <span className="font-bold text-[#191c1d]">Smart Ride</span>
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-[#6f7a71]">
             Thank you for riding with us!
           </p>
-          <p className="text-xs text-gray-600 mt-2">
+          <p className="text-xs text-[#bec9bf] mt-2">
             {receipt.receiptId} • {formatDate(receipt.endTime)}
           </p>
         </div>

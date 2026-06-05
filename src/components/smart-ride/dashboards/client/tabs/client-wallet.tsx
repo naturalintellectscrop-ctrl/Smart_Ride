@@ -153,11 +153,11 @@ const getPaymentIcon = (type: PaymentMethodType) => {
       return <Smartphone className="h-5 w-5 text-red-600" />;
     case 'visa':
     case 'mastercard':
-      return <CreditCard className="h-5 w-5 text-blue-600" />;
+      return <CreditCard className="h-5 w-5 text-[#4b5264]" />;
     case 'cash':
-      return <Banknote className="h-5 w-5 text-green-600" />;
+      return <Banknote className="h-5 w-5 text-[#005f3a]" />;
     default:
-      return <CreditCard className="h-5 w-5 text-gray-600" />;
+      return <CreditCard className="h-5 w-5 text-[#6f7a71]" />;
   }
 };
 
@@ -179,77 +179,83 @@ export function ClientWallet() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] pb-4">
+    <div className="min-h-screen bg-[#f8f9fa] pb-4">
       {/* Header */}
-      <div className="bg-[#13131A] px-4 py-4 border-b border-white/5 sticky top-6 z-40">
-        <h1 className="text-xl font-bold text-white">Wallet</h1>
+      <div className="bg-white px-4 py-4 border-b border-[#bec9bf]/30 sticky top-6 z-40 shadow-sm">
+        <h1 className="text-xl font-bold text-[#191c1d]">Wallet</h1>
       </div>
 
-      {/* Wallet Balance Card */}
+      {/* Wallet Balance Card — Deep Green bg with decorative circles */}
       <div className="px-4 pt-4">
-        <Card className="p-6 bg-gradient-to-br from-[#00FF88] to-[#00CC6E] text-black border-0">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Wallet className="h-6 w-6" />
-              <span className="text-sm font-medium opacity-80">Smart Ride Wallet</span>
+        <div className="relative overflow-hidden rounded-2xl p-6 bg-[#005f3a]">
+          {/* Decorative circles */}
+          <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full" />
+          <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-6 w-6 text-white" />
+                <span className="text-sm font-medium text-white/80">Smart Ride Wallet</span>
+              </div>
+            </div>
+            <div className="mb-4">
+              <p className="text-sm text-white/70">Available Balance</p>
+              <h2 className="text-3xl font-bold text-white mt-1">
+                {currency} {walletBalance.toLocaleString()}
+              </h2>
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                onClick={() => setShowTopUp(true)}
+                className="flex-1 bg-white text-[#005f3a] hover:bg-white/90 font-semibold"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Top Up
+              </Button>
+              <Button 
+                onClick={() => setShowTransfer(true)}
+                variant="outline" 
+                className="flex-1 border-white/40 text-white hover:bg-white/10"
+              >
+                <ArrowUpRight className="h-4 w-4 mr-2" />
+                Transfer
+              </Button>
             </div>
           </div>
-          <div className="mb-4">
-            <p className="text-sm opacity-80">Available Balance</p>
-            <h2 className="text-3xl font-bold mt-1">
-              {currency} {walletBalance.toLocaleString()}
-            </h2>
-          </div>
-          <div className="flex gap-3">
-            <Button 
-              onClick={() => setShowTopUp(true)}
-              className="flex-1 bg-black text-white hover:bg-black/80"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Top Up
-            </Button>
-            <Button 
-              onClick={() => setShowTransfer(true)}
-              variant="outline" 
-              className="flex-1 border-black text-black hover:bg-black/10"
-            >
-              <ArrowUpRight className="h-4 w-4 mr-2" />
-              Transfer
-            </Button>
-          </div>
-        </Card>
+        </div>
       </div>
 
       {/* Payment Methods */}
       <div className="px-4 mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-white">Payment Methods</h2>
-          <button className="text-[#00FF88] text-sm font-medium flex items-center gap-1">
+          <h2 className="text-lg font-semibold text-[#191c1d]">Payment Methods</h2>
+          <button className="text-[#005f3a] text-sm font-medium flex items-center gap-1">
             <Plus className="h-4 w-4" />
             Add New
           </button>
         </div>
         <div className="space-y-2">
           {paymentMethods.map((method) => (
-            <Card key={method.id} className="p-4 bg-[#13131A] border-white/5 hover:border-[#00FF88]/30 transition-all cursor-pointer">
+            <Card key={method.id} className="p-4 bg-white border border-[#bec9bf]/30 hover:border-[#005f3a]/30 transition-all cursor-pointer shadow-sm rounded-2xl">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-[#1A1A24] rounded-xl flex items-center justify-center">
+                <div className="w-12 h-12 bg-[#edeeef] rounded-xl flex items-center justify-center">
                   {getPaymentIcon(method.type)}
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-medium text-white">{method.name}</h3>
+                    <h3 className="font-medium text-[#191c1d]">{method.name}</h3>
                     {method.isDefault && (
-                      <span className="text-xs bg-[#00FF88]/20 text-[#00FF88] px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-[#005f3a]/10 text-[#005f3a] px-2 py-0.5 rounded-full">
                         Default
                       </span>
                     )}
                   </div>
                   {method.number && (
-                    <p className="text-sm text-gray-400">{method.number}</p>
+                    <p className="text-sm text-[#6f7a71]">{method.number}</p>
                   )}
                 </div>
-                <ChevronRight className="h-5 w-5 text-gray-500" />
+                <ChevronRight className="h-5 w-5 text-[#bec9bf]" />
               </div>
             </Card>
           ))}
@@ -259,8 +265,8 @@ export function ClientWallet() {
       {/* Promotions & Credits */}
       <div className="px-4 mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-white flex items-center gap-2">
-            <Gift className="h-5 w-5 text-[#00FF88]" />
+          <h2 className="text-lg font-semibold text-[#191c1d] flex items-center gap-2">
+            <Gift className="h-5 w-5 text-[#005f3a]" />
             Promotions & Credits
           </h2>
         </div>
@@ -268,19 +274,19 @@ export function ClientWallet() {
           {promotions.map((promo) => (
             <Card
               key={promo.id}
-              className="min-w-[260px] p-4 bg-[#13131A] border-white/5 border-l-4 border-l-[#00FF88]"
+              className="min-w-[260px] p-4 bg-white border border-[#bec9bf]/30 border-l-4 border-l-[#005f3a] shadow-sm rounded-2xl"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <span className="text-2xl font-bold text-[#00FF88]">{promo.discount}</span>
-                  <p className="text-sm text-gray-400 mt-1">{promo.description}</p>
+                  <span className="text-2xl font-bold text-[#005f3a]">{promo.discount}</span>
+                  <p className="text-sm text-[#3f4941] mt-1">{promo.description}</p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Tag className="h-3 w-3 text-gray-400" />
-                    <span className="text-xs text-gray-500">{promo.code}</span>
+                    <Tag className="h-3 w-3 text-[#6f7a71]" />
+                    <span className="text-xs text-[#6f7a71]">{promo.code}</span>
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-2">Expires: {promo.expiresAt}</p>
+              <p className="text-xs text-[#6f7a71] mt-2">Expires: {promo.expiresAt}</p>
             </Card>
           ))}
         </div>
@@ -289,47 +295,47 @@ export function ClientWallet() {
       {/* Transaction History */}
       <div className="px-4 mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-white">Transaction History</h2>
-          <button className="text-[#00FF88] text-sm font-medium flex items-center gap-1">
+          <h2 className="text-lg font-semibold text-[#191c1d]">Transaction History</h2>
+          <button className="text-[#005f3a] text-sm font-medium flex items-center gap-1">
             See all
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
-        <Card className="bg-[#13131A] border-white/5 overflow-hidden">
-          <div className="divide-y divide-white/5">
+        <Card className="bg-white border border-[#bec9bf]/30 overflow-hidden shadow-sm rounded-2xl">
+          <div className="divide-y divide-[#bec9bf]/20">
             {transactions.map((transaction) => (
-              <div key={transaction.id} className="p-4 hover:bg-[#1A1A24] cursor-pointer">
+              <div key={transaction.id} className="p-4 hover:bg-[#f3f4f5] cursor-pointer">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-10 h-10 rounded-full flex items-center justify-center",
-                    transaction.type === 'credit' ? "bg-[#00FF88]/20" : "bg-[#1A1A24]"
+                    transaction.type === 'credit' ? "bg-[#005f3a]/10" : "bg-[#edeeef]"
                   )}>
                     {transaction.type === 'credit' ? (
-                      <ArrowDownLeft className="h-5 w-5 text-[#00FF88]" />
+                      <ArrowDownLeft className="h-5 w-5 text-[#005f3a]" />
                     ) : (
-                      <ArrowUpRight className="h-5 w-5 text-gray-400" />
+                      <ArrowUpRight className="h-5 w-5 text-[#6f7a71]" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-white text-sm truncate">
+                    <h3 className="font-medium text-[#191c1d] text-sm truncate">
                       {transaction.description}
                     </h3>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <Clock className="h-3 w-3 text-gray-500" />
-                      <span className="text-xs text-gray-500">{transaction.timestamp}</span>
+                      <Clock className="h-3 w-3 text-[#6f7a71]" />
+                      <span className="text-xs text-[#6f7a71]">{transaction.timestamp}</span>
                     </div>
                   </div>
                   <div className="text-right">
                     <span className={cn(
                       "font-semibold",
-                      transaction.type === 'credit' ? "text-[#00FF88]" : "text-white"
+                      transaction.type === 'credit' ? "text-[#005f3a]" : "text-[#191c1d]"
                     )}>
                       {transaction.type === 'credit' ? '+' : '-'}UGX {transaction.amount.toLocaleString()}
                     </span>
                     <p className={cn(
                       "text-xs",
-                      transaction.status === 'completed' ? "text-gray-500" :
-                      transaction.status === 'pending' ? "text-yellow-500" : "text-red-500"
+                      transaction.status === 'completed' ? "text-[#6f7a71]" :
+                      transaction.status === 'pending' ? "text-[#F59E0B]" : "text-[#ba1a1a]"
                     )}>
                       {transaction.status}
                     </p>

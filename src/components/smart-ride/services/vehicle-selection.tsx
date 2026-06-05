@@ -103,8 +103,8 @@ export function VehicleSelection({
   return (
     <div className={cn('space-y-3', className)}>
       <div className="flex items-center justify-between">
-        <h3 className="text-white font-medium">Select Ride Type</h3>
-        <div className="flex items-center gap-1 text-gray-400 text-sm">
+        <h3 className="text-[#191c1d] font-medium">Select Ride Type</h3>
+        <div className="flex items-center gap-1 text-[#6f7a71] text-sm">
           <Clock className="h-4 w-4" />
           <span>~{estimatedTimeMinutes} min</span>
         </div>
@@ -122,9 +122,9 @@ export function VehicleSelection({
                 'cursor-pointer transition-all overflow-hidden',
                 option.isAvailable
                   ? isSelected
-                    ? 'bg-[#00FF88]/10 border-[#00FF88]/50'
-                    : 'bg-[#13131A] border-white/5 hover:border-white/10'
-                  : 'bg-[#13131A]/50 border-white/5 opacity-50 cursor-not-allowed'
+                    ? 'bg-white ring-2 ring-[#005f3a] border-[#005f3a] shadow-md shadow-[#005f3a]/10'
+                    : 'bg-white border-[#bec9bf]/30 hover:border-[#bec9bf]/40'
+                  : 'bg-[#f3f4f5]0 border-[#bec9bf]/30 opacity-50 cursor-not-allowed'
               )}
               onClick={() => {
                 if (option.isAvailable) {
@@ -140,18 +140,18 @@ export function VehicleSelection({
                       'w-14 h-14 rounded-xl flex items-center justify-center shrink-0',
                       option.isAvailable
                         ? isSelected
-                          ? 'bg-[#00FF88]/20'
-                          : 'bg-[#1A1A24]'
-                        : 'bg-[#1A1A24]/50'
+                          ? 'bg-[#98f6be]/40'
+                          : 'bg-[#f3f4f5]'
+                        : 'bg-[#f3f4f5]/50'
                     )}
                   >
                     <div
                       className={cn(
                         option.isAvailable
                           ? isSelected
-                            ? 'text-[#00FF88]'
-                            : 'text-white'
-                          : 'text-gray-500'
+                            ? 'text-[#005f3a]'
+                            : 'text-[#191c1d]'
+                          : 'text-[#6f7a71]'
                       )}
                     >
                       {Icon}
@@ -166,9 +166,9 @@ export function VehicleSelection({
                           'font-semibold',
                           option.isAvailable
                             ? isSelected
-                              ? 'text-[#00FF88]'
-                              : 'text-white'
-                            : 'text-gray-500'
+                              ? 'text-[#005f3a]'
+                              : 'text-[#191c1d]'
+                            : 'text-[#6f7a71]'
                         )}
                       >
                         {option.config.name}
@@ -192,12 +192,12 @@ export function VehicleSelection({
                     </div>
 
                     <div className="flex items-center gap-2 mt-1">
-                      <div className="flex items-center gap-1 text-gray-400 text-sm">
+                      <div className="flex items-center gap-1 text-[#6f7a71] text-sm">
                         <Users className="h-3.5 w-3.5" />
                         <span>{option.config.maxPassengers}</span>
                       </div>
-                      <span className="text-gray-600">•</span>
-                      <p className="text-gray-500 text-sm truncate">
+                      <span className="text-[#bec9bf]">•</span>
+                      <p className="text-[#6f7a71] text-sm truncate">
                         {option.config.description}
                       </p>
                     </div>
@@ -207,7 +207,7 @@ export function VehicleSelection({
                       {option.config.features.slice(0, 2).map((feature, idx) => (
                         <span
                           key={idx}
-                          className="text-xs text-gray-500 bg-[#1A1A24] px-2 py-0.5 rounded-full"
+                          className="text-xs text-[#6f7a71] bg-[#f3f4f5] px-2 py-0.5 rounded-full"
                         >
                           {feature}
                         </span>
@@ -230,17 +230,17 @@ export function VehicleSelection({
                         <p
                           className={cn(
                             'text-lg font-bold',
-                            isSelected ? 'text-[#00FF88]' : 'text-white'
+                            isSelected ? 'text-[#005f3a]' : 'text-[#191c1d]'
                           )}
                         >
                           {option.pricing.formattedFare}
                         </p>
-                        <p className="text-gray-500 text-xs mt-0.5">
+                        <p className="text-[#6f7a71] text-xs mt-0.5">
                           {distanceKm.toFixed(1)} km
                         </p>
                       </>
                     ) : (
-                      <p className="text-gray-500 text-sm">Unavailable</p>
+                      <p className="text-[#6f7a71] text-sm">Unavailable</p>
                     )}
 
                     {/* Selection indicator */}
@@ -249,7 +249,7 @@ export function VehicleSelection({
                         className={cn(
                           'mt-2 w-6 h-6 rounded-full border-2 flex items-center justify-center mx-auto transition-all',
                           isSelected
-                            ? 'border-[#00FF88] bg-[#00FF88]'
+                            ? 'border-[#005f3a] bg-[#005f3a]'
                             : 'border-gray-600'
                         )}
                       >
@@ -262,7 +262,7 @@ export function VehicleSelection({
 
               {/* Selected highlight bar */}
               {isSelected && (
-                <div className="h-1 bg-gradient-to-r from-[#00FF88] to-[#00CC6E]" />
+                <div className="h-1 bg-gradient-to-r from-[#005f3a] to-[#0e7a4d]" />
               )}
             </Card>
           );
@@ -271,10 +271,10 @@ export function VehicleSelection({
 
       {/* Selected vehicle details */}
       {selectedVehicle && (
-        <Card className="bg-[#13131A] border-white/5 p-4">
+        <Card className="bg-white border-[#bec9bf]/30 p-4">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-400">Selected</span>
-            <span className="text-[#00FF88] font-medium">
+            <span className="text-[#6f7a71]">Selected</span>
+            <span className="text-[#005f3a] font-medium">
               {VEHICLE_CONFIGS[selectedVehicle].name}
             </span>
           </div>
@@ -308,8 +308,8 @@ export function VehicleBadge({
         'flex items-center gap-2 rounded-full transition-all',
         compact ? 'px-3 py-1.5 text-sm' : 'px-4 py-2',
         selected
-          ? 'bg-[#00FF88]/20 text-[#00FF88] border border-[#00FF88]/50'
-          : 'bg-[#1A1A24] text-gray-400 border border-white/5 hover:border-white/10'
+          ? 'bg-[#005f3a]/20 text-[#005f3a] border border-[#005f3a]/50'
+          : 'bg-[#f3f4f5] text-[#6f7a71] border border-[#bec9bf]/30 hover:border-[#bec9bf]/40'
       )}
     >
       {Icon}

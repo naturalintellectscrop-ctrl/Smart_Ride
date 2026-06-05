@@ -141,7 +141,7 @@ function getCategoryIcon(category?: string, type?: string[]): React.ReactNode {
     return <Store className="h-5 w-5 text-purple-400" />;
   }
   if (type?.includes('address') || type?.includes('street')) {
-    return <MapPin className="h-5 w-5 text-gray-400" />;
+    return <MapPin className="h-5 w-5 text-[#6f7a71]" />;
   }
   if (type?.includes('poi')) {
     return <Landmark className="h-5 w-5 text-blue-400" />;
@@ -149,7 +149,7 @@ function getCategoryIcon(category?: string, type?: string[]): React.ReactNode {
   if (type?.includes('place') || type?.includes('locality')) {
     return <Building className="h-5 w-5 text-emerald-400" />;
   }
-  return <MapPin className="h-5 w-5 text-gray-400" />;
+  return <MapPin className="h-5 w-5 text-[#6f7a71]" />;
 }
 
 // ==========================================
@@ -332,17 +332,17 @@ export function LocationPicker({
   return (
     <div className={cn('space-y-4', className)}>
       {/* Location Input Card */}
-      <Card className="bg-[#13131A] border-white/5 overflow-hidden">
+      <Card className="bg-white border-[#bec9bf]/30 overflow-hidden">
         <div className="p-4 space-y-0">
           {/* Pickup Input */}
           <div className="flex items-center gap-3">
             <div className="relative">
               <div className={cn(
                 "w-3 h-3 rounded-full transition-colors",
-                activeField === 'pickup' ? "bg-[#00FF88] animate-pulse" : "bg-[#00FF88]"
+                activeField === 'pickup' ? "bg-[#005f3a] animate-pulse" : "bg-[#005f3a]"
               )} />
               {activeField === 'pickup' && (
-                <div className="absolute -inset-1 bg-[#00FF88]/30 rounded-full animate-ping" />
+                <div className="absolute -inset-1 bg-[#005f3a]/30 rounded-full animate-ping" />
               )}
             </div>
             <div className="flex-1 relative">
@@ -359,26 +359,26 @@ export function LocationPicker({
                   setActiveField('pickup');
                   setSearchQuery(pickup?.address || '');
                 }}
-                className="w-full bg-transparent outline-none text-white placeholder-gray-500 text-base"
+                className="w-full bg-transparent outline-none text-[#191c1d] placeholder-[#6f7a71] text-base"
               />
               {pickup?.address && activeField !== 'pickup' && (
                 <button
                   onClick={() => clearField('pickup')}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 p-1 hover:bg-[#e8ebe8] rounded-full"
                 >
-                  <X className="h-4 w-4 text-gray-400" />
+                  <X className="h-4 w-4 text-[#6f7a71]" />
                 </button>
               )}
             </div>
             {activeField !== 'pickup' && !pickup?.address && (
               <button
                 onClick={handleCurrentLocation}
-                className="p-2 hover:bg-white/5 rounded-full transition-colors"
+                className="p-2 hover:bg-[#f3f4f5] rounded-full transition-colors"
               >
                 {isSearching ? (
-                  <Loader2 className="h-5 w-5 text-[#00FF88] animate-spin" />
+                  <Loader2 className="h-5 w-5 text-[#005f3a] animate-spin" />
                 ) : (
-                  <Locate className="h-5 w-5 text-[#00FF88]" />
+                  <Locate className="h-5 w-5 text-[#005f3a]" />
                 )}
               </button>
             )}
@@ -387,7 +387,7 @@ export function LocationPicker({
           {/* Connector Line */}
           <div className="flex items-center gap-3">
             <div className="w-3 flex justify-center">
-              <div className="w-0.5 h-6 bg-gradient-to-b from-[#00FF88] to-orange-500" />
+              <div className="w-0.5 h-6 bg-gradient-to-b from-[#005f3a] to-red-500" />
             </div>
           </div>
 
@@ -411,23 +411,23 @@ export function LocationPicker({
                   setActiveField('destination');
                   setSearchQuery(destination?.address || '');
                 }}
-                className="w-full bg-transparent outline-none text-white placeholder-gray-500 text-base"
+                className="w-full bg-transparent outline-none text-[#191c1d] placeholder-[#6f7a71] text-base"
               />
               {destination?.address && activeField !== 'destination' && (
                 <button
                   onClick={() => clearField('destination')}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 p-1 hover:bg-[#e8ebe8] rounded-full"
                 >
-                  <X className="h-4 w-4 text-gray-400" />
+                  <X className="h-4 w-4 text-[#6f7a71]" />
                 </button>
               )}
             </div>
             {activeField === 'destination' && destination?.address && (
               <button
                 onClick={onSwapLocations}
-                className="p-2 hover:bg-white/5 rounded-full transition-colors"
+                className="p-2 hover:bg-[#f3f4f5] rounded-full transition-colors"
               >
-                <Navigation className="h-5 w-5 text-gray-400" />
+                <Navigation className="h-5 w-5 text-[#6f7a71]" />
               </button>
             )}
           </div>
@@ -439,39 +439,39 @@ export function LocationPicker({
         <div className="space-y-2">
           {/* Searching Indicator */}
           {isSearching && (
-            <Card className="bg-[#13131A] border-white/5 p-4">
+            <Card className="bg-white border-[#bec9bf]/30 p-4">
               <div className="flex items-center gap-3">
-                <Loader2 className="h-5 w-5 text-[#00FF88] animate-spin" />
-                <p className="text-gray-400">Searching in Uganda...</p>
+                <Loader2 className="h-5 w-5 text-[#005f3a] animate-spin" />
+                <p className="text-[#6f7a71]">Searching in Uganda...</p>
               </div>
             </Card>
           )}
 
           {/* Error Message */}
           {searchError && !isSearching && (
-            <Card className="bg-[#13131A] border-white/5 p-4">
+            <Card className="bg-white border-[#bec9bf]/30 p-4">
               <p className="text-red-400 text-sm">{searchError}</p>
             </Card>
           )}
 
           {/* Search Results */}
           {searchResults.length > 0 && (
-            <Card className="bg-[#13131A] border-white/5 overflow-hidden">
+            <Card className="bg-white border-[#bec9bf]/30 overflow-hidden">
               <div className="divide-y divide-white/5">
                 {searchResults.map((result) => (
                   <button
                     key={result.id}
                     onClick={() => handleLocationSelect(result, activeField)}
-                    className="w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-4 hover:bg-[#f3f4f5] transition-colors text-left"
                   >
-                    <div className="w-10 h-10 bg-[#1A1A24] rounded-full flex items-center justify-center">
+                    <div className="w-10 h-10 bg-[#f3f4f5] rounded-full flex items-center justify-center">
                       {getCategoryIcon(result.category, result.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white font-medium truncate">{result.name}</p>
-                      <p className="text-gray-500 text-sm truncate">{result.fullAddress}</p>
+                      <p className="text-[#191c1d] font-medium truncate">{result.name}</p>
+                      <p className="text-[#6f7a71] text-sm truncate">{result.fullAddress}</p>
                       {result.type && (
-                        <p className="text-[#00FF88] text-xs mt-0.5">
+                        <p className="text-[#005f3a] text-xs mt-0.5">
                           {result.type.join(', ')}
                         </p>
                       )}
@@ -487,14 +487,14 @@ export function LocationPicker({
             <>
               {/* Saved Places */}
               <div className="space-y-2">
-                <p className="text-gray-500 text-sm px-1">Saved Places</p>
-                <Card className="bg-[#13131A] border-white/5 overflow-hidden">
+                <p className="text-[#6f7a71] text-sm px-1">Saved Places</p>
+                <Card className="bg-white border-[#bec9bf]/30 overflow-hidden">
                   <div className="divide-y divide-white/5">
                     {savedPlaces.map((place) => (
                       <button
                         key={place.id}
                         onClick={() => handleSavedPlaceSelect(place, activeField)}
-                        className="w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-colors text-left"
+                        className="w-full flex items-center gap-3 p-4 hover:bg-[#f3f4f5] transition-colors text-left"
                       >
                         <div className={cn(
                           "w-10 h-10 rounded-full flex items-center justify-center",
@@ -507,8 +507,8 @@ export function LocationPicker({
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="text-white font-medium">{place.name}</p>
-                          <p className="text-gray-500 text-sm">{place.address}</p>
+                          <p className="text-[#191c1d] font-medium">{place.name}</p>
+                          <p className="text-[#6f7a71] text-sm">{place.address}</p>
                         </div>
                       </button>
                     ))}
@@ -518,25 +518,25 @@ export function LocationPicker({
 
               {/* Recent Locations */}
               <div className="space-y-2">
-                <p className="text-gray-500 text-sm px-1">Recent</p>
-                <Card className="bg-[#13131A] border-white/5 overflow-hidden">
+                <p className="text-[#6f7a71] text-sm px-1">Recent</p>
+                <Card className="bg-white border-[#bec9bf]/30 overflow-hidden">
                   <div className="divide-y divide-white/5">
                     {recentLocations.map((place) => (
                       <button
                         key={place.id}
                         onClick={() => handleSavedPlaceSelect(place, activeField)}
-                        className="w-full flex items-center gap-3 p-4 hover:bg-white/5 transition-colors text-left"
+                        className="w-full flex items-center gap-3 p-4 hover:bg-[#f3f4f5] transition-colors text-left"
                       >
-                        <div className="w-10 h-10 bg-[#1A1A24] rounded-full flex items-center justify-center">
+                        <div className="w-10 h-10 bg-[#f3f4f5] rounded-full flex items-center justify-center">
                           {place.type === 'recent' ? (
-                            <Clock className="h-5 w-5 text-gray-400" />
+                            <Clock className="h-5 w-5 text-[#6f7a71]" />
                           ) : (
                             <Star className="h-5 w-5 text-yellow-400" />
                           )}
                         </div>
                         <div className="flex-1">
-                          <p className="text-white font-medium">{place.name}</p>
-                          <p className="text-gray-500 text-sm">{place.address}</p>
+                          <p className="text-[#191c1d] font-medium">{place.name}</p>
+                          <p className="text-[#6f7a71] text-sm">{place.address}</p>
                         </div>
                       </button>
                     ))}
@@ -545,8 +545,8 @@ export function LocationPicker({
               </div>
 
               {/* Search Tips */}
-              <Card className="bg-[#00FF88]/5 border-[#00FF88]/20 p-4">
-                <p className="text-[#00FF88] text-sm">
+              <Card className="bg-[#005f3a]/5 border-[#005f3a]/20 p-4">
+                <p className="text-[#005f3a] text-sm">
                   💡 Try searching for "Bugolobi", "Cafe Javas", "Jinja Road", or any street name in Uganda
                 </p>
               </Card>

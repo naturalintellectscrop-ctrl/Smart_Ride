@@ -124,7 +124,7 @@ export function PharmacistOrders() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="bg-white px-4 py-4 border-b border-gray-100 sticky top-6 z-40">
-        <h1 className="text-xl font-bold text-gray-900">Orders</h1>
+        <h1 className="text-xl font-bold text-gray-900 font-[family-name:var(--font-plus-jakarta)]">Orders</h1>
       </div>
 
       {/* Search and Filter */}

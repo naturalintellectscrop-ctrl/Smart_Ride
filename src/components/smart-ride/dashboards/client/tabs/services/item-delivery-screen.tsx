@@ -407,13 +407,13 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
   
   if (step === 'completed') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div className="px-4 py-4 flex items-center gap-4 bg-gradient-to-r from-[#14B8A6]/20 to-transparent">
-          <button onClick={onBack} className="text-white/80 hover:text-white transition-colors">
+          <button onClick={onBack} className="text-white/80 hover:text-[#191c1d] transition-colors">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-white">Delivery Complete</h1>
+            <h1 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#191c1d] ">Delivery Complete</h1>
           </div>
         </div>
         
@@ -425,29 +425,29 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
             >
               <Check className="h-12 w-12" style={{ color: TEAL_PRIMARY }} />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Package Delivered!</h2>
-            <p className="text-white/60 mb-8">Your package has been successfully delivered</p>
+            <h2 className="font-[family-name:var(--font-plus-jakarta)] text-2xl font-bold text-[#191c1d] mb-2 ">Package Delivered!</h2>
+            <p className="text-[#6f7a71] mb-8">Your package has been successfully delivered</p>
             
-            <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
+            <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
               <div className="space-y-3 text-left">
                 <div className="flex justify-between">
-                  <span className="text-white/50">Delivery ID</span>
-                  <span className="font-mono text-[#00FF88]">{currentTask?.taskNumber}</span>
+                  <span className="text-[#6f7a71]">Delivery ID</span>
+                  <span className="font-mono text-[#005f3a]">{currentTask?.taskNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/50">Total Cost</span>
-                  <span className="font-bold text-white">UGX {fare?.total.toLocaleString()}</span>
+                  <span className="text-[#6f7a71]">Total Cost</span>
+                  <span className="font-bold text-[#191c1d]">UGX {fare?.total.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/50">Payment</span>
-                  <span className="text-[#00FF88]">{paymentMethod === 'MTN_MOMO' ? 'MTN MoMo' : paymentMethod === 'AIRTEL_MONEY' ? 'Airtel Money' : paymentMethod}</span>
+                  <span className="text-[#6f7a71]">Payment</span>
+                  <span className="text-[#005f3a]">{paymentMethod === 'MTN_MOMO' ? 'MTN MoMo' : paymentMethod === 'AIRTEL_MONEY' ? 'Airtel Money' : paymentMethod}</span>
                 </div>
               </div>
             </Card>
             
             <button 
               onClick={onBack}
-              className="w-full mt-6 py-4 rounded-xl font-semibold text-[#0D0D12]"
+              className="w-full mt-6 py-4 rounded-xl font-semibold text-white"
               style={{ backgroundColor: TEAL_PRIMARY }}
             >
               Done
@@ -464,13 +464,13 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
   
   if (step === 'searching') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div className="px-4 py-4 bg-gradient-to-r from-[#14B8A6]/20 to-transparent">
-          <button onClick={onBack} className="text-white/80 hover:text-white transition-colors">
+          <button onClick={onBack} className="text-white/80 hover:text-[#191c1d] transition-colors">
             <ArrowLeft className="h-6 w-6" />
           </button>
-          <h1 className="text-lg font-bold text-white mt-4">Finding a Courier</h1>
-          <p className="text-white/60 text-sm">Searching for nearby delivery partners...</p>
+          <h1 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#191c1d] mt-4 ">Finding a Courier</h1>
+          <p className="text-[#6f7a71] text-sm">Searching for nearby delivery partners...</p>
         </div>
         
         <div className="px-4 pt-8">
@@ -485,32 +485,32 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
             </div>
             <div className="text-center z-10">
               <div 
-                className="w-20 h-20 bg-[#1A1A24] rounded-full flex items-center justify-center mx-auto mb-4"
+                className="w-20 h-20 bg-[#f3f4f5] rounded-full flex items-center justify-center mx-auto mb-4"
                 style={{ boxShadow: `0 0 30px ${TEAL_GLOW}` }}
               >
                 <Loader2 className="h-10 w-10 animate-spin" style={{ color: TEAL_PRIMARY }} />
               </div>
-              <p className="font-medium text-white">Looking for couriers...</p>
-              <p className="text-white/40 text-sm mt-1">This usually takes 1-2 minutes</p>
+              <p className="font-medium text-[#191c1d]">Looking for couriers...</p>
+              <p className="text-[#bec9bf] text-sm mt-1">This usually takes 1-2 minutes</p>
             </div>
           </div>
 
-          <Card className="mt-4 p-4 bg-[#1A1A24]/80 border-white/5">
+          <Card className="mt-4 p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TEAL_PRIMARY }} />
-                <p className="text-white">{pickup?.address || pickupInput}</p>
+                <p className="text-[#191c1d]">{pickup?.address || pickupInput}</p>
               </div>
-              <div className="ml-1.5 border-l-2 border-dashed border-white/10 h-4" />
+              <div className="ml-1.5 border-l-2 border-dashed border-[#bec9bf]/30 h-4" />
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-[#F97316] rounded-full" />
-                <p className="text-white">{dropoff?.address || dropoffInput}</p>
+                <p className="text-[#191c1d]">{dropoff?.address || dropoffInput}</p>
               </div>
             </div>
             
             {currentTask && (
-              <div className="mt-4 pt-4 border-t border-white/5">
-                <p className="text-sm text-white/40">Request ID: <span className="font-mono text-[#00FF88]">{currentTask.taskNumber}</span></p>
+              <div className="mt-4 pt-4 border-t border-[#bec9bf]/20">
+                <p className="text-sm text-[#bec9bf]">Request ID: <span className="font-mono text-[#005f3a]">{currentTask.taskNumber}</span></p>
               </div>
             )}
           </Card>
@@ -532,23 +532,23 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
   
   if (step === 'matched' || step === 'inDelivery') {
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-24">
+      <div className="min-h-screen bg-[#f8f9fa] pb-24">
         <div className="fixed top-4 right-4 z-50">
           <SOSButtonModal onOpen={() => setShowSOS(true)} />
         </div>
 
         <div className="px-4 py-4 bg-gradient-to-r from-[#14B8A6]/20 to-transparent">
-          <button onClick={onBack} className="text-white/80 hover:text-white transition-colors">
+          <button onClick={onBack} className="text-white/80 hover:text-[#191c1d] transition-colors">
             <ArrowLeft className="h-6 w-6" />
           </button>
-          <h1 className="text-lg font-bold text-white mt-4">
+          <h1 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#191c1d] mt-4 ">
             {step === 'inDelivery' ? 'Delivery in Progress' : 'Courier Found!'}
           </h1>
         </div>
         
         <div className="px-4 pt-4">
           <Card 
-            className="p-6 border-2 bg-[#1A1A24]/80"
+            className="p-6 border-2 bg-[#f3f4f5]/80"
             style={{ borderColor: `${TEAL_PRIMARY}40` }}
           >
             <div className="flex items-center gap-4">
@@ -559,14 +559,14 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                 <User className="h-8 w-8" style={{ color: TEAL_PRIMARY }} />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-lg text-white">{matchedProvider?.name || 'Courier'}</h3>
+                <h3 className="font-[family-name:var(--font-plus-jakarta)] font-bold text-lg text-[#191c1d] ">{matchedProvider?.name || 'Courier'}</h3>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-sm font-medium text-white">{matchedProvider?.rating || 4.9}</span>
+                    <span className="text-sm font-medium text-[#191c1d]">{matchedProvider?.rating || 4.9}</span>
                   </div>
-                  <span className="text-white/30">•</span>
-                  <span className="text-sm text-white/60">{matchedProvider?.deliveries || 0} deliveries</span>
+                  <span className="text-[#bec9bf]">•</span>
+                  <span className="text-sm text-[#6f7a71]">{matchedProvider?.deliveries || 0} deliveries</span>
                   <div 
                     className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: `${TEAL_PRIMARY}20`, color: TEAL_PRIMARY }}
@@ -578,79 +578,79 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
               </div>
             </div>
             
-            <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="mt-4 pt-4 border-t border-[#bec9bf]/30">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white/50">Vehicle</p>
-                  <p className="font-medium text-white">{matchedProvider?.vehicle || 'Vehicle'}</p>
+                  <p className="text-sm text-[#6f7a71]">Vehicle</p>
+                  <p className="font-medium text-[#191c1d]">{matchedProvider?.vehicle || 'Vehicle'}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-white/50">Plate</p>
-                  <p className="font-medium text-white">{matchedProvider?.plateNumber || 'UBD 456X'}</p>
+                  <p className="text-sm text-[#6f7a71]">Plate</p>
+                  <p className="font-medium text-[#191c1d]">{matchedProvider?.plateNumber || 'UBD 456X'}</p>
                 </div>
               </div>
             </div>
           </Card>
 
           {/* Package Info */}
-          <Card className="mt-4 p-4 bg-[#1A1A24]/80 border-white/5">
+          <Card className="mt-4 p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
             <div className="flex items-center gap-3 mb-3">
               <Package className="h-5 w-5" style={{ color: TEAL_PRIMARY }} />
-              <span className="font-medium text-white">Package Details</span>
+              <span className="font-medium text-[#191c1d]">Package Details</span>
             </div>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <div>
-                <span className="text-white/50">Item</span>
-                <p className="text-white truncate">{itemDetails.description}</p>
+                <span className="text-[#6f7a71]">Item</span>
+                <p className="text-[#191c1d] truncate">{itemDetails.description}</p>
               </div>
               <div>
-                <span className="text-white/50">Weight</span>
-                <p className="text-white">{itemDetails.weight} kg</p>
+                <span className="text-[#6f7a71]">Weight</span>
+                <p className="text-[#191c1d]">{itemDetails.weight} kg</p>
               </div>
               <div>
-                <span className="text-white/50">Size</span>
-                <p className="text-white">{PACKAGE_SIZES[itemDetails.size].label}</p>
+                <span className="text-[#6f7a71]">Size</span>
+                <p className="text-[#191c1d]">{PACKAGE_SIZES[itemDetails.size].label}</p>
               </div>
               <div>
-                <span className="text-white/50">Value</span>
-                <p className="text-white">UGX {itemDetails.value.toLocaleString()}</p>
+                <span className="text-[#6f7a71]">Value</span>
+                <p className="text-[#191c1d]">UGX {itemDetails.value.toLocaleString()}</p>
               </div>
             </div>
           </Card>
 
           <div className="mt-4 text-center">
-            <p className="text-white/50">{step === 'inDelivery' ? 'Estimated arrival' : 'Courier arriving in'}</p>
+            <p className="text-[#6f7a71]">{step === 'inDelivery' ? 'Estimated arrival' : 'Courier arriving in'}</p>
             <p className="text-4xl font-bold" style={{ color: TEAL_PRIMARY }}>
               {step === 'inDelivery' ? `${Math.round(route?.durationMin || 15)} min` : `${matchedProvider?.eta || 5} min`}
             </p>
           </div>
 
-          <Card className="mt-4 p-4 bg-[#1A1A24]/80 border-white/5">
+          <Card className="mt-4 p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5" style={{ color: TEAL_PRIMARY }} />
                 <div>
-                  <p className="text-xs text-white/50">Pickup</p>
-                  <p className="text-white">{pickup?.address}</p>
+                  <p className="text-xs text-[#6f7a71]">Pickup</p>
+                  <p className="text-[#191c1d]">{pickup?.address}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <Navigation className="h-5 w-5 text-[#F97316]" />
                 <div>
-                  <p className="text-xs text-white/50">Dropoff</p>
-                  <p className="text-white">{dropoff?.address}</p>
+                  <p className="text-xs text-[#6f7a71]">Dropoff</p>
+                  <p className="text-[#191c1d]">{dropoff?.address}</p>
                 </div>
               </div>
             </div>
             
-            <div className="mt-4 pt-4 border-t border-white/5 flex justify-between">
+            <div className="mt-4 pt-4 border-t border-[#bec9bf]/20 flex justify-between">
               <div>
-                <p className="text-sm text-white/50">Delivery fee</p>
-                <p className="font-bold text-lg text-white">UGX {fare?.total.toLocaleString()}</p>
+                <p className="text-sm text-[#6f7a71]">Delivery fee</p>
+                <p className="font-bold text-lg text-[#191c1d]">UGX {fare?.total.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm text-white/50">Payment</p>
-                <p className="font-medium text-[#00FF88]">{paymentMethod === 'MTN_MOMO' ? 'MTN MoMo' : paymentMethod === 'AIRTEL_MONEY' ? 'Airtel Money' : paymentMethod}</p>
+                <p className="text-sm text-[#6f7a71]">Payment</p>
+                <p className="font-medium text-[#005f3a]">{paymentMethod === 'MTN_MOMO' ? 'MTN MoMo' : paymentMethod === 'AIRTEL_MONEY' ? 'Airtel Money' : paymentMethod}</p>
               </div>
             </div>
           </Card>
@@ -663,7 +663,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                     window.location.href = `tel:${matchedProvider.phone}`;
                   }
                 }}
-                className="py-4 rounded-xl font-semibold flex items-center justify-center gap-2 text-white transition-all hover:scale-[1.02]"
+                className="py-4 rounded-xl font-semibold flex items-center justify-center gap-2 text-[#191c1d] transition-all hover:scale-[1.02]"
                 style={{ backgroundColor: TEAL_PRIMARY, boxShadow: `0 0 20px ${TEAL_GLOW}` }}
               >
                 <Phone className="h-5 w-5" />
@@ -677,7 +677,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
             {step === 'matched' && (
               <button 
                 onClick={() => setStep('inDelivery')}
-                className="w-full bg-[#1A1A24] text-white py-4 rounded-xl font-medium border border-white/10 hover:border-white/20 transition-all"
+                className="w-full bg-[#f3f4f5] text-[#191c1d] py-4 rounded-xl font-medium border border-[#bec9bf]/30 hover:border-[#bec9bf]/40 transition-all"
               >
                 Start Delivery
               </button>
@@ -704,69 +704,69 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
   
   if (step === 'confirmation') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div className="px-4 pt-4 pb-6 bg-gradient-to-r from-[#14B8A6]/20 to-transparent">
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => setStep('details')} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={() => setStep('details')} className="text-[#191c1d] hover:bg-[#e7e8e9]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Confirm Delivery</h1>
-              <p className="text-white/60 text-sm">Review your delivery details</p>
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Confirm Delivery</h1>
+              <p className="text-[#6f7a71] text-sm">Review your delivery details</p>
             </div>
           </div>
         </div>
 
         <div className="px-4 -mt-4 space-y-4">
           {/* Route Summary */}
-          <Card className="p-4 bg-[#1A1A24]/90 border-white/5">
+          <Card className="p-4 bg-[#f3f4f5]/90 border-[#bec9bf]/20">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${TEAL_PRIMARY}20` }}>
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: TEAL_PRIMARY }} />
                 </div>
                 <div>
-                  <p className="text-xs text-white/50">Pickup</p>
-                  <p className="text-white font-medium">{pickup?.address}</p>
-                  <p className="text-xs text-white/40">{senderName} • {senderPhone}</p>
+                  <p className="text-xs text-[#6f7a71]">Pickup</p>
+                  <p className="text-[#191c1d] font-medium">{pickup?.address}</p>
+                  <p className="text-xs text-[#bec9bf]">{senderName} • {senderPhone}</p>
                 </div>
               </div>
-              <div className="ml-4 border-l-2 border-dashed border-white/10 h-4" />
+              <div className="ml-4 border-l-2 border-dashed border-[#bec9bf]/30 h-4" />
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-[#F97316]/20 rounded-full flex items-center justify-center">
                   <Navigation className="h-4 w-4 text-[#F97316]" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/50">Dropoff</p>
-                  <p className="text-white font-medium">{dropoff?.address}</p>
-                  <p className="text-xs text-white/40">{receiverName} • {receiverPhone}</p>
+                  <p className="text-xs text-[#6f7a71]">Dropoff</p>
+                  <p className="text-[#191c1d] font-medium">{dropoff?.address}</p>
+                  <p className="text-xs text-[#bec9bf]">{receiverName} • {receiverPhone}</p>
                 </div>
               </div>
             </div>
           </Card>
 
           {/* Package Details */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
             <div className="flex items-center gap-2 mb-3">
               <Package className="h-5 w-5" style={{ color: TEAL_PRIMARY }} />
-              <span className="font-medium text-white">Package Details</span>
+              <span className="font-medium text-[#191c1d]">Package Details</span>
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-white/50">Description</span>
-                <span className="text-white">{itemDetails.description}</span>
+                <span className="text-[#6f7a71]">Description</span>
+                <span className="text-[#191c1d]">{itemDetails.description}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/50">Size</span>
-                <span className="text-white">{PACKAGE_SIZES[itemDetails.size].label}</span>
+                <span className="text-[#6f7a71]">Size</span>
+                <span className="text-[#191c1d]">{PACKAGE_SIZES[itemDetails.size].label}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/50">Weight</span>
-                <span className="text-white">{itemDetails.weight} kg</span>
+                <span className="text-[#6f7a71]">Weight</span>
+                <span className="text-[#191c1d]">{itemDetails.weight} kg</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/50">Declared Value</span>
-                <span className="text-white">UGX {itemDetails.value.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Declared Value</span>
+                <span className="text-[#191c1d]">UGX {itemDetails.value.toLocaleString()}</span>
               </div>
               {itemDetails.isFragile && (
                 <div className="flex items-center gap-2 text-[#F59E0B]">
@@ -778,22 +778,22 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
           </Card>
 
           {/* Trip Stats */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
             <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <p className="text-xs text-white/50">Distance</p>
-                <p className="text-lg font-bold text-white">{route?.distanceKm} km</p>
+                <p className="text-xs text-[#6f7a71]">Distance</p>
+                <p className="text-lg font-bold text-[#191c1d]">{route?.distanceKm} km</p>
               </div>
               <div>
-                <p className="text-xs text-white/50">Est. Time</p>
-                <p className="text-lg font-bold text-white">{route?.durationMin} min</p>
+                <p className="text-xs text-[#6f7a71]">Est. Time</p>
+                <p className="text-lg font-bold text-[#191c1d]">{route?.durationMin} min</p>
               </div>
             </div>
           </Card>
 
           {/* Payment Method */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-            <p className="text-xs text-white/50 mb-3">Payment Method</p>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+            <p className="text-xs text-[#6f7a71] mb-3">Payment Method</p>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'CASH' as const, label: 'Cash', icon: '💵', disabled: false },
@@ -809,17 +809,17 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                     paymentMethod === method.id
                       ? "border-[#14B8A6] bg-[#14B8A6]/10"
                       : method.disabled
-                        ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed"
-                        : "border-white/10 bg-white/5 hover:border-white/20"
+                        ? "border-[#bec9bf]/20 bg-white/[0.02] opacity-50 cursor-not-allowed"
+                        : "border-[#bec9bf]/30 bg-white/5 hover:border-[#bec9bf]/40"
                   )}
                 >
                   <span className="text-lg">{method.icon}</span>
                   <span className={cn(
                     "text-xs font-medium",
-                    paymentMethod === method.id ? "text-[#14B8A6]" : method.disabled ? "text-white/30" : "text-white/60"
+                    paymentMethod === method.id ? "text-[#14B8A6]" : method.disabled ? "text-[#bec9bf]" : "text-[#6f7a71]"
                   )}>{method.label}</span>
                   {method.badge && (
-                    <span className="absolute -top-1 -right-1 text-[8px] bg-white/10 text-white/40 px-1 rounded">{method.badge}</span>
+                    <span className="absolute -top-1 -right-1 text-[8px] bg-white/10 text-[#bec9bf] px-1 rounded">{method.badge}</span>
                   )}
                 </button>
               ))}
@@ -827,29 +827,29 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
           </Card>
 
           {/* Fare Breakdown */}
-          <Card className="p-4 border-2 bg-[#1A1A24]/80" style={{ borderColor: `${TEAL_PRIMARY}30` }}>
+          <Card className="p-4 border-2 bg-[#f3f4f5]/80" style={{ borderColor: `${TEAL_PRIMARY}30` }}>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Base fare</span>
-                <span className="text-white">UGX {fare?.baseFare.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Base fare</span>
+                <span className="text-[#191c1d]">UGX {fare?.baseFare.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Distance ({route?.distanceKm} km)</span>
-                <span className="text-white">UGX {fare?.distanceFare.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Distance ({route?.distanceKm} km)</span>
+                <span className="text-[#191c1d]">UGX {fare?.distanceFare.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Weight ({itemDetails.weight} kg)</span>
-                <span className="text-white">UGX {fare?.weightFare.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Weight ({itemDetails.weight} kg)</span>
+                <span className="text-[#191c1d]">UGX {fare?.weightFare.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/50 flex items-center gap-1">
+                <span className="text-[#6f7a71] flex items-center gap-1">
                   <Shield className="h-3 w-3" /> Insurance
                 </span>
-                <span className="text-white">UGX {fare?.insuranceFee.toLocaleString()}</span>
+                <span className="text-[#191c1d]">UGX {fare?.insuranceFee.toLocaleString()}</span>
               </div>
-              <div className="pt-2 mt-2 border-t border-white/10 flex justify-between">
-                <span className="text-white font-medium">Total</span>
-                <span className="text-xl font-bold text-[#00FF88]">UGX {fare?.total.toLocaleString()}</span>
+              <div className="pt-2 mt-2 border-t border-[#bec9bf]/30 flex justify-between">
+                <span className="text-[#191c1d] font-medium">Total</span>
+                <span className="text-xl font-bold text-[#005f3a]">UGX {fare?.total.toLocaleString()}</span>
               </div>
             </div>
           </Card>
@@ -857,14 +857,14 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
           {/* Confirm Button */}
           <Button 
             onClick={handleConfirmDelivery}
-            className="w-full h-14 text-lg font-semibold rounded-xl text-[#0D0D12]"
+            className="w-full h-14 text-lg font-semibold rounded-xl text-white"
             style={{ backgroundColor: TEAL_PRIMARY }}
           >
             <Truck className="h-5 w-5 mr-2" />
             Confirm Delivery • UGX {fare?.total.toLocaleString()}
           </Button>
           
-          <p className="text-center text-xs text-white/30">
+          <p className="text-center text-xs text-[#bec9bf]">
             By confirming, you agree to our Terms of Service
           </p>
         </div>
@@ -878,55 +878,55 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
   
   if (step === 'details') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div className="px-4 pt-4 pb-6 bg-gradient-to-r from-[#14B8A6]/20 to-transparent">
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => setStep('location')} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={() => setStep('location')} className="text-[#191c1d] hover:bg-[#e7e8e9]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Item Details</h1>
-              <p className="text-white/60 text-sm">Tell us about your package</p>
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Item Details</h1>
+              <p className="text-[#6f7a71] text-sm">Tell us about your package</p>
             </div>
           </div>
         </div>
 
         <div className="px-4 -mt-4 space-y-4">
           {/* Route Preview */}
-          <Card className="p-3 bg-[#1A1A24]/90 border-white/5">
+          <Card className="p-3 bg-[#f3f4f5]/90 border-[#bec9bf]/20">
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: TEAL_PRIMARY }} />
-                  <p className="text-sm text-white truncate">{pickup?.address}</p>
+                  <p className="text-sm text-[#191c1d] truncate">{pickup?.address}</p>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-[#F97316]" />
-                  <p className="text-sm text-white truncate">{dropoff?.address}</p>
+                  <p className="text-sm text-[#191c1d] truncate">{dropoff?.address}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-white">{route?.distanceKm} km</p>
-                <p className="text-xs text-white/50">{route?.durationMin} min</p>
+                <p className="text-sm font-bold text-[#191c1d]">{route?.distanceKm} km</p>
+                <p className="text-xs text-[#6f7a71]">{route?.durationMin} min</p>
               </div>
             </div>
           </Card>
 
           {/* Package Description */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-            <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">What are you sending?</label>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+            <label className="text-xs text-[#6f7a71] uppercase tracking-wider mb-2 block">What are you sending?</label>
             <textarea
               value={itemDetails.description}
               onChange={(e) => setItemDetails(prev => ({ ...prev, description: e.target.value }))}
               placeholder="e.g., Documents, Electronics, Gift box..."
               rows={2}
-              className="w-full p-3 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#14B8A6]/50 focus:outline-none transition-colors resize-none"
+              className="w-full p-3 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#14B8A6]/50 focus:outline-none transition-colors resize-none"
             />
           </Card>
 
           {/* Package Size */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-            <label className="text-xs text-white/50 uppercase tracking-wider mb-3 block">Package Size</label>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+            <label className="text-xs text-[#6f7a71] uppercase tracking-wider mb-3 block">Package Size</label>
             <div className="grid grid-cols-2 gap-2">
               {(Object.keys(PACKAGE_SIZES) as PackageSize[]).map((size) => (
                 <button
@@ -936,7 +936,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                     "p-3 rounded-xl border text-left transition-all",
                     itemDetails.size === size
                       ? "border-[#14B8A6] bg-[#14B8A6]/10"
-                      : "border-white/10 bg-white/5 hover:border-white/20"
+                      : "border-[#bec9bf]/30 bg-white/5 hover:border-[#bec9bf]/40"
                   )}
                 >
                   <div className="flex items-center gap-2">
@@ -944,9 +944,9 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                     <div>
                       <p className={cn(
                         "font-medium",
-                        itemDetails.size === size ? "text-[#14B8A6]" : "text-white"
+                        itemDetails.size === size ? "text-[#14B8A6]" : "text-[#191c1d]"
                       )}>{PACKAGE_SIZES[size].label}</p>
-                      <p className="text-xs text-white/40">{PACKAGE_SIZES[size].description}</p>
+                      <p className="text-xs text-[#bec9bf]">{PACKAGE_SIZES[size].description}</p>
                     </div>
                   </div>
                 </button>
@@ -955,8 +955,8 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
           </Card>
 
           {/* Weight Selection */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-            <label className="text-xs text-white/50 uppercase tracking-wider mb-3 block flex items-center gap-2">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+            <label className="text-xs text-[#6f7a71] uppercase tracking-wider mb-3 block flex items-center gap-2">
               <Scale className="h-4 w-4" />
               Weight (kg)
             </label>
@@ -972,7 +972,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                     "px-4 py-2 rounded-lg border font-medium transition-all",
                     itemDetails.weight === weight
                       ? "border-[#14B8A6] bg-[#14B8A6]/10 text-[#14B8A6]"
-                      : "border-white/10 bg-white/5 text-white/70 hover:border-white/20"
+                      : "border-[#bec9bf]/30 bg-white/5 text-[#3f4941] hover:border-[#bec9bf]/40"
                   )}
                 >
                   {weight} kg
@@ -982,13 +982,13 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
           </Card>
 
           {/* Item Value */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-            <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block flex items-center gap-2">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+            <label className="text-xs text-[#6f7a71] uppercase tracking-wider mb-2 block flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
               Item Value (for insurance)
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50">UGX</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6f7a71]">UGX</span>
               <input
                 type="number"
                 value={itemDetails.value}
@@ -996,17 +996,17 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                   setItemDetails(prev => ({ ...prev, value: parseInt(e.target.value) || 0 }));
                   updateFare();
                 }}
-                className="w-full p-3 pl-16 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
+                className="w-full p-3 pl-16 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
               />
             </div>
-            <p className="text-xs text-white/40 mt-2 flex items-center gap-1">
+            <p className="text-xs text-[#bec9bf] mt-2 flex items-center gap-1">
               <Info className="h-3 w-3" />
               Insurance fee: {PRICING.INSURANCE_RATE * 100}% of value (min UGX {PRICING.MIN_INSURANCE_FEE})
             </p>
           </Card>
 
           {/* Fragile Toggle */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
             <button
               onClick={() => setItemDetails(prev => ({ ...prev, isFragile: !prev.isFragile }))}
               className="flex items-center justify-between w-full"
@@ -1014,8 +1014,8 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
               <div className="flex items-center gap-3">
                 <AlertTriangle className="h-5 w-5 text-[#F59E0B]" />
                 <div className="text-left">
-                  <p className="font-medium text-white">Fragile Item</p>
-                  <p className="text-xs text-white/50">Handle with extra care</p>
+                  <p className="font-medium text-[#191c1d]">Fragile Item</p>
+                  <p className="text-xs text-[#6f7a71]">Handle with extra care</p>
                 </div>
               </div>
               <div className={cn(
@@ -1031,14 +1031,14 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
           </Card>
 
           {/* Special Instructions */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-            <label className="text-xs text-white/50 uppercase tracking-wider mb-2 block">Special Instructions (Optional)</label>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+            <label className="text-xs text-[#6f7a71] uppercase tracking-wider mb-2 block">Special Instructions (Optional)</label>
             <textarea
               value={itemDetails.specialInstructions}
               onChange={(e) => setItemDetails(prev => ({ ...prev, specialInstructions: e.target.value }))}
               placeholder="Any special handling instructions..."
               rows={2}
-              className="w-full p-3 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#14B8A6]/50 focus:outline-none transition-colors resize-none"
+              className="w-full p-3 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#14B8A6]/50 focus:outline-none transition-colors resize-none"
             />
           </Card>
 
@@ -1049,7 +1049,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-white/60">Estimated Price</p>
+                <p className="text-sm text-[#6f7a71]">Estimated Price</p>
                 <p className="text-2xl font-bold" style={{ color: TEAL_PRIMARY }}>
                   UGX {fare?.total.toLocaleString()}
                 </p>
@@ -1062,7 +1062,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
           <Button 
             onClick={() => setStep('confirmation')}
             disabled={!itemDetails.description || itemDetails.weight <= 0}
-            className="w-full h-14 text-lg font-semibold rounded-xl text-[#0D0D12] disabled:opacity-50"
+            className="w-full h-14 text-lg font-semibold rounded-xl text-white disabled:opacity-50"
             style={{ backgroundColor: TEAL_PRIMARY }}
           >
             Continue
@@ -1078,23 +1078,23 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
   // ============================================
   
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
+    <div className="min-h-screen bg-[#f8f9fa]">
       {/* Header */}
       <div className="px-4 pt-4 pb-6 bg-gradient-to-r from-[#14B8A6]/20 to-transparent">
         <div className="flex items-center gap-3 mb-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10">
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-[#191c1d] hover:bg-[#e7e8e9]">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-white">Smart Courier</h1>
-            <p className="text-white/60 text-sm">Send packages anywhere</p>
+            <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Smart Courier</h1>
+            <p className="text-[#6f7a71] text-sm">Send packages anywhere</p>
           </div>
         </div>
       </div>
 
       {/* Location Inputs */}
       <div className="px-4 -mt-4">
-        <Card className="p-4 bg-[#1A1A24]/90 border-white/5">
+        <Card className="p-4 bg-[#f3f4f5]/90 border-[#bec9bf]/20">
           <div className="space-y-3">
             {/* Pickup */}
             <div className="flex items-center gap-3">
@@ -1110,9 +1110,9 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                   value={pickupInput}
                   onChange={(e) => setPickupInput(e.target.value)}
                   placeholder="Enter pickup location"
-                  className="w-full h-12 px-3 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
+                  className="w-full h-12 px-3 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
                 />
-                <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
+                <MapPin className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#bec9bf]" />
               </div>
             </div>
 
@@ -1134,63 +1134,63 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                   value={dropoffInput}
                   onChange={(e) => setDropoffInput(e.target.value)}
                   placeholder="Enter delivery destination"
-                  className="w-full h-12 px-3 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
+                  className="w-full h-12 px-3 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
                 />
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#bec9bf]" />
               </div>
             </div>
           </div>
         </Card>
 
         {/* Sender Information */}
-        <Card className="mt-4 p-4 bg-[#1A1A24]/80 border-white/5">
-          <h3 className="text-xs text-white/50 uppercase tracking-wider mb-3">Sender Information</h3>
+        <Card className="mt-4 p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+          <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xs text-[#6f7a71] uppercase tracking-wider mb-3 ">Sender Information</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-white/40 mb-1 block">Name</label>
+              <label className="text-xs text-[#bec9bf] mb-1 block">Name</label>
               <input
                 type="text"
                 value={senderName}
                 onChange={(e) => setSenderName(e.target.value)}
                 placeholder="Your name"
-                className="w-full p-3 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
+                className="w-full p-3 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
               />
             </div>
             <div>
-              <label className="text-xs text-white/40 mb-1 block">Phone</label>
+              <label className="text-xs text-[#bec9bf] mb-1 block">Phone</label>
               <input
                 type="tel"
                 value={senderPhone}
                 onChange={(e) => setSenderPhone(e.target.value)}
                 placeholder="Your phone"
-                className="w-full p-3 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
+                className="w-full p-3 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
               />
             </div>
           </div>
         </Card>
 
         {/* Receiver Information */}
-        <Card className="mt-4 p-4 bg-[#1A1A24]/80 border-white/5">
-          <h3 className="text-xs text-white/50 uppercase tracking-wider mb-3">Receiver Information</h3>
+        <Card className="mt-4 p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+          <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xs text-[#6f7a71] uppercase tracking-wider mb-3 ">Receiver Information</h3>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs text-white/40 mb-1 block">Name</label>
+              <label className="text-xs text-[#bec9bf] mb-1 block">Name</label>
               <input
                 type="text"
                 value={receiverName}
                 onChange={(e) => setReceiverName(e.target.value)}
                 placeholder="Receiver name"
-                className="w-full p-3 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
+                className="w-full p-3 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
               />
             </div>
             <div>
-              <label className="text-xs text-white/40 mb-1 block">Phone</label>
+              <label className="text-xs text-[#bec9bf] mb-1 block">Phone</label>
               <input
                 type="tel"
                 value={receiverPhone}
                 onChange={(e) => setReceiverPhone(e.target.value)}
                 placeholder="Receiver phone"
-                className="w-full p-3 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
+                className="w-full p-3 bg-[#edeeef] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#14B8A6]/50 focus:outline-none transition-colors"
               />
             </div>
           </div>
@@ -1201,8 +1201,8 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
           <div className="flex items-start gap-3">
             <Package className="h-5 w-5 flex-shrink-0" style={{ color: TEAL_PRIMARY }} />
             <div>
-              <p className="font-medium text-white text-sm">Item Delivery</p>
-              <p className="text-xs text-white/50 mt-1">
+              <p className="font-medium text-[#191c1d] text-sm">Item Delivery</p>
+              <p className="text-xs text-[#6f7a71] mt-1">
                 Send packages anywhere in Kampala. Pricing based on distance and weight.
               </p>
             </div>
@@ -1213,7 +1213,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
         <Button 
           onClick={handleCalculateRoute}
           disabled={!pickupInput || !dropoffInput || calculating}
-          className="w-full h-14 text-lg font-semibold rounded-xl mt-6 text-[#0D0D12] disabled:opacity-50"
+          className="w-full h-14 text-lg font-semibold rounded-xl mt-6 text-white disabled:opacity-50"
           style={{ backgroundColor: TEAL_PRIMARY }}
         >
           {calculating ? (

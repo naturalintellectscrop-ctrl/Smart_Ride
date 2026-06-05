@@ -30,27 +30,27 @@ const iconMap: Record<string, React.ReactNode> = {
 
 const colorConfig: Record<string, { bg: string; border: string; text: string; gradient: string }> = {
   emerald: {
-    bg: 'bg-emerald-500/15',
-    border: 'border-emerald-500/30',
-    text: 'text-emerald-400',
-    gradient: 'from-emerald-500 to-teal-600',
+    bg: 'bg-[#98f6be]/20',
+    border: 'border-[#005f3a]/30',
+    text: 'text-[#005f3a]',
+    gradient: 'from-[#005f3a] to-[#0e7a4d]',
   },
   orange: {
-    bg: 'bg-orange-500/15',
+    bg: 'bg-orange-500/10',
     border: 'border-orange-500/30',
-    text: 'text-orange-400',
+    text: 'text-orange-600',
     gradient: 'from-orange-500 to-red-500',
   },
   blue: {
-    bg: 'bg-blue-500/15',
+    bg: 'bg-blue-500/10',
     border: 'border-blue-500/30',
-    text: 'text-blue-400',
+    text: 'text-blue-600',
     gradient: 'from-blue-500 to-indigo-600',
   },
   rose: {
-    bg: 'bg-rose-500/15',
+    bg: 'bg-rose-500/10',
     border: 'border-rose-500/30',
-    text: 'text-rose-400',
+    text: 'text-rose-600',
     gradient: 'from-rose-500 to-pink-600',
   },
 };
@@ -67,18 +67,18 @@ export function RoleSelectionScreen({ onBack, onRoleSelect, currentRole }: RoleS
   const mobileRoles = MOBILE_APP_CONFIG.availableRoles;
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#f8f9fa] max-w-md mx-auto">
       {/* Header */}
-      <div className="px-4 py-4 flex items-center border-b border-white/5">
+      <div className="px-4 py-4 flex items-center border-b border-[#bec9bf]/30 bg-white">
         <Button 
           variant="ghost" 
           size="icon"
           onClick={onBack}
-          className="mr-2 text-gray-400 hover:text-white hover:bg-white/5"
+          className="mr-2 text-[#6f7a71] hover:text-[#191c1d] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-lg font-semibold text-white">
+        <h1 className="text-lg font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">
           {currentRole ? 'Switch Role' : 'Choose Your Role'}
         </h1>
       </div>
@@ -86,10 +86,10 @@ export function RoleSelectionScreen({ onBack, onRoleSelect, currentRole }: RoleS
       {/* Content */}
       <div className="px-6 pt-8">
         <div className="text-center mb-8">
-          <h2 className="text-xl font-bold text-white mb-2">
+          <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">
             {currentRole ? 'What would you like to do?' : 'How would you like to use Smart Ride?'}
           </h2>
-          <p className="text-gray-400 text-sm">
+          <p className="text-[#3f4941] text-sm">
             {currentRole 
               ? 'You can switch between roles anytime from your profile.'
               : 'Select how you want to use the app. You can change this later.'}
@@ -107,10 +107,10 @@ export function RoleSelectionScreen({ onBack, onRoleSelect, currentRole }: RoleS
               <Card 
                 key={role.id}
                 className={cn(
-                  "cursor-pointer transition-all border-2 bg-[#13131A]",
+                  "cursor-pointer transition-all border-2 bg-white shadow-sm",
                   isSelected 
                     ? `${colors.border} ${colors.bg}` 
-                    : 'border-white/5 hover:border-white/10'
+                    : 'border-[#bec9bf]/30 hover:border-[#005f3a]/20'
                 )}
                 onClick={() => onRoleSelect(role.id as UserRole)}
               >
@@ -121,14 +121,14 @@ export function RoleSelectionScreen({ onBack, onRoleSelect, currentRole }: RoleS
                         "w-14 h-14 rounded-xl flex items-center justify-center text-white bg-gradient-to-br",
                         colors.gradient
                       )}
-                      style={{ boxShadow: `0 4px 20px rgba(0, 255, 136, ${isSelected ? 0.3 : 0.1})` }}
+                      style={{ boxShadow: `0 4px 20px rgba(0, 95, 58, ${isSelected ? 0.15 : 0.05})` }}
                     >
                       {IconComponent}
                     </div>
                     
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-semibold text-white text-base">
+                        <h3 className="font-semibold text-[#191c1d] text-base">
                           {role.title}
                         </h3>
                         {isSelected && (
@@ -140,10 +140,10 @@ export function RoleSelectionScreen({ onBack, onRoleSelect, currentRole }: RoleS
                           </div>
                         )}
                       </div>
-                      <p className="text-sm text-gray-500 mb-1">
+                      <p className="text-sm text-[#6f7a71] mb-1">
                         {role.subtitle}
                       </p>
-                      <p className="text-sm text-gray-400">
+                      <p className="text-sm text-[#3f4941]">
                         {role.description}
                       </p>
                     </div>
@@ -155,10 +155,10 @@ export function RoleSelectionScreen({ onBack, onRoleSelect, currentRole }: RoleS
         </div>
 
         {/* Info Card */}
-        <Card className="mt-6 border-0 bg-[#13131A]">
+        <Card className="mt-6 border border-[#bec9bf]/30 bg-white shadow-sm">
           <CardContent className="p-4">
-            <p className="text-sm text-gray-400 text-center">
-              <span className="font-medium text-white">Note:</span> As a rider or merchant, 
+            <p className="text-sm text-[#3f4941] text-center">
+              <span className="font-medium text-[#191c1d]">Note:</span> As a rider or merchant, 
               additional verification may be required before you can start earning.
             </p>
           </CardContent>

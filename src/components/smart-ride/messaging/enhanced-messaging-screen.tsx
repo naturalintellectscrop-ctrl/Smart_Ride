@@ -66,7 +66,7 @@ const getTypeColor = (type: ConversationType) => {
     case 'rider': return { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30' };
     case 'merchant': return { bg: 'bg-purple-500/15', text: 'text-purple-400', border: 'border-purple-500/30' };
     case 'safety': return { bg: 'bg-rose-500/15', text: 'text-rose-400', border: 'border-rose-500/30' };
-    case 'support': return { bg: 'bg-[#00FF88]/15', text: 'text-[#00FF88]', border: 'border-[#00FF88]/30' };
+    case 'support': return { bg: 'bg-[#005f3a]/15', text: 'text-[#005f3a]', border: 'border-[#005f3a]/30' };
   }
 };
 
@@ -123,14 +123,14 @@ function MiniMap({ pickup, dropoff, riderLocation, taskStatus }: MiniMapProps) {
   const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
   
   return (
-    <div className="relative w-full h-40 bg-[#1A1A24] rounded-xl overflow-hidden">
+    <div className="relative w-full h-40 bg-[#f3f4f5] rounded-xl overflow-hidden">
       {/* Map Background */}
       <div 
         className="absolute inset-0 bg-cover bg-center opacity-70"
         style={{
           backgroundImage: mapboxToken 
             ? `url(https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/32.5826,0.3476,12,0/400x200?access_token=${mapboxToken})`
-            : 'linear-gradient(135deg, #1A1A24 0%, #2A2A34 100%)'
+            : 'linear-gradient(135deg, #f3f4f5 0%, #edeeef 100%)'
         }}
       />
       
@@ -138,7 +138,7 @@ function MiniMap({ pickup, dropoff, riderLocation, taskStatus }: MiniMapProps) {
       <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 200">
         <defs>
           <linearGradient id="routeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#00FF88" />
+            <stop offset="0%" stopColor="#005f3a" />
             <stop offset="100%" stopColor="#FF6B35" />
           </linearGradient>
         </defs>
@@ -156,7 +156,7 @@ function MiniMap({ pickup, dropoff, riderLocation, taskStatus }: MiniMapProps) {
       {pickup && (
         <div className="absolute bottom-6 left-16 transform -translate-x-1/2">
           <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/30">
-            <MapPin className="h-4 w-4 text-white" />
+            <MapPin className="h-4 w-4 text-[#191c1d]" />
           </div>
           <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
             <span className="text-[10px] text-white bg-black/50 px-2 py-0.5 rounded-full">Pickup</span>
@@ -168,7 +168,7 @@ function MiniMap({ pickup, dropoff, riderLocation, taskStatus }: MiniMapProps) {
       {dropoff && (
         <div className="absolute top-10 right-16">
           <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center shadow-lg shadow-orange-500/30">
-            <Navigation className="h-4 w-4 text-white" />
+            <Navigation className="h-4 w-4 text-[#191c1d]" />
           </div>
           <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 whitespace-nowrap">
             <span className="text-[10px] text-white bg-black/50 px-2 py-0.5 rounded-full">Dropoff</span>
@@ -180,10 +180,10 @@ function MiniMap({ pickup, dropoff, riderLocation, taskStatus }: MiniMapProps) {
       {riderLocation && taskStatus !== 'COMPLETED' && (
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
           <div className="relative">
-            <div className="w-10 h-10 bg-[#00FF88] rounded-full flex items-center justify-center shadow-lg shadow-[#00FF88]/50 animate-pulse">
-              <Bike className="h-5 w-5 text-[#0D0D12]" />
+            <div className="w-10 h-10 bg-[#005f3a] rounded-full flex items-center justify-center shadow-lg shadow-[#005f3a]/50 animate-pulse">
+              <Bike className="h-5 w-5 text-white" />
             </div>
-            <div className="absolute -inset-2 rounded-full bg-[#00FF88]/20 animate-ping" />
+            <div className="absolute -inset-2 rounded-full bg-[#005f3a]/20 animate-ping" />
           </div>
         </div>
       )}
@@ -196,16 +196,16 @@ function MiniMap({ pickup, dropoff, riderLocation, taskStatus }: MiniMapProps) {
               <div className={cn(
                 "w-2 h-2 rounded-full",
                 taskStatus === 'EN_ROUTE' && "bg-yellow-400 animate-pulse",
-                taskStatus === 'ARRIVED' && "bg-[#00FF88]",
+                taskStatus === 'ARRIVED' && "bg-[#005f3a]",
                 taskStatus === 'IN_PROGRESS' && "bg-blue-400 animate-pulse"
               )} />
-              <span className="text-xs text-white font-medium">
+              <span className="text-xs text-[#191c1d] font-medium">
                 {taskStatus === 'EN_ROUTE' && 'Rider en route'}
                 {taskStatus === 'ARRIVED' && 'Rider arrived'}
                 {taskStatus === 'IN_PROGRESS' && 'In progress'}
               </span>
             </div>
-            <span className="text-xs text-gray-400">Tap to expand</span>
+            <span className="text-xs text-[#6f7a71]">Tap to expand</span>
           </div>
         </div>
       )}
@@ -249,16 +249,16 @@ export function ConversationList({ onSelectConversation, filter = 'all' }: Conve
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] flex flex-col">
+    <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
       {/* Header */}
-      <div className="bg-[#13131A] border-b border-white/5 px-4 py-4 sticky top-0 z-10">
+      <div className="bg-white border-b border-[#bec9bf]/20 px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-xl font-bold text-white">Messages</h1>
-            <p className="text-sm text-gray-400">
+            <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Messages</h1>
+            <p className="text-sm text-[#6f7a71]">
               {totalUnread > 0 ? (
                 <span className="flex items-center gap-1">
-                  <span className="w-2 h-2 bg-[#00FF88] rounded-full animate-pulse" />
+                  <span className="w-2 h-2 bg-[#005f3a] rounded-full animate-pulse" />
                   {totalUnread} unread message{totalUnread !== 1 ? 's' : ''}
                 </span>
               ) : (
@@ -266,19 +266,19 @@ export function ConversationList({ onSelectConversation, filter = 'all' }: Conve
               )}
             </p>
           </div>
-          <div className="w-10 h-10 bg-[#00FF88]/15 rounded-full flex items-center justify-center">
-            <MessageSquare className="h-5 w-5 text-[#00FF88]" />
+          <div className="w-10 h-10 bg-[#005f3a]/15 rounded-full flex items-center justify-center">
+            <MessageSquare className="h-5 w-5 text-[#005f3a]" />
           </div>
         </div>
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#6f7a71]" />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search conversations..."
-            className="pl-10 h-12 bg-[#1A1A24] border-[#1A1A24] text-white placeholder-gray-500 focus:border-[#00FF88]/30 rounded-xl"
+            className="pl-10 h-12 bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d] placeholder-[#6f7a71] focus:border-[#005f3a]/30 rounded-xl"
           />
         </div>
 
@@ -297,8 +297,8 @@ export function ConversationList({ onSelectConversation, filter = 'all' }: Conve
               className={cn(
                 "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
                 activeFilter === tab.id
-                  ? "bg-[#00FF88] text-[#0D0D12]"
-                  : "bg-[#1A1A24] text-gray-400 hover:text-white hover:bg-[#1E1E28]"
+                  ? "bg-[#005f3a] text-white"
+                  : "bg-[#f3f4f5] text-[#6f7a71] hover:text-[#191c1d] hover:bg-[#e7e8e9]"
               )}
             >
               {tab.icon && <tab.icon className="h-4 w-4" />}
@@ -312,11 +312,11 @@ export function ConversationList({ onSelectConversation, filter = 'all' }: Conve
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {filteredConversations.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <div className="w-16 h-16 bg-[#1A1A24] rounded-full flex items-center justify-center mb-4">
-              <MessageSquare className="h-8 w-8 text-gray-500" />
+            <div className="w-16 h-16 bg-[#f3f4f5] rounded-full flex items-center justify-center mb-4">
+              <MessageSquare className="h-8 w-8 text-[#6f7a71]" />
             </div>
-            <h3 className="font-semibold text-white mb-1">No Messages</h3>
-            <p className="text-sm text-gray-400 text-center">
+            <h3 className="font-[family-name:var(--font-plus-jakarta)] font-semibold text-[#191c1d] mb-1 ">No Messages</h3>
+            <p className="text-sm text-[#6f7a71] text-center">
               {searchQuery 
                 ? 'No conversations match your search.'
                 : 'Start chatting during tasks to see messages here.'}
@@ -330,7 +330,7 @@ export function ConversationList({ onSelectConversation, filter = 'all' }: Conve
                 <div
                   key={conversation.id}
                   onClick={() => handleConversationClick(conversation)}
-                  className="bg-[#13131A] border border-white/5 rounded-2xl p-4 cursor-pointer hover:border-[#00FF88]/30 transition-all active:scale-[0.98]"
+                  className="bg-white border border-[#bec9bf]/20 rounded-2xl p-4 cursor-pointer hover:border-[#005f3a]/30 transition-all active:scale-[0.98]"
                 >
                   <div className="flex items-start gap-3">
                     {/* Avatar */}
@@ -354,7 +354,7 @@ export function ConversationList({ onSelectConversation, filter = 'all' }: Conve
                         <div className="flex items-center gap-2">
                           <p className={cn(
                             "font-semibold truncate",
-                            conversation.unreadCount > 0 ? "text-white" : "text-gray-300"
+                            conversation.unreadCount > 0 ? "text-[#191c1d]" : "text-[#3f4941]"
                           )}>
                             {conversation.participantName}
                           </p>
@@ -362,22 +362,22 @@ export function ConversationList({ onSelectConversation, filter = 'all' }: Conve
                             {getTypeLabel(conversation.type)}
                           </Badge>
                         </div>
-                        <span className="text-xs text-gray-500 flex-shrink-0">
+                        <span className="text-xs text-[#6f7a71] flex-shrink-0">
                           {formatTime(conversation.lastMessageTime)}
                         </span>
                       </div>
 
                       <p className={cn(
                         "text-sm truncate",
-                        conversation.unreadCount > 0 ? "text-white font-medium" : "text-gray-400"
+                        conversation.unreadCount > 0 ? "text-[#191c1d] font-medium" : "text-[#6f7a71]"
                       )}>
                         {conversation.lastMessage}
                       </p>
 
                       {conversation.taskId && (
                         <div className="flex items-center gap-1 mt-1">
-                          <Clock className="h-3 w-3 text-[#00FF88]" />
-                          <span className="text-xs text-[#00FF88]">{conversation.taskId}</span>
+                          <Clock className="h-3 w-3 text-[#005f3a]" />
+                          <span className="text-xs text-[#005f3a]">{conversation.taskId}</span>
                         </div>
                       )}
                     </div>
@@ -469,15 +469,15 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
   }, {} as Record<string, typeof conversation.messages>);
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] flex flex-col">
+    <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
       {/* Header */}
-      <div className="bg-[#13131A] border-b border-white/5 px-4 py-3 sticky top-0 z-10">
+      <div className="bg-white border-b border-[#bec9bf]/20 px-4 py-3 sticky top-0 z-10">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors"
+            className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-[#edeeef] transition-colors"
           >
-            <ArrowLeft className="h-5 w-5 text-gray-400" />
+            <ArrowLeft className="h-5 w-5 text-[#6f7a71]" />
           </button>
 
           <div className={cn(
@@ -489,13 +489,13 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-white truncate">{conversation.participantName}</h3>
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] font-semibold text-[#191c1d] truncate ">{conversation.participantName}</h3>
               <Badge className={cn("text-[10px]", colors.bg, colors.text, colors.border)}>
                 {getTypeLabel(conversation.type)}
               </Badge>
             </div>
             {conversation.taskId && (
-              <p className="text-xs text-[#00FF88]">{conversation.taskId}</p>
+              <p className="text-xs text-[#005f3a]">{conversation.taskId}</p>
             )}
           </div>
 
@@ -507,15 +507,15 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
             <Phone className="h-5 w-5 text-emerald-400" />
           </button>
 
-          <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5">
-            <MoreVertical className="h-5 w-5 text-gray-400" />
+          <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#edeeef]">
+            <MoreVertical className="h-5 w-5 text-[#6f7a71]" />
           </button>
         </div>
       </div>
 
       {/* Mini Map for Active Tasks */}
       {showMap && conversation.taskId && (
-        <div className="px-4 py-3 bg-[#13131A] border-b border-white/5">
+        <div className="px-4 py-3 bg-white border-b border-[#bec9bf]/20">
           <MiniMap
             pickup={{ lat: 0.3476, lng: 32.5826, address: 'Pickup location' }}
             dropoff={{ lat: 0.3176, lng: 32.5726, address: 'Dropoff location' }}
@@ -526,8 +526,8 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
       )}
 
       {/* Privacy Banner */}
-      <div className="px-4 py-2 bg-[#00FF88]/5 border-b border-[#00FF88]/10">
-        <div className="flex items-center gap-2 text-xs text-[#00FF88]">
+      <div className="px-4 py-2 bg-[#005f3a]/5 border-b border-[#005f3a]/10">
+        <div className="flex items-center gap-2 text-xs text-[#005f3a]">
           <Shield className="h-3 w-3" />
           <span>End-to-end encrypted • Phone numbers hidden</span>
         </div>
@@ -539,7 +539,7 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
           <React.Fragment key={date}>
             {/* Date Separator */}
             <div className="flex items-center justify-center py-4">
-              <span className="text-xs text-gray-500 bg-[#1A1A24] px-3 py-1 rounded-full">
+              <span className="text-xs text-[#6f7a71] bg-[#f3f4f5] px-3 py-1 rounded-full">
                 {date === new Date().toDateString() ? 'Today' : 
                  date === new Date(Date.now() - 86400000).toDateString() ? 'Yesterday' : 
                  new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
@@ -577,15 +577,15 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
                     className={cn(
                       "max-w-[75%] px-4 py-2.5 rounded-2xl",
                       message.senderType === 'me'
-                        ? "bg-[#00FF88] text-[#0D0D12] rounded-br-md"
-                        : "bg-[#1A1A24] text-white rounded-bl-md border border-white/5",
+                        ? "bg-[#005f3a] text-white rounded-br-md"
+                        : "bg-[#f3f4f5] text-[#191c1d] rounded-bl-md border border-[#bec9bf]/20",
                       message.type === 'system' && "bg-blue-500/10 text-blue-300 border border-blue-500/20 text-center text-sm"
                     )}
                   >
                     <p className="text-sm leading-relaxed">{message.content}</p>
                     <div className={cn(
                       "flex items-center justify-end gap-1 mt-1",
-                      message.senderType === 'me' ? "text-[#0D0D12]/50" : "text-gray-500"
+                      message.senderType === 'me' ? "text-[#6f7a71]" : "text-[#6f7a71]"
                     )}>
                       <span className="text-[10px]">{formatMessageTime(message.timestamp)}</span>
                       {message.senderType === 'me' && (
@@ -607,7 +607,7 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
             <div className={cn("w-8 h-8 rounded-full flex items-center justify-center", colors.bg)}>
               {getTypeIcon(conversation.type)}
             </div>
-            <div className="bg-[#1A1A24] border border-white/5 rounded-2xl rounded-bl-md px-4 py-3">
+            <div className="bg-[#f3f4f5] border border-[#bec9bf]/20 rounded-2xl rounded-bl-md px-4 py-3">
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -621,13 +621,13 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
       </div>
 
       {/* Quick Replies */}
-      <div className="px-4 py-2 border-t border-white/5 bg-[#13131A]">
+      <div className="px-4 py-2 border-t border-[#bec9bf]/20 bg-white">
         <div className="flex gap-2 overflow-x-auto scrollbar-hide -mx-4 px-4">
           {quickReplies.slice(0, 6).map((reply) => (
             <button
               key={reply.id}
               onClick={() => handleQuickReply(reply.text)}
-              className="flex-shrink-0 px-4 py-2 bg-[#1A1A24] border border-white/5 rounded-full text-sm text-gray-300 hover:bg-[#1E1E28] hover:border-[#00FF88]/30 transition-all"
+              className="flex-shrink-0 px-4 py-2 bg-[#f3f4f5] border border-[#bec9bf]/20 rounded-full text-sm text-[#3f4941] hover:bg-[#e7e8e9] hover:border-[#005f3a]/30 transition-all"
             >
               {reply.text}
             </button>
@@ -636,11 +636,11 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
       </div>
 
       {/* Input Area */}
-      <div className="bg-[#13131A] border-t border-white/5 px-4 py-3">
+      <div className="bg-white border-t border-[#bec9bf]/20 px-4 py-3">
         <div className="flex items-center gap-2">
           {/* Attachment buttons */}
-          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-[#1A1A24] hover:bg-[#1E1E28] transition-colors">
-            <Paperclip className="h-5 w-5 text-gray-400" />
+          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-[#f3f4f5] hover:bg-[#e7e8e9] transition-colors">
+            <Paperclip className="h-5 w-5 text-[#6f7a71]" />
           </button>
 
           {/* Text Input */}
@@ -651,10 +651,10 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
               onChange={(e) => setMessageInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Type a message..."
-              className="w-full h-12 pr-10 bg-[#1A1A24] border-[#1A1A24] text-white placeholder-gray-500 focus:border-[#00FF88]/30 rounded-xl"
+              className="w-full h-12 pr-10 bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d] placeholder-[#6f7a71] focus:border-[#005f3a]/30 rounded-xl"
             />
             <button className="absolute right-3 top-1/2 -translate-y-1/2">
-              <Smile className="h-5 w-5 text-gray-400" />
+              <Smile className="h-5 w-5 text-[#6f7a71]" />
             </button>
           </div>
 
@@ -665,8 +665,8 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType, showMa
             className={cn(
               "w-12 h-12 rounded-full flex items-center justify-center transition-all",
               messageInput.trim()
-                ? "bg-[#00FF88] text-[#0D0D12] hover:bg-[#00CC6E]"
-                : "bg-[#1A1A24] text-gray-500"
+                ? "bg-[#005f3a] text-white hover:bg-[#0e7a4d]"
+                : "bg-[#f3f4f5] text-[#6f7a71]"
             )}
           >
             <Send className="h-5 w-5" />
@@ -747,10 +747,10 @@ function CallModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-[#0D0D12] to-[#1A1A24] z-50 flex flex-col max-w-md mx-auto">
+    <div className="fixed inset-0 bg-gradient-to-b from-[#f8f9fa] to-[#edeeef] z-50 flex flex-col max-w-md mx-auto">
       {/* Privacy Header */}
       <div className="px-4 py-3 text-center">
-        <div className="inline-flex items-center gap-2 text-xs text-[#00FF88] bg-[#00FF88]/10 px-3 py-1 rounded-full">
+        <div className="inline-flex items-center gap-2 text-xs text-[#005f3a] bg-[#005f3a]/10 px-3 py-1 rounded-full">
           <Shield className="h-3 w-3" />
           <span>Secure Call • Numbers Hidden</span>
         </div>
@@ -765,24 +765,24 @@ function CallModal({
         )}>
           {getTypeIcon(recipientType)}
           {callState === 'connected' && (
-            <div className="absolute inset-0 rounded-full border-4 border-[#00FF88] animate-pulse" />
+            <div className="absolute inset-0 rounded-full border-4 border-[#005f3a] animate-pulse" />
           )}
         </div>
 
         {/* Name and Status */}
-        <h2 className="text-2xl font-bold text-white mb-2">{recipientName}</h2>
-        <p className="text-gray-400 capitalize mb-2">{getTypeLabel(recipientType)}</p>
+        <h2 className="text-2xl font-bold text-[#191c1d] mb-2 ">{recipientName}</h2>
+        <p className="text-[#6f7a71] capitalize mb-2">{getTypeLabel(recipientType)}</p>
 
         {/* Call Status */}
         <div className="text-center">
           {callState === 'calling' && (
-            <div className="flex items-center gap-2 text-[#00FF88]">
-              <div className="w-2 h-2 bg-[#00FF88] rounded-full animate-pulse" />
+            <div className="flex items-center gap-2 text-[#005f3a]">
+              <div className="w-2 h-2 bg-[#005f3a] rounded-full animate-pulse" />
               <span>Calling...</span>
             </div>
           )}
           {callState === 'connected' && (
-            <div className="text-white text-xl font-mono">
+            <div className="text-[#191c1d] text-xl font-mono">
               {formatDuration(callDuration)}
             </div>
           )}
@@ -800,13 +800,13 @@ function CallModal({
             onClick={() => setIsMuted(!isMuted)}
             className={cn(
               "w-14 h-14 rounded-full flex items-center justify-center transition-colors",
-              isMuted ? "bg-red-500/20" : "bg-[#1A1A24]"
+              isMuted ? "bg-red-500/20" : "bg-[#f3f4f5]"
             )}
           >
             {isMuted ? (
               <MicOff className="h-6 w-6 text-red-400" />
             ) : (
-              <Mic className="h-6 w-6 text-white" />
+              <Mic className="h-6 w-6 text-[#191c1d]" />
             )}
           </button>
 
@@ -815,7 +815,7 @@ function CallModal({
             onClick={handleEndCall}
             className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center"
           >
-            <PhoneOff className="h-7 w-7 text-white" />
+            <PhoneOff className="h-7 w-7 text-[#191c1d]" />
           </button>
 
           {/* Speaker */}
@@ -823,10 +823,10 @@ function CallModal({
             onClick={() => setIsSpeakerOn(!isSpeakerOn)}
             className={cn(
               "w-14 h-14 rounded-full flex items-center justify-center transition-colors",
-              isSpeakerOn ? "bg-[#00FF88]/20" : "bg-[#1A1A24]"
+              isSpeakerOn ? "bg-[#005f3a]/20" : "bg-[#f3f4f5]"
             )}
           >
-            <Volume2 className={cn("h-6 w-6", isSpeakerOn ? "text-[#00FF88]" : "text-white")} />
+            <Volume2 className={cn("h-6 w-6", isSpeakerOn ? "text-[#005f3a]" : "text-[#191c1d]")} />
           </button>
         </div>
       </div>

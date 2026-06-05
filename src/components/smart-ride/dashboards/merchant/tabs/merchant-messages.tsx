@@ -130,14 +130,14 @@ export function MerchantMessages() {
   const hasMessages = chats.length > 0 || notifications.length > 0;
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] pb-4">
+    <div className="min-h-screen bg-[#f8f9fa] pb-4">
       {/* Header */}
-      <div className="bg-[#13131A] px-4 py-4 border-b border-white/5 sticky top-6 z-40">
-        <h1 className="text-xl font-bold text-white">Messages</h1>
+      <div className="bg-white px-4 py-4 border-b border-[#bec9bf]/30 sticky top-6 z-40">
+        <h1 className="text-xl font-bold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">Messages</h1>
       </div>
 
       {/* Filter Tabs */}
-      <div className="bg-[#13131A] px-4 py-3 border-b border-white/5 overflow-x-auto">
+      <div className="bg-white px-4 py-3 border-b border-[#bec9bf]/30 overflow-x-auto">
         <div className="flex gap-2 min-w-max">
           <button
             onClick={() => setActiveFilter('all')}
@@ -145,7 +145,7 @@ export function MerchantMessages() {
               "px-4 py-2 rounded-full text-sm font-medium transition-all",
               activeFilter === 'all'
                 ? "bg-orange-500 text-white"
-                : "bg-white/5 text-gray-400 hover:bg-white/10"
+                : "bg-[#f3f4f5] text-gray-400 hover:bg-[#f3f4f5]"
             )}
           >
             All
@@ -156,7 +156,7 @@ export function MerchantMessages() {
               "px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2",
               activeFilter === 'clients'
                 ? "bg-orange-500 text-white"
-                : "bg-white/5 text-gray-400 hover:bg-white/10"
+                : "bg-[#f3f4f5] text-gray-400 hover:bg-[#f3f4f5]"
             )}
           >
             <User className="h-4 w-4" />
@@ -168,7 +168,7 @@ export function MerchantMessages() {
               "px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2",
               activeFilter === 'riders'
                 ? "bg-orange-500 text-white"
-                : "bg-white/5 text-gray-400 hover:bg-white/10"
+                : "bg-[#f3f4f5] text-gray-400 hover:bg-[#f3f4f5]"
             )}
           >
             <Package className="h-4 w-4" />
@@ -180,7 +180,7 @@ export function MerchantMessages() {
               "px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2",
               activeFilter === 'system'
                 ? "bg-orange-500 text-white"
-                : "bg-white/5 text-gray-400 hover:bg-white/10"
+                : "bg-[#f3f4f5] text-gray-400 hover:bg-[#f3f4f5]"
             )}
           >
             <Bell className="h-4 w-4" />
@@ -193,10 +193,10 @@ export function MerchantMessages() {
       <div className="px-4 pt-4">
         {!hasMessages ? (
           <div className="flex flex-col items-center justify-center py-16">
-            <div className="w-20 h-20 bg-[#1A1A24] rounded-full flex items-center justify-center mb-4">
+            <div className="w-20 h-20 bg-[#f3f4f5] rounded-full flex items-center justify-center mb-4">
               <MessageSquare className="h-10 w-10 text-gray-500" />
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">No messages</h3>
+            <h3 className="text-lg font-semibold text-[#191c1d] mb-2">No messages</h3>
             <p className="text-gray-400 text-center text-sm">
               Your conversations will appear here
             </p>
@@ -213,7 +213,7 @@ export function MerchantMessages() {
                   {filterChats().map((chat) => (
                     <Card 
                       key={chat.id} 
-                      className="p-4 bg-[#13131A] border-white/5 hover:border-orange-500/30 transition-all cursor-pointer"
+                      className="p-4 bg-white border-[#bec9bf]/30 hover:border-orange-500/30 transition-all cursor-pointer"
                       onClick={() => handleChatClick(chat.id)}
                     >
                       <div className="flex items-center gap-3">
@@ -226,14 +226,14 @@ export function MerchantMessages() {
                         </Avatar>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <h3 className="font-medium text-white">{chat.name}</h3>
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <h3 className="font-medium text-[#191c1d]">{chat.name}</h3>
+                            <span className="text-xs text-[#6f7a71] flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               {chat.timestamp}
                             </span>
                           </div>
                           <div className="flex items-center justify-between mt-1">
-                            <p className="text-sm text-gray-400 truncate pr-2">{chat.lastMessage}</p>
+                            <p className="text-sm text-[#3f4941] truncate pr-2">{chat.lastMessage}</p>
                             {chat.unread > 0 && (
                               <span className="bg-orange-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                                 {chat.unread}
@@ -266,7 +266,7 @@ export function MerchantMessages() {
                     <Card 
                       key={notification.id} 
                       className={cn(
-                        "p-4 bg-[#13131A] border-white/5 hover:border-orange-500/30 transition-all cursor-pointer",
+                        "p-4 bg-white border-[#bec9bf]/30 hover:border-orange-500/30 transition-all cursor-pointer",
                         !notification.read && "border-orange-500/30 bg-orange-500/5"
                       )}
                       onClick={() => handleNotificationClick(notification.id)}
@@ -277,13 +277,13 @@ export function MerchantMessages() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between">
-                            <h3 className="font-medium text-white">{notification.title}</h3>
-                            <span className="text-xs text-gray-500 flex items-center gap-1">
+                            <h3 className="font-medium text-[#191c1d]">{notification.title}</h3>
+                            <span className="text-xs text-[#6f7a71] flex items-center gap-1">
                               <Clock className="h-3 w-3" />
                               {notification.timestamp}
                             </span>
                           </div>
-                          <p className="text-sm text-gray-400 mt-1">{notification.message}</p>
+                          <p className="text-sm text-[#3f4941] mt-1">{notification.message}</p>
                         </div>
                       </div>
                     </Card>

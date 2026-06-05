@@ -426,28 +426,28 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
     );
 
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         {/* Header */}
         <div
           className="px-4 pt-4 pb-6"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
         >
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={onBack} className="text-[#191c1d] hover:bg-[#e7e8e9]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
-              <h1 className="text-xl font-bold text-white">Food Delivery</h1>
-              <p className="text-white/60 text-sm">Discover restaurants near you</p>
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Food Delivery</h1>
+              <p className="text-[#6f7a71] text-sm">Discover restaurants near you</p>
             </div>
             <button
               onClick={() => cart.length > 0 && setStep('cart')}
-              className="relative p-2 rounded-xl bg-[#1A1A24]"
+              className="relative p-2 rounded-xl bg-[#f3f4f5]"
             >
-              <ShoppingCart className="h-5 w-5 text-white" />
+              <ShoppingCart className="h-5 w-5 text-[#191c1d]" />
               {cartCount > 0 && (
                 <span
-                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-[#0D0D12]"
+                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white"
                   style={{ backgroundColor: serviceColors.primary }}
                 >
                   {cartCount}
@@ -458,13 +458,13 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
 
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#bec9bf]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search restaurants or cuisines..."
-              className="w-full h-12 pl-10 pr-4 bg-[#1A1A24] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#F97316]/50 focus:outline-none transition-colors"
+              className="w-full h-12 pl-10 pr-4 bg-[#f3f4f5] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#F97316]/50 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -483,8 +483,8 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
         {/* Loading state */}
         {loadingMerchants ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-10 w-10 animate-spin text-white/30 mb-4" />
-            <p className="text-white/50">Loading restaurants...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-[#bec9bf] mb-4" />
+            <p className="text-[#6f7a71]">Loading restaurants...</p>
           </div>
         ) : (
           <>
@@ -493,7 +493,7 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
               {filteredMerchants.map((merchant) => (
                 <Card
                   key={merchant.id}
-                  className="p-4 bg-[#1A1A24]/80 border-white/5 cursor-pointer hover:border-white/10 transition-all"
+                  className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 cursor-pointer hover:border-[#bec9bf]/30 transition-all"
                   onClick={() => handleSelectMerchant(merchant)}
                 >
                   <div className="flex gap-3">
@@ -511,28 +511,28 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
                           }}
                         />
                       ) : (
-                        <Store className="h-6 w-6 text-white/30" />
+                        <Store className="h-6 w-6 text-[#bec9bf]" />
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-semibold text-white truncate">{merchant.name}</h3>
+                        <h3 className="font-[family-name:var(--font-plus-jakarta)] font-semibold text-[#191c1d] truncate ">{merchant.name}</h3>
                         <div className="flex items-center gap-1 text-sm flex-shrink-0">
                           <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                          <span className="text-white font-medium">{merchant.rating.toFixed(1)}</span>
+                          <span className="text-[#191c1d] font-medium">{merchant.rating.toFixed(1)}</span>
                         </div>
                       </div>
-                      <p className="text-sm text-white/50 mt-0.5 truncate">{merchant.description || merchant.address}</p>
+                      <p className="text-sm text-[#6f7a71] mt-0.5 truncate">{merchant.description || merchant.address}</p>
                       <div className="flex items-center gap-3 mt-2 text-xs">
-                        <div className="flex items-center gap-1 text-white/60">
+                        <div className="flex items-center gap-1 text-[#6f7a71]">
                           <Clock className="h-3 w-3" />
                           <span>{merchant.averagePrepTime || 15}-{(merchant.averagePrepTime || 15) + 10} min</span>
                         </div>
-                        <div className="flex items-center gap-1 text-white/60">
+                        <div className="flex items-center gap-1 text-[#6f7a71]">
                           <Bike className="h-3 w-3" />
                           <span>UGX {merchant.deliveryFee.toLocaleString()}</span>
                         </div>
-                        <div className="flex items-center gap-1 text-white/60">
+                        <div className="flex items-center gap-1 text-[#6f7a71]">
                           <MapPin className="h-3 w-3" />
                           <span className="truncate">{merchant.address}</span>
                         </div>
@@ -544,9 +544,9 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
 
               {filteredMerchants.length === 0 && !loadingMerchants && (
                 <div className="text-center py-12">
-                  <Store className="h-12 w-12 mx-auto text-white/20 mb-3" />
-                  <p className="text-white/50">No restaurants found</p>
-                  <p className="text-white/30 text-sm mt-1">
+                  <Store className="h-12 w-12 mx-auto text-[#bec9bf] mb-3" />
+                  <p className="text-[#6f7a71]">No restaurants found</p>
+                  <p className="text-[#bec9bf] text-sm mt-1">
                     {merchants.length === 0
                       ? 'No restaurants are currently available'
                       : 'Try a different search term'}
@@ -572,28 +572,28 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
       : menuItems.filter(i => i.category === selectedCategory && i.isAvailable);
 
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-24">
+      <div className="min-h-screen bg-[#f8f9fa] pb-24">
         {/* Header */}
         <div
           className="px-4 pt-4 pb-6"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
         >
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => { setStep('merchants'); setMenuItems([]); }} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={() => { setStep('merchants'); setMenuItems([]); }} className="text-[#191c1d] hover:bg-[#e7e8e9]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div className="flex-1">
-              <h1 className="text-xl font-bold text-white">{selectedMerchant.name}</h1>
-              <p className="text-white/60 text-sm">{selectedMerchant.address}</p>
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">{selectedMerchant.name}</h1>
+              <p className="text-[#6f7a71] text-sm">{selectedMerchant.address}</p>
             </div>
             <button
               onClick={() => cart.length > 0 && setStep('cart')}
-              className="relative p-2 rounded-xl bg-[#1A1A24]"
+              className="relative p-2 rounded-xl bg-[#f3f4f5]"
             >
-              <ShoppingCart className="h-5 w-5 text-white" />
+              <ShoppingCart className="h-5 w-5 text-[#191c1d]" />
               {cartCount > 0 && (
                 <span
-                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-[#0D0D12]"
+                  className="absolute -top-1 -right-1 w-5 h-5 rounded-full text-xs font-bold flex items-center justify-center text-white"
                   style={{ backgroundColor: serviceColors.primary }}
                 >
                   {cartCount}
@@ -606,14 +606,14 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
           <div className="flex items-center gap-4 text-sm">
             <div className="flex items-center gap-1">
               <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-              <span className="text-white font-medium">{selectedMerchant.rating.toFixed(1)}</span>
-              <span className="text-white/40">({selectedMerchant.totalOrders})</span>
+              <span className="text-[#191c1d] font-medium">{selectedMerchant.rating.toFixed(1)}</span>
+              <span className="text-[#bec9bf]">({selectedMerchant.totalOrders})</span>
             </div>
-            <div className="flex items-center gap-1 text-white/60">
+            <div className="flex items-center gap-1 text-[#6f7a71]">
               <Clock className="h-4 w-4" />
               <span>{selectedMerchant.averagePrepTime || 15}-{(selectedMerchant.averagePrepTime || 15) + 10} min</span>
             </div>
-            <div className="flex items-center gap-1 text-white/60">
+            <div className="flex items-center gap-1 text-[#6f7a71]">
               <Bike className="h-4 w-4" />
               <span>UGX {selectedMerchant.deliveryFee.toLocaleString()}</span>
             </div>
@@ -633,21 +633,21 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
         {/* Loading state */}
         {loadingMenu ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className="h-10 w-10 animate-spin text-white/30 mb-4" />
-            <p className="text-white/50">Loading menu...</p>
+            <Loader2 className="h-10 w-10 animate-spin text-[#bec9bf] mb-4" />
+            <p className="text-[#6f7a71]">Loading menu...</p>
           </div>
         ) : (
           <>
             {/* Categories */}
             {menuCategories.length > 0 && (
-              <div className="px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide sticky top-0 bg-[#0D0D12] z-10">
+              <div className="px-4 py-2 flex gap-2 overflow-x-auto scrollbar-hide sticky top-0 bg-[#f8f9fa] z-10">
                 <button
                   onClick={() => setSelectedCategory('all')}
                   className={cn(
                     "px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all",
                     selectedCategory === 'all'
-                      ? "text-[#0D0D12]"
-                      : "bg-[#1A1A24] text-white/70 hover:text-white"
+                      ? "text-white"
+                      : "bg-[#f3f4f5] text-[#3f4941] hover:text-[#191c1d]"
                   )}
                   style={selectedCategory === 'all' ? { backgroundColor: serviceColors.primary } : undefined}
                 >
@@ -660,8 +660,8 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
                     className={cn(
                       "px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all",
                       selectedCategory === cat
-                        ? "text-[#0D0D12]"
-                        : "bg-[#1A1A24] text-white/70 hover:text-white"
+                        ? "text-white"
+                        : "bg-[#f3f4f5] text-[#3f4941] hover:text-[#191c1d]"
                     )}
                     style={selectedCategory === cat ? { backgroundColor: serviceColors.primary } : undefined}
                   >
@@ -678,7 +678,7 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
                 return (
                   <Card
                     key={item.id}
-                    className="p-4 bg-[#1A1A24]/80 border-white/5"
+                    className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20"
                   >
                     <div className="flex gap-3">
                       <div
@@ -695,14 +695,14 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
                             }}
                           />
                         ) : (
-                          <Utensils className="h-5 w-5 text-white/20" />
+                          <Utensils className="h-5 w-5 text-[#bec9bf]" />
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div>
-                          <h3 className="font-semibold text-white">{item.name}</h3>
+                          <h3 className="font-[family-name:var(--font-plus-jakarta)] font-semibold text-[#191c1d] ">{item.name}</h3>
                           {item.description && (
-                            <p className="text-sm text-white/50 mt-0.5 line-clamp-2">{item.description}</p>
+                            <p className="text-sm text-[#6f7a71] mt-0.5 line-clamp-2">{item.description}</p>
                           )}
                         </div>
                         <div className="flex items-center justify-between mt-2">
@@ -713,17 +713,17 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
                             {quantity > 0 && (
                               <button
                                 onClick={() => removeFromCart(item)}
-                                className="w-8 h-8 rounded-lg bg-[#252530] flex items-center justify-center text-white hover:bg-[#303040] transition-colors"
+                                className="w-8 h-8 rounded-lg bg-[#edeeef] flex items-center justify-center text-[#191c1d] hover:bg-[#e7e8e9] transition-colors"
                               >
                                 <Minus className="h-4 w-4" />
                               </button>
                             )}
                             {quantity > 0 && (
-                              <span className="w-6 text-center text-white font-medium">{quantity}</span>
+                              <span className="w-6 text-center text-[#191c1d] font-medium">{quantity}</span>
                             )}
                             <button
                               onClick={() => addToCart(item)}
-                              className="w-8 h-8 rounded-lg flex items-center justify-center text-white transition-colors"
+                              className="w-8 h-8 rounded-lg flex items-center justify-center text-[#191c1d] transition-colors"
                               style={{ backgroundColor: serviceColors.primary }}
                             >
                               <Plus className="h-4 w-4" />
@@ -738,8 +738,8 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
 
               {filteredItems.length === 0 && !loadingMenu && (
                 <div className="text-center py-12">
-                  <Utensils className="h-12 w-12 mx-auto text-white/20 mb-3" />
-                  <p className="text-white/50">No items in this category</p>
+                  <Utensils className="h-12 w-12 mx-auto text-[#bec9bf] mb-3" />
+                  <p className="text-[#6f7a71]">No items in this category</p>
                 </div>
               )}
             </div>
@@ -751,7 +751,7 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
           <div className="fixed bottom-4 left-4 right-4 z-20">
             <button
               onClick={() => setStep('cart')}
-              className="w-full h-14 rounded-xl flex items-center justify-between px-4 text-white font-semibold"
+              className="w-full h-14 rounded-xl flex items-center justify-between px-4 text-[#191c1d] font-semibold"
               style={{ backgroundColor: serviceColors.primary, boxShadow: `0 0 20px ${serviceColors.glow}` }}
             >
               <div className="flex items-center gap-2">
@@ -779,19 +779,19 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
     const total = subtotal + deliveryFee + serviceFee;
 
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-32">
+      <div className="min-h-screen bg-[#f8f9fa] pb-32">
         {/* Header */}
         <div
           className="px-4 pt-4 pb-6"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
         >
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={() => setStep('menu')} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={() => setStep('menu')} className="text-[#191c1d] hover:bg-[#e7e8e9]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Your Cart</h1>
-              <p className="text-white/60 text-sm">{selectedMerchant.name}</p>
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Your Cart</h1>
+              <p className="text-[#6f7a71] text-sm">{selectedMerchant.name}</p>
             </div>
           </div>
         </div>
@@ -812,7 +812,7 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
           {cart.map((item) => (
             <Card
               key={item.menuItem.id}
-              className="p-4 bg-[#1A1A24]/80 border-white/5"
+              className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20"
             >
               <div className="flex gap-3">
                 <div
@@ -822,11 +822,11 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
                   {item.menuItem.image ? (
                     <img src={item.menuItem.image} alt={item.menuItem.name} className="w-full h-full object-cover" />
                   ) : (
-                    <Utensils className="h-4 w-4 text-white/20" />
+                    <Utensils className="h-4 w-4 text-[#bec9bf]" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-white">{item.menuItem.name}</h3>
+                  <h3 className="font-[family-name:var(--font-plus-jakarta)] font-medium text-[#191c1d] ">{item.menuItem.name}</h3>
                   <div className="flex items-center justify-between mt-2">
                     <span className="font-medium" style={{ color: serviceColors.primary }}>
                       UGX {(item.menuItem.price * item.quantity).toLocaleString()}
@@ -834,14 +834,14 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => removeFromCart(item.menuItem)}
-                        className="w-8 h-8 rounded-lg bg-[#252530] flex items-center justify-center text-white hover:bg-[#303040] transition-colors"
+                        className="w-8 h-8 rounded-lg bg-[#edeeef] flex items-center justify-center text-[#191c1d] hover:bg-[#e7e8e9] transition-colors"
                       >
                         <Minus className="h-4 w-4" />
                       </button>
-                      <span className="w-6 text-center text-white font-medium">{item.quantity}</span>
+                      <span className="w-6 text-center text-[#191c1d] font-medium">{item.quantity}</span>
                       <button
                         onClick={() => addToCart(item.menuItem)}
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white transition-colors"
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-[#191c1d] transition-colors"
                         style={{ backgroundColor: serviceColors.primary }}
                       >
                         <Plus className="h-4 w-4" />
@@ -855,8 +855,8 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
 
           {cart.length === 0 && (
             <div className="text-center py-12">
-              <ShoppingCart className="h-12 w-12 mx-auto text-white/20 mb-3" />
-              <p className="text-white/50">Your cart is empty</p>
+              <ShoppingCart className="h-12 w-12 mx-auto text-[#bec9bf] mb-3" />
+              <p className="text-[#6f7a71]">Your cart is empty</p>
               <button
                 onClick={() => setStep('menu')}
                 className="mt-4 text-sm font-medium"
@@ -871,22 +871,22 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
         {/* Order Summary */}
         {cart.length > 0 && (
           <div className="px-4 mt-4">
-            <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-              <h3 className="font-semibold text-white mb-3">Order Summary</h3>
+            <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] font-semibold text-[#191c1d] mb-3 ">Order Summary</h3>
               <div className="space-y-2 text-sm">
-                <div className="flex justify-between text-white/60">
+                <div className="flex justify-between text-[#6f7a71]">
                   <span>Subtotal</span>
                   <span>UGX {subtotal.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-white/60">
+                <div className="flex justify-between text-[#6f7a71]">
                   <span>Delivery Fee</span>
                   <span>UGX {deliveryFee.toLocaleString()}</span>
                 </div>
-                <div className="flex justify-between text-white/60">
+                <div className="flex justify-between text-[#6f7a71]">
                   <span>Service Fee</span>
                   <span>UGX {serviceFee.toLocaleString()}</span>
                 </div>
-                <div className="border-t border-white/10 pt-2 flex justify-between text-white font-bold">
+                <div className="border-t border-[#bec9bf]/30 pt-2 flex justify-between text-[#191c1d] font-bold">
                   <span>Total</span>
                   <span>UGX {total.toLocaleString()}</span>
                 </div>
@@ -900,19 +900,19 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
           <div className="px-4 mt-4 space-y-3">
             {/* Delivery Address */}
             <div>
-              <label className="text-white/60 text-sm mb-1 block">Delivery Address</label>
+              <label className="text-[#6f7a71] text-sm mb-1 block">Delivery Address</label>
               <input
                 type="text"
                 value={deliveryAddress}
                 onChange={(e) => setDeliveryAddress(e.target.value)}
                 placeholder="Enter your delivery address..."
-                className="w-full h-12 px-4 bg-[#1A1A24] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#F97316]/50 focus:outline-none"
+                className="w-full h-12 px-4 bg-[#f3f4f5] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#F97316]/50 focus:outline-none"
               />
             </div>
 
             {/* Payment Method */}
             <div>
-              <label className="text-white/60 text-sm mb-2 block">Payment Method</label>
+              <label className="text-[#6f7a71] text-sm mb-2 block">Payment Method</label>
               <div className="flex gap-2">
                 {[
                   { id: 'CASH' as const, label: 'Cash', icon: Wallet },
@@ -925,8 +925,8 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
                     className={cn(
                       "flex-1 py-3 rounded-xl text-sm font-medium flex flex-col items-center gap-1 transition-all",
                       paymentMethod === method.id
-                        ? "text-[#0D0D12] border-transparent"
-                        : "bg-[#1A1A24] text-white/70 border border-white/10 hover:text-white"
+                        ? "text-white border-transparent"
+                        : "bg-[#f3f4f5] text-[#3f4941] border border-[#bec9bf]/30 hover:text-[#191c1d]"
                     )}
                     style={paymentMethod === method.id ? { backgroundColor: serviceColors.primary } : undefined}
                   >
@@ -942,7 +942,7 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
               onClick={placeOrder}
               disabled={placingOrder || !deliveryAddress || cart.length === 0}
               className={cn(
-                "w-full h-14 rounded-xl flex items-center justify-center gap-2 text-white font-semibold transition-all",
+                "w-full h-14 rounded-xl flex items-center justify-center gap-2 text-[#191c1d] font-semibold transition-all",
                 placingOrder || !deliveryAddress ? "opacity-50 cursor-not-allowed" : ""
               )}
               style={{ backgroundColor: serviceColors.primary }}
@@ -985,16 +985,16 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
     const StatusIcon = config.icon;
 
     return (
-      <div className="min-h-screen bg-[#0D0D12] flex flex-col">
+      <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
         {/* Header */}
         <div className="px-4 pt-4 pb-6">
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={onBack} className="text-[#191c1d] hover:bg-[#e7e8e9]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Order Tracking</h1>
-              <p className="text-white/60 text-sm">{currentOrder?.orderNumber}</p>
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] ">Order Tracking</h1>
+              <p className="text-[#6f7a71] text-sm">{currentOrder?.orderNumber}</p>
             </div>
           </div>
         </div>
@@ -1010,40 +1010,40 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
             )}
           </div>
 
-          <h2 className="text-2xl font-bold text-white mb-2">{config.label}</h2>
-          <p className="text-white/60 text-center mb-8">{config.description}</p>
+          <h2 className="font-[family-name:var(--font-plus-jakarta)] text-2xl font-bold text-[#191c1d] mb-2 ">{config.label}</h2>
+          <p className="text-[#6f7a71] text-center mb-8">{config.description}</p>
 
           {/* Order Details Card */}
           {currentOrder && (
-            <Card className="w-full p-4 bg-[#1A1A24]/80 border-white/5 mb-4">
+            <Card className="w-full p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 mb-4">
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-white/60">Order Number</span>
-                  <span className="text-white font-medium">{currentOrder.orderNumber}</span>
+                  <span className="text-[#6f7a71]">Order Number</span>
+                  <span className="text-[#191c1d] font-medium">{currentOrder.orderNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Status</span>
+                  <span className="text-[#6f7a71]">Status</span>
                   <span className={config.color + ' font-medium'}>{config.label}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60">Total Amount</span>
-                  <span className="text-white font-bold">UGX {currentOrder.totalAmount?.toLocaleString()}</span>
+                  <span className="text-[#6f7a71]">Total Amount</span>
+                  <span className="text-[#191c1d] font-bold">UGX {currentOrder.totalAmount?.toLocaleString()}</span>
                 </div>
 
                 {/* Rider info */}
                 {currentOrder.task?.rider && (
-                  <div className="border-t border-white/10 pt-3 mt-3">
+                  <div className="border-t border-[#bec9bf]/30 pt-3 mt-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-teal-500/20 flex items-center justify-center">
                         <Bike className="h-5 w-5 text-teal-400" />
                       </div>
                       <div className="flex-1">
-                        <p className="text-white font-medium">{currentOrder.task.rider.fullName}</p>
-                        <p className="text-white/50 text-xs">{currentOrder.task.rider.phone}</p>
+                        <p className="text-[#191c1d] font-medium">{currentOrder.task.rider.fullName}</p>
+                        <p className="text-[#6f7a71] text-xs">{currentOrder.task.rider.phone}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                        <span className="text-white text-sm">{currentOrder.task.rider.rating}</span>
+                        <span className="text-[#191c1d] text-sm">{currentOrder.task.rider.rating}</span>
                       </div>
                     </div>
                   </div>
@@ -1058,14 +1058,14 @@ export function FoodDeliveryScreen({ onBack }: FoodDeliveryScreenProps) {
           {['DELIVERED', 'CANCELLED', 'REJECTED'].includes(currentOrder?.status || '') ? (
             <button
               onClick={onBack}
-              className="w-full h-14 rounded-xl flex items-center justify-center gap-2 text-white font-semibold"
+              className="w-full h-14 rounded-xl flex items-center justify-center gap-2 text-[#191c1d] font-semibold"
               style={{ backgroundColor: serviceColors.primary }}
             >
               <ArrowLeft className="h-5 w-5" />
               <span>Back to Restaurants</span>
             </button>
           ) : (
-            <div className="flex items-center gap-2 justify-center text-white/40 text-sm">
+            <div className="flex items-center gap-2 justify-center text-[#bec9bf] text-sm">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Tracking your order...</span>
             </div>

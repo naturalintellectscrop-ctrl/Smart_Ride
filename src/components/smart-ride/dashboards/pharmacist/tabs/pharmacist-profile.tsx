@@ -60,7 +60,7 @@ export function PharmacistProfile() {
     <div className="min-h-screen bg-gray-50 pb-4">
       {/* Header */}
       <div className="bg-white px-4 py-4 border-b border-gray-100 sticky top-6 z-40">
-        <h1 className="text-xl font-bold text-gray-900">Profile</h1>
+        <h1 className="text-xl font-bold text-gray-900 font-[family-name:var(--font-plus-jakarta)]">Profile</h1>
       </div>
 
       {/* Pharmacy Profile Card */}
@@ -78,9 +78,9 @@ export function PharmacistProfile() {
               </div>
               <p className="text-rose-100 text-sm">{pharmacyData.type}</p>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-sm text-white/80">⭐ {pharmacyData.rating}</span>
-                <span className="text-white/60">•</span>
-                <span className="text-sm text-white/80">{pharmacyData.totalOrders} orders</span>
+                <span className="text-sm text-[#3f4941]">⭐ {pharmacyData.rating}</span>
+                <span className="text-[#6f7a71]">•</span>
+                <span className="text-sm text-[#3f4941]">{pharmacyData.totalOrders} orders</span>
               </div>
             </div>
             <button className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">

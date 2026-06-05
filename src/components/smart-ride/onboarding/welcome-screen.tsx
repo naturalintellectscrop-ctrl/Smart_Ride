@@ -31,12 +31,12 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 const colorConfig: Record<string, { bg: string; text: string; border: string }> = {
-  emerald: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30' },
-  orange: { bg: 'bg-orange-500/15', text: 'text-orange-400', border: 'border-orange-500/30' },
-  blue: { bg: 'bg-blue-500/15', text: 'text-blue-400', border: 'border-blue-500/30' },
-  purple: { bg: 'bg-purple-500/15', text: 'text-purple-400', border: 'border-purple-500/30' },
-  teal: { bg: 'bg-teal-500/15', text: 'text-teal-400', border: 'border-teal-500/30' },
-  rose: { bg: 'bg-rose-500/15', text: 'text-rose-400', border: 'border-rose-500/30' },
+  emerald: { bg: 'bg-[#98f6be]/20', text: 'text-[#005f3a]', border: 'border-[#005f3a]/20' },
+  orange: { bg: 'bg-orange-500/10', text: 'text-orange-600', border: 'border-orange-500/20' },
+  blue: { bg: 'bg-blue-500/10', text: 'text-blue-600', border: 'border-blue-500/20' },
+  purple: { bg: 'bg-purple-500/10', text: 'text-purple-600', border: 'border-purple-500/20' },
+  teal: { bg: 'bg-teal-500/10', text: 'text-teal-600', border: 'border-teal-500/20' },
+  rose: { bg: 'bg-rose-500/10', text: 'text-rose-600', border: 'border-rose-500/20' },
 };
 
 export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
@@ -46,7 +46,7 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#f8f9fa] max-w-md mx-auto">
       {/* Header */}
       <div className="px-6 pt-12 pb-8">
         <div className="flex items-center justify-center mb-8">
@@ -60,18 +60,18 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
           />
         </div>
         
-        <h1 className="text-3xl font-bold text-white text-center mb-3">
+        <h1 className="text-3xl font-bold text-[#191c1d] text-center mb-3 font-[family-name:var(--font-plus-jakarta)]">
           Welcome to Smart Ride
         </h1>
         
-        <p className="text-gray-400 text-center mb-8">
+        <p className="text-[#3f4941] text-center mb-8">
           Your all-in-one platform for rides, deliveries, shopping, and healthcare services.
         </p>
       </div>
 
       {/* Services Grid */}
       <div className="px-6 mb-8">
-        <h2 className="text-lg font-semibold text-white mb-4">Our Services</h2>
+        <h2 className="text-lg font-semibold text-[#191c1d] mb-4 font-[family-name:var(--font-plus-jakarta)]">Our Services</h2>
         <div className="grid grid-cols-2 gap-3">
           {SERVICE_CATEGORIES.map((service) => {
             const Icon = iconMap[service.icon];
@@ -80,7 +80,7 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
             return (
               <Card 
                 key={service.id} 
-                className="bg-[#13131A] border border-white/5 hover:border-[#00FF88]/30 transition-all cursor-pointer active:scale-[0.98]"
+                className="bg-white border border-[#bec9bf]/30 hover:border-[#005f3a]/30 transition-all cursor-pointer active:scale-[0.98] shadow-sm"
               >
                 <CardContent className="p-4">
                   <div className={cn(
@@ -89,10 +89,10 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
                   )}>
                     <span className={colors.text}>{Icon}</span>
                   </div>
-                  <h3 className="font-semibold text-white text-sm mb-1">
+                  <h3 className="font-semibold text-[#191c1d] text-sm mb-1">
                     {service.name}
                   </h3>
-                  <p className="text-xs text-gray-500">{service.description}</p>
+                  <p className="text-xs text-[#6f7a71]">{service.description}</p>
                 </CardContent>
               </Card>
             );
@@ -102,15 +102,15 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
 
       {/* Feature Highlight */}
       <div className="px-6 mb-8">
-        <Card className="bg-[#13131A] border border-white/5">
+        <Card className="bg-white border border-[#bec9bf]/30 shadow-sm">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#00FF88]/15 rounded-full flex items-center justify-center">
-                <Smartphone className="h-5 w-5 text-[#00FF88]" />
+              <div className="w-10 h-10 bg-[#98f6be]/20 rounded-full flex items-center justify-center">
+                <Smartphone className="h-5 w-5 text-[#005f3a]" />
               </div>
               <div>
-                <p className="font-medium text-white text-sm">One App, Everything</p>
-                <p className="text-xs text-gray-500">Access all services from a single account</p>
+                <p className="font-medium text-[#191c1d] text-sm">One App, Everything</p>
+                <p className="text-xs text-[#6f7a71]">Access all services from a single account</p>
               </div>
             </div>
           </CardContent>
@@ -121,18 +121,17 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
       <div className="px-6 pb-8">
         <Button 
           onClick={onGetStarted}
-          className="w-full h-14 bg-gradient-to-r from-[#00FF88] to-[#00CC6E] text-[#0D0D12] font-semibold text-lg rounded-xl shadow-lg transition-all hover:shadow-xl"
-          style={{ boxShadow: '0 4px 20px rgba(0, 255, 136, 0.3)' }}
+          className="w-full h-14 bg-[#005f3a] text-white font-semibold text-lg rounded-xl shadow-lg shadow-[#005f3a]/15 hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           Get Started
           <ArrowRight className="h-5 w-5 ml-2" />
         </Button>
         
-        <p className="text-center text-xs text-gray-500 mt-4">
+        <p className="text-center text-xs text-[#6f7a71] mt-4">
           By continuing, you agree to our{' '}
-          <span className="text-[#00FF88] font-medium">Terms of Service</span>
+          <span className="text-[#005f3a] font-medium">Terms of Service</span>
           {' '}and{' '}
-          <span className="text-[#00FF88] font-medium">Privacy Policy</span>
+          <span className="text-[#005f3a] font-medium">Privacy Policy</span>
         </p>
       </div>
     </div>

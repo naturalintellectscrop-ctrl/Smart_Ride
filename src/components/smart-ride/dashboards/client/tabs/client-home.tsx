@@ -17,7 +17,9 @@ import {
   ChevronRight,
   Star,
   Bell,
-  Zap
+  Zap,
+  Wallet,
+  Headphones
 } from 'lucide-react';
 // Client Home Component
 import { useNotifications } from '../../../context/notification-context';
@@ -50,56 +52,50 @@ function getGreetingEmoji(): string {
 const services = [
   {
     id: 'boda',
-    label: 'Smart Boda',
+    label: 'Ride',
     icon: Bike,
-    color: 'emerald',
-    gradient: 'from-emerald-500 to-teal-600',
-    shadowColor: 'rgba(0, 255, 136, 0.3)',
+    color: '#005f3a',
+    bgColor: 'bg-[#005f3a]',
     description: 'Quick motorcycle rides'
   },
   {
     id: 'car',
-    label: 'Smart Car',
+    label: 'Ride',
     icon: Car,
-    color: 'blue',
-    gradient: 'from-blue-500 to-indigo-600',
-    shadowColor: 'rgba(0, 212, 255, 0.3)',
+    color: '#005f3a',
+    bgColor: 'bg-[#005f3a]',
     description: 'Comfortable car rides'
   },
   {
     id: 'food',
-    label: 'Food Delivery',
+    label: 'Food',
     icon: UtensilsCrossed,
-    color: 'orange',
-    gradient: 'from-orange-500 to-red-500',
-    shadowColor: 'rgba(255, 107, 53, 0.3)',
+    color: '#006e2f',
+    bgColor: 'bg-[#006e2f]',
     description: 'Restaurant deliveries'
   },
   {
     id: 'smart-grocery',
-    label: 'Smart Grocery',
+    label: 'Shopping',
     icon: ShoppingCart,
-    color: 'purple',
-    gradient: 'from-purple-500 to-pink-500',
-    shadowColor: 'rgba(168, 85, 247, 0.3)',
+    color: '#4b5264',
+    bgColor: 'bg-[#4b5264]',
     description: 'Groceries & retail'
   },
   {
     id: 'smart-courier',
-    label: 'Smart Courier',
+    label: 'Parcel',
     icon: Package,
-    color: 'teal',
-    gradient: 'from-teal-500 to-cyan-500',
-    shadowColor: 'rgba(20, 184, 166, 0.3)',
+    color: '#7cd9a4',
+    bgColor: 'bg-[#7cd9a4]',
     description: 'Send packages anywhere'
   },
   {
     id: 'health',
-    label: 'Smart Health',
+    label: 'Health',
     icon: Heart,
-    color: 'rose',
-    gradient: 'from-rose-500 to-red-500',
-    shadowColor: 'rgba(255, 59, 92, 0.3)',
+    color: '#005f3a',
+    bgColor: 'bg-[#005f3a]',
     description: 'Pharmacy & medicines'
   },
 ];
@@ -115,16 +111,20 @@ const promotions = [
     id: '1',
     title: '20% OFF',
     subtitle: 'On your next 3 rides!',
-    gradient: 'from-orange-500 to-red-500',
     emoji: '🎉'
   },
   {
     id: '2',
     title: 'Free Delivery',
     subtitle: 'On orders above UGX 50,000',
-    gradient: 'from-emerald-500 to-teal-600',
     emoji: '🚀'
   }
+];
+
+const nearbyFavorites = [
+  { id: '1', name: 'Cafe Java', type: 'Restaurant', rating: 4.5, icon: UtensilsCrossed },
+  { id: '2', name: 'Shoprite', type: 'Grocery', rating: 4.3, icon: ShoppingCart },
+  { id: '3', name: 'Capital Shoppers', type: 'Grocery', rating: 4.1, icon: ShoppingCart },
 ];
 
 export function ClientHome({ onBellClick }: ClientHomeProps) {
@@ -175,132 +175,194 @@ export function ClientHome({ onBellClick }: ClientHomeProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
-      {/* Header with Gradient */}
-      <div className="bg-gradient-to-br from-[#13131A] to-[#1A1A24] px-4 pt-4 pb-8 rounded-b-3xl">
-        {/* User Greeting */}
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <p className="text-gray-400 text-sm">{greeting} {emoji}</p>
-            <h1 className="text-white text-xl font-bold">John Doe</h1>
+    <div className="min-h-screen bg-[#f8f9fa]">
+      {/* TopAppBar with user avatar, location, support/notification */}
+      <div className="bg-white px-4 pt-3 pb-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-[#005f3a] flex items-center justify-center">
+              <span className="text-white text-sm font-bold">JD</span>
+            </div>
+            <div className="flex items-center gap-1 text-[#6f7a71]">
+              <MapPin className="h-4 w-4 text-[#005f3a]" />
+              <span className="text-sm">Kampala, UG</span>
+            </div>
           </div>
           <div className="flex items-center gap-2">
+            <button className="w-10 h-10 bg-[#f3f4f5] rounded-full flex items-center justify-center hover:bg-[#edeeef] transition-colors">
+              <Headphones className="h-5 w-5 text-[#6f7a71]" />
+            </button>
             <button 
               onClick={onBellClick}
-              className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors border border-white/5 relative"
+              className="w-10 h-10 bg-[#f3f4f5] rounded-full flex items-center justify-center hover:bg-[#edeeef] transition-colors relative"
             >
-              <Bell className="h-6 w-6 text-gray-400" />
+              <Bell className="h-5 w-5 text-[#6f7a71]" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF3B5C] rounded-full text-xs flex items-center justify-center text-white font-bold">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#ba1a1a] rounded-full text-xs flex items-center justify-center text-white font-bold">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </span>
               )}
             </button>
-            <button 
-              className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors border border-white/5"
-            >
-              <MapPin className="h-6 w-6 text-[#00FF88]" />
-            </button>
           </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="bg-[#13131A] rounded-xl p-3 flex items-center gap-3 border border-white/5">
-          <Search className="h-5 w-5 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Where to?"
-            className="flex-1 bg-transparent outline-none text-white placeholder-gray-500 text-base"
-          />
         </div>
       </div>
 
-      {/* Services Grid */}
-      <div className="px-4 -mt-4">
-        <Card className="p-2 bg-[#13131A] border-white/5">
-          <div className="grid grid-cols-3 gap-2">
-            {services.slice(0, 3).map((service) => {
+      {/* Logo + Greeting Section */}
+      <div className="bg-white px-4 pb-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Zap className="h-5 w-5 text-[#005f3a]" />
+          <span className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#005f3a]">Smart Ride</span>
+        </div>
+        <p className="text-[#6f7a71] text-sm">{greeting} {emoji}</p>
+        <h1 className="font-[family-name:var(--font-plus-jakarta)] text-2xl font-bold text-[#191c1d]">John Doe</h1>
+      </div>
+
+      {/* Wallet Balance Card — Deep Green bg with decorative circles */}
+      <div className="px-4 mb-4">
+        <div className="relative overflow-hidden rounded-2xl p-5 bg-[#005f3a]">
+          {/* Decorative circles */}
+          <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full" />
+          <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-white/5 rounded-full" />
+          <div className="absolute top-1/2 right-1/3 w-16 h-16 bg-white/5 rounded-full" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-3">
+              <Wallet className="h-5 w-5 text-white" />
+              <span className="text-sm font-medium text-white/80">Smart Ride Wallet</span>
+            </div>
+            <p className="text-sm text-white/70">Available Balance</p>
+            <h2 className="text-3xl font-bold text-white mt-1">UGX 245,000</h2>
+            <div className="flex gap-2 mt-4">
+              <button className="px-4 py-2 bg-white text-[#005f3a] rounded-xl text-sm font-semibold hover:bg-white/90 transition-colors">
+                Top Up
+              </button>
+              <button className="px-4 py-2 bg-white/20 text-white rounded-xl text-sm font-semibold hover:bg-white/30 transition-colors">
+                Transfer
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2x2 Quick Services Grid */}
+      <div className="px-4 mb-4">
+        <h2 className="font-[family-name:var(--font-plus-jakarta)] text-base font-semibold text-[#191c1d] mb-3">Services</h2>
+        <Card className="p-3 bg-white border border-[#bec9bf]/30 shadow-sm rounded-2xl">
+          <div className="grid grid-cols-2 gap-2">
+            {services.slice(0, 4).map((service) => {
               const Icon = service.icon;
               return (
                 <button
                   key={service.id}
                   onClick={() => handleServiceClick(service.id)}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all active:scale-95",
-                    "bg-[#1A1A24] border-white/5 hover:border-[#00FF88]/30"
+                    "flex items-center gap-3 p-3 rounded-xl border transition-all active:scale-[0.98]",
+                    "bg-[#f8f9fa] border-[#bec9bf]/20 hover:border-[#005f3a]/30 hover:shadow-sm"
                   )}
                 >
                   <div 
-                    className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br", service.gradient)}
-                    style={{ boxShadow: `0 4px 20px ${service.shadowColor}` }}
+                    className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ backgroundColor: service.color }}
                   >
-                    <Icon className="h-6 w-6 text-white" />
+                    <Icon className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-xs font-medium text-white text-center">
-                    {service.label}
-                  </span>
+                  <div className="text-left min-w-0">
+                    <span className="text-sm font-semibold text-[#191c1d] block">
+                      {service.label}
+                    </span>
+                    <span className="text-xs text-[#6f7a71] truncate block">
+                      {service.description}
+                    </span>
+                  </div>
                 </button>
               );
             })}
           </div>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {services.slice(3).map((service) => {
-              const Icon = service.icon;
-              return (
-                <button
-                  key={service.id}
-                  onClick={() => handleServiceClick(service.id)}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all active:scale-95",
-                    "bg-[#1A1A24] border-white/5 hover:border-[#00FF88]/30"
-                  )}
-                >
-                  <div 
-                    className={cn("w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br", service.gradient)}
-                    style={{ boxShadow: `0 4px 20px ${service.shadowColor}` }}
+          {/* Row 2 with remaining services */}
+          {services.length > 4 && (
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {services.slice(4).map((service) => {
+                const Icon = service.icon;
+                return (
+                  <button
+                    key={service.id}
+                    onClick={() => handleServiceClick(service.id)}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-xl border transition-all active:scale-[0.98]",
+                      "bg-[#f8f9fa] border-[#bec9bf]/20 hover:border-[#005f3a]/30 hover:shadow-sm"
+                    )}
                   >
-                    <Icon className="h-6 w-6 text-white" />
-                  </div>
-                  <span className="text-xs font-medium text-white text-center">
-                    {service.label}
-                  </span>
-                </button>
-              );
-            })}
+                    <div 
+                      className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: service.color }}
+                    >
+                      <Icon className="h-5 w-5 text-white" />
+                    </div>
+                    <div className="text-left min-w-0">
+                      <span className="text-sm font-semibold text-[#191c1d] block">
+                        {service.label}
+                      </span>
+                      <span className="text-xs text-[#6f7a71] truncate block">
+                        {service.description}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* Support Prompt Card */}
+      <div className="px-4 mb-4">
+        <Card className="p-4 bg-white border border-[#bec9bf]/30 shadow-sm rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#edeeef] rounded-full flex items-center justify-center">
+              <Headphones className="h-5 w-5 text-[#005f3a]" />
+            </div>
+            <div className="flex-1">
+              <p className="font-medium text-[#191c1d] text-sm">Need help?</p>
+              <p className="text-xs text-[#6f7a71]">24/7 support available</p>
+            </div>
+            <ChevronRight className="h-5 w-5 text-[#bec9bf]" />
           </div>
         </Card>
       </div>
 
-      {/* Promotions Banner */}
-      <div className="px-4 mt-6">
-        <h2 className="text-lg font-semibold text-white mb-3">Promotions</h2>
+      {/* Promo Banner with gradient overlay */}
+      <div className="px-4 mb-4">
+        <h2 className="font-[family-name:var(--font-plus-jakarta)] text-base font-semibold text-[#191c1d] mb-3">Promotions</h2>
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
           {promotions.map((promo) => (
-            <Card
+            <div
               key={promo.id}
-              className={cn(
-                "min-w-[280px] p-4 text-white border-0 bg-gradient-to-r",
-                promo.gradient
-              )}
+              className="min-w-[280px] p-4 rounded-2xl relative overflow-hidden"
+              style={{
+                background: 'linear-gradient(135deg, #005f3a 0%, #0e7a4d 100%)',
+                boxShadow: '0 4px 15px rgba(0, 95, 58, 0.2)'
+              }}
             >
-              <div className="flex items-center justify-between">
+              {/* Decorative circle */}
+              <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+              <div className="relative z-10 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium opacity-90">Special Offer</p>
-                  <h3 className="text-2xl font-bold">{promo.title}</h3>
-                  <p className="text-sm mt-1">{promo.subtitle}</p>
+                  <p className="text-sm font-medium text-white/80">Special Offer</p>
+                  <h3 className="text-2xl font-bold text-white">{promo.title}</h3>
+                  <p className="text-sm mt-1 text-white/80">{promo.subtitle}</p>
                 </div>
                 <div className="text-5xl">{promo.emoji}</div>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       </div>
 
       {/* Recent Orders */}
-      <div className="px-4 mt-6 pb-4">
+      <div className="px-4 mt-2 pb-4">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold text-white">Recent Orders</h2>
-          <button className="text-[#00FF88] text-sm font-medium flex items-center gap-1">
+          <h2 className="font-[family-name:var(--font-plus-jakarta)] text-base font-semibold text-[#191c1d]">Recent Orders</h2>
+          <button className="text-[#005f3a] text-sm font-medium flex items-center gap-1">
             See all
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -310,24 +372,24 @@ export function ClientHome({ onBellClick }: ClientHomeProps) {
           {recentOrders.map((order) => {
             const Icon = order.icon;
             return (
-              <Card key={order.id} className="bg-[#13131A] border-white/5 hover:border-[#00FF88]/30 transition-all cursor-pointer">
+              <Card key={order.id} className="bg-white border border-[#bec9bf]/30 hover:border-[#005f3a]/30 transition-all cursor-pointer shadow-sm rounded-2xl">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-[#1A1A24] rounded-xl flex items-center justify-center">
-                      <Icon className="h-6 w-6 text-[#00FF88]" />
+                    <div className="w-11 h-11 bg-[#edeeef] rounded-xl flex items-center justify-center">
+                      <Icon className="h-5 w-5 text-[#005f3a]" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h3 className="font-medium text-white">{order.type}</h3>
-                        <span className="font-semibold text-white whitespace-nowrap">
+                        <h3 className="font-medium text-[#191c1d]">{order.type}</h3>
+                        <span className="font-semibold text-[#191c1d] whitespace-nowrap">
                           UGX {order.amount.toLocaleString()}
                         </span>
                       </div>
-                      <div className="mt-1 flex items-center gap-2 text-sm text-gray-400">
+                      <div className="mt-1 flex items-center gap-2 text-sm text-[#3f4941]">
                         <MapPin className="h-3 w-3 flex-shrink-0" />
                         <span className="truncate">{order.from} → {order.to}</span>
                       </div>
-                      <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                      <div className="mt-1 flex items-center gap-2 text-xs text-[#6f7a71]">
                         <Clock className="h-3 w-3" />
                         <span>{order.time}</span>
                       </div>
@@ -339,36 +401,28 @@ export function ClientHome({ onBellClick }: ClientHomeProps) {
           })}
         </div>
 
-        {/* Favorite Places */}
+        {/* Nearby Favorites — Horizontal scroll */}
         <div className="mt-6">
-          <h2 className="text-lg font-semibold text-white mb-3">Favorite Places</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <Card className="bg-[#13131A] border-white/5 hover:border-[#00FF88]/30 transition-all cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-blue-500/20 rounded-full flex items-center justify-center">
-                    <Star className="h-5 w-5 text-blue-400" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">Home</p>
-                    <p className="text-xs text-gray-400">Ntinda, Kampala</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="bg-[#13131A] border-white/5 hover:border-[#00FF88]/30 transition-all cursor-pointer">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center">
-                    <Star className="h-5 w-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-white">Work</p>
-                    <p className="text-xs text-gray-400">Kampala CBD</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+          <h2 className="font-[family-name:var(--font-plus-jakarta)] text-base font-semibold text-[#191c1d] mb-3">Nearby Favorites</h2>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+            {nearbyFavorites.map((fav) => {
+              const Icon = fav.icon;
+              return (
+                <Card key={fav.id} className="min-w-[160px] bg-white border border-[#bec9bf]/30 shadow-sm rounded-2xl cursor-pointer hover:border-[#005f3a]/30 transition-all">
+                  <CardContent className="p-3">
+                    <div className="w-10 h-10 bg-[#edeeef] rounded-xl flex items-center justify-center mb-2">
+                      <Icon className="h-5 w-5 text-[#005f3a]" />
+                    </div>
+                    <p className="font-medium text-sm text-[#191c1d]">{fav.name}</p>
+                    <p className="text-xs text-[#6f7a71]">{fav.type}</p>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Star className="h-3 w-3 text-[#6bff8f] fill-[#6bff8f]" />
+                      <span className="text-xs text-[#3f4941]">{fav.rating}</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </div>
       </div>

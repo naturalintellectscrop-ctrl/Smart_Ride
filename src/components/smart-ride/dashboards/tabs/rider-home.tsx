@@ -544,20 +544,20 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
+    <div className="min-h-screen bg-[#f8f9fa]">
       {/* Header with Online Toggle */}
-      <div className="bg-gradient-to-br from-[#13131A] to-[#1A1A24] px-4 pt-4 pb-6 rounded-b-3xl">
+      <div className="bg-gradient-to-br from-white to-[#f3f4f5] px-4 pt-4 pb-6 rounded-b-3xl border-b border-[#bec9bf]/30">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <p className="text-gray-400 text-sm">{greeting}</p>
-            <h1 className="text-xl font-bold text-white">
+            <p className="text-[#6f7a71] text-sm">{greeting}</p>
+            <h1 className="text-xl font-bold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">
               {riderName || 'Rider'}
             </h1>
           </div>
           <button className="relative" onClick={onBellClick}>
-            <Bell className="h-6 w-6 text-gray-400" />
+            <Bell className="h-6 w-6 text-[#6f7a71]" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF3B5C] rounded-full text-xs flex items-center justify-center text-white font-bold">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#ba1a1a] rounded-full text-xs flex items-center justify-center text-white font-bold">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -565,25 +565,25 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
         </div>
 
         {/* Online/Offline Toggle */}
-        <Card className="p-4 bg-[#1A1A24]/80 backdrop-blur border-white/5">
+        <Card className="p-4 bg-white/80 backdrop-blur border-[#bec9bf]/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div
                 className={cn(
                   'w-12 h-12 rounded-full flex items-center justify-center',
                   isOnline 
-                    ? 'bg-[#00FF88]/20' 
-                    : 'bg-gray-500/20'
+                    ? 'bg-[#98f6be]/30' 
+                    : 'bg-[#f3f4f5]'
                 )}
-                style={isOnline ? { boxShadow: '0 0 20px rgba(0, 255, 136, 0.4)' } : {}}
+                style={isOnline ? { boxShadow: '0 0 20px rgba(0, 95, 58, 0.15)' } : {}}
               >
-                <Power className={cn("h-6 w-6", isOnline ? "text-[#00FF88]" : "text-gray-400")} />
+                <Power className={cn("h-6 w-6", isOnline ? "text-[#005f3a]" : "text-[#6f7a71]")} />
               </div>
               <div>
-                <p className="font-semibold text-white">
+                <p className="font-semibold text-[#191c1d]">
                   {togglingOnline ? 'Updating...' : isOnline ? 'You are Online' : 'You are Offline'}
                 </p>
-                <p className="text-gray-400 text-sm">
+                <p className="text-[#6f7a71] text-sm">
                   {isOnline ? 'Accepting ride requests' : 'Go online to receive tasks'}
                 </p>
               </div>
@@ -593,10 +593,10 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
               disabled={togglingOnline}
               className={cn(
                 'w-14 h-8 rounded-full transition-all relative',
-                isOnline ? 'bg-[#00FF88]' : 'bg-gray-600',
+                isOnline ? 'bg-[#005f3a]' : 'bg-[#bec9bf]',
                 togglingOnline && 'opacity-50'
               )}
-              style={isOnline ? { boxShadow: '0 0 15px rgba(0, 255, 136, 0.5)' } : {}}
+              style={isOnline ? { boxShadow: '0 0 15px rgba(0, 95, 58, 0.2)' } : {}}
             >
               <div
                 className={cn(
@@ -612,20 +612,20 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
       <div className="px-4 -mt-2">
         {/* Offline State */}
         {!isOnline && (
-          <Card className="p-6 mt-4 bg-[#13131A] border-white/5">
+          <Card className="p-6 mt-4 bg-white border-[#bec9bf]/30">
             <div className="text-center">
-              <div className="w-20 h-20 bg-[#1A1A24] rounded-full flex items-center justify-center mx-auto mb-4">
-                <Power className="h-10 w-10 text-gray-500" />
+              <div className="w-20 h-20 bg-[#f3f4f5] rounded-full flex items-center justify-center mx-auto mb-4">
+                <Power className="h-10 w-10 text-[#6f7a71]" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-2">You&apos;re Offline</h3>
-              <p className="text-gray-400 text-sm mb-4">
+              <h3 className="text-lg font-semibold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">You&apos;re Offline</h3>
+              <p className="text-[#3f4941] text-sm mb-4">
                 Go online to start receiving ride and delivery requests from nearby customers.
               </p>
               <Button
                 onClick={handleToggleOnline}
                 disabled={togglingOnline}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-[#00FF88] to-[#00CC6E] text-[#0D0D12] font-semibold text-lg flex items-center justify-center gap-2"
-                style={{ boxShadow: '0 4px 20px rgba(0, 255, 136, 0.3)' }}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-[#005f3a] to-[#0e7a4d] text-white font-semibold text-lg flex items-center justify-center gap-2"
+                style={{ boxShadow: '0 4px 20px rgba(0, 95, 58, 0.15)' }}
               >
                 <Power className="h-5 w-5" />
                 Go Online
@@ -640,8 +640,8 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
             {/* Incoming Ride Requests */}
             {incomingRequests.length > 0 && (
               <div className="mt-4 space-y-3">
-                <h3 className="font-semibold text-white flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-[#00FF88] animate-pulse" />
+                <h3 className="font-semibold text-[#191c1d] flex items-center gap-2 font-[family-name:var(--font-plus-jakarta)]">
+                  <AlertCircle className="h-4 w-4 text-[#005f3a] animate-pulse" />
                   Incoming Requests ({incomingRequests.length})
                 </h3>
                 {incomingRequests.map((request) => {
@@ -652,27 +652,27 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
                   return (
                     <Card key={request.matchId} className={cn(
                       'p-4 border-2',
-                      isExpiring ? 'bg-red-500/5 border-red-500/40' : 'bg-[#13131A] border-[#00FF88]/30'
+                      isExpiring ? 'bg-red-500/5 border-red-500/40' : 'bg-white border-[#005f3a]/30'
                     )}>
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
                           <div className={cn(
-                            'w-8 h-8 rounded-full flex items-center justify-center text-white bg-gradient-to-br',
+                            'w-8 h-8 rounded-full flex items-center justify-center bg-gradient-to-br',
                             getTypeGradient(taskType)
                           )}>
                             {getTypeIcon(taskType)}
                           </div>
                           <div>
-                            <p className="font-medium text-white text-sm capitalize">
+                            <p className="font-medium text-[#191c1d] text-sm capitalize">
                               {taskType === 'boda' ? 'Boda Ride' : taskType === 'car' ? 'Car Ride' : 'Delivery'}
                             </p>
                             {request.taskNumber && (
-                              <p className="text-gray-500 text-xs">{request.taskNumber}</p>
+                              <p className="text-[#6f7a71] text-xs">{request.taskNumber}</p>
                             )}
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-[#00FF88] text-sm">
+                          <p className="font-bold text-[#005f3a] text-sm">
                             UGX {request.totalAmount.toLocaleString()}
                           </p>
                           <p className={cn(
@@ -686,22 +686,22 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
 
                       <div className="space-y-2 mb-3">
                         <div className="flex items-center gap-2">
-                          <MapPin className="h-3 w-3 text-[#00FF88] flex-shrink-0" />
-                          <p className="text-gray-400 text-xs truncate">{request.pickupAddress}</p>
+                          <MapPin className="h-3 w-3 text-[#005f3a] flex-shrink-0" />
+                          <p className="text-[#3f4941] text-xs truncate">{request.pickupAddress}</p>
                         </div>
                         <div className="flex items-center gap-2">
                           <Navigation className="h-3 w-3 text-orange-500 flex-shrink-0" />
-                          <p className="text-gray-400 text-xs truncate">{request.dropoffAddress}</p>
+                          <p className="text-[#3f4941] text-xs truncate">{request.dropoffAddress}</p>
                         </div>
                         {request.distanceKm && (
-                          <p className="text-gray-500 text-xs">{request.distanceKm.toFixed(1)} km</p>
+                          <p className="text-[#6f7a71] text-xs">{request.distanceKm.toFixed(1)} km</p>
                         )}
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
                         <Button
                           size="sm"
-                          className="bg-[#00FF88] text-black hover:bg-[#00CC6E] gap-1"
+                          className="bg-[#005f3a] text-white hover:bg-[#0e7a4d] gap-1"
                           onClick={() => handleAcceptRequest(request.matchId)}
                           disabled={acceptingRequestId === request.matchId || timeLeft <= 0}
                         >
@@ -715,7 +715,7 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
                         <Button
                           size="sm"
                           variant="outline"
-                          className="border-white/10 text-gray-400 hover:bg-white/5 gap-1"
+                          className="border-[#bec9bf]/30 text-[#3f4941] hover:bg-[#f3f4f5] gap-1"
                           onClick={() => handleRejectRequest(request.matchId)}
                           disabled={rejectingRequestId === request.matchId}
                         >
@@ -735,19 +735,19 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
 
             {/* Nearby Requests placeholder when no active requests */}
             {incomingRequests.length === 0 && (
-              <Card className="mt-4 p-4 bg-[#13131A] border-white/5">
+              <Card className="mt-4 p-4 bg-white border-[#bec9bf]/30">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-white">Nearby Requests</h3>
-                  <Badge className="bg-[#00FF88]/15 text-[#00FF88] border-[#00FF88]/30">
+                  <h3 className="font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">Nearby Requests</h3>
+                  <Badge className="bg-[#98f6be]/30 text-[#005f3a] border-[#98f6be]/50">
                     <Wifi className="h-3 w-3 mr-1" />
                     Listening
                   </Badge>
                 </div>
                 <div className="flex items-center justify-center py-6">
                   <div className="text-center">
-                    <Wifi className="h-8 w-8 text-gray-600 mx-auto mb-2" />
-                    <p className="text-gray-400 text-sm">Waiting for requests...</p>
-                    <p className="text-gray-600 text-xs mt-1">New requests will appear here in real-time</p>
+                    <Wifi className="h-8 w-8 text-[#6f7a71] mx-auto mb-2" />
+                    <p className="text-[#3f4941] text-sm">Waiting for requests...</p>
+                    <p className="text-[#6f7a71] text-xs mt-1">New requests will appear here in real-time</p>
                   </div>
                 </div>
               </Card>
@@ -757,42 +757,42 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
 
         {/* Today's Stats */}
         <div className="grid grid-cols-2 gap-3 mt-4">
-          <Card className="p-4 bg-[#13131A] border-white/5">
+          <Card className="p-4 bg-white border-[#bec9bf]/30">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#00FF88]/15 rounded-full flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-[#00FF88]" />
+              <div className="w-10 h-10 bg-[#98f6be]/30 rounded-full flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-[#005f3a]" />
               </div>
               <div>
-                <p className="text-gray-400 text-xs">Today&apos;s Earnings</p>
+                <p className="text-[#6f7a71] text-xs">Today&apos;s Earnings</p>
                 {statsLoading ? (
                   <Skeleton className="h-6 w-24 mt-1" />
                 ) : statsError ? (
-                  <button onClick={() => fetchStats(true)} className="text-xs text-red-400 flex items-center gap-1">
+                  <button onClick={() => fetchStats(true)} className="text-xs text-red-500 flex items-center gap-1">
                     <RefreshCw className="h-3 w-3" /> Retry
                   </button>
                 ) : (
-                  <p className="text-xl font-bold text-white">
+                  <p className="text-xl font-bold text-[#191c1d]">
                     UGX {(stats?.todayEarnings || 0).toLocaleString()}
                   </p>
                 )}
               </div>
             </div>
           </Card>
-          <Card className="p-4 bg-[#13131A] border-white/5">
+          <Card className="p-4 bg-white border-[#bec9bf]/30">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-cyan-500/15 rounded-full flex items-center justify-center">
-                <Bike className="h-5 w-5 text-cyan-400" />
+              <div className="w-10 h-10 bg-cyan-100 rounded-full flex items-center justify-center">
+                <Bike className="h-5 w-5 text-cyan-600" />
               </div>
               <div>
-                <p className="text-gray-400 text-xs">Today&apos;s Trips</p>
+                <p className="text-[#6f7a71] text-xs">Today&apos;s Trips</p>
                 {statsLoading ? (
                   <Skeleton className="h-6 w-12 mt-1" />
                 ) : statsError ? (
-                  <button onClick={() => fetchStats(true)} className="text-xs text-red-400 flex items-center gap-1">
+                  <button onClick={() => fetchStats(true)} className="text-xs text-red-500 flex items-center gap-1">
                     <RefreshCw className="h-3 w-3" /> Retry
                   </button>
                 ) : (
-                  <p className="text-xl font-bold text-white">{stats?.todayTrips || 0}</p>
+                  <p className="text-xl font-bold text-[#191c1d]">{stats?.todayTrips || 0}</p>
                 )}
               </div>
             </div>
@@ -802,7 +802,7 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
         {/* Active Task Preview */}
         {isOnline && (
           activeTaskLoading ? (
-            <Card className="mt-4 p-4 bg-[#13131A] border-[#00FF88]/30">
+            <Card className="mt-4 p-4 bg-white border-[#005f3a]/30">
               <div className="flex items-center justify-between mb-3">
                 <Skeleton className="h-5 w-24" />
                 <Skeleton className="h-5 w-20" />
@@ -817,36 +817,36 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
               </div>
             </Card>
           ) : activeTaskError ? (
-            <Card className="mt-4 p-4 bg-[#13131A] border-white/5">
+            <Card className="mt-4 p-4 bg-white border-[#bec9bf]/30">
               <div className="flex items-center justify-between">
-                <p className="text-gray-400 text-sm">Failed to load active task</p>
-                <button onClick={() => fetchActiveTask(true)} className="text-xs text-[#00FF88] flex items-center gap-1">
+                <p className="text-[#6f7a71] text-sm">Failed to load active task</p>
+                <button onClick={() => fetchActiveTask(true)} className="text-xs text-[#005f3a] flex items-center gap-1">
                   <RefreshCw className="h-3 w-3" /> Retry
                 </button>
               </div>
             </Card>
           ) : activeTask ? (
-            <Card className="mt-4 p-4 bg-[#13131A] border-[#00FF88]/30">
+            <Card className="mt-4 p-4 bg-white border-[#005f3a]/30">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="font-semibold text-white">Active Task</h3>
-                <Badge className="bg-[#00FF88]/15 text-[#00FF88] border-[#00FF88]/30 animate-pulse">
+                <h3 className="font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">Active Task</h3>
+                <Badge className="bg-[#98f6be]/30 text-[#005f3a] border-[#98f6be]/50 animate-pulse">
                   {activeTask.status.replace(/_/g, ' ')}
                 </Badge>
               </div>
               <div className="flex items-start gap-3">
                 <div
                   className={cn(
-                    'w-12 h-12 rounded-xl flex items-center justify-center text-white bg-gradient-to-br',
+                    'w-12 h-12 rounded-xl flex items-center justify-center bg-gradient-to-br',
                     getTypeGradient(activeTask.type)
                   )}
                 >
                   {getTypeIcon(activeTask.type)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-white capitalize">
+                  <p className="font-medium text-[#191c1d] capitalize">
                     {activeTask.type === 'boda' ? 'Boda Ride' : activeTask.type === 'car' ? 'Car Ride' : 'Delivery'}
                   </p>
-                  <div className="flex items-center gap-1 text-sm text-gray-400 mt-1">
+                  <div className="flex items-center gap-1 text-sm text-[#3f4941] mt-1">
                     <MapPin className="h-3 w-3" />
                     <span className="truncate">{activeTask.from}</span>
                     <span className="mx-1">→</span>
@@ -855,7 +855,7 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-[#00FF88]">
+                  <p className="font-bold text-[#005f3a]">
                     UGX {activeTask.amount.toLocaleString()}
                   </p>
                 </div>
@@ -865,8 +865,8 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
         )}
 
         {/* Performance Stats */}
-        <Card className="mt-4 p-4 bg-[#13131A] border-white/5">
-          <h3 className="font-semibold text-white mb-3">Your Performance</h3>
+        <Card className="mt-4 p-4 bg-white border-[#bec9bf]/30">
+          <h3 className="font-semibold text-[#191c1d] mb-3 font-[family-name:var(--font-plus-jakarta)]">Your Performance</h3>
           {statsLoading ? (
             <div className="grid grid-cols-4 gap-4">
               {[1, 2, 3, 4].map(i => (
@@ -881,34 +881,34 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
               <div className="text-center">
                 <div className="flex items-center justify-center gap-1">
                   <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
-                  <span className="font-bold text-white">{stats?.rating || 0}</span>
+                  <span className="font-bold text-[#191c1d]">{stats?.rating || 0}</span>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Rating</p>
+                <p className="text-xs text-[#6f7a71] mt-1">Rating</p>
               </div>
               <div className="text-center">
-                <p className="font-bold text-white">{stats?.completionRate || 0}%</p>
-                <p className="text-xs text-gray-400 mt-1">Completion</p>
+                <p className="font-bold text-[#191c1d]">{stats?.completionRate || 0}%</p>
+                <p className="text-xs text-[#6f7a71] mt-1">Completion</p>
               </div>
               <div className="text-center">
-                <p className="font-bold text-white">{stats?.acceptanceRate || 0}%</p>
-                <p className="text-xs text-gray-400 mt-1">Acceptance</p>
+                <p className="font-bold text-[#191c1d]">{stats?.acceptanceRate || 0}%</p>
+                <p className="text-xs text-[#6f7a71] mt-1">Acceptance</p>
               </div>
               <div className="text-center">
-                <p className="font-bold text-[#00FF88]">
+                <p className="font-bold text-[#005f3a]">
                   UGX {((stats?.weeklyEarnings || 0) / 1000).toFixed(0)}K
                 </p>
-                <p className="text-xs text-gray-400 mt-1">This Week</p>
+                <p className="text-xs text-[#6f7a71] mt-1">This Week</p>
               </div>
             </div>
           )}
         </Card>
 
         {/* Weekly Trend */}
-        <Card className="mt-4 p-4 mb-6 bg-[#13131A] border-white/5">
+        <Card className="mt-4 p-4 mb-6 bg-white border-[#bec9bf]/30">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-white">Weekly Earnings Trend</h3>
+            <h3 className="font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">Weekly Earnings Trend</h3>
             {stats && stats.weeklyEarnings > 0 && (
-              <div className="flex items-center gap-1 text-[#00FF88]">
+              <div className="flex items-center gap-1 text-[#005f3a]">
                 <TrendingUp className="h-4 w-4" />
                 <span className="text-sm font-medium">Active</span>
               </div>
@@ -928,10 +928,10 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
               {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => (
                 <div key={index} className="flex-1 flex flex-col items-center">
                   <div
-                    className="w-full bg-gradient-to-t from-[#00FF88] to-[#00CC6E] rounded-t-lg"
+                    className="w-full bg-gradient-to-t from-[#005f3a] to-[#0e7a4d] rounded-t-lg"
                     style={{ height: `${stats?.weeklyEarnings ? Math.min(30, 10) : 5}%`, opacity: 0.3 }}
                   />
-                  <p className="text-xs text-gray-500 mt-1">{day}</p>
+                  <p className="text-xs text-[#6f7a71] mt-1">{day}</p>
                 </div>
               ))}
             </div>

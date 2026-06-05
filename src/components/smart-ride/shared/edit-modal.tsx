@@ -195,18 +195,18 @@ export function EditModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center max-w-md mx-auto">
-      <Card className="w-full bg-[#13131A] border-white/10 rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-hidden">
+      <Card className="w-full bg-white border-[#bec9bf]/30 rounded-t-3xl sm:rounded-3xl max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="px-4 py-4 border-b border-white/5 flex items-center justify-between">
+        <div className="px-4 py-4 border-b border-[#bec9bf]/20 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-white">{title}</h2>
-            <p className="text-sm text-gray-400">{subtitle}</p>
+            <h2 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-[#191c1d] ">{title}</h2>
+            <p className="text-sm text-[#6f7a71]">{subtitle}</p>
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors"
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#edeeef] transition-colors"
           >
-            <X className="h-5 w-5 text-gray-400" />
+            <X className="h-5 w-5 text-[#6f7a71]" />
           </button>
         </div>
 
@@ -218,14 +218,14 @@ export function EditModal({
             
             return (
               <div key={field.id}>
-                <label className="block text-sm text-gray-400 mb-1.5">
+                <label className="block text-sm text-[#6f7a71] mb-1.5">
                   {field.label}
                   {field.required && <span className="text-red-400 ml-1">*</span>}
                 </label>
                 
                 {isEditing ? (
                   <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6f7a71]">
                       {config.icon}
                     </div>
                     <Input
@@ -234,28 +234,28 @@ export function EditModal({
                       onChange={(e) => handleValueChange(field.id, e.target.value)}
                       placeholder={field.placeholder || config.placeholder}
                       maxLength={field.maxLength}
-                      className="pl-11 h-12 bg-[#1A1A24] border-white/10 text-white focus:border-[#00FF88]/30 rounded-xl"
+                      className="pl-11 h-12 bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d] focus:border-[#005f3a]/30 rounded-xl"
                       autoFocus
                     />
                     <button
                       onClick={() => setActiveField(null)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-[#00FF88]/20"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-[#005f3a]/20"
                     >
-                      <Check className="h-4 w-4 text-[#00FF88]" />
+                      <Check className="h-4 w-4 text-[#005f3a]" />
                     </button>
                   </div>
                 ) : (
                   <button
                     onClick={() => setActiveField(field.id)}
-                    className="w-full flex items-center gap-3 p-3 bg-[#1A1A24] border border-white/5 rounded-xl hover:border-[#00FF88]/30 transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-3 bg-[#f3f4f5] border border-[#bec9bf]/20 rounded-xl hover:border-[#005f3a]/30 transition-colors text-left"
                   >
-                    <div className="text-gray-500">
+                    <div className="text-[#6f7a71]">
                       {config.icon}
                     </div>
-                    <span className="flex-1 text-white truncate">
+                    <span className="flex-1 text-[#191c1d] truncate">
                       {editedValues[field.id] || field.placeholder || config.placeholder}
                     </span>
-                    <Edit className="h-4 w-4 text-gray-500" />
+                    <Edit className="h-4 w-4 text-[#6f7a71]" />
                   </button>
                 )}
               </div>
@@ -276,7 +276,7 @@ export function EditModal({
         {/* Success Message */}
         {success && (
           <div className="px-4 py-2">
-            <div className="flex items-center gap-2 text-[#00FF88] text-sm bg-[#00FF88]/10 px-3 py-2 rounded-lg">
+            <div className="flex items-center gap-2 text-[#005f3a] text-sm bg-[#005f3a]/10 px-3 py-2 rounded-lg">
               <Check className="h-4 w-4" />
               Changes saved successfully!
             </div>
@@ -284,22 +284,22 @@ export function EditModal({
         )}
 
         {/* Footer */}
-        <div className="px-4 py-4 border-t border-white/5 flex gap-3">
+        <div className="px-4 py-4 border-t border-[#bec9bf]/20 flex gap-3">
           <Button
             variant="outline"
             onClick={onClose}
-            className="flex-1 border-white/10 bg-transparent text-gray-300 hover:bg-white/5"
+            className="flex-1 border-[#bec9bf]/30 bg-transparent text-[#3f4941] hover:bg-[#edeeef]"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex-1 bg-[#00FF88] text-[#0D0D12] hover:bg-[#00CC6E]"
+            className="flex-1 bg-[#005f3a] text-white hover:bg-[#0e7a4d]"
           >
             {isSaving ? (
               <>
-                <div className="w-4 h-4 border-2 border-[#0D0D12]/30 border-t-[#0D0D12] rounded-full animate-spin mr-2" />
+                <div className="w-4 h-4 border-2 border-[#bec9bf]/30 border-t-[#005f3a] rounded-full animate-spin mr-2" />
                 Saving...
               </>
             ) : (
@@ -344,9 +344,9 @@ export function EditButton({ onClick, size = 'md', variant = 'default' }: EditBu
       className={cn(
         "rounded-full flex items-center justify-center transition-all",
         sizeClasses[size],
-        variant === 'dark' && "bg-white/10 hover:bg-white/20 text-white",
-        variant === 'light' && "bg-[#0D0D12]/10 hover:bg-[#0D0D12]/20 text-[#0D0D12]",
-        variant === 'default' && "bg-[#1A1A24] hover:bg-[#1E1E28] text-[#00FF88]"
+        variant === 'dark' && "bg-white/10 hover:bg-[#e1e3e4] text-[#191c1d]",
+        variant === 'light' && "bg-[#f8f9fa]/10 hover:bg-[#f8f9fa]/20 text-[#191c1d]",
+        variant === 'default' && "bg-[#f3f4f5] hover:bg-[#e7e8e9] text-[#005f3a]"
       )}
     >
       <Edit className={iconSizes[size]} />

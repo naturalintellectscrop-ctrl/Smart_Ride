@@ -63,7 +63,7 @@ export function RiderProfile() {
     <div className="min-h-screen bg-gray-50 pb-4">
       {/* Header */}
       <div className="bg-white px-4 py-4 border-b border-gray-100 sticky top-6 z-40">
-        <h1 className="text-xl font-bold text-gray-900">Profile</h1>
+        <h1 className="text-xl font-bold text-gray-900 font-[family-name:var(--font-plus-jakarta)]">Profile</h1>
       </div>
 
       {/* Profile Card */}
@@ -82,8 +82,8 @@ export function RiderProfile() {
                   <Star className="h-4 w-4 text-yellow-300 fill-yellow-300" />
                   <span className="text-sm">{userData.rating}</span>
                 </div>
-                <span className="text-white/60">•</span>
-                <span className="text-sm text-white/80">{userData.totalTrips} trips</span>
+                <span className="text-[#6f7a71]">•</span>
+                <span className="text-sm text-[#3f4941]">{userData.totalTrips} trips</span>
               </div>
             </div>
             <button className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
@@ -92,20 +92,20 @@ export function RiderProfile() {
           </div>
 
           <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-white/10 rounded-xl p-3 text-center">
+            <div className="bg-[#f3f4f5] rounded-xl p-3 text-center">
               <p className="text-xl font-bold">{userData.completionRate}%</p>
-              <p className="text-xs text-white/80">Completion</p>
+              <p className="text-xs text-[#3f4941]">Completion</p>
             </div>
-            <div className="bg-white/10 rounded-xl p-3 text-center">
+            <div className="bg-[#f3f4f5] rounded-xl p-3 text-center">
               <p className="text-xl font-bold">{userData.acceptanceRate}%</p>
-              <p className="text-xs text-white/80">Acceptance</p>
+              <p className="text-xs text-[#3f4941]">Acceptance</p>
             </div>
-            <div className="bg-white/10 rounded-xl p-3 text-center">
+            <div className="bg-[#f3f4f5] rounded-xl p-3 text-center">
               <div className="flex items-center justify-center gap-1">
                 <Star className="h-4 w-4 text-yellow-300 fill-yellow-300" />
                 <span className="text-xl font-bold">{userData.rating}</span>
               </div>
-              <p className="text-xs text-white/80">Rating</p>
+              <p className="text-xs text-[#3f4941]">Rating</p>
             </div>
           </div>
         </Card>

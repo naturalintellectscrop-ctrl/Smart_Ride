@@ -124,7 +124,7 @@ const getTypeColor = (type: ConversationType) => {
     case 'safety':
       return 'bg-rose-500/15 text-rose-400';
     case 'support':
-      return 'bg-[#00FF88]/15 text-[#00FF88]';
+      return 'bg-[#005f3a]/15 text-[#005f3a]';
   }
 };
 
@@ -170,13 +170,13 @@ export function RiderMessages() {
   // Chat View
   if (selectedConversation) {
     return (
-      <div className="min-h-screen bg-[#0D0D12] flex flex-col">
+      <div className="min-h-screen bg-[#f8f9fa] flex flex-col">
         {/* Chat Header */}
-        <div className="bg-[#13131A] border-b border-white/5 px-4 py-3 sticky top-6 z-10">
+        <div className="bg-white border-b border-[#bec9bf]/30 px-4 py-3 sticky top-6 z-10">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSelectedConversation(null)}
-              className="p-2 -ml-2 hover:bg-white/5 rounded-full"
+              className="p-2 -ml-2 hover:bg-[#f3f4f5] rounded-full"
             >
               <ArrowLeft className="h-5 w-5 text-gray-400" />
             </button>
@@ -188,8 +188,8 @@ export function RiderMessages() {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <h3 className="font-semibold text-white">{selectedConversation.name}</h3>
-                <Badge className="bg-white/5 text-gray-400 border-white/10 text-xs">
+                <h3 className="font-semibold text-[#191c1d]">{selectedConversation.name}</h3>
+                <Badge className="bg-[#f3f4f5] text-gray-400 border-[#bec9bf]/30 text-xs">
                   {getTypeLabel(selectedConversation.type)}
                 </Badge>
               </div>
@@ -197,10 +197,10 @@ export function RiderMessages() {
                 <p className="text-xs text-gray-500">{selectedConversation.taskId}</p>
               )}
             </div>
-            <button className="p-2 hover:bg-white/5 rounded-full">
+            <button className="p-2 hover:bg-[#f3f4f5] rounded-full">
               <Phone className="h-5 w-5 text-gray-400" />
             </button>
-            <button className="p-2 hover:bg-white/5 rounded-full">
+            <button className="p-2 hover:bg-[#f3f4f5] rounded-full">
               <MoreVertical className="h-5 w-5 text-gray-400" />
             </button>
           </div>
@@ -225,7 +225,7 @@ export function RiderMessages() {
 
           {/* Date Separator */}
           <div className="flex items-center justify-center">
-            <span className="text-xs text-gray-500 bg-[#1A1A24] px-3 py-1 rounded-full">
+            <span className="text-xs text-gray-500 bg-[#f3f4f5] px-3 py-1 rounded-full">
               Today
             </span>
           </div>
@@ -241,13 +241,13 @@ export function RiderMessages() {
               <div className={cn(
                 'max-w-[75%] px-4 py-2 rounded-2xl',
                 message.isMine
-                  ? 'bg-[#00FF88] text-[#0D0D12] rounded-br-md'
-                  : 'bg-[#1A1A24] text-white rounded-bl-md border border-white/5'
+                  ? 'bg-[#005f3a] text-white rounded-br-md'
+                  : 'bg-[#f3f4f5] text-[#191c1d] rounded-bl-md border border-[#bec9bf]/30'
               )}>
                 <p className="text-sm">{message.content}</p>
                 <div className={cn(
                   'flex items-center justify-end gap-1 mt-1',
-                  message.isMine ? 'text-[#0D0D12]/60' : 'text-gray-500'
+                  message.isMine ? 'text-[#6f7a71]' : 'text-gray-500'
                 )}>
                   <span className="text-xs">{message.timestamp}</span>
                   {message.isMine && (
@@ -262,17 +262,17 @@ export function RiderMessages() {
         </div>
 
         {/* Message Input */}
-        <div className="bg-[#13131A] border-t border-white/5 px-4 py-3">
+        <div className="bg-white border-t border-[#bec9bf]/30 px-4 py-3">
           <div className="flex items-center gap-2">
             <Input
               value={messageInput}
               onChange={(e) => setMessageInput(e.target.value)}
               placeholder="Type a message..."
-              className="flex-1 rounded-full px-4 py-2 bg-[#1A1A24] border-white/5 text-white placeholder-gray-500"
+              className="flex-1 rounded-full px-4 py-2 bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d] placeholder-gray-500"
             />
             <Button
               size="icon"
-              className="rounded-full bg-[#00FF88] hover:bg-[#00CC6E] text-[#0D0D12]"
+              className="rounded-full bg-[#005f3a] hover:bg-[#0e7a4d] text-white"
               disabled={!messageInput.trim()}
             >
               <Send className="h-5 w-5" />
@@ -285,9 +285,9 @@ export function RiderMessages() {
 
   // Conversations List View
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
+    <div className="min-h-screen bg-[#f8f9fa]">
       {/* Header */}
-      <div className="bg-[#13131A] border-b border-white/5 px-4 py-4 sticky top-6 z-10">
+      <div className="bg-white border-b border-[#bec9bf]/30 px-4 py-4 sticky top-6 z-10">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h1 className="text-xl font-bold text-white">Messages</h1>
@@ -304,7 +304,7 @@ export function RiderMessages() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search messages..."
-            className="pl-9 bg-[#1A1A24] border-white/5 text-white placeholder-gray-500"
+            className="pl-9 bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d] placeholder-gray-500"
           />
         </div>
       </div>
@@ -312,18 +312,18 @@ export function RiderMessages() {
       <div className="px-4 pt-4">
         {/* Quick Filters */}
         <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#00FF88] text-[#0D0D12] rounded-full text-sm font-medium">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#005f3a] text-white rounded-full text-sm font-medium">
             All
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#1A1A24] border border-white/5 rounded-full text-sm font-medium text-gray-400 hover:border-[#00FF88]/30">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#f3f4f5] border border-[#bec9bf]/30 rounded-full text-sm font-medium text-gray-400 hover:border-[#005f3a]/30">
             <User className="h-4 w-4" />
             Clients
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#1A1A24] border border-white/5 rounded-full text-sm font-medium text-gray-400 hover:border-[#00FF88]/30">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#f3f4f5] border border-[#bec9bf]/30 rounded-full text-sm font-medium text-gray-400 hover:border-[#005f3a]/30">
             <Store className="h-4 w-4" />
             Merchants
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#1A1A24] border border-white/5 rounded-full text-sm font-medium text-gray-400 hover:border-[#00FF88]/30">
+          <button className="flex items-center gap-2 px-4 py-2 bg-[#f3f4f5] border border-[#bec9bf]/30 rounded-full text-sm font-medium text-gray-400 hover:border-[#005f3a]/30">
             <Shield className="h-4 w-4" />
             Safety
           </button>
@@ -331,12 +331,12 @@ export function RiderMessages() {
 
         {/* Conversations List */}
         {filteredConversations.length === 0 ? (
-          <Card className="p-8 bg-[#13131A] border-white/5">
+          <Card className="p-8 bg-white border-[#bec9bf]/30">
             <div className="text-center">
-              <div className="w-16 h-16 bg-[#1A1A24] rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="w-16 h-16 bg-[#f3f4f5] rounded-full flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="h-8 w-8 text-gray-500" />
               </div>
-              <h3 className="font-semibold text-white mb-1">No Messages</h3>
+              <h3 className="font-semibold text-[#191c1d] mb-1">No Messages</h3>
               <p className="text-sm text-gray-400">
                 {searchQuery
                   ? 'No conversations match your search.'
@@ -349,7 +349,7 @@ export function RiderMessages() {
             {filteredConversations.map((conversation) => (
               <Card
                 key={conversation.id}
-                className="p-4 bg-[#13131A] border-white/5 cursor-pointer hover:border-[#00FF88]/30 transition-all"
+                className="p-4 bg-white border-[#bec9bf]/30 cursor-pointer hover:border-[#005f3a]/30 transition-all"
                 onClick={() => handleConversationClick(conversation)}
               >
                 <div className="flex items-center gap-3">
@@ -361,7 +361,7 @@ export function RiderMessages() {
                       {getTypeIcon(conversation.type)}
                     </div>
                     {conversation.unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF3B5C] rounded-full text-xs flex items-center justify-center text-white font-medium">
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#ba1a1a] rounded-full text-xs flex items-center justify-center text-white font-medium">
                         {conversation.unreadCount}
                       </span>
                     )}
@@ -369,8 +369,8 @@ export function RiderMessages() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-white">{conversation.name}</p>
-                        <Badge className="bg-white/5 text-gray-400 border-white/10 text-xs">
+                        <p className="font-semibold text-[#191c1d]">{conversation.name}</p>
+                        <Badge className="bg-[#f3f4f5] text-gray-400 border-[#bec9bf]/30 text-xs">
                           {getTypeLabel(conversation.type)}
                         </Badge>
                       </div>
@@ -378,12 +378,12 @@ export function RiderMessages() {
                     </div>
                     <p className={cn(
                       'text-sm truncate mt-0.5',
-                      conversation.unreadCount > 0 ? 'text-white font-medium' : 'text-gray-400'
+                      conversation.unreadCount > 0 ? 'text-[#191c1d] font-medium' : 'text-gray-400'
                     )}>
                       {conversation.lastMessage}
                     </p>
                     {conversation.taskId && (
-                      <p className="text-xs text-[#00FF88] mt-0.5">{conversation.taskId}</p>
+                      <p className="text-xs text-[#005f3a] mt-0.5">{conversation.taskId}</p>
                     )}
                   </div>
                 </div>

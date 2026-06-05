@@ -9,6 +9,7 @@ interface LogoProps {
   showText?: boolean;
   className?: string;
   linkToHome?: boolean;
+  variant?: 'light' | 'dark';
 }
 
 const sizeMap = {
@@ -21,9 +22,13 @@ export default function Logo({
   size = 'md', 
   showText = true, 
   className = '',
-  linkToHome = true 
+  linkToHome = true,
+  variant = 'light',
 }: LogoProps) {
   const { height, width } = sizeMap[size];
+  
+  const textColor = variant === 'dark' ? 'text-white' : 'text-[#191c1d]';
+  const glowColor = variant === 'dark' ? '0 8px 32px rgba(0, 255, 136, 0.2)' : '0 4px 12px rgba(0, 95, 58, 0.15)';
   
   const logoContent = (
     <div className={`flex items-center gap-3 ${className}`}>
@@ -32,7 +37,7 @@ export default function Logo({
         style={{ 
           width: width, 
           height: height,
-          boxShadow: '0 8px 32px rgba(0, 255, 136, 0.2)'
+          boxShadow: glowColor
         }}
       >
         <Image
@@ -45,7 +50,7 @@ export default function Logo({
         />
       </div>
       {showText && (
-        <span className="text-xl font-bold text-white tracking-tight">
+        <span className={`text-xl font-bold ${textColor} tracking-tight font-[family-name:var(--font-plus-jakarta)]`}>
           Smart Ride
         </span>
       )}

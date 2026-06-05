@@ -257,7 +257,7 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] max-w-md mx-auto">
+    <div className="min-h-screen bg-[#f8f9fa] max-w-md mx-auto">
       {/* Hidden reCAPTCHA button */}
       <button 
         ref={recaptchaButtonRef} 
@@ -267,16 +267,16 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
       />
       
       {/* Header */}
-      <div className="px-4 py-4 flex items-center border-b border-white/5">
+      <div className="px-4 py-4 flex items-center border-b border-[#bec9bf]/30 bg-white">
         <Button 
           variant="ghost" 
           size="icon"
           onClick={() => authStep === 'otp' ? setAuthStep('phone') : onBack()}
-          className="mr-2 text-gray-400 hover:text-white hover:bg-white/5"
+          className="mr-2 text-[#6f7a71] hover:text-[#191c1d] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-lg font-semibold text-white">
+        <h1 className="text-lg font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">
           {authStep === 'phone' && 'Sign In'}
           {authStep === 'otp' && 'Verify OTP'}
           {authStep === 'success' && 'Success!'}
@@ -289,13 +289,13 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
           <>
             {/* Phone Icon */}
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-[#00FF88]/15 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Smartphone className="h-8 w-8 text-[#00FF88]" />
+              <div className="w-16 h-16 bg-[#98f6be]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Smartphone className="h-8 w-8 text-[#005f3a]" />
               </div>
-              <h2 className="text-xl font-bold text-white mb-2">
+              <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">
                 Welcome to Smart Ride
               </h2>
-              <p className="text-gray-400 text-sm">
+              <p className="text-[#3f4941] text-sm">
                 Sign in with your phone number
               </p>
             </div>
@@ -303,7 +303,7 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
             {/* Phone Input */}
             <div className="space-y-4 mb-6">
               <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6f7a71] font-medium text-sm">
                   +256
                 </span>
                 <Input
@@ -311,12 +311,12 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
                   placeholder="7XX XXX XXX"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
-                  className="pl-16 h-14 text-base bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-[#00FF88] focus:ring-[#00FF88]/20"
+                  className="pl-16 h-14 text-base bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
                 />
               </div>
               
               {error && (
-                <div className="flex items-center gap-2 text-red-400 text-sm bg-red-400/10 p-3 rounded-lg">
+                <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg">
                   <AlertCircle className="h-4 w-4 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -325,8 +325,7 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
               <Button 
                 onClick={handlePhoneSubmit}
                 disabled={isLoading || phone.length < 9}
-                className="w-full h-14 bg-gradient-to-r from-[#00FF88] to-[#00CC6E] text-[#0D0D12] rounded-xl font-semibold text-base"
-                style={{ boxShadow: '0 4px 20px rgba(0, 255, 136, 0.25)' }}
+                className="w-full h-14 bg-[#005f3a] text-white rounded-xl font-semibold text-base hover:bg-[#0e7a4d] active:scale-95 transition-all"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -338,9 +337,9 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
 
             {/* Divider */}
             <div className="flex items-center gap-4 my-6">
-              <div className="flex-1 h-px bg-white/10" />
-              <span className="text-gray-500 text-sm">or continue with</span>
-              <div className="flex-1 h-px bg-white/10" />
+              <div className="flex-1 h-px bg-[#bec9bf]/30" />
+              <span className="text-[#6f7a71] text-sm">or continue with</span>
+              <div className="flex-1 h-px bg-[#bec9bf]/30" />
             </div>
 
             {/* Google Sign-In Button */}
@@ -348,7 +347,7 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
               variant="outline"
-              className="w-full h-14 bg-white text-gray-900 border-0 rounded-xl font-semibold text-base hover:bg-gray-100"
+              className="w-full h-14 bg-white border border-[#bec9bf] rounded-xl font-semibold text-base text-[#191c1d] hover:bg-[#f3f4f5]"
             >
               {googleLoading ? (
                 <Loader2 className="h-5 w-5 animate-spin mr-2" />
@@ -376,11 +375,11 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
             </Button>
 
             {/* Terms */}
-            <p className="text-center text-xs text-gray-500 mt-8">
+            <p className="text-center text-xs text-[#6f7a71] mt-8">
               By continuing, you agree to our{' '}
-              <span className="text-[#00FF88]">Terms of Service</span>
+              <span className="text-[#005f3a]">Terms of Service</span>
               {' '}and{' '}
-              <span className="text-[#00FF88]">Privacy Policy</span>
+              <span className="text-[#005f3a]">Privacy Policy</span>
             </p>
           </>
         )}
@@ -388,13 +387,13 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
         {authStep === 'otp' && (
           <>
             <div className="text-center mb-8">
-              <div className="w-16 h-16 bg-[#00FF88]/15 rounded-full flex items-center justify-center mx-auto mb-4">
-                <ShieldCheck className="h-8 w-8 text-[#00FF88]" />
+              <div className="w-16 h-16 bg-[#98f6be]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ShieldCheck className="h-8 w-8 text-[#005f3a]" />
               </div>
-              <h2 className="text-xl font-bold text-white mb-2">
+              <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">
                 Verify your number
               </h2>
-              <p className="text-gray-400 text-sm">
+              <p className="text-[#3f4941] text-sm">
                 Enter the 6-digit code sent to +256 {phone}
               </p>
             </div>
@@ -407,18 +406,18 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
                   onChange={setOtp}
                 >
                   <InputOTPGroup className="gap-2">
-                    <InputOTPSlot index={0} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
-                    <InputOTPSlot index={1} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
-                    <InputOTPSlot index={2} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
-                    <InputOTPSlot index={3} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
-                    <InputOTPSlot index={4} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
-                    <InputOTPSlot index={5} className="w-12 h-14 text-lg bg-[#1A1A24] border-[#1A1A24] text-white focus:border-[#00FF88]" />
+                    <InputOTPSlot index={0} className="w-12 h-14 text-lg bg-[#f3f4f5] border border-[#bec9bf] text-[#191c1d] focus:border-[#005f3a]" />
+                    <InputOTPSlot index={1} className="w-12 h-14 text-lg bg-[#f3f4f5] border border-[#bec9bf] text-[#191c1d] focus:border-[#005f3a]" />
+                    <InputOTPSlot index={2} className="w-12 h-14 text-lg bg-[#f3f4f5] border border-[#bec9bf] text-[#191c1d] focus:border-[#005f3a]" />
+                    <InputOTPSlot index={3} className="w-12 h-14 text-lg bg-[#f3f4f5] border border-[#bec9bf] text-[#191c1d] focus:border-[#005f3a]" />
+                    <InputOTPSlot index={4} className="w-12 h-14 text-lg bg-[#f3f4f5] border border-[#bec9bf] text-[#191c1d] focus:border-[#005f3a]" />
+                    <InputOTPSlot index={5} className="w-12 h-14 text-lg bg-[#f3f4f5] border border-[#bec9bf] text-[#191c1d] focus:border-[#005f3a]" />
                   </InputOTPGroup>
                 </InputOTP>
               </div>
 
               {error && (
-                <div className="flex items-center gap-2 text-red-400 text-sm bg-red-400/10 p-3 rounded-lg justify-center">
+                <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 p-3 rounded-lg justify-center">
                   <AlertCircle className="h-4 w-4 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
@@ -427,8 +426,7 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
               <Button 
                 onClick={handleOtpSubmit}
                 disabled={isLoading || otp.length !== 6}
-                className="w-full h-14 bg-gradient-to-r from-[#00FF88] to-[#00CC6E] text-[#0D0D12] rounded-xl font-semibold"
-                style={{ boxShadow: '0 4px 20px rgba(0, 255, 136, 0.25)' }}
+                className="w-full h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
               >
                 {isLoading ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -439,14 +437,14 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
 
               <div className="text-center">
                 {resendTimer > 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-[#6f7a71]">
                     Resend code in {resendTimer}s
                   </p>
                 ) : (
                   <button 
                     onClick={handleResendOtp}
                     disabled={isLoading}
-                    className="text-[#00FF88] font-medium text-sm"
+                    className="text-[#005f3a] font-medium text-sm"
                   >
                     Resend Code
                   </button>
@@ -459,15 +457,15 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
         {authStep === 'success' && (
           <div className="text-center py-12">
             <div 
-              className="w-20 h-20 bg-[#00FF88]/15 rounded-full flex items-center justify-center mx-auto mb-4"
-              style={{ boxShadow: '0 0 30px rgba(0, 255, 136, 0.3)' }}
+              className="w-20 h-20 bg-[#98f6be]/20 rounded-full flex items-center justify-center mx-auto mb-4"
+              style={{ boxShadow: '0 0 30px rgba(0, 95, 58, 0.15)' }}
             >
-              <ShieldCheck className="h-10 w-10 text-[#00FF88]" />
+              <ShieldCheck className="h-10 w-10 text-[#005f3a]" />
             </div>
-            <h2 className="text-xl font-bold text-white mb-2">
+            <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">
               Verification Complete!
             </h2>
-            <p className="text-gray-400 text-sm">
+            <p className="text-[#3f4941] text-sm">
               Setting up your account...
             </p>
           </div>

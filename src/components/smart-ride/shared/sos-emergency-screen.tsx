@@ -338,7 +338,7 @@ export function SOSEmergencyScreen({
   // ========================================================================
   if (sosActive) {
     return (
-      <div className="fixed inset-0 z-[100] bg-[#0D0D12] overflow-y-auto">
+      <div className="fixed inset-0 z-[100] bg-[#f8f9fa] overflow-y-auto">
         {/* Red glow background */}
         <div className="absolute inset-0 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-red-500/20 rounded-full blur-[120px]" />
@@ -360,14 +360,14 @@ export function SOSEmergencyScreen({
               </div>
               <button
                 onClick={() => setShowCancelConfirm(true)}
-                className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                className="p-2 rounded-lg bg-[#f3f4f5] hover:bg-[#e8ebe8] transition-colors"
               >
-                <X className="h-5 w-5 text-white/60" />
+                <X className="h-5 w-5 text-[#6f7a71]" />
               </button>
             </div>
 
             {/* Countdown Timer Card */}
-            <Card className="bg-[#13131A] border border-red-500/20 overflow-hidden">
+            <Card className="bg-white border border-red-500/20 overflow-hidden">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -375,8 +375,8 @@ export function SOSEmergencyScreen({
                       <Clock className="h-5 w-5 text-red-400" />
                     </div>
                     <div>
-                      <p className="text-white font-medium text-sm">SOS Duration</p>
-                      <p className="text-white/50 text-xs">
+                      <p className="text-[#191c1d] font-medium text-sm">SOS Duration</p>
+                      <p className="text-[#6f7a71] text-xs">
                         {currentLocation
                           ? `${currentLocation.lat.toFixed(4)}, ${currentLocation.lng.toFixed(4)}`
                           : 'Getting location...'}
@@ -393,9 +393,9 @@ export function SOSEmergencyScreen({
 
           {/* Status Progress */}
           <div className="px-4 mb-4">
-            <Card className="bg-[#13131A] border border-white/5">
+            <Card className="bg-white border border-[#bec9bf]/30">
               <CardContent className="p-4">
-                <h3 className="text-white/70 font-semibold text-sm mb-3 uppercase tracking-wider">Response Status</h3>
+                <h3 className="text-[#3f4941] font-semibold text-sm mb-3 uppercase tracking-wider">Response Status</h3>
                 <div className="space-y-3">
                   <StatusItem
                     icon={Shield}
@@ -459,7 +459,7 @@ export function SOSEmergencyScreen({
 
           {/* Audio Recording */}
           <div className="px-4 mb-4">
-            <Card className="bg-[#13131A] border border-white/5">
+            <Card className="bg-white border border-[#bec9bf]/30">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -471,20 +471,20 @@ export function SOSEmergencyScreen({
                       )}
                     >
                       {isRecording ? (
-                        <MicOff className="h-5 w-5 text-white" />
+                        <MicOff className="h-5 w-5 text-[#191c1d]" />
                       ) : (
-                        <Mic className="h-5 w-5 text-white/70" />
+                        <Mic className="h-5 w-5 text-[#3f4941]" />
                       )}
                     </button>
                     <div>
-                      <p className="text-white font-medium text-sm">
+                      <p className="text-[#191c1d] font-medium text-sm">
                         {isRecording ? 'Recording...' : actionsTaken.recordingStarted ? 'Recording Saved' : 'Record Audio'}
                       </p>
                       {isRecording && (
                         <p className="text-red-400 text-xs font-mono">{formatDuration(recordingDuration)}</p>
                       )}
                       {!isRecording && !actionsTaken.recordingStarted && (
-                        <p className="text-white/40 text-xs">Save evidence of the incident</p>
+                        <p className="text-[#6f7a71] text-xs">Save evidence of the incident</p>
                       )}
                     </div>
                   </div>
@@ -499,7 +499,7 @@ export function SOSEmergencyScreen({
                       {isMuted ? (
                         <VolumeX className="h-4 w-4 text-red-400" />
                       ) : (
-                        <Volume2 className="h-4 w-4 text-white/70" />
+                        <Volume2 className="h-4 w-4 text-[#3f4941]" />
                       )}
                     </button>
                     <button
@@ -509,7 +509,7 @@ export function SOSEmergencyScreen({
                         isSpeakerOn ? 'bg-emerald-500/20' : 'bg-white/5'
                       )}
                     >
-                      <Volume2 className="h-4 w-4 text-white/70" />
+                      <Volume2 className="h-4 w-4 text-[#3f4941]" />
                     </button>
                   </div>
                 </div>
@@ -519,45 +519,45 @@ export function SOSEmergencyScreen({
 
           {/* Trip Details */}
           <div className="px-4 mb-4">
-            <Card className="bg-[#13131A] border border-white/5">
+            <Card className="bg-white border border-[#bec9bf]/30">
               <CardContent className="p-4">
-                <h3 className="text-white/70 font-semibold text-sm mb-3 uppercase tracking-wider">Trip Details</h3>
+                <h3 className="text-[#3f4941] font-semibold text-sm mb-3 uppercase tracking-wider">Trip Details</h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-white/40 text-sm">Trip ID</span>
-                    <Badge variant="outline" className="bg-[#1A1A24] border-white/10 text-white/70 text-xs">
+                    <span className="text-[#6f7a71] text-sm">Trip ID</span>
+                    <Badge variant="outline" className="bg-[#f3f4f5] border-[#bec9bf]/40 text-[#3f4941] text-xs">
                       {trip.taskNumber}
                     </Badge>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#00FF88]/20 flex items-center justify-center mt-0.5">
-                      <CircleDot className="h-3 w-3 text-[#00FF88]" />
+                    <div className="w-6 h-6 rounded-full bg-[#98f6be]/40 flex items-center justify-center mt-0.5">
+                      <CircleDot className="h-3 w-3 text-[#005f3a]" />
                     </div>
                     <div>
-                      <p className="text-white/40 text-xs">Pickup</p>
-                      <p className="text-white text-sm">{trip.pickupAddress}</p>
+                      <p className="text-[#6f7a71] text-xs">Pickup</p>
+                      <p className="text-[#191c1d] text-sm">{trip.pickupAddress}</p>
                     </div>
                   </div>
-                  <div className="ml-3 border-l border-dashed border-white/10 h-3" />
+                  <div className="ml-3 border-l border-dashed border-[#bec9bf]/40 h-3" />
                   <div className="flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center mt-0.5">
                       <Navigation className="h-3 w-3 text-red-400" />
                     </div>
                     <div>
-                      <p className="text-white/40 text-xs">Dropoff</p>
-                      <p className="text-white text-sm">{trip.dropoffAddress}</p>
+                      <p className="text-[#6f7a71] text-xs">Dropoff</p>
+                      <p className="text-[#191c1d] text-sm">{trip.dropoffAddress}</p>
                     </div>
                   </div>
                   {(trip.riderName || trip.clientName) && (
-                    <div className="mt-3 p-3 bg-[#1A1A24] rounded-xl">
-                      <p className="text-white/40 text-xs mb-1">
+                    <div className="mt-3 p-3 bg-[#f3f4f5] rounded-xl">
+                      <p className="text-[#6f7a71] text-xs mb-1">
                         {userType === 'CLIENT' ? 'Rider' : 'Client'}
                       </p>
-                      <p className="text-white text-sm font-medium">
+                      <p className="text-[#191c1d] text-sm font-medium">
                         {userType === 'CLIENT' ? trip.riderName : trip.clientName}
                       </p>
                       {trip.plateNumber && (
-                        <p className="text-white/40 text-xs mt-1">
+                        <p className="text-[#6f7a71] text-xs mt-1">
                           {trip.vehicleInfo} &bull; {trip.plateNumber}
                         </p>
                       )}
@@ -570,9 +570,9 @@ export function SOSEmergencyScreen({
 
           {/* Emergency Numbers */}
           <div className="px-4 mb-4">
-            <Card className="bg-[#13131A] border border-white/5">
+            <Card className="bg-white border border-[#bec9bf]/30">
               <CardContent className="p-4">
-                <h3 className="text-white/70 font-semibold text-sm mb-3 uppercase tracking-wider">
+                <h3 className="text-[#3f4941] font-semibold text-sm mb-3 uppercase tracking-wider">
                   Emergency Numbers
                 </h3>
                 <div className="space-y-2">
@@ -582,15 +582,15 @@ export function SOSEmergencyScreen({
                       <button
                         key={emergency.number}
                         onClick={() => callEmergency(emergency.number)}
-                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#1A1A24] hover:bg-[#252530] transition-colors"
+                        className="w-full flex items-center justify-between p-3 rounded-xl bg-[#f3f4f5] hover:bg-[#e8ebe8] transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-red-500/15 flex items-center justify-center">
                             <Icon className="h-4 w-4 text-red-400" />
                           </div>
                           <div className="text-left">
-                            <p className="text-white text-sm font-medium">{emergency.name}</p>
-                            <p className="text-white/40 text-xs">{emergency.description}</p>
+                            <p className="text-[#191c1d] text-sm font-medium">{emergency.name}</p>
+                            <p className="text-[#6f7a71] text-xs">{emergency.description}</p>
                           </div>
                         </div>
                         <span className="text-red-400 font-bold text-lg">{emergency.number}</span>
@@ -604,15 +604,15 @@ export function SOSEmergencyScreen({
 
           {/* Emergency Contacts */}
           <div className="px-4 mb-4">
-            <Card className="bg-[#13131A] border border-white/5">
+            <Card className="bg-white border border-[#bec9bf]/30">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-white/70 font-semibold text-sm uppercase tracking-wider">
+                  <h3 className="text-[#3f4941] font-semibold text-sm uppercase tracking-wider">
                     Emergency Contacts
                   </h3>
                   <button
                     onClick={() => setShowContactManager(!showContactManager)}
-                    className="text-[#00FF88] text-xs font-medium flex items-center gap-1"
+                    className="text-[#005f3a] text-xs font-medium flex items-center gap-1"
                   >
                     <Plus className="h-3 w-3" />
                     Manage
@@ -622,25 +622,25 @@ export function SOSEmergencyScreen({
                   {contacts.map((contact) => (
                     <div
                       key={contact.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-[#1A1A24]"
+                      className="flex items-center justify-between p-3 rounded-xl bg-[#f3f4f5]"
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-[#00FF88]/10 flex items-center justify-center">
-                          <Users className="h-4 w-4 text-[#00FF88]" />
+                        <div className="w-9 h-9 rounded-full bg-[#98f6be]/30 flex items-center justify-center">
+                          <Users className="h-4 w-4 text-[#005f3a]" />
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-white text-sm font-medium">{contact.name}</p>
+                            <p className="text-[#191c1d] text-sm font-medium">{contact.name}</p>
                             {contact.isPrimary && (
-                              <Badge className="bg-[#00FF88]/10 text-[#00FF88] text-[10px] px-1.5 py-0 h-4 border-0">
+                              <Badge className="bg-[#98f6be]/30 text-[#005f3a] text-[10px] px-1.5 py-0 h-4 border-0">
                                 Primary
                               </Badge>
                             )}
                           </div>
-                          <p className="text-white/40 text-xs">
+                          <p className="text-[#6f7a71] text-xs">
                             {contact.relationship}
                             {contact.isNotified && (
-                              <span className="text-[#00FF88] ml-2">&bull; Notified</span>
+                              <span className="text-[#005f3a] ml-2">&bull; Notified</span>
                             )}
                           </p>
                         </div>
@@ -664,26 +664,26 @@ export function SOSEmergencyScreen({
               <Button
                 onClick={() => setShowCancelConfirm(true)}
                 variant="outline"
-                className="w-full py-6 bg-[#1A1A24] border-white/10 text-white/60 hover:bg-white/10 hover:text-white rounded-xl"
+                className="w-full py-6 bg-[#f3f4f5] border-[#bec9bf]/40 text-[#6f7a71] hover:bg-[#e8ebe8] hover:text-white rounded-xl"
               >
                 Cancel SOS
               </Button>
             ) : (
               <div className="space-y-3">
-                <p className="text-center text-white/60 text-sm">
+                <p className="text-center text-[#6f7a71] text-sm">
                   Are you sure you want to cancel the emergency alert?
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                   <Button
                     onClick={() => setShowCancelConfirm(false)}
                     variant="outline"
-                    className="py-5 bg-[#1A1A24] border-white/10 text-white/70 hover:bg-white/10 rounded-xl"
+                    className="py-5 bg-[#f3f4f5] border-[#bec9bf]/40 text-[#3f4941] hover:bg-[#e8ebe8] rounded-xl"
                   >
                     Keep Active
                   </Button>
                   <Button
                     onClick={cancelSOS}
-                    className="py-5 bg-red-600 hover:bg-red-700 text-white rounded-xl"
+                    className="py-5 bg-red-600 hover:bg-red-700 text-[#191c1d] rounded-xl"
                   >
                     Cancel SOS
                   </Button>
@@ -713,7 +713,7 @@ export function SOSEmergencyScreen({
   // SOS PRE-ACTIVATION VIEW
   // ========================================================================
   return (
-    <div className="fixed inset-0 z-[100] bg-[#0D0D12] overflow-y-auto">
+    <div className="fixed inset-0 z-[100] bg-[#f8f9fa] overflow-y-auto">
       {/* Background glow */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[500px] h-[500px] bg-red-500/10 rounded-full blur-[120px]" />
@@ -725,13 +725,13 @@ export function SOSEmergencyScreen({
           <div className="flex items-center gap-3 mb-2">
             <button
               onClick={onClose}
-              className="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+              className="w-10 h-10 rounded-full bg-[#f3f4f5] hover:bg-[#e8ebe8] flex items-center justify-center transition-colors"
             >
-              <XCircle className="h-5 w-5 text-white/60" />
+              <XCircle className="h-5 w-5 text-[#6f7a71]" />
             </button>
             <div>
-              <h1 className="text-xl font-bold text-white">Emergency Actions</h1>
-              <p className="text-white/50 text-sm">Select what you need help with</p>
+              <h1 className="text-xl font-bold text-[#191c1d]">Emergency Actions</h1>
+              <p className="text-[#6f7a71] text-sm">Select what you need help with</p>
             </div>
           </div>
         </div>
@@ -744,8 +744,8 @@ export function SOSEmergencyScreen({
             className={cn(
               'w-full p-6 rounded-2xl flex flex-col items-center gap-3 transition-all',
               currentLocation
-                ? 'bg-gradient-to-br from-red-600 to-red-700 text-white shadow-lg shadow-red-500/30 active:scale-[0.98]'
-                : 'bg-[#1A1A24] text-white/40'
+                ? 'bg-gradient-to-br from-red-600 to-red-700 text-[#191c1d] shadow-lg shadow-red-500/30 active:scale-[0.98]'
+                : 'bg-[#f3f4f5] text-[#6f7a71]'
             )}
           >
             <div className={cn(
@@ -801,13 +801,13 @@ export function SOSEmergencyScreen({
 
         {/* Emergency Numbers */}
         <div className="px-4 mb-4">
-          <Card className="bg-[#13131A] border border-white/5">
+          <Card className="bg-white border border-[#bec9bf]/30">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-white/70 font-semibold text-sm uppercase tracking-wider">
+                <h3 className="text-[#3f4941] font-semibold text-sm uppercase tracking-wider">
                   Emergency Numbers
                 </h3>
-                <Badge variant="outline" className="bg-[#1A1A24] border-white/10 text-white/40 text-[10px]">
+                <Badge variant="outline" className="bg-[#f3f4f5] border-[#bec9bf]/40 text-[#6f7a71] text-[10px]">
                   Uganda
                 </Badge>
               </div>
@@ -818,15 +818,15 @@ export function SOSEmergencyScreen({
                     <button
                       key={emergency.number}
                       onClick={() => callEmergency(emergency.number)}
-                      className="w-full flex items-center justify-between p-3 rounded-xl bg-[#1A1A24] hover:bg-[#252530] transition-colors"
+                      className="w-full flex items-center justify-between p-3 rounded-xl bg-[#f3f4f5] hover:bg-[#e8ebe8] transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-red-500/15 flex items-center justify-center">
                           <Icon className="h-4 w-4 text-red-400" />
                         </div>
                         <div className="text-left">
-                          <p className="text-white text-sm font-medium">{emergency.name}</p>
-                          <p className="text-white/40 text-xs">{emergency.description}</p>
+                          <p className="text-[#191c1d] text-sm font-medium">{emergency.name}</p>
+                          <p className="text-[#6f7a71] text-xs">{emergency.description}</p>
                         </div>
                       </div>
                       <span className="text-red-400 font-bold text-lg">{emergency.number}</span>
@@ -836,18 +836,18 @@ export function SOSEmergencyScreen({
                 {/* Smart Ride Support */}
                 <button
                   onClick={() => callEmergency(SMART_RIDE_SUPPORT.number)}
-                  className="w-full flex items-center justify-between p-3 rounded-xl bg-[#1A1A24] hover:bg-[#252530] transition-colors"
+                  className="w-full flex items-center justify-between p-3 rounded-xl bg-[#f3f4f5] hover:bg-[#e8ebe8] transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-[#00FF88]/15 flex items-center justify-center">
-                      <HeadsetIcon className="h-4 w-4 text-[#00FF88]" />
+                    <div className="w-9 h-9 rounded-full bg-[#98f6be]/25 flex items-center justify-center">
+                      <HeadsetIcon className="h-4 w-4 text-[#005f3a]" />
                     </div>
                     <div className="text-left">
-                      <p className="text-white text-sm font-medium">{SMART_RIDE_SUPPORT.name}</p>
-                      <p className="text-white/40 text-xs">{SMART_RIDE_SUPPORT.description}</p>
+                      <p className="text-[#191c1d] text-sm font-medium">{SMART_RIDE_SUPPORT.name}</p>
+                      <p className="text-[#6f7a71] text-xs">{SMART_RIDE_SUPPORT.description}</p>
                     </div>
                   </div>
-                  <span className="text-[#00FF88] font-bold text-sm">{SMART_RIDE_SUPPORT.number}</span>
+                  <span className="text-[#005f3a] font-bold text-sm">{SMART_RIDE_SUPPORT.number}</span>
                 </button>
               </div>
             </CardContent>
@@ -856,15 +856,15 @@ export function SOSEmergencyScreen({
 
         {/* Emergency Contacts Management */}
         <div className="px-4 mb-4">
-          <Card className="bg-[#13131A] border border-white/5">
+          <Card className="bg-white border border-[#bec9bf]/30">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-white/70 font-semibold text-sm uppercase tracking-wider">
+                <h3 className="text-[#3f4941] font-semibold text-sm uppercase tracking-wider">
                   Emergency Contacts
                 </h3>
                 <button
                   onClick={() => setShowContactManager(!showContactManager)}
-                  className="text-[#00FF88] text-xs font-medium flex items-center gap-1"
+                  className="text-[#005f3a] text-xs font-medium flex items-center gap-1"
                 >
                   <Plus className="h-3 w-3" />
                   Manage
@@ -875,7 +875,7 @@ export function SOSEmergencyScreen({
                   {contacts.map((contact) => (
                     <div
                       key={contact.id}
-                      className="flex items-center justify-between p-3 rounded-xl bg-[#1A1A24]"
+                      className="flex items-center justify-between p-3 rounded-xl bg-[#f3f4f5]"
                     >
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 rounded-full bg-red-500/10 flex items-center justify-center">
@@ -883,14 +883,14 @@ export function SOSEmergencyScreen({
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <p className="text-white text-sm font-medium">{contact.name}</p>
+                            <p className="text-[#191c1d] text-sm font-medium">{contact.name}</p>
                             {contact.isPrimary && (
-                              <Badge className="bg-[#00FF88]/10 text-[#00FF88] text-[10px] px-1.5 py-0 h-4 border-0">
+                              <Badge className="bg-[#98f6be]/30 text-[#005f3a] text-[10px] px-1.5 py-0 h-4 border-0">
                                 Primary
                               </Badge>
                             )}
                           </div>
-                          <p className="text-white/40 text-xs">{contact.relationship}</p>
+                          <p className="text-[#6f7a71] text-xs">{contact.relationship}</p>
                         </div>
                       </div>
                       <button
@@ -904,11 +904,11 @@ export function SOSEmergencyScreen({
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <Users className="h-12 w-12 text-white/10 mx-auto mb-3" />
-                  <p className="text-white/40 text-sm mb-2">No emergency contacts added</p>
+                  <Users className="h-12 w-12 text-[#bec9bf] mx-auto mb-3" />
+                  <p className="text-[#6f7a71] text-sm mb-2">No emergency contacts added</p>
                   <button
                     onClick={() => setShowContactManager(true)}
-                    className="text-[#00FF88] text-sm font-medium"
+                    className="text-[#005f3a] text-sm font-medium"
                   >
                     Add Contacts
                   </button>
@@ -921,35 +921,35 @@ export function SOSEmergencyScreen({
         {/* Trip Details (if active) */}
         {trip && (
           <div className="px-4 mb-8">
-            <Card className="bg-[#13131A] border border-white/5">
+            <Card className="bg-white border border-[#bec9bf]/30">
               <CardContent className="p-4">
-                <h3 className="text-white/70 font-semibold text-sm mb-3 uppercase tracking-wider">
+                <h3 className="text-[#3f4941] font-semibold text-sm mb-3 uppercase tracking-wider">
                   Current Trip
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-white/40 text-sm">Trip ID</span>
-                    <Badge variant="outline" className="bg-[#1A1A24] border-white/10 text-white/70 text-xs">
+                    <span className="text-[#6f7a71] text-sm">Trip ID</span>
+                    <Badge variant="outline" className="bg-[#f3f4f5] border-[#bec9bf]/40 text-[#3f4941] text-xs">
                       {trip.taskNumber}
                     </Badge>
                   </div>
                   <div className="flex items-start gap-3">
-                    <div className="w-6 h-6 rounded-full bg-[#00FF88]/20 flex items-center justify-center mt-0.5">
-                      <CircleDot className="h-3 w-3 text-[#00FF88]" />
+                    <div className="w-6 h-6 rounded-full bg-[#98f6be]/40 flex items-center justify-center mt-0.5">
+                      <CircleDot className="h-3 w-3 text-[#005f3a]" />
                     </div>
                     <div>
-                      <p className="text-white/40 text-xs">Pickup</p>
-                      <p className="text-white text-sm">{trip.pickupAddress}</p>
+                      <p className="text-[#6f7a71] text-xs">Pickup</p>
+                      <p className="text-[#191c1d] text-sm">{trip.pickupAddress}</p>
                     </div>
                   </div>
-                  <div className="ml-3 border-l border-dashed border-white/10 h-3" />
+                  <div className="ml-3 border-l border-dashed border-[#bec9bf]/40 h-3" />
                   <div className="flex items-start gap-3">
                     <div className="w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center mt-0.5">
                       <Navigation className="h-3 w-3 text-red-400" />
                     </div>
                     <div>
-                      <p className="text-white/40 text-xs">Dropoff</p>
-                      <p className="text-white text-sm">{trip.dropoffAddress}</p>
+                      <p className="text-[#6f7a71] text-xs">Dropoff</p>
+                      <p className="text-[#191c1d] text-sm">{trip.dropoffAddress}</p>
                     </div>
                   </div>
                 </div>
@@ -993,15 +993,15 @@ function StatusItem({
   return (
     <div className="flex items-center gap-3">
       {done ? (
-        <CheckCircle className="h-5 w-5 text-[#00FF88] flex-shrink-0" />
+        <CheckCircle className="h-5 w-5 text-[#005f3a] flex-shrink-0" />
       ) : (
-        <Loader2 className="h-5 w-5 text-white/30 animate-spin flex-shrink-0" />
+        <Loader2 className="h-5 w-5 text-[#bec9bf] animate-spin flex-shrink-0" />
       )}
-      <span className={cn('text-sm flex-1', done ? 'text-[#00FF88]' : 'text-white/40')}>
+      <span className={cn('text-sm flex-1', done ? 'text-[#005f3a]' : 'text-[#6f7a71]')}>
         {label}
       </span>
       {detail && (
-        <span className="text-[#00FF88]/60 text-xs">{detail}</span>
+        <span className="text-[#005f3a]/60 text-xs">{detail}</span>
       )}
     </div>
   );
@@ -1036,15 +1036,15 @@ function QuickAction({
       onClick={onClick}
       className={cn(
         'p-4 rounded-xl flex flex-col items-center gap-2 transition-all',
-        'bg-[#1A1A24] border border-white/5 hover:border-white/10',
+        'bg-[#f3f4f5] border border-[#bec9bf]/30 hover:border-[#bec9bf]/40',
         'active:scale-[0.97]'
       )}
     >
       <div className={cn('w-11 h-11 rounded-full flex items-center justify-center', cfg.bg)}>
         <Icon className={cn('h-5 w-5', cfg.icon)} />
       </div>
-      <p className="text-white text-sm font-medium">{label}</p>
-      <p className="text-white/40 text-xs">{sublabel}</p>
+      <p className="text-[#191c1d] text-sm font-medium">{label}</p>
+      <p className="text-[#6f7a71] text-xs">{sublabel}</p>
     </button>
   );
 }
@@ -1091,16 +1091,16 @@ function ContactManagerModal({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-[110] bg-[#0D0D12]/95 backdrop-blur-md flex items-end sm:items-center justify-center">
-      <div className="w-full max-w-md max-h-[85vh] bg-[#13131A] border-t border-white/10 rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
+    <div className="fixed inset-0 z-[110] bg-[#f8f9fa]/95 backdrop-blur-md flex items-end sm:items-center justify-center">
+      <div className="w-full max-w-md max-h-[85vh] bg-white border-t border-[#bec9bf]/40 rounded-t-3xl sm:rounded-3xl overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-white/5 flex items-center justify-between">
-          <h2 className="text-lg font-bold text-white">Manage Emergency Contacts</h2>
+        <div className="p-4 border-b border-[#bec9bf]/30 flex items-center justify-between">
+          <h2 className="text-lg font-bold text-[#191c1d]">Manage Emergency Contacts</h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center"
+            className="w-8 h-8 rounded-full bg-[#f3f4f5] hover:bg-[#e8ebe8] flex items-center justify-center"
           >
-            <X className="h-4 w-4 text-white/60" />
+            <X className="h-4 w-4 text-[#6f7a71]" />
           </button>
         </div>
 
@@ -1109,30 +1109,30 @@ function ContactManagerModal({
           {contacts.map((contact) => (
             <div
               key={contact.id}
-              className="flex items-center justify-between p-3 rounded-xl bg-[#1A1A24]"
+              className="flex items-center justify-between p-3 rounded-xl bg-[#f3f4f5]"
             >
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-[#00FF88]/10 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-[#00FF88]" />
+                <div className="w-9 h-9 rounded-full bg-[#98f6be]/30 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-[#005f3a]" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <p className="text-white text-sm font-medium">{contact.name}</p>
+                    <p className="text-[#191c1d] text-sm font-medium">{contact.name}</p>
                     {contact.isPrimary && (
-                      <Star className="h-3 w-3 text-[#00FF88] fill-[#00FF88]" />
+                      <Star className="h-3 w-3 text-[#005f3a] fill-[#005f3a]" />
                     )}
                   </div>
-                  <p className="text-white/40 text-xs">{contact.relationship} &bull; {contact.phone}</p>
+                  <p className="text-[#6f7a71] text-xs">{contact.relationship} &bull; {contact.phone}</p>
                 </div>
               </div>
               <div className="flex items-center gap-1">
                 {!contact.isPrimary && (
                   <button
                     onClick={() => onSetPrimary(contact.id)}
-                    className="p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+                    className="p-1.5 rounded-lg hover:bg-[#f3f4f5] transition-colors"
                     title="Set as primary"
                   >
-                    <Star className="h-4 w-4 text-white/30" />
+                    <Star className="h-4 w-4 text-[#bec9bf]" />
                   </button>
                 )}
                 <button
@@ -1140,7 +1140,7 @@ function ContactManagerModal({
                   className="p-1.5 rounded-lg hover:bg-red-500/10 transition-colors"
                   title="Remove contact"
                 >
-                  <Trash2 className="h-4 w-4 text-white/30 hover:text-red-400" />
+                  <Trash2 className="h-4 w-4 text-[#bec9bf] hover:text-red-400" />
                 </button>
               </div>
             </div>
@@ -1148,34 +1148,34 @@ function ContactManagerModal({
         </div>
 
         {/* Add New Contact */}
-        <div className="p-4 border-t border-white/5 bg-[#0D0D12]">
-          <p className="text-white/70 text-sm font-medium mb-3">Add New Contact</p>
+        <div className="p-4 border-t border-[#bec9bf]/30 bg-[#f8f9fa]">
+          <p className="text-[#3f4941] text-sm font-medium mb-3">Add New Contact</p>
           <div className="space-y-2">
             <input
               type="text"
               placeholder="Full Name"
               value={newContact.name}
               onChange={(e) => onNewContactChange({ ...newContact, name: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-xl bg-[#1A1A24] border border-white/10 text-white placeholder:text-white/30 text-sm focus:outline-none focus:border-[#00FF88]/40"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#f3f4f5] border border-[#bec9bf]/40 text-[#191c1d] placeholder:text-[#bec9bf] text-sm focus:outline-none focus:border-[#005f3a]/40"
             />
             <input
               type="tel"
               placeholder="Phone Number (+256...)"
               value={newContact.phone}
               onChange={(e) => onNewContactChange({ ...newContact, phone: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-xl bg-[#1A1A24] border border-white/10 text-white placeholder:text-white/30 text-sm focus:outline-none focus:border-[#00FF88]/40"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#f3f4f5] border border-[#bec9bf]/40 text-[#191c1d] placeholder:text-[#bec9bf] text-sm focus:outline-none focus:border-[#005f3a]/40"
             />
             <input
               type="text"
               placeholder="Relationship (e.g. Spouse, Parent)"
               value={newContact.relationship}
               onChange={(e) => onNewContactChange({ ...newContact, relationship: e.target.value })}
-              className="w-full px-4 py-2.5 rounded-xl bg-[#1A1A24] border border-white/10 text-white placeholder:text-white/30 text-sm focus:outline-none focus:border-[#00FF88]/40"
+              className="w-full px-4 py-2.5 rounded-xl bg-[#f3f4f5] border border-[#bec9bf]/40 text-[#191c1d] placeholder:text-[#bec9bf] text-sm focus:outline-none focus:border-[#005f3a]/40"
             />
             <Button
               onClick={onAddContact}
               disabled={!newContact.name || !newContact.phone}
-              className="w-full bg-[#00FF88] text-[#0D0D12] hover:bg-[#00FF88]/90 font-semibold rounded-xl"
+              className="w-full bg-[#005f3a] text-white hover:bg-[#0e7a4d] font-semibold rounded-xl"
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Contact

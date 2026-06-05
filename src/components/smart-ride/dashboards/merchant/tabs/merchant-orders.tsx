@@ -348,7 +348,7 @@ ${order.notes ? `NOTES: ${order.notes}` : ''}
       <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Orders</h1>
+            <h1 className="text-xl font-bold text-gray-900 font-[family-name:var(--font-plus-jakarta)]">Orders</h1>
             <p className="text-sm text-gray-500">Manage all your orders</p>
           </div>
           <button

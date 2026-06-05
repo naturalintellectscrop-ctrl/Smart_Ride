@@ -190,19 +190,19 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
     const cartTotal = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-28">
+      <div className="min-h-screen bg-[#f8f9fa] pb-28">
         {/* Header */}
-        <header className="sticky top-0 z-40 bg-[#13131A] border-b border-white/5 px-4 py-3">
+        <header className="sticky top-0 z-40 bg-white border-b border-[#bec9bf]/30 px-4 py-3">
           <div className="flex items-center gap-3">
             <button
               onClick={() => { setView('restaurants'); setMenuItems([]); }}
-              className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-white/5 active:scale-95 transition-transform"
+              className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-[#f3f4f5] active:scale-95 transition-transform"
             >
-              <ArrowLeft className="h-5 w-5 text-white" />
+              <ArrowLeft className="h-5 w-5 text-[#191c1d]" />
             </button>
             <div className="flex-1 min-w-0">
-              <h1 className="text-lg font-semibold text-white truncate">{selectedRestaurant.name}</h1>
-              <p className="text-sm text-gray-500 truncate">{selectedRestaurant.cuisine}</p>
+              <h1 className="text-lg font-semibold text-[#191c1d] truncate">{selectedRestaurant.name}</h1>
+              <p className="text-sm text-[#6f7a71] truncate">{selectedRestaurant.cuisine}</p>
             </div>
           </div>
         </header>
@@ -210,16 +210,16 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
         {/* Restaurant Info */}
         <div className="px-4 pt-4">
           <div className="flex items-center gap-4 mb-4">
-            <div className="flex items-center gap-1 bg-[#13131A] px-3 py-1.5 rounded-full">
+            <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-full">
               <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-              <span className="text-white font-medium">{selectedRestaurant.rating}</span>
-              <span className="text-gray-500 text-sm">({selectedRestaurant.reviews})</span>
+              <span className="text-[#191c1d] font-medium">{selectedRestaurant.rating}</span>
+              <span className="text-[#6f7a71] text-sm">({selectedRestaurant.reviews})</span>
             </div>
-            <div className="flex items-center gap-1 text-gray-400">
+            <div className="flex items-center gap-1 text-[#6f7a71]">
               <Clock className="h-4 w-4" />
               <span className="text-sm">{selectedRestaurant.deliveryTime}</span>
             </div>
-            <div className="flex items-center gap-1 text-gray-400">
+            <div className="flex items-center gap-1 text-[#6f7a71]">
               <MapPin className="h-4 w-4" />
               <span className="text-sm">UGX {selectedRestaurant.deliveryFee.toLocaleString()}</span>
             </div>
@@ -229,26 +229,26 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
           {loadingMenu ? (
             <div className="flex flex-col items-center justify-center py-16">
               <Loader2 className="h-8 w-8 animate-spin text-orange-400 mb-4" />
-              <p className="text-gray-500">Loading menu...</p>
+              <p className="text-[#6f7a71]">Loading menu...</p>
             </div>
           ) : (
             <>
               {/* Menu Items */}
-              <h3 className="text-white font-semibold mb-3">Menu</h3>
+              <h3 className="text-[#191c1d] font-semibold mb-3">Menu</h3>
               <div className="space-y-3">
                 {availableItems.map((item) => {
                   const cartItem = cart.items.find(c => c.id === item.id);
                   return (
-                    <Card key={item.id} className="bg-[#13131A] border-white/5">
+                    <Card key={item.id} className="bg-white border-[#bec9bf]/30">
                       <CardContent className="p-4">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <p className="text-white font-medium">{item.name}</p>
-                            <p className="text-gray-500 text-sm mt-1 line-clamp-2">{item.description}</p>
+                            <p className="text-[#191c1d] font-medium">{item.name}</p>
+                            <p className="text-[#6f7a71] text-sm mt-1 line-clamp-2">{item.description}</p>
                             <div className="flex items-center gap-2 mt-2">
                               <p className="text-orange-400 font-semibold">UGX {item.price.toLocaleString()}</p>
                               {item.preparationTime && (
-                                <span className="text-gray-600 text-xs">{item.preparationTime} min</span>
+                                <span className="text-[#bec9bf] text-xs">{item.preparationTime} min</span>
                               )}
                             </div>
                           </div>
@@ -265,16 +265,16 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
                               <div className="flex items-center gap-2">
                                 <button
                                   onClick={() => handleRemoveFromCart(item.id)}
-                                  className="w-8 h-8 rounded-full bg-[#1A1A24] flex items-center justify-center hover:bg-white/10 transition-colors"
+                                  className="w-8 h-8 rounded-full bg-[#f3f4f5] flex items-center justify-center hover:bg-[#e8ebe8] transition-colors"
                                 >
-                                  <Minus className="h-4 w-4 text-white" />
+                                  <Minus className="h-4 w-4 text-[#191c1d]" />
                                 </button>
-                                <span className="text-white font-medium w-6 text-center">{cartItem.quantity}</span>
+                                <span className="text-[#191c1d] font-medium w-6 text-center">{cartItem.quantity}</span>
                                 <button
                                   onClick={() => handleAddToCart(item)}
                                   className="w-8 h-8 rounded-full bg-orange-600 flex items-center justify-center"
                                 >
-                                  <Plus className="h-4 w-4 text-white" />
+                                  <Plus className="h-4 w-4 text-[#191c1d]" />
                                 </button>
                               </div>
                             </div>
@@ -294,8 +294,8 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
 
                 {availableItems.length === 0 && !loadingMenu && (
                   <div className="text-center py-12">
-                    <UtensilsCrossed className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-                    <p className="text-gray-500">No menu items available</p>
+                    <UtensilsCrossed className="h-12 w-12 text-[#bec9bf] mx-auto mb-3" />
+                    <p className="text-[#6f7a71]">No menu items available</p>
                   </div>
                 )}
               </div>
@@ -305,17 +305,17 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
 
         {/* Cart Bar */}
         {cartCount > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12]/95 backdrop-blur-lg border-t border-white/5 max-w-md mx-auto">
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#f8f9fa]/95 backdrop-blur-lg border-t border-[#bec9bf]/30 max-w-md mx-auto">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-orange-500/20 rounded-xl flex items-center justify-center relative">
                 <ShoppingCart className="h-6 w-6 text-orange-400" />
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-600 rounded-full text-white text-xs flex items-center justify-center font-bold">
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-orange-600 rounded-full text-[#191c1d] text-xs flex items-center justify-center font-bold">
                   {cartCount}
                 </span>
               </div>
               <div className="flex-1">
-                <p className="text-gray-400 text-xs">{cartCount} item{cartCount > 1 ? 's' : ''} in cart</p>
-                <p className="text-white font-semibold">UGX {cartTotal.toLocaleString()}</p>
+                <p className="text-[#6f7a71] text-xs">{cartCount} item{cartCount > 1 ? 's' : ''} in cart</p>
+                <p className="text-[#191c1d] font-semibold">UGX {cartTotal.toLocaleString()}</p>
               </div>
               <Button
                 onClick={handleContinue}
@@ -333,33 +333,33 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
 
   // Restaurants list view
   return (
-    <div className="min-h-screen bg-[#0D0D12] pb-20">
+    <div className="min-h-screen bg-[#f8f9fa] pb-20">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#13131A] border-b border-white/5 px-4 py-3">
+      <header className="sticky top-0 z-40 bg-white border-b border-[#bec9bf]/30 px-4 py-3">
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-white/5 active:scale-95 transition-transform"
+            className="w-10 h-10 -ml-2 flex items-center justify-center rounded-full hover:bg-[#f3f4f5] active:scale-95 transition-transform"
           >
-            <ArrowLeft className="h-5 w-5 text-white" />
+            <ArrowLeft className="h-5 w-5 text-[#191c1d]" />
           </button>
           <div>
-            <h1 className="text-lg font-semibold text-white">Smart Food</h1>
-            <p className="text-sm text-gray-500">Order from your favorite restaurants</p>
+            <h1 className="text-lg font-semibold text-[#191c1d]">Smart Food</h1>
+            <p className="text-sm text-[#6f7a71]">Order from your favorite restaurants</p>
           </div>
         </div>
       </header>
 
       <div className="px-4 pt-4">
         {/* Search */}
-        <div className="bg-[#13131A] rounded-xl p-3 flex items-center gap-3 border border-white/5 mb-4">
-          <Search className="h-5 w-5 text-gray-500" />
+        <div className="bg-white rounded-xl p-3 flex items-center gap-3 border border-[#bec9bf]/30 mb-4">
+          <Search className="h-5 w-5 text-[#6f7a71]" />
           <input
             type="text"
             placeholder="Search restaurants or cuisines..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 bg-transparent outline-none text-white placeholder-gray-500"
+            className="flex-1 bg-transparent outline-none text-[#191c1d] placeholder-[#6f7a71]"
           />
         </div>
 
@@ -367,12 +367,12 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
         {loadingRestaurants ? (
           <div className="flex flex-col items-center justify-center py-16">
             <Loader2 className="h-8 w-8 animate-spin text-orange-400 mb-4" />
-            <p className="text-gray-500">Loading restaurants...</p>
+            <p className="text-[#6f7a71]">Loading restaurants...</p>
           </div>
         ) : (
           <>
             {/* Restaurants */}
-            <h3 className="text-white font-semibold mb-3">Nearby Restaurants</h3>
+            <h3 className="text-[#191c1d] font-semibold mb-3">Nearby Restaurants</h3>
             <div className="space-y-4">
               {restaurants
                 .filter(r =>
@@ -382,7 +382,7 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
                 .map((restaurant) => (
                   <Card
                     key={restaurant.id}
-                    className="bg-[#13131A] border-white/5 overflow-hidden cursor-pointer hover:border-orange-500/30 transition-all active:scale-[0.98]"
+                    className="bg-white border-[#bec9bf]/30 overflow-hidden cursor-pointer hover:border-orange-500/30 transition-all active:scale-[0.98]"
                     onClick={() => selectRestaurant(restaurant)}
                   >
                     {restaurant.image ? (
@@ -391,22 +391,22 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
                         style={{ backgroundImage: `url(${restaurant.image})` }}
                       />
                     ) : (
-                      <div className="h-32 bg-[#1A1A24] flex items-center justify-center">
-                        <Store className="h-12 w-12 text-gray-600" />
+                      <div className="h-32 bg-[#f3f4f5] flex items-center justify-center">
+                        <Store className="h-12 w-12 text-[#bec9bf]" />
                       </div>
                     )}
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <h3 className="text-white font-semibold">{restaurant.name}</h3>
-                          <p className="text-gray-500 text-sm">{restaurant.cuisine}</p>
+                          <h3 className="text-[#191c1d] font-semibold">{restaurant.name}</h3>
+                          <p className="text-[#6f7a71] text-sm">{restaurant.cuisine}</p>
                         </div>
-                        <div className="flex items-center gap-1 bg-[#00FF88]/10 px-2 py-1 rounded">
-                          <Star className="h-3 w-3 text-[#00FF88] fill-[#00FF88]" />
-                          <span className="text-sm font-medium text-[#00FF88]">{restaurant.rating}</span>
+                        <div className="flex items-center gap-1 bg-[#98f6be]/30 px-2 py-1 rounded">
+                          <Star className="h-3 w-3 text-[#005f3a] fill-[#005f3a]" />
+                          <span className="text-sm font-medium text-[#005f3a]">{restaurant.rating}</span>
                         </div>
                       </div>
-                      <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
+                      <div className="mt-2 flex items-center gap-4 text-sm text-[#6f7a71]">
                         <div className="flex items-center gap-1">
                           <Clock className="h-4 w-4" />
                           <span>{restaurant.deliveryTime}</span>
@@ -422,8 +422,8 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
 
               {restaurants.length === 0 && !loadingRestaurants && (
                 <div className="text-center py-12">
-                  <Store className="h-12 w-12 text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-500">No restaurants available</p>
+                  <Store className="h-12 w-12 text-[#bec9bf] mx-auto mb-3" />
+                  <p className="text-[#6f7a71]">No restaurants available</p>
                 </div>
               )}
             </div>

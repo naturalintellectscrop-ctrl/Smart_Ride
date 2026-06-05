@@ -8,6 +8,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --font-headline: var(--font-plus-jakarta);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -41,75 +42,112 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  /* Stitch Design System Colors */
+  --color-stitch-surface: #f8f9fa;
+  --color-stitch-surface-dim: #d9dadb;
+  --color-stitch-surface-container-lowest: #ffffff;
+  --color-stitch-surface-container-low: #f3f4f5;
+  --color-stitch-surface-container: #edeeef;
+  --color-stitch-surface-container-high: #e7e8e9;
+  --color-stitch-surface-container-highest: #e1e3e4;
+  --color-stitch-on-surface: #191c1d;
+  --color-stitch-on-surface-variant: #3f4941;
+  --color-stitch-primary: #005f3a;
+  --color-stitch-on-primary: #ffffff;
+  --color-stitch-primary-container: #0e7a4d;
+  --color-stitch-on-primary-container: #a6ffc9;
+  --color-stitch-secondary: #006e2f;
+  --color-stitch-on-secondary: #ffffff;
+  --color-stitch-secondary-container: #6bff8f;
+  --color-stitch-on-secondary-container: #007432;
+  --color-stitch-tertiary: #4b5264;
+  --color-stitch-on-tertiary: #ffffff;
+  --color-stitch-tertiary-container: #636a7c;
+  --color-stitch-on-tertiary-container: #e6ebff;
+  --color-stitch-error: #ba1a1a;
+  --color-stitch-on-error: #ffffff;
+  --color-stitch-outline: #6f7a71;
+  --color-stitch-outline-variant: #bec9bf;
+  --color-stitch-inverse-surface: #2e3132;
+  --color-stitch-inverse-on-surface: #f0f1f2;
+  --color-stitch-primary-fixed: #98f6be;
+  --color-stitch-primary-fixed-dim: #7cd9a4;
+  --color-stitch-secondary-fixed: #6bff8f;
+  --color-stitch-secondary-fixed-dim: #4ae176;
+  --color-stitch-bright-green: #22C55E;
+  --color-stitch-deep-green: #0E7A4D;
+  --color-stitch-charcoal: #111827;
 }
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Stitch Design System - Light Mode */
+  --background: #f8f9fa;
+  --foreground: #191c1d;
+  --card: #ffffff;
+  --card-foreground: #191c1d;
+  --popover: #ffffff;
+  --popover-foreground: #191c1d;
+  --primary: #005f3a;
+  --primary-foreground: #ffffff;
+  --secondary: #006e2f;
+  --secondary-foreground: #ffffff;
+  --muted: #edeeef;
+  --muted-foreground: #3f4941;
+  --accent: #0e7a4d;
+  --accent-foreground: #ffffff;
+  --destructive: #ba1a1a;
+  --border: #bec9bf;
+  --input: #e1e3e4;
+  --ring: #005f3a;
+  --chart-1: #005f3a;
+  --chart-2: #22C55E;
+  --chart-3: #4b5264;
+  --chart-4: #0e7a4d;
+  --chart-5: #98f6be;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #191c1d;
+  --sidebar-primary: #005f3a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f3f4f5;
+  --sidebar-accent-foreground: #191c1d;
+  --sidebar-border: #bec9bf;
+  --sidebar-ring: #005f3a;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #111827;
+  --foreground: #f0f1f2;
+  --card: #1f2937;
+  --card-foreground: #f0f1f2;
+  --popover: #1f2937;
+  --popover-foreground: #f0f1f2;
+  --primary: #7cd9a4;
+  --primary-foreground: #002111;
+  --secondary: #4ae176;
+  --secondary-foreground: #002109;
+  --muted: #374151;
+  --muted-foreground: #9ca3af;
+  --accent: #0e7a4d;
+  --accent-foreground: #a6ffc9;
+  --destructive: #ffdad6;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #7cd9a4;
+  --chart-1: #7cd9a4;
+  --chart-2: #4ae176;
+  --chart-3: #9ca3af;
+  --chart-4: #0e7a4d;
+  --chart-5: #98f6be;
+  --sidebar: #1f2937;
+  --sidebar-foreground: #f0f1f2;
+  --sidebar-primary: #7cd9a4;
+  --sidebar-primary-foreground: #002111;
+  --sidebar-accent: #374151;
+  --sidebar-accent-foreground: #f0f1f2;
+  --sidebar-border: rgba(255, 255, 255, 0.1);
+  --sidebar-ring: #7cd9a4;
 }
 
 @layer base {
@@ -121,50 +159,47 @@
   }
 }
 
-/* Glassmorphism Styles */
+/* Glassmorphism Styles - Stitch Updated */
 .glass {
-  background: rgba(19, 19, 26, 0.6);
+  background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(0, 95, 58, 0.08);
 }
 
 .glass-card {
-  background: rgba(19, 19, 26, 0.7);
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.1),
-    0 2px 4px -1px rgba(0, 0, 0, 0.06),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(0, 95, 58, 0.06);
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
 }
 
 .glass-sidebar {
-  background: rgba(13, 13, 18, 0.85);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(0, 95, 58, 0.06);
 }
 
 .glass-button {
-  background: rgba(0, 255, 136, 0.1);
+  background: rgba(0, 95, 58, 0.08);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(0, 255, 136, 0.2);
+  border: 1px solid rgba(0, 95, 58, 0.15);
 }
 
 .glass-input {
-  background: rgba(26, 26, 36, 0.6);
+  background: #f3f4f5;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid #bec9bf;
 }
 
-/* Gradient Borders */
+/* Gradient Borders - Stitch Updated */
 .gradient-border {
   position: relative;
-  background: rgba(19, 19, 26, 0.6);
+  background: rgba(255, 255, 255, 0.8);
   border-radius: 16px;
 }
 
@@ -174,7 +209,7 @@
   inset: 0;
   border-radius: 16px;
   padding: 1px;
-  background: linear-gradient(135deg, rgba(0, 255, 136, 0.3), rgba(0, 212, 255, 0.3));
+  background: linear-gradient(135deg, rgba(0, 95, 58, 0.3), rgba(14, 122, 77, 0.3));
   -webkit-mask: 
     linear-gradient(#fff 0 0) content-box, 
     linear-gradient(#fff 0 0);
@@ -186,34 +221,34 @@
   pointer-events: none;
 }
 
-/* Hover glow effect */
+/* Hover glow effect - Stitch Updated */
 .glow-hover {
   transition: all 0.3s ease;
 }
 
 .glow-hover:hover {
   box-shadow: 
-    0 0 20px rgba(0, 255, 136, 0.15),
-    0 0 40px rgba(0, 255, 136, 0.05);
-  border-color: rgba(0, 255, 136, 0.3);
+    0 0 20px rgba(0, 95, 58, 0.15),
+    0 0 40px rgba(0, 95, 58, 0.05);
+  border-color: rgba(0, 95, 58, 0.3);
 }
 
-/* Custom scrollbar for glass effect */
+/* Custom scrollbar for glass effect - Stitch Updated */
 .glass-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 .glass-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(0, 0, 0, 0.02);
   border-radius: 3px;
 }
 
 .glass-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(0, 95, 58, 0.15);
   border-radius: 3px;
 }
 
 .glass-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 95, 58, 0.3);
 }

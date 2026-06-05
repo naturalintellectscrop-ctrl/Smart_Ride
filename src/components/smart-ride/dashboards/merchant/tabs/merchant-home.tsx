@@ -82,7 +82,7 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
       case 'PREPARING':
         return 'bg-purple-500/15 text-purple-400 border-purple-500/30';
       case 'READY_FOR_PICKUP':
-        return 'bg-[#00FF88]/15 text-[#00FF88] border-[#00FF88]/30';
+        return 'bg-[#005f3a]/15 text-[#005f3a] border-[#005f3a]/30';
       default:
         return 'bg-gray-500/15 text-gray-400 border-gray-500/30';
     }
@@ -106,12 +106,12 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
   const quickActions = [
     { icon: UtensilsCrossed, label: 'Add Item', color: 'bg-orange-500/15 text-orange-400' },
     { icon: ShoppingCart, label: 'View Stock', color: 'bg-blue-500/15 text-blue-400' },
-    { icon: DollarSign, label: 'Earnings', color: 'bg-[#00FF88]/15 text-[#00FF88]' },
+    { icon: DollarSign, label: 'Earnings', color: 'bg-[#005f3a]/15 text-[#005f3a]' },
     { icon: Package, label: 'Orders', color: 'bg-purple-500/15 text-purple-400' },
   ];
 
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
+    <div className="min-h-screen bg-[#f8f9fa]">
       {/* Header with Online Toggle */}
       <div className="bg-gradient-to-br from-orange-500 to-red-500 px-4 pt-4 pb-6 rounded-b-3xl">
         <div className="flex items-center justify-between mb-4">
@@ -122,7 +122,7 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
           <button className="relative" onClick={onBellClick}>
             <Bell className="h-6 w-6 text-white" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#FF3B5C] rounded-full text-xs flex items-center justify-center text-white font-bold">
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#ba1a1a] rounded-full text-xs flex items-center justify-center text-white font-bold">
                 {unreadCount > 9 ? '9+' : unreadCount}
               </span>
             )}
@@ -130,16 +130,16 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
         </div>
 
         {/* Open/Close Toggle */}
-        <Card className="p-4 bg-white/10 border-white/20 backdrop-blur">
+        <Card className="p-4 bg-[#f3f4f5] border-[#bec9bf]/50 backdrop-blur">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={cn(
                 "w-12 h-12 rounded-full flex items-center justify-center",
-                isOnline ? "bg-[#00FF88]" : "bg-gray-400"
+                isOnline ? "bg-[#005f3a]" : "bg-gray-400"
               )}
-              style={isOnline ? { boxShadow: '0 0 20px rgba(0, 255, 136, 0.5)' } : {}}
+              style={isOnline ? { boxShadow: '0 0 20px rgba(0, 95, 58, 0.15)' } : {}}
               >
-                <Store className="h-6 w-6 text-[#0D0D12]" />
+                <Store className="h-6 w-6 text-white" />
               </div>
               <div>
                 <p className="font-semibold text-white">
@@ -154,9 +154,9 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
               onClick={() => setIsOnline(!isOnline)}
               className={cn(
                 "w-14 h-8 rounded-full transition-all relative",
-                isOnline ? "bg-[#00FF88]" : "bg-gray-500"
+                isOnline ? "bg-[#005f3a]" : "bg-gray-500"
               )}
-              style={isOnline ? { boxShadow: '0 0 15px rgba(0, 255, 136, 0.5)' } : {}}
+              style={isOnline ? { boxShadow: '0 0 15px rgba(0, 95, 58, 0.15)' } : {}}
             >
               <div className={cn(
                 "w-6 h-6 bg-white rounded-full transition-transform absolute top-1",
@@ -170,25 +170,25 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
       <div className="px-4 -mt-2">
         {/* Today's Stats */}
         <div className="grid grid-cols-2 gap-3">
-          <Card className="p-4 bg-[#13131A] border-white/5">
+          <Card className="p-4 bg-white border-[#bec9bf]/30">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-orange-500/15 rounded-full flex items-center justify-center">
                 <Package className="h-5 w-5 text-orange-400" />
               </div>
               <div>
-                <p className="text-gray-400 text-xs">Today&apos;s Orders</p>
-                <p className="text-xl font-bold text-white">{stats.todayOrders}</p>
+                <p className="text-[#6f7a71] text-xs">Today&apos;s Orders</p>
+                <p className="text-xl font-bold text-[#191c1d]">{stats.todayOrders}</p>
               </div>
             </div>
           </Card>
-          <Card className="p-4 bg-[#13131A] border-white/5">
+          <Card className="p-4 bg-white border-[#bec9bf]/30">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-[#00FF88]/15 rounded-full flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-[#00FF88]" />
+              <div className="w-10 h-10 bg-[#005f3a]/15 rounded-full flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-[#005f3a]" />
               </div>
               <div>
-                <p className="text-gray-400 text-xs">Revenue Today</p>
-                <p className="text-xl font-bold text-white">UGX {(stats.todayRevenue / 1000).toFixed(0)}K</p>
+                <p className="text-[#6f7a71] text-xs">Revenue Today</p>
+                <p className="text-xl font-bold text-[#191c1d]">UGX {(stats.todayRevenue / 1000).toFixed(0)}K</p>
               </div>
             </div>
           </Card>
@@ -212,7 +212,7 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
 
         {/* Quick Actions */}
         <div className="mt-6">
-          <h3 className="font-semibold text-white mb-3">Quick Actions</h3>
+          <h3 className="font-semibold text-[#191c1d] mb-3 font-[family-name:var(--font-plus-jakarta)]">Quick Actions</h3>
           <div className="grid grid-cols-4 gap-3">
             {quickActions.map((action, index) => {
               const Icon = action.icon;
@@ -224,7 +224,7 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
                   <div className={cn("w-12 h-12 rounded-full flex items-center justify-center", action.color)}>
                     <Icon className="h-5 w-5" />
                   </div>
-                  <span className="text-xs text-gray-400">{action.label}</span>
+                  <span className="text-xs text-[#6f7a71]">{action.label}</span>
                 </button>
               );
             })}
@@ -234,34 +234,34 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
         {/* Preparation Queue */}
         <div className="mt-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-white">Preparation Queue</h3>
-            <span className="text-sm text-orange-400 font-medium">{stats.preparingOrders} active</span>
+            <h3 className="font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">Preparation Queue</h3>
+            <span className="text-sm text-[#005f3a] font-medium">{stats.preparingOrders} active</span>
           </div>
 
           <div className="space-y-3 max-h-72 overflow-y-auto">
             {preparationQueue.map((order) => (
-              <Card key={order.id} className="p-4 bg-[#13131A] border-white/5">
+              <Card key={order.id} className="p-4 bg-white border-[#bec9bf]/30">
                 <div className="flex items-start justify-between mb-2">
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-white">{order.id}</span>
+                      <span className="font-bold text-[#191c1d]">{order.id}</span>
                       <span className={cn("text-xs px-2 py-0.5 rounded-full border", getStatusColor(order.status))}>
                         {getStatusLabel(order.status)}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-500">{order.orderNumber}</p>
+                    <p className="text-sm text-[#6f7a71]">{order.orderNumber}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-white">UGX {order.total.toLocaleString()}</p>
-                    <p className="text-xs text-gray-500">{order.time}</p>
+                    <p className="font-bold text-[#191c1d]">UGX {order.total.toLocaleString()}</p>
+                    <p className="text-xs text-[#6f7a71]">{order.time}</p>
                   </div>
                 </div>
 
                 {/* Items */}
-                <div className="bg-[#1A1A24] rounded-lg p-2 mb-3">
+                <div className="bg-[#f3f4f5] rounded-lg p-2 mb-3">
                   <ul className="space-y-1">
                     {order.items.map((item, index) => (
-                      <li key={index} className="text-sm text-gray-300 flex items-center gap-2">
+                      <li key={index} className="text-sm text-[#3f4941] flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-orange-400 rounded-full" />
                         {item}
                       </li>
@@ -272,7 +272,7 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
                 {/* Actions */}
                 {order.status === 'PAYMENT_CONFIRMED' && (
                   <div className="flex gap-3">
-                    <button className="flex-1 py-2 rounded-xl bg-[#FF3B5C]/15 text-[#FF3B5C] font-medium flex items-center justify-center gap-2 hover:bg-[#FF3B5C]/25 transition-colors border border-[#FF3B5C]/30">
+                    <button className="flex-1 py-2 rounded-xl bg-[#ba1a1a]/15 text-[#ba1a1a] font-medium flex items-center justify-center gap-2 hover:bg-[#ba1a1a]/25 transition-colors border border-[#ba1a1a]/30">
                       <XCircle className="h-4 w-4" />
                       Reject
                     </button>
@@ -284,14 +284,14 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
                 )}
 
                 {order.status === 'PREPARING' && (
-                  <button className="w-full py-2 rounded-xl bg-gradient-to-r from-[#00FF88] to-[#00CC6E] text-[#0D0D12] font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
+                  <button className="w-full py-2 rounded-xl bg-gradient-to-r from-[#005f3a] to-[#0e7a4d] text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity">
                     <CheckCircle className="h-4 w-4" />
                     Mark Ready for Pickup
                   </button>
                 )}
 
                 {order.status === 'READY_FOR_PICKUP' && (
-                  <div className="flex items-center gap-2 text-[#00FF88] bg-[#00FF88]/10 p-2 rounded-lg border border-[#00FF88]/20">
+                  <div className="flex items-center gap-2 text-[#005f3a] bg-[#98f6be]/30 p-2 rounded-lg border border-[#98f6be]/50">
                     <Package className="h-4 w-4" />
                     <span className="text-sm font-medium">Waiting for rider pickup</span>
                   </div>
@@ -304,20 +304,20 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
         {/* Recent Orders */}
         <div className="mt-6 mb-6">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="font-semibold text-white">Recent Orders</h3>
-            <button className="text-orange-400 text-sm font-medium">View All</button>
+            <h3 className="font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">Recent Orders</h3>
+            <button className="text-[#005f3a] text-sm font-medium">View All</button>
           </div>
 
-          <Card className="bg-[#13131A] border-white/5 divide-y divide-white/5">
+          <Card className="bg-white border-[#bec9bf]/30 divide-y divide-[#bec9bf]/30">
             {recentOrders.map((order, index) => (
               <div key={index} className="p-4 flex items-center justify-between">
                 <div>
-                  <p className="font-medium text-white">{order.id}</p>
-                  <p className="text-sm text-gray-500">{order.customer} • {order.time}</p>
+                  <p className="font-medium text-[#191c1d]">{order.id}</p>
+                  <p className="text-sm text-[#6f7a71]">{order.customer} • {order.time}</p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-white">UGX {order.amount.toLocaleString()}</p>
-                  <p className="text-xs text-[#00FF88]">{order.status}</p>
+                  <p className="font-bold text-[#191c1d]">UGX {order.amount.toLocaleString()}</p>
+                  <p className="text-xs text-[#005f3a]">{order.status}</p>
                 </div>
               </div>
             ))}
@@ -325,21 +325,21 @@ export function MerchantHome({ onBellClick }: MerchantHomeProps) {
         </div>
 
         {/* Weekly Performance */}
-        <Card className="p-4 mb-6 bg-[#13131A] border-white/5">
+        <Card className="p-4 mb-6 bg-white border-[#bec9bf]/30">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-white">Weekly Performance</h3>
-            <TrendingUp className="h-5 w-5 text-[#00FF88]" />
+            <h3 className="font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">Weekly Performance</h3>
+            <TrendingUp className="h-5 w-5 text-[#005f3a]" />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <p className="text-gray-400 text-sm">Total Orders</p>
-              <p className="text-2xl font-bold text-white">156</p>
-              <p className="text-xs text-[#00FF88]">+12% from last week</p>
+              <p className="text-[#6f7a71] text-sm">Total Orders</p>
+              <p className="text-2xl font-bold text-[#191c1d]">156</p>
+              <p className="text-xs text-[#005f3a]">+12% from last week</p>
             </div>
             <div>
-              <p className="text-gray-400 text-sm">Total Revenue</p>
-              <p className="text-2xl font-bold text-[#00FF88]">UGX {(stats.weeklyRevenue / 1000).toFixed(0)}K</p>
-              <p className="text-xs text-[#00FF88]">+8% from last week</p>
+              <p className="text-[#6f7a71] text-sm">Total Revenue</p>
+              <p className="text-2xl font-bold text-[#005f3a]">UGX {(stats.weeklyRevenue / 1000).toFixed(0)}K</p>
+              <p className="text-xs text-[#005f3a]">+8% from last week</p>
             </div>
           </div>
         </Card>

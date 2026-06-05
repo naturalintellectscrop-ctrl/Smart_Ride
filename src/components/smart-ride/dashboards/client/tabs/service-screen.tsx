@@ -129,7 +129,7 @@ const VEHICLE_CONFIG: Record<VehicleType, {
     multiplier: 1.3,
     avgSpeed: 40,
     maxPassengers: 4,
-    color: '#00FF88'
+    color: '#005f3a'
   }
 };
 
@@ -524,24 +524,24 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
   
   if (step === 'searching') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div 
           className="px-4 py-4 flex items-center gap-4"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, ${serviceColors.primary}10)` }}
         >
-          <button onClick={onBack} className="text-white/80 hover:text-white transition-colors">
+          <button onClick={onBack} className="text-white hover:text-white transition-colors">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <div>
             <h1 className="text-lg font-bold text-white">Finding your ride</h1>
-            <p className="text-white/60 text-sm">Searching for nearby drivers...</p>
+            <p className="text-[#3f4941] text-sm">Searching for nearby drivers...</p>
           </div>
         </div>
         
         <div className="px-4 pt-8">
           <div 
-            className="rounded-3xl h-64 flex items-center justify-center relative overflow-hidden mt-6 glass-panel"
-            style={{ background: `linear-gradient(135deg, ${serviceColors.primary}10, rgba(26, 26, 36, 0.8))` }}
+            className="rounded-3xl h-64 flex items-center justify-center relative overflow-hidden mt-6 "
+            style={{ background: `linear-gradient(135deg, ${serviceColors.primary}10, rgba(248, 249, 250, 0.9))` }}
           >
             <div className="absolute inset-0 opacity-30">
               <div className="absolute top-1/4 left-1/4 w-4 h-4 rounded-full animate-ping" style={{ backgroundColor: serviceColors.primary }} />
@@ -550,32 +550,32 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
             </div>
             <div className="text-center z-10">
               <div 
-                className="w-20 h-20 bg-[#1A1A24] rounded-full flex items-center justify-center mx-auto mb-4"
-                style={{ boxShadow: `0 0 30px ${serviceColors.glow}` }}
+                className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ boxShadow: `0 0 20px rgba(0, 95, 58, 0.15)` }}
               >
                 <Loader2 className="h-10 w-10 animate-spin" style={{ color: serviceColors.primary }} />
               </div>
-              <p className="font-medium text-white">Looking for nearby drivers...</p>
-              <p className="text-white/40 text-sm mt-1">This usually takes 1-2 minutes</p>
+              <p className="font-medium text-[#191c1d]">Looking for nearby drivers...</p>
+              <p className="text-[#6f7a71] text-sm mt-1">This usually takes 1-2 minutes</p>
             </div>
           </div>
 
-          <Card className="mt-4 p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
+          <Card className="mt-4 p-4 bg-white border-[#bec9bf]/30 ">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: serviceColors.primary }} />
-                <p className="text-white">{pickup?.address || pickupInput}</p>
+                <p className="text-[#191c1d]">{pickup?.address || pickupInput}</p>
               </div>
-              <div className="ml-1.5 border-l-2 border-dashed border-white/10 h-4" />
+              <div className="ml-1.5 border-l-2 border-dashed border-[#bec9bf]/40 h-4" />
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-[#F97316] rounded-full" />
-                <p className="text-white">{destination?.address || destinationInput}</p>
+                <p className="text-[#191c1d]">{destination?.address || destinationInput}</p>
               </div>
             </div>
             
             {currentTask && (
-              <div className="mt-4 pt-4 border-t border-white/5">
-                <p className="text-sm text-white/40">Request ID: <span className="font-mono text-[#00FF88]">{currentTask.taskNumber}</span></p>
+              <div className="mt-4 pt-4 border-t border-[#bec9bf]/30">
+                <p className="text-sm text-[#6f7a71]">Request ID: <span className="font-mono text-[#005f3a]">{currentTask.taskNumber}</span></p>
               </div>
             )}
           </Card>
@@ -597,7 +597,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
   
   if (step === 'matched' || step === 'inTrip') {
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-24">
+      <div className="min-h-screen bg-[#f8f9fa] pb-24">
         <div className="fixed top-4 right-4 z-50">
           <SOSButtonModal onOpen={() => setShowSOS(true)} />
         </div>
@@ -606,7 +606,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           className="px-4 py-4 flex items-center gap-4"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, ${serviceColors.primary}10)` }}
         >
-          <button onClick={onBack} className="text-white/80 hover:text-white transition-colors">
+          <button onClick={onBack} className="text-[#3f4941] hover:text-[#191c1d] transition-colors">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <div>
@@ -618,7 +618,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
         
         <div className="px-4 pt-4">
           <Card 
-            className="p-6 border-2 bg-[#1A1A24]/80 glass-panel"
+            className="p-6 border-2 bg-white "
             style={{ borderColor: `${serviceColors.primary}40` }}
           >
             <div className="flex items-center gap-4">
@@ -629,14 +629,14 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                 <User className="h-8 w-8" style={{ color: serviceColors.primary }} />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold text-lg text-white">{matchedProvider?.name || 'Driver'}</h3>
+                <h3 className="font-bold text-lg text-[#191c1d]">{matchedProvider?.name || 'Driver'}</h3>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-sm font-medium text-white">{matchedProvider?.rating || 4.8}</span>
+                    <span className="text-sm font-medium text-[#191c1d]">{matchedProvider?.rating || 4.8}</span>
                   </div>
-                  <span className="text-white/30">•</span>
-                  <span className="text-sm text-white/60">{matchedProvider?.trips || 0} rides</span>
+                  <span className="text-[#bec9bf]">•</span>
+                  <span className="text-sm text-[#3f4941]">{matchedProvider?.trips || 0} rides</span>
                   <div 
                     className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full"
                     style={{ backgroundColor: `${serviceColors.primary}20`, color: serviceColors.primary }}
@@ -648,47 +648,47 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
               </div>
             </div>
             
-            <div className="mt-4 pt-4 border-t border-white/10">
+            <div className="mt-4 pt-4 border-t border-[#bec9bf]/40">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-white/50">Vehicle</p>
-                  <p className="font-medium text-white">{matchedProvider?.vehicle || 'Vehicle'} • Red</p>
+                  <p className="text-sm text-[#6f7a71]">Vehicle</p>
+                  <p className="font-medium text-[#191c1d]">{matchedProvider?.vehicle || 'Vehicle'} • Red</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-white/50">Plate</p>
-                  <p className="font-medium text-white">{matchedProvider?.plateNumber || 'UAX 123A'}</p>
+                  <p className="text-sm text-[#6f7a71]">Plate</p>
+                  <p className="font-medium text-[#191c1d]">{matchedProvider?.plateNumber || 'UAX 123A'}</p>
                 </div>
               </div>
             </div>
           </Card>
 
           <div className="mt-4 text-center">
-            <p className="text-white/50">{step === 'inTrip' ? 'Arriving at destination in' : 'Arriving in'}</p>
-            <p className="text-4xl font-bold text-neon-glow" style={{ color: serviceColors.primary }}>
+            <p className="text-[#6f7a71]">{step === 'inTrip' ? 'Arriving at destination in' : 'Arriving in'}</p>
+            <p className="text-4xl font-bold" style={{ color: serviceColors.primary }}>
               {step === 'inTrip' ? '8 min' : `${matchedProvider?.eta || 3} min`}
             </p>
           </div>
 
-          <Card className="mt-4 p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
+          <Card className="mt-4 p-4 bg-white border-[#bec9bf]/30 ">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <MapPin className="h-5 w-5" style={{ color: serviceColors.primary }} />
-                <p className="text-white">{pickup?.address}</p>
+                <p className="text-[#191c1d]">{pickup?.address}</p>
               </div>
               <div className="flex items-center gap-3">
                 <Navigation className="h-5 w-5 text-[#F97316]" />
-                <p className="text-white">{destination?.address}</p>
+                <p className="text-[#191c1d]">{destination?.address}</p>
               </div>
             </div>
             
-            <div className="mt-4 pt-4 border-t border-white/5 flex justify-between">
+            <div className="mt-4 pt-4 border-t border-[#bec9bf]/30 flex justify-between">
               <div>
-                <p className="text-sm text-white/50">Trip fare</p>
-                <p className="font-bold text-lg text-white">UGX {selectedVehicleOption?.fare.total.toLocaleString()}</p>
+                <p className="text-sm text-[#6f7a71]">Trip fare</p>
+                <p className="font-bold text-lg text-[#191c1d]">UGX {selectedVehicleOption?.fare.total.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-sm text-white/50">Payment</p>
-                <p className="font-medium text-[#00FF88]">{paymentMethod === 'MTN_MOMO' ? 'MTN MoMo' : paymentMethod === 'AIRTEL_MONEY' ? 'Airtel Money' : paymentMethod}</p>
+                <p className="text-sm text-[#6f7a71]">Payment</p>
+                <p className="font-medium text-[#005f3a]">{paymentMethod === 'MTN_MOMO' ? 'MTN MoMo' : paymentMethod === 'AIRTEL_MONEY' ? 'Airtel Money' : paymentMethod}</p>
               </div>
             </div>
           </Card>
@@ -702,12 +702,12 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                   }
                 }}
                 className="py-4 rounded-xl font-semibold flex items-center justify-center gap-2 text-white transition-all hover:scale-[1.02]"
-                style={{ backgroundColor: serviceColors.primary, boxShadow: `0 0 20px ${serviceColors.glow}` }}
+                style={{ backgroundColor: serviceColors.primary, boxShadow: `0 4px 15px rgba(0, 95, 58, 0.2)` }}
               >
                 <Phone className="h-5 w-5" />
                 Call Driver
               </button>
-              <button className="bg-[#3B82F6] text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2 electric-glow-sm hover:bg-blue-500 transition-all hover:scale-[1.02]">
+              <button className="bg-[#3B82F6] text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2  hover:bg-blue-500 transition-all hover:scale-[1.02]">
                 <MessageSquare className="h-5 w-5" />
                 Message
               </button>
@@ -715,7 +715,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
             {step === 'matched' && (
               <button 
                 onClick={onBack}
-                className="w-full bg-[#1A1A24] text-white py-4 rounded-xl font-medium border border-white/10 hover:border-white/20 transition-all"
+                className="w-full bg-white text-[#191c1d] py-4 rounded-xl font-medium border border-[#bec9bf]/30 hover:border-[#005f3a]/30 transition-all"
               >
                 Track Ride
               </button>
@@ -745,69 +745,69 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
   
   if (step === 'confirmation') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div 
           className="px-4 pt-4 pb-6"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
         >
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => setStep('vehicle')} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={() => setStep('vehicle')} className="text-[#191c1d] hover:bg-[#f3f4f5]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Confirm Your Ride</h1>
-              <p className="text-white/60 text-sm">Review your trip details</p>
+              <h1 className="text-xl font-bold text-[#191c1d]">Confirm Your Ride</h1>
+              <p className="text-[#3f4941] text-sm">Review your trip details</p>
             </div>
           </div>
         </div>
 
         <div className="px-4 -mt-4 space-y-4">
           {/* Route Summary */}
-          <Card className="p-4 bg-[#1A1A24]/90 border-white/5 glass-panel">
+          <Card className="p-4 bg-[#edeeef]/90 border-[#bec9bf]/30 ">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${serviceColors.primary}20` }}>
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: serviceColors.primary }} />
                 </div>
                 <div>
-                  <p className="text-xs text-white/50">Pickup</p>
-                  <p className="text-white font-medium">{pickup?.address}</p>
+                  <p className="text-xs text-[#6f7a71]">Pickup</p>
+                  <p className="text-[#191c1d] font-medium">{pickup?.address}</p>
                 </div>
               </div>
-              <div className="ml-4 border-l-2 border-dashed border-white/10 h-4" />
+              <div className="ml-4 border-l-2 border-dashed border-[#bec9bf]/40 h-4" />
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-[#F97316]/20 rounded-full flex items-center justify-center">
                   <Navigation className="h-4 w-4 text-[#F97316]" />
                 </div>
                 <div>
-                  <p className="text-xs text-white/50">Destination</p>
-                  <p className="text-white font-medium">{destination?.address}</p>
+                  <p className="text-xs text-[#6f7a71]">Destination</p>
+                  <p className="text-[#191c1d] font-medium">{destination?.address}</p>
                 </div>
               </div>
             </div>
           </Card>
 
           {/* Trip Stats */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
+          <Card className="p-4 bg-white border-[#bec9bf]/30 ">
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-xs text-white/50">Distance</p>
-                <p className="text-lg font-bold text-white">{route?.distanceKm} km</p>
+                <p className="text-xs text-[#6f7a71]">Distance</p>
+                <p className="text-lg font-bold text-[#191c1d]">{route?.distanceKm} km</p>
               </div>
               <div>
-                <p className="text-xs text-white/50">Est. Time</p>
-                <p className="text-lg font-bold text-white">{route?.durationMin} min</p>
+                <p className="text-xs text-[#6f7a71]">Est. Time</p>
+                <p className="text-lg font-bold text-[#191c1d]">{route?.durationMin} min</p>
               </div>
               <div>
-                <p className="text-xs text-white/50">Passengers</p>
-                <p className="text-lg font-bold text-white">{passengers}</p>
+                <p className="text-xs text-[#6f7a71]">Passengers</p>
+                <p className="text-lg font-bold text-[#191c1d]">{passengers}</p>
               </div>
             </div>
           </Card>
 
           {/* Vehicle Selected */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
-            <p className="text-xs text-white/50 mb-3">Vehicle</p>
+          <Card className="p-4 bg-white border-[#bec9bf]/30 ">
+            <p className="text-xs text-[#6f7a71] mb-3">Vehicle</p>
             <div className="flex items-center gap-3">
               <div 
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
@@ -819,12 +819,12 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                 })}
               </div>
               <div className="flex-1">
-                <p className="font-medium text-white">{VEHICLE_CONFIG[selectedVehicle].name}</p>
-                <p className="text-sm text-white/50">{VEHICLE_CONFIG[selectedVehicle].description}</p>
+                <p className="font-medium text-[#191c1d]">{VEHICLE_CONFIG[selectedVehicle].name}</p>
+                <p className="text-sm text-[#6f7a71]">{VEHICLE_CONFIG[selectedVehicle].description}</p>
               </div>
               <button 
                 onClick={() => setStep('vehicle')}
-                className="text-[#00FF88] text-sm font-medium"
+                className="text-[#005f3a] text-sm font-medium"
               >
                 Change
               </button>
@@ -832,8 +832,8 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           </Card>
 
           {/* Payment Method */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
-            <p className="text-xs text-white/50 mb-3">Payment Method</p>
+          <Card className="p-4 bg-white border-[#bec9bf]/30 ">
+            <p className="text-xs text-[#6f7a71] mb-3">Payment Method</p>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'CASH', label: 'Cash', icon: '💵', disabled: false },
@@ -847,19 +847,19 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                   className={cn(
                     "p-3 rounded-xl border flex flex-col items-center gap-1 transition-all relative",
                     paymentMethod === method.id
-                      ? "border-[#00FF88] bg-[#00FF88]/10"
+                      ? "border-[#005f3a] bg-[#005f3a]/10"
                       : method.disabled
-                        ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed"
-                        : "border-white/10 bg-white/5 hover:border-white/20"
+                        ? "border-[#bec9bf]/30 bg-[#f3f4f5] opacity-50 cursor-not-allowed"
+                        : "border-[#bec9bf]/40 bg-[#f3f4f5] hover:border-[#bec9bf]/50"
                   )}
                 >
                   <span className="text-lg">{method.icon}</span>
                   <span className={cn(
                     "text-xs font-medium",
-                    paymentMethod === method.id ? "text-[#00FF88]" : method.disabled ? "text-white/30" : "text-white/60"
+                    paymentMethod === method.id ? "text-[#005f3a]" : method.disabled ? "text-[#bec9bf]" : "text-[#3f4941]"
                   )}>{method.label}</span>
                   {method.badge && (
-                    <span className="absolute -top-1 -right-1 text-[8px] bg-white/10 text-white/40 px-1 rounded">{method.badge}</span>
+                    <span className="absolute -top-1 -right-1 text-[8px] bg-[#edeeef] text-[#6f7a71] px-1 rounded">{method.badge}</span>
                   )}
                 </button>
               ))}
@@ -867,23 +867,23 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           </Card>
 
           {/* Fare Breakdown */}
-          <Card className="p-4 border-2 bg-[#1A1A24]/80 glass-card" style={{ borderColor: `${serviceColors.primary}30` }}>
+          <Card className="p-4 border-2 bg-white " style={{ borderColor: `${serviceColors.primary}30` }}>
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Base fare</span>
-                <span className="text-white">UGX {selectedVehicleOption?.fare.baseFare.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Base fare</span>
+                <span className="text-[#191c1d]">UGX {selectedVehicleOption?.fare.baseFare.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Distance ({route?.distanceKm} km)</span>
-                <span className="text-white">UGX {selectedVehicleOption?.fare.distanceFare.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Distance ({route?.distanceKm} km)</span>
+                <span className="text-[#191c1d]">UGX {selectedVehicleOption?.fare.distanceFare.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Time ({route?.durationMin} min)</span>
-                <span className="text-white">UGX {selectedVehicleOption?.fare.timeFare.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Time ({route?.durationMin} min)</span>
+                <span className="text-[#191c1d]">UGX {selectedVehicleOption?.fare.timeFare.toLocaleString()}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/50">Booking fee</span>
-                <span className="text-white">UGX {selectedVehicleOption?.fare.bookingFee.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Booking fee</span>
+                <span className="text-[#191c1d]">UGX {selectedVehicleOption?.fare.bookingFee.toLocaleString()}</span>
               </div>
               {selectedVehicleOption?.fare.surgeMultiplier && selectedVehicleOption.fare.surgeMultiplier > 1 && (
                 <div className="flex justify-between text-sm">
@@ -891,9 +891,9 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                   <span className="text-[#F59E0B]">+UGX {Math.round(selectedVehicleOption.fare.subtotal * (selectedVehicleOption.fare.surgeMultiplier - 1)).toLocaleString()}</span>
                 </div>
               )}
-              <div className="pt-2 mt-2 border-t border-white/10 flex justify-between">
-                <span className="text-white font-medium">Total</span>
-                <span className="text-xl font-bold text-[#00FF88]">UGX {selectedVehicleOption?.fare.total.toLocaleString()}</span>
+              <div className="pt-2 mt-2 border-t border-[#bec9bf]/40 flex justify-between">
+                <span className="text-[#191c1d] font-medium">Total</span>
+                <span className="text-xl font-bold text-[#005f3a]">UGX {selectedVehicleOption?.fare.total.toLocaleString()}</span>
               </div>
             </div>
           </Card>
@@ -901,12 +901,12 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           {/* Confirm Button */}
           <Button 
             onClick={handleConfirmRide}
-            className="w-full h-14 text-lg font-semibold rounded-xl bg-[#00FF88] text-[#0D0D12] hover:bg-[#10B981] neon-glow"
+            className="w-full h-14 text-lg font-semibold rounded-xl bg-[#005f3a] text-white hover:bg-[#10B981] "
           >
             Confirm Ride • UGX {selectedVehicleOption?.fare.total.toLocaleString()}
           </Button>
           
-          <p className="text-center text-xs text-white/30">
+          <p className="text-center text-xs text-[#bec9bf]">
             By confirming, you agree to our Terms of Service
           </p>
         </div>
@@ -920,39 +920,39 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
   
   if (step === 'vehicle') {
     return (
-      <div className="min-h-screen bg-[#0D0D12]">
+      <div className="min-h-screen bg-[#f8f9fa]">
         <div 
           className="px-4 pt-4 pb-6"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
         >
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => setStep('location')} className="text-white hover:bg-white/10">
+            <Button variant="ghost" size="icon" onClick={() => setStep('location')} className="text-[#191c1d] hover:bg-[#f3f4f5]">
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-white">Choose Your Ride</h1>
-              <p className="text-white/60 text-sm">Select vehicle type</p>
+              <h1 className="text-xl font-bold text-[#191c1d]">Choose Your Ride</h1>
+              <p className="text-[#3f4941] text-sm">Select vehicle type</p>
             </div>
           </div>
         </div>
 
         <div className="px-4 -mt-4">
           {/* Route Preview */}
-          <Card className="p-3 bg-[#1A1A24]/90 border-white/5 glass-panel mb-4">
+          <Card className="p-3 bg-[#edeeef]/90 border-[#bec9bf]/30  mb-4">
             <div className="flex items-center gap-3">
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: serviceColors.primary }} />
-                  <p className="text-sm text-white truncate">{pickup?.address}</p>
+                  <p className="text-sm text-[#191c1d] truncate">{pickup?.address}</p>
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <div className="w-2 h-2 rounded-full bg-[#F97316]" />
-                  <p className="text-sm text-white truncate">{destination?.address}</p>
+                  <p className="text-sm text-[#191c1d] truncate">{destination?.address}</p>
                 </div>
               </div>
               <div className="text-right">
-                <p className="text-sm font-bold text-white">{route?.distanceKm} km</p>
-                <p className="text-xs text-white/50">{route?.durationMin} min</p>
+                <p className="text-sm font-bold text-[#191c1d]">{route?.distanceKm} km</p>
+                <p className="text-xs text-[#6f7a71]">{route?.durationMin} min</p>
               </div>
             </div>
           </Card>
@@ -969,8 +969,8 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                   className={cn(
                     "p-4 cursor-pointer transition-all",
                     isSelected 
-                      ? "border-2 glass-panel" 
-                      : "bg-[#1A1A24]/80 border-white/5 hover:border-white/10"
+                      ? "border-2 " 
+                      : "bg-white border-[#bec9bf]/30 hover:border-[#bec9bf]/40"
                   )}
                   style={isSelected ? { borderColor: config.color } : undefined}
                   onClick={() => setSelectedVehicle(vehicle.id)}
@@ -984,20 +984,20 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-white">{vehicle.name}</p>
+                        <p className="font-semibold text-[#191c1d]">{vehicle.name}</p>
                         {isSelected && (
                           <Check className="h-4 w-4" style={{ color: config.color }} />
                         )}
                       </div>
-                      <p className="text-sm text-white/50">{vehicle.description}</p>
-                      <p className="text-xs text-white/40 mt-1">{vehicle.eta} away</p>
+                      <p className="text-sm text-[#6f7a71]">{vehicle.description}</p>
+                      <p className="text-xs text-[#6f7a71] mt-1">{vehicle.eta} away</p>
                     </div>
                     <div className="text-right">
                       <p className="text-lg font-bold" style={{ color: config.color }}>
                         UGX {vehicle.fare.total.toLocaleString()}
                       </p>
                       {vehicle.multiplier !== 1.0 && (
-                        <p className="text-xs text-white/40">
+                        <p className="text-xs text-[#6f7a71]">
                           {vehicle.multiplier < 1 ? `${Math.round((1 - vehicle.multiplier) * 100)}% off` : `${vehicle.multiplier}x`}
                         </p>
                       )}
@@ -1009,15 +1009,15 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           </div>
 
           {/* Passenger Info */}
-          <Card className="mt-4 p-3 bg-[#1A1A24]/80 border-white/5 glass-card">
+          <Card className="mt-4 p-3 bg-white border-[#bec9bf]/30 ">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <User className="h-5 w-5 text-white/50" />
-                <span className="text-sm text-white/70">{passengers} passenger{passengers > 1 ? 's' : ''}</span>
+                <User className="h-5 w-5 text-[#6f7a71]" />
+                <span className="text-sm text-[#3f4941]">{passengers} passenger{passengers > 1 ? 's' : ''}</span>
               </div>
               <button 
                 onClick={() => setStep('location')}
-                className="text-[#00FF88] text-sm font-medium"
+                className="text-[#005f3a] text-sm font-medium"
               >
                 Change
               </button>
@@ -1028,7 +1028,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           <Button 
             onClick={() => setStep('confirmation')}
             disabled={!selectedVehicle}
-            className="w-full h-14 text-lg font-semibold rounded-xl mt-6 bg-[#00FF88] text-[#0D0D12] hover:bg-[#10B981] neon-glow"
+            className="w-full h-14 text-lg font-semibold rounded-xl mt-6 bg-[#005f3a] text-white hover:bg-[#10B981] "
           >
             Continue
           </Button>
@@ -1042,28 +1042,28 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
   // ============================================
   
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
+    <div className="min-h-screen bg-[#f8f9fa]">
       {/* Header */}
       <div 
         className="px-4 pt-4 pb-6"
         style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, transparent)` }}
       >
         <div className="flex items-center gap-3 mb-4">
-          <Button variant="ghost" size="icon" onClick={onBack} className="text-white hover:bg-white/10">
+          <Button variant="ghost" size="icon" onClick={onBack} className="text-[#191c1d] hover:bg-[#f3f4f5]">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-xl font-bold text-white">
+            <h1 className="text-xl font-bold text-[#191c1d]">
               {isRideService ? 'Book a Ride' : 'Book Delivery'}
             </h1>
-            <p className="text-white/60 text-sm">Enter your trip details</p>
+            <p className="text-[#3f4941] text-sm">Enter your trip details</p>
           </div>
         </div>
       </div>
 
       {/* Location Inputs */}
       <div className="px-4 -mt-4">
-        <Card className="p-4 bg-[#1A1A24]/90 border-white/5 glass-panel">
+        <Card className="p-4 bg-[#edeeef]/90 border-[#bec9bf]/30 ">
           <div className="space-y-3">
             {/* Pickup */}
             <div className="flex items-center gap-3">
@@ -1079,16 +1079,16 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                   value={pickupInput}
                   onChange={(e) => setPickupInput(e.target.value)}
                   placeholder="Enter pickup location"
-                  className="w-full h-12 px-3 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#00FF88]/50 focus:outline-none transition-colors"
+                  className="w-full h-12 px-3 bg-white rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a]/50 focus:outline-none transition-colors"
                 />
-                <Target className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
+                <Target className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#bec9bf]" />
               </div>
             </div>
 
             {/* Connector */}
             <div className="flex items-center gap-3">
               <div className="w-8 flex justify-center">
-                <div className="w-0.5 h-4 bg-white/10" />
+                <div className="w-0.5 h-4 bg-[#edeeef]" />
               </div>
             </div>
 
@@ -1103,9 +1103,9 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                   value={destinationInput}
                   onChange={(e) => setDestinationInput(e.target.value)}
                   placeholder="Where are you going?"
-                  className="w-full h-12 px-3 bg-[#252530] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#00FF88]/50 focus:outline-none transition-colors"
+                  className="w-full h-12 px-3 bg-white rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a]/50 focus:outline-none transition-colors"
                 />
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#bec9bf]" />
               </div>
             </div>
           </div>
@@ -1115,30 +1115,30 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
       {/* Passenger Count - Only for rides */}
       {isRideService && (
         <div className="px-4 mt-4">
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5 glass-card">
+          <Card className="p-4 bg-white border-[#bec9bf]/30 ">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center">
-                  <User className="h-5 w-5 text-white/60" />
+                <div className="w-10 h-10 bg-[#f3f4f5] rounded-xl flex items-center justify-center">
+                  <User className="h-5 w-5 text-[#3f4941]" />
                 </div>
                 <div>
-                  <p className="font-medium text-white">Passengers</p>
-                  <p className="text-sm text-white/40">How many people?</p>
+                  <p className="font-medium text-[#191c1d]">Passengers</p>
+                  <p className="text-sm text-[#6f7a71]">How many people?</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <button 
                   onClick={() => setPassengers(Math.max(1, passengers - 1))} 
-                  className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors"
+                  className="w-10 h-10 bg-[#f3f4f5] rounded-xl flex items-center justify-center hover:bg-[#f3f4f5] transition-colors"
                 >
-                  <Minus className="h-5 w-5 text-white/60" />
+                  <Minus className="h-5 w-5 text-[#3f4941]" />
                 </button>
-                <span className="w-8 text-center font-semibold text-lg text-white">{passengers}</span>
+                <span className="w-8 text-center font-semibold text-lg text-[#191c1d]">{passengers}</span>
                 <button 
                   onClick={() => setPassengers(Math.min(4, passengers + 1))} 
-                  className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center hover:bg-white/10 transition-colors"
+                  className="w-10 h-10 bg-[#f3f4f5] rounded-xl flex items-center justify-center hover:bg-[#f3f4f5] transition-colors"
                 >
-                  <Plus className="h-5 w-5 text-white/60" />
+                  <Plus className="h-5 w-5 text-[#3f4941]" />
                 </button>
               </div>
             </div>
@@ -1148,8 +1148,8 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
 
       {/* Popular Locations */}
       <div className="px-4 mt-4">
-        <p className="text-xs text-white/40 uppercase tracking-wider mb-2">Popular Locations</p>
-        <Card className="divide-y divide-white/5 bg-[#1A1A24]/80 border-white/5">
+        <p className="text-xs text-[#6f7a71] uppercase tracking-wider mb-2">Popular Locations</p>
+        <Card className="divide-y divide-[#bec9bf]/20 bg-white border-[#bec9bf]/30">
           {KAMPALA_LOCATIONS.slice(0, 5).map((loc, idx) => (
             <button
               key={idx}
@@ -1160,10 +1160,10 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
                   setDestinationInput(loc.name);
                 }
               }}
-              className="w-full p-3 flex items-center gap-3 hover:bg-white/5 transition-colors text-left"
+              className="w-full p-3 flex items-center gap-3 hover:bg-[#f3f4f5] transition-colors text-left"
             >
-              <MapPin className="h-4 w-4 text-white/30" />
-              <span className="text-white">{loc.name}</span>
+              <MapPin className="h-4 w-4 text-[#bec9bf]" />
+              <span className="text-[#191c1d]">{loc.name}</span>
             </button>
           ))}
         </Card>
@@ -1177,8 +1177,8 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           className={cn(
             "w-full h-14 text-lg font-semibold rounded-xl transition-all",
             !pickupInput || !destinationInput || calculating
-              ? "bg-white/5 text-white/30 border border-white/5"
-              : "bg-[#00FF88] text-[#0D0D12] hover:bg-[#10B981] neon-glow"
+              ? "bg-[#f3f4f5] text-[#bec9bf] border border-[#bec9bf]/30"
+              : "bg-[#005f3a] text-white hover:bg-[#10B981] "
           )}
         >
           {calculating ? (
@@ -1194,7 +1194,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           )}
         </Button>
         
-        <p className="text-center text-xs text-white/30 mt-3">
+        <p className="text-center text-xs text-[#bec9bf] mt-3">
           Enter pickup and destination to see available rides and prices
         </p>
       </div>

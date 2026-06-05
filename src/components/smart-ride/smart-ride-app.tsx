@@ -41,18 +41,18 @@ export function SmartRideApp() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0D0D12] max-w-md mx-auto flex items-center justify-center">
+      <div className="min-h-screen bg-[#f8f9fa] max-w-md mx-auto flex items-center justify-center">
         <div className="text-center">
           <div 
-            className="w-16 h-16 bg-[#00FF88]/15 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse"
-            style={{ boxShadow: '0 0 30px rgba(0, 255, 136, 0.3)' }}
+            className="w-16 h-16 bg-[#005f3a]/15 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse"
+            style={{ boxShadow: '0 0 30px rgba(0, 95, 58, 0.15)' }}
           >
-            <svg className="h-8 w-8 text-[#00FF88]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg className="h-8 w-8 text-[#005f3a]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="12" cy="12" r="10" />
               <path d="M12 6v6l4 2" />
             </svg>
           </div>
-          <p className="text-gray-400">Loading Smart Ride...</p>
+          <p className="text-[#6f7a71]">Loading Smart Ride...</p>
         </div>
       </div>
     );
@@ -280,10 +280,10 @@ export function SmartRideApp() {
           default:
             // Admin roles should never reach here in mobile app
             return (
-              <div className="min-h-screen bg-[#0D0D12] flex items-center justify-center p-4">
+              <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center p-4">
                 <div className="text-center">
-                  <p className="text-white mb-4">Admin access is not available in the mobile app.</p>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-[#191c1d] mb-4">Admin access is not available in the mobile app.</p>
+                  <p className="text-[#6f7a71] text-sm">
                     Please use admin.smartride.com
                   </p>
                 </div>
@@ -297,7 +297,7 @@ export function SmartRideApp() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
+    <div className="min-h-screen bg-[#f8f9fa]">
       {renderScreen()}
     </div>
   );

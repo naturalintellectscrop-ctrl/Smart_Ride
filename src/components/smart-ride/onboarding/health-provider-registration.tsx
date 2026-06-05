@@ -187,45 +187,45 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
   const renderBusinessInfo = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-rose-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Heart className="h-8 w-8 text-rose-400" />
+        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Heart className="h-8 w-8 text-rose-600" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Facility Information</h2>
-        <p className="text-gray-400 text-sm">Tell us about your healthcare facility</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Facility Information</h2>
+        <p className="text-[#3f4941] text-sm">Tell us about your healthcare facility</p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Facility Name *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Facility Name *</label>
           <Input
             value={businessName}
             onChange={(e) => setBusinessName(e.target.value)}
             placeholder="Enter facility name"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Facility Type *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Facility Type *</label>
           <div className="space-y-2">
             {providerTypes.map((type) => (
               <Card
                 key={type.type}
                 className={cn(
-                  "cursor-pointer border-2 transition-all bg-[#13131A]",
+                  "cursor-pointer border-2 transition-all bg-white shadow-sm",
                   providerType === type.type
-                    ? 'border-rose-400 bg-rose-400/10'
-                    : 'border-white/5 hover:border-white/10'
+                    ? 'border-rose-400 bg-rose-50'
+                    : 'border-[#bec9bf]/30 hover:border-[#bec9bf]/60'
                 )}
                 onClick={() => setProviderType(type.type)}
               >
                 <CardContent className="p-3 flex items-center justify-between">
                   <div>
-                    <p className="font-medium text-white">{type.label}</p>
-                    <p className="text-xs text-gray-500">{type.description}</p>
+                    <p className="font-medium text-[#191c1d]">{type.label}</p>
+                    <p className="text-xs text-[#6f7a71]">{type.description}</p>
                   </div>
                   {providerType === type.type && (
-                    <CheckCircle className="h-5 w-5 text-rose-400" />
+                    <CheckCircle className="h-5 w-5 text-rose-600" />
                   )}
                 </CardContent>
               </Card>
@@ -234,30 +234,30 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">License Number *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">License Number *</label>
           <Input
             value={licenseNumber}
             onChange={(e) => setLicenseNumber(e.target.value)}
             placeholder="Enter facility license number"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Issuing Authority</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Issuing Authority</label>
           <Input
             value={issuingAuthority}
             onChange={(e) => setIssuingAuthority(e.target.value)}
             placeholder="e.g., Uganda Pharmacy Board"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400"
           />
         </div>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-          <AlertCircle className="h-4 w-4 text-red-400" />
-          <p className="text-red-400 text-sm">{error}</p>
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-red-500" />
+          <p className="text-red-600 text-sm">{error}</p>
         </div>
       )}
 
@@ -265,7 +265,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           variant="outline"
           onClick={onBack}
-          className="flex-1 h-14 rounded-xl font-semibold bg-[#1A1A24] border-white/10 text-gray-300"
+          className="flex-1 h-14 rounded-xl font-semibold bg-white border border-[#bec9bf] text-[#005f3a] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
@@ -273,7 +273,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           onClick={() => setStep('owner')}
           disabled={!canProceedBusiness}
-          className="flex-1 h-14 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-semibold"
+          className="flex-1 h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           Continue
           <ChevronRight className="h-5 w-5 ml-2" />
@@ -285,56 +285,56 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
   const renderOwnerInfo = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-rose-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <User className="h-8 w-8 text-rose-400" />
+        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <User className="h-8 w-8 text-rose-600" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Owner Information</h2>
-        <p className="text-gray-400 text-sm">Details of the facility owner/manager</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Owner Information</h2>
+        <p className="text-[#3f4941] text-sm">Details of the facility owner/manager</p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Full Name *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Full Name *</label>
           <Input
             value={ownerName}
             onChange={(e) => setOwnerName(e.target.value)}
             placeholder="Enter full name"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Phone Number *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Phone Number *</label>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">+256</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6f7a71] font-medium text-sm">+256</span>
             <Input
               type="tel"
               value={ownerPhone}
               onChange={(e) => setOwnerPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
               placeholder="7XX XXX XXX"
-              className="pl-16 h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+              className="pl-16 h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Email (Optional)</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Email (Optional)</label>
           <Input
             type="email"
             value={ownerEmail}
             onChange={(e) => setOwnerEmail(e.target.value)}
             placeholder="owner@example.com"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">National ID Number (NIN)</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">National ID Number (NIN)</label>
           <Input
             value={ownerNIN}
             onChange={(e) => setOwnerNIN(e.target.value.toUpperCase())}
             placeholder="Enter NIN"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400 uppercase"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400 uppercase"
           />
         </div>
       </div>
@@ -343,7 +343,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           variant="outline"
           onClick={() => setStep('business')}
-          className="flex-1 h-14 rounded-xl font-semibold bg-[#1A1A24] border-white/10 text-gray-300"
+          className="flex-1 h-14 rounded-xl font-semibold bg-white border border-[#bec9bf] text-[#005f3a] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
@@ -351,7 +351,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           onClick={() => setStep('location')}
           disabled={!canProceedOwner}
-          className="flex-1 h-14 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-semibold"
+          className="flex-1 h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           Continue
           <ChevronRight className="h-5 w-5 ml-2" />
@@ -363,41 +363,41 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
   const renderLocation = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-rose-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <MapPin className="h-8 w-8 text-rose-400" />
+        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <MapPin className="h-8 w-8 text-rose-600" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Location</h2>
-        <p className="text-gray-400 text-sm">Where is your facility located?</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Location</h2>
+        <p className="text-[#3f4941] text-sm">Where is your facility located?</p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Physical Address *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Physical Address *</label>
           <Input
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="Enter street address"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">City</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">City</label>
           <Input
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="e.g., Kampala"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">District</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">District</label>
           <Input
             value={district}
             onChange={(e) => setDistrict(e.target.value)}
             placeholder="e.g., Central"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400"
           />
         </div>
       </div>
@@ -406,7 +406,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           variant="outline"
           onClick={() => setStep('owner')}
-          className="flex-1 h-14 rounded-xl font-semibold bg-[#1A1A24] border-white/10 text-gray-300"
+          className="flex-1 h-14 rounded-xl font-semibold bg-white border border-[#bec9bf] text-[#005f3a] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
@@ -414,7 +414,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           onClick={() => setStep('services')}
           disabled={!canProceedLocation}
-          className="flex-1 h-14 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-semibold"
+          className="flex-1 h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           Continue
           <ChevronRight className="h-5 w-5 ml-2" />
@@ -426,51 +426,51 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
   const renderServices = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-rose-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Clock className="h-8 w-8 text-rose-400" />
+        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Clock className="h-8 w-8 text-rose-600" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Services & Hours</h2>
-        <p className="text-gray-400 text-sm">What services do you offer?</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Services & Hours</h2>
+        <p className="text-[#3f4941] text-sm">What services do you offer?</p>
       </div>
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between p-4 bg-[#13131A] rounded-xl border border-white/5">
+        <div className="flex items-center justify-between p-4 bg-white rounded-xl border border-[#bec9bf]/30 shadow-sm">
           <div>
-            <p className="font-medium text-white">24 Hours Service</p>
-            <p className="text-sm text-gray-500">Open round the clock</p>
+            <p className="font-medium text-[#191c1d]">24 Hours Service</p>
+            <p className="text-sm text-[#6f7a71]">Open round the clock</p>
           </div>
           <Checkbox
             checked={is24Hours}
             onCheckedChange={(checked) => setIs24Hours(checked as boolean)}
-            className="data-[state=checked]:bg-rose-500"
+            className="data-[state=checked]:bg-[#005f3a]"
           />
         </div>
 
         {!is24Hours && (
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Opens</label>
+              <label className="block text-sm font-medium text-[#3f4941] mb-2">Opens</label>
               <Input
                 type="time"
                 value={openingTime}
                 onChange={(e) => setOpeningTime(e.target.value)}
-                className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white"
+                className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">Closes</label>
+              <label className="block text-sm font-medium text-[#3f4941] mb-2">Closes</label>
               <Input
                 type="time"
                 value={closingTime}
                 onChange={(e) => setClosingTime(e.target.value)}
-                className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white"
+                className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d]"
               />
             </div>
           </div>
         )}
 
         <div className="space-y-2">
-          <p className="text-sm font-medium text-gray-300">Services Offered</p>
+          <p className="text-sm font-medium text-[#3f4941]">Services Offered</p>
           
           {[
             { label: 'Prescription Medicines', checked: supportsPrescription, setter: setSupportsPrescription },
@@ -478,12 +478,12 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
             { label: 'Delivery Service', checked: supportsDelivery, setter: setSupportsDelivery },
             { label: 'Pickup Service', checked: supportsPickup, setter: setSupportsPickup },
           ].map((service, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-[#13131A] rounded-lg border border-white/5">
-              <span className="text-white">{service.label}</span>
+            <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg border border-[#bec9bf]/30 shadow-sm">
+              <span className="text-[#191c1d]">{service.label}</span>
               <Checkbox
                 checked={service.checked}
                 onCheckedChange={(checked) => service.setter(checked as boolean)}
-                className="data-[state=checked]:bg-rose-500"
+                className="data-[state=checked]:bg-[#005f3a]"
               />
             </div>
           ))}
@@ -494,14 +494,14 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           variant="outline"
           onClick={() => setStep('location')}
-          className="flex-1 h-14 rounded-xl font-semibold bg-[#1A1A24] border-white/10 text-gray-300"
+          className="flex-1 h-14 rounded-xl font-semibold bg-white border border-[#bec9bf] text-[#005f3a] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
         </Button>
         <Button
           onClick={() => setStep('bank')}
-          className="flex-1 h-14 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-semibold"
+          className="flex-1 h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           Continue
           <ChevronRight className="h-5 w-5 ml-2" />
@@ -513,54 +513,54 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
   const renderBankDetails = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-rose-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <Building2 className="h-8 w-8 text-rose-400" />
+        <div className="w-16 h-16 bg-[#98f6be]/20 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Building2 className="h-8 w-8 text-[#005f3a]" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Payout Details</h2>
-        <p className="text-gray-400 text-sm">Where should we send your earnings?</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Payout Details</h2>
+        <p className="text-[#3f4941] text-sm">Where should we send your earnings?</p>
       </div>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Bank Name *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Bank Name *</label>
           <Input
             value={bankName}
             onChange={(e) => setBankName(e.target.value)}
             placeholder="e.g., Stanbic Bank"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Account Name *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Account Name *</label>
           <Input
             value={accountName}
             onChange={(e) => setAccountName(e.target.value)}
             placeholder="Account holder's name"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Account Number *</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Account Number *</label>
           <Input
             value={accountNumber}
             onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
             placeholder="Enter account number"
-            className="h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-300 mb-2">Mobile Money Number (Optional)</label>
+          <label className="block text-sm font-medium text-[#3f4941] mb-2">Mobile Money Number (Optional)</label>
           <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium text-sm">+256</span>
+            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6f7a71] font-medium text-sm">+256</span>
             <Input
               type="tel"
               value={mobileMoneyNumber}
               onChange={(e) => setMobileMoneyNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
               placeholder="7XX XXX XXX"
-              className="pl-16 h-14 bg-[#1A1A24] border-[#1A1A24] text-white placeholder:text-gray-500 focus:border-rose-400"
+              className="pl-16 h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
             />
           </div>
         </div>
@@ -570,7 +570,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           variant="outline"
           onClick={() => setStep('services')}
-          className="flex-1 h-14 rounded-xl font-semibold bg-[#1A1A24] border-white/10 text-gray-300"
+          className="flex-1 h-14 rounded-xl font-semibold bg-white border border-[#bec9bf] text-[#005f3a] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
@@ -578,7 +578,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           onClick={() => setStep('documents')}
           disabled={!canProceedBank}
-          className="flex-1 h-14 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-semibold"
+          className="flex-1 h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           Continue
           <ChevronRight className="h-5 w-5 ml-2" />
@@ -590,11 +590,11 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
   const renderDocuments = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-rose-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <FileText className="h-8 w-8 text-rose-400" />
+        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <FileText className="h-8 w-8 text-rose-600" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Upload Documents</h2>
-        <p className="text-gray-400 text-sm">We need to verify your facility</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Upload Documents</h2>
+        <p className="text-[#3f4941] text-sm">We need to verify your facility</p>
       </div>
 
       <div className="space-y-3">
@@ -605,25 +605,25 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
           { label: 'Facility Photo', desc: 'Optional - exterior photo', value: facilityPhoto, setter: setFacilityPhoto, optional: true },
         ].map((doc, i) => (
           <Card key={i} className={cn(
-            "border-2 bg-[#13131A]",
-            doc.value ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-white/5'
+            "border-2 bg-white shadow-sm",
+            doc.value ? 'border-[#005f3a]/30 bg-[#98f6be]/5' : 'border-[#bec9bf]/30'
           )}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className={cn(
                     "w-12 h-12 rounded-full flex items-center justify-center overflow-hidden",
-                    doc.value ? 'bg-emerald-500/20' : 'bg-white/5'
+                    doc.value ? 'bg-[#98f6be]/20' : 'bg-[#f3f4f5]'
                   )}>
                     {doc.value ? (
                       <img src={doc.value} alt={doc.label} className="w-full h-full object-cover" />
                     ) : (
-                      <Camera className="h-6 w-6 text-gray-500" />
+                      <Camera className="h-6 w-6 text-[#6f7a71]" />
                     )}
                   </div>
                   <div>
-                    <p className="font-medium text-white">{doc.label} {!doc.optional && '*'}</p>
-                    <p className="text-sm text-gray-500">{doc.desc}</p>
+                    <p className="font-medium text-[#191c1d]">{doc.label} {!doc.optional && '*'}</p>
+                    <p className="text-sm text-[#6f7a71]">{doc.desc}</p>
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -632,7 +632,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
                       variant="outline"
                       size="sm"
                       onClick={() => doc.setter(null)}
-                      className="shrink-0 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20"
+                      className="shrink-0 bg-red-50 border-red-200 text-red-500 hover:bg-red-100"
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -641,7 +641,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
                     variant="outline"
                     size="sm"
                     onClick={() => handleFileUpload(doc.setter)}
-                    className="shrink-0 bg-[#1A1A24] border-white/10 text-gray-300 hover:bg-[#1E1E28] hover:text-white"
+                    className="shrink-0 bg-white border border-[#bec9bf] text-[#3f4941] hover:bg-[#f3f4f5] hover:text-[#191c1d]"
                   >
                     <Upload className="h-4 w-4 mr-2" />
                     {doc.value ? 'Change' : 'Upload'}
@@ -654,9 +654,9 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-          <AlertCircle className="h-4 w-4 text-red-400" />
-          <p className="text-red-400 text-sm">{error}</p>
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-red-500" />
+          <p className="text-red-600 text-sm">{error}</p>
         </div>
       )}
 
@@ -664,7 +664,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           variant="outline"
           onClick={() => setStep('bank')}
-          className="flex-1 h-14 rounded-xl font-semibold bg-[#1A1A24] border-white/10 text-gray-300"
+          className="flex-1 h-14 rounded-xl font-semibold bg-white border border-[#bec9bf] text-[#005f3a] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
@@ -672,7 +672,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           onClick={() => setStep('review')}
           disabled={!canProceedDocuments}
-          className="flex-1 h-14 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-semibold"
+          className="flex-1 h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           Continue
           <ChevronRight className="h-5 w-5 ml-2" />
@@ -684,14 +684,14 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
   const renderReview = () => (
     <div className="space-y-6">
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-rose-500/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <CheckCircle className="h-8 w-8 text-rose-400" />
+        <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CheckCircle className="h-8 w-8 text-rose-600" />
         </div>
-        <h2 className="text-xl font-bold text-white mb-2">Review Application</h2>
-        <p className="text-gray-400 text-sm">Make sure everything is correct</p>
+        <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">Review Application</h2>
+        <p className="text-[#3f4941] text-sm">Make sure everything is correct</p>
       </div>
 
-      <Card className="bg-gradient-to-r text-white border-0" style={{ background: 'linear-gradient(135deg, #F43F5E, #EC4899)' }}>
+      <Card className="bg-gradient-to-r text-white border-0 shadow-sm" style={{ background: 'linear-gradient(135deg, #005f3a, #0e7a4d)' }}>
         <CardContent className="p-4 text-center">
           <p className="text-white/80 text-sm">Registering as</p>
           <p className="text-xl font-bold">{businessName}</p>
@@ -699,48 +699,48 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         </CardContent>
       </Card>
 
-      <Card className="bg-[#13131A] border-white/5">
+      <Card className="bg-white border border-[#bec9bf]/30 shadow-sm">
         <CardContent className="p-4">
-          <h3 className="font-semibold text-white mb-3">Facility Details</h3>
+          <h3 className="font-semibold text-[#191c1d] mb-3">Facility Details</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">License</span>
-              <span className="font-medium text-white">{licenseNumber}</span>
+              <span className="text-[#6f7a71]">License</span>
+              <span className="font-medium text-[#191c1d]">{licenseNumber}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Address</span>
-              <span className="font-medium text-white">{address}</span>
+              <span className="text-[#6f7a71]">Address</span>
+              <span className="font-medium text-[#191c1d]">{address}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Hours</span>
-              <span className="font-medium text-white">{is24Hours ? '24 Hours' : `${openingTime} - ${closingTime}`}</span>
+              <span className="text-[#6f7a71]">Hours</span>
+              <span className="font-medium text-[#191c1d]">{is24Hours ? '24 Hours' : `${openingTime} - ${closingTime}`}</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-[#13131A] border-white/5">
+      <Card className="bg-white border border-[#bec9bf]/30 shadow-sm">
         <CardContent className="p-4">
-          <h3 className="font-semibold text-white mb-3">Owner Details</h3>
+          <h3 className="font-semibold text-[#191c1d] mb-3">Owner Details</h3>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-gray-500">Name</span>
-              <span className="font-medium text-white">{ownerName}</span>
+              <span className="text-[#6f7a71]">Name</span>
+              <span className="font-medium text-[#191c1d]">{ownerName}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Phone</span>
-              <span className="font-medium text-white">+256 {ownerPhone}</span>
+              <span className="text-[#6f7a71]">Phone</span>
+              <span className="font-medium text-[#191c1d]">+256 {ownerPhone}</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-amber-500/10 border-amber-500/30">
+      <Card className="bg-amber-50 border-amber-200">
         <CardContent className="p-4">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-amber-400 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-amber-200/70">
-              <p className="font-medium text-amber-300 mb-1">What happens next?</p>
+            <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-amber-600">
+              <p className="font-medium text-amber-700 mb-1">What happens next?</p>
               <ul className="space-y-1">
                 <li>• Your application will be reviewed</li>
                 <li>• License will be verified with authorities</li>
@@ -752,9 +752,9 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
       </Card>
 
       {error && (
-        <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-          <AlertCircle className="h-4 w-4 text-red-400" />
-          <p className="text-red-400 text-sm">{error}</p>
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="h-4 w-4 text-red-500" />
+          <p className="text-red-600 text-sm">{error}</p>
         </div>
       )}
 
@@ -762,7 +762,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           variant="outline"
           onClick={() => setStep('documents')}
-          className="flex-1 h-14 rounded-xl font-semibold bg-[#1A1A24] border-white/10 text-gray-300"
+          className="flex-1 h-14 rounded-xl font-semibold bg-white border border-[#bec9bf] text-[#005f3a] hover:bg-[#f3f4f5]"
         >
           <ArrowLeft className="h-5 w-5 mr-2" />
           Back
@@ -770,7 +770,7 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
         <Button
           onClick={handleSubmit}
           disabled={isLoading}
-          className="flex-1 h-14 bg-gradient-to-r from-rose-500 to-pink-600 text-white rounded-xl font-semibold"
+          className="flex-1 h-14 bg-[#005f3a] text-white rounded-xl font-semibold hover:bg-[#0e7a4d] active:scale-95 transition-all"
         >
           {isLoading ? (
             <>
@@ -788,41 +788,41 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
   const renderSubmitted = () => (
     <div className="text-center py-12">
       <div 
-        className="w-20 h-20 bg-rose-500/15 rounded-full flex items-center justify-center mx-auto mb-4"
-        style={{ boxShadow: '0 0 30px rgba(244, 63, 94, 0.3)' }}
+        className="w-20 h-20 bg-[#98f6be]/20 rounded-full flex items-center justify-center mx-auto mb-4"
+        style={{ boxShadow: '0 0 30px rgba(0, 95, 58, 0.15)' }}
       >
-        <CheckCircle className="h-10 w-10 text-rose-400" />
+        <CheckCircle className="h-10 w-10 text-[#005f3a]" />
       </div>
-      <h2 className="text-xl font-bold text-white mb-2">
+      <h2 className="text-xl font-bold text-[#191c1d] mb-2 font-[family-name:var(--font-plus-jakarta)]">
         Application Submitted!
       </h2>
-      <p className="text-gray-400 text-sm">
+      <p className="text-[#3f4941] text-sm">
         Your health provider application is pending verification. We&apos;ll contact you soon.
       </p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#0D0D12] max-w-md mx-auto">
-      <div className="px-4 py-4 flex items-center border-b border-white/5 sticky top-0 z-10 bg-[#0D0D12]">
+    <div className="min-h-screen bg-[#f8f9fa] max-w-md mx-auto">
+      <div className="px-4 py-4 flex items-center border-b border-[#bec9bf]/30 sticky top-0 z-10 bg-white">
         {step !== 'submitted' && (
           <Button 
             variant="ghost" 
             size="icon"
             onClick={goBack}
-            className="mr-2 text-gray-400 hover:text-white hover:bg-white/5"
+            className="mr-2 text-[#6f7a71] hover:text-[#191c1d] hover:bg-[#f3f4f5]"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
         )}
         <div className="flex-1">
-          <h1 className="text-lg font-semibold text-white">
+          <h1 className="text-lg font-semibold text-[#191c1d] font-[family-name:var(--font-plus-jakarta)]">
             {step === 'submitted' ? 'Application Status' : 'Health Provider Registration'}
           </h1>
           {step !== 'submitted' && (
             <Progress 
               value={getStepProgress()} 
-              className="h-1.5 mt-2 bg-[#1A1A24]"
+              className="h-1.5 mt-2 bg-[#f3f4f5]"
             />
           )}
         </div>

@@ -394,7 +394,7 @@ export function RiderTasks() {
       <div className="bg-white border-b border-gray-200 px-4 py-4 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">My Tasks</h1>
+            <h1 className="text-xl font-bold text-gray-900 font-[family-name:var(--font-plus-jakarta)]">My Tasks</h1>
             <p className="text-sm text-gray-500">Manage your rides and deliveries</p>
           </div>
           <Button variant="outline" size="sm" className="gap-2">

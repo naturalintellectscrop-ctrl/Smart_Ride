@@ -1,147 +1,174 @@
 /**
  * Smart Ride Design System Theme Configuration
  * 
- * Primary Theme: Dark mode interface
- * Background: Deep charcoal / dark navy (#0D0D12, #1A1A24)
- * Primary Accent: Neon green (#00FF88)
- * Secondary Accent: Electric blue (#3B82F6)
+ * Updated to match Stitch Visual Design System
+ * 
+ * Primary Theme: Light mode interface
+ * Background: White / Light grey (#f8f9fa, #ffffff)
+ * Primary Accent: Deep Green (#005f3a)
+ * Secondary Accent: Bright Green (#22C55E)
+ * Typography: Plus Jakarta Sans (headlines), Inter (body)
  */
 
 export const smartRideTheme = {
   // ============================================
-  // Color Palette
+  // Color Palette - Stitch Design System
   // ============================================
   colors: {
-    // Background Colors
+    // Background Colors - Light Mode
     background: {
-      base: '#0D0D12',       // Deep charcoal - main background
-      elevated: '#1A1A24',   // Dark navy - cards, panels
-      surface: '#252530',    // Slightly lighter - inputs, buttons
-      overlay: 'rgba(0, 0, 0, 0.5)', // Modal overlays
+      base: '#f8f9fa',           // Surface - main background
+      elevated: '#ffffff',        // Surface container lowest - cards, panels
+      surface: '#f3f4f5',        // Surface container low - inputs, buttons
+      overlay: 'rgba(0, 0, 0, 0.4)', // Modal overlays
     },
     
-    // Neon Green - Primary Accent
-    neon: {
-      DEFAULT: '#00FF88',
-      bright: '#00FF88',
-      muted: '#10B981',
-      dark: '#059669',
-      glow: 'rgba(0, 255, 136, 0.4)',
-      glowIntense: 'rgba(0, 255, 136, 0.6)',
+    // Deep Green - Primary Color
+    primary: {
+      DEFAULT: '#005f3a',
+      container: '#0e7a4d',
+      onPrimary: '#ffffff',
+      onPrimaryContainer: '#a6ffc9',
+      fixed: '#98f6be',
+      fixedDim: '#7cd9a4',
+      onPrimaryFixed: '#002111',
+      onPrimaryFixedVariant: '#005231',
     },
     
-    // Electric Blue - Secondary Accent
-    electric: {
-      DEFAULT: '#3B82F6',
-      bright: '#60A5FA',
-      muted: '#2563EB',
-      dark: '#1D4ED8',
-      glow: 'rgba(59, 130, 246, 0.4)',
-      glowIntense: 'rgba(59, 130, 246, 0.6)',
+    // Bright Green - Secondary/Go Color
+    green: {
+      DEFAULT: '#22C55E',
+      bright: '#4ae176',
+      muted: '#006e2f',
+      container: '#6bff8f',
+      onContainer: '#007432',
+      glow: 'rgba(0, 95, 58, 0.4)',
+      glowIntense: 'rgba(0, 95, 58, 0.6)',
+    },
+    
+    // Tertiary - Slate Grey
+    tertiary: {
+      DEFAULT: '#4b5264',
+      container: '#636a7c',
+      onTertiary: '#ffffff',
+      onContainer: '#e6ebff',
+      fixed: '#dce2f7',
+      fixedDim: '#c0c6db',
     },
     
     // Status Colors
     status: {
-      active: '#00FF88',      // Green - active/online
-      aiMonitoring: '#3B82F6', // Blue - AI features
-      emergency: '#EF4444',    // Red - SOS/emergency
-      warning: '#F59E0B',      // Orange - warnings
-      pending: '#8B5CF6',      // Purple - pending states
-      offline: '#6B7280',      // Gray - offline/inactive
+      active: '#22C55E',        // Bright green - active/online
+      success: '#005f3a',       // Deep green - success
+      emergency: '#ba1a1a',     // Red - SOS/emergency
+      warning: '#F59E0B',       // Orange - warnings
+      pending: '#636a7c',       // Slate - pending states
+      offline: '#6f7a71',       // Muted green - offline/inactive
     },
     
     // Service Colors (per service type)
     services: {
       boda: {
-        primary: '#10B981',
-        gradient: 'from-emerald-500 to-teal-600',
-        glow: 'rgba(16, 185, 129, 0.4)',
+        primary: '#005f3a',
+        gradient: 'from-[#005f3a] to-[#0e7a4d]',
+        glow: 'rgba(0, 95, 58, 0.3)',
       },
       car: {
-        primary: '#3B82F6',
-        gradient: 'from-blue-500 to-blue-600',
-        glow: 'rgba(59, 130, 246, 0.4)',
+        primary: '#0e7a4d',
+        gradient: 'from-[#0e7a4d] to-[#22C55E]',
+        glow: 'rgba(14, 122, 77, 0.3)',
       },
       food: {
         primary: '#F97316',
-        gradient: 'from-orange-500 to-orange-600',
-        glow: 'rgba(249, 115, 22, 0.4)',
+        gradient: 'from-[#F97316] to-[#FB923C]',
+        glow: 'rgba(249, 115, 22, 0.3)',
       },
       shopping: {
         primary: '#8B5CF6',
-        gradient: 'from-purple-500 to-purple-600',
-        glow: 'rgba(139, 92, 246, 0.4)',
+        gradient: 'from-[#8B5CF6] to-[#A78BFA]',
+        glow: 'rgba(139, 92, 246, 0.3)',
       },
       item: {
         primary: '#14B8A6',
-        gradient: 'from-teal-500 to-teal-600',
-        glow: 'rgba(20, 184, 166, 0.4)',
+        gradient: 'from-[#14B8A6] to-[#2DD4BF]',
+        glow: 'rgba(20, 184, 166, 0.3)',
       },
       health: {
         primary: '#F43F5E',
-        gradient: 'from-rose-500 to-rose-600',
-        glow: 'rgba(244, 63, 94, 0.4)',
+        gradient: 'from-[#F43F5E] to-[#FB7185]',
+        glow: 'rgba(244, 63, 94, 0.3)',
       },
     },
     
-    // Text Colors
+    // Text Colors - Light Mode
     text: {
-      primary: '#FFFFFF',
-      secondary: 'rgba(255, 255, 255, 0.7)',
-      muted: 'rgba(255, 255, 255, 0.5)',
-      disabled: 'rgba(255, 255, 255, 0.3)',
+      primary: '#191c1d',           // On-surface
+      secondary: '#3f4941',         // On-surface-variant
+      muted: '#6f7a71',             // Outline
+      disabled: '#bec9bf',          // Outline-variant
+      inverse: '#f0f1f2',          // Inverse-on-surface
     },
     
-    // Border Colors
+    // Border Colors - Light Mode
     border: {
-      DEFAULT: 'rgba(255, 255, 255, 0.08)',
-      subtle: 'rgba(255, 255, 255, 0.05)',
-      strong: 'rgba(255, 255, 255, 0.15)',
-      neon: 'rgba(0, 255, 136, 0.3)',
-      electric: 'rgba(59, 130, 246, 0.3)',
+      DEFAULT: '#bec9bf',           // Outline-variant
+      subtle: '#e1e3e4',            // Surface-variant
+      strong: '#6f7a71',            // Outline
+      primary: 'rgba(0, 95, 58, 0.3)',
+      green: 'rgba(34, 197, 94, 0.3)',
     },
   },
   
   // ============================================
-  // Glass Morphism Effects
+  // Elevation & Shadows (Stitch)
+  // ============================================
+  elevation: {
+    level0: 'none',                              // Floor: Maps
+    level1: '0 4px 12px 0 rgba(0, 0, 0, 0.08)', // Floating cards
+    level2: '0 8px 32px rgba(0, 0, 0, 0.12)',    // Active/modal
+    level3: '0 16px 48px rgba(0, 0, 0, 0.16)',   // High emphasis
+  },
+  
+  // ============================================
+  // Glass Morphism Effects (Stitch - Light Mode)
   // ============================================
   glass: {
     default: {
-      background: 'rgba(26, 26, 36, 0.8)',
+      background: 'rgba(255, 255, 255, 0.8)',
       backdropFilter: 'blur(12px)',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+      border: '1px solid rgba(0, 95, 58, 0.08)',
+      boxShadow: '0 4px 12px 0 rgba(0, 0, 0, 0.08)',
     },
     elevated: {
-      background: 'rgba(26, 26, 36, 0.9)',
+      background: 'rgba(255, 255, 255, 0.9)',
       backdropFilter: 'blur(16px)',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
-      boxShadow: '0 12px 48px rgba(0, 0, 0, 0.5)',
+      border: '1px solid rgba(0, 95, 58, 0.06)',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
     },
     subtle: {
-      background: 'rgba(26, 26, 36, 0.6)',
+      background: 'rgba(248, 249, 250, 0.6)',
       backdropFilter: 'blur(8px)',
-      border: '1px solid rgba(255, 255, 255, 0.05)',
+      border: '1px solid rgba(0, 95, 58, 0.04)',
     },
   },
   
   // ============================================
-  // Glow Effects
+  // Glow Effects (Stitch - Green based)
   // ============================================
   glow: {
-    neon: {
-      sm: '0 0 10px rgba(0, 255, 136, 0.3)',
-      DEFAULT: '0 0 20px rgba(0, 255, 136, 0.4), 0 0 40px rgba(0, 255, 136, 0.2)',
-      lg: '0 0 30px rgba(0, 255, 136, 0.5), 0 0 60px rgba(0, 255, 136, 0.3)',
+    primary: {
+      sm: '0 0 10px rgba(0, 95, 58, 0.2)',
+      DEFAULT: '0 0 20px rgba(0, 95, 58, 0.25), 0 0 40px rgba(0, 95, 58, 0.1)',
+      lg: '0 0 30px rgba(0, 95, 58, 0.3), 0 0 60px rgba(0, 95, 58, 0.15)',
     },
-    electric: {
-      sm: '0 0 10px rgba(59, 130, 246, 0.3)',
-      DEFAULT: '0 0 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(59, 130, 246, 0.2)',
-      lg: '0 0 30px rgba(59, 130, 246, 0.5), 0 0 60px rgba(59, 130, 246, 0.3)',
+    green: {
+      sm: '0 0 10px rgba(34, 197, 94, 0.2)',
+      DEFAULT: '0 0 20px rgba(34, 197, 94, 0.25), 0 0 40px rgba(34, 197, 94, 0.1)',
+      lg: '0 0 30px rgba(34, 197, 94, 0.3), 0 0 60px rgba(34, 197, 94, 0.15)',
     },
     sos: {
-      DEFAULT: '0 0 20px rgba(239, 68, 68, 0.5), 0 0 40px rgba(239, 68, 68, 0.3)',
-      pulse: '0 0 30px rgba(239, 68, 68, 0.7), 0 0 60px rgba(239, 68, 68, 0.4)',
+      DEFAULT: '0 0 20px rgba(186, 26, 26, 0.4), 0 0 40px rgba(186, 26, 26, 0.2)',
+      pulse: '0 0 30px rgba(186, 26, 26, 0.5), 0 0 60px rgba(186, 26, 26, 0.3)',
     },
   },
   
@@ -161,7 +188,7 @@ export const smartRideTheme = {
     },
     slideUp: {
       duration: '0.3s',
-      timing: 'ease-out',
+      timing: 'cubic-bezier(0.33, 1, 0.68, 1)',
     },
     fadeIn: {
       duration: '0.2s',
@@ -170,22 +197,24 @@ export const smartRideTheme = {
   },
   
   // ============================================
-  // Typography
+  // Typography - Stitch Design System
   // ============================================
   typography: {
     fontFamily: {
-      sans: 'var(--font-geist-sans), system-ui, sans-serif',
-      mono: 'var(--font-geist-mono), monospace',
+      headline: 'var(--font-plus-jakarta), system-ui, sans-serif',
+      sans: 'var(--font-inter), system-ui, sans-serif',
+      mono: 'ui-monospace, SFMono-Regular, monospace',
     },
     fontSize: {
-      xs: '0.75rem',
-      sm: '0.875rem',
-      base: '1rem',
-      lg: '1.125rem',
-      xl: '1.25rem',
-      '2xl': '1.5rem',
-      '3xl': '1.875rem',
-      '4xl': '2.25rem',
+      displayLg: '32px',     // display-lg
+      headlineLg: '24px',    // headline-lg
+      headlineMd: '20px',    // headline-md
+      headlineLgMobile: '22px', // headline-lg-mobile
+      bodyLg: '18px',        // body-lg
+      bodyMd: '16px',        // body-md
+      bodySm: '14px',        // body-sm
+      labelLg: '14px',       // label-lg
+      labelMd: '12px',       // label-md
     },
     fontWeight: {
       normal: '400',
@@ -193,29 +222,58 @@ export const smartRideTheme = {
       semibold: '600',
       bold: '700',
     },
+    lineHeight: {
+      displayLg: '40px',
+      headlineLg: '32px',
+      headlineMd: '28px',
+      headlineLgMobile: '28px',
+      bodyLg: '28px',
+      bodyMd: '24px',
+      bodySm: '20px',
+      labelLg: '20px',
+      labelMd: '16px',
+    },
+    letterSpacing: {
+      displayLg: '-0.02em',
+      labelLg: '0.02em',
+      default: '0',
+    },
   },
   
   // ============================================
-  // Border Radius
+  // Border Radius - Stitch Design System
   // ============================================
   borderRadius: {
-    sm: '0.375rem',
-    DEFAULT: '0.5rem',
-    md: '0.625rem',
-    lg: '0.75rem',
-    xl: '1rem',
-    '2xl': '1.5rem',
-    full: '9999px',
+    sm: '0.25rem',       // 4px - small elements
+    DEFAULT: '0.5rem',   // 8px - buttons, inputs
+    md: '0.75rem',       // 12px - medium cards
+    lg: '1rem',          // 16px - large cards
+    xl: '1.5rem',        // 24px - bottom sheets
+    '2xl': '2rem',       // 32px - hero sections
+    full: '9999px',      // Pill shapes
   },
   
   // ============================================
-  // Shadows
+  // Spacing - 4px Baseline Grid
+  // ============================================
+  spacing: {
+    xs: '4px',
+    sm: '8px',
+    md: '16px',
+    lg: '24px',
+    xl: '32px',
+    containerMargin: '16px',
+    gutter: '12px',
+  },
+  
+  // ============================================
+  // Shadows - Stitch Elevation
   // ============================================
   shadows: {
-    sm: '0 2px 8px rgba(0, 0, 0, 0.3)',
-    DEFAULT: '0 4px 16px rgba(0, 0, 0, 0.4)',
-    lg: '0 8px 32px rgba(0, 0, 0, 0.5)',
-    xl: '0 16px 48px rgba(0, 0, 0, 0.6)',
+    sm: '0 2px 4px rgba(0, 0, 0, 0.05)',
+    DEFAULT: '0 4px 12px rgba(0, 0, 0, 0.08)',
+    lg: '0 8px 32px rgba(0, 0, 0, 0.12)',
+    xl: '0 16px 48px rgba(0, 0, 0, 0.16)',
   },
 } as const;
 
@@ -246,18 +304,18 @@ export function getGlassClasses(variant: 'default' | 'elevated' | 'subtle' = 'de
 /**
  * Get glow classes for buttons
  */
-export function getGlowClasses(color: 'neon' | 'electric' | 'sos', size: 'sm' | 'default' | 'lg' = 'default') {
+export function getGlowClasses(color: 'primary' | 'green' | 'sos', size: 'sm' | 'default' | 'lg' = 'default') {
   return smartRideTheme.glow[color][size];
 }
 
 /**
  * Generate status color with glow
  */
-export function getStatusStyle(status: 'active' | 'aiMonitoring' | 'emergency' | 'warning' | 'pending' | 'offline') {
+export function getStatusStyle(status: 'active' | 'success' | 'emergency' | 'warning' | 'pending' | 'offline') {
   const color = smartRideTheme.colors.status[status];
   const glowColor = status === 'emergency' ? smartRideTheme.glow.sos.DEFAULT :
-                    status === 'active' ? smartRideTheme.glow.neon.DEFAULT :
-                    status === 'aiMonitoring' ? smartRideTheme.glow.electric.DEFAULT : 'none';
+                    status === 'active' ? smartRideTheme.glow.green.DEFAULT :
+                    status === 'success' ? smartRideTheme.glow.primary.DEFAULT : 'none';
   
   return {
     color,

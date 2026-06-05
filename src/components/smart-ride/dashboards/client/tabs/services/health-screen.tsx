@@ -557,31 +557,31 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
 
   if (step === 'facilities') {
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-24">
+      <div className="min-h-screen bg-[#f8f9fa] pb-24">
         {/* Header */}
         <div 
           className="px-4 py-4 flex items-center gap-4"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, ${serviceColors.primary}10)` }}
         >
-          <button onClick={onBack} className="text-white/80 hover:text-white transition-colors">
+          <button onClick={onBack} className="text-white/80 hover:text-[#191c1d] transition-colors">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-white">Smart Health</h1>
-            <p className="text-white/60 text-sm">Select a health facility</p>
+            <h1 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#191c1d] ">Smart Health</h1>
+            <p className="text-[#6f7a71] text-sm">Select a health facility</p>
           </div>
         </div>
 
         <div className="px-4 pt-4 space-y-4">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#bec9bf]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search pharmacies..."
-              className="w-full h-12 pl-10 pr-4 bg-[#1A1A24] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#F43F5E]/50 focus:outline-none transition-colors"
+              className="w-full h-12 pl-10 pr-4 bg-[#f3f4f5] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#F43F5E]/50 focus:outline-none transition-colors"
             />
           </div>
 
@@ -590,7 +590,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
             {FACILITY_TYPES.map((type) => (
               <button
                 key={type.id}
-                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-white/70 hover:border-[#F43F5E]/30 transition-all whitespace-nowrap"
+                className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-[#bec9bf]/30 text-[#3f4941] hover:border-[#F43F5E]/30 transition-all whitespace-nowrap"
               >
                 <type.icon className="h-4 w-4" />
                 <span className="text-sm">{type.name}</span>
@@ -606,7 +606,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
               <Card 
                 key={facility.id}
                 className={cn(
-                  "p-4 bg-[#1A1A24]/80 border-white/5 cursor-pointer transition-all hover:border-[#F43F5E]/30",
+                  "p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20 cursor-pointer transition-all hover:border-[#F43F5E]/30",
                   !facility.isOpen && "opacity-50"
                 )}
                 onClick={() => {
@@ -632,31 +632,31 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                   
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-white truncate">{facility.name}</h3>
+                      <h3 className="font-[family-name:var(--font-plus-jakarta)] font-semibold text-[#191c1d] truncate ">{facility.name}</h3>
                       {facility.verified && (
-                        <BadgeCheck className="h-4 w-4 text-[#00FF88] flex-shrink-0" />
+                        <BadgeCheck className="h-4 w-4 text-[#005f3a] flex-shrink-0" />
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
-                      <span className="text-sm text-white/70">{facility.rating}</span>
-                      <span className="text-white/30">•</span>
-                      <Navigation className="h-3 w-3 text-white/40" />
-                      <span className="text-sm text-white/50">{facility.distance}</span>
+                      <span className="text-sm text-[#3f4941]">{facility.rating}</span>
+                      <span className="text-[#bec9bf]">•</span>
+                      <Navigation className="h-3 w-3 text-[#bec9bf]" />
+                      <span className="text-sm text-[#6f7a71]">{facility.distance}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
-                      <Clock className="h-3 w-3 text-white/40" />
-                      <span className="text-xs text-white/50">{facility.deliveryTime}</span>
-                      <span className="text-white/30">•</span>
+                      <Clock className="h-3 w-3 text-[#bec9bf]" />
+                      <span className="text-xs text-[#6f7a71]">{facility.deliveryTime}</span>
+                      <span className="text-[#bec9bf]">•</span>
                       <span className="text-xs text-[#F43F5E]">UGX {facility.deliveryFee.toLocaleString()} delivery</span>
                     </div>
                   </div>
                   
                   <div className="text-right">
                     {!facility.isOpen ? (
-                      <span className="text-xs bg-white/10 text-white/50 px-2 py-1 rounded-full">Closed</span>
+                      <span className="text-xs bg-white/10 text-[#6f7a71] px-2 py-1 rounded-full">Closed</span>
                     ) : (
-                      <ChevronRight className="h-5 w-5 text-white/30" />
+                      <ChevronRight className="h-5 w-5 text-[#bec9bf]" />
                     )}
                   </div>
                 </div>
@@ -674,26 +674,26 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
 
   if (step === 'browse' && selectedFacility) {
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-32">
+      <div className="min-h-screen bg-[#f8f9fa] pb-32">
         {/* Header */}
         <div 
           className="px-4 py-4 flex items-center gap-4"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, ${serviceColors.primary}10)` }}
         >
-          <button onClick={() => setStep('facilities')} className="text-white/80 hover:text-white transition-colors">
+          <button onClick={() => setStep('facilities')} className="text-white/80 hover:text-[#191c1d] transition-colors">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-bold text-white">{selectedFacility.name}</h1>
+              <h1 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#191c1d] ">{selectedFacility.name}</h1>
               {selectedFacility.verified && (
-                <BadgeCheck className="h-4 w-4 text-[#00FF88]" />
+                <BadgeCheck className="h-4 w-4 text-[#005f3a]" />
               )}
             </div>
-            <div className="flex items-center gap-2 text-white/60 text-sm">
+            <div className="flex items-center gap-2 text-[#6f7a71] text-sm">
               <Clock className="h-3 w-3" />
               <span>{selectedFacility.deliveryTime}</span>
-              <span className="text-white/30">•</span>
+              <span className="text-[#bec9bf]">•</span>
               <span>UGX {selectedFacility.deliveryFee.toLocaleString()} delivery</span>
             </div>
           </div>
@@ -702,13 +702,13 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
         <div className="px-4 pt-4">
           {/* Search */}
           <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/30" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[#bec9bf]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search medicines..."
-              className="w-full h-12 pl-10 pr-4 bg-[#1A1A24] rounded-xl border border-white/10 text-white placeholder:text-white/30 focus:border-[#F43F5E]/50 focus:outline-none transition-colors"
+              className="w-full h-12 pl-10 pr-4 bg-[#f3f4f5] rounded-xl border border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#F43F5E]/50 focus:outline-none transition-colors"
             />
           </div>
 
@@ -719,8 +719,8 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
               className={cn(
                 "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all",
                 selectedCategory === 'all'
-                  ? "bg-[#F43F5E] text-white"
-                  : "bg-white/5 text-white/60 hover:bg-white/10"
+                  ? "bg-[#F43F5E] text-[#191c1d]"
+                  : "bg-white/5 text-[#6f7a71] hover:bg-[#e7e8e9]"
               )}
             >
               All
@@ -734,8 +734,8 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                   className={cn(
                     "px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all flex items-center gap-2",
                     selectedCategory === cat.id
-                      ? "bg-[#F43F5E] text-white"
-                      : "bg-white/5 text-white/60 hover:bg-white/10"
+                      ? "bg-[#F43F5E] text-[#191c1d]"
+                      : "bg-white/5 text-[#6f7a71] hover:bg-[#e7e8e9]"
                   )}
                 >
                   <Icon className="h-4 w-4" />
@@ -754,7 +754,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
               return (
                 <Card 
                   key={medicine.id} 
-                  className="p-3 bg-[#1A1A24]/80 border-white/5 hover:border-white/10 transition-all cursor-pointer"
+                  className="p-3 bg-[#f3f4f5]/80 border-[#bec9bf]/20 hover:border-[#bec9bf]/30 transition-all cursor-pointer"
                   onClick={() => setShowMedicineDetail(medicine)}
                 >
                   {/* Medicine Image Placeholder */}
@@ -766,13 +766,13 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                   </div>
                   
                   <div className="flex items-start justify-between gap-1">
-                    <h3 className="font-medium text-white text-sm line-clamp-2">{medicine.name}</h3>
+                    <h3 className="font-[family-name:var(--font-plus-jakarta)] font-medium text-[#191c1d] text-sm line-clamp-2 ">{medicine.name}</h3>
                     {medicine.requiresPrescription && (
                       <FileText className="h-4 w-4 text-[#F59E0B] flex-shrink-0" />
                     )}
                   </div>
                   
-                  <p className="text-xs text-white/40 mt-0.5">{medicine.unit}</p>
+                  <p className="text-xs text-[#bec9bf] mt-0.5">{medicine.unit}</p>
                   
                   <div className="flex items-center justify-between mt-2">
                     <div>
@@ -780,7 +780,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                         UGX {medicine.price.toLocaleString()}
                       </p>
                       {medicine.originalPrice && (
-                        <p className="text-xs text-white/40 line-through">
+                        <p className="text-xs text-[#bec9bf] line-through">
                           UGX {medicine.originalPrice.toLocaleString()}
                         </p>
                       )}
@@ -793,17 +793,17 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                             e.stopPropagation();
                             updateQuantity(medicine.id, -1);
                           }}
-                          className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
+                          className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[#191c1d] hover:bg-[#e1e3e4]"
                         >
                           <Minus className="h-3 w-3" />
                         </button>
-                        <span className="w-6 text-center text-white text-sm font-medium">{quantity}</span>
+                        <span className="w-6 text-center text-[#191c1d] text-sm font-medium">{quantity}</span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             addToCart(medicine);
                           }}
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white"
+                          className="w-7 h-7 rounded-lg flex items-center justify-center text-[#191c1d]"
                           style={{ backgroundColor: `${serviceColors.primary}30` }}
                         >
                           <Plus className="h-3 w-3" style={{ color: serviceColors.primary }} />
@@ -821,7 +821,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                           boxShadow: `0 0 15px ${serviceColors.glow}`
                         }}
                       >
-                        <Plus className="h-4 w-4 text-white" />
+                        <Plus className="h-4 w-4 text-[#191c1d]" />
                       </button>
                     )}
                   </div>
@@ -832,9 +832,9 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
 
           {facilityMedicines.length === 0 && (
             <div className="text-center py-12">
-              <Pill className="h-12 w-12 mx-auto text-white/20 mb-4" />
-              <p className="text-white/50">No medicines found</p>
-              <p className="text-white/30 text-sm mt-1">Try a different search or category</p>
+              <Pill className="h-12 w-12 mx-auto text-[#bec9bf] mb-4" />
+              <p className="text-[#6f7a71]">No medicines found</p>
+              <p className="text-[#bec9bf] text-sm mt-1">Try a different search or category</p>
             </div>
           )}
         </div>
@@ -852,20 +852,20 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
             >
               <div className="flex items-center gap-3">
                 <div className="w-7 h-7 rounded-full bg-white/20 flex items-center justify-center">
-                  <ShoppingCart className="h-4 w-4 text-white" />
+                  <ShoppingCart className="h-4 w-4 text-[#191c1d]" />
                 </div>
-                <span className="text-white text-sm">{cartItemCount} items</span>
+                <span className="text-[#191c1d] text-sm">{cartItemCount} items</span>
               </div>
-              <span className="text-white text-sm">UGX {cartTotal.toLocaleString()}</span>
+              <span className="text-[#191c1d] text-sm">UGX {cartTotal.toLocaleString()}</span>
             </button>
           </div>
         )}
 
         {/* Medicine Detail Modal */}
         <Dialog open={!!showMedicineDetail} onOpenChange={() => setShowMedicineDetail(null)}>
-          <DialogContent className="max-w-sm bg-[#1A1A24] border-white/10 text-white">
+          <DialogContent className="max-w-sm bg-[#f3f4f5] border-[#bec9bf]/30 text-[#191c1d]">
             <DialogHeader>
-              <DialogTitle className="text-white">{showMedicineDetail?.name}</DialogTitle>
+              <DialogTitle className="text-[#191c1d]">{showMedicineDetail?.name}</DialogTitle>
             </DialogHeader>
             {showMedicineDetail && (
               <div className="space-y-4 pt-4">
@@ -877,18 +877,18 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                 </div>
                 
                 <div>
-                  <p className="text-white/50 text-sm">{showMedicineDetail.genericName}</p>
-                  <p className="text-white text-lg font-bold mt-1">
+                  <p className="text-[#6f7a71] text-sm">{showMedicineDetail.genericName}</p>
+                  <p className="text-[#191c1d] text-lg font-bold mt-1">
                     UGX {showMedicineDetail.price.toLocaleString()}
                   </p>
-                  <p className="text-white/40 text-xs">{showMedicineDetail.unit}</p>
+                  <p className="text-[#bec9bf] text-xs">{showMedicineDetail.unit}</p>
                 </div>
                 
-                <p className="text-white/70 text-sm">{showMedicineDetail.description}</p>
+                <p className="text-[#3f4941] text-sm">{showMedicineDetail.description}</p>
                 
                 <div className="bg-white/5 p-3 rounded-lg">
-                  <p className="text-xs text-white/50 mb-1">Dosage</p>
-                  <p className="text-sm text-white">{showMedicineDetail.dosage}</p>
+                  <p className="text-xs text-[#6f7a71] mb-1">Dosage</p>
+                  <p className="text-sm text-[#191c1d]">{showMedicineDetail.dosage}</p>
                 </div>
                 
                 {showMedicineDetail.requiresPrescription && (
@@ -899,7 +899,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                         Prescription Recommended
                       </p>
                     </div>
-                    <p className="text-white/50 text-xs mt-1">
+                    <p className="text-[#6f7a71] text-xs mt-1">
                       This medicine is best used with a prescription. You can still proceed without one.
                     </p>
                   </div>
@@ -911,7 +911,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                     setShowMedicineDetail(null);
                   }}
                   className="w-full h-12 font-semibold"
-                  style={{ backgroundColor: serviceColors.primary, color: '#0D0D12' }}
+                  style={{ backgroundColor: serviceColors.primary, color: '#ffffff' }}
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add to Cart
@@ -930,18 +930,18 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
 
   if (step === 'cart') {
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-32">
+      <div className="min-h-screen bg-[#f8f9fa] pb-32">
         {/* Header */}
         <div 
           className="px-4 py-4 flex items-center gap-4"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, ${serviceColors.primary}10)` }}
         >
-          <button onClick={() => setStep('browse')} className="text-white/80 hover:text-white">
+          <button onClick={() => setStep('browse')} className="text-white/80 hover:text-[#191c1d]">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-white">Your Cart</h1>
-            <p className="text-white/60 text-sm">{cart.length} items from {selectedFacility?.name}</p>
+            <h1 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#191c1d] ">Your Cart</h1>
+            <p className="text-[#6f7a71] text-sm">{cart.length} items from {selectedFacility?.name}</p>
           </div>
           {cart.length > 0 && (
             <button onClick={() => setCart([])} className="text-red-400 text-sm font-medium">
@@ -953,11 +953,11 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
         <div className="px-4 pt-4">
           {cart.length === 0 ? (
             <div className="text-center py-12">
-              <ShoppingCart className="h-16 w-16 mx-auto text-white/20 mb-4" />
-              <p className="text-white/50 text-lg">Your cart is empty</p>
+              <ShoppingCart className="h-16 w-16 mx-auto text-[#bec9bf] mb-4" />
+              <p className="text-[#6f7a71] text-lg">Your cart is empty</p>
               <Button 
                 onClick={() => setStep('browse')}
-                className="mt-4 text-[#0D0D12]"
+                className="mt-4 text-[#005f3a]"
                 style={{ backgroundColor: serviceColors.primary }}
               >
                 Browse Medicines
@@ -966,7 +966,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
           ) : (
             <div className="space-y-3">
               {cart.map(item => (
-                <Card key={item.id} className="p-4 bg-[#1A1A24]/80 border-white/5">
+                <Card key={item.id} className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
                   <div className="flex gap-3">
                     <div 
                       className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -977,8 +977,8 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="font-medium text-white truncate">{item.name}</p>
-                          <p className="text-xs text-white/50">{item.unit}</p>
+                          <p className="font-medium text-[#191c1d] truncate">{item.name}</p>
+                          <p className="text-xs text-[#6f7a71]">{item.unit}</p>
                           {item.requiresPrescription && (
                             <span className="text-xs px-2 py-0.5 rounded-full bg-[#F59E0B]/20 text-[#F59E0B] mt-1 inline-flex items-center gap-1">
                               <FileText className="h-3 w-3" />
@@ -988,7 +988,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                         </div>
                         <button 
                           onClick={() => removeFromCart(item.id)} 
-                          className="text-white/40 hover:text-red-400"
+                          className="text-[#bec9bf] hover:text-red-400"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -1000,11 +1000,11 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                         <div className="flex items-center gap-2">
                           <button 
                             onClick={() => updateQuantity(item.id, -1)}
-                            className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-white hover:bg-white/20"
+                            className="w-7 h-7 rounded-lg bg-white/10 flex items-center justify-center text-[#191c1d] hover:bg-[#e1e3e4]"
                           >
                             <Minus className="h-3 w-3" />
                           </button>
-                          <span className="w-6 text-center text-white font-medium">{item.quantity}</span>
+                          <span className="w-6 text-center text-[#191c1d] font-medium">{item.quantity}</span>
                           <button 
                             onClick={() => updateQuantity(item.id, 1)}
                             className="w-7 h-7 rounded-lg flex items-center justify-center"
@@ -1024,11 +1024,11 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
 
         {/* Continue Button */}
         {cart.length > 0 && (
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12]/90 backdrop-blur-xl border-t border-white/5">
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#f8f9fa]/90 backdrop-blur-xl border-t border-[#bec9bf]/20">
             {/* Prescription Ask - Optional */}
             {hasPrescriptionItems && !askPrescription && prescriptions.length === 0 && (
               <Card className="p-3 mb-3 bg-[#F59E0B]/10 border-[#F59E0B]/20 border">
-                <p className="text-sm text-white mb-2">
+                <p className="text-sm text-[#191c1d] mb-2">
                   Some items in your cart are prescription recommended. Would you like to upload a prescription?
                 </p>
                 <div className="flex gap-2">
@@ -1036,14 +1036,14 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setAskPrescription(false)}
-                    className="flex-1 border-white/10 text-white/70"
+                    className="flex-1 border-[#bec9bf]/30 text-[#3f4941]"
                   >
                     Skip
                   </Button>
                   <Button
                     size="sm"
                     onClick={() => setShowPrescriptionModal(true)}
-                    className="flex-1 bg-[#F59E0B] text-[#0D0D12]"
+                    className="flex-1 bg-[#F59E0B] text-[#191c1d]"
                   >
                     Upload Rx
                   </Button>
@@ -1056,7 +1056,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
               className="w-full h-14 text-lg font-semibold rounded-xl"
               style={{ 
                 backgroundColor: serviceColors.primary,
-                color: '#0D0D12'
+                color: '#ffffff'
               }}
             >
               Continue to Pricing • UGX {cartTotal.toLocaleString()}
@@ -1067,26 +1067,26 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
         {/* Prescription Upload Modal */}
         {showPrescriptionModal && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end justify-center">
-            <div className="w-full max-w-md bg-[#1A1A24] rounded-t-3xl p-6 animate-slide-up">
+            <div className="w-full max-w-md bg-[#f3f4f5] rounded-t-3xl p-6 animate-slide-up">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-bold text-white">Upload Prescription (Optional)</h3>
-                <button onClick={() => setShowPrescriptionModal(false)} className="text-white/60 hover:text-white">
+                <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#191c1d] ">Upload Prescription (Optional)</h3>
+                <button onClick={() => setShowPrescriptionModal(false)} className="text-[#6f7a71] hover:text-[#191c1d]">
                   <X className="h-6 w-6" />
                 </button>
               </div>
               
-              <p className="text-white/50 text-sm mb-4">
+              <p className="text-[#6f7a71] text-sm mb-4">
                 Upload a prescription for faster processing. You can still order without one.
               </p>
               
               <div className="space-y-3">
-                <label className="flex items-center gap-4 p-4 bg-[#252530] rounded-xl cursor-pointer hover:bg-[#303040] transition-colors">
+                <label className="flex items-center gap-4 p-4 bg-[#edeeef] rounded-xl cursor-pointer hover:bg-[#e7e8e9] transition-colors">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${serviceColors.primary}20` }}>
                     <Camera className="h-6 w-6" style={{ color: serviceColors.primary }} />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-white">Take Photo</p>
-                    <p className="text-sm text-white/50">Use camera to capture prescription</p>
+                    <p className="font-medium text-[#191c1d]">Take Photo</p>
+                    <p className="text-sm text-[#6f7a71]">Use camera to capture prescription</p>
                   </div>
                   <input
                     type="file"
@@ -1097,13 +1097,13 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                   />
                 </label>
                 
-                <label className="flex items-center gap-4 p-4 bg-[#252530] rounded-xl cursor-pointer hover:bg-[#303040] transition-colors">
+                <label className="flex items-center gap-4 p-4 bg-[#edeeef] rounded-xl cursor-pointer hover:bg-[#e7e8e9] transition-colors">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${serviceColors.primary}20` }}>
                     <Upload className="h-6 w-6" style={{ color: serviceColors.primary }} />
                   </div>
                   <div className="flex-1">
-                    <p className="font-medium text-white">Upload File</p>
-                    <p className="text-sm text-white/50">Choose from gallery or files</p>
+                    <p className="font-medium text-[#191c1d]">Upload File</p>
+                    <p className="text-sm text-[#6f7a71]">Choose from gallery or files</p>
                   </div>
                   <input
                     type="file"
@@ -1117,24 +1117,24 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
               {prescriptions.length > 0 && (
                 <div className="mt-4 space-y-2">
                   {prescriptions.map(rx => (
-                    <div key={rx.id} className="flex items-center justify-between p-3 bg-[#252530] rounded-xl">
+                    <div key={rx.id} className="flex items-center justify-between p-3 bg-[#edeeef] rounded-xl">
                       <div className="flex items-center gap-3">
-                        <ImageIcon className="h-5 w-5 text-white/40" />
+                        <ImageIcon className="h-5 w-5 text-[#bec9bf]" />
                         <div>
-                          <p className="text-sm text-white truncate max-w-[150px]">{rx.fileName}</p>
-                          <p className="text-xs text-white/40">{(rx.fileSize / 1024).toFixed(1)} KB</p>
+                          <p className="text-sm text-[#191c1d] truncate max-w-[150px]">{rx.fileName}</p>
+                          <p className="text-xs text-[#bec9bf]">{(rx.fileSize / 1024).toFixed(1)} KB</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <span className={cn(
                           "text-xs px-2 py-1 rounded-full",
-                          rx.status === 'verified' ? "bg-[#00FF88]/20 text-[#00FF88]" :
+                          rx.status === 'verified' ? "bg-[#005f3a]/20 text-[#005f3a]" :
                           rx.status === 'rejected' ? "bg-[#EF4444]/20 text-[#EF4444]" :
                           "bg-yellow-500/20 text-yellow-500"
                         )}>
                           {rx.status === 'verified' ? 'Verified' : rx.status === 'rejected' ? 'Rejected' : 'Pending'}
                         </span>
-                        <button onClick={() => removePrescription(rx.id)} className="text-white/40 hover:text-red-400">
+                        <button onClick={() => removePrescription(rx.id)} className="text-[#bec9bf] hover:text-red-400">
                           <X className="h-4 w-4" />
                         </button>
                       </div>
@@ -1149,7 +1149,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                   setAskPrescription(true);
                 }}
                 className="w-full h-12 mt-4 font-semibold"
-                style={{ backgroundColor: serviceColors.primary, color: '#0D0D12' }}
+                style={{ backgroundColor: serviceColors.primary, color: '#ffffff' }}
               >
                 Done
               </Button>
@@ -1166,39 +1166,39 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
 
   if (step === 'checkout') {
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-32">
+      <div className="min-h-screen bg-[#f8f9fa] pb-32">
         {/* Header */}
         <div 
           className="px-4 py-4 flex items-center gap-4"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, ${serviceColors.primary}10)` }}
         >
-          <button onClick={() => setStep('cart')} className="text-white/80 hover:text-white">
+          <button onClick={() => setStep('cart')} className="text-white/80 hover:text-[#191c1d]">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <div>
-            <h1 className="text-lg font-bold text-white">Checkout</h1>
-            <p className="text-white/60 text-sm">Review your order</p>
+            <h1 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#191c1d] ">Checkout</h1>
+            <p className="text-[#6f7a71] text-sm">Review your order</p>
           </div>
         </div>
 
         <div className="px-4 pt-4 space-y-4">
           {/* Delivery Address */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-            <p className="text-sm text-white/50 mb-2">Delivery Address</p>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+            <p className="text-sm text-[#6f7a71] mb-2">Delivery Address</p>
             <div className="flex items-center gap-3">
               <MapPin className="h-5 w-5" style={{ color: serviceColors.primary }} />
               <input
                 type="text"
                 value={deliveryAddress}
                 onChange={(e) => setDeliveryAddress(e.target.value)}
-                className="flex-1 bg-transparent text-white outline-none"
+                className="flex-1 bg-transparent text-[#191c1d] outline-none"
                 placeholder="Enter delivery address"
               />
             </div>
           </Card>
 
           {/* Facility Info */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-xl overflow-hidden bg-white/10">
                 <img 
@@ -1208,21 +1208,21 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                 />
               </div>
               <div>
-                <p className="font-medium text-white">{selectedFacility?.name}</p>
-                <p className="text-sm text-white/50">{selectedFacility?.address}</p>
+                <p className="font-medium text-[#191c1d]">{selectedFacility?.name}</p>
+                <p className="text-sm text-[#6f7a71]">{selectedFacility?.address}</p>
               </div>
             </div>
           </Card>
 
           {/* Prescription Status */}
           {hasPrescriptionItems && (
-            <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
+            <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <FileText className="h-5 w-5 text-[#F59E0B]" />
                   <div>
-                    <p className="text-sm text-white">Prescription</p>
-                    <p className="text-xs text-white/50">
+                    <p className="text-sm text-[#191c1d]">Prescription</p>
+                    <p className="text-xs text-[#6f7a71]">
                       {prescriptions.length > 0 
                         ? `${prescriptions.length} uploaded` 
                         : askPrescription 
@@ -1236,7 +1236,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setShowPrescriptionModal(true)}
-                    className="border-white/10 text-white/70"
+                    className="border-[#bec9bf]/30 text-[#3f4941]"
                   >
                     Add Rx
                   </Button>
@@ -1246,23 +1246,23 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
           )}
 
           {/* Order Summary */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-            <p className="text-sm text-white/50 mb-3">Order Summary ({cart.length} items)</p>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+            <p className="text-sm text-[#6f7a71] mb-3">Order Summary ({cart.length} items)</p>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-white/50">Subtotal</span>
-                <span className="text-white">UGX {cartTotal.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Subtotal</span>
+                <span className="text-[#191c1d]">UGX {cartTotal.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/50">Delivery Fee</span>
-                <span className="text-white">UGX {deliveryFee.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Delivery Fee</span>
+                <span className="text-[#191c1d]">UGX {deliveryFee.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-white/50">Service Fee</span>
-                <span className="text-white">UGX {serviceFee.toLocaleString()}</span>
+                <span className="text-[#6f7a71]">Service Fee</span>
+                <span className="text-[#191c1d]">UGX {serviceFee.toLocaleString()}</span>
               </div>
-              <div className="pt-2 mt-2 border-t border-white/10 flex justify-between">
-                <span className="font-medium text-white">Total</span>
+              <div className="pt-2 mt-2 border-t border-[#bec9bf]/30 flex justify-between">
+                <span className="font-medium text-[#191c1d]">Total</span>
                 <span className="text-lg font-bold" style={{ color: serviceColors.primary }}>
                   UGX {orderTotal.toLocaleString()}
                 </span>
@@ -1271,8 +1271,8 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
           </Card>
 
           {/* Payment Method */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-            <p className="text-sm text-white/50 mb-3">Payment Method</p>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+            <p className="text-sm text-[#6f7a71] mb-3">Payment Method</p>
             <div className="grid grid-cols-3 gap-2">
               {[
                 { id: 'CASH' as const, label: 'Cash', icon: '💵', disabled: false },
@@ -1288,17 +1288,17 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                     paymentMethod === method.id
                       ? "border-[#F43F5E] bg-[#F43F5E]/10"
                       : method.disabled
-                        ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed"
-                        : "border-white/10 bg-white/5 hover:border-white/20"
+                        ? "border-[#bec9bf]/20 bg-white/[0.02] opacity-50 cursor-not-allowed"
+                        : "border-[#bec9bf]/30 bg-white/5 hover:border-[#bec9bf]/40"
                   )}
                 >
                   <span className="text-lg">{method.icon}</span>
                   <span className={cn(
                     "text-xs font-medium",
-                    paymentMethod === method.id ? "text-[#F43F5E]" : method.disabled ? "text-white/30" : "text-white/60"
+                    paymentMethod === method.id ? "text-[#F43F5E]" : method.disabled ? "text-[#bec9bf]" : "text-[#6f7a71]"
                   )}>{method.label}</span>
                   {method.badge && (
-                    <span className="absolute -top-1 -right-1 text-[8px] bg-white/10 text-white/40 px-1 rounded">{method.badge}</span>
+                    <span className="absolute -top-1 -right-1 text-[8px] bg-white/10 text-[#bec9bf] px-1 rounded">{method.badge}</span>
                   )}
                 </button>
               ))}
@@ -1307,14 +1307,14 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
         </div>
 
         {/* Place Order Button */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#0D0D12]/90 backdrop-blur-xl border-t border-white/5">
+        <div className="fixed bottom-0 left-0 right-0 p-4 bg-[#f8f9fa]/90 backdrop-blur-xl border-t border-[#bec9bf]/20">
           <Button 
             onClick={handleCheckout}
             disabled={loading}
             className="w-full h-14 text-lg font-semibold rounded-xl"
             style={{ 
               backgroundColor: serviceColors.primary,
-              color: '#0D0D12'
+              color: '#ffffff'
             }}
           >
             {loading ? (
@@ -1347,24 +1347,24 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
     const currentStatusIndex = statusSteps.findIndex(s => s.id === currentOrder.status);
 
     return (
-      <div className="min-h-screen bg-[#0D0D12] pb-24">
+      <div className="min-h-screen bg-[#f8f9fa] pb-24">
         {/* Header */}
         <div 
           className="px-4 py-4 flex items-center gap-4"
           style={{ background: `linear-gradient(135deg, ${serviceColors.primary}20, ${serviceColors.primary}10)` }}
         >
-          <button onClick={onBack} className="text-white/80 hover:text-white transition-colors">
+          <button onClick={onBack} className="text-white/80 hover:text-[#191c1d] transition-colors">
             <ArrowLeft className="h-6 w-6" />
           </button>
           <div className="flex-1">
-            <h1 className="text-lg font-bold text-white">Order Tracking</h1>
-            <p className="text-white/60 text-sm font-mono">{currentOrder.orderNumber}</p>
+            <h1 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#191c1d] ">Order Tracking</h1>
+            <p className="text-[#6f7a71] text-sm font-mono">{currentOrder.orderNumber}</p>
           </div>
         </div>
 
         <div className="px-4 pt-4 space-y-4">
           {/* Status Progress */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
             <div className="flex items-center justify-between mb-4">
               {statusSteps.map((status, index) => {
                 const isCompleted = index <= currentStatusIndex;
@@ -1376,7 +1376,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                     <div 
                       className={cn(
                         "w-10 h-10 rounded-full flex items-center justify-center transition-all",
-                        isCompleted ? "text-white" : "bg-[#252530] text-white/30"
+                        isCompleted ? "text-[#191c1d]" : "bg-[#edeeef] text-[#bec9bf]"
                       )}
                       style={isCompleted ? { 
                         backgroundColor: serviceColors.primary,
@@ -1387,7 +1387,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                     </div>
                     <span className={cn(
                       "text-xs mt-1 text-center",
-                      isCurrent ? "text-white font-medium" : "text-white/50"
+                      isCurrent ? "text-[#191c1d] font-medium" : "text-[#6f7a71]"
                     )}>
                       {status.label}
                     </span>
@@ -1399,16 +1399,16 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
 
           {/* Estimated Delivery */}
           <Card 
-            className="p-6 border-2 bg-[#1A1A24]/80 text-center"
+            className="p-6 border-2 bg-[#f3f4f5]/80 text-center"
             style={{ borderColor: `${serviceColors.primary}40` }}
           >
             <Clock className="h-8 w-8 mx-auto mb-2" style={{ color: serviceColors.primary }} />
-            <p className="text-white/50 text-sm">Estimated Delivery</p>
-            <p className="text-2xl font-bold text-white">{currentOrder.estimatedDelivery}</p>
+            <p className="text-[#6f7a71] text-sm">Estimated Delivery</p>
+            <p className="text-2xl font-bold text-[#191c1d]">{currentOrder.estimatedDelivery}</p>
           </Card>
 
           {/* Facility Info */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
             <div className="flex items-center gap-3">
               <div 
                 className="w-12 h-12 rounded-xl flex items-center justify-center"
@@ -1417,8 +1417,8 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                 <Pill className="h-6 w-6" style={{ color: serviceColors.primary }} />
               </div>
               <div className="flex-1">
-                <p className="font-medium text-white">{currentOrder.facility.name}</p>
-                <p className="text-sm text-white/50">Preparing your order</p>
+                <p className="font-medium text-[#191c1d]">{currentOrder.facility.name}</p>
+                <p className="text-sm text-[#6f7a71]">Preparing your order</p>
               </div>
               <button 
                 className="p-2 rounded-full"
@@ -1430,32 +1430,32 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
           </Card>
 
           {/* Delivery Address */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
             <div className="flex items-start gap-3">
               <MapPin className="h-5 w-5 mt-0.5" style={{ color: serviceColors.primary }} />
               <div>
-                <p className="text-sm text-white/50">Delivery Address</p>
-                <p className="text-white">{currentOrder.deliveryAddress}</p>
+                <p className="text-sm text-[#6f7a71]">Delivery Address</p>
+                <p className="text-[#191c1d]">{currentOrder.deliveryAddress}</p>
               </div>
             </div>
           </Card>
 
           {/* Order Items */}
-          <Card className="p-4 bg-[#1A1A24]/80 border-white/5">
-            <p className="text-sm text-white/50 mb-3">Order Items ({currentOrder.items.length})</p>
+          <Card className="p-4 bg-[#f3f4f5]/80 border-[#bec9bf]/20">
+            <p className="text-sm text-[#6f7a71] mb-3">Order Items ({currentOrder.items.length})</p>
             <div className="space-y-2">
               {currentOrder.items.map(item => (
                 <div key={item.id} className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-white">{item.name}</span>
-                    <span className="text-white/40">x{item.quantity}</span>
+                    <span className="text-[#191c1d]">{item.name}</span>
+                    <span className="text-[#bec9bf]">x{item.quantity}</span>
                   </div>
-                  <span className="text-white">UGX {(item.price * item.quantity).toLocaleString()}</span>
+                  <span className="text-[#191c1d]">UGX {(item.price * item.quantity).toLocaleString()}</span>
                 </div>
               ))}
             </div>
-            <div className="mt-3 pt-3 border-t border-white/10 flex justify-between">
-              <span className="font-medium text-white">Total</span>
+            <div className="mt-3 pt-3 border-t border-[#bec9bf]/30 flex justify-between">
+              <span className="font-medium text-[#191c1d]">Total</span>
               <span className="font-bold" style={{ color: serviceColors.primary }}>
                 UGX {currentOrder.total.toLocaleString()}
               </span>
@@ -1465,7 +1465,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
           {/* Actions */}
           <div className="grid grid-cols-2 gap-3">
             <button 
-              className="py-3 rounded-xl font-medium flex items-center justify-center gap-2 text-white"
+              className="py-3 rounded-xl font-medium flex items-center justify-center gap-2 text-[#191c1d]"
               style={{ backgroundColor: `${serviceColors.primary}20`, color: serviceColors.primary }}
             >
               <Phone className="h-5 w-5" />
@@ -1480,7 +1480,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
           {currentOrder.status === 'delivered' && (
             <Button 
               onClick={onBack}
-              className="w-full h-12 text-lg font-semibold rounded-xl text-[#0D0D12]"
+              className="w-full h-12 text-lg font-semibold rounded-xl text-white"
               style={{ backgroundColor: serviceColors.primary }}
             >
               Order Complete - Back to Home

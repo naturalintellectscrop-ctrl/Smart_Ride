@@ -82,12 +82,12 @@ export interface NotificationsContextValue {
 // ============================================================================
 
 const THEME = {
-  primary: '#00FF88',
-  glow: 'rgba(0, 255, 136, 0.4)',
+  primary: '#005f3a',
+  glow: 'rgba(0, 95, 58, 0.25)',
   secondary: '#3B82F6',
-  background: '#0D0D12',
-  card: '#1A1A24',
-  cardHover: '#252530',
+  background: '#f8f9fa',
+  card: '#ffffff',
+  cardHover: '#f3f4f5',
   warning: '#F59E0B',
   danger: '#EF4444',
   info: '#3B82F6',
@@ -105,8 +105,8 @@ const NOTIFICATION_TYPE_CONFIG: Record<NotificationType, {
 }> = {
   order_update: {
     icon: Package,
-    color: '#00FF88',
-    bgColor: 'rgba(0, 255, 136, 0.15)',
+    color: '#005f3a',
+    bgColor: 'rgba(0, 95, 58, 0.1)',
     label: 'Order Update',
   },
   delivery: {
@@ -364,20 +364,20 @@ export function NotificationBell({
       onClick={onClick}
       className={cn(
         'relative p-2.5 rounded-xl transition-all duration-200',
-        'bg-[#1A1A24] hover:bg-[#252530] border border-white/5',
-        'focus:outline-none focus:ring-2 focus:ring-[#00FF88]/50',
+        'bg-[#f3f4f5] hover:bg-[#e8ebe8] border border-[#bec9bf]/30',
+        'focus:outline-none focus:ring-2 focus:ring-[#005f3a]/30',
         className
       )}
       aria-label={`Notifications${hasUnread ? ` (${unreadCount} unread)` : ''}`}
     >
-      <Bell className="h-5 w-5 text-white/80" />
+      <Bell className="h-5 w-5 text-[#005f3a]" />
       
       {showBadge && hasUnread && (
         <span
           className={cn(
             'absolute -top-1 -right-1 min-w-5 h-5 px-1',
             'flex items-center justify-center',
-            'text-xs font-bold text-white',
+            'text-xs font-bold text-[#191c1d]',
             'rounded-full animate-pulse'
           )}
           style={{
@@ -426,10 +426,10 @@ function NotificationItem({
     <div
       className={cn(
         'group relative p-4 rounded-xl transition-all duration-200 cursor-pointer',
-        'hover:bg-[#252530]',
-        notification.isRead ? 'bg-[#1A1A24]' : 'bg-[#1F1F2A]',
+        'hover:bg-[#e8ebe8]',
+        notification.isRead ? 'bg-white' : 'bg-[#98f6be]/10',
         !notification.isRead && 'border-l-2',
-        'border-white/5'
+        'border-[#bec9bf]/30'
       )}
       style={{
         borderLeftColor: !notification.isRead ? THEME.primary : undefined,
@@ -464,24 +464,24 @@ function NotificationItem({
           <div className="flex items-center gap-2">
             <p className={cn(
               'font-medium text-sm truncate',
-              notification.isRead ? 'text-white/70' : 'text-white'
+              notification.isRead ? 'text-[#3f4941]' : 'text-[#191c1d]'
             )}>
               {notification.title}
             </p>
             {!notification.isRead && (
-              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[#00FF88] animate-pulse" />
+              <span className="flex-shrink-0 w-2 h-2 rounded-full bg-[#005f3a] animate-pulse" />
             )}
           </div>
           
           <p className={cn(
             'text-xs mt-1 line-clamp-2',
-            notification.isRead ? 'text-white/50' : 'text-white/60'
+            notification.isRead ? 'text-[#6f7a71]' : 'text-[#6f7a71]'
           )}>
             {notification.message}
           </p>
 
           <div className="flex items-center gap-3 mt-2">
-            <span className="flex items-center gap-1 text-xs text-white/40">
+            <span className="flex items-center gap-1 text-xs text-[#6f7a71]">
               <Clock className="h-3 w-3" />
               {formatTimeAgo(notification.timestamp)}
             </span>
@@ -502,7 +502,7 @@ function NotificationItem({
             <button
               className={cn(
                 'mt-3 flex items-center gap-1 text-xs font-medium',
-                'text-[#00FF88] hover:text-[#00FF88]/80 transition-colors'
+                'text-[#005f3a] hover:text-[#005f3a]/80 transition-colors'
               )}
               onClick={(e) => {
                 e.stopPropagation();
@@ -524,10 +524,10 @@ function NotificationItem({
               e.stopPropagation();
               onMarkAsRead(notification.id);
             }}
-            className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg bg-[#f3f4f5] hover:bg-[#e8ebe8] transition-colors"
             title="Mark as read"
           >
-            <Check className="h-3.5 w-3.5 text-[#00FF88]" />
+            <Check className="h-3.5 w-3.5 text-[#005f3a]" />
           </button>
         )}
         <button
@@ -535,10 +535,10 @@ function NotificationItem({
             e.stopPropagation();
             onRemove(notification.id);
           }}
-          className="p-1.5 rounded-lg bg-white/5 hover:bg-red-500/20 transition-colors"
+          className="p-1.5 rounded-lg bg-[#f3f4f5] hover:bg-red-500/20 transition-colors"
           title="Remove"
         >
-          <X className="h-3.5 w-3.5 text-white/50 hover:text-red-400" />
+          <X className="h-3.5 w-3.5 text-[#6f7a71] hover:text-red-400" />
         </button>
       </div>
     </div>
@@ -586,26 +586,26 @@ export function NotificationPanel({
         className={cn(
           'fixed right-0 top-0 bottom-0 h-screen w-full max-w-md',
           'translate-x-0 translate-y-0',
-          'bg-[#0D0D12] border-l border-white/10',
+          'bg-[#f8f9fa] border-l border-[#bec9bf]/40',
           'p-0 rounded-none'
         )}
         showCloseButton={false}
       >
         {/* Header */}
-        <DialogHeader className="p-4 border-b border-white/10">
+        <DialogHeader className="p-4 border-b border-[#bec9bf]/40">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center"
                 style={{ backgroundColor: 'rgba(0, 255, 136, 0.15)' }}
               >
-                <Bell className="h-5 w-5 text-[#00FF88]" />
+                <Bell className="h-5 w-5 text-[#005f3a]" />
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-white">
+                <DialogTitle className="text-lg font-bold text-[#191c1d]">
                   Notifications
                 </DialogTitle>
-                <p className="text-xs text-white/50">
+                <p className="text-xs text-[#6f7a71]">
                   {unreadCount > 0 
                     ? `${unreadCount} unread message${unreadCount !== 1 ? 's' : ''}`
                     : 'All caught up!'
@@ -616,9 +616,9 @@ export function NotificationPanel({
             
             <button
               onClick={() => onOpenChange(false)}
-              className="p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+              className="p-2 rounded-lg bg-[#f3f4f5] hover:bg-[#e8ebe8] transition-colors"
             >
-              <X className="h-5 w-5 text-white/70" />
+              <X className="h-5 w-5 text-[#3f4941]" />
             </button>
           </div>
 
@@ -629,8 +629,8 @@ export function NotificationPanel({
               className={cn(
                 'px-4 py-2 rounded-lg text-sm font-medium transition-all',
                 filter === 'all'
-                  ? 'bg-[#00FF88] text-[#0D0D12]'
-                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+                  ? 'bg-[#005f3a] text-white'
+                  : 'bg-[#f3f4f5] text-[#3f4941] hover:bg-[#e8ebe8]'
               )}
             >
               All
@@ -640,8 +640,8 @@ export function NotificationPanel({
               className={cn(
                 'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2',
                 filter === 'unread'
-                  ? 'bg-[#00FF88] text-[#0D0D12]'
-                  : 'bg-white/5 text-white/70 hover:bg-white/10'
+                  ? 'bg-[#005f3a] text-white'
+                  : 'bg-[#f3f4f5] text-[#3f4941] hover:bg-[#e8ebe8]'
               )}
             >
               Unread
@@ -650,8 +650,8 @@ export function NotificationPanel({
                   className={cn(
                     'px-1.5 py-0.5 rounded text-xs font-bold',
                     filter === 'unread'
-                      ? 'bg-[#0D0D12]/20'
-                      : 'bg-[#00FF88]/20 text-[#00FF88]'
+                      ? 'bg-[#005f3a]/20'
+                      : 'bg-[#005f3a]/20 text-[#005f3a]'
                   )}
                 >
                   {unreadCount}
@@ -663,15 +663,15 @@ export function NotificationPanel({
 
         {/* Actions bar */}
         {notifications.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-[#1A1A24]/50">
-            <span className="text-xs text-white/40">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-[#bec9bf]/30 bg-[#f3f4f5]/50">
+            <span className="text-xs text-[#6f7a71]">
               {filteredNotifications.length} notification{filteredNotifications.length !== 1 ? 's' : ''}
             </span>
             <div className="flex gap-2">
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#00FF88] bg-[#00FF88]/10 hover:bg-[#00FF88]/20 transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#005f3a] bg-[#005f3a]/10 hover:bg-[#005f3a]/20 transition-colors"
                 >
                   <Check className="h-3.5 w-3.5" />
                   Mark all read
@@ -694,14 +694,14 @@ export function NotificationPanel({
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <div
                 className="w-20 h-20 rounded-2xl flex items-center justify-center mb-4"
-                style={{ backgroundColor: 'rgba(255, 255, 255, 0.03)' }}
+                style={{ backgroundColor: 'rgba(0, 0, 0, 0.03)' }}
               >
-                <Bell className="h-10 w-10 text-white/20" />
+                <Bell className="h-10 w-10 text-[#bec9bf]" />
               </div>
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <h3 className="text-lg font-semibold text-[#191c1d] mb-1">
                 {filter === 'unread' ? 'No unread notifications' : 'No notifications'}
               </h3>
-              <p className="text-sm text-white/40 max-w-[200px]">
+              <p className="text-sm text-[#6f7a71] max-w-[200px]">
                 {filter === 'unread'
                   ? "You've read all your notifications"
                   : "We'll notify you when something arrives"
@@ -722,9 +722,9 @@ export function NotificationPanel({
         </div>
 
         {/* Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/10 bg-[#0D0D12]">
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-[#bec9bf]/40 bg-[#f8f9fa]">
           <button
-            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-medium text-white/50 hover:text-white/70 hover:bg-white/5 transition-colors"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-medium text-[#6f7a71] hover:text-[#3f4941] hover:bg-[#f3f4f5] transition-colors"
           >
             <Settings className="h-4 w-4" />
             Notification Settings
