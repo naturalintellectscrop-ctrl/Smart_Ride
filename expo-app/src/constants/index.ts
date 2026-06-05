@@ -4,7 +4,13 @@
 // Minimal constants for boot - no external dependencies
 // ============================================
 
-// Brand Colors
+// ============================================
+// NOTE: COLORS is the DARK palette kept for backward compatibility.
+// New code should use `useTheme().colors` from @/src/context/theme-context
+// which automatically switches between LightColors and DarkColors.
+// ============================================
+
+// Brand Colors (Dark palette — legacy, still the default export)
 export const COLORS = {
   // Primary - Neon Green (Main brand color)
   primary: '#00FF88',
@@ -56,6 +62,12 @@ export const GRADIENTS = {
   primary: ['#00FF88', '#00D4FF'],
   danger: ['#EF4444', '#DC2626'],
   accent: ['#00D4FF', '#00FF88'],
+  // Light mode variants
+  light: {
+    primary: ['#005f3a', '#0e7a4d'],
+    danger: ['#EF4444', '#DC2626'],
+    accent: ['#0e7a4d', '#005f3a'],
+  },
 };
 
 // Glass styles
@@ -64,6 +76,13 @@ export const GLASS = {
   border: 'rgba(255, 255, 255, 0.05)',
   shadow: 'rgba(0, 0, 0, 0.3)',
   elevated: 'rgba(30, 30, 40, 0.8)',
+  // Light mode variants
+  light: {
+    background: 'rgba(255, 255, 255, 0.8)',
+    border: 'rgba(0, 95, 58, 0.08)',
+    shadow: 'rgba(0, 0, 0, 0.08)',
+    elevated: 'rgba(255, 255, 255, 0.9)',
+  },
 };
 
 // Services config for ServiceIcon component
@@ -186,10 +205,16 @@ export const PAYMENT_METHOD_DISPLAY: Record<string, string> = {
   'WALLET': 'WALLET',
 };
 
+// Named color palette exports for direct import if needed
+// Prefer useTheme().colors for dynamic switching
+export { DarkColors as DARK_COLORS } from '@/src/context/theme-context';
+export { LightColors as LIGHT_COLORS } from '@/src/context/theme-context';
+
 // Storage Keys
 export const STORAGE_KEYS = {
   authToken: 'smart_ride_auth_token',
   refreshToken: 'smart_ride_refresh_token',
   user: 'smart_ride_user',
   location: 'smart_ride_last_location',
+  theme: 'smart_ride_theme',
 };

@@ -1,7 +1,7 @@
 // ============================================
 // SMART RIDE MOBILE - TABS LAYOUT
 // ============================================
-// Dark Theme with Smart Ride Branding
+// Theme-aware with Smart Ride Branding
 // ============================================
 
 import React from 'react';
@@ -12,11 +12,12 @@ import Animated, {
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
-import { COLORS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
 import { useAuthStore } from '@/src/store';
 
 export default function TabsLayout() {
   const { isAuthenticated } = useAuthStore();
+  const { colors } = useTheme();
 
   if (!isAuthenticated) {
     return <Redirect href="/auth/login" />;
@@ -27,23 +28,23 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: true,
         headerStyle: {
-          backgroundColor: COLORS.background,
+          backgroundColor: colors.background,
         },
-        headerTintColor: COLORS.text,
+        headerTintColor: colors.text,
         headerTitleStyle: {
           fontWeight: '600',
-          color: COLORS.text,
+          color: colors.text,
         },
         tabBarStyle: {
-          backgroundColor: COLORS.backgroundElevated,
+          backgroundColor: colors.backgroundElevated,
           borderTopWidth: 1,
-          borderTopColor: COLORS.border,
+          borderTopColor: colors.border,
           paddingTop: 8,
           paddingBottom: 8,
           height: 60,
         },
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '500',

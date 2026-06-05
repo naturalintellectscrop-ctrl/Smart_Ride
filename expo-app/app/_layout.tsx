@@ -20,25 +20,13 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configureGoogleSignIn } from '../src/config/google';
+import { ThemeProvider, useTheme } from '../src/context/theme-context';
 
 // Suppress known benign warnings in production
 LogBox.ignoreLogs([
   'Non-serializable values were found in the navigation state',
   'Cannot update a component from inside the test renderer',
 ]);
-
-// ============================================
-// BRAND COLORS - Smart Ride Uganda
-// ============================================
-const COLORS = {
-  primaryGreen: '#00FF88',    // Neon Green - Main brand color
-  accent: '#00FFF3',          // Cyan - Secondary accent
-  darkSurface: '#0D0D12',     // Dark background
-  surface: '#1A1A24',         // Card surface
-  white: '#FFFFFF',
-  warning: '#FFB800',
-  error: '#FF4757',
-};
 
 // ============================================
 // ERROR BOUNDARY - Prevents provider crashes
@@ -92,14 +80,55 @@ const createQueryClient = () => {
 const queryClient = createQueryClient();
 
 // ============================================
-// ROOT LAYOUT - With Error Boundaries
+// INNER LAYOUT - Consumes ThemeContext
 // ============================================
-export default function RootLayout() {
+function ThemedRootLayout() {
+  const { isDark, colors } = useTheme();
+
   // Configure Google Sign-In once on app startup
   useEffect(() => {
     configureGoogleSignIn();
   }, []);
 
+  return (
+    <>
+      <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
+      <ProviderErrorBoundary name="Navigation">
+        <Stack 
+          screenOptions={{ 
+            headerShown: false,
+            contentStyle: { backgroundColor: colors.background }
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="auth/login" />
+          <Stack.Screen name="auth/register" />
+          <Stack.Screen name="auth/phone-login" />
+          <Stack.Screen name="auth/verify-otp" />
+          <Stack.Screen name="auth/forgot-password" />
+          <Stack.Screen name="auth/reset-password" />
+          <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="delivery/index" />
+          <Stack.Screen name="rider/ride-request" />
+          <Stack.Screen name="rider/ride-tracking" />
+          <Stack.Screen name="driver/index" />
+          <Stack.Screen name="driver/driver-task" />
+          <Stack.Screen name="wallet/index" />
+          <Stack.Screen name="health/index" />
+          <Stack.Screen name="shopping/index" />
+          <Stack.Screen name="profile/edit" />
+          <Stack.Screen name="orders/restaurants" />
+          <Stack.Screen name="orders/order-tracking" />
+        </Stack>
+      </ProviderErrorBoundary>
+    </>
+  );
+}
+
+// ============================================
+// ROOT LAYOUT - With Error Boundaries & Theme
+// ============================================
+export default function RootLayout() {
   return (
     <ProviderErrorBoundary name="Root">
       <QueryClientProvider client={queryClient}>
@@ -107,35 +136,9 @@ export default function RootLayout() {
           <GestureHandlerRootView style={styles.container}>
             <ProviderErrorBoundary name="SafeArea">
               <SafeAreaProvider>
-                <StatusBar style="light" backgroundColor={COLORS.darkSurface} />
-                <ProviderErrorBoundary name="Navigation">
-                  <Stack 
-                    screenOptions={{ 
-                      headerShown: false,
-                      contentStyle: { backgroundColor: COLORS.darkSurface }
-                    }}
-                  >
-                    <Stack.Screen name="index" />
-                    <Stack.Screen name="auth/login" />
-                    <Stack.Screen name="auth/register" />
-                    <Stack.Screen name="auth/phone-login" />
-                    <Stack.Screen name="auth/verify-otp" />
-                    <Stack.Screen name="auth/forgot-password" />
-                    <Stack.Screen name="auth/reset-password" />
-                    <Stack.Screen name="(tabs)" />
-                    <Stack.Screen name="delivery/index" />
-                    <Stack.Screen name="rider/ride-request" />
-                    <Stack.Screen name="rider/ride-tracking" />
-                    <Stack.Screen name="driver/index" />
-                    <Stack.Screen name="driver/driver-task" />
-                    <Stack.Screen name="wallet/index" />
-                    <Stack.Screen name="health/index" />
-                    <Stack.Screen name="shopping/index" />
-                    <Stack.Screen name="profile/edit" />
-                    <Stack.Screen name="orders/restaurants" />
-                    <Stack.Screen name="orders/order-tracking" />
-                  </Stack>
-                </ProviderErrorBoundary>
+                <ThemeProvider>
+                  <ThemedRootLayout />
+                </ThemeProvider>
               </SafeAreaProvider>
             </ProviderErrorBoundary>
           </GestureHandlerRootView>
@@ -156,7 +159,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.darkSurface,
+    backgroundColor: '#0D0D12',
     padding: 20,
   },
   errorTitle: {

@@ -1,10 +1,10 @@
 // ============================================
 // SMART RIDE MOBILE - PROFILE SCREEN
 // ============================================
-// Dark Theme with GlowHeader & Custom Components
+// Theme-aware with GlowHeader & Custom Components
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -24,16 +24,20 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { useTheme, ThemeColors } from '@/src/context/theme-context';
 import { GlowHeader, GlassCard, GradientButton } from '@/src/components';
 
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const { isDark, toggleTheme, colors } = useTheme();
   
   const [isLoading, setIsLoading] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [stats, setStats] = useState({ totalRides: 0, orders: 0, rating: '-' });
+
+  // Dynamic styles based on theme colors
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   useEffect(() => {
     loadStats();
@@ -98,6 +102,13 @@ export default function ProfileScreen() {
     {
       section: 'Preferences',
       items: [
+        {
+          icon: '🌙',
+          label: 'Dark Mode',
+          type: 'toggle',
+          value: isDark,
+          onToggle: () => toggleTheme(),
+        },
         { 
           icon: '🔔', 
           label: 'Notifications', 
@@ -152,11 +163,11 @@ export default function ProfileScreen() {
         >
           <GlassCard variant="elevated" style={styles.statsCard}>
             <View style={styles.statsRow}>
-              <StatItem label="Total Rides" value={String(stats.totalRides)} delay={300} />
+              <StatItem label="Total Rides" value={String(stats.totalRides)} delay={300} colors={colors} />
               <View style={styles.statDivider} />
-              <StatItem label="Orders" value={String(stats.orders)} delay={350} />
+              <StatItem label="Orders" value={String(stats.orders)} delay={350} colors={colors} />
               <View style={styles.statDivider} />
-              <StatItem label="Rating" value={stats.rating} delay={400} />
+              <StatItem label="Rating" value={stats.rating} delay={400} colors={colors} />
             </View>
           </GlassCard>
         </Animated.View>
@@ -177,7 +188,8 @@ export default function ProfileScreen() {
                 >
                   <MenuItem 
                     item={item} 
-                    isLast={itemIndex === section.items.length - 1} 
+                    isLast={itemIndex === section.items.length - 1}
+                    colors={colors}
                   />
                 </Animated.View>
               ))}
@@ -211,176 +223,185 @@ export default function ProfileScreen() {
 }
 
 // Animated Stat Item
-function StatItem({ label, value, delay }: { label: string; value: string; delay: number }) {
+function StatItem({ label, value, delay, colors }: { label: string; value: string; delay: number; colors: ThemeColors }) {
+  const statStyles = useMemo(() => ({
+    statItem: {
+      flex: 1,
+      alignItems: 'center',
+      paddingVertical: 4,
+    },
+    statValue: {
+      fontSize: 22,
+      fontWeight: 'bold',
+      color: colors.primary,
+    },
+    statLabel: {
+      fontSize: 12,
+      color: colors.textMuted,
+      marginTop: 4,
+    },
+  }), [colors]);
+
   return (
     <Animated.View 
       entering={FadeIn.duration(400).delay(delay).springify()}
-      style={styles.statItem}
+      style={statStyles.statItem}
     >
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={statStyles.statValue}>{value}</Text>
+      <Text style={statStyles.statLabel}>{label}</Text>
     </Animated.View>
   );
 }
 
 // Menu Item Component
-function MenuItem({ item, isLast }: { item: any; isLast: boolean }) {
+function MenuItem({ item, isLast, colors }: { item: any; isLast: boolean; colors: ThemeColors }) {
+  const itemStyles = useMemo(() => ({
+    menuItem: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      paddingHorizontal: 4,
+      paddingVertical: 16,
+    },
+    menuIcon: {
+      fontSize: 20,
+      marginRight: 12,
+    },
+    menuLabel: {
+      flex: 1,
+      fontSize: 16,
+      fontWeight: '500',
+      color: colors.text,
+    },
+    menuValue: {
+      fontSize: 14,
+      color: colors.textMuted,
+    },
+    menuArrow: {
+      fontSize: 18,
+      color: colors.textMuted,
+    },
+    menuDivider: {
+      position: 'absolute' as const,
+      left: 36,
+      right: 0,
+      bottom: 0,
+      height: 1,
+      backgroundColor: colors.border,
+    },
+  }), [colors]);
+
   return (
     <TouchableOpacity
-      style={styles.menuItem}
+      style={itemStyles.menuItem}
       onPress={item.type === 'toggle' ? undefined : item.onPress}
       activeOpacity={0.7}
     >
-      <Text style={styles.menuIcon}>{item.icon}</Text>
-      <Text style={styles.menuLabel}>{item.label}</Text>
+      <Text style={itemStyles.menuIcon}>{item.icon}</Text>
+      <Text style={itemStyles.menuLabel}>{item.label}</Text>
       {item.type === 'toggle' ? (
         <Switch
           value={item.value}
           onValueChange={item.onToggle}
-          trackColor={{ false: '#374151', true: COLORS.primary }}
-          thumbColor={item.value ? COLORS.primary : '#6B7280'}
+          trackColor={{ false: '#374151', true: colors.primary }}
+          thumbColor={item.value ? colors.primary : '#6B7280'}
         />
       ) : item.value ? (
-        <Text style={styles.menuValue}>{item.value}</Text>
+        <Text style={itemStyles.menuValue}>{item.value}</Text>
       ) : (
-        <Text style={styles.menuArrow}>›</Text>
+        <Text style={itemStyles.menuArrow}>›</Text>
       )}
-      {!isLast && <View style={styles.menuDivider} />}
+      {!isLast && <View style={itemStyles.menuDivider} />}
     </TouchableOpacity>
   );
 }
 
-const styles = StyleSheet.create({
-  screenContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  userInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: COLORS.backgroundSurface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 16,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  avatarText: {
-    fontSize: 32,
-  },
-  userDetails: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.text,
-  },
-  userEmail: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  userPhone: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    marginTop: 2,
-  },
-  statsWrapper: {
-    marginHorizontal: 20,
-    marginTop: -20,
-    zIndex: 10,
-  },
-  statsCard: {
-    padding: 16,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  statItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 4,
-  },
-  statValue: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginTop: 4,
-  },
-  statDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: COLORS.border,
-  },
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 20,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.textMuted,
-    marginBottom: 8,
-  },
-  menuCard: {
-    overflow: 'hidden',
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-    paddingVertical: 16,
-  },
-  menuIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  menuLabel: {
-    flex: 1,
-    fontSize: 16,
-    fontWeight: '500',
-    color: COLORS.text,
-  },
-  menuValue: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-  },
-  menuArrow: {
-    fontSize: 18,
-    color: COLORS.textMuted,
-  },
-  menuDivider: {
-    position: 'absolute',
-    left: 36,
-    right: 0,
-    bottom: 0,
-    height: 1,
-    backgroundColor: COLORS.border,
-  },
-  version: {
-    textAlign: 'center',
-    color: COLORS.textMuted,
-    fontSize: 12,
-    marginTop: 24,
-  },
-  logoutContainer: {
-    paddingHorizontal: 20,
-    marginTop: 24,
-  },
-});
+// Dynamic style factory — recreates when colors change
+function createStyles(colors: ThemeColors) {
+  return StyleSheet.create({
+    screenContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    userInfo: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 16,
+    },
+    avatar: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: colors.backgroundSurface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginRight: 16,
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    avatarText: {
+      fontSize: 32,
+    },
+    userDetails: {
+      flex: 1,
+    },
+    userName: {
+      fontSize: 20,
+      fontWeight: 'bold',
+      color: colors.text,
+    },
+    userEmail: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    userPhone: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      marginTop: 2,
+    },
+    statsWrapper: {
+      marginHorizontal: 20,
+      marginTop: -20,
+      zIndex: 10,
+    },
+    statsCard: {
+      padding: 16,
+    },
+    statsRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    statDivider: {
+      width: 1,
+      height: 32,
+      backgroundColor: colors.border,
+    },
+    section: {
+      marginTop: 24,
+      paddingHorizontal: 20,
+    },
+    sectionTitle: {
+      fontSize: 14,
+      fontWeight: '500',
+      color: colors.textMuted,
+      marginBottom: 8,
+    },
+    menuCard: {
+      overflow: 'hidden',
+    },
+    version: {
+      textAlign: 'center',
+      color: colors.textMuted,
+      fontSize: 12,
+      marginTop: 24,
+    },
+    logoutContainer: {
+      paddingHorizontal: 20,
+      marginTop: 24,
+    },
+  });
+}

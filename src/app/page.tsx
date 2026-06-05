@@ -8,22 +8,22 @@ import Logo from '@/components/Logo';
 // ============================================
 // SMART RIDE - LANDING PAGE
 // ============================================
-// Design System: Stitch Visual Design
+// Design System: Stitch Visual Design (Dark Theme)
 // Primary: #005f3a (deep green)
 // Accent: #22C55E (bright green)
-// Background: #f8f9fa (light surface)
+// Background: #111827 (dark surface)
 // Headlines: Plus Jakarta Sans
 // Body: Inter
 // ============================================
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-[#f8f9fa] font-sans flex flex-col">
+    <div className="min-h-screen bg-background font-sans flex flex-col">
       
       {/* ============================================ */}
       {/* NAVIGATION */}
       {/* ============================================ */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-[#bec9bf]/30">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
@@ -31,16 +31,16 @@ export default function LandingPage() {
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/about" className="text-[#3f4941] hover:text-[#005f3a] transition-colors duration-200 text-sm font-medium">
+              <Link href="/about" className="text-muted-foreground hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium">
                 About
               </Link>
-              <Link href="/help" className="text-[#3f4941] hover:text-[#005f3a] transition-colors duration-200 text-sm font-medium">
+              <Link href="/help" className="text-muted-foreground hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium">
                 Help
               </Link>
-              <Link href="/contact" className="text-[#3f4941] hover:text-[#005f3a] transition-colors duration-200 text-sm font-medium">
+              <Link href="/contact" className="text-muted-foreground hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium">
                 Contact
               </Link>
-              <Link href="/blog" className="text-[#3f4941] hover:text-[#005f3a] transition-colors duration-200 text-sm font-medium">
+              <Link href="/blog" className="text-muted-foreground hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium">
                 Blog
               </Link>
             </div>
@@ -49,7 +49,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-3">
               <Link 
                 href="/admin/login" 
-                className="text-[#3f4941] hover:text-[#005f3a] transition-colors duration-200 text-sm font-medium hidden sm:block"
+                className="text-muted-foreground hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium hidden sm:block"
               >
                 Admin
               </Link>
@@ -57,7 +57,7 @@ export default function LandingPage() {
                 href="https://play.google.com/store" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="bg-[#005f3a] text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#0e7a4d] transition-all duration-300 active:scale-95 shadow-lg shadow-[#005f3a]/10"
+                className="bg-[#005f3a] text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#0e7a4d] transition-all duration-300 active:scale-95 shadow-lg shadow-[#005f3a]/20"
               >
                 Get the App
               </a>
@@ -69,21 +69,21 @@ export default function LandingPage() {
       {/* ============================================ */}
       {/* HERO SECTION */}
       {/* ============================================ */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#f8f9fa] via-white to-[#e8f5ee] pt-16">
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#111827] via-[#0f172a] to-[#0a1f15] pt-16">
         {/* Decorative Circles */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#98f6be]/20 rounded-full blur-[128px] animate-pulse" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#005f3a]/15 rounded-full blur-[128px] animate-pulse" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#0e7a4d]/10 rounded-full blur-[128px] animate-pulse" style={{ animationDelay: '1s' }} />
         
         {/* Content */}
         <div className="relative z-10 text-center px-4 pt-8 pb-20">
-          <h1 className="font-[family-name:var(--font-plus-jakarta)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-[#191c1d] leading-tight max-w-4xl mx-auto">
+          <h1 className="font-[family-name:var(--font-plus-jakarta)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-tight max-w-4xl mx-auto">
             Your All-in-One Mobility
-            <span className="block mt-2 text-[#005f3a]">
+            <span className="block mt-2 text-[#22C55E]">
               & Delivery App
             </span>
           </h1>
           
-          <p className="mt-6 text-lg sm:text-xl md:text-2xl text-[#3f4941] max-w-2xl mx-auto leading-relaxed">
+          <p className="mt-6 text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
             Book rides, order food, get items delivered, and shop from local stores — all from one app. Fast, reliable, and affordable services across Uganda.
           </p>
           
@@ -93,7 +93,7 @@ export default function LandingPage() {
               href="https://play.google.com/store" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-[#005f3a] text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-[#0e7a4d] transition-all duration-300 active:scale-95 shadow-lg shadow-[#005f3a]/15"
+              className="inline-flex items-center justify-center gap-2 bg-[#005f3a] text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-[#0e7a4d] transition-all duration-300 active:scale-95 shadow-lg shadow-[#005f3a]/20"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -102,7 +102,7 @@ export default function LandingPage() {
             </a>
             <Link 
               href="/about#drivers"
-              className="inline-flex items-center justify-center gap-2 bg-white border-2 border-[#bec9bf] text-[#005f3a] px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-[#f3f4f5] hover:border-[#005f3a]/30 transition-all duration-300"
+              className="inline-flex items-center justify-center gap-2 bg-card border-2 border-border text-[#22C55E] px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-muted hover:border-[#22C55E]/30 transition-all duration-300"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -113,17 +113,17 @@ export default function LandingPage() {
           
           {/* Phone Mockup */}
           <div className="mt-16 relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-[#f8f9fa] via-transparent to-transparent z-10 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-t from-[#111827] via-transparent to-transparent z-10 pointer-events-none" />
             <div className="flex justify-center">
               <div className="relative">
                 {/* Glow Effect */}
-                <div className="absolute -inset-8 bg-gradient-to-r from-[#98f6be]/30 to-[#0e7a4d]/10 rounded-[48px] blur-2xl" />
+                <div className="absolute -inset-8 bg-gradient-to-r from-[#005f3a]/20 to-[#0e7a4d]/10 rounded-[48px] blur-2xl" />
                 
                 {/* Phone Frame */}
-                <div className="relative bg-white rounded-[32px] p-3 border border-[#bec9bf]/30 shadow-2xl shadow-[#005f3a]/10">
-                  <div className="w-72 sm:w-80 h-[500px] sm:h-[560px] bg-gradient-to-b from-white to-[#f8f9fa] rounded-[24px] flex flex-col items-center justify-center overflow-hidden">
+                <div className="relative bg-card rounded-[32px] p-3 border border-border shadow-2xl shadow-[#005f3a]/15">
+                  <div className="w-72 sm:w-80 h-[500px] sm:h-[560px] bg-gradient-to-b from-[#1f2937] to-[#111827] rounded-[24px] flex flex-col items-center justify-center overflow-hidden">
                     {/* App Logo */}
-                    <div className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-lg shadow-[#005f3a]/15 mb-6 overflow-hidden">
+                    <div className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-lg shadow-[#005f3a]/20 mb-6 overflow-hidden">
                       <Image
                         src="/smartride-logo.jpeg"
                         alt="Smart Ride Logo"
@@ -133,15 +133,15 @@ export default function LandingPage() {
                         priority
                       />
                     </div>
-                    <h3 className="font-[family-name:var(--font-plus-jakarta)] text-[#191c1d] font-bold text-2xl mb-2">Smart Ride</h3>
-                    <p className="text-[#6f7a71] text-sm mb-8">Uganda&apos;s #1 Mobility App</p>
+                    <h3 className="font-[family-name:var(--font-plus-jakarta)] text-foreground font-bold text-2xl mb-2">Smart Ride</h3>
+                    <p className="text-muted-foreground text-sm mb-8">Uganda&apos;s #1 Mobility App</p>
                     
                     {/* Feature Pills */}
                     <div className="flex flex-wrap gap-2 justify-center px-4">
-                      <span className="px-3 py-1.5 bg-[#98f6be]/30 border border-[#0e7a4d]/20 rounded-full text-[#005f3a] text-xs font-medium">Rides</span>
-                      <span className="px-3 py-1.5 bg-[#6bff8f]/20 border border-[#006e2f]/20 rounded-full text-[#006e2f] text-xs font-medium">Food</span>
-                      <span className="px-3 py-1.5 bg-[#dce2f7]/40 border border-[#4b5264]/20 rounded-full text-[#4b5264] text-xs font-medium">Shopping</span>
-                      <span className="px-3 py-1.5 bg-[#7cd9a4]/20 border border-[#005f3a]/20 rounded-full text-[#005231] text-xs font-medium">Delivery</span>
+                      <span className="px-3 py-1.5 bg-[#005f3a]/20 border border-[#0e7a4d]/30 rounded-full text-[#22C55E] text-xs font-medium">Rides</span>
+                      <span className="px-3 py-1.5 bg-[#006e2f]/15 border border-[#006e2f]/25 rounded-full text-[#4ae176] text-xs font-medium">Food</span>
+                      <span className="px-3 py-1.5 bg-[#4b5264]/20 border border-[#636a7c]/30 rounded-full text-[#9ca3af] text-xs font-medium">Shopping</span>
+                      <span className="px-3 py-1.5 bg-[#005f3a]/15 border border-[#005f3a]/25 rounded-full text-[#7cd9a4] text-xs font-medium">Delivery</span>
                     </div>
                   </div>
                 </div>
@@ -154,17 +154,17 @@ export default function LandingPage() {
       {/* ============================================ */}
       {/* SERVICES SECTION */}
       {/* ============================================ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-7xl mx-auto">
           {/* Section Header */}
           <div className="text-center mb-16">
-            <h2 className="font-[family-name:var(--font-plus-jakarta)] text-3xl sm:text-4xl md:text-5xl font-bold text-[#191c1d] mb-4">
+            <h2 className="font-[family-name:var(--font-plus-jakarta)] text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
               Everything You Need,{' '}
-              <span className="text-[#005f3a]">
+              <span className="text-[#22C55E]">
                 One App
               </span>
             </h2>
-            <p className="text-[#3f4941] text-lg max-w-2xl mx-auto">
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               From daily commutes to food delivery, Smart Ride connects you with reliable services at your fingertips.
             </p>
           </div>
@@ -173,24 +173,24 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             
             {/* Smart Ride */}
-            <div className="group bg-white rounded-2xl p-6 border border-[#bec9bf]/30 hover:border-[#005f3a]/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#005f3a]/8">
-              <div className="w-14 h-14 bg-[#98f6be] rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-[#005f3a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#005f3a]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#005f3a]/10">
+              <div className="w-14 h-14 bg-[#005f3a]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-[#22C55E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                 </svg>
               </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] mb-2">Smart Ride</h3>
-              <p className="text-[#3f4941] text-sm leading-relaxed mb-4">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Ride</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                 Book a Boda Boda or Car ride in seconds. Safe, affordable, and reliable transportation across Uganda.
               </p>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#22C55E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   Smart Boda - From UGX 2,000
                 </li>
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#22C55E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -200,24 +200,24 @@ export default function LandingPage() {
             </div>
             
             {/* Smart Food */}
-            <div className="group bg-white rounded-2xl p-6 border border-[#bec9bf]/30 hover:border-[#F97316]/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#F97316]/8">
-              <div className="w-14 h-14 bg-[#FFF7ED] rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
+            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#F97316]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#F97316]/10">
+              <div className="w-14 h-14 bg-[#F97316]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
                 <svg className="w-7 h-7 text-[#F97316]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
                 </svg>
               </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] mb-2">Smart Food</h3>
-              <p className="text-[#3f4941] text-sm leading-relaxed mb-4">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Food</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                 Order from your favorite restaurants. Fast delivery from local cafes and kitchens to your doorstep.
               </p>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#F97316]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   100+ Local Restaurants
                 </li>
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#F97316]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -227,24 +227,24 @@ export default function LandingPage() {
             </div>
             
             {/* Smart Delivery */}
-            <div className="group bg-white rounded-2xl p-6 border border-[#bec9bf]/30 hover:border-[#14B8A6]/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#14B8A6]/8">
-              <div className="w-14 h-14 bg-[#F0FDFA] rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
+            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#14B8A6]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#14B8A6]/10">
+              <div className="w-14 h-14 bg-[#14B8A6]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
                 <svg className="w-7 h-7 text-[#14B8A6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                 </svg>
               </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] mb-2">Smart Delivery</h3>
-              <p className="text-[#3f4941] text-sm leading-relaxed mb-4">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Delivery</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                 Send packages, documents, or any items across town. Reliable pickup and drop-off service.
               </p>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#14B8A6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   Package Delivery
                 </li>
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#14B8A6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -254,24 +254,24 @@ export default function LandingPage() {
             </div>
             
             {/* Smart Shopping */}
-            <div className="group bg-white rounded-2xl p-6 border border-[#bec9bf]/30 hover:border-[#8B5CF6]/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#8B5CF6]/8">
-              <div className="w-14 h-14 bg-[#F5F3FF] rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
+            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#8B5CF6]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#8B5CF6]/10">
+              <div className="w-14 h-14 bg-[#8B5CF6]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
                 <svg className="w-7 h-7 text-[#8B5CF6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
               </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] mb-2">Smart Shopping</h3>
-              <p className="text-[#3f4941] text-sm leading-relaxed mb-4">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Shopping</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                 Shop groceries, pharmacy items, and more from local stores. Quality products delivered to you.
               </p>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#8B5CF6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   Groceries
                 </li>
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#8B5CF6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -281,24 +281,24 @@ export default function LandingPage() {
             </div>
             
             {/* Smart Health */}
-            <div className="group bg-white rounded-2xl p-6 border border-[#bec9bf]/30 hover:border-[#F43F5E]/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#F43F5E]/8">
-              <div className="w-14 h-14 bg-[#FFF1F2] rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
+            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#F43F5E]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#F43F5E]/10">
+              <div className="w-14 h-14 bg-[#F43F5E]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
                 <svg className="w-7 h-7 text-[#F43F5E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
               </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] mb-2">Smart Health</h3>
-              <p className="text-[#3f4941] text-sm leading-relaxed mb-4">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Health</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                 Order medicines, book pharmacy deliveries, and access healthcare services from trusted providers.
               </p>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#F43F5E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   Medicine Delivery
                 </li>
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#F43F5E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
@@ -308,30 +308,30 @@ export default function LandingPage() {
             </div>
             
             {/* Smart Pay */}
-            <div className="group bg-white rounded-2xl p-6 border border-[#bec9bf]/30 hover:border-[#005f3a]/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#005f3a]/8">
-              <div className="w-14 h-14 bg-[#98f6be]/30 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-[#005f3a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#005f3a]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#005f3a]/10">
+              <div className="w-14 h-14 bg-[#005f3a]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
+                <svg className="w-7 h-7 text-[#22C55E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-[#191c1d] mb-2">Smart Pay</h3>
-              <p className="text-[#3f4941] text-sm leading-relaxed mb-4">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Pay</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                 Seamless payments with cash. Mobile money options coming soon!
               </p>
               <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#22C55E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                   </svg>
                   Cash
                 </li>
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#FFCC00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   MTN MoMo — Coming Soon
                 </li>
-                <li className="flex items-center gap-2 text-[#6f7a71] text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground text-sm">
                   <svg className="w-4 h-4 text-[#ED1C24]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
@@ -346,14 +346,14 @@ export default function LandingPage() {
       {/* ============================================ */}
       {/* HOW IT WORKS SECTION */}
       {/* ============================================ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-[#f3f4f5]">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-muted">
         <div className="max-w-7xl mx-auto">
           {/* Section Header */}
           <div className="text-center mb-16">
-            <h2 className="font-[family-name:var(--font-plus-jakarta)] text-3xl sm:text-4xl md:text-5xl font-bold text-[#191c1d] mb-4">
+            <h2 className="font-[family-name:var(--font-plus-jakarta)] text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
               How It Works
             </h2>
-            <p className="text-[#3f4941] text-lg max-w-2xl mx-auto">
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Getting started is easy. Follow these simple steps to enjoy our services.
             </p>
           </div>
@@ -365,44 +365,44 @@ export default function LandingPage() {
             
             {/* Step 1 */}
             <div className="relative text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#005f3a] shadow-[#005f3a]/20">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#005f3a] shadow-[#005f3a]/30">
                 1
               </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-[#191c1d] mb-2">Request</h3>
-              <p className="text-[#3f4941] text-sm max-w-xs mx-auto">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-foreground mb-2">Request</h3>
+              <p className="text-muted-foreground text-sm max-w-xs mx-auto">
                 Open the app and request a ride, food order, or delivery service.
               </p>
             </div>
             
             {/* Step 2 */}
             <div className="relative text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#0e7a4d] shadow-[#0e7a4d]/20">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#0e7a4d] shadow-[#0e7a4d]/30">
                 2
               </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-[#191c1d] mb-2">Match</h3>
-              <p className="text-[#3f4941] text-sm max-w-xs mx-auto">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-foreground mb-2">Match</h3>
+              <p className="text-muted-foreground text-sm max-w-xs mx-auto">
                 We connect you with the nearest available rider or driver.
               </p>
             </div>
             
             {/* Step 3 */}
             <div className="relative text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#22C55E] shadow-[#22C55E]/20">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#22C55E] shadow-[#22C55E]/30">
                 3
               </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-[#191c1d] mb-2">Ride</h3>
-              <p className="text-[#3f4941] text-sm max-w-xs mx-auto">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-foreground mb-2">Ride</h3>
+              <p className="text-muted-foreground text-sm max-w-xs mx-auto">
                 Track in real-time as your rider arrives and completes your request.
               </p>
             </div>
             
             {/* Step 4 */}
             <div className="relative text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#4ae176] shadow-[#4ae176]/20">
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#4ae176] shadow-[#4ae176]/30">
                 4
               </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-[#191c1d] mb-2">Pay</h3>
-              <p className="text-[#3f4941] text-sm max-w-xs mx-auto">
+              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-foreground mb-2">Pay</h3>
+              <p className="text-muted-foreground text-sm max-w-xs mx-auto">
                 Pay with cash (mobile money coming soon!). Rate your experience!
               </p>
             </div>
@@ -486,44 +486,44 @@ export default function LandingPage() {
       {/* ============================================ */}
       {/* PAYMENT METHODS */}
       {/* ============================================ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-white">
+      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
         <div className="max-w-7xl mx-auto text-center">
-          <h2 className="font-[family-name:var(--font-plus-jakarta)] text-2xl sm:text-3xl font-bold text-[#191c1d] mb-12">
+          <h2 className="font-[family-name:var(--font-plus-jakarta)] text-2xl sm:text-3xl font-bold text-foreground mb-12">
             Accepted Payment Methods
           </h2>
           
           <div className="flex flex-wrap justify-center gap-6 sm:gap-8">
             {/* Cash - Active */}
-            <div className="bg-white rounded-2xl p-6 border border-[#005f3a]/20 flex items-center gap-4 hover:border-[#005f3a]/40 transition-all duration-300 hover:-translate-y-1 shadow-sm">
+            <div className="bg-card rounded-2xl p-6 border border-[#005f3a]/30 flex items-center gap-4 hover:border-[#005f3a]/50 transition-all duration-300 hover:-translate-y-1 shadow-sm">
               <div className="w-14 h-14 bg-[#005f3a] rounded-xl flex items-center justify-center">
                 <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
               </div>
               <div>
-                <span className="text-[#191c1d] font-medium block">Cash</span>
+                <span className="text-foreground font-medium block">Cash</span>
                 <span className="text-[#22C55E] text-xs font-medium">Active</span>
               </div>
             </div>
             
             {/* MTN MoMo - Coming Soon */}
-            <div className="bg-white rounded-2xl p-6 border border-[#bec9bf]/30 flex items-center gap-4 opacity-60">
+            <div className="bg-card rounded-2xl p-6 border border-border flex items-center gap-4 opacity-60">
               <div className="w-14 h-14 bg-[#FFCC00] rounded-xl flex items-center justify-center">
                 <span className="text-[#0D0D12] font-bold text-sm">MTN</span>
               </div>
               <div>
-                <span className="text-[#3f4941] font-medium block">MTN MoMo</span>
+                <span className="text-muted-foreground font-medium block">MTN MoMo</span>
                 <span className="text-[#FFCC00] text-xs font-medium">Coming Soon</span>
               </div>
             </div>
             
             {/* Airtel Money - Coming Soon */}
-            <div className="bg-white rounded-2xl p-6 border border-[#bec9bf]/30 flex items-center gap-4 opacity-60">
+            <div className="bg-card rounded-2xl p-6 border border-border flex items-center gap-4 opacity-60">
               <div className="w-14 h-14 bg-[#ED1C24] rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-lg">A</span>
               </div>
               <div>
-                <span className="text-[#3f4941] font-medium block">Airtel Money</span>
+                <span className="text-muted-foreground font-medium block">Airtel Money</span>
                 <span className="text-[#ED1C24] text-xs font-medium">Coming Soon</span>
               </div>
             </div>
@@ -534,7 +534,7 @@ export default function LandingPage() {
       {/* ============================================ */}
       {/* FOOTER */}
       {/* ============================================ */}
-      <footer className="py-16 px-4 sm:px-6 lg:px-8 bg-[#191c1d] border-t border-[#2e3132] mt-auto">
+      <footer className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0a0f1a] border-t border-white/5 mt-auto">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
             

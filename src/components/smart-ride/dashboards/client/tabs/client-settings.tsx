@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -9,6 +10,7 @@ import {
   ArrowLeft,
   Bell,
   Moon,
+  Sun,
   Globe,
   Shield,
   Smartphone,
@@ -29,6 +31,9 @@ interface SettingsProps {
 }
 
 export function SettingsScreen({ onBack }: SettingsProps) {
+  const { theme, setTheme } = useTheme();
+  const isDark = theme === 'dark';
+
   const [notifications, setNotifications] = useState({
     push: true,
     email: true,
@@ -44,38 +49,33 @@ export function SettingsScreen({ onBack }: SettingsProps) {
     analytics: true,
   });
 
-  const [appearance, setAppearance] = useState({
-    darkMode: true,
-    compactView: false,
-  });
-
   return (
-    <div className="min-h-screen bg-[#f8f9fa] pb-4">
+    <div className="min-h-screen bg-background pb-4">
       {/* Header */}
-      <div className="bg-white px-4 py-4 flex items-center gap-4 sticky top-0 z-20 border-b border-[#bec9bf]/30 shadow-sm">
+      <div className="bg-card px-4 py-4 flex items-center gap-4 sticky top-0 z-20 border-b border-border shadow-sm">
         <button
           onClick={onBack}
-          className="w-10 h-10 bg-[#f3f4f5] rounded-full flex items-center justify-center hover:bg-[#edeeef] transition-colors"
+          className="w-10 h-10 bg-muted rounded-full flex items-center justify-center hover:bg-accent/10 transition-colors"
         >
-          <ArrowLeft className="h-5 w-5 text-[#191c1d]" />
+          <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
-        <h1 className="text-lg font-bold text-[#191c1d]">Settings</h1>
+        <h1 className="text-lg font-bold text-foreground">Settings</h1>
       </div>
 
       <div className="p-4 space-y-6">
         {/* Notifications */}
         <div>
-          <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
             <Bell className="h-4 w-4" />
             Notifications
           </h2>
-          <Card className="bg-white border border-[#bec9bf]/30 divide-y divide-[#bec9bf]/20">
+          <Card className="bg-card border border-border divide-y divide-border">
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Smartphone className="h-5 w-5 text-[#6f7a71]" />
+                <Smartphone className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-[#191c1d]">Push Notifications</p>
-                  <p className="text-[#6f7a71] text-sm">Receive alerts on your device</p>
+                  <p className="text-foreground">Push Notifications</p>
+                  <p className="text-muted-foreground text-sm">Receive alerts on your device</p>
                 </div>
               </div>
               <Switch
@@ -85,10 +85,10 @@ export function SettingsScreen({ onBack }: SettingsProps) {
             </div>
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Mail className="h-5 w-5 text-[#6f7a71]" />
+                <Mail className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-[#191c1d]">Email Notifications</p>
-                  <p className="text-[#6f7a71] text-sm">Receive updates via email</p>
+                  <p className="text-foreground">Email Notifications</p>
+                  <p className="text-muted-foreground text-sm">Receive updates via email</p>
                 </div>
               </div>
               <Switch
@@ -98,10 +98,10 @@ export function SettingsScreen({ onBack }: SettingsProps) {
             </div>
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Bell className="h-5 w-5 text-[#6f7a71]" />
+                <Bell className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-[#191c1d]">Order Updates</p>
-                  <p className="text-[#6f7a71] text-sm">Get notified about order status</p>
+                  <p className="text-foreground">Order Updates</p>
+                  <p className="text-muted-foreground text-sm">Get notified about order status</p>
                 </div>
               </div>
               <Switch
@@ -111,10 +111,10 @@ export function SettingsScreen({ onBack }: SettingsProps) {
             </div>
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Shield className="h-5 w-5 text-[#6f7a71]" />
+                <Shield className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-[#191c1d]">Safety Alerts</p>
-                  <p className="text-[#6f7a71] text-sm">Important safety notifications</p>
+                  <p className="text-foreground">Safety Alerts</p>
+                  <p className="text-muted-foreground text-sm">Important safety notifications</p>
                 </div>
               </div>
               <Switch
@@ -127,17 +127,17 @@ export function SettingsScreen({ onBack }: SettingsProps) {
 
         {/* Privacy */}
         <div>
-          <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
             <Lock className="h-4 w-4" />
             Privacy
           </h2>
-          <Card className="bg-white border border-[#bec9bf]/30 divide-y divide-[#bec9bf]/20">
+          <Card className="bg-card border border-border divide-y divide-border">
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-[#6f7a71]" />
+                <MapPin className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-[#191c1d]">Share Location</p>
-                  <p className="text-[#6f7a71] text-sm">Allow location sharing during rides</p>
+                  <p className="text-foreground">Share Location</p>
+                  <p className="text-muted-foreground text-sm">Allow location sharing during rides</p>
                 </div>
               </div>
               <Switch
@@ -147,10 +147,10 @@ export function SettingsScreen({ onBack }: SettingsProps) {
             </div>
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Eye className="h-5 w-5 text-[#6f7a71]" />
+                <Eye className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-[#191c1d]">Profile Visibility</p>
-                  <p className="text-[#6f7a71] text-sm">Show profile to other users</p>
+                  <p className="text-foreground">Profile Visibility</p>
+                  <p className="text-muted-foreground text-sm">Show profile to other users</p>
                 </div>
               </div>
               <Switch
@@ -160,10 +160,10 @@ export function SettingsScreen({ onBack }: SettingsProps) {
             </div>
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Shield className="h-5 w-5 text-[#6f7a71]" />
+                <Shield className="h-5 w-5 text-muted-foreground" />
                 <div>
-                  <p className="text-[#191c1d]">Analytics</p>
-                  <p className="text-[#6f7a71] text-sm">Help improve Smart Ride</p>
+                  <p className="text-foreground">Analytics</p>
+                  <p className="text-muted-foreground text-sm">Help improve Smart Ride</p>
                 </div>
               </div>
               <Switch
@@ -176,22 +176,22 @@ export function SettingsScreen({ onBack }: SettingsProps) {
 
         {/* Appearance */}
         <div>
-          <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3 flex items-center gap-2">
-            <Moon className="h-4 w-4" />
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
+            {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
             Appearance
           </h2>
-          <Card className="bg-white border border-[#bec9bf]/30 divide-y divide-[#bec9bf]/20">
+          <Card className="bg-card border border-border divide-y divide-border">
             <div className="p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Moon className="h-5 w-5 text-[#6f7a71]" />
+                {isDark ? <Moon className="h-5 w-5 text-primary" /> : <Sun className="h-5 w-5 text-primary" />}
                 <div>
-                  <p className="text-[#191c1d]">Dark Mode</p>
-                  <p className="text-[#6f7a71] text-sm">Use dark theme</p>
+                  <p className="text-foreground">Dark Mode</p>
+                  <p className="text-muted-foreground text-sm">Switch between light and dark theme</p>
                 </div>
               </div>
               <Switch
-                checked={appearance.darkMode}
-                onCheckedChange={(checked) => setAppearance({ ...appearance, darkMode: checked })}
+                checked={isDark}
+                onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
               />
             </div>
           </Card>
@@ -199,66 +199,66 @@ export function SettingsScreen({ onBack }: SettingsProps) {
 
         {/* Language & Region */}
         <div>
-          <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
             <Globe className="h-4 w-4" />
             Language & Region
           </h2>
-          <Card className="bg-white border border-[#bec9bf]/30">
-            <button className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors">
+          <Card className="bg-card border border-border">
+            <button className="w-full p-4 flex items-center justify-between hover:bg-muted transition-colors">
               <div className="flex items-center gap-3">
-                <Globe className="h-5 w-5 text-[#6f7a71]" />
+                <Globe className="h-5 w-5 text-muted-foreground" />
                 <div className="text-left">
-                  <p className="text-[#191c1d]">Language</p>
-                  <p className="text-[#6f7a71] text-sm">English</p>
+                  <p className="text-foreground">Language</p>
+                  <p className="text-muted-foreground text-sm">English</p>
                 </div>
               </div>
-              <ChevronRight className="h-5 w-5 text-[#bec9bf]" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </button>
           </Card>
         </div>
 
         {/* Payment Methods */}
         <div>
-          <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
             <CreditCard className="h-4 w-4" />
             Payment
           </h2>
-          <Card className="bg-white border border-[#bec9bf]/30 divide-y divide-[#bec9bf]/20">
-            <button className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors">
+          <Card className="bg-card border border-border divide-y divide-border">
+            <button className="w-full p-4 flex items-center justify-between hover:bg-muted transition-colors">
               <div className="flex items-center gap-3">
-                <CreditCard className="h-5 w-5 text-[#6f7a71]" />
-                <span className="text-[#191c1d]">Manage Payment Methods</span>
+                <CreditCard className="h-5 w-5 text-muted-foreground" />
+                <span className="text-foreground">Manage Payment Methods</span>
               </div>
-              <ChevronRight className="h-5 w-5 text-[#bec9bf]" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </button>
-            <button className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors">
+            <button className="w-full p-4 flex items-center justify-between hover:bg-muted transition-colors">
               <div className="flex items-center gap-3">
-                <FileText className="h-5 w-5 text-[#6f7a71]" />
-                <span className="text-[#191c1d]">Billing History</span>
+                <FileText className="h-5 w-5 text-muted-foreground" />
+                <span className="text-foreground">Billing History</span>
               </div>
-              <ChevronRight className="h-5 w-5 text-[#bec9bf]" />
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </button>
           </Card>
         </div>
 
         {/* Legal */}
         <div>
-          <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-2">
             <FileText className="h-4 w-4" />
             Legal
           </h2>
-          <Card className="bg-white border border-[#bec9bf]/30 divide-y divide-[#bec9bf]/20">
-            <button className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors">
-              <span className="text-[#191c1d]">Terms of Service</span>
-              <ExternalLink className="h-4 w-4 text-[#6f7a71]" />
+          <Card className="bg-card border border-border divide-y divide-border">
+            <button className="w-full p-4 flex items-center justify-between hover:bg-muted transition-colors">
+              <span className="text-foreground">Terms of Service</span>
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
             </button>
-            <button className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors">
-              <span className="text-[#191c1d]">Privacy Policy</span>
-              <ExternalLink className="h-4 w-4 text-[#6f7a71]" />
+            <button className="w-full p-4 flex items-center justify-between hover:bg-muted transition-colors">
+              <span className="text-foreground">Privacy Policy</span>
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
             </button>
-            <button className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors">
-              <span className="text-[#191c1d]">Cookie Policy</span>
-              <ExternalLink className="h-4 w-4 text-[#6f7a71]" />
+            <button className="w-full p-4 flex items-center justify-between hover:bg-muted transition-colors">
+              <span className="text-foreground">Cookie Policy</span>
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
             </button>
           </Card>
         </div>
@@ -268,21 +268,21 @@ export function SettingsScreen({ onBack }: SettingsProps) {
           <h2 className="text-sm font-semibold text-[#ba1a1a] uppercase tracking-wider mb-3">
             Danger Zone
           </h2>
-          <Card className="bg-white border border-[#ba1a1a]/20">
-            <button className="w-full p-4 flex items-center justify-between hover:bg-[#ba1a1a]/5 transition-colors rounded-xl">
+          <Card className="bg-card border border-destructive/20">
+            <button className="w-full p-4 flex items-center justify-between hover:bg-destructive/5 transition-colors rounded-xl">
               <div className="flex items-center gap-3">
-                <Trash2 className="h-5 w-5 text-[#ba1a1a]" />
-                <span className="text-[#ba1a1a]">Delete Account</span>
+                <Trash2 className="h-5 w-5 text-destructive" />
+                <span className="text-destructive">Delete Account</span>
               </div>
-              <ChevronRight className="h-5 w-5 text-[#ba1a1a]" />
+              <ChevronRight className="h-5 w-5 text-destructive" />
             </button>
           </Card>
         </div>
 
         {/* Version Info */}
         <div className="text-center py-4">
-          <p className="text-[#6f7a71] text-sm">Smart Ride v1.0.0</p>
-          <p className="text-[#bec9bf] text-xs mt-1">© 2024 Smart Ride Uganda</p>
+          <p className="text-muted-foreground text-sm">Smart Ride v1.0.0</p>
+          <p className="text-muted-foreground/50 text-xs mt-1">© 2024 Smart Ride Uganda</p>
         </div>
       </div>
     </div>
@@ -315,16 +315,16 @@ export function HelpSupportScreen({ onBack }: HelpSupportProps) {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] pb-4">
+    <div className="min-h-screen bg-background pb-4">
       {/* Header */}
-      <div className="bg-white px-4 py-4 flex items-center gap-4 sticky top-0 z-20 border-b border-[#bec9bf]/30 shadow-sm">
+      <div className="bg-card px-4 py-4 flex items-center gap-4 sticky top-0 z-20 border-b border-border shadow-sm">
         <button
           onClick={onBack}
-          className="w-10 h-10 bg-[#f3f4f5] rounded-full flex items-center justify-center hover:bg-[#edeeef] transition-colors"
+          className="w-10 h-10 bg-muted rounded-full flex items-center justify-center hover:bg-accent/10 transition-colors"
         >
-          <ArrowLeft className="h-5 w-5 text-[#191c1d]" />
+          <ArrowLeft className="h-5 w-5 text-foreground" />
         </button>
-        <h1 className="text-lg font-bold text-[#191c1d]">Help & Support</h1>
+        <h1 className="text-lg font-bold text-foreground">Help & Support</h1>
       </div>
 
       <div className="p-4 space-y-6">
@@ -353,14 +353,14 @@ export function HelpSupportScreen({ onBack }: HelpSupportProps) {
 
         {/* FAQ */}
         <div>
-          <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Frequently Asked Questions
           </h2>
           <div className="space-y-3">
             {faqs.map((faq, index) => (
-              <Card key={index} className="bg-white border border-[#bec9bf]/30 p-4 shadow-sm rounded-2xl">
-                <h3 className="text-[#191c1d] font-medium mb-2">{faq.question}</h3>
-                <p className="text-[#3f4941] text-sm">{faq.answer}</p>
+              <Card key={index} className="bg-card border border-border p-4 shadow-sm rounded-2xl">
+                <h3 className="text-foreground font-medium mb-2">{faq.question}</h3>
+                <p className="text-muted-foreground text-sm">{faq.answer}</p>
               </Card>
             ))}
           </div>
@@ -368,21 +368,21 @@ export function HelpSupportScreen({ onBack }: HelpSupportProps) {
 
         {/* Quick Actions */}
         <div>
-          <h2 className="text-sm font-semibold text-[#6f7a71] uppercase tracking-wider mb-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             Quick Actions
           </h2>
-          <Card className="bg-white border border-[#bec9bf]/30 divide-y divide-[#bec9bf]/20">
-            <button className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors">
-              <span className="text-[#191c1d]">Report a Problem</span>
-              <ChevronRight className="h-5 w-5 text-[#bec9bf]" />
+          <Card className="bg-card border border-border divide-y divide-border">
+            <button className="w-full p-4 flex items-center justify-between hover:bg-muted transition-colors">
+              <span className="text-foreground">Report a Problem</span>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </button>
-            <button className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors">
-              <span className="text-[#191c1d]">Submit Feedback</span>
-              <ChevronRight className="h-5 w-5 text-[#bec9bf]" />
+            <button className="w-full p-4 flex items-center justify-between hover:bg-muted transition-colors">
+              <span className="text-foreground">Submit Feedback</span>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </button>
-            <button className="w-full p-4 flex items-center justify-between hover:bg-[#f3f4f5] transition-colors">
-              <span className="text-[#191c1d]">Safety Center</span>
-              <ChevronRight className="h-5 w-5 text-[#bec9bf]" />
+            <button className="w-full p-4 flex items-center justify-between hover:bg-muted transition-colors">
+              <span className="text-foreground">Safety Center</span>
+              <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </button>
           </Card>
         </div>
