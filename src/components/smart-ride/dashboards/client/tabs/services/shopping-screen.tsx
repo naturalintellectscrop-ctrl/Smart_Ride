@@ -154,7 +154,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [productCategory, setProductCategory] = useState<string | null>(null);
   const [currentOrder, setCurrentOrder] = useState<Order | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MOBILE_MONEY' | 'WALLET'>('MOBILE_MONEY');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MTN_MOMO' | 'AIRTEL_MONEY' | 'WALLET'>('CASH');
   const [deliveryAddress, setDeliveryAddress] = useState('');
 
   // API state
@@ -338,7 +338,7 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
         deliveryFee: 4000,
         serviceFee: 1000,
         totalAmount: cartTotal + 4000 + 1000,
-        paymentMethod: paymentMethod === 'MOBILE_MONEY' ? 'MTN_MOMO' : paymentMethod === 'CASH' ? 'CASH' : 'MTN_MOMO',
+        paymentMethod: paymentMethod,
         deliveryAddress: deliveryAddress.trim(),
       };
 
@@ -680,18 +680,21 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
             <p className="text-sm text-white/50 mb-3">Payment Method</p>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'CASH', label: 'Cash', icon: 'cash' },
-                { id: 'MOBILE_MONEY', label: 'MoMo', icon: 'momo' },
-                { id: 'WALLET', label: 'Wallet', icon: 'wallet' },
+                { id: 'CASH' as const, label: 'Cash', icon: 'cash', disabled: false },
+                { id: 'MTN_MOMO' as const, label: 'MTN MoMo', icon: 'momo', disabled: true, badge: 'Coming Soon' },
+                { id: 'AIRTEL_MONEY' as const, label: 'Airtel', icon: 'momo', disabled: true, badge: 'Coming Soon' },
+                { id: 'WALLET' as const, label: 'Wallet', icon: 'wallet', disabled: true, badge: 'Coming Soon' },
               ].map((method) => (
                 <button
                   key={method.id}
-                  onClick={() => setPaymentMethod(method.id as typeof paymentMethod)}
+                  onClick={() => !method.disabled && setPaymentMethod(method.id as typeof paymentMethod)}
                   className={cn(
-                    "p-3 rounded-xl border flex flex-col items-center gap-1 transition-all",
+                    "p-3 rounded-xl border flex flex-col items-center gap-1 transition-all relative",
                     paymentMethod === method.id
                       ? "border-[#8B5CF6] bg-[#8B5CF6]/10"
-                      : "border-white/10 bg-white/5 hover:border-white/20"
+                      : method.disabled
+                        ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed"
+                        : "border-white/10 bg-white/5 hover:border-white/20"
                   )}
                 >
                   {method.icon === 'cash' && <Wallet className="h-5 w-5 text-white/60" />}
@@ -699,8 +702,11 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
                   {method.icon === 'wallet' && <CreditCard className="h-5 w-5 text-white/60" />}
                   <span className={cn(
                     "text-xs font-medium",
-                    paymentMethod === method.id ? "text-[#8B5CF6]" : "text-white/60"
+                    paymentMethod === method.id ? "text-[#8B5CF6]" : method.disabled ? "text-white/30" : "text-white/60"
                   )}>{method.label}</span>
+                  {method.badge && (
+                    <span className="absolute -top-1 -right-1 text-[8px] bg-white/10 text-white/40 px-1 rounded">{method.badge}</span>
+                  )}
                 </button>
               ))}
             </div>

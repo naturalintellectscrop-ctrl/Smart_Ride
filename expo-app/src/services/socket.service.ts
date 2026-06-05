@@ -618,6 +618,11 @@ class SocketService {
   async reconnect(): Promise<void> {
     this.intentionalDisconnect = false;
 
+    // Save room memberships before cleaning up
+    const savedTaskRoom = this.currentTaskRoom;
+    const savedDriverRoom = this.currentDriverRoom;
+    const savedRiderRoom = this.currentRiderRoom;
+
     // Clean up channels without clearing listeners
     for (const [name, channel] of this.channels.entries()) {
       this.supabase?.removeChannel(channel);
@@ -628,6 +633,20 @@ class SocketService {
     this.currentUserId = null;
 
     await this.connect();
+
+    // Re-join rooms that were active before reconnect
+    if (this.isConnected) {
+      if (savedDriverRoom) {
+        this.joinDriverRoom(savedDriverRoom);
+      }
+      if (savedTaskRoom) {
+        this.joinTaskRoom(savedTaskRoom);
+      }
+      if (savedRiderRoom) {
+        this.joinRiderRoom(savedRiderRoom);
+      }
+      console.log('[Realtime] Re-joined rooms after reconnect');
+    }
   }
 
   /** Schedule a reconnect attempt with exponential backoff */

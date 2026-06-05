@@ -133,8 +133,12 @@ export function useDriverLocation({
 
     // Send to server via central socket service
     if (socketService.isConnectedToSocket() && isOnline) {
-      // Emit via the central socketService (updateDriverLocation handles riderId internally)
-      socketService.updateDriverLocation({
+      // Use updateLocation() which includes riderId — broadcasts to both
+      // task room (if active) and rider's personal channel.
+      // Do NOT also call updateDriverLocation() — it broadcasts the same
+      // `rider:location:update` event and would cause duplicate updates.
+      socketService.updateLocation({
+        riderId: driverId,
         latitude: location.latitude,
         longitude: location.longitude,
         heading: location.heading,

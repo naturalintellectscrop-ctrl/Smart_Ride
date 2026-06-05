@@ -91,27 +91,35 @@ export default function DriverTaskScreen() {
   useEffect(() => {
     if (params.taskId) {
       loadTask(params.taskId);
-      socketService.joinTaskRoom(params.taskId);
+      // Connect socket before joining the task room
+      socketService.connect().then(() => {
+        socketService.joinTaskRoom(params.taskId);
+      });
     }
 
-    // Listen for real-time task status updates (e.g. client cancellation)
-    const unsubscribe = socketService.on('task:status:update', (data: { taskId: string; status: string }) => {
-      if (data.taskId === params.taskId) {
-        if (data.status === 'CANCELLED') {
-          Alert.alert(
-            'Task Cancelled',
-            'This task has been cancelled by the client.',
-            [{ text: 'OK', onPress: () => router.replace('/driver') }]
-          );
-        } else if (data.status === 'FAILED') {
-          Alert.alert(
-            'Task Failed',
-            'This task has failed.',
-            [{ text: 'OK', onPress: () => router.replace('/driver') }]
-          );
-        } else {
-          // For other status updates, reload the task to get fresh data
+    // Listen for real-time task status changes
+    const unsubscribe = socketService.on('task:status:update', (data: any) => {
+      if (data.taskId === task?.id || data.taskId === params.taskId) {
+        // Update task state immediately for responsive UI
+        setTask(prev => prev ? { ...prev, status: data.status } : prev);
+
+        // If task is completed or cancelled, refresh full task data and alert
+        if (['COMPLETED', 'CANCELLED', 'CLOSED', 'FAILED'].includes(data.status)) {
           loadTask(params.taskId);
+
+          if (data.status === 'CANCELLED') {
+            Alert.alert(
+              'Task Cancelled',
+              'This task has been cancelled by the client.',
+              [{ text: 'OK', onPress: () => router.replace('/driver') }]
+            );
+          } else if (data.status === 'FAILED') {
+            Alert.alert(
+              'Task Failed',
+              'This task has failed.',
+              [{ text: 'OK', onPress: () => router.replace('/driver') }]
+            );
+          }
         }
       }
     });

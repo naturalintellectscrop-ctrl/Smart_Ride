@@ -227,7 +227,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
   const [receiverPhone, setReceiverPhone] = useState('');
   const [route, setRoute] = useState<RouteData | null>(null);
   const [fare, setFare] = useState<DeliveryFare | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MOBILE_MONEY' | 'WALLET'>('CASH');
+  const [paymentMethod, setPaymentMethod] = useState<'CASH' | 'MTN_MOMO' | 'AIRTEL_MONEY' | 'WALLET'>('CASH');
   const [calculating, setCalculating] = useState(false);
   
   // Item details state
@@ -440,7 +440,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-white/50">Payment</span>
-                  <span className="text-[#00FF88]">{paymentMethod === 'MOBILE_MONEY' ? 'MTN MoMo' : paymentMethod}</span>
+                  <span className="text-[#00FF88]">{paymentMethod === 'MTN_MOMO' ? 'MTN MoMo' : paymentMethod === 'AIRTEL_MONEY' ? 'Airtel Money' : paymentMethod}</span>
                 </div>
               </div>
             </Card>
@@ -650,7 +650,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
               </div>
               <div>
                 <p className="text-sm text-white/50">Payment</p>
-                <p className="font-medium text-[#00FF88]">{paymentMethod === 'MOBILE_MONEY' ? 'MTN MoMo' : paymentMethod}</p>
+                <p className="font-medium text-[#00FF88]">{paymentMethod === 'MTN_MOMO' ? 'MTN MoMo' : paymentMethod === 'AIRTEL_MONEY' ? 'Airtel Money' : paymentMethod}</p>
               </div>
             </div>
           </Card>
@@ -796,25 +796,31 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
             <p className="text-xs text-white/50 mb-3">Payment Method</p>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { id: 'CASH', label: 'Cash', icon: '💵' },
-                { id: 'MOBILE_MONEY', label: 'MoMo', icon: '📱' },
-                { id: 'WALLET', label: 'Wallet', icon: '💳' },
+                { id: 'CASH' as const, label: 'Cash', icon: '💵', disabled: false },
+                { id: 'MTN_MOMO' as const, label: 'MTN MoMo', icon: '📱', disabled: true, badge: 'Coming Soon' },
+                { id: 'AIRTEL_MONEY' as const, label: 'Airtel', icon: '📱', disabled: true, badge: 'Coming Soon' },
+                { id: 'WALLET' as const, label: 'Wallet', icon: '💳', disabled: true, badge: 'Coming Soon' },
               ].map((method) => (
                 <button
                   key={method.id}
-                  onClick={() => setPaymentMethod(method.id as typeof paymentMethod)}
+                  onClick={() => !method.disabled && setPaymentMethod(method.id as typeof paymentMethod)}
                   className={cn(
-                    "p-3 rounded-xl border flex flex-col items-center gap-1 transition-all",
+                    "p-3 rounded-xl border flex flex-col items-center gap-1 transition-all relative",
                     paymentMethod === method.id
                       ? "border-[#14B8A6] bg-[#14B8A6]/10"
-                      : "border-white/10 bg-white/5 hover:border-white/20"
+                      : method.disabled
+                        ? "border-white/5 bg-white/[0.02] opacity-50 cursor-not-allowed"
+                        : "border-white/10 bg-white/5 hover:border-white/20"
                   )}
                 >
                   <span className="text-lg">{method.icon}</span>
                   <span className={cn(
                     "text-xs font-medium",
-                    paymentMethod === method.id ? "text-[#14B8A6]" : "text-white/60"
+                    paymentMethod === method.id ? "text-[#14B8A6]" : method.disabled ? "text-white/30" : "text-white/60"
                   )}>{method.label}</span>
+                  {method.badge && (
+                    <span className="absolute -top-1 -right-1 text-[8px] bg-white/10 text-white/40 px-1 rounded">{method.badge}</span>
+                  )}
                 </button>
               ))}
             </div>

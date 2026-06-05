@@ -148,6 +148,14 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
   const matchTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Connect to Supabase Realtime on mount
+  useEffect(() => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !socketService.isConnectedToSocket()) {
+      socketService.connect(token);
+    }
+  }, []);
+
   // Auto-select best available vehicle when pricing is ready
   const effectiveVehicle = React.useMemo(() => {
     if (!selectedVehicle && distanceKm > 0) {
@@ -217,6 +225,12 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
     // Clear any previous listeners
     socketUnsubs.current.forEach(unsub => unsub());
     socketUnsubs.current = [];
+
+    // Ensure socket is connected before joining room
+    if (!socketService.isConnectedToSocket()) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      if (token) socketService.connect(token);
+    }
 
     // Join the task room to receive status updates
     socketService.joinTaskRoom(createdTaskId);

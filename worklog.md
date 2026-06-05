@@ -1107,3 +1107,100 @@ Stage Summary:
 - Auth token key unified to `accessToken` on web (with backward compat fallback)
 - 401 errors handled globally in auth-api.ts with token cleanup + redirect
 - Empty states improved with actionable messages
+
+---
+Task ID: 3-c/3-d
+Agent: customer-journey-fix-2
+Task: Fix duplicate location updates + socket disconnect clearing listeners
+
+Work Log:
+- H4: Fixed duplicate location updates in use-driver-location.ts
+  - Replaced `socketService.updateDriverLocation({...})` with `socketService.updateLocation({riderId: driverId, ...})`
+  - `updateLocation()` includes riderId and broadcasts to both task room (if active) and rider's personal channel
+  - `updateDriverLocation()` was a redundant call that broadcast the same `rider:location:update` event to the rider channel only, causing clients to receive every location update twice
+  - Added comment explaining why `updateDriverLocation()` must NOT be called alongside `updateLocation()`
+- H8: Verified socket disconnect listener clearing is already fixed
+  - The `disconnect()` method in `src/services/socket.ts` no longer calls `this.listeners.clear()`
+  - This was already fixed during the Socket.io → Supabase Realtime migration (Task ID 9)
+  - Lines 238-242 contain an explicit comment: "NOTE: Do NOT clear listeners on disconnect. Components register listeners independently of connection state..."
+  - Listeners are properly cleaned up only via individual `off()` calls in component useEffect cleanup functions
+- Ran `bun run lint` — passes cleanly with no errors
+
+Stage Summary:
+- H4 FIXED: Driver location hook now uses `updateLocation()` with riderId instead of `updateDriverLocation()`, eliminating duplicate `rider:location:update` broadcasts
+- H8 ALREADY FIXED: Socket service `disconnect()` preserves listeners — no `this.listeners.clear()` call present
+- Lint passes cleanly
+
+---
+Task ID: 3-e/3-f
+Agent: customer-journey-fix-3
+Task: Fix driver-task.tsx status listener + order-tracking.tsx infinite loop
+
+Work Log:
+- Read worklog.md to understand previous work context
+- Read driver-task.tsx, order-tracking.tsx, and socket.service.ts to understand current state
+- H5 (driver-task.tsx): Found that a `task:status:update` listener already existed from prior work but had two gaps:
+  1. Missing `socketService.connect()` call before `joinTaskRoom()` — the mobile socket service's `joinTaskRoom()` silently fails if not connected (unlike `joinDriverRoom()` which auto-connects)
+  2. Listener only handled CANCELLED/FAILED; didn't update task state immediately or handle COMPLETED/CLOSED
+- H5 Fix applied:
+  - Added `socketService.connect().then(() => socketService.joinTaskRoom(params.taskId))` to ensure connection before room join
+  - Improved listener: now uses `setTask(prev => prev ? { ...prev, status: data.status } : prev)` for immediate optimistic UI update
+  - Added handling for COMPLETED, CLOSED terminal states (triggers full reload via `loadTask()`)
+  - Kept CANCELLED/FAILED alerts with navigation back to driver home
+  - Kept cleanup with `unsubscribe()` and `leaveTaskRoom()`
+- H6 (order-tracking.tsx): Verified the infinite loop fix was already in place from prior work:
+  - Uses `taskIdRef = useRef<string>(params.orderId)` to store task ID
+  - Separate useEffect updates the ref when `order` changes (doesn't trigger re-subscription)
+  - Socket subscription useEffect depends only on `[params.orderId]`, NOT on `order`
+  - No code changes needed for this file
+- Ran `bun run lint` — passes cleanly with no errors
+
+Stage Summary:
+- H5 FIXED: driver-task.tsx now calls `socketService.connect()` before `joinTaskRoom()`, and the `task:status:update` listener immediately updates local task state + handles all terminal statuses (COMPLETED, CANCELLED, CLOSED, FAILED)
+- H6 ALREADY FIXED: order-tracking.tsx uses `useRef` pattern to avoid infinite re-subscription loop; `order` is NOT in the socket useEffect dependency array
+- Lint passes cleanly
+
+---
+Task ID: 3-a/3-b
+Agent: customer-journey-fix-1
+Task: Fix ride-booking.tsx missing socket connect + service-screen.tsx MOBILE_MONEY enum
+
+Work Log:
+- **ride-booking.tsx (C5 fix)**: Added `useEffect` after refs (line 151) that calls `socketService.connect(token)` on mount if token exists and socket is not already connected
+- **ride-booking.tsx (C5 fix)**: Added `isConnectedToSocket()` guard in `startListeningForMatch()` before `joinTaskRoom()` to ensure socket is connected before joining the task room
+- **service-screen.tsx (H2 fix)**: Verified MOBILE_MONEY was already removed from this file in prior work — type is `'CASH' | 'MTN_MOMO' | 'AIRTEL_MONEY' | 'WALLET'` with CASH default, MTN_MOMO/AIRTEL_MONEY/WALLET disabled with "Coming Soon" badges
+- **shopping-screen.tsx (H2 fix, bonus)**: Replaced `'CASH' | 'MOBILE_MONEY' | 'WALLET'` with `'CASH' | 'MTN_MOMO' | 'AIRTEL_MONEY' | 'WALLET'`, changed default from `'MOBILE_MONEY'` to `'CASH'`, removed broken MOBILE_MONEY→MTN_MOMO mapping in API call, replaced inline payment buttons with CASH active + MTN_MOMO/AIRTEL_MONEY/WALLET disabled with "Coming Soon" badges
+- **item-delivery-screen.tsx (H2 fix, bonus)**: Replaced `'CASH' | 'MOBILE_MONEY' | 'WALLET'` with `'CASH' | 'MTN_MOMO' | 'AIRTEL_MONEY' | 'WALLET'`, updated display labels from `MOBILE_MONEY ? 'MTN MoMo'` to `MTN_MOMO ? 'MTN MoMo' : AIRTEL_MONEY ? 'Airtel Money'`, replaced inline payment buttons with CASH active + disabled options with "Coming Soon" badges
+- **health-screen.tsx (H2 fix, bonus)**: Replaced `'CASH' | 'MOBILE_MONEY' | 'WALLET'` with `'CASH' | 'MTN_MOMO' | 'AIRTEL_MONEY' | 'WALLET'`, changed default from `'MOBILE_MONEY'` to `'CASH'`, replaced inline payment buttons with CASH active + disabled options with "Coming Soon" badges
+- Lint passes cleanly with no errors
+
+Stage Summary:
+- ride-booking.tsx now connects to Supabase Realtime on mount and before joining task rooms (fixes C5 audit finding — clients will now receive rider matching events)
+- All 4 client service screens (service-screen, shopping-screen, item-delivery-screen, health-screen) now use valid Prisma PaymentMethod enum values (CASH, MTN_MOMO, AIRTEL_MONEY, WALLET) instead of invalid MOBILE_MONEY (fixes H2 audit finding — no more 400 validation errors)
+- Mobile money and wallet options disabled with "Coming Soon" badges across all screens
+- shopping-screen and health-screen no longer default to MOBILE_MONEY (was causing immediate 400 errors on any order)
+
+---
+Task ID: 1-3
+Agent: Main
+Task: Provide Vercel env vars, verify Expo env vars, Phase 1-4 customer journey fixes
+
+Work Log:
+- Provided complete list of Vercel env vars (8 required + 7 optional)
+- Verified Expo mobile .env is already set up with all needed vars (API URL, Google Client ID, Mapbox token, Supabase URL + anon key)
+- Fixed ride-booking.tsx: Added socketService.connect(token) on mount + pre-join connection guard in startListeningForMatch
+- Fixed service-screen.tsx/shopping-screen.tsx/item-delivery-screen.tsx/health-screen.tsx: Replaced MOBILE_MONEY enum with proper MTN_MOMO/AIRTEL_MONEY + Coming Soon badges
+- Fixed use-driver-location.ts: Removed duplicate updateDriverLocation() call, keeping only updateLocation() (includes riderId)
+- Verified web socket disconnect() does NOT clear listeners (already fixed in prior migration)
+- Fixed driver-task.tsx: Added socketService.connect() before joinTaskRoom + expanded task:status:update listener to handle COMPLETED/CANCELLED/CLOSED/FAILED
+- Verified order-tracking.tsx infinite loop already fixed (uses useRef pattern)
+- Fixed mobile socket.service.ts reconnect(): Added room re-subscription after reconnect (driver/task/rider rooms)
+- Lint passes cleanly with zero errors
+- Dev server starts and serves GET / 200 successfully
+
+Stage Summary:
+- All 8 customer journey audit issues fixed (H2, H4, H5, H7 + C5 ride-booking connect)
+- 3 issues confirmed already fixed in prior work (H6 order-tracking, H8 socket listeners, C1 rider-tracking)
+- Mobile socket service now properly re-joins rooms after auto-reconnect
+- Vercel env vars documented for deployment
+- Expo mobile env vars already configured
