@@ -118,6 +118,10 @@ const MAPBOX_API_BASE = 'https://api.mapbox.com';
 const UGANDA_COUNTRY_CODE = 'ug';
 const KAMPALA_CENTER: [number, number] = [32.5825, 0.3476]; // [lng, lat]
 
+// Next.js uses NEXT_PUBLIC_ prefix; Expo uses EXPO_PUBLIC_ prefix
+// Both are set in .env — prefer NEXT_PUBLIC_ for server-side, fall back to EXPO_PUBLIC_
+const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
+
 // Place types to search for in Uganda
 const PLACE_TYPES = [
   'poi',          // Points of interest (restaurants, shops, etc.)
@@ -166,17 +170,14 @@ export async function searchPlaces(
     bbox?: [number, number, number, number];
   }
 ): Promise<PlaceResult[]> {
-  // Expo release builds require EXPO_PUBLIC_ prefix
-  const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  
-  if (!token) {
+  if (!MAPBOX_ACCESS_TOKEN) {
     console.error('Mapbox access token not found');
     return getFallbackPlaces(query);
   }
 
   try {
     const params = new URLSearchParams({
-      access_token: token,
+      access_token: MAPBOX_ACCESS_TOKEN,
       country: options?.country || UGANDA_COUNTRY_CODE,
       types: options?.types?.join(',') || PLACE_TYPES,
       limit: String(options?.limit || 10),
@@ -222,16 +223,13 @@ export async function reverseGeocode(
   lat: number,
   lng: number
 ): Promise<PlaceResult | null> {
-  // Expo release builds require EXPO_PUBLIC_ prefix
-  const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  
-  if (!token) {
+  if (!MAPBOX_ACCESS_TOKEN) {
     return null;
   }
 
   try {
     const params = new URLSearchParams({
-      access_token: token,
+      access_token: MAPBOX_ACCESS_TOKEN,
       country: UGANDA_COUNTRY_CODE,
       types: PLACE_TYPES,
     });
@@ -276,16 +274,13 @@ export async function getPlacesByCategory(
   proximity?: [number, number],
   limit: number = 20
 ): Promise<PlaceResult[]> {
-  // Expo release builds require EXPO_PUBLIC_ prefix
-  const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  
-  if (!token) {
+  if (!MAPBOX_ACCESS_TOKEN) {
     return getFallbackPlacesByCategory(category);
   }
 
   try {
     const params = new URLSearchParams({
-      access_token: token,
+      access_token: MAPBOX_ACCESS_TOKEN,
       country: UGANDA_COUNTRY_CODE,
       types: 'poi',
       limit: String(limit),
@@ -331,16 +326,13 @@ export async function getDirections(
   destination: [number, number],
   profile: 'driving' | 'walking' | 'cycling' = 'driving'
 ): Promise<RouteResult | null> {
-  // Expo release builds require EXPO_PUBLIC_ prefix
-  const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  
-  if (!token) {
+  if (!MAPBOX_ACCESS_TOKEN) {
     return null;
   }
 
   try {
     const params = new URLSearchParams({
-      access_token: token,
+      access_token: MAPBOX_ACCESS_TOKEN,
       geometries: 'geojson',
       steps: 'true',
       overview: 'full',
@@ -400,10 +392,7 @@ export function getStaticMapUrl(options: {
   path?: Array<[number, number]>;
   style?: 'streets-v11' | 'satellite-v9' | 'dark-v11' | 'light-v11' | 'navigation-night-v1';
 }): string {
-  // Expo release builds require EXPO_PUBLIC_ prefix
-  const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  
-  if (!token) {
+  if (!MAPBOX_ACCESS_TOKEN) {
     return '';
   }
 
@@ -434,7 +423,7 @@ export function getStaticMapUrl(options: {
 
   const overlayString = overlays.length > 0 ? overlays.join(',') + ',' : '';
   
-  return `${MAPBOX_API_BASE}/styles/v1/mapbox/${style}/static/${overlayString}${center[0]},${center[1]},${zoom}/${width}x${height}@2x?access_token=${token}`;
+  return `${MAPBOX_API_BASE}/styles/v1/mapbox/${style}/static/${overlayString}${center[0]},${center[1]},${zoom}/${width}x${height}@2x?access_token=${MAPBOX_ACCESS_TOKEN}`;
 }
 
 /**
@@ -449,10 +438,7 @@ export function getRouteMapUrl(
     style?: 'streets-v11' | 'dark-v11';
   }
 ): string {
-  // Expo release builds require EXPO_PUBLIC_ prefix
-  const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  
-  if (!token) {
+  if (!MAPBOX_ACCESS_TOKEN) {
     return '';
   }
 
@@ -471,7 +457,7 @@ export function getRouteMapUrl(
   const centerLng = (origin[0] + destination[0]) / 2;
   const centerLat = (origin[1] + destination[1]) / 2;
 
-  return `${MAPBOX_API_BASE}/styles/v1/mapbox/${style}/static/${pathOverlay},${pickupMarker},${destMarker}/auto/${width}x${height}@2x?padding=50&access_token=${token}`;
+  return `${MAPBOX_API_BASE}/styles/v1/mapbox/${style}/static/${pathOverlay},${pickupMarker},${destMarker}/auto/${width}x${height}@2x?padding=50&access_token=${MAPBOX_ACCESS_TOKEN}`;
 }
 
 // ==========================================

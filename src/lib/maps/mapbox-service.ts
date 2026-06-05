@@ -4,8 +4,9 @@
  */
 
 // Mapbox configuration
-// Expo release builds require EXPO_PUBLIC_ prefix
-const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.EXPO_PUBLIC_MAPBOX_TOKEN || '';
+// Next.js uses NEXT_PUBLIC_ prefix; Expo uses EXPO_PUBLIC_ prefix
+// Both are set in .env — prefer NEXT_PUBLIC_ for server-side, fall back to EXPO_PUBLIC_
+const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 const MAPBOX_BASE_URL = 'https://api.mapbox.com';
 
 // ==========================================

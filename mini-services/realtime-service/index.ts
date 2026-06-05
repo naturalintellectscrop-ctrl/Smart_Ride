@@ -18,6 +18,8 @@ const CORS_ORIGINS = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
   'https://smartrideug.vercel.app',
+  // Fly.io realtime service origin (for health checks / internal)
+  'https://smartride-realtime.fly.dev',
   // Add any other domains you need
 ];
 

@@ -58,6 +58,7 @@ import {
   UserPlus
 } from 'lucide-react';
 import { EditUserDialog } from '@/components/dashboard/edit-user-dialog';
+import { downloadBlob } from '@/lib/export';
 
 interface User {
   id: string;
@@ -93,6 +94,8 @@ export function UserManagement() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+
+  const [isExporting, setIsExporting] = useState(false);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -220,9 +223,36 @@ export function UserManagement() {
           <p className="text-gray-400 mt-1">Manage clients and admin users</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" size="sm" className="glass-button text-gray-300 border-white/10 hover:bg-white/5">
-            <Download className="h-4 w-4 mr-2" />
-            Export
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="glass-button text-gray-300 border-white/10 hover:bg-white/5"
+            disabled={isExporting}
+            onClick={async () => {
+              setIsExporting(true);
+              try {
+                const token = localStorage.getItem('accessToken');
+                const headers: HeadersInit = {};
+                if (token) headers['Authorization'] = `Bearer ${token}`;
+                const params = new URLSearchParams({ action: 'export' });
+                if (roleFilter !== 'all') params.append('role', roleFilter);
+                if (statusFilter !== 'all') params.append('status', statusFilter);
+                if (searchQuery) params.append('search', searchQuery);
+                const response = await fetch(`/api/admin/users?${params.toString()}`, { headers });
+                if (!response.ok) throw new Error('Export failed');
+                const blob = await response.blob();
+                const date = new Date().toISOString().split('T')[0];
+                downloadBlob(blob, `users-export-${date}.csv`);
+              } catch (err) {
+                console.error('Export error:', err);
+                alert('Failed to export users. Please try again.');
+              } finally {
+                setIsExporting(false);
+              }
+            }}
+          >
+            {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+            Export CSV
           </Button>
           <Dialog>
             <DialogTrigger asChild>

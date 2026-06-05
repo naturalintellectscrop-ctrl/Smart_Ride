@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { UserRole, UserStatus } from '@prisma/client';
+import { generateCSV, csvResponse } from '@/lib/export';
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
@@ -27,6 +28,7 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role');
     const status = searchParams.get('status');
     const search = searchParams.get('search');
+    const action = searchParams.get('action');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
@@ -48,6 +50,48 @@ export async function GET(request: NextRequest) {
         { email: { contains: search, mode: 'insensitive' } },
         { phone: { contains: search, mode: 'insensitive' } },
       ];
+    }
+
+    // CSV Export
+    if (action === 'export') {
+      const users = await db.user.findMany({
+        where,
+        take: 10000,
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          name: true,
+          role: true,
+          status: true,
+          createdAt: true,
+          lastLoginAt: true,
+          _count: {
+            select: {
+              orders: true,
+              tasks: true,
+            }
+          }
+        }
+      });
+
+      const headers = ['Name', 'Email', 'Phone', 'Role', 'Status', 'Joined', 'Last Login', 'Orders', 'Tasks'];
+      const rows = users.map(u => [
+        u.name,
+        u.email,
+        u.phone || '',
+        u.role,
+        u.status,
+        new Date(u.createdAt).toLocaleDateString(),
+        u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleDateString() : 'Never',
+        String(u._count.orders),
+        String(u._count.tasks),
+      ]);
+
+      const csv = generateCSV(headers, rows);
+      const date = new Date().toISOString().split('T')[0];
+      return csvResponse(csv, `users-export-${date}.csv`);
     }
 
     // Get users and count

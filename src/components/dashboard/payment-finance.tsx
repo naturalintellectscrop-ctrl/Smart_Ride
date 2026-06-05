@@ -24,6 +24,7 @@ import {
   CreditCard,
   ArrowUpRight
 } from 'lucide-react';
+import { downloadBlob } from '@/lib/export';
 
 interface Payment {
   id: string;
@@ -76,6 +77,7 @@ export function PaymentFinance() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -159,9 +161,32 @@ export function PaymentFinance() {
           </h1>
           <p className="text-gray-400 mt-1">Track payments, commissions, and payouts</p>
         </div>
-        <Button variant="outline" size="sm" className="glass-button text-gray-300 border-white/10 hover:bg-white/5">
-          <Download className="h-4 w-4 mr-2" />
-          Export Report
+        <Button 
+          variant="outline" 
+          size="sm" 
+          className="glass-button text-gray-300 border-white/10 hover:bg-white/5"
+          disabled={isExporting}
+          onClick={async () => {
+            setIsExporting(true);
+            try {
+              const token = localStorage.getItem('accessToken');
+              const headers: HeadersInit = {};
+              if (token) headers['Authorization'] = `Bearer ${token}`;
+              const response = await fetch('/api/payments?action=export', { headers });
+              if (!response.ok) throw new Error('Export failed');
+              const blob = await response.blob();
+              const date = new Date().toISOString().split('T')[0];
+              downloadBlob(blob, `payments-export-${date}.csv`);
+            } catch (err) {
+              console.error('Export error:', err);
+              alert('Failed to export payments. Please try again.');
+            } finally {
+              setIsExporting(false);
+            }
+          }}
+        >
+          {isExporting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+          Export CSV
         </Button>
       </div>
 
