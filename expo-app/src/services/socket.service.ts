@@ -1,12 +1,14 @@
 // ============================================
-// SMART RIDE MOBILE - SOCKET SERVICE
+// SMART RIDE MOBILE - REALTIME SERVICE
 // ============================================
-// Real-time communication for driver and rider apps
+// Supabase Realtime client for Expo React Native.
+// Replaces Socket.io with Supabase Realtime channels.
+// Same API surface as the old SocketService — consuming code unchanged.
 // ============================================
 
-import { io, Socket } from 'socket.io-client';
+import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS, API_CONFIG } from '../constants';
+import { STORAGE_KEYS } from '../constants';
 
 // ============================================
 // TYPES
@@ -51,23 +53,23 @@ interface TaskUpdate {
 }
 
 // ============================================
-// SOCKET SERVICE CLASS
+// REALTIME SERVICE CLASS
 // ============================================
 
 class SocketService {
-  private socket: Socket | null = null;
+  private supabase: SupabaseClient | null = null;
   private isConnected: boolean = false;
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5;
   private listeners: Map<string, Set<Function>> = new Map();
+  private channels: Map<string, RealtimeChannel> = new Map();
 
-  // Track current task room for re-subscription on reconnect
+  // Track current user
+  private currentUserId: string | null = null;
+  private currentToken: string | null = null;
+
+  // Track rooms for re-subscription on reconnect
   private currentTaskRoom: string | null = null;
-
-  // Track current driver room for re-subscription on reconnect
   private currentDriverRoom: string | null = null;
-
-  // Track current rider room for re-subscription on reconnect
   private currentRiderRoom: string | null = null;
 
   // Track expiry timers for incoming driver requests
@@ -78,272 +80,179 @@ class SocketService {
   // ==========================================
 
   async connect(): Promise<void> {
-    if (this.socket?.connected) {
-      console.log('[SOCKET] Already connected');
+    if (this.isConnected) {
+      console.log('[Realtime] Already connected');
       return;
     }
 
     try {
       const token = await AsyncStorage.getItem(STORAGE_KEYS.authToken);
-      
-      // Build the socket URL: connect through gateway to realtime service
-      // The gateway uses XTransformPort query param to route to the correct service
-      let wsUrl: string;
-      
-      if (API_CONFIG.socketUrl) {
-        // Explicit socket URL provided (e.g. for production)
-        wsUrl = API_CONFIG.socketUrl;
-      } else {
-        // Derive from API base URL, add XTransformPort for gateway routing
-        const apiBase = API_CONFIG.baseUrl;
-        // Strip /api suffix if present, then add gateway routing params
-        const baseUrl = apiBase.replace(/\/api$/, '');
-        const protocol = baseUrl.startsWith('https') ? 'wss' : 'ws';
-        const host = baseUrl.replace(/^https?:\/\//, '');
-        wsUrl = `${protocol}://${host}/?XTransformPort=${API_CONFIG.realtimePort}`;
+      if (!token) {
+        console.warn('[Realtime] No auth token found');
+        return;
       }
-      
-      console.log('[SOCKET] Connecting to:', wsUrl);
 
-      this.socket = io(wsUrl, {
-        auth: { token },
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionAttempts: this.maxReconnectAttempts,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 20000,
-        // Socket.io path - default is /socket.io/
-        path: '/socket.io/',
-      });
+      this.currentToken = token;
 
-      this.setupEventHandlers();
-    } catch (error) {
-      console.error('[SOCKET] Connection error:', error);
-    }
-  }
+      // Extract userId from JWT
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        this.currentUserId = payload.userId || payload.sub || '';
+      } catch {
+        this.currentUserId = '';
+      }
 
-  private setupEventHandlers(): void {
-    if (!this.socket) return;
+      // Initialize Supabase client
+      this.initSupabase();
 
-    this.socket.on('connect', () => {
-      console.log('[SOCKET] Connected');
+      // Subscribe to personal channel for user-specific events
+      this.subscribeToUserChannel();
+
       this.isConnected = true;
       this.reconnectAttempts = 0;
-      this.emit('connection:changed', { connected: true });
+      this.emitLocal('connection:changed', { connected: true });
 
-      // Re-subscribe to rooms after reconnect
-      this.resubscribeRooms();
-    });
-
-    this.socket.on('disconnect', (reason) => {
-      console.log('[SOCKET] Disconnected:', reason);
-      this.isConnected = false;
-      this.emit('connection:changed', { connected: false, reason });
-    });
-
-    this.socket.on('connect_error', (error) => {
-      console.error('[SOCKET] Connection error:', error.message);
+      console.log('[Realtime] Connected as user:', this.currentUserId);
+    } catch (error) {
+      console.error('[Realtime] Connection error:', error);
       this.reconnectAttempts++;
-      this.emit('connection:error', { error: error.message, attempts: this.reconnectAttempts });
-    });
-
-    this.socket.on('error', (error) => {
-      console.error('[SOCKET] Error:', error);
-      this.emit('error', error);
-    });
-
-    // ==========================================
-    // DRIVER EVENTS (matching backend realtime service)
-    // ==========================================
-
-    this.socket.on('driver:request', (data: IncomingRequest) => {
-      console.log('[SOCKET] Incoming ride request:', data.task?.id);
-      this.emit('driver:request', data);
-
-      // Set up local expiry timer for this request
-      this.scheduleRequestExpiry(data.task.id, data.expiresAt);
-    });
-
-    this.socket.on('driver:request:cancelled', (data: { taskId: string }) => {
-      console.log('[SOCKET] Request cancelled:', data.taskId);
-      this.emit('driver:request:cancelled', data);
-
-      // Clear the expiry timer since request was cancelled
-      this.clearRequestExpiryTimer(data.taskId);
-    });
-
-    this.socket.on('driver:task:updated', (data: TaskUpdate) => {
-      console.log('[SOCKET] Task updated:', data);
-      this.emit('driver:task:updated', data);
-    });
-
-    // ==========================================
-    // DISPATCH MATCH EVENTS
-    // ==========================================
-
-    this.socket.on('dispatch:match', (data: { matchId: string; taskId: string; riderId: string }) => {
-      console.log('[SOCKET] Dispatch match:', data);
-      this.emit('dispatch:match', data);
-    });
-
-    this.socket.on('dispatch:new-task', (data: { matchId: string; taskId: string; riderId: string }) => {
-      console.log('[SOCKET] Dispatch new task:', data);
-      this.emit('dispatch:new-task', data);
-      // Also emit as dispatch:match for backward compatibility
-      this.emit('dispatch:match', data);
-    });
-
-    this.socket.on('dispatch:assignment', (data: { taskId: string; riderId: string }) => {
-      console.log('[SOCKET] Dispatch assignment:', data);
-      this.emit('dispatch:assignment', data);
-    });
-
-    // ==========================================
-    // CLIENT EVENTS (customer side)
-    // ==========================================
-
-    this.socket.on('rider:task:created', (data: TaskUpdate) => {
-      console.log('[SOCKET] Task created:', data);
-      this.emit('rider:task:created', data);
-    });
-
-    this.socket.on('rider:task:matched', (data: any) => {
-      console.log('[SOCKET] Driver matched:', data);
-      this.emit('rider:task:matched', data);
-    });
-
-    // Fixed: server emits 'rider:location:update' not 'rider:driver:location'
-    this.socket.on('rider:location:update', (data: LocationUpdate & { driverId: string }) => {
-      console.log('[SOCKET] Rider location update:', data);
-      this.emit('rider:location:update', data);
-      // Also emit under old name for backward compatibility
-      this.emit('rider:driver:location', data);
-    });
-
-    // Fixed: server emits 'task:status:update' not 'rider:task:status'
-    this.socket.on('task:status:update', (data: TaskUpdate) => {
-      console.log('[SOCKET] Task status update:', data);
-      this.emit('task:status:update', data);
-    });
-
-    this.socket.on('rider:task:completed', (data: any) => {
-      console.log('[SOCKET] Task completed:', data);
-      this.emit('rider:task:completed', data);
-    });
-
-    // ==========================================
-    // CHAT EVENTS
-    // ==========================================
-
-    this.socket.on('chat:message', (data: any) => {
-      console.log('[SOCKET] Chat message received');
-      this.emit('chat:message', data);
-    });
-
-    this.socket.on('chat:typing', (data: { roomId: string; userId: string; isTyping: boolean }) => {
-      this.emit('chat:typing', data);
-    });
-
-    // Notification events from backend
-    this.socket.on('notification', (data: any) => {
-      console.log('[SOCKET] Notification received');
-      this.emit('notification', data);
-    });
-  }
-
-  // ==========================================
-  // RE-SUBSCRIPTION ON RECONNECT
-  // ==========================================
-
-  private resubscribeRooms(): void {
-    if (!this.socket?.connected) return;
-
-    // Re-join driver room if previously joined
-    if (this.currentDriverRoom) {
-      console.log('[SOCKET] Re-subscribing to driver room:', this.currentDriverRoom);
-      this.socket.emit('driver:join', { driverId: this.currentDriverRoom });
-    }
-
-    // Re-join rider room if previously joined
-    if (this.currentRiderRoom) {
-      console.log('[SOCKET] Re-subscribing to rider room:', this.currentRiderRoom);
-      this.socket.emit('rider:join', { riderId: this.currentRiderRoom });
-    }
-
-    // Re-join task room if previously joined
-    if (this.currentTaskRoom) {
-      console.log('[SOCKET] Re-subscribing to task room:', this.currentTaskRoom);
-      this.socket.emit('task:join', this.currentTaskRoom);
+      this.emitLocal('connection:error', { error: String(error), attempts: this.reconnectAttempts });
     }
   }
 
-  // ==========================================
-  // REQUEST EXPIRY TIMER
-  // ==========================================
+  private initSupabase(): void {
+    if (this.supabase) return;
 
-  /**
-   * Schedule a local timer that fires `driver:request:expired` when the
-   * request's expiresAt time is reached. This is a client-side fallback
-   * since the server may not emit this event.
-   */
-  private scheduleRequestExpiry(taskId: string, expiresAt: string): void {
-    // Clear any existing timer for this task
-    this.clearRequestExpiryTimer(taskId);
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-    const expiryTime = new Date(expiresAt).getTime();
-    const now = Date.now();
-    const delay = expiryTime - now;
-
-    if (delay <= 0) {
-      // Already expired
-      console.log('[SOCKET] Request already expired:', taskId);
-      this.emit('driver:request:expired', { taskId });
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('[Realtime] Missing EXPO_PUBLIC_SUPABASE_URL or EXPO_PUBLIC_SUPABASE_ANON_KEY');
       return;
     }
 
-    console.log('[SOCKET] Scheduling expiry timer for task:', taskId, 'in', delay, 'ms');
-
-    const timer = setTimeout(() => {
-      console.log('[SOCKET] Request expired (local timer):', taskId);
-      this.emit('driver:request:expired', { taskId });
-      this.requestExpiryTimers.delete(taskId);
-    }, delay);
-
-    this.requestExpiryTimers.set(taskId, timer);
-  }
-
-  /**
-   * Clear the expiry timer for a given task.
-   */
-  private clearRequestExpiryTimer(taskId: string): void {
-    const timer = this.requestExpiryTimers.get(taskId);
-    if (timer) {
-      clearTimeout(timer);
-      this.requestExpiryTimers.delete(taskId);
-      console.log('[SOCKET] Cleared expiry timer for task:', taskId);
-    }
-  }
-
-  /**
-   * Clear all request expiry timers.
-   */
-  private clearAllRequestExpiryTimers(): void {
-    this.requestExpiryTimers.forEach((timer, taskId) => {
-      clearTimeout(timer);
-      console.log('[SOCKET] Cleared expiry timer for task:', taskId);
+    this.supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
     });
-    this.requestExpiryTimers.clear();
+
+    console.log('[Realtime] Supabase client initialized');
+  }
+
+  /** Subscribe to user's personal channel */
+  private subscribeToUserChannel(): void {
+    if (!this.supabase || !this.currentUserId) return;
+
+    const channelName = `user:${this.currentUserId}`;
+    if (this.channels.has(channelName)) return;
+
+    const channel = this.createChannel(channelName);
+
+    // Driver events
+    channel.on('broadcast', { event: 'driver:request' }, (payload) => {
+      const data = payload.payload as IncomingRequest;
+      this.emitLocal('driver:request', data);
+      if (data.task?.id && data.expiresAt) {
+        this.scheduleRequestExpiry(data.task.id, data.expiresAt);
+      }
+    });
+
+    channel.on('broadcast', { event: 'driver:request:cancelled' }, (payload) => {
+      this.emitLocal('driver:request:cancelled', payload.payload);
+      const d = payload.payload as { taskId: string };
+      if (d?.taskId) this.clearRequestExpiryTimer(d.taskId);
+    });
+
+    channel.on('broadcast', { event: 'driver:task:updated' }, (payload) => {
+      this.emitLocal('driver:task:updated', payload.payload);
+    });
+
+    // Dispatch events
+    channel.on('broadcast', { event: 'dispatch:match' }, (payload) => {
+      this.emitLocal('dispatch:match', payload.payload);
+    });
+
+    channel.on('broadcast', { event: 'dispatch:new-task' }, (payload) => {
+      this.emitLocal('dispatch:new-task', payload.payload);
+      this.emitLocal('dispatch:match', payload.payload); // backward compat
+    });
+
+    channel.on('broadcast', { event: 'dispatch:assignment' }, (payload) => {
+      this.emitLocal('dispatch:assignment', payload.payload);
+    });
+
+    // Client events
+    channel.on('broadcast', { event: 'rider:task:created' }, (payload) => {
+      this.emitLocal('rider:task:created', payload.payload);
+    });
+
+    channel.on('broadcast', { event: 'rider:task:matched' }, (payload) => {
+      this.emitLocal('rider:task:matched', payload.payload);
+    });
+
+    channel.on('broadcast', { event: 'rider:task:completed' }, (payload) => {
+      this.emitLocal('rider:task:completed', payload.payload);
+    });
+
+    // Task status
+    channel.on('broadcast', { event: 'task:status:update' }, (payload) => {
+      this.emitLocal('task:status:update', payload.payload);
+    });
+
+    // Notifications
+    channel.on('broadcast', { event: 'notification' }, (payload) => {
+      this.emitLocal('notification', payload.payload);
+    });
+  }
+
+  /** Create a Supabase Realtime channel and track it */
+  private createChannel(name: string): RealtimeChannel {
+    if (!this.supabase) {
+      throw new Error('[Realtime] Supabase not initialized');
+    }
+
+    const channel = this.supabase.channel(name, {
+      config: {
+        broadcast: { self: false },
+        presence: { key: this.currentUserId || '' },
+      },
+    });
+
+    channel.subscribe((status: string) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[Realtime] Subscribed to: ${name}`);
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error(`[Realtime] Channel error: ${name}`);
+      } else if (status === 'TIMED_OUT') {
+        console.warn(`[Realtime] Channel timed out: ${name}`);
+      }
+    });
+
+    this.channels.set(name, channel);
+    return channel;
   }
 
   disconnect(): void {
-    if (this.socket) {
-      console.log('[SOCKET] Disconnecting...');
-      this.clearAllRequestExpiryTimers();
-      this.socket.disconnect();
-      this.socket = null;
-      this.isConnected = false;
+    this.clearAllRequestExpiryTimers();
+
+    for (const [name, channel] of this.channels.entries()) {
+      this.supabase?.removeChannel(channel);
     }
+    this.channels.clear();
+
+    this.isConnected = false;
+    this.currentToken = null;
+    this.currentUserId = null;
+    this.currentTaskRoom = null;
+    this.currentDriverRoom = null;
+    this.currentRiderRoom = null;
+    this.listeners.clear();
+
+    this.emitLocal('connection:changed', { connected: false, reason: 'intentional' });
+    console.log('[Realtime] Disconnected');
   }
 
   isSocketConnected(): boolean {
@@ -355,64 +264,77 @@ class SocketService {
   // ==========================================
 
   async joinDriverRoom(driverId: string): Promise<void> {
-    if (!this.socket?.connected) {
-      await this.connect();
-    }
-    
+    if (!this.isConnected) await this.connect();
+
     this.currentDriverRoom = driverId;
-    this.socket?.emit('driver:join', { driverId });
-    console.log('[SOCKET] Joined driver room:', driverId);
+    const channelName = `driver:${driverId}`;
+    if (!this.channels.has(channelName)) {
+      this.createChannel(channelName);
+    }
+    console.log('[Realtime] Joined driver room:', driverId);
   }
 
   leaveDriverRoom(driverId: string): void {
     this.currentDriverRoom = null;
-    this.socket?.emit('driver:leave', { driverId });
-    console.log('[SOCKET] Left driver room:', driverId);
+    const channelName = `driver:${driverId}`;
+    const channel = this.channels.get(channelName);
+    if (channel) {
+      this.supabase?.removeChannel(channel);
+      this.channels.delete(channelName);
+    }
+    console.log('[Realtime] Left driver room:', driverId);
   }
 
   updateLocation(location: LocationUpdate): void {
-    if (!this.socket?.connected) {
-      // Silently fail - will retry on next update
-      return;
-    }
-    
-    this.socket.emit('driver:location:update', {
+    if (!this.isConnected || !this.currentUserId) return;
+
+    const payload = {
+      riderId: this.currentUserId,
       latitude: location.latitude,
       longitude: location.longitude,
       heading: location.heading || 0,
       speed: location.speed || 0,
       timestamp: new Date().toISOString(),
-    });
+    };
+
+    // Broadcast to task room if in one
+    if (this.currentTaskRoom) {
+      const channel = this.channels.get(`task:${this.currentTaskRoom}`);
+      channel?.send({
+        type: 'broadcast',
+        event: 'rider:location:update',
+        payload,
+      });
+    }
+
+    // Also broadcast to rider's personal channel
+    const riderChannel = this.channels.get(`rider:${this.currentUserId}`);
+    if (riderChannel) {
+      riderChannel.send({
+        type: 'broadcast',
+        event: 'rider:location:update',
+        payload,
+      });
+    }
   }
 
-  /**
-   * Accept an incoming ride/delivery request.
-   */
   acceptRequest(taskId: string): void {
-    if (!this.socket?.connected) {
-      console.warn('[SOCKET] Cannot accept request - not connected');
+    if (!this.isConnected) {
+      console.warn('[Realtime] Cannot accept request - not connected');
       return;
     }
-
-    this.socket.emit('driver:request:accept', { taskId });
-    // Clear expiry timer since the driver accepted
+    // Accept is handled via API call, not realtime broadcast
     this.clearRequestExpiryTimer(taskId);
-    console.log('[SOCKET] Accepted request:', taskId);
+    console.log('[Realtime] Accepted request:', taskId);
   }
 
-  /**
-   * Reject/decline an incoming ride/delivery request.
-   */
   rejectRequest(taskId: string): void {
-    if (!this.socket?.connected) {
-      console.warn('[SOCKET] Cannot reject request - not connected');
+    if (!this.isConnected) {
+      console.warn('[Realtime] Cannot reject request - not connected');
       return;
     }
-
-    this.socket.emit('driver:request:reject', { taskId });
-    // Clear expiry timer since the driver rejected
     this.clearRequestExpiryTimer(taskId);
-    console.log('[SOCKET] Rejected request:', taskId);
+    console.log('[Realtime] Rejected request:', taskId);
   }
 
   // ==========================================
@@ -420,22 +342,61 @@ class SocketService {
   // ==========================================
 
   joinTaskRoom(taskId: string): void {
-    if (!this.socket?.connected) {
-      console.warn('[SOCKET] Cannot join task room - not connected');
+    if (!this.isConnected) {
+      console.warn('[Realtime] Cannot join task room - not connected');
       return;
     }
-    
-    // Fixed: server expects plain string, not object
+
     this.currentTaskRoom = taskId;
-    this.socket.emit('task:join', taskId);
-    console.log('[SOCKET] Joined task room:', taskId);
+    const channelName = `task:${taskId}`;
+
+    if (!this.channels.has(channelName)) {
+      const channel = this.createChannel(channelName);
+
+      // Listen for task-specific broadcasts
+      channel.on('broadcast', { event: 'task:status:update' }, (payload) => {
+        this.emitLocal('task:status:update', payload.payload);
+      });
+
+      channel.on('broadcast', { event: 'rider:location:update' }, (payload) => {
+        const data = payload.payload as LocationUpdate & { driverId?: string };
+        this.emitLocal('rider:location:update', data);
+        this.emitLocal('rider:driver:location', data); // backward compat
+      });
+
+      channel.on('broadcast', { event: 'rider:task:matched' }, (payload) => {
+        this.emitLocal('rider:task:matched', payload.payload);
+      });
+
+      channel.on('broadcast', { event: 'notification' }, (payload) => {
+        this.emitLocal('notification', payload.payload);
+      });
+    }
+
+    // Also subscribe to DB changes for this task
+    this.subscribeToTaskChanges(taskId);
+
+    console.log('[Realtime] Joined task room:', taskId);
   }
 
   leaveTaskRoom(taskId: string): void {
     this.currentTaskRoom = null;
-    // Fixed: server expects plain string, not object
-    this.socket?.emit('task:leave', taskId);
-    console.log('[SOCKET] Left task room:', taskId);
+
+    const channelName = `task:${taskId}`;
+    const channel = this.channels.get(channelName);
+    if (channel) {
+      this.supabase?.removeChannel(channel);
+      this.channels.delete(channelName);
+    }
+
+    const dbChannelName = `db:task:${taskId}`;
+    const dbChannel = this.channels.get(dbChannelName);
+    if (dbChannel) {
+      this.supabase?.removeChannel(dbChannel);
+      this.channels.delete(dbChannelName);
+    }
+
+    console.log('[Realtime] Left task room:', taskId);
   }
 
   // ==========================================
@@ -443,83 +404,109 @@ class SocketService {
   // ==========================================
 
   joinRiderRoom(riderId: string): void {
-    if (!this.socket?.connected) {
-      this.connect();
-    }
-    
+    if (!this.isConnected) this.connect();
+
     this.currentRiderRoom = riderId;
-    this.socket?.emit('rider:join', { riderId });
-    console.log('[SOCKET] Joined rider room:', riderId);
+    const channelName = `rider:${riderId}`;
+    if (!this.channels.has(channelName)) {
+      const channel = this.createChannel(channelName);
+
+      channel.on('broadcast', { event: 'rider:location:update' }, (payload) => {
+        this.emitLocal('rider:location:update', payload.payload);
+      });
+    }
+    console.log('[Realtime] Joined rider room:', riderId);
   }
 
   leaveRiderRoom(riderId: string): void {
     this.currentRiderRoom = null;
-    this.socket?.emit('rider:leave', { riderId });
-    console.log('[SOCKET] Left rider room:', riderId);
+    const channelName = `rider:${riderId}`;
+    const channel = this.channels.get(channelName);
+    if (channel) {
+      this.supabase?.removeChannel(channel);
+      this.channels.delete(channelName);
+    }
+    console.log('[Realtime] Left rider room:', riderId);
   }
 
   // ==========================================
   // CHAT METHODS
   // ==========================================
 
-  /**
-   * Send a chat message to a room.
-   */
   chatSend(roomId: string, message: any): void {
-    if (!this.socket?.connected) {
-      console.warn('[SOCKET] Cannot send chat message - not connected');
+    if (!this.isConnected) {
+      console.warn('[Realtime] Cannot send chat message - not connected');
       return;
     }
 
-    this.socket.emit('chat:message', { roomId, message });
-    console.log('[SOCKET] Chat message sent to room:', roomId);
+    const channelName = `chat:${roomId}`;
+    let channel = this.channels.get(channelName);
+    if (!channel) {
+      channel = this.createChannel(channelName);
+    }
+
+    channel.send({
+      type: 'broadcast',
+      event: 'chat:message',
+      payload: { roomId, message, timestamp: new Date().toISOString() },
+    });
   }
 
-  /**
-   * Join a chat room to receive messages.
-   */
   chatJoin(roomId: string): void {
-    if (!this.socket?.connected) {
-      console.warn('[SOCKET] Cannot join chat room - not connected');
+    if (!this.isConnected) {
+      console.warn('[Realtime] Cannot join chat room - not connected');
       return;
     }
 
-    this.socket.emit('chat:join', roomId);
-    console.log('[SOCKET] Joined chat room:', roomId);
+    const channelName = `chat:${roomId}`;
+    if (this.channels.has(channelName)) return;
+
+    const channel = this.createChannel(channelName);
+
+    channel.on('broadcast', { event: 'chat:message' }, (payload) => {
+      this.emitLocal('chat:message', payload.payload);
+    });
+
+    channel.on('broadcast', { event: 'chat:typing' }, (payload) => {
+      this.emitLocal('chat:typing', payload.payload);
+    });
+
+    console.log('[Realtime] Joined chat room:', roomId);
   }
 
-  /**
-   * Leave a chat room.
-   */
   chatLeave(roomId: string): void {
-    this.socket?.emit('chat:leave', roomId);
-    console.log('[SOCKET] Left chat room:', roomId);
+    const channelName = `chat:${roomId}`;
+    const channel = this.channels.get(channelName);
+    if (channel) {
+      this.supabase?.removeChannel(channel);
+      this.channels.delete(channelName);
+    }
+    console.log('[Realtime] Left chat room:', roomId);
   }
 
-  /**
-   * Indicate typing status in a chat room.
-   */
   chatTyping(roomId: string, isTyping: boolean): void {
-    if (!this.socket?.connected) {
-      console.warn('[SOCKET] Cannot send typing status - not connected');
-      return;
-    }
+    if (!this.isConnected) return;
 
-    this.socket.emit('chat:typing', { roomId, isTyping });
+    const channelName = `chat:${roomId}`;
+    let channel = this.channels.get(channelName);
+    if (!channel) return; // Must join first
+
+    channel.send({
+      type: 'broadcast',
+      event: 'chat:typing',
+      payload: { roomId, userId: this.currentUserId, isTyping },
+    });
   }
 
   // ==========================================
-  // EVENT LISTENERS
+  // EVENT LISTENERS (same API as before)
   // ==========================================
 
   on(event: string, callback: Function): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
-    
     this.listeners.get(event)!.add(callback);
-    
-    // Return unsubscribe function
     return () => {
       this.listeners.get(event)?.delete(callback);
     };
@@ -533,17 +520,90 @@ class SocketService {
     }
   }
 
-  private emit(event: string, data?: any): void {
+  private emitLocal(event: string, data?: any): void {
     const callbacks = this.listeners.get(event);
     if (callbacks) {
       callbacks.forEach(callback => {
         try {
           callback(data);
         } catch (error) {
-          console.error(`[SOCKET] Error in listener for ${event}:`, error);
+          console.error(`[Realtime] Error in listener for ${event}:`, error);
         }
       });
     }
+  }
+
+  // ==========================================
+  // DB CHANGES SUBSCRIPTION
+  // ==========================================
+
+  private subscribeToTaskChanges(taskId: string): void {
+    if (!this.supabase) return;
+
+    const channelName = `db:task:${taskId}`;
+    if (this.channels.has(channelName)) return;
+
+    const channel = this.supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes' as any,
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'Task',
+          filter: `id=eq.${taskId}`,
+        },
+        (payload: any) => {
+          const newRecord = payload.new;
+          if (newRecord) {
+            this.emitLocal('task:status:update', {
+              taskId: newRecord.id,
+              status: newRecord.status,
+              timestamp: new Date().toISOString(),
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    this.channels.set(channelName, channel);
+  }
+
+  // ==========================================
+  // REQUEST EXPIRY TIMER
+  // ==========================================
+
+  private scheduleRequestExpiry(taskId: string, expiresAt: string): void {
+    this.clearRequestExpiryTimer(taskId);
+
+    const expiryTime = new Date(expiresAt).getTime();
+    const now = Date.now();
+    const delay = expiryTime - now;
+
+    if (delay <= 0) {
+      this.emitLocal('driver:request:expired', { taskId });
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      this.emitLocal('driver:request:expired', { taskId });
+      this.requestExpiryTimers.delete(taskId);
+    }, delay);
+
+    this.requestExpiryTimers.set(taskId, timer);
+  }
+
+  private clearRequestExpiryTimer(taskId: string): void {
+    const timer = this.requestExpiryTimers.get(taskId);
+    if (timer) {
+      clearTimeout(timer);
+      this.requestExpiryTimers.delete(taskId);
+    }
+  }
+
+  private clearAllRequestExpiryTimers(): void {
+    this.requestExpiryTimers.forEach((timer) => clearTimeout(timer));
+    this.requestExpiryTimers.clear();
   }
 
   // ==========================================
@@ -563,4 +623,4 @@ class SocketService {
 export const socketService = new SocketService();
 export default socketService;
 
-console.log('[SOCKET-SERVICE] Service initialized');
+console.log('[REALTIME-SERVICE] Supabase Realtime service initialized');

@@ -157,8 +157,11 @@ export const RIDE_TYPES = {
 export const API_CONFIG = {
   baseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api',
   timeout: 30000,
-  // Socket.io URL - connects through gateway to realtime service (port 3001)
-  socketUrl: process.env.EXPO_PUBLIC_SOCKET_URL || '',
+  // Supabase Realtime (replaces Socket.io)
+  supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || '',
+  supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
+  // Legacy socket config (kept for reference, no longer used)
+  socketUrl: '',
   realtimePort: 3001,
 };
 
