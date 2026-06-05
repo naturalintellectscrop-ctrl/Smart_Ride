@@ -14,15 +14,16 @@ import {
   Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useLocationStore, useCartStore } from '@/src/store';
+import { useLocationStore, useCartStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, PAYMENT_METHODS } from '@/src/constants';
+import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
 
 export default function CartScreen() {
   const router = useRouter();
   const { address, latitude, longitude } = useLocationStore();
   const { items, removeItem, updateQuantity, clearCart, totalPrice, merchantId, merchantName } = useCartStore();
+  const { user } = useAuthStore();
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -64,19 +65,25 @@ export default function CartScreen() {
     setIsPlacingOrder(true);
     try {
       const response = await api.placeOrder({
+        clientId: user?.id,              // Fixed: backend requires clientId
         merchantId,
         orderType: 'FOOD_DELIVERY',
         items: items.map(item => ({
           menuItemId: item.productId,
           quantity: item.quantity,
-          name: item.name,
-          price: item.price,
+          itemName: item.name,        // Fixed: backend expects itemName (not name)
+          unitPrice: item.price,      // Fixed: backend expects unitPrice (not price)
         })),
+        subtotal: totalPrice,          // Fixed: backend requires subtotal
+        deliveryFee,
+        serviceFee,
+        totalAmount: total,             // Fixed: backend requires totalAmount
         deliveryAddress: address,
         deliveryLatitude: latitude,
         deliveryLongitude: longitude,
-        paymentMethod,
+        paymentMethod: PAYMENT_METHOD_MAP[paymentMethod] || paymentMethod,
         deliveryInstructions,
+        ...(phoneNumber && paymentMethod !== 'CASH' ? { recipientPhone: phoneNumber } : {}),
       });
 
       if (response.success && response.data) {

@@ -242,6 +242,45 @@ export async function POST(request: NextRequest) {
       description: `Order ${order.orderNumber} created for ${merchant.name}`,
     });
 
+    // Auto-create a FOOD_DELIVERY task so a rider can be dispatched
+    try {
+      const task = await db.task.create({
+        data: {
+          taskNumber: `TSK-${Date.now().toString(36).toUpperCase()}`,
+          taskType: 'FOOD_DELIVERY',
+          clientId: validatedData.clientId,
+          orderId: order.id,
+          status: 'CREATED',
+          pickupAddress: merchant.address || merchant.name,
+          pickupLatitude: merchant.latitude,
+          pickupLongitude: merchant.longitude,
+          dropoffAddress: validatedData.deliveryAddress,
+          dropoffLatitude: validatedData.deliveryLatitude || null,
+          dropoffLongitude: validatedData.deliveryLongitude || null,
+          totalAmount: validatedData.totalAmount,
+          paymentMethod: validatedData.paymentMethod,
+          itemDescription: `Order ${order.orderNumber} - ${validatedData.items.length} item(s)`,
+        },
+      });
+
+      // Link the task back to the order
+      await db.order.update({
+        where: { id: order.id },
+        data: { taskId: task.id },
+      });
+
+      console.log(`[ORDER] Auto-created task ${task.taskNumber} for order ${order.orderNumber}`);
+
+      // Transition task to MATCHING status for dispatch
+      await db.task.update({
+        where: { id: task.id },
+        data: { status: 'MATCHING' },
+      });
+    } catch (taskError) {
+      // Task creation failure should NOT fail the order
+      console.error('[ORDER] Failed to auto-create task for order:', taskError);
+    }
+
     return successResponse(order, 'Order created successfully', 201);
   } catch (error) {
     if (error instanceof z.ZodError) {

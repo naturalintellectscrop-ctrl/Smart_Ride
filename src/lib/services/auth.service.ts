@@ -6,6 +6,7 @@
 import { db } from '@/lib/db';
 import { hashPassword, verifyPassword, validatePasswordStrength, generateOTP } from '../auth/password';
 import { generateTokenPair, verifyRefreshToken } from '../auth/jwt';
+import { createSession, revokeAllSessions } from '../auth/session-service';
 import { UserRole, UserStatus } from '@prisma/client';
 import { z } from 'zod';
 
@@ -94,18 +95,19 @@ export async function registerUser(data: z.infer<typeof registerSchema>): Promis
       },
     });
     
-    // Generate tokens
-    const tokens = generateTokenPair(user);
-    
-    // Update user with refresh token
-    await db.user.update({
-      where: { id: user.id },
-      data: {
-        refreshToken: tokens.refreshToken,
-        refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      },
+    // Create a proper session record instead of storing refresh token on User row
+    const sessionResult = await createSession({
+      userId: user.id,
+      deviceId: `register-${Date.now()}`,
+      deviceName: 'Registration',
+      deviceType: 'web',
     });
-    
+
+    // Use session tokens if available, fallback to generated tokens
+    const tokens = sessionResult.success
+      ? { accessToken: sessionResult.accessToken!, refreshToken: sessionResult.refreshToken!, expiresIn: sessionResult.expiresIn! }
+      : generateTokenPair(user);
+
     return {
       success: true,
       user: {
@@ -154,20 +156,28 @@ export async function loginUser(data: z.infer<typeof loginSchema>): Promise<Auth
     if (!isValid) {
       return { success: false, error: 'Invalid email or password' };
     }
-    
-    // Generate tokens
-    const tokens = generateTokenPair(user);
-    
-    // Update user with refresh token and last login
+
+    // Create a proper session record instead of storing refresh token on User row
+    const sessionResult = await createSession({
+      userId: user.id,
+      deviceId: `login-${Date.now()}`,
+      deviceName: 'Login',
+      deviceType: 'web',
+    });
+
+    // Use session tokens if available, fallback to generated tokens
+    const tokens = sessionResult.success
+      ? { accessToken: sessionResult.accessToken!, refreshToken: sessionResult.refreshToken!, expiresIn: sessionResult.expiresIn! }
+      : generateTokenPair(user);
+
+    // Update last login timestamp (session creation already handles this, but keep for safety)
     await db.user.update({
       where: { id: user.id },
       data: {
-        refreshToken: tokens.refreshToken,
-        refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
         lastLoginAt: new Date(),
       },
     });
-    
+
     return {
       success: true,
       user: {
@@ -248,6 +258,7 @@ export async function refreshAccessToken(refreshToken: string): Promise<AuthResu
  */
 export async function logoutUser(userId: string): Promise<{ success: boolean }> {
   try {
+    // Nullify legacy refresh token on User row
     await db.user.update({
       where: { id: userId },
       data: {
@@ -255,7 +266,10 @@ export async function logoutUser(userId: string): Promise<{ success: boolean }> 
         refreshTokenExpiresAt: null,
       },
     });
-    
+
+    // Revoke all Session records
+    await revokeAllSessions(userId);
+
     return { success: true };
   } catch (error) {
     console.error('Logout error:', error);

@@ -5,9 +5,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
-import { generateTokenPair } from '@/lib/auth/jwt';
+import { createSession } from '@/lib/auth/session-service';
 import { UserRole, UserStatus } from '@prisma/client';
 import { errorResponse, serverErrorResponse } from '@/lib/api/response';
+import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 interface GoogleUserInfo {
   email: string;
@@ -18,7 +19,6 @@ interface GoogleUserInfo {
 
 async function verifyGoogleToken(idToken: string): Promise<GoogleUserInfo | null> {
   try {
-    // Verify with Google's API
     const response = await fetch(
       `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
     );
@@ -31,6 +31,13 @@ async function verifyGoogleToken(idToken: string): Promise<GoogleUserInfo | null
     
     // Verify the token is valid
     if (!data.email || !data.sub) {
+      return null;
+    }
+    
+    // Verify audience - critical security check
+    const expectedClientId = process.env.GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+    if (expectedClientId && data.aud !== expectedClientId) {
+      console.error('[GOOGLE-AUTH] Audience mismatch. Expected:', expectedClientId, 'Got:', data.aud);
       return null;
     }
     
@@ -96,44 +103,62 @@ export async function POST(request: NextRequest) {
       return errorResponse('Account is not active. Please contact support.', 403);
     }
 
-    // Generate tokens
-    const tokens = generateTokenPair(user);
-
-    // Update user with refresh token
-    await db.user.update({
-      where: { id: user.id },
-      data: {
-        refreshToken: tokens.refreshToken,
-        refreshTokenExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      },
+    // Create a proper session using session-service
+    const sessionResult = await createSession({
+      userId: user.id,
+      deviceName: 'Google Sign-In',
+      deviceType: 'web',
     });
 
-    // Set refresh token as HTTP-only cookie
+    if (!sessionResult.success) {
+      console.error('[GOOGLE-AUTH] Failed to create session:', sessionResult.error);
+      return serverErrorResponse('Failed to create session');
+    }
+
+    // Audit log
+    try {
+      await createAuditLog({
+        action: AuditActions.LOGIN_SUCCESS,
+        entityType: EntityTypes.USER,
+        entityId: user.id,
+        actorType: 'USER',
+        userId: user.id,
+        description: `Google login: ${user.email}`,
+        source: 'MOBILE_APP',
+      });
+    } catch (auditError) {
+      console.error('Google auth audit log failed:', auditError);
+    }
+
+    // Standardized response format (matching email/OTP auth endpoints)
     const response = NextResponse.json({
       success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role,
-        avatarUrl: user.avatarUrl,
-      },
-      tokens: {
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        expiresIn: tokens.expiresIn,
+      data: {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          avatarUrl: user.avatarUrl,
+        },
+        accessToken: sessionResult.accessToken,
+        refreshToken: sessionResult.refreshToken,
+        expiresIn: sessionResult.expiresIn,
       },
       message: 'Google login successful',
     });
 
-    response.cookies.set('refreshToken', tokens.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60, // 30 days
-      path: '/',
-    });
+    // Also set as HTTP-only cookie for web clients
+    if (sessionResult.refreshToken) {
+      response.cookies.set('refreshToken', sessionResult.refreshToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        path: '/',
+      });
+    }
 
     return response;
   } catch (error) {

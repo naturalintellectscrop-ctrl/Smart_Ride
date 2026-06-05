@@ -162,6 +162,28 @@ export const API_CONFIG = {
   realtimePort: 3001,
 };
 
+// Payment method mapping: client display values → server enum values
+// The mobile app uses short names (MTN_MOMO, AIRTEL_MONEY) but the backend
+// Zod schema expects MOBILE_MONEY_MTN, MOBILE_MONEY_AIRTEL.
+export const PAYMENT_METHOD_MAP: Record<string, string> = {
+  'CASH': 'CASH',
+  'MTN_MOMO': 'MOBILE_MONEY_MTN',
+  'AIRTEL_MONEY': 'MOBILE_MONEY_AIRTEL',
+  'VISA': 'VISA',
+  'MASTERCARD': 'MASTERCARD',
+  'WALLET': 'WALLET',
+};
+
+// Reverse map for displaying server values in the UI
+export const PAYMENT_METHOD_DISPLAY: Record<string, string> = {
+  'CASH': 'CASH',
+  'MOBILE_MONEY_MTN': 'MTN_MOMO',
+  'MOBILE_MONEY_AIRTEL': 'AIRTEL_MONEY',
+  'VISA': 'VISA',
+  'MASTERCARD': 'MASTERCARD',
+  'WALLET': 'WALLET',
+};
+
 // Storage Keys
 export const STORAGE_KEYS = {
   authToken: 'smart_ride_auth_token',

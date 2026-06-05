@@ -32,10 +32,14 @@ class ApiService {
     return headers;
   }
 
+  private isRefreshing = false;
+  private refreshPromise: Promise<string | null> | null = null;
+
   private async request<T>(
     endpoint: string,
     method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-    body?: any
+    body?: any,
+    isRetry: boolean = false
   ): Promise<ApiResponse<T>> {
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
@@ -43,6 +47,18 @@ class ApiService {
         headers: await this.getHeaders(),
         body: body ? JSON.stringify(body) : undefined,
       });
+
+      // Handle 401 - attempt token refresh and retry once
+      if (response.status === 401 && !isRetry) {
+        console.log('[API] Got 401, attempting token refresh...');
+        const newToken = await this.tryRefreshToken();
+        if (newToken) {
+          // Retry the original request with new token
+          return this.request<T>(endpoint, method, body, true);
+        }
+        // Refresh failed - clear tokens and return original error
+        await AsyncStorage.multiRemove([STORAGE_KEYS.authToken, STORAGE_KEYS.refreshToken]);
+      }
 
       const data = await response.json();
 
@@ -61,6 +77,55 @@ class ApiService {
         error: 'Network error. Please check your connection.' 
       };
     }
+  }
+
+  /**
+   * Attempt to refresh the access token.
+   * Uses a shared promise to prevent concurrent refresh calls.
+   */
+  private async tryRefreshToken(): Promise<string | null> {
+    if (this.isRefreshing && this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.isRefreshing = true;
+    this.refreshPromise = (async () => {
+      try {
+        const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.refreshToken);
+        if (!refreshToken) {
+          console.log('[API] No refresh token available');
+          return null;
+        }
+
+        const response = await fetch(`${this.baseUrl}/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken }),
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.data?.accessToken) {
+          await AsyncStorage.setItem(STORAGE_KEYS.authToken, data.data.accessToken);
+          if (data.data.refreshToken) {
+            await AsyncStorage.setItem(STORAGE_KEYS.refreshToken, data.data.refreshToken);
+          }
+          console.log('[API] Token refresh successful');
+          return data.data.accessToken;
+        }
+
+        console.log('[API] Token refresh failed:', data.error);
+        return null;
+      } catch (error) {
+        console.error('[API] Token refresh error:', error);
+        return null;
+      } finally {
+        this.isRefreshing = false;
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
   }
 
   // ==========================================
@@ -193,6 +258,51 @@ class ApiService {
   }
 
   // ==========================================
+  // RIDER ONBOARDING
+  // ==========================================
+
+  async getRiderOnboarding(): Promise<ApiResponse<any>> {
+    return this.request<any>('/riders/onboarding');
+  }
+
+  async updateRiderOnboarding(step: number, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+    return this.request<any>('/riders/onboarding', 'PUT', { step, ...data });
+  }
+
+  async registerRider(data: {
+    fullName?: string;
+    phone?: string;
+    email?: string;
+    riderRole?: string;
+    vehicleType?: string;
+    vehiclePlate?: string;
+    vehicleModel?: string;
+    vehicleColor?: string;
+    [key: string]: unknown;
+  }): Promise<ApiResponse<Rider>> {
+    return this.request<Rider>('/riders/register', 'POST', data);
+  }
+
+  // ==========================================
+  // RIDER EARNINGS
+  // ==========================================
+
+  async getRiderEarnings(period: string = 'week'): Promise<ApiResponse<{
+    totalEarnings: number;
+    todayEarnings: number;
+    weekEarnings: number;
+    monthEarnings: number;
+    completedTrips: number;
+    pendingPayout: number;
+  }>> {
+    return this.request(`/riders/earnings?period=${period}`);
+  }
+
+  async requestRiderWithdrawal(amount: number, phone: string, provider: string): Promise<ApiResponse<any>> {
+    return this.request<any>('/riders/withdraw', 'POST', { amount, phone, provider });
+  }
+
+  // ==========================================
   // TASKS - CLIENT
   // ==========================================
 
@@ -213,7 +323,7 @@ class ApiService {
   }
 
   async cancelTask(taskId: string, reason: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/tasks/${taskId}/cancel`, 'POST', { reason });
+    return this.request<void>(`/tasks/${taskId}?action=cancel`, 'POST', { reason });
   }
 
   // ==========================================
@@ -478,6 +588,14 @@ class ApiService {
       notificationId,
       markAll,
     });
+  }
+
+  // ==========================================
+  // RATINGS
+  // ==========================================
+
+  async rateTask(taskId: string, rating: number, comment?: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/tasks/${taskId}/rate`, 'POST', { rating, comment });
   }
 
   // ==========================================

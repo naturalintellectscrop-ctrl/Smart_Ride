@@ -15,7 +15,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useLocationStore, useTaskStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, RIDE_TYPES, PAYMENT_METHODS } from '@/src/constants';
+import { COLORS, RIDE_TYPES, PAYMENT_METHODS, PAYMENT_METHOD_MAP } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
 
 // Types for search results
@@ -183,7 +183,7 @@ export default function RideRequestScreen() {
         dropoffAddress,
         dropoffLatitude,
         dropoffLongitude,
-        paymentMethod,
+        paymentMethod: PAYMENT_METHOD_MAP[paymentMethod] || paymentMethod,
         distanceKm, // FIX: Send distanceKm
       });
 

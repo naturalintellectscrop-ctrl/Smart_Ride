@@ -118,11 +118,35 @@ export default function OrderTrackingScreen() {
     }
   }, [order?.status]);
 
+  // Determine the taskId for socket room subscription.
+  // Orders may have a related task on the backend; use orderId as fallback.
+  const getTaskId = (): string => {
+    if ((order as any)?.taskId) return (order as any).taskId;
+    return params.orderId;
+  };
+
   useEffect(() => {
-    // Listen for order status updates via socket (secondary mechanism)
-    // FIXED: Event name is 'order:status:update' (matches server emission)
-    const unsubscribe = socketService.on('order:status:update', (data: { orderId: string; status: string }) => {
-      if (data.orderId === params.orderId && order) {
+    // Connect socket and join task room (secondary update mechanism)
+    const initSocket = async () => {
+      try {
+        await socketService.connect();
+        const taskId = getTaskId();
+        if (socketService.isSocketConnected() && taskId) {
+          socketService.joinTaskRoom(taskId);
+          console.log('[OrderTracking] Socket connected, joined task room:', taskId);
+        }
+      } catch (error) {
+        console.log('[OrderTracking] Socket not available, polling only');
+      }
+    };
+
+    initSocket();
+
+    // Listen for task status updates via socket (secondary mechanism)
+    // FIXED: Event name is 'task:status:update' (matches server emission)
+    const unsubscribe = socketService.on('task:status:update', (data: { taskId: string; status: string }) => {
+      const taskId = getTaskId();
+      if (data.taskId === taskId && order) {
         setOrder({ ...order, status: data.status as any });
 
         // Stop polling if terminal state
@@ -134,6 +158,10 @@ export default function OrderTrackingScreen() {
 
     return () => {
       unsubscribe();
+      const taskId = getTaskId();
+      if (taskId) {
+        socketService.leaveTaskRoom(taskId);
+      }
     };
   }, [params.orderId, order]);
 

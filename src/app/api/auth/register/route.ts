@@ -40,12 +40,13 @@ export async function POST(request: NextRequest) {
       console.error('Audit log failed for user registration:', auditError);
     }
 
-    // Set refresh token as HTTP-only cookie
+    // Return tokens - BOTH accessToken AND refreshToken for mobile
     const response = NextResponse.json({
       success: true,
       data: {
         user: result.user,
         accessToken: result.tokens?.accessToken,
+        refreshToken: result.tokens?.refreshToken,
         expiresIn: result.tokens?.expiresIn,
       },
       message: 'Registration successful',

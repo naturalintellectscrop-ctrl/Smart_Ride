@@ -127,8 +127,20 @@ export default function RegisterScreen() {
       setError('Please enter your phone number');
       return false;
     }
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return false;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError('Password must contain at least one uppercase letter');
+      return false;
+    }
+    if (!/[a-z]/.test(password)) {
+      setError('Password must contain at least one lowercase letter');
+      return false;
+    }
+    if (!/[0-9]/.test(password)) {
+      setError('Password must contain at least one number');
       return false;
     }
     if (password !== confirmPassword) {
@@ -254,7 +266,7 @@ export default function RegisterScreen() {
             <Animated.View entering={FadeInDown.duration(400).delay(400)}>
               <IconInput
                 label="Password"
-                placeholder="Create a password"
+                placeholder="Min 8 chars, upper, lower, number"
                 value={password}
                 onChangeText={setPassword}
                 icon="lock"

@@ -20,7 +20,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore, useLocationStore, useTaskStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, PAYMENT_METHODS } from '@/src/constants';
+import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
 
 // ============================================
@@ -345,7 +345,7 @@ export default function DeliveryScreen() {
         dropoffLatitude,
         dropoffLongitude,
         distanceKm: dist,
-        paymentMethod,
+        paymentMethod: PAYMENT_METHOD_MAP[paymentMethod] || paymentMethod,
         packageDescription,
         deliveryType,
       });

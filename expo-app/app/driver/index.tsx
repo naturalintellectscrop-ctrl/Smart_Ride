@@ -105,7 +105,17 @@ export default function DriverHomeScreen() {
   useEffect(() => {
     loadRiderProfile();
 
-    // Listen for ride requests
+    // Connect socket and listen for ride requests
+    const initSocket = async () => {
+      try {
+        await socketService.connect();
+        console.log('[DriverHome] Socket connected');
+      } catch (e) {
+        console.warn('[DriverHome] Socket connection failed, will retry:', e);
+      }
+    };
+    initSocket();
+
     const unsubscribeRequest = socketService.on('driver:request', handleIncomingRequest);
     const unsubscribeExpired = socketService.on('driver:request:expired', handleRequestExpired);
 
@@ -113,6 +123,7 @@ export default function DriverHomeScreen() {
       unsubscribeRequest();
       unsubscribeExpired();
       stopLocationTracking();
+      socketService.disconnect();
     };
   }, []);
 
@@ -170,6 +181,22 @@ export default function DriverHomeScreen() {
         setIsOnline(value);
         if (value) {
           getCurrentLocation().catch(() => {});
+          // Join driver room so server can route dispatch events to this rider
+          const driverId = rider?.id || user?.id;
+          if (driverId) {
+            try {
+              await socketService.joinDriverRoom(driverId);
+              console.log('[DriverHome] Joined driver room:', driverId);
+            } catch (e) {
+              console.warn('[DriverHome] Failed to join driver room:', e);
+            }
+          }
+        } else {
+          // Leave driver room when going offline
+          const driverId = rider?.id || user?.id;
+          if (driverId) {
+            socketService.leaveDriverRoom(driverId);
+          }
         }
       } else {
         Alert.alert('Error', response.error || 'Failed to update status');

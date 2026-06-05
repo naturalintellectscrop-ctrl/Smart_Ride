@@ -245,9 +245,9 @@ export default function DriverTaskScreen() {
       case 'ASSIGNED':
         return 'Accept Task';
       case 'ACCEPTED':
-        return 'Navigate to Pickup';
+        return "I've Arrived";
       case 'ARRIVED':
-        return 'Confirm Pickup';
+        return 'Picked Up';
       case 'PICKED_UP':
         return 'Start Delivery';
       case 'IN_TRANSIT':
@@ -265,9 +265,6 @@ export default function DriverTaskScreen() {
         updateStatus('ACCEPTED');
         break;
       case 'ACCEPTED':
-        if (task.pickupLatitude && task.pickupLongitude) {
-          openNavigation(task.pickupLatitude, task.pickupLongitude);
-        }
         updateStatus('ARRIVED');
         break;
       case 'ARRIVED':
@@ -426,6 +423,28 @@ export default function DriverTaskScreen() {
                 UGX {task.totalAmount.toLocaleString()}
               </Text>
             </Animated.View>
+
+            {/* Navigation Button (separate from status transition) */}
+            {(task.status === 'ACCEPTED' || task.status === 'ARRIVED' || task.status === 'PICKED_UP' || task.status === 'IN_TRANSIT') && (
+              <Animated.View entering={FadeInUp.duration(300).delay(400)}>
+                <TouchableOpacity
+                  style={styles.navigateButton}
+                  onPress={() => {
+                    // Navigate to pickup if ACCEPTED/ARRIVED, otherwise to dropoff
+                    const isHeadingToPickup = task.status === 'ACCEPTED' || task.status === 'ARRIVED';
+                    const destLat = isHeadingToPickup ? task.pickupLatitude : task.dropoffLatitude;
+                    const destLng = isHeadingToPickup ? task.pickupLongitude : task.dropoffLongitude;
+                    if (destLat && destLng) {
+                      openNavigation(destLat, destLng);
+                    }
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.navigateButtonIcon}>🧭</Text>
+                  <Text style={styles.navigateButtonText}>Navigate</Text>
+                </TouchableOpacity>
+              </Animated.View>
+            )}
 
             {/* Actions */}
             <Animated.View
@@ -657,6 +676,28 @@ const styles = StyleSheet.create({
   paymentAmount: {
     fontSize: 20,
     fontWeight: '700',
+    color: COLORS.secondary,
+  },
+
+  // Navigation button
+  navigateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: `${COLORS.secondary}15`,
+    borderWidth: 1,
+    borderColor: `${COLORS.secondary}30`,
+    borderRadius: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  navigateButtonIcon: {
+    fontSize: 18,
+  },
+  navigateButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
     color: COLORS.secondary,
   },
 

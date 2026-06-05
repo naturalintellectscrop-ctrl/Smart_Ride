@@ -5,7 +5,7 @@
 // ============================================
 
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -13,8 +13,15 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { COLORS } from '@/src/constants';
+import { useAuthStore } from '@/src/store';
 
 export default function TabsLayout() {
+  const { isAuthenticated } = useAuthStore();
+
+  if (!isAuthenticated) {
+    return <Redirect href="/auth/login" />;
+  }
+
   return (
     <Tabs
       screenOptions={{

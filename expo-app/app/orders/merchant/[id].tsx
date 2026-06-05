@@ -75,7 +75,7 @@ export default function MerchantDetailScreen() {
     try {
       const [merchantRes, productsRes] = await Promise.all([
         api.getMerchant(id),
-        api.getMerchantProducts(id),
+        api.getMerchantMenu(id),  // Fixed: use /menu endpoint (not /products which 404s)
       ]);
       
       if (merchantRes.success && merchantRes.data) {

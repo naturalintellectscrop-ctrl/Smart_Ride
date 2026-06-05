@@ -85,7 +85,7 @@ export default function RideTrackingScreen() {
     }
   };
 
-  // Handle ride completion - redirect to payment or rating
+  // Handle ride completion - show fare summary + rating prompt
   const handleRideCompleted = (completedTask: Task) => {
     // Stop polling immediately
     stopPolling();
@@ -105,25 +105,36 @@ export default function RideTrackingScreen() {
     const paymentMethodLabel: Record<string, string> = {
       'CASH': '💵 Cash',
       'MTN_MOMO': '📱 MTN MoMo',
+      'MOBILE_MONEY_MTN': '📱 MTN MoMo',
       'AIRTEL_MONEY': '📱 Airtel Money',
+      'MOBILE_MONEY_AIRTEL': '📱 Airtel Money',
       'VISA': '💳 Visa',
       'MASTERCARD': '💳 Mastercard',
     };
+
+    const displayMethod = paymentMethodLabel[paymentDetails.paymentMethod] || paymentDetails.paymentMethod;
+    const fareDisplay = paymentDetails.fare?.toLocaleString() || completedTask.totalAmount?.toLocaleString() || 'N/A';
     
-    // Show completion alert with payment confirmation
+    const submitRating = async (stars: number) => {
+      if (completedTask.id) {
+        try {
+          await api.rateTask(completedTask.id, stars);
+        } catch (e) {
+          console.error('Rating failed:', e);
+        }
+      }
+      router.replace('/(tabs)');
+    };
+
+    // Show completion alert with star-rating buttons
     Alert.alert(
       '✅ Ride Completed!',
-      `Total Fare: ${paymentDetails.currency} ${paymentDetails.fare?.toLocaleString() || 'N/A'}\n\nPayment Method: ${paymentMethodLabel[paymentDetails.paymentMethod] || paymentDetails.paymentMethod}\n\n${paymentDetails.paymentMethod === 'CASH' ? 'Please pay the driver in cash.' : 'Payment will be processed automatically.'}`,
+      `Total Fare: UGX ${fareDisplay}\nPayment: ${displayMethod}\n\n${paymentDetails.paymentMethod === 'CASH' ? 'Please pay the driver in cash.' : 'Payment will be processed automatically.'}`,
       [
-        {
-          text: 'Rate Driver',
-          onPress: () => router.replace('/(tabs)'),
-        },
-        {
-          text: 'Done',
-          style: 'default',
-          onPress: () => router.replace('/(tabs)'),
-        },
+        { text: '⭐⭐⭐⭐⭐', onPress: () => submitRating(5) },
+        { text: '⭐⭐⭐⭐', onPress: () => submitRating(4) },
+        { text: '⭐⭐⭐', onPress: () => submitRating(3) },
+        { text: 'Skip', style: 'cancel', onPress: () => router.replace('/(tabs)') },
       ],
       { cancelable: false }
     );
@@ -178,7 +189,8 @@ export default function RideTrackingScreen() {
     initSocket();
 
     // Listen for task status updates (if socket connects - secondary)
-    const unsubscribeStatus = socketService.on('task:status', (data: { taskId: string; status: string }) => {
+    // Fixed: match server event name 'task:status:update'
+    const unsubscribeStatus = socketService.on('task:status:update', (data: { taskId: string; status: string }) => {
       if (data.taskId === params.taskId) {
         updateTaskStatus(data.taskId, data.status);
         setTask(prev => prev ? { ...prev, status: data.status as TaskStatus } : null);
@@ -191,14 +203,14 @@ export default function RideTrackingScreen() {
     });
 
     // Listen for driver location updates (if socket connects - secondary)
-    const unsubscribeLocation = socketService.on('location:update', (data: { riderId: string; latitude: number; longitude: number; heading?: number }) => {
-      if (task?.riderId === data.riderId) {
-        setDriverLocation({
-          latitude: data.latitude,
-          longitude: data.longitude,
-          heading: data.heading,
-        });
-      }
+    // Fixed: match server event name 'rider:location:update'
+    const unsubscribeLocation = socketService.on('rider:location:update', (data: { latitude: number; longitude: number; heading?: number; driverId?: string }) => {
+      // Accept location updates for this task's driver
+      setDriverLocation({
+        latitude: data.latitude,
+        longitude: data.longitude,
+        heading: data.heading,
+      });
     });
 
     // Listen for task cancellation (if socket connects - secondary)
