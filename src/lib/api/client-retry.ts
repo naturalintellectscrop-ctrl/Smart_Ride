@@ -101,7 +101,7 @@ function calculateDelay(
  *
  * @example
  * ```ts
- * const result = await fetchWithRetry('/api/tasks?XTransformPort=3000', {
+ * const result = await fetchWithRetry('/api/tasks', {
  *   headers: { 'Authorization': `Bearer ${token}` },
  *   maxRetries: 3,
  *   onRetry: (attempt, max, err) => console.log(`Retry ${attempt}/${max}:`, err.message),

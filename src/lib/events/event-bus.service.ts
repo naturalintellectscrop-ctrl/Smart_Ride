@@ -5,6 +5,7 @@
  */
 
 import { db } from '@/lib/db';
+import { broadcastEvent } from '@/lib/realtime-server';
 import { createHash } from 'crypto';
 
 // ============================================
@@ -83,37 +84,17 @@ function getOrderId(event: SmartRideEvent): string | undefined {
 }
 
 // ============================================
-// SOCKET EMISSION
+// REALTIME EMISSION (Supabase)
 // ============================================
-
-const SOCKET_HTTP_PORT = 3002;
-const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
 
 async function emitViaSocket(event: SmartRideEvent, eventId: string): Promise<boolean> {
   try {
     const room = getRoomForEvent(event);
     const socketEventName = getSocketEventName(event);
-
-    const response = await fetch(`/api/emit?XTransformPort=${SOCKET_HTTP_PORT}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Key': INTERNAL_API_KEY,
-      },
-      body: JSON.stringify({
-        room,
-        event: socketEventName,
-        data: {
-          eventId,
-          ...event,
-          timestamp: new Date().toISOString(),
-        },
-      }),
-    });
-
-    return response.ok;
+    await broadcastEvent(room, socketEventName, { eventId, ...event, timestamp: new Date().toISOString() });
+    return true;
   } catch (error) {
-    console.error('[EventBus] Socket emission failed:', error instanceof Error ? error.message : error);
+    console.error('[EventBus] Broadcast failed:', error instanceof Error ? error.message : error);
     return false;
   }
 }
@@ -179,7 +160,7 @@ export interface EmitResult {
 export class EventBusService {
   /**
    * Emit a single event.
-   * Persists to AuditLog and emits via Socket.io.
+   * Persists to AuditLog and broadcasts via Supabase Realtime.
    * Supports deduplication and acknowledgement tracking.
    */
   static async emit(event: SmartRideEvent): Promise<EmitResult> {
@@ -207,7 +188,7 @@ export class EventBusService {
         console.error('[EventBus] Failed to persist event:', persistError instanceof Error ? persistError.message : persistError);
       }
 
-      // 2. Emit via Socket.io HTTP endpoint
+      // 2. Broadcast via Supabase Realtime
       const socketDelivered = await emitViaSocket(event, eventId);
 
       return {

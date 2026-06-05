@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { broadcastToTask } from '@/lib/realtime-server';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -104,37 +105,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Emit socket event to task room if task is going back to SEARCHING
+    // Emit realtime broadcast to task room if task is going back to SEARCHING
     // (i.e., retries remain and a new rider will be searched)
     const maxRetryAttempts = 3; // must match DISPATCH_CONFIG.maxRetryAttempts
     const nextRetryCount = match.retryCount + 1;
     if (nextRetryCount < maxRetryAttempts && match.taskId) {
       try {
-        const socketPort = process.env.SOCKET_PORT || '3002';
-        const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-
-        await fetch(`http://localhost:${socketPort}/emit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Internal-Key': internalKey,
-          },
-          body: JSON.stringify({
-            room: `task:${match.taskId}`,
-            event: 'task:status:update',
-            data: {
-              taskId: match.taskId,
-              status: 'SEARCHING',
-              reason: 'RIDER_REJECTED',
-              message: 'Rider declined the task. Searching for another rider...',
-              retryAttempt: nextRetryCount,
-              maxRetries: maxRetryAttempts,
-              timestamp: new Date().toISOString(),
-            },
-          }),
+        await broadcastToTask(match.taskId, 'task:status:update', {
+          taskId: match.taskId,
+          status: 'SEARCHING',
+          reason: 'RIDER_REJECTED',
+          message: 'Rider declined the task. Searching for another rider...',
+          retryAttempt: nextRetryCount,
+          maxRetries: maxRetryAttempts,
+          timestamp: new Date().toISOString(),
         });
-      } catch (socketError) {
-        console.error('Socket emission to task room failed (non-blocking):', socketError);
+      } catch (broadcastError) {
+        console.error('Realtime broadcast to task room failed (non-blocking):', broadcastError);
       }
     }
 

@@ -15,9 +15,10 @@ import { verifyAccessToken } from '@/lib/auth/jwt';
 import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 import { TaskStatus, DispatchMatchStatus } from '@prisma/client';
+import { broadcastEvent, broadcastToRider } from '@/lib/realtime-server';
 
 // ============================================
-// SOCKET EMISSION HELPER
+// REALTIME BROADCAST HELPER
 // ============================================
 
 async function emitSocketEvent(
@@ -26,19 +27,16 @@ async function emitSocketEvent(
   data: Record<string, unknown>
 ): Promise<void> {
   try {
-    const socketPort = process.env.SOCKET_PORT || '3002';
-    const internalKey =
-      process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-    await fetch(`http://localhost:${socketPort}/emit`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Key': internalKey,
-      },
-      body: JSON.stringify({ room, event, data }),
-    });
+    // Route to the appropriate Supabase broadcast helper based on room prefix
+    if (room.startsWith('rider:')) {
+      const riderId = room.replace('rider:', '');
+      await broadcastToRider(riderId, event, data);
+    } else {
+      // For admin:dashboard and other rooms, broadcast directly to the channel
+      await broadcastEvent(room, event, data);
+    }
   } catch (error) {
-    console.error('[AdminOverride] Socket emission failed:', error);
+    console.error('[AdminOverride] Realtime broadcast failed:', error);
   }
 }
 

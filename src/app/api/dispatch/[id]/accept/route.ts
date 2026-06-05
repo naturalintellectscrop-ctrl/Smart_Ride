@@ -7,6 +7,7 @@ import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
+import { broadcastToUser, broadcastToTask } from '@/lib/realtime-server';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Emit real-time socket events and notifications after successful acceptance
+    // Emit real-time events via Supabase broadcast after successful acceptance
     if (result.taskId) {
       const task = await db.task.findUnique({
         where: { id: result.taskId },
@@ -99,85 +100,49 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       });
 
       if (task) {
-        const socketPort = process.env.SOCKET_PORT || '3002';
-        const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-
         try {
           // 1. Notify CLIENT that a rider was assigned
-          await fetch(`http://localhost:${socketPort}/emit`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Internal-Key': internalKey,
+          await broadcastToUser(task.clientId, 'rider:task:matched', {
+            taskId: result.taskId,
+            rider: {
+              id: rider.id,
+              name: rider.fullName,
+              phone: rider.phone,
+              rating: rider.rating,
             },
-            body: JSON.stringify({
-              room: `user:${task.clientId}`,
-              event: 'rider:task:matched',
-              data: {
-                taskId: result.taskId,
-                rider: {
-                  id: rider.id,
-                  name: rider.fullName,
-                  phone: rider.phone,
-                  rating: rider.rating,
-                },
-              },
-            }),
           });
-        } catch (socketError) {
-          console.error('Socket emission to client failed (non-blocking):', socketError);
+        } catch (broadcastError) {
+          console.error('Broadcast to client failed (non-blocking):', broadcastError);
         }
 
         try {
           // 2. Notify TASK ROOM that the task status changed
-          await fetch(`http://localhost:${socketPort}/emit`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Internal-Key': internalKey,
+          await broadcastToTask(result.taskId, 'task:status:update', {
+            taskId: result.taskId,
+            status: 'ASSIGNED',
+            rider: {
+              id: rider.id,
+              name: rider.fullName,
+              phone: rider.phone,
+              rating: rider.rating,
             },
-            body: JSON.stringify({
-              room: `task:${result.taskId}`,
-              event: 'task:status:update',
-              data: {
-                taskId: result.taskId,
-                status: 'ASSIGNED',
-                rider: {
-                  id: rider.id,
-                  name: rider.fullName,
-                  phone: rider.phone,
-                  rating: rider.rating,
-                },
-                timestamp: new Date().toISOString(),
-              },
-            }),
+            timestamp: new Date().toISOString(),
           });
-        } catch (socketError) {
-          console.error('Socket emission to task room failed (non-blocking):', socketError);
+        } catch (broadcastError) {
+          console.error('Broadcast to task room failed (non-blocking):', broadcastError);
         }
 
         try {
           // 3. Notify RIDER that their acceptance was confirmed
-          await fetch(`http://localhost:${socketPort}/emit`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-Internal-Key': internalKey,
-            },
-            body: JSON.stringify({
-              room: `user:${user.id}`,
-              event: 'dispatch:assignment',
-              data: {
-                taskId: result.taskId,
-                taskNumber: task.taskNumber,
-                status: 'ASSIGNED',
-                matchId,
-                timestamp: new Date().toISOString(),
-              },
-            }),
+          await broadcastToUser(user.id, 'dispatch:assignment', {
+            taskId: result.taskId,
+            taskNumber: task.taskNumber,
+            status: 'ASSIGNED',
+            matchId,
+            timestamp: new Date().toISOString(),
           });
-        } catch (socketError) {
-          console.error('Socket emission to rider failed (non-blocking):', socketError);
+        } catch (broadcastError) {
+          console.error('Broadcast to rider failed (non-blocking):', broadcastError);
         }
 
         // 4. Send DB notification to client about rider assignment

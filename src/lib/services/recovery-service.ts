@@ -19,6 +19,7 @@ import {
 } from '@prisma/client';
 import { EnhancedTaskStateMachine } from './enhanced-task-state-machine.service';
 import { sendTaskUpdateNotification } from './notification.service';
+import { broadcastEvent, broadcastToUser } from '@/lib/realtime-server';
 
 // ============================================
 // RECOVERY CONFIGURATION
@@ -45,7 +46,7 @@ const RECOVERY_CONFIG = {
 };
 
 // ============================================
-// SOCKET EMISSION HELPER
+// REALTIME BROADCAST HELPER
 // ============================================
 
 async function emitSocketEvent(
@@ -54,19 +55,16 @@ async function emitSocketEvent(
   data: Record<string, unknown>
 ): Promise<void> {
   try {
-    const socketPort = process.env.SOCKET_PORT || '3002';
-    const internalKey =
-      process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-    await fetch(`http://localhost:${socketPort}/emit`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Key': internalKey,
-      },
-      body: JSON.stringify({ room, event, data }),
-    });
+    // Route to the appropriate Supabase broadcast helper based on room prefix
+    if (room.startsWith('user:')) {
+      const userId = room.replace('user:', '');
+      await broadcastToUser(userId, event, data);
+    } else {
+      // For admin:dashboard and other rooms, broadcast directly to the channel
+      await broadcastEvent(room, event, data);
+    }
   } catch (error) {
-    console.error('[Recovery] Socket emission failed:', error);
+    console.error('[Recovery] Realtime broadcast failed:', error);
   }
 }
 

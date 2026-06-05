@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
+import { broadcastEvent } from '@/lib/realtime-server';
 
 export async function POST(request: NextRequest) {
   try {
@@ -90,29 +91,16 @@ export async function POST(request: NextRequest) {
     // If going online, notify the realtime dispatch service so it knows about this rider
     if (isOnline) {
       try {
-        const socketPort = process.env.SOCKET_PORT || '3002';
-        const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-        await fetch(`http://localhost:${socketPort}/emit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Internal-Key': internalKey,
-          },
-          body: JSON.stringify({
-            room: 'dispatch',
-            event: 'rider:status:update',
-            data: {
-              riderId: rider.id,
-              isOnline: true,
-              latitude: latitude || rider.currentLatitude,
-              longitude: longitude || rider.currentLongitude,
-              riderRole: rider.riderRole,
-            },
-          }),
+        await broadcastEvent('dispatch', 'rider:status:update', {
+          riderId: rider.id,
+          isOnline: true,
+          latitude: latitude || rider.currentLatitude,
+          longitude: longitude || rider.currentLongitude,
+          riderRole: rider.riderRole,
         });
       } catch {
-        // Socket service might not be running - don't fail the status update
-        console.log(`[RiderStatus] Socket notification skipped for rider ${rider.id}`);
+        // Broadcast might fail - don't block the status update
+        console.log(`[RiderStatus] Realtime broadcast skipped for rider ${rider.id}`);
       }
     }
 

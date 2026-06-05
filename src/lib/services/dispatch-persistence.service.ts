@@ -14,6 +14,7 @@ import { DispatchMatchStatus, TaskStatus, TaskType } from '@prisma/client';
 import { CapabilityService } from './capability.service';
 import { sendDispatchReassignedNotification, sendSearchingNotification } from './notification.service';
 import { EnhancedTaskStateMachine } from './enhanced-task-state-machine.service';
+import { broadcastToUser } from '@/lib/realtime-server';
 
 // ============================================
 // DISPATCH CONFIGURATION
@@ -247,10 +248,9 @@ export class DispatchService {
 
   /**
    * Notify rider about the dispatch match
-   * Emits socket event to the realtime service so the rider app receives the offer.
-   * Includes retry logic: if the socket emission fails, retries up to 3 times
-   * with 1-second delays. If all retries fail, marks notificationSent as false
-   * so the periodic processExpiredMatches() can re-attempt later.
+   * Broadcasts event via Supabase Realtime so the rider app receives the offer.
+   * If broadcast fails, marks notificationSent as false so the periodic
+   * processExpiredMatches() can re-attempt later.
    */
   private static async notifyRider(match: any, taskId: string): Promise<void> {
     // Get task details for the offer
@@ -272,86 +272,52 @@ export class DispatchService {
       },
     });
 
-    // Get rider's userId for socket room targeting (rooms are keyed by userId)
+    // Get rider's userId for channel targeting (Supabase channels are keyed by userId)
     const rider = await db.rider.findUnique({
       where: { id: match.riderId },
       select: { userId: true },
     });
 
-    // Build the socket emission payload
-    const socketPort = process.env.SOCKET_PORT || '3002';
-    const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
+    // Build the broadcast payload
     const payload = {
-      room: `user:${rider?.userId || match.riderId}`,
-      event: 'driver:request',
-      data: {
-        task: {
-          id: taskId,
-          taskNumber: task?.taskNumber,
-          taskType: task?.taskType,
-          pickupAddress: task?.pickupAddress,
-          dropoffAddress: task?.dropoffAddress,
-          pickupLatitude: task?.pickupLatitude,
-          pickupLongitude: task?.pickupLongitude,
-          dropoffLatitude: task?.dropoffLatitude,
-          dropoffLongitude: task?.dropoffLongitude,
-          totalAmount: task?.totalAmount,
-          paymentMethod: task?.paymentMethod,
-          status: 'ASSIGNED',
-        },
-        pickup: {
-          address: task?.pickupAddress,
-          latitude: task?.pickupLatitude || 0,
-          longitude: task?.pickupLongitude || 0,
-        },
-        matchId: match.id,
-        distanceKm: match.distanceKm,
-        estimatedArrival: match.estimatedArrival,
-        expiresAt: match.expiresAt?.toISOString(),
+      task: {
+        id: taskId,
+        taskNumber: task?.taskNumber,
+        taskType: task?.taskType,
+        pickupAddress: task?.pickupAddress,
+        dropoffAddress: task?.dropoffAddress,
+        pickupLatitude: task?.pickupLatitude,
+        pickupLongitude: task?.pickupLongitude,
+        dropoffLatitude: task?.dropoffLatitude,
+        dropoffLongitude: task?.dropoffLongitude,
+        totalAmount: task?.totalAmount,
+        paymentMethod: task?.paymentMethod,
+        status: 'ASSIGNED',
       },
+      pickup: {
+        address: task?.pickupAddress,
+        latitude: task?.pickupLatitude || 0,
+        longitude: task?.pickupLongitude || 0,
+      },
+      matchId: match.id,
+      distanceKm: match.distanceKm,
+      estimatedArrival: match.estimatedArrival,
+      expiresAt: match.expiresAt?.toISOString(),
     };
 
-    // Attempt socket emission with retry (3 attempts, 1s delay)
-    const maxRetries = 3;
-    const retryDelayMs = 1000;
+    // Broadcast via Supabase Realtime
     let notificationSucceeded = false;
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const response = await fetch(`http://localhost:${socketPort}/emit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Internal-Key': internalKey,
-          },
-          body: JSON.stringify(payload),
-        });
-
-        if (response.ok) {
-          notificationSucceeded = true;
-          console.log(`[Dispatch] Socket notification sent to rider ${match.riderId} about task ${taskId} (attempt ${attempt})`);
-          break;
-        }
-
-        // Non-OK response — might be temporary server issue
-        console.warn(
-          `[Dispatch] Socket emission returned ${response.status} for rider ${match.riderId}, task ${taskId} (attempt ${attempt}/${maxRetries})`
-        );
-
-        if (attempt < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-        }
-      } catch (error) {
-        // Network error — service might be temporarily unavailable
-        console.warn(
-          `[Dispatch] Socket emission failed for rider ${match.riderId}, task ${taskId} (attempt ${attempt}/${maxRetries}):`,
-          error instanceof Error ? error.message : error
-        );
-
-        if (attempt < maxRetries) {
-          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
-        }
-      }
+    try {
+      await broadcastToUser(
+        rider?.userId || match.riderId,
+        'driver:request',
+        payload
+      );
+      notificationSucceeded = true;
+      console.log(`[Dispatch] Notification sent to rider ${match.riderId} about task ${taskId}`);
+    } catch (error) {
+      console.error(`[Dispatch] Broadcast failed for rider ${match.riderId}:`, error);
     }
 
     // Update the match record with the notification result
@@ -364,7 +330,7 @@ export class DispatchService {
         },
       });
     } else {
-      // All retries failed — mark notificationSent as false so the
+      // Broadcast failed — mark notificationSent as false so the
       // periodic processExpiredMatches() can re-attempt notification
       await db.dispatchMatch.update({
         where: { id: match.id },
@@ -373,7 +339,7 @@ export class DispatchService {
         },
       });
       console.error(
-        `[Dispatch] All ${maxRetries} socket emission attempts failed for rider ${match.riderId}, task ${taskId}. Match added to retry queue.`
+        `[Dispatch] Broadcast failed for rider ${match.riderId}, task ${taskId}. Match added to retry queue.`
       );
     }
   }
@@ -607,7 +573,7 @@ export class DispatchService {
         }
       }
 
-      // Notify the client about the delay via socket
+      // Notify the client about the delay via Supabase Realtime broadcast
       // (dispatch-specific event — not handled by SM lifecycle hooks)
       await this.notifyClient(taskId, task.clientId, {
         event: 'dispatch:delay',
@@ -633,8 +599,8 @@ export class DispatchService {
   }
 
   /**
-   * Notify the client about dispatch status via socket emission
-   * Emits an event to the client's user room through the realtime service
+   * Notify the client about dispatch status via Supabase Realtime broadcast
+   * Emits an event to the client's user channel through Supabase Realtime
    */
   private static async notifyClient(
     taskId: string,
@@ -642,24 +608,10 @@ export class DispatchService {
     payload: { event: string; data: Record<string, unknown> }
   ): Promise<void> {
     try {
-      const socketPort = process.env.SOCKET_PORT || '3002';
-      const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-      await fetch(`http://localhost:${socketPort}/emit`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Internal-Key': internalKey,
-        },
-        body: JSON.stringify({
-          room: `user:${clientId}`,
-          event: payload.event,
-          data: payload.data,
-        }),
-      });
+      await broadcastToUser(clientId, payload.event, payload.data);
       console.log(`[Dispatch] Client notification sent for task ${taskId}, event: ${payload.event}`);
     } catch (error) {
-      // Socket service might not be running - don't fail the dispatch
-      console.log(`[Dispatch] Client notification skipped for task ${taskId} (service unavailable)`);
+      console.log(`[Dispatch] Client notification skipped for task ${taskId} (broadcast failed)`);
     }
   }
 

@@ -1,24 +1,23 @@
 /**
  * Smart Ride Socket Reliability Service
  * Provides reliable real-time communication with fallback to DB notifications.
- * All HTTP calls to the socket service use the gateway pattern.
+ *
+ * Migrated from Socket.IO HTTP calls to Supabase Realtime broadcast.
+ * Supabase Realtime handles its own reconnection, so the acknowledgement
+ * and health-check mechanisms have been simplified. The DB notification
+ * fallback is preserved for critical messages.
  */
 
 import { db } from '@/lib/db';
 import { NotificationType } from '@prisma/client';
-
-// ============================================
-// CONFIGURATION
-// ============================================
-
-const SOCKET_HTTP_PORT = 3002;
-const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-const DEFAULT_ACK_TIMEOUT_MS = 10000; // 10 seconds
-const MAX_ACK_RETRIES = 3;
+import { broadcastEvent, broadcastToUser } from '@/lib/realtime-server';
 
 // ============================================
 // PENDING ACKNOWLEDGEMENT TRACKING
 // ============================================
+// Note: Supabase Broadcast is fire-and-forget (no server-side ack).
+// We keep the ack interface for backward compatibility but resolve
+// immediately after broadcast.
 
 interface PendingAck {
   id: string;
@@ -35,48 +34,20 @@ interface PendingAck {
 const pendingAcknowledgements = new Map<string, PendingAck>();
 
 // ============================================
-// SOCKET HEALTH STATUS
+// REALTIME HEALTH STATUS
 // ============================================
 
-interface SocketHealth {
+interface RealtimeHealth {
   reachable: boolean;
-  connections: number;
-  connectedUsers: number;
-  latencyMs: number | null;
   lastCheckedAt: string;
   error?: string;
 }
 
-let lastHealthCheck: SocketHealth = {
+let lastHealthCheck: RealtimeHealth = {
   reachable: false,
-  connections: 0,
-  connectedUsers: 0,
-  latencyMs: null,
   lastCheckedAt: new Date().toISOString(),
   error: 'Not yet checked',
 };
-
-// ============================================
-// INTERNAL: HTTP CALL TO SOCKET SERVICE
-// ============================================
-
-async function callSocketService(path: string, body?: unknown): Promise<Response | null> {
-  try {
-    const url = `/api${path}?XTransformPort=${SOCKET_HTTP_PORT}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Key': INTERNAL_API_KEY,
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    return response;
-  } catch (error) {
-    console.error('[SocketReliability] Failed to call socket service:', error instanceof Error ? error.message : error);
-    return null;
-  }
-}
 
 // ============================================
 // FALLBACK: CREATE NOTIFICATION IN DB
@@ -101,9 +72,9 @@ async function fallbackToNotification(
         referenceType: referenceType || null,
       },
     });
-    console.log(`[SocketReliability] Fallback notification created for user ${userId}`);
+    console.log(`[RealtimeReliability] Fallback notification created for user ${userId}`);
   } catch (error) {
-    console.error('[SocketReliability] Fallback notification failed:', error instanceof Error ? error.message : error);
+    console.error('[RealtimeReliability] Fallback notification failed:', error instanceof Error ? error.message : error);
   }
 }
 
@@ -114,7 +85,7 @@ async function fallbackToNotification(
 export class SocketReliabilityService {
   /**
    * Emit event to a specific user's room.
-   * Tries socket emission first. If socket fails, falls back to creating a Notification record.
+   * Broadcasts via Supabase Realtime. If broadcast fails, falls back to creating a Notification record.
    */
   static async emitToUser(
     userId: string,
@@ -128,30 +99,30 @@ export class SocketReliabilityService {
       [key: string]: unknown;
     }
   ): Promise<{ socketDelivered: boolean; fallbackCreated: boolean }> {
-    const response = await callSocketService('/emit', {
-      room: `user:${userId}`,
-      event,
-      data: {
+    try {
+      await broadcastToUser(userId, event, {
         ...data,
         timestamp: new Date().toISOString(),
-      },
-    });
+      });
 
-    const socketDelivered = response?.ok === true;
+      return { socketDelivered: true, fallbackCreated: false };
+    } catch (error) {
+      console.error('[RealtimeReliability] Broadcast to user failed:', error instanceof Error ? error.message : error);
 
-    if (!socketDelivered && data.title && data.message && data.notificationType) {
-      await fallbackToNotification(
-        userId,
-        data.title,
-        data.message,
-        data.notificationType,
-        data.referenceId,
-        data.referenceType
-      );
-      return { socketDelivered: false, fallbackCreated: true };
+      if (data.title && data.message && data.notificationType) {
+        await fallbackToNotification(
+          userId,
+          data.title,
+          data.message,
+          data.notificationType,
+          data.referenceId,
+          data.referenceType
+        );
+        return { socketDelivered: false, fallbackCreated: true };
+      }
+
+      return { socketDelivered: false, fallbackCreated: false };
     }
-
-    return { socketDelivered, fallbackCreated: false };
   }
 
   /**
@@ -162,17 +133,18 @@ export class SocketReliabilityService {
     event: string,
     data: Record<string, unknown>
   ): Promise<{ socketDelivered: boolean }> {
-    const response = await callSocketService('/emit', {
-      room: `task:${taskId}`,
-      event,
-      data: {
+    try {
+      await broadcastEvent(`task:${taskId}`, event, {
         ...data,
         taskId,
         timestamp: new Date().toISOString(),
-      },
-    });
+      });
 
-    return { socketDelivered: response?.ok === true };
+      return { socketDelivered: true };
+    } catch (error) {
+      console.error('[RealtimeReliability] Broadcast to task room failed:', error instanceof Error ? error.message : error);
+      return { socketDelivered: false };
+    }
   }
 
   /**
@@ -182,79 +154,64 @@ export class SocketReliabilityService {
     event: string,
     data: Record<string, unknown>
   ): Promise<{ socketDelivered: boolean }> {
-    const response = await callSocketService('/emit', {
-      room: 'admin:dashboard',
-      event,
-      data: {
+    try {
+      await broadcastEvent('admin:dashboard', event, {
         ...data,
         timestamp: new Date().toISOString(),
-      },
-    });
+      });
 
-    return { socketDelivered: response?.ok === true };
+      return { socketDelivered: true };
+    } catch (error) {
+      console.error('[RealtimeReliability] Broadcast to admin room failed:', error instanceof Error ? error.message : error);
+      return { socketDelivered: false };
+    }
   }
 
   /**
-   * Emit event and wait for acknowledgement.
-   * Stores pending acknowledgement in memory.
-   * Retries if no ack within timeout.
-   * Max 3 retries.
+   * Emit event and resolve after broadcast.
+   * Supabase Broadcast is fire-and-forget, so acknowledgement is implied
+   * by successful broadcast. Falls back to DB notification on failure.
    */
-  static emitWithAcknowledgement(
+  static async emitWithAcknowledgement(
     userId: string,
     event: string,
     data: Record<string, unknown>,
-    timeout: number = DEFAULT_ACK_TIMEOUT_MS
+    _timeout: number = 10000
   ): Promise<boolean> {
-    return new Promise((resolve, reject) => {
-      const ackId = `ack:${userId}:${event}:${Date.now()}`;
-
-      const timeoutId = setTimeout(() => {
-        handleAckTimeout(ackId);
-      }, timeout);
-
-      const pendingAck: PendingAck = {
-        id: ackId,
-        userId,
-        event,
-        data,
-        resolve,
-        reject,
-        retryCount: 0,
-        createdAt: Date.now(),
-        timeoutId,
-      };
-
-      pendingAcknowledgements.set(ackId, pendingAck);
-
-      // Emit the event
-      callSocketService('/emit', {
-        room: `user:${userId}`,
-        event,
-        data: {
-          ...data,
-          _ackId: ackId,
-          timestamp: new Date().toISOString(),
-        },
-      }).then(response => {
-        if (!response?.ok) {
-          // Socket delivery failed — still wait for ack (might come via polling)
-          console.log(`[SocketReliability] Socket delivery failed for ack ${ackId}, waiting for acknowledgement`);
-        }
-      }).catch(error => {
-        console.error(`[SocketReliability] Error emitting for ack ${ackId}:`, error);
+    try {
+      await broadcastToUser(userId, event, {
+        ...data,
+        timestamp: new Date().toISOString(),
       });
-    });
+      return true;
+    } catch (error) {
+      console.error('[RealtimeReliability] Acknowledged broadcast failed:', error instanceof Error ? error.message : error);
+
+      // Fall back to notification if title/message provided
+      const dataRecord = data as Record<string, unknown>;
+      if (dataRecord.title && dataRecord.message && dataRecord.notificationType) {
+        await fallbackToNotification(
+          userId,
+          dataRecord.title as string,
+          dataRecord.message as string,
+          dataRecord.notificationType as string,
+          dataRecord.referenceId as string | undefined,
+          dataRecord.referenceType as string | undefined
+        ).catch(() => {});
+      }
+
+      return false;
+    }
   }
 
   /**
    * Receive an acknowledgement for a pending event.
-   * Called when the client sends back an ack response.
+   * Kept for backward compatibility — Supabase Broadcast doesn't have
+   * server-side acks, so this is a no-op that resolves any pending promise.
    */
   static receiveAcknowledgement(ackId: string): void {
     const pending = pendingAcknowledgements.get(ackId);
     if (!pending) {
-      console.warn(`[SocketReliability] Received ack for unknown ID: ${ackId}`);
       return;
     }
 
@@ -264,48 +221,21 @@ export class SocketReliabilityService {
   }
 
   /**
-   * Check if the socket service is reachable.
-   * Pings the socket HTTP health endpoint.
+   * Check if the Supabase Realtime service is reachable.
+   * Performs a lightweight broadcast test to verify connectivity.
    */
-  static async getSocketHealth(): Promise<SocketHealth> {
-    const startTime = Date.now();
-
+  static async getSocketHealth(): Promise<RealtimeHealth> {
     try {
-      const url = `/api/health?XTransformPort=${SOCKET_HTTP_PORT}`;
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: {
-          'X-Internal-Key': INTERNAL_API_KEY,
-        },
-      });
+      // Attempt a lightweight broadcast to verify Supabase connectivity
+      await broadcastEvent('health:check', 'ping', { timestamp: new Date().toISOString() });
 
-      const latencyMs = Date.now() - startTime;
-
-      if (response.ok) {
-        const body = await response.json() as { status: string; connections: number; connectedUsers: number };
-        lastHealthCheck = {
-          reachable: true,
-          connections: body.connections || 0,
-          connectedUsers: body.connectedUsers || 0,
-          latencyMs,
-          lastCheckedAt: new Date().toISOString(),
-        };
-      } else {
-        lastHealthCheck = {
-          reachable: false,
-          connections: 0,
-          connectedUsers: 0,
-          latencyMs: null,
-          lastCheckedAt: new Date().toISOString(),
-          error: `HTTP ${response.status}`,
-        };
-      }
+      lastHealthCheck = {
+        reachable: true,
+        lastCheckedAt: new Date().toISOString(),
+      };
     } catch (error) {
       lastHealthCheck = {
         reachable: false,
-        connections: 0,
-        connectedUsers: 0,
-        latencyMs: null,
         lastCheckedAt: new Date().toISOString(),
         error: error instanceof Error ? error.message : 'Unknown error',
       };
@@ -316,6 +246,7 @@ export class SocketReliabilityService {
 
   /**
    * Get current pending acknowledgement count.
+   * Always 0 with Supabase Broadcast (fire-and-forget).
    */
   static getPendingAckCount(): number {
     return pendingAcknowledgements.size;
@@ -324,62 +255,8 @@ export class SocketReliabilityService {
   /**
    * Get current cached health status (without making a new request).
    */
-  static getCachedHealth(): SocketHealth {
+  static getCachedHealth(): RealtimeHealth {
     return lastHealthCheck;
-  }
-}
-
-// ============================================
-// ACK TIMEOUT HANDLER
-// ============================================
-
-function handleAckTimeout(ackId: string): void {
-  const pending = pendingAcknowledgements.get(ackId);
-  if (!pending) return;
-
-  pending.retryCount++;
-
-  if (pending.retryCount <= MAX_ACK_RETRIES) {
-    console.log(`[SocketReliability] Ack timeout for ${ackId}, retry ${pending.retryCount}/${MAX_ACK_RETRIES}`);
-
-    // Re-emit the event
-    callSocketService('/emit', {
-      room: `user:${pending.userId}`,
-      event: pending.event,
-      data: {
-        ...pending.data,
-        _ackId: ackId,
-        _retryCount: pending.retryCount,
-        timestamp: new Date().toISOString(),
-      },
-    }).catch(error => {
-      console.error(`[SocketReliability] Retry emission failed for ack ${ackId}:`, error);
-    });
-
-    // Set a new timeout
-    pending.timeoutId = setTimeout(() => {
-      handleAckTimeout(ackId);
-    }, DEFAULT_ACK_TIMEOUT_MS);
-  } else {
-    console.warn(`[SocketReliability] Ack ${ackId} failed after ${MAX_ACK_RETRIES} retries`);
-
-    // Clean up and resolve as not acknowledged
-    pendingAcknowledgements.delete(ackId);
-
-    // Fall back to notification if title/message provided
-    const data = pending.data as Record<string, unknown>;
-    if (data.title && data.message && data.notificationType) {
-      fallbackToNotification(
-        pending.userId,
-        data.title as string,
-        data.message as string,
-        data.notificationType as string,
-        data.referenceId as string | undefined,
-        data.referenceType as string | undefined
-      ).catch(() => {});
-    }
-
-    pending.resolve(false);
   }
 }
 

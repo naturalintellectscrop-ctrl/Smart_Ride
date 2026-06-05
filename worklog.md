@@ -478,3 +478,76 @@ Stage Summary:
 - Free tier: 200 concurrent connections, 1M messages/month
 - All consuming code (hooks, components, screens) unchanged due to same API surface
 - User needs to provide SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY
+
+---
+Task ID: 5-6
+Agent: backend-migration-3
+Task: Migrate remaining backend services from Socket.IO to Supabase broadcastEvent
+
+Work Log:
+- Migrated notification.service.ts: Replaced `emitNotification` function's `fetch('http://localhost:${socketPort}/emit')` call with `broadcastToUser(userId, 'notification', data)` from realtime-server.ts
+- Migrated recovery-service.ts: Replaced `emitSocketEvent` helper's Socket.IO HTTP call with routing logic that uses `broadcastToUser` for `user:` rooms and `broadcastEvent` for other rooms (admin:dashboard, etc.)
+- Migrated socket-reliability.service.ts: Complete rewrite from Socket.IO HTTP client to Supabase Realtime broadcast. Preserved same public API surface (emitToUser, emitToTaskRoom, emitToAdminRoom, emitWithAcknowledgement, getSocketHealth). Simplified ack mechanism (Supabase Broadcast is fire-and-forget). Kept DB notification fallback. Removed SOCKET_HTTP_PORT, INTERNAL_API_KEY, callSocketService, handleAckTimeout internals.
+- Migrated retry-system.service.ts: Replaced `fetch('/api/dispatch/match?XTransformPort=3000')` with direct `DispatchService.findAndAssign()` call, removing INTERNAL_API_KEY and XTransformPort routing
+- Migrated riders/status/route.ts: Replaced `fetch('http://localhost:${socketPort}/emit')` with `broadcastEvent('dispatch', 'rider:status:update', data)`. Removed socketPort and internalKey variables.
+- Migrated orders/[id]/route.ts: Replaced `emitSocketEvent` helper's Socket.IO HTTP call with routing logic using `broadcastToUser` for `user:` rooms and `broadcastEvent` for others
+- Migrated tasks/[id]/transition/route.ts: Replaced `fetch('http://localhost:${socketPort}/emit')` with `broadcastToTask(taskId, 'task:status:update', data)`. Removed socketPort and internalKey variables.
+- Migrated dispatch/[id]/reject/route.ts: Replaced `fetch('http://localhost:${socketPort}/emit')` with `broadcastToTask(match.taskId, 'task:status:update', data)`. Removed socketPort and internalKey variables.
+- Migrated dispatch/[id]/accept/route.ts: Replaced 3 separate `fetch('http://localhost:${socketPort}/emit')` calls with: (1) `broadcastToUser(task.clientId, 'rider:task:matched', ...)`, (2) `broadcastToTask(result.taskId, 'task:status:update', ...)`, (3) `broadcastToUser(user.id, 'dispatch:assignment', ...)`. Removed socketPort and internalKey variables.
+- Reviewed dispatch/process-expired/route.ts: INTERNAL_API_KEY is used for service-to-service auth (verifying X-Internal-Key header), NOT for Socket.IO emission. No migration needed — this is legitimate API authentication.
+- Migrated admin/task-override/route.ts: Replaced `emitSocketEvent` helper's Socket.IO HTTP call with routing logic using `broadcastToRider` for `rider:` rooms and `broadcastEvent` for admin:dashboard
+- Cleaned up client-retry.ts: Removed stale `XTransformPort=3000` from example code in JSDoc comment
+- Verified: No remaining `fetch('http://localhost:${socketPort}/emit')` or `localhost:3002` server-side Socket.IO patterns in src/app or src/lib
+- Verified: No new TypeScript compilation errors introduced (all errors are pre-existing)
+
+Stage Summary:
+- 10 files successfully migrated from Socket.IO HTTP calls to Supabase Realtime broadcastEvent
+- 1 file (process-expired) reviewed and confirmed no change needed (INTERNAL_API_KEY used for auth, not socket emission)
+- 1 minor cleanup (client-retry.ts JSDoc example)
+- All backend server-side code now uses Supabase Realtime broadcast instead of Socket.IO HTTP API
+- Remaining XTransformPort references exist only in frontend components (connection-monitoring.tsx, dispatch-monitoring.tsx, ride-booking.tsx) which are client-side Socket.IO UI components, not backend services
+- Key design decision: `emitSocketEvent` helper functions were preserved with same name but reimplemented to route to appropriate Supabase broadcast helpers (broadcastToUser, broadcastToTask, broadcastToRider, broadcastEvent) based on room prefix, maintaining backward compatibility with all callers
+Task ID: 3
+Agent: backend-migration-1
+Task: Migrate event-bus.service.ts from Socket.IO to Supabase broadcastEvent
+
+Work Log:
+- Read event-bus.service.ts and realtime-server.ts to understand current implementation
+- Replaced `emitViaSocket` function: removed `fetch()` call to `localhost:3002/emit` endpoint, replaced with `broadcastEvent(room, socketEventName, payload)` from `@/lib/realtime-server`
+- Removed `SOCKET_HTTP_PORT` and `INTERNAL_API_KEY` constants (no longer needed)
+- Added `import { broadcastEvent } from '@/lib/realtime-server'` at top of file
+- Kept `getRoomForEvent()` and `getSocketEventName()` helper functions (still used to determine channel names and event names for Supabase Realtime)
+- Updated section comment from "SOCKET EMISSION" to "REALTIME EMISSION (Supabase)"
+- Updated inline comment from "Emit via Socket.io HTTP endpoint" to "Broadcast via Supabase Realtime"
+- Updated JSDoc on `emit()` method from "emits via Socket.io" to "broadcasts via Supabase Realtime"
+- Verified EventBusService class API (emit, emitWithRetry, emitBatch) remains unchanged
+- Verified SmartRideEvent type and EmitResult interface remain unchanged
+
+Stage Summary:
+- event-bus.service.ts now uses Supabase Realtime broadcastEvent instead of Socket.IO HTTP endpoint on port 3002
+- No more dependency on INTERNAL_API_KEY or SOCKET_HTTP_PORT
+- All public API surface (EventBusService.emit/emitWithRetry/emitBatch, SmartRideEvent, EmitResult) preserved — zero breaking changes
+- Channel names and event names remain identical (getRoomForEvent/getSocketEventName preserved)
+
+---
+Task ID: 4
+Agent: backend-migration-2
+Task: Migrate dispatch-persistence.service.ts from Socket.IO to Supabase broadcastEvent
+
+Work Log:
+- Read dispatch-persistence.service.ts, realtime-server.ts, and worklog.md to understand current implementation and prior work
+- Added `import { broadcastToUser } from '@/lib/realtime-server'` at top of file
+- Replaced `notifyRider()` method: removed `socketPort`/`internalKey` variables, replaced 3-attempt retry loop with `fetch(localhost:3002/emit)` with a single `broadcastToUser()` call wrapped in try/catch
+- Updated payload construction in `notifyRider()`: removed `room`/`event`/`data` wrapper (old Socket.IO format), payload now directly contains task/pickup/matchId fields passed as broadcast data
+- Preserved `notificationSucceeded` flag and DB update logic (notificationSent true/false + notificationSentAt)
+- Replaced `notifyClient()` method: removed `socketPort`/`internalKey` variables, replaced `fetch(localhost:3002/emit)` with `broadcastToUser(clientId, payload.event, payload.data)`
+- Updated method JSDoc comments from "socket emission" to "Supabase Realtime broadcast"
+- Updated inline comments referencing "socket room" to "Supabase channel"
+- Verified zero remaining references to socketPort, internalKey, localhost:3002, /emit, or fetch() in the file
+
+Stage Summary:
+- dispatch-persistence.service.ts fully migrated from Socket.IO HTTP calls to Supabase Realtime broadcastToUser
+- Two emission points migrated: notifyRider() (driver:request event) and notifyClient() (dispatch:delay/dispatch:retry/dispatch:cancelled events)
+- Retry logic simplified: old 3-attempt HTTP retry loop replaced with single broadcastToUser call (Supabase Realtime is more reliable than HTTP calls to a separate service)
+- All DB operations, state machine calls, and business logic preserved unchanged
+- No breaking changes to DispatchService class API

@@ -14,6 +14,7 @@
 
 import { db } from '@/lib/db';
 import { EventBusService } from '@/lib/events/event-bus.service';
+import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 
 // ============================================
 // Types
@@ -270,22 +271,22 @@ export class RetrySystemService {
           return { success: false, attempts, lastError: `Task is in ${task.status} state, cannot retry dispatch` };
         }
 
-        // Attempt to dispatch via internal API
-        const dispatchResult = await fetch(`/api/dispatch/match?XTransformPort=3000`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Internal-Key': process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024',
-          },
-          body: JSON.stringify({ taskId }),
+        // Attempt to dispatch directly via DispatchService
+        // (replaces old HTTP call to /api/dispatch/match with XTransformPort routing)
+        const dispatchResult = await DispatchService.findAndAssign({
+          taskId,
+          taskType: task.taskType,
+          pickupLatitude: 0,
+          pickupLongitude: 0,
         });
 
-        if (dispatchResult.ok) {
+        if (dispatchResult.success) {
           return { success: true, attempts };
         }
 
-        const errorBody = await dispatchResult.text();
-        lastError = `Dispatch API returned ${dispatchResult.status}: ${errorBody}`;
+        lastError = dispatchResult.noRidersAvailable
+          ? 'No riders available for dispatch'
+          : (dispatchResult.error || 'Dispatch failed');
       } catch (error) {
         lastError = error instanceof Error ? error.message : String(error);
       }

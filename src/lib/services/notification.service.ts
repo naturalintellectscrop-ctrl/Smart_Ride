@@ -5,6 +5,7 @@
 
 import { db } from '@/lib/db';
 import { NotificationType } from '@prisma/client';
+import { broadcastToUser } from '@/lib/realtime-server';
 
 export interface CreateNotificationInput {
   userId: string;
@@ -1161,33 +1162,13 @@ function formatCurrency(amount: number): string {
 // ============================================
 
 /**
- * Emit notification via Socket.io
- * This function interfaces with the Socket.io mini-service
+ * Emit notification via Supabase Realtime broadcast.
+ * Replaces the old Socket.io HTTP call to localhost:3002.
  */
 async function emitNotification(userId: string, data: unknown): Promise<void> {
   try {
-    // In production, this would emit via Socket.io
-    // For now, we'll use fetch to the mini-service
-    // Internal HTTP emit API runs on port 3002 (Socket.io WebSocket is on 3001)
-    const socketPort = process.env.SOCKET_PORT || '3002';
-    const response = await fetch(`http://localhost:${socketPort}/emit`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Key': process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024',
-      },
-      body: JSON.stringify({
-        room: `user:${userId}`,
-        event: 'notification',
-        data,
-      }),
-    });
-
-    if (!response.ok) {
-      console.error('Failed to emit notification via Socket.io');
-    }
+    await broadcastToUser(userId, 'notification', data);
   } catch (error) {
-    // Socket.io service might not be running
-    console.log('Socket.io emission skipped (service not available)');
+    console.error('[Notification] Realtime broadcast failed:', error);
   }
 }

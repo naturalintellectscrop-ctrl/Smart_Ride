@@ -12,6 +12,7 @@ import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { calculatePricing } from '@/lib/api/pricing';
 import { TaskStatus } from '@prisma/client';
 import { z } from 'zod';
+import { broadcastEvent, broadcastToUser } from '@/lib/realtime-server';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -50,23 +51,20 @@ const deliverSchema = z.object({
 });
 
 /**
- * Emit a socket event to a specific room via the realtime service
+ * Emit a realtime event via Supabase broadcast.
+ * Routes to the appropriate broadcast helper based on room prefix.
  */
 async function emitSocketEvent(room: string, event: string, data: Record<string, unknown>): Promise<void> {
   try {
-    const socketPort = process.env.SOCKET_PORT || '3002';
-    const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-    await fetch(`http://localhost:${socketPort}/emit`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Internal-Key': internalKey,
-      },
-      body: JSON.stringify({ room, event, data }),
-    });
+    if (room.startsWith('user:')) {
+      const userId = room.replace('user:', '');
+      await broadcastToUser(userId, event, data);
+    } else {
+      await broadcastEvent(room, event, data);
+    }
   } catch {
-    // Socket service might not be running - don't fail the request
-    console.log('[Orders] Socket emission skipped (service unavailable)');
+    // Broadcast might fail - don't block the request
+    console.log('[Orders] Realtime broadcast skipped (service unavailable)');
   }
 }
 

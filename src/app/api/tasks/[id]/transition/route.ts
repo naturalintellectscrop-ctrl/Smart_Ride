@@ -12,6 +12,7 @@ import { authGuard } from '@/lib/auth/guards';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { broadcastToTask } from '@/lib/realtime-server';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -220,26 +221,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           }
         }
 
-        // Emit real-time socket event for task status change
-        // Internal HTTP emit API runs on port 3002 (Socket.io WebSocket is on 3001)
-        const socketPort = process.env.SOCKET_PORT || '3002';
-        const internalKey = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
-        await fetch(`http://localhost:${socketPort}/emit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Internal-Key': internalKey,
-          },
-          body: JSON.stringify({
-            room: `task:${taskId}`,
-            event: 'task:status:update',
-            data: {
-              taskId,
-              status: toStatus,
-              timestamp: new Date().toISOString(),
-            },
-          }),
-        }).catch(() => {}); // Non-blocking
+        // Emit real-time event via Supabase broadcast for task status change
+        try {
+          await broadcastToTask(taskId, 'task:status:update', {
+            taskId,
+            status: toStatus,
+            timestamp: new Date().toISOString(),
+          });
+        } catch {
+          // Non-blocking: broadcast failure shouldn't fail the transition
+        }
       }
     } catch (notificationError) {
       console.error('Notification failed for task transition (non-blocking):', notificationError);
