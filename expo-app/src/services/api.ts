@@ -362,6 +362,12 @@ class ApiService {
     return this.request<Order>('/orders', 'POST', data);
   }
 
+  async confirmOrderPayment(orderId: string, paymentReference?: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/orders/${orderId}?action=confirm-payment`, 'PATCH', {
+      paymentReference: paymentReference || `PAY-${Date.now()}`,
+    });
+  }
+
   // ==========================================
   // MERCHANTS
   // ==========================================

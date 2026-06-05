@@ -198,7 +198,7 @@ export function RiderTasks() {
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchWithRetry('/api/tasks?limit=50&XTransformPort=3000', {
+      const result = await fetchWithRetry('/api/tasks?limit=50', {
         headers: getAuthHeaders(),
         maxRetries: 3,
       });
@@ -236,6 +236,14 @@ export function RiderTasks() {
   }, [tasks.length]);
 
   useEffect(() => {
+    // Connect socket service with auth token
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !socketService.isConnectedToSocket()) {
+      socketService.connect(token);
+    } else if (!token) {
+      socketService.autoConnect();
+    }
+
     fetchTasks(true);
   }, [fetchTasks]);
 
@@ -317,7 +325,7 @@ export function RiderTasks() {
     setTransitioning(taskId);
     const promise = (async () => {
       try {
-        const result = await fetchWithRetry(`/api/tasks/${taskId}/transition?XTransformPort=3000`, {
+        const result = await fetchWithRetry(`/api/tasks/${taskId}/transition`, {
           method: 'POST',
           headers: getAuthHeaders(),
           body: JSON.stringify({ toStatus }),

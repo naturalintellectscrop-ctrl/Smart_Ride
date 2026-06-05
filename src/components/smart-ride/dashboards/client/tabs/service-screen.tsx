@@ -360,6 +360,11 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
         
         // Join the task room for real-time updates
         const { socketService } = await import('@/services/socket');
+        // CRITICAL: Connect socket before joining room (was missing)
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : undefined;
+        if (token) {
+          socketService.connect(token);
+        }
         socketService.joinTaskRoom(result.data.id);
 
         // Listen for rider:task:matched event (real matching via socket)
@@ -367,7 +372,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           if (data.taskId === result.data.id) {
             // Fetch real rider details from the task
             try {
-              const taskResult = await fetch(`/api/tasks/${result.data.id}?XTransformPort=3000`, {
+              const taskResult = await fetch(`/api/tasks/${result.data.id}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` },
               });
               if (taskResult.ok) {
@@ -397,7 +402,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
           if (data.taskId === result.data.id) {
             if (data.status === 'ASSIGNED' || data.status === 'ACCEPTED') {
               try {
-                const taskResult = await fetch(`/api/tasks/${result.data.id}?XTransformPort=3000`, {
+                const taskResult = await fetch(`/api/tasks/${result.data.id}`, {
                   headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` },
                 });
                 if (taskResult.ok) {
@@ -434,7 +439,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
         // HTTP polling fallback in case socket events are missed
         const pollInterval = setInterval(async () => {
           try {
-            const taskResult = await fetch(`/api/tasks/${result.data.id}?XTransformPort=3000`, {
+            const taskResult = await fetch(`/api/tasks/${result.data.id}`, {
               headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` },
             });
             if (taskResult.ok) {

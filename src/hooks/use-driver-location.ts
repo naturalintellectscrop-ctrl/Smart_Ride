@@ -134,16 +134,6 @@ export function useDriverLocation({
 
     // Send to server via central socket service
     if (socketService.isConnectedToSocket() && isOnline) {
-      const update: LocationUpdate = {
-        driver_id: driverId,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        speed: location.speed,
-        heading: location.heading,
-        timestamp: location.timestamp,
-        accuracy: location.accuracy,
-      };
-
       // Emit via the central socketService (updateDriverLocation handles riderId internally)
       socketService.updateDriverLocation({
         latitude: location.latitude,
@@ -207,7 +197,7 @@ export function useDriverLocation({
     // Update rider status via API (which also notifies the realtime service)
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/riders/status?XTransformPort=3000', {
+      const response = await fetch('/api/riders/status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -235,7 +225,7 @@ export function useDriverLocation({
   const goOffline = useCallback(async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      await fetch('/api/riders/status?XTransformPort=3000', {
+      await fetch('/api/riders/status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

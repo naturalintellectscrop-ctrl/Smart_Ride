@@ -325,7 +325,7 @@ export function useHeartbeat(
 
     // Fallback to HTTP
     try {
-      const response = await fetch('/api/rider/heartbeat?XTransformPort=3000', {
+      const response = await fetch('/api/rider/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -389,7 +389,7 @@ export function useHeartbeat(
     const latest = offlineHeartbeats[offlineHeartbeats.length - 1];
     
     try {
-      await fetch('/api/rider/heartbeat?XTransformPort=3000', {
+      await fetch('/api/rider/heartbeat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

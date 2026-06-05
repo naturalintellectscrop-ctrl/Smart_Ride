@@ -53,9 +53,17 @@ function RiderDashboardContent({ user }: RiderDashboardProps) {
 
   // Fetch unread notification count on mount (with retry)
   useEffect(() => {
+    // Connect socket service with auth token
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !socketService.isConnectedToSocket()) {
+      socketService.connect(token);
+    } else if (!token) {
+      socketService.autoConnect();
+    }
+
     const fetchUnreadCount = async () => {
       try {
-        const result = await fetchWithRetry('/api/notifications?unreadOnly=true&limit=0&XTransformPort=3000', {
+        const result = await fetchWithRetry('/api/notifications?unreadOnly=true&limit=0', {
           headers: getAuthHeaders(),
           maxRetries: 3,
         });
@@ -83,7 +91,7 @@ function RiderDashboardContent({ user }: RiderDashboardProps) {
       // Refetch notification count on reconnect
       const fetchUnreadCount = async () => {
         try {
-          const result = await fetchWithRetry('/api/notifications?unreadOnly=true&limit=0&XTransformPort=3000', {
+          const result = await fetchWithRetry('/api/notifications?unreadOnly=true&limit=0', {
             headers: getAuthHeaders(),
             maxRetries: 3,
           });

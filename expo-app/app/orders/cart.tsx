@@ -87,6 +87,12 @@ export default function CartScreen() {
       });
 
       if (response.success && response.data) {
+        // Confirm payment - this notifies the merchant and creates KOT
+        try {
+          await api.confirmOrderPayment(response.data.id);
+        } catch {
+          // Non-blocking - order is already created, task auto-created by server
+        }
         clearCart();
         router.replace(`/orders/order-tracking?orderId=${response.data.id}`);
       } else {

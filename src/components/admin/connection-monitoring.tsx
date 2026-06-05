@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { socketService } from '@/services/socket';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -145,7 +145,7 @@ export function ConnectionMonitoringDashboard() {
   const [isConnected, setIsConnected] = useState(false);
   const [selectedRider, setSelectedRider] = useState<RiderStatus | null>(null);
   
-  const socketRef = useRef<Socket | null>(null);
+  const socketRef = useRef<any>(null);
 
   // Update stats based on rider data - defined first to avoid hoisting issues
   const updateStats = useCallback((riderData: RiderStatus[], currentAlerts: ConnectionAlert[]) => {
@@ -164,67 +164,72 @@ export function ConnectionMonitoringDashboard() {
 
   // Initialize WebSocket connection
   useEffect(() => {
-    socketRef.current = io(`/?XTransformPort=${HEARTBEAT_MONITOR_PORT}`, {
-      transports: ['websocket'],
-    });
-
-    socketRef.current.on('connect', () => {
-      console.log('Connected to heartbeat monitor');
+    // Initialize Supabase Realtime connection for heartbeat monitoring
+    const unsubConnect = socketService.on('connect', () => {
+      console.log('Connected to heartbeat realtime');
       setIsConnected(true);
-      socketRef.current?.emit('admin:join');
     });
 
-    socketRef.current.on('disconnect', () => {
-      console.log('Disconnected from heartbeat monitor');
+    const unsubDisconnect = socketService.on('disconnect', () => {
+      console.log('Disconnected from heartbeat realtime');
       setIsConnected(false);
     });
 
-    // Receive active riders
-    socketRef.current.on('admin:active-riders', (data: any[]) => {
-      const riderStatuses: RiderStatus[] = data.map(r => ({
-        riderId: r.riderId,
-        riderName: `Rider ${r.riderId.slice(0, 4)}`,
-        riderRole: 'SMART_BODA_RIDER',
-        taskId: r.taskId,
-        taskNumber: null,
-        lastHeartbeatAt: r.lastHeartbeatAt,
-        connectionStatus: r.connectionStatus,
-        lastKnownLocation: r.lastKnownLocation,
-        batteryLevel: r.batteryLevel,
-        secondsSinceHeartbeat: r.lastHeartbeatAt 
-          ? Math.floor((Date.now() - new Date(r.lastHeartbeatAt).getTime()) / 1000)
-          : 999,
-      }));
-      
-      setRiders(riderStatuses);
-      // Use alerts state directly inside the handler
-      setAlerts(currentAlerts => {
-        updateStats(riderStatuses, currentAlerts);
-        return currentAlerts;
-      });
+    // Receive active riders via Supabase Realtime
+    const unsubRiders = socketService.on('notification', (data: any) => {
+      if (data?.type === 'admin:active-riders' && Array.isArray(data.riders)) {
+        const riderStatuses: RiderStatus[] = data.riders.map((r: any) => ({
+          riderId: r.riderId,
+          riderName: `Rider ${r.riderId?.slice(0, 4) || '????'}`,
+          riderRole: 'SMART_BODA_RIDER',
+          taskId: r.taskId,
+          taskNumber: null,
+          lastHeartbeatAt: r.lastHeartbeatAt,
+          connectionStatus: r.connectionStatus,
+          lastKnownLocation: r.lastKnownLocation,
+          batteryLevel: r.batteryLevel,
+          secondsSinceHeartbeat: r.lastHeartbeatAt 
+            ? Math.floor((Date.now() - new Date(r.lastHeartbeatAt).getTime()) / 1000)
+            : 999,
+        }));
+        
+        setRiders(riderStatuses);
+        setAlerts(currentAlerts => {
+          updateStats(riderStatuses, currentAlerts);
+          return currentAlerts;
+        });
+      }
     });
 
     // Receive rider status updates
-    socketRef.current.on('admin:rider:status', (data: { riderId: string; connectionStatus: string }) => {
-      setRiders(prev => prev.map(r => 
-        r.riderId === data.riderId 
-          ? { ...r, connectionStatus: data.connectionStatus as any }
-          : r
-      ));
+    const unsubStatus = socketService.on('notification', (data: any) => {
+      if (data?.type === 'admin:rider:status' && data.riderId) {
+        setRiders(prev => prev.map(r => 
+          r.riderId === data.riderId 
+            ? { ...r, connectionStatus: data.connectionStatus as any }
+            : r
+        ));
+      }
     });
 
     // Receive alerts
-    socketRef.current.on('admin:alert', (alert: ConnectionAlert) => {
-      setAlerts(prev => {
-        const updated = [alert, ...prev].slice(0, 50);
-        // Update stats with new alerts
-        setStats(s => ({ ...s, activeAlerts: updated.filter(a => !a.isAcknowledged).length }));
-        return updated;
-      });
+    const unsubAlert = socketService.on('notification', (data: any) => {
+      if (data?.type === 'admin:alert' && data.alert) {
+        const alert = data.alert as ConnectionAlert;
+        setAlerts(prev => {
+          const updated = [alert, ...prev].slice(0, 50);
+          setStats(s => ({ ...s, activeAlerts: updated.filter(a => !a.isAcknowledged).length }));
+          return updated;
+        });
+      }
     });
 
     return () => {
-      socketRef.current?.disconnect();
+      unsubConnect();
+      unsubDisconnect();
+      unsubRiders();
+      unsubStatus();
+      unsubAlert();
     };
   }, [updateStats]);
 

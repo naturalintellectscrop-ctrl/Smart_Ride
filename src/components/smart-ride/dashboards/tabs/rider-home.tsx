@@ -165,11 +165,11 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
       today.setHours(0, 0, 0, 0);
 
       const [activeResult, completedResult] = await Promise.all([
-        fetchWithRetry('/api/tasks?status=IN_PROGRESS,ASSIGNED,ACCEPTED,ARRIVED,PICKED_UP,IN_TRANSIT,DELIVERED&limit=100&XTransformPort=3000', {
+        fetchWithRetry('/api/tasks?status=IN_PROGRESS,ASSIGNED,ACCEPTED,ARRIVED,PICKED_UP,IN_TRANSIT,DELIVERED&limit=100', {
           headers: getAuthHeaders(),
           maxRetries: 3,
         }),
-        fetchWithRetry('/api/tasks?status=COMPLETED,DELIVERED&limit=100&XTransformPort=3000', {
+        fetchWithRetry('/api/tasks?status=COMPLETED,DELIVERED&limit=100', {
           headers: getAuthHeaders(),
           maxRetries: 3,
         }),
@@ -211,7 +211,7 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
       let rating = 0;
       let acceptanceRate = 0;
       try {
-        const profileResult = await fetchWithRetry('/api/riders/profile?XTransformPort=3000', {
+        const profileResult = await fetchWithRetry('/api/riders/profile', {
           headers: getAuthHeaders(),
           maxRetries: 1,
         });
@@ -258,7 +258,7 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
     setActiveTaskError(null);
     try {
       const result = await fetchWithRetry(
-        '/api/tasks?status=ASSIGNED,ACCEPTED,ARRIVING,ARRIVED,PICKED_UP,IN_TRANSIT,IN_PROGRESS,DELIVERED&limit=1&XTransformPort=3000',
+        '/api/tasks?status=ASSIGNED,ACCEPTED,ARRIVING,ARRIVED,PICKED_UP,IN_TRANSIT,IN_PROGRESS,DELIVERED&limit=1',
         { headers: getAuthHeaders(), maxRetries: 3 }
       );
 
@@ -311,7 +311,7 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
         } catch {}
       }
 
-      const result = await fetchWithRetry('/api/riders/status?XTransformPort=3000', {
+      const result = await fetchWithRetry('/api/riders/status', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ isOnline: !isOnline, latitude, longitude }),
@@ -338,7 +338,7 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
   const handleAcceptRequest = useCallback(async (matchId: string) => {
     setAcceptingRequestId(matchId);
     try {
-      const result = await fetchWithRetry(`/api/dispatch/${matchId}/accept?XTransformPort=3000`, {
+      const result = await fetchWithRetry(`/api/dispatch/${matchId}/accept`, {
         method: 'POST',
         headers: getAuthHeaders(),
         maxRetries: 2,
@@ -373,7 +373,7 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
   const handleRejectRequest = useCallback(async (matchId: string, reason?: string) => {
     setRejectingRequestId(matchId);
     try {
-      await fetchWithRetry(`/api/dispatch/${matchId}/reject?XTransformPort=3000`, {
+      await fetchWithRetry(`/api/dispatch/${matchId}/reject`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ reason: reason || 'RIDER_DECLINED' }),
@@ -446,8 +446,17 @@ export function RiderHome({ isOnline, onToggleOnline, onBellClick, riderName }: 
     };
   }, [isOnline]);
 
-  // Initial data fetch
+  // Connect to realtime service and fetch initial data
   useEffect(() => {
+    // Connect socket service with auth token
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !socketService.isConnectedToSocket()) {
+      socketService.connect(token);
+    } else if (!token) {
+      // Try auto-connect from stored token
+      socketService.autoConnect();
+    }
+
     fetchStats(true);
     fetchActiveTask(true);
   }, [fetchStats, fetchActiveTask]);

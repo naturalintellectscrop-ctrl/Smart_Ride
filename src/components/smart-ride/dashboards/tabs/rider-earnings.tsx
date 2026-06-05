@@ -143,7 +143,7 @@ export function RiderEarnings() {
     setError(null);
     try {
       // Fetch completed tasks to derive earnings (with retry)
-      const result = await fetchWithRetry('/api/tasks?status=COMPLETED,DELIVERED&limit=100&XTransformPort=3000', {
+      const result = await fetchWithRetry('/api/tasks?status=COMPLETED,DELIVERED&limit=100', {
         headers: getAuthHeaders(),
         maxRetries: 3,
       });
@@ -269,6 +269,14 @@ export function RiderEarnings() {
   }, [earnings]);
 
   useEffect(() => {
+    // Connect socket service with auth token
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token && !socketService.isConnectedToSocket()) {
+      socketService.connect(token);
+    } else if (!token) {
+      socketService.autoConnect();
+    }
+
     fetchEarnings(true);
   }, [fetchEarnings]);
 

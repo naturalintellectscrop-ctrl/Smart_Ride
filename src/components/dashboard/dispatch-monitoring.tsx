@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { socketService } from '@/services/socket';
 import {
   Card,
   CardContent,
@@ -82,32 +82,33 @@ export function DispatchMonitoring() {
 
   // Initialize WebSocket connection
   useEffect(() => {
-    const newSocket = io('/?XTransformPort=3003', {
-      transports: ['websocket'],
-    });
-
-    newSocket.on('connect', () => {
-      console.log('Connected to dispatch service');
+    // Initialize Supabase Realtime connection for dispatch monitoring
+    const unsubConnect = socketService.on('connect', () => {
+      console.log('Connected to dispatch realtime');
       setConnected(true);
-      newSocket.emit('admin:join');
-      newSocket.emit('admin:stats');
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from dispatch service');
+    const unsubDisconnect = socketService.on('disconnect', () => {
+      console.log('Disconnected from dispatch realtime');
       setConnected(false);
     });
 
-    newSocket.on('admin:stats', (data: DispatchStats) => {
-      setStats(data);
-    });
+    // Request initial stats via API
+    fetch('/api/dispatch/stats', {
+      headers: { 'Content-Type': 'application/json' },
+    }).catch(() => {});
 
-    newSocket.on('admin:logs', (data: DispatchLog[]) => {
-      setLogs(data);
+    // Listen for realtime stats updates via Supabase Realtime
+    const unsubStats = socketService.on('notification', (data: any) => {
+      if (data?.type === 'dispatch:stats') {
+        setStats(data.stats);
+      }
     });
 
     return () => {
-      newSocket.close();
+      unsubConnect();
+      unsubDisconnect();
+      unsubStats();
     };
   }, []);
 

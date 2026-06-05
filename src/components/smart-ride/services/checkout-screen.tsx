@@ -55,7 +55,7 @@ function mapPaymentMethod(method: PaymentMethod): string {
 export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutScreenProps) {
   const { getCartByType, removeItem, updateQuantity, clearCart, getGrandTotal } = useCart();
   const [step, setStep] = useState<CheckoutStep>('cart');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('MTN_MOMO');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -73,6 +73,16 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
   const handleQuantityChange = (itemId: string, newQuantity: number) => {
     updateQuantity(itemId, newQuantity, cartType);
   };
+
+  // Get auth headers for API calls
+  const getAuthHeaders = useCallback((): Record<string, string> => {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  }, []);
 
   // REAL ORDER CREATION via /api/orders
   const handlePlaceOrder = useCallback(async () => {
@@ -92,8 +102,12 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
     setErrorMessage('');
 
     try {
+      // Get the authenticated user's ID
+      const storedUser = typeof window !== 'undefined' ? localStorage.getItem('smart_ride_user') : null;
+      const userId = storedUser ? JSON.parse(storedUser).id : '';
+
       const orderPayload = {
-        clientId: '', // Will be set server-side from auth token
+        clientId: userId, // Will be verified server-side from auth token
         merchantId: cart.merchantId,
         orderType: cart.orderType || (cartType === 'grocery' || cartType === 'shopping' ? 'SHOPPING' : 'FOOD_DELIVERY'),
         items: cart.items.map(item => ({
@@ -117,9 +131,10 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
         recipientPhone: undefined,
       };
 
+      // Step 1: Create the order (requires auth)
       const response = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(orderPayload),
       });
 
@@ -129,9 +144,32 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
         throw new Error(data.error || 'Failed to create order');
       }
 
+      const orderId = data.data.id;
+      const orderNumber = data.data.orderNumber;
+
+      // Step 2: Confirm payment - this notifies the merchant and creates KOT
+      try {
+        const confirmResponse = await fetch(`/api/orders/${orderId}?action=confirm-payment`, {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify({
+            paymentReference: `PAY-${Date.now()}`,
+          }),
+        });
+
+        if (!confirmResponse.ok) {
+          const confirmData = await confirmResponse.json();
+          console.error('[Checkout] Payment confirmation failed (non-blocking):', confirmData.error);
+          // Don't fail the whole flow - order is already created
+        }
+      } catch (confirmErr) {
+        console.error('[Checkout] Payment confirmation error (non-blocking):', confirmErr);
+        // Don't fail the whole flow - order is already created
+      }
+
       setCreatedOrder({
-        id: data.data.id,
-        orderNumber: data.data.orderNumber,
+        id: orderId,
+        orderNumber,
       });
 
       setStep('success');
@@ -142,7 +180,7 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
     } finally {
       setIsProcessing(false);
     }
-  }, [cart, cartType, deliveryAddress, grandTotal, paymentMethod, total]);
+  }, [cart, cartType, deliveryAddress, getAuthHeaders, grandTotal, paymentMethod, total]);
 
   const handleContinue = () => {
     if (step === 'cart' && cart.items.length > 0) {

@@ -46,6 +46,9 @@ interface CartContextType {
   // Get current active cart
   getActiveCart: () => CartState;
   
+  // Get cart by type
+  getCartByType: (type: CartType) => CartState;
+  
   // Cart actions
   addItem: (item: CartItem, cartType: CartType) => void;
   removeItem: (itemId: string, cartType: CartType) => void;
@@ -248,6 +251,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     activeCartType,
     setActiveCartType,
     getActiveCart,
+    getCartByType,
     addItem,
     removeItem,
     updateQuantity,
@@ -269,6 +273,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     shoppingCart,
     activeCartType,
     getActiveCart,
+    getCartByType,
     addItem,
     removeItem,
     updateQuantity,
@@ -310,6 +315,8 @@ export function useCartForType(cartType: CartType) {
     clearCart,
     setDeliveryFee,
     setServiceInfo,
+    setMerchantInfo,
+    setOrderType,
     getCartTotal,
     getCartCount,
     getGrandTotal,

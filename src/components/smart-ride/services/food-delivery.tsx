@@ -54,7 +54,7 @@ interface MenuItemData {
 const CART_TYPE: CartType = 'food';
 
 export function FoodDelivery({ onBack }: FoodDeliveryProps) {
-  const { getCartByType, addItem, removeItem, updateQuantity, setDeliveryFee, setServiceInfo, getCartCount, setCheckoutCart } = useCart();
+  const { getCartByType, addItem, removeItem, updateQuantity, setDeliveryFee, setServiceInfo, setMerchantInfo, setOrderType, getCartCount, setCheckoutCart } = useCart();
   const [view, setView] = useState<'restaurants' | 'menu' | 'checkout'>('restaurants');
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,7 +81,7 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
             cuisine: m.description || 'Restaurant',
             rating: m.rating || 5.0,
             reviews: m.totalOrders || 0,
-            deliveryTime: `${m.averagePrepTime || 15}-${(m.averagePrepTime || 15) + 10} min`,
+            deliveryTime: `${m.averagePrepTime || 15}-${Number(m.averagePrepTime || 15) + 10} min`,
             deliveryFee: 3000,
             image: m.coverImageUrl || m.logoUrl || '',
             description: m.description || '',
@@ -129,6 +129,7 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
   const handleAddToCart = (item: MenuItemData) => {
     addItem({
       id: item.id,
+      menuItemId: item.id,  // Link to DB MenuItem for order creation
       name: item.name,
       price: item.price,
       quantity: 1,
@@ -153,6 +154,14 @@ export function FoodDelivery({ onBack }: FoodDeliveryProps) {
     setSelectedRestaurant(restaurant);
     setDeliveryFee(restaurant.deliveryFee, CART_TYPE);
     setServiceInfo(restaurant.id, restaurant.name, CART_TYPE);
+    // CRITICAL: Set merchant info so checkout can create the order with the correct merchantId
+    setMerchantInfo({
+      id: restaurant.id,
+      name: restaurant.name,
+      address: restaurant.address,
+    }, CART_TYPE);
+    // Set order type so the backend knows this is FOOD_DELIVERY
+    setOrderType('FOOD_DELIVERY', CART_TYPE);
     fetchMenu(restaurant.id);
     setView('menu');
   };

@@ -226,7 +226,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
       if (data.taskId === createdTaskId) {
         // Fetch rider details from the task
         try {
-          const result = await fetchWithRetry(`/api/tasks?limit=1&XTransformPort=3000`, {
+          const result = await fetchWithRetry(`/api/tasks?limit=1`, {
             headers: getAuthHeaders(),
             maxRetries: 2,
           });
@@ -269,7 +269,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
         if (data.status === 'ASSIGNED' || data.status === 'ACCEPTED') {
           // Task has been assigned - fetch rider details
           try {
-            const result = await fetchWithRetry(`/api/tasks/${createdTaskId}?XTransformPort=3000`, {
+            const result = await fetchWithRetry(`/api/tasks/${createdTaskId}`, {
               headers: getAuthHeaders(),
               maxRetries: 2,
             });
@@ -338,7 +338,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
         } : undefined,
       };
 
-      const result = await fetchWithRetry('/api/tasks?XTransformPort=3000', {
+      const result = await fetchWithRetry('/api/tasks', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(payload),
@@ -367,7 +367,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
         pollingRef.current = setInterval(async () => {
           if (!createdTask?.id) return;
           try {
-            const pollResult = await fetchWithRetry(`/api/tasks/${createdTask.id}?XTransformPort=3000`, {
+            const pollResult = await fetchWithRetry(`/api/tasks/${createdTask.id}`, {
               headers: getAuthHeaders(),
               maxRetries: 1,
             });
@@ -419,7 +419,7 @@ export function RideBooking({ onClose, initialService, clientId }: RideBookingPr
     }
     setCancelling(true);
     try {
-      await fetchWithRetry(`/api/tasks/${taskId}/transition?XTransformPort=3000`, {
+      await fetchWithRetry(`/api/tasks/${taskId}/transition`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({

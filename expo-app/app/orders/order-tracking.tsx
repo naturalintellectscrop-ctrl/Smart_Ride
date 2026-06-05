@@ -120,17 +120,22 @@ export default function OrderTrackingScreen() {
 
   // Determine the taskId for socket room subscription.
   // Orders may have a related task on the backend; use orderId as fallback.
-  const getTaskId = (): string => {
-    if ((order as any)?.taskId) return (order as any).taskId;
-    return params.orderId;
-  };
+  // Use a ref to avoid re-subscription loops when order state changes.
+  const taskIdRef = useRef<string>(params.orderId);
+  
+  // Update the ref when we get order data with a taskId
+  useEffect(() => {
+    if ((order as any)?.taskId) {
+      taskIdRef.current = (order as any).taskId;
+    }
+  }, [order]);
 
   useEffect(() => {
     // Connect socket and join task room (secondary update mechanism)
     const initSocket = async () => {
       try {
         await socketService.connect();
-        const taskId = getTaskId();
+        const taskId = taskIdRef.current;
         if (socketService.isSocketConnected() && taskId) {
           socketService.joinTaskRoom(taskId);
           console.log('[OrderTracking] Socket connected, joined task room:', taskId);
@@ -145,9 +150,9 @@ export default function OrderTrackingScreen() {
     // Listen for task status updates via socket (secondary mechanism)
     // FIXED: Event name is 'task:status:update' (matches server emission)
     const unsubscribe = socketService.on('task:status:update', (data: { taskId: string; status: string }) => {
-      const taskId = getTaskId();
-      if (data.taskId === taskId && order) {
-        setOrder({ ...order, status: data.status as any });
+      const taskId = taskIdRef.current;
+      if (data.taskId === taskId) {
+        setOrder(prev => prev ? { ...prev, status: data.status as any } : prev);
 
         // Stop polling if terminal state
         if (isTerminalState(data.status)) {
@@ -158,12 +163,12 @@ export default function OrderTrackingScreen() {
 
     return () => {
       unsubscribe();
-      const taskId = getTaskId();
+      const taskId = taskIdRef.current;
       if (taskId) {
         socketService.leaveTaskRoom(taskId);
       }
     };
-  }, [params.orderId, order?.id]);
+  }, [params.orderId]);
 
   const loadOrder = async (orderId: string) => {
     setIsLoading(true);

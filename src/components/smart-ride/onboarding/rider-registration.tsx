@@ -45,6 +45,7 @@ const vehicleOptions: { type: VehicleType; label: string; icon: React.ReactNode 
 export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegistrationProps) {
   const [step, setStep] = useState<RegistrationStep>('personal');
   const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   
   // Personal info
   const [fullName, setFullName] = useState('');
@@ -105,25 +106,65 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
 
   const handleSubmit = async () => {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setStep('submitted');
-    
-    setTimeout(() => {
-      onComplete({
-        name: fullName,
-        phone,
-        physicalAddress,
-        riderRoleType: riderRole,
-        verificationStatus: 'PENDING_APPROVAL',
-        vehicleType: vehicleType || undefined,
-        documents: {
-          facePhoto: facePhoto || undefined,
-          nationalIdFront: nationalIdFront || undefined,
-          nationalIdBack: nationalIdBack || undefined,
-          driversLicense: driversLicense || undefined,
-        },
+    setSubmitError(null);
+    try {
+      // Call the rider registration API
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/riders', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          fullName,
+          phone: `+256${phone}`,
+          physicalAddress,
+          riderRole: riderRole === 'SMART_BODA' ? 'SMART_BODA_RIDER' : riderRole === 'SMART_CAR' ? 'SMART_CAR_DRIVER' : 'DELIVERY_PERSONNEL',
+          vehicleType: vehicleType || undefined,
+          vehiclePlateNumber: vehiclePlate || undefined,
+          vehicleModel: vehicleModel || undefined,
+          vehicleColor: vehicleColor || undefined,
+          facePhotoUrl: facePhoto || undefined,
+          nationalIdFrontUrl: nationalIdFront || undefined,
+          nationalIdBackUrl: nationalIdBack || undefined,
+          driverLicenseUrl: driversLicense || undefined,
+        }),
       });
-    }, 2000);
+
+      const result = await response.json();
+
+      if (result.success) {
+        setStep('submitted');
+        setTimeout(() => {
+          onComplete({
+            name: fullName,
+            phone,
+            physicalAddress,
+            riderRoleType: riderRole,
+            verificationStatus: 'PENDING_APPROVAL',
+            vehicleType: vehicleType || undefined,
+            documents: {
+              facePhoto: facePhoto || undefined,
+              nationalIdFront: nationalIdFront || undefined,
+              nationalIdBack: nationalIdBack || undefined,
+              driversLicense: driversLicense || undefined,
+            },
+          });
+        }, 2000);
+      } else {
+        setSubmitError(result.error || 'Failed to submit application. Please try again.');
+      }
+    } catch (error) {
+      console.error('Rider registration error:', error);
+      setSubmitError('Failed to submit application. Please check your connection and try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderPersonalInfo = () => (
@@ -483,6 +524,21 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
           )}
         </Button>
       </div>
+
+      {/* Error display */}
+      {submitError && (
+        <Card className="bg-red-500/10 border-red-500/30 mt-4">
+          <CardContent className="p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-medium text-red-300 text-sm">Registration Failed</p>
+                <p className="text-red-200/70 text-sm">{submitError}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 
