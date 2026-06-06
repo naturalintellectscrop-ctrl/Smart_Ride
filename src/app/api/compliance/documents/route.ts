@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
     return errorResponse('Invalid action. Use: reverify or set-expiry.');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return errorResponse(error.errors[0]?.message || 'Validation error');
+      return errorResponse(error.issues[0]?.message || 'Validation error');
     }
     console.error('Error processing document request:', error);
     return serverErrorResponse('Failed to process document request');
@@ -305,7 +305,7 @@ export async function PATCH(request: NextRequest) {
     return successResponse(updatedDocument, 'Document updated successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return errorResponse(error.errors[0]?.message || 'Validation error');
+      return errorResponse(error.issues[0]?.message || 'Validation error');
     }
     console.error('Error updating document:', error);
     return serverErrorResponse('Failed to update document');

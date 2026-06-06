@@ -80,6 +80,7 @@ export async function initiatePayment(params: InitiatePaymentParams): Promise<Pa
         status: 'PENDING',
         phoneNumber: phoneNumber ? formatPhone(paymentMethod, phoneNumber) : null,
         taskId: taskId || null,
+        orderId: orderId || null,
       },
     });
 

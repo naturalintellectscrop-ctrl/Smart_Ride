@@ -3,9 +3,16 @@ import { db } from '@/lib/db';
 import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { checkRateLimit, paymentRateLimit } from '@/lib/security/rate-limit';
 
 // POST /api/wallet/transfer - Transfer money to another user
 export async function POST(request: NextRequest) {
+  // Rate limiting check
+  const rateLimitResult = checkRateLimit(request, paymentRateLimit);
+  if (!rateLimitResult.success) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   // Require authentication - sender must be the authenticated user
   const authResult = await requireAuth(request);
   if (authResult instanceof NextResponse) {

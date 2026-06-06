@@ -7,8 +7,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PaymentService } from '@/lib/payments/payment-service';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { setRLSContext, resetRLSContext } from '@/lib/db';
+import { checkRateLimit, paymentRateLimit } from '@/lib/security/rate-limit';
 
 export async function POST(request: NextRequest) {
+  // Rate limiting check
+  const rateLimitResult = checkRateLimit(request, paymentRateLimit);
+  if (!rateLimitResult.success) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   // Verify authentication
   const authHeader = request.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) {

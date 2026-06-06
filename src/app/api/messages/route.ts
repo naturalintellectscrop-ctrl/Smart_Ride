@@ -97,19 +97,26 @@ export async function GET(request: NextRequest) {
       orderBy: { updatedAt: 'desc' }
     });
 
-    // Calculate unread counts
-    const conversationsWithUnread = await Promise.all(
-      conversations.map(async (conv) => {
-        const unreadCount = await db.message.count({
-          where: {
-            conversationId: conv.id,
-            senderId: { not: decoded.userId },
-            isRead: false
-          }
-        });
-        return { ...conv, unreadCount };
-      })
-    );
+    // Calculate unread counts — single groupBy query instead of N+1
+    const conversationIds = conversations.map(conv => conv.id);
+
+    const unreadCounts = await db.message.groupBy({
+      by: ['conversationId'],
+      where: {
+        conversationId: { in: conversationIds },
+        senderId: { not: decoded.userId },
+        isRead: false,
+      },
+      _count: true,
+    });
+
+    // Create a lookup map
+    const unreadMap = new Map(unreadCounts.map(u => [u.conversationId, u._count]));
+
+    const conversationsWithUnread = conversations.map(conv => ({
+      ...conv,
+      unreadCount: unreadMap.get(conv.id) || 0,
+    }));
 
     return NextResponse.json({ conversations: conversationsWithUnread });
   } catch (error) {

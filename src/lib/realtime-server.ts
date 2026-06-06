@@ -9,7 +9,7 @@
 //   await broadcastEvent(`task:${taskId}`, 'task:status:update', { taskId, status });
 //   await broadcastToUser(userId, 'notification', { type: 'task', title: 'Ride Updated', message: '...' });
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 
 // Singleton server-side Supabase client (uses service role key for full access)
 let serverClient: SupabaseClient | null = null;
@@ -35,9 +35,73 @@ function getServerClient(): SupabaseClient {
   return serverClient;
 }
 
+// ============================================
+// CHANNEL CACHE
+// ============================================
+// Reuse channels instead of creating/destroying per broadcast.
+// Channels are cleaned up after being idle for CHANNEL_IDLE_TIMEOUT ms.
+
+const channelCache = new Map<string, { channel: RealtimeChannel; lastUsedAt: number }>();
+const CHANNEL_IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
+function getOrCreateChannel(name: string): RealtimeChannel {
+  const client = getServerClient();
+  const cached = channelCache.get(name);
+
+  // Reuse if channel exists and is not closed
+  if (cached && cached.channel.state !== 'closed') {
+    cached.lastUsedAt = Date.now();
+    return cached.channel;
+  }
+
+  // Create new channel and cache it
+  const channel = client.channel(name);
+  channel.subscribe();
+  channelCache.set(name, { channel, lastUsedAt: Date.now() });
+  return channel;
+}
+
+/**
+ * Periodically clean up idle channels to free resources.
+ * Runs every 5 minutes, removes channels not used in the last 5 minutes.
+ */
+function cleanupIdleChannels(): void {
+  const now = Date.now();
+  const client = getServerClient();
+
+  for (const [name, entry] of channelCache.entries()) {
+    if (now - entry.lastUsedAt > CHANNEL_IDLE_TIMEOUT) {
+      try {
+        client.removeChannel(entry.channel);
+      } catch {
+        // Ignore removal errors for cached channels
+      }
+      channelCache.delete(name);
+    }
+  }
+}
+
+// Start periodic cleanup (every 5 minutes)
+let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
+
+function ensureCleanupRunning(): void {
+  if (cleanupIntervalId) return;
+  cleanupIntervalId = setInterval(cleanupIdleChannels, CHANNEL_IDLE_TIMEOUT);
+  // Allow the Node.js process to exit even if this interval is running
+  if (cleanupIntervalId && typeof cleanupIntervalId === 'object' && 'unref' in cleanupIntervalId) {
+    cleanupIntervalId.unref();
+  }
+}
+
+// Initialize cleanup on first module load
+ensureCleanupRunning();
+
 /**
  * Broadcast an event to all subscribers of a channel.
  * Replaces: fetch(REALTIME_API_URL + '/emit', { body: { room, event, data } })
+ *
+ * Uses cached channels for performance — avoids creating/destroying
+ * a new channel on every broadcast call.
  *
  * @param channelName - The channel to broadcast on (e.g., "task:abc123", "user:def456")
  * @param event - The event name (e.g., "task:status:update", "rider:location:update")
@@ -49,8 +113,7 @@ export async function broadcastEvent(
   payload: unknown
 ): Promise<void> {
   try {
-    const client = getServerClient();
-    const channel = client.channel(channelName);
+    const channel = getOrCreateChannel(channelName);
 
     await channel.send({
       type: 'broadcast',
@@ -58,8 +121,7 @@ export async function broadcastEvent(
       payload,
     });
 
-    // Clean up the channel after sending (server doesn't need to stay subscribed)
-    client.removeChannel(channel);
+    // Don't remove the channel — let it be reused from cache
   } catch (error) {
     console.error(`[Realtime Server] Failed to broadcast to ${channelName}:`, error);
   }

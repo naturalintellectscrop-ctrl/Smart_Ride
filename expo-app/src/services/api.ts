@@ -7,6 +7,7 @@
 import { ApiResponse, Task, Order, Merchant, User, Rider } from '../types';
 import { API_CONFIG, STORAGE_KEYS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '../store/authStore';
 
 // ============================================
 // API CLIENT
@@ -56,8 +57,9 @@ class ApiService {
           // Retry the original request with new token
           return this.request<T>(endpoint, method, body, true);
         }
-        // Refresh failed - clear tokens and return original error
+        // Refresh failed - clear tokens and log out
         await AsyncStorage.multiRemove([STORAGE_KEYS.authToken, STORAGE_KEYS.refreshToken]);
+        try { useAuthStore.getState().logout(); } catch {}
       }
 
       const data = await response.json();

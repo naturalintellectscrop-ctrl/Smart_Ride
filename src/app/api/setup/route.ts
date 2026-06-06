@@ -146,7 +146,7 @@ export async function POST(request: NextRequest) {
 
     if (!validationResult.success) {
       return NextResponse.json(
-        { success: false, error: validationResult.error.errors[0]?.message || 'Validation error' },
+        { success: false, error: validationResult.error.issues[0]?.message || 'Validation error' },
         { status: 400 }
       );
     }

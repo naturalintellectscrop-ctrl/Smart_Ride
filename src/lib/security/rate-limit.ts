@@ -302,6 +302,54 @@ export const RATE_LIMITS = {
 } as const;
 
 // ============================================================================
+// Convenience Rate Limit Configs (for direct import in routes)
+// ============================================================================
+
+/**
+ * Auth rate limit: 10 req/min per IP
+ * For registration, OTP send/verify endpoints
+ */
+export const authRateLimit: RateLimitConfig = {
+  windowMs: 60 * 1000,
+  maxRequests: 10,
+  keyPrefix: 'auth',
+  message: 'Too many auth requests. Please try again later.',
+};
+
+/**
+ * Payment rate limit: 10 req/min per user
+ * For payment initiation, wallet withdraw/transfer/topup endpoints
+ */
+export const paymentRateLimit: RateLimitConfig = {
+  windowMs: 60 * 1000,
+  maxRequests: 10,
+  keyPrefix: 'payment',
+  message: 'Too many payment requests. Please slow down.',
+};
+
+/**
+ * API rate limit: 30 req/min per user
+ * For general API write endpoints (e.g. task creation)
+ */
+export const apiRateLimit: RateLimitConfig = {
+  windowMs: 60 * 1000,
+  maxRequests: 30,
+  keyPrefix: 'api',
+  message: 'Too many requests. Please slow down.',
+};
+
+/**
+ * Admin login rate limit: 5 req/min per IP
+ * For admin authentication endpoint
+ */
+export const adminLoginRateLimit: RateLimitConfig = {
+  windowMs: 60 * 1000,
+  maxRequests: 5,
+  keyPrefix: 'admin:login',
+  message: 'Too many admin login attempts. Please try again later.',
+};
+
+// ============================================================================
 // Middleware Wrapper
 // ============================================================================
 

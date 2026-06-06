@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendOTP } from '@/lib/auth/otp-service';
 import { errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { z } from 'zod';
+import { checkRateLimit, authRateLimit } from '@/lib/security/rate-limit';
 
 // Validation schema
 const sendOTPSchema = z.object({
@@ -16,13 +17,19 @@ const sendOTPSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Rate limiting check
+  const rateLimitResult = checkRateLimit(request, authRateLimit);
+  if (!rateLimitResult.success) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     const body = await request.json();
     
     // Validate input
     const validationResult = sendOTPSchema.safeParse(body);
     if (!validationResult.success) {
-      return errorResponse(validationResult.error.errors[0]?.message || 'Validation error');
+      return errorResponse(validationResult.error.issues[0]?.message || 'Validation error');
     }
 
     const { phone, purpose } = validationResult.data;

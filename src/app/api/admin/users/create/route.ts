@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const validationResult = createAdminSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
-        { success: false, error: validationResult.error.errors[0]?.message || 'Validation error' },
+        { success: false, error: validationResult.error.issues[0]?.message || 'Validation error' },
         { status: 400 }
       );
     }
@@ -104,8 +104,8 @@ export async function POST(request: NextRequest) {
         entityType: 'USER',
         entityId: newAdmin.id,
         actorType: 'ADMIN',
-        actorId: user.id,
-        userId: user.id,
+        actorId: user.userId,
+        userId: user.userId,
         description: `Admin ${user.name} created new admin: ${name} (${role})`,
         newValues: JSON.stringify({
           email,

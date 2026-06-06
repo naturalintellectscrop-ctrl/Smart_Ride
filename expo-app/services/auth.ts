@@ -114,10 +114,57 @@ export function syncAuthStore(user: User, accessToken: string): void {
 // API HELPERS
 // ============================================
 
+// Mutex to prevent concurrent token refresh calls
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+async function tryRefreshAccessToken(): Promise<string | null> {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) {
+        console.log('[AUTH] No refresh token available for refresh');
+        return null;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.data?.accessToken) {
+        await saveTokens(data.data.accessToken, data.data.refreshToken);
+        console.log('[AUTH] Token refresh successful');
+        return data.data.accessToken;
+      }
+
+      console.log('[AUTH] Token refresh failed:', data.error);
+      return null;
+    } catch (error) {
+      console.error('[AUTH] Token refresh error:', error);
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 async function apiRequest<T>(
   endpoint: string,
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
-  body?: any
+  body?: any,
+  isRetry: boolean = false
 ): Promise<T> {
   const token = await getAccessToken();
   
@@ -134,6 +181,22 @@ async function apiRequest<T>(
     headers,
     body: body ? JSON.stringify(body) : undefined,
   });
+
+  // Handle 401 — attempt token refresh and retry once
+  if (response.status === 401 && !isRetry) {
+    console.log('[AUTH] Got 401, attempting token refresh...');
+    const newToken = await tryRefreshAccessToken();
+    if (newToken) {
+      // Retry the original request with the new token
+      return apiRequest<T>(endpoint, method, body, true);
+    }
+    // Refresh failed — clear tokens and log out
+    await clearTokens();
+    try {
+      useAuthStore.getState().logout();
+    } catch {}
+    throw new Error('Session expired. Please log in again.');
+  }
   
   const data = await response.json();
   

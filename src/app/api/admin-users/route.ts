@@ -154,7 +154,7 @@ export async function POST(request: NextRequest) {
     return successResponse({ user }, 'Admin user created successfully', 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return errorResponse(error.errors[0].message);
+      return errorResponse(error.issues[0].message);
     }
     console.error('Error creating admin user:', error);
     return serverErrorResponse('Failed to create admin user');

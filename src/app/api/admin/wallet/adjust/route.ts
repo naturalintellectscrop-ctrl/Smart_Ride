@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const zodError = error as z.ZodError;
-      return errorResponse(zodError.errors[0]?.message || 'Validation error');
+      return errorResponse(zodError.issues[0]?.message || 'Validation error');
     }
     console.error('Error adjusting wallet:', error);
     return serverErrorResponse('Failed to adjust wallet');

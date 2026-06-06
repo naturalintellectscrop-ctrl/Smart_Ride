@@ -192,59 +192,48 @@ export async function POST(request: NextRequest) {
       return errorResponse('Merchant is not active');
     }
 
-    // Create order with items
-    const order = await db.order.create({
-      data: {
-        orderNumber: generateOrderNumber(),
-        orderType: validatedData.orderType as OrderType,
-        clientId: validatedData.clientId,
-        merchantId: validatedData.merchantId,
-        status: 'ORDER_CREATED',
-        subtotal: validatedData.subtotal,
-        deliveryFee: validatedData.deliveryFee,
-        serviceFee: validatedData.serviceFee || 0,
-        discount: validatedData.discount || 0,
-        totalAmount: validatedData.totalAmount,
-        paymentMethod: validatedData.paymentMethod,
-        paymentStatus: 'PENDING',
-        deliveryAddress: validatedData.deliveryAddress,
-        deliveryLatitude: validatedData.deliveryLatitude || null,
-        deliveryLongitude: validatedData.deliveryLongitude || null,
-        deliveryInstructions: validatedData.deliveryInstructions || null,
-        recipientName: validatedData.recipientName || null,
-        recipientPhone: validatedData.recipientPhone || null,
-        items: {
-          create: validatedData.items.map(item => ({
-            menuItemId: item.menuItemId,
-            itemName: item.itemName,
-            itemDescription: item.itemDescription,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            totalPrice: item.unitPrice * item.quantity,
-            specialInstructions: item.specialInstructions,
-          })),
+    // Create order + items + task atomically in a transaction
+    const result = await db.$transaction(async (tx) => {
+      const order = await tx.order.create({
+        data: {
+          orderNumber: generateOrderNumber(),
+          orderType: validatedData.orderType as OrderType,
+          clientId: validatedData.clientId,
+          merchantId: validatedData.merchantId,
+          status: 'ORDER_CREATED',
+          subtotal: validatedData.subtotal,
+          deliveryFee: validatedData.deliveryFee,
+          serviceFee: validatedData.serviceFee || 0,
+          discount: validatedData.discount || 0,
+          totalAmount: validatedData.totalAmount,
+          paymentMethod: validatedData.paymentMethod,
+          paymentStatus: 'PENDING',
+          deliveryAddress: validatedData.deliveryAddress,
+          deliveryLatitude: validatedData.deliveryLatitude || null,
+          deliveryLongitude: validatedData.deliveryLongitude || null,
+          deliveryInstructions: validatedData.deliveryInstructions || null,
+          recipientName: validatedData.recipientName || null,
+          recipientPhone: validatedData.recipientPhone || null,
+          items: {
+            create: validatedData.items.map(item => ({
+              menuItemId: item.menuItemId,
+              itemName: item.itemName,
+              itemDescription: item.itemDescription,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              totalPrice: item.unitPrice * item.quantity,
+              specialInstructions: item.specialInstructions,
+            })),
+          },
         },
-      },
-      include: {
-        items: true,
-        merchant: true,
-      },
-    });
+        include: {
+          items: true,
+          merchant: true,
+        },
+      });
 
-    // Create audit log
-    await createAuditLog({
-      action: AuditActions.ORDER_CREATED,
-      entityType: EntityTypes.ORDER,
-      entityId: order.id,
-      actorType: 'USER',
-      userId: validatedData.clientId,
-      orderId: order.id,
-      description: `Order ${order.orderNumber} created for ${merchant.name}`,
-    });
-
-    // Auto-create a FOOD_DELIVERY task so a rider can be dispatched
-    try {
-      const task = await db.task.create({
+      // Create task linked to the order
+      const task = await tx.task.create({
         data: {
           taskNumber: `TSK-${Date.now().toString(36).toUpperCase()}`,
           taskType: 'FOOD_DELIVERY',
@@ -263,29 +252,35 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Link the task back to the order
-      await db.order.update({
-        where: { id: order.id },
-        data: { taskId: task.id },
-      });
-
-      console.log(`[ORDER] Auto-created task ${task.taskNumber} for order ${order.orderNumber}`);
-
       // Transition task to MATCHING status for dispatch
-      await db.task.update({
+      await tx.task.update({
         where: { id: task.id },
         data: { status: 'MATCHING' },
       });
-    } catch (taskError) {
-      // Task creation failure should NOT fail the order
-      console.error('[ORDER] Failed to auto-create task for order:', taskError);
-    }
+
+      return { order, task };
+    });
+
+    const { order, task } = result;
+
+    // Create audit log (outside transaction — non-critical)
+    await createAuditLog({
+      action: AuditActions.ORDER_CREATED,
+      entityType: EntityTypes.ORDER,
+      entityId: order.id,
+      actorType: 'USER',
+      userId: validatedData.clientId,
+      orderId: order.id,
+      description: `Order ${order.orderNumber} created for ${merchant.name}`,
+    });
+
+    console.log(`[ORDER] Auto-created task ${task.taskNumber} for order ${order.orderNumber}`);
 
     return successResponse(order, 'Order created successfully', 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
       const zodError = error as z.ZodError;
-      return errorResponse(zodError.errors[0]?.message || 'Validation error');
+      return errorResponse(zodError.issues[0]?.message || 'Validation error');
     }
     console.error('Error creating order:', error);
     return serverErrorResponse('Failed to create order');

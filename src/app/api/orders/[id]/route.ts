@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
@@ -13,6 +13,7 @@ import { calculatePricing } from '@/lib/api/pricing';
 import { TaskStatus } from '@prisma/client';
 import { z } from 'zod';
 import { broadcastEvent, broadcastToUser } from '@/lib/realtime-server';
+import { requireAuth, isAdmin } from '@/lib/auth/guards';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -71,8 +72,19 @@ async function emitSocketEvent(room: string, event: string, data: Record<string,
 /**
  * GET /api/orders/[id]
  * Get a specific order by ID
+ * SECURITY: Requires authentication + ownership verification
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  // SECURITY: Require authentication
+  const authResult = requireAuth(request);
+  if (!authResult.success || !authResult.user) {
+    return NextResponse.json(
+      { success: false, error: authResult.error || 'Authentication required' },
+      { status: authResult.statusCode || 401 }
+    );
+  }
+  const user = authResult.user;
+
   await setServiceRoleContext();
   try {
     const { id } = await params;
@@ -97,6 +109,38 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (!order) {
       return notFoundResponse('Order');
+    }
+
+    // SECURITY: Verify the user has access to this order
+    if (!isAdmin(user.role)) {
+      const isClient = order.clientId === user.userId;
+      let isMerchant = false;
+      let isRider = false;
+
+      // Check if user is the merchant
+      if (order.merchantId) {
+        const merchant = await db.merchant.findUnique({
+          where: { id: order.merchantId },
+          select: { userId: true },
+        });
+        isMerchant = merchant?.userId === user.userId;
+      }
+
+      // Check if user is the assigned rider
+      if (order.task?.riderId) {
+        const rider = await db.rider.findUnique({
+          where: { id: order.task.riderId },
+          select: { userId: true },
+        });
+        isRider = rider?.userId === user.userId;
+      }
+
+      if (!isClient && !isMerchant && !isRider) {
+        return NextResponse.json(
+          { success: false, error: 'Access denied to this order' },
+          { status: 403 }
+        );
+      }
     }
 
     return successResponse(order);

@@ -10,6 +10,7 @@ import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { z } from 'zod';
 import { UserRole, UserStatus } from '@prisma/client';
+import { checkRateLimit, authRateLimit } from '@/lib/security/rate-limit';
 
 // Validation schema
 const verifyOTPSchema = z.object({
@@ -29,6 +30,12 @@ const verifyOTPSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Rate limiting check
+  const rateLimitResult = checkRateLimit(request, authRateLimit);
+  if (!rateLimitResult.success) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -36,7 +43,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validationResult = verifyOTPSchema.safeParse(body);
     if (!validationResult.success) {
-      return errorResponse(validationResult.error.errors[0]?.message || 'Validation error');
+      return errorResponse(validationResult.error.issues[0]?.message || 'Validation error');
     }
 
     const { 

@@ -18,16 +18,23 @@ export async function POST(request: NextRequest) {
 
     console.log('Airtel Money Callback received:', JSON.stringify(body, null, 2));
 
-    // SECURITY: Verify webhook signature if secret is configured
+    // SECURITY: Always verify webhook signature — even in development/test.
+    // TODO: The current verification is a simple header-to-secret comparison.
+    //       Replace with proper HMAC verification once Airtel provides
+    //       documentation for their signing algorithm.
+    //       Configure AIRTEL_MONEY_WEBHOOK_SECRET (use test keys for non-production).
     const AIRTEL_SECRET = process.env.AIRTEL_MONEY_WEBHOOK_SECRET;
-    if (AIRTEL_SECRET) {
-      const signature = request.headers.get('X-Airtel-Signature');
-      if (!signature || signature !== AIRTEL_SECRET) {
-        console.error('Airtel callback: Invalid signature');
-        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-      }
-    } else {
-      console.warn('Airtel callback: No webhook secret configured, signature verification skipped');
+    if (!AIRTEL_SECRET) {
+      console.error('Airtel callback: AIRTEL_MONEY_WEBHOOK_SECRET not configured');
+      return NextResponse.json(
+        { error: 'Webhook secret key not configured (AIRTEL_MONEY_WEBHOOK_SECRET)' },
+        { status: 500 }
+      );
+    }
+    const signature = request.headers.get('X-Airtel-Signature');
+    if (!signature || signature !== AIRTEL_SECRET) {
+      console.error('Airtel callback: Invalid signature');
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
     }
 
     await setServiceRoleContext();

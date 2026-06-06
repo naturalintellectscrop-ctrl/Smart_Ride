@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
     return errorResponse('Invalid action. Use: verify, bulk-verify, or escalate.');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return errorResponse(error.errors[0]?.message || 'Validation error');
+      return errorResponse(error.issues[0]?.message || 'Validation error');
     }
     console.error('Error processing verification:', error);
     return serverErrorResponse('Failed to process verification');

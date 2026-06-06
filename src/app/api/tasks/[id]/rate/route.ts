@@ -108,7 +108,7 @@ export async function POST(
     return successResponse({ message: 'Rating submitted' }, 'Rating submitted');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return errorResponse(error.errors[0]?.message || 'Validation error');
+      return errorResponse(error.issues[0]?.message || 'Validation error');
     }
     console.error('Rating error:', error);
     return serverErrorResponse('Failed to submit rating');

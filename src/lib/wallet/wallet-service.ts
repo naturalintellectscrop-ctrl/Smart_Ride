@@ -224,7 +224,7 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
       return { success: false, error: 'Withdrawal amount must be positive' };
     }
 
-    // Get wallet
+    // Get wallet for existence check
     const wallet = await db.wallet.findUnique({
       where: {
         ownerId_ownerType: { ownerId: input.ownerId, ownerType: input.ownerType },
@@ -235,19 +235,28 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
       return { success: false, error: 'Wallet not found' };
     }
 
-    // Check balance
-    if (wallet.balance < input.amount) {
-      return { success: false, error: 'Insufficient balance' };
-    }
-
-    // Check wallet status
-    if (wallet.status !== 'ACTIVE') {
-      return { success: false, error: 'Wallet is not active' };
-    }
-
     // Create transaction and update wallet atomically
+    // Read balance INSIDE the transaction to avoid stale reads
     const result = await db.$transaction(async (tx) => {
-      const balanceBefore = wallet.balance;
+      const walletRecord = await tx.wallet.findUnique({
+        where: { id: wallet.id },
+      });
+
+      if (!walletRecord) {
+        throw new Error('Wallet not found');
+      }
+
+      // Check balance with fresh value
+      if (walletRecord.balance < input.amount) {
+        throw new Error('Insufficient balance');
+      }
+
+      // Check wallet status
+      if (walletRecord.status !== 'ACTIVE') {
+        throw new Error('Wallet is not active');
+      }
+
+      const balanceBefore = walletRecord.balance;
       const balanceAfter = balanceBefore - input.amount;
 
       // Create transaction record
@@ -301,7 +310,7 @@ export async function payFromWallet(input: PaymentInput): Promise<{
       return { success: false, error: 'Payment amount must be positive' };
     }
 
-    // Get wallet
+    // Get wallet for existence check
     const wallet = await db.wallet.findUnique({
       where: {
         ownerId_ownerType: { ownerId: input.ownerId, ownerType: input.ownerType },
@@ -312,19 +321,28 @@ export async function payFromWallet(input: PaymentInput): Promise<{
       return { success: false, error: 'Wallet not found' };
     }
 
-    // Check balance
-    if (wallet.balance < input.amount) {
-      return { success: false, error: 'Insufficient balance' };
-    }
-
-    // Check wallet status
-    if (wallet.status !== 'ACTIVE') {
-      return { success: false, error: 'Wallet is not active' };
-    }
-
     // Create transaction and update wallet atomically
+    // Read balance INSIDE the transaction to avoid stale reads
     const result = await db.$transaction(async (tx) => {
-      const balanceBefore = wallet.balance;
+      const walletRecord = await tx.wallet.findUnique({
+        where: { id: wallet.id },
+      });
+
+      if (!walletRecord) {
+        throw new Error('Wallet not found');
+      }
+
+      // Check balance with fresh value
+      if (walletRecord.balance < input.amount) {
+        throw new Error('Insufficient balance');
+      }
+
+      // Check wallet status
+      if (walletRecord.status !== 'ACTIVE') {
+        throw new Error('Wallet is not active');
+      }
+
+      const balanceBefore = walletRecord.balance;
       const balanceAfter = balanceBefore - input.amount;
 
       // Create transaction record

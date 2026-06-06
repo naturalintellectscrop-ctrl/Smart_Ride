@@ -8,11 +8,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { db, resetRLSContext } from '@/lib/db';
+import { checkRateLimit, paymentRateLimit } from '@/lib/security/rate-limit';
 
 const VALID_PROVIDERS = ['MTN_MOMO', 'AIRTEL_MONEY'];
 
 // POST /api/wallet/withdraw - Withdraw from wallet
 export async function POST(request: NextRequest) {
+  // Rate limiting check
+  const rateLimitResult = checkRateLimit(request, paymentRateLimit);
+  if (!rateLimitResult.success) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   const authResult = await requireAuthWithRLS(request);
 
   if (!authResult.success || !authResult.user) {

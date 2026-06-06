@@ -47,6 +47,10 @@
     "prisma",
     "upload",
     "docs",
-    "download"
+    "download",
+    "App.tsx",
+    "capacitor.config.ts",
+    "fix-admin-password.ts",
+    "src/__tests__"
   ]
 }

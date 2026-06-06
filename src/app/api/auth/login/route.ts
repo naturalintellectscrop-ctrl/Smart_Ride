@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validationResult = loginRequestSchema.safeParse(body);
     if (!validationResult.success) {
-      return errorResponse(validationResult.error.errors[0]?.message || 'Validation error');
+      return errorResponse(validationResult.error.issues[0]?.message || 'Validation error');
     }
 
     const { email, password, deviceId, deviceName, deviceType } = validationResult.data;

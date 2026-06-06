@@ -12,6 +12,7 @@ import { verifyPassword } from '@/lib/auth/password';
 import { generateTokenPair } from '@/lib/auth/jwt';
 import { isAdminRole } from '@/lib/config/mobile-access';
 import { z } from 'zod';
+import { checkRateLimit, adminLoginRateLimit } from '@/lib/security/rate-limit';
 
 const adminLoginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -19,6 +20,12 @@ const adminLoginSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Rate limiting check
+  const rateLimitResult = checkRateLimit(request, adminLoginRateLimit);
+  if (!rateLimitResult.success) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -27,7 +34,7 @@ export async function POST(request: NextRequest) {
     const validationResult = adminLoginSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
-        { success: false, error: validationResult.error.errors[0]?.message || 'Validation error' },
+        { success: false, error: validationResult.error.issues[0]?.message || 'Validation error' },
         { status: 400 }
       );
     }

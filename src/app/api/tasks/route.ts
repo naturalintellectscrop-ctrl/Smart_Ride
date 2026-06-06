@@ -31,6 +31,7 @@ import { resetRLSContext } from '@/lib/db';
 import { UserRole } from '@prisma/client';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
+import { checkRateLimit, apiRateLimit } from '@/lib/security/rate-limit';
 
 /**
  * GET /api/tasks
@@ -163,6 +164,12 @@ const createTaskSchema = z.object({
  * SECURITY: Requires authentication, client must be the authenticated user
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting check
+  const rateLimitResult = checkRateLimit(request, apiRateLimit);
+  if (!rateLimitResult.success) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   try {
     // SECURITY: Require authentication + set RLS context
     const authResult = await requireAuthWithRLS(request);
@@ -320,7 +327,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const zodError = error as z.ZodError;
-      return errorResponse(zodError.errors[0]?.message || 'Validation error');
+      return errorResponse(zodError.issues[0]?.message || 'Validation error');
     }
     console.error('Error creating task:', error);
     return serverErrorResponse('Failed to create task');

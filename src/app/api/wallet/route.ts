@@ -3,6 +3,7 @@ import { db, resetRLSContext } from '@/lib/db';
 import { requireAuth, requireOwnershipOrAdmin } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { checkRateLimit, paymentRateLimit } from '@/lib/security/rate-limit';
 
 // GET /api/wallet - Get wallet balance and info
 export async function GET(request: NextRequest) {
@@ -110,6 +111,12 @@ export async function GET(request: NextRequest) {
 
 // POST /api/wallet - Top up wallet
 export async function POST(request: NextRequest) {
+  // Rate limiting check
+  const rateLimitResult = checkRateLimit(request, paymentRateLimit);
+  if (!rateLimitResult.success) {
+    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+  }
+
   // Require authentication
   const authResult = await requireAuth(request);
   if (authResult instanceof NextResponse) {

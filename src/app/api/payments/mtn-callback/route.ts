@@ -22,21 +22,19 @@ export async function POST(request: NextRequest) {
 
     console.log('MTN MoMo Callback received:', JSON.stringify(body, null, 2));
 
-    // SECURITY: Verify webhook signature
-    // Skip verification in development if no secret is configured
-    const skipSignatureCheck = process.env.NODE_ENV !== 'production' && !process.env.MTN_MOMO_SECRET_KEY;
-
-    if (!skipSignatureCheck) {
-      const isValidSignature = verifyMtnSignature(request, rawBody);
-      if (!isValidSignature) {
-        console.error('MTN MoMo callback: Invalid signature');
-        return NextResponse.json(
-          { error: 'Invalid signature' },
-          { status: 401 }
-        );
-      }
-    } else {
-      console.warn('MTN MoMo callback: Signature verification skipped (development mode)');
+    // SECURITY: Always verify webhook signature — even in development/test.
+    // Configure MTN_MOMO_SECRET_KEY (use test keys for non-production environments).
+    const isValidSignature = verifyMtnSignature(request, rawBody);
+    if (!isValidSignature) {
+      const hasKey = !!process.env.MTN_MOMO_SECRET_KEY;
+      console.error('MTN MoMo callback: Signature verification failed', {
+        hasSecretKey: hasKey,
+        signaturePresent: !!request.headers.get('x-mtn-signature'),
+      });
+      return NextResponse.json(
+        { error: hasKey ? 'Invalid signature' : 'Webhook secret key not configured (MTN_MOMO_SECRET_KEY)' },
+        { status: hasKey ? 401 : 500 }
+      );
     }
 
     await setServiceRoleContext();

@@ -137,7 +137,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return successResponse(user, 'Admin user updated successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return errorResponse(error.errors[0].message);
+      return errorResponse(error.issues[0].message);
     }
     console.error('Error updating admin user:', error);
     return serverErrorResponse('Failed to update admin user');

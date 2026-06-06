@@ -122,7 +122,7 @@ export async function registerUser(data: z.infer<typeof registerSchema>): Promis
   } catch (error) {
     if (error instanceof z.ZodError) {
       const zodError = error as z.ZodError;
-      return { success: false, error: zodError.errors[0]?.message || 'Validation error' };
+      return { success: false, error: zodError.issues[0]?.message || 'Validation error' };
     }
     console.error('Registration error:', error);
     return { success: false, error: 'Failed to register user' };
@@ -192,7 +192,7 @@ export async function loginUser(data: z.infer<typeof loginSchema>): Promise<Auth
   } catch (error) {
     if (error instanceof z.ZodError) {
       const zodError = error as z.ZodError;
-      return { success: false, error: zodError.errors[0]?.message || 'Validation error' };
+      return { success: false, error: zodError.issues[0]?.message || 'Validation error' };
     }
     console.error('Login error:', error);
     return { success: false, error: 'Failed to login' };

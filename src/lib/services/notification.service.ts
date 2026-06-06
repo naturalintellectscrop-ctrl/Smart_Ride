@@ -6,6 +6,7 @@
 import { db } from '@/lib/db';
 import { NotificationType } from '@prisma/client';
 import { broadcastToUser } from '@/lib/realtime-server';
+import { sendPushNotification } from './push-notification.service';
 
 export interface CreateNotificationInput {
   userId: string;
@@ -39,7 +40,7 @@ export async function createNotification(input: CreateNotificationInput): Promis
       },
     });
 
-    // Emit real-time notification via Socket.io
+    // Emit real-time notification via Supabase Realtime
     await emitNotification(input.userId, {
       id: notification.id,
       type: input.type,
@@ -49,6 +50,25 @@ export async function createNotification(input: CreateNotificationInput): Promis
       referenceType: input.referenceType,
       createdAt: notification.createdAt,
     });
+
+    // Send push notification (non-blocking — don't fail if push fails)
+    try {
+      await sendPushNotification({
+        userId: input.userId,
+        title: input.title,
+        message: input.message,
+        data: {
+          notificationId: notification.id,
+          type: input.type,
+          referenceId: input.referenceId,
+          referenceType: input.referenceType,
+          ...input.data,
+        },
+      });
+    } catch (pushError) {
+      console.error('[Notification] Push notification failed:', pushError);
+      // Don't fail the notification creation if push fails
+    }
 
     return { success: true, notification };
   } catch (error) {
@@ -84,6 +104,25 @@ export async function createNotifications(
         referenceId: input.referenceId,
         referenceType: input.referenceType,
       });
+    }
+
+    // Send push notifications (non-blocking — don't fail if push fails)
+    for (const input of inputs) {
+      try {
+        await sendPushNotification({
+          userId: input.userId,
+          title: input.title,
+          message: input.message,
+          data: {
+            type: input.type,
+            referenceId: input.referenceId,
+            referenceType: input.referenceType,
+            ...input.data,
+          },
+        });
+      } catch (pushError) {
+        console.error('[Notification] Push notification failed:', pushError);
+      }
     }
 
     return { success: true };
@@ -548,6 +587,25 @@ export async function createNotificationsForUsers(
       referenceId: notification.referenceId,
       referenceType: notification.referenceType,
     });
+  }
+
+  // Send push notifications (non-blocking — don't fail if push fails)
+  for (const userId of userIds) {
+    try {
+      await sendPushNotification({
+        userId,
+        title: notification.title,
+        message: notification.message,
+        data: {
+          type: notification.type,
+          referenceId: notification.referenceId,
+          referenceType: notification.referenceType,
+          ...notification.data,
+        },
+      });
+    } catch (pushError) {
+      console.error('[Notification] Push notification failed:', pushError);
+    }
   }
 
   return notifications;

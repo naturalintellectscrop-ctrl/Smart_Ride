@@ -146,20 +146,33 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete in batches of 1000 to avoid transaction timeouts
+    // (Prisma deleteMany does not support `take`, so we batch by fetching IDs first)
     let totalDeleted = 0;
     const batchSize = 1000;
-    let deleted = 0;
+    let hasMore = true;
 
-    do {
-      const result = await db.auditLog.deleteMany({
+    while (hasMore) {
+      const batch = await db.auditLog.findMany({
         where: {
           createdAt: { lt: cutoffDate },
         },
+        select: { id: true },
         take: batchSize,
       });
-      deleted = result.count;
-      totalDeleted += deleted;
-    } while (deleted === batchSize);
+
+      if (batch.length === 0) {
+        hasMore = false;
+      } else {
+        const ids = batch.map(b => b.id);
+        const result = await db.auditLog.deleteMany({
+          where: { id: { in: ids } },
+        });
+        totalDeleted += result.count;
+        if (batch.length < batchSize) {
+          hasMore = false;
+        }
+      }
+    }
 
     // Log the cleanup itself as a system audit log
     await db.auditLog.create({

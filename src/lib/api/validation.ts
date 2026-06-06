@@ -27,7 +27,7 @@ export async function validateBody<T>(
       const zodError = result.error as z.ZodError;
       return {
         success: false,
-        error: zodError.errors[0]?.message || 'Validation error',
+        error: zodError.issues[0]?.message || 'Validation error',
       };
     }
 
@@ -73,7 +73,7 @@ export function validateQuery<T>(
       const zodError = result.error as z.ZodError;
       return {
         success: false,
-        error: zodError.errors[0]?.message || 'Validation error',
+        error: zodError.issues[0]?.message || 'Validation error',
       };
     }
 
@@ -103,7 +103,7 @@ export function validateParams<T>(
       const zodError = result.error as z.ZodError;
       return {
         success: false,
-        error: zodError.errors[0]?.message || 'Validation error',
+        error: zodError.issues[0]?.message || 'Validation error',
       };
     }
 

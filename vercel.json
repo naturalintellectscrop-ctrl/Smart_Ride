@@ -1,4 +1,14 @@
 {
   "framework": "nextjs",
-  "regions": ["iad1"]
+  "regions": ["iad1"],
+  "crons": [
+    {
+      "path": "/api/dispatch/process-expired",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/admin/cleanup?cleanup=expired-sessions",
+      "schedule": "0 3 * * *"
+    }
+  ]
 }

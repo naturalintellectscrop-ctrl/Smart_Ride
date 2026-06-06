@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     }, 'Successfully enrolled in incentive', 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return errorResponse(error.errors[0].message);
+      return errorResponse(error.issues[0].message);
     }
     console.error('Error enrolling in incentive:', error);
     return serverErrorResponse('Failed to enroll in incentive');
