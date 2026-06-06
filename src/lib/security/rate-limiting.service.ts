@@ -146,11 +146,12 @@ export class RateLimitingService {
       };
     } catch (error) {
       console.error('[RateLimiting] Error checking rate limit:', error);
-      // On error, allow the request through (fail-open)
+      // Fail-closed: block the request if rate limiting cannot be verified
+      // This prevents attackers from bypassing rate limits by causing DB errors
       return {
-        allowed: true,
-        remaining: limits.maxRequests,
-        resetAt,
+        allowed: false,
+        remaining: 0,
+        resetAt: new Date(Date.now() + limits.windowMs),
         totalLimit: limits.maxRequests,
       };
     }

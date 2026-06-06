@@ -163,13 +163,48 @@ export function secureApiResponse(response: NextResponse): NextResponse {
 // CORS Configuration
 // ============================================================================
 
-const ALLOWED_ORIGINS = [
-  process.env.NEXT_PUBLIC_API_URL,
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'http://localhost:19006',
-  'exp://localhost:19000',
-].filter(Boolean) as string[];
+/**
+ * Get allowed CORS origins based on environment.
+ *
+ * - Production: uses CORS_ALLOWED_ORIGINS env var (comma-separated) + app's own URL
+ * - Development: allows localhost origins in addition to configured URLs
+ */
+export function getAllowedOrigins(): string[] {
+  const origins: string[] = [];
+
+  // Production: use CORS_ALLOWED_ORIGINS env var (comma-separated)
+  if (process.env.CORS_ALLOWED_ORIGINS) {
+    origins.push(
+      ...process.env.CORS_ALLOWED_ORIGINS.split(',')
+        .map((o) => o.trim())
+        .filter(Boolean),
+    );
+  }
+
+  // Always allow the app's own URL if configured
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    origins.push(process.env.NEXT_PUBLIC_APP_URL);
+  }
+
+  // Also support legacy NEXT_PUBLIC_API_URL
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    origins.push(process.env.NEXT_PUBLIC_API_URL);
+  }
+
+  // Development only: allow localhost
+  if (process.env.NODE_ENV !== 'production') {
+    origins.push(
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:19006',
+      'exp://localhost:19000',
+    );
+  }
+
+  return [...new Set(origins)]; // Deduplicate
+}
+
+const ALLOWED_ORIGINS = getAllowedOrigins();
 
 /**
  * Handle CORS for API routes
@@ -177,12 +212,13 @@ const ALLOWED_ORIGINS = [
 export function handleCors(
   request: NextRequest,
   response: NextResponse,
-  allowedOrigins: string[] = ALLOWED_ORIGINS
+  allowedOrigins?: string[]
 ): NextResponse {
+  const origins = allowedOrigins ?? getAllowedOrigins();
   const origin = request.headers.get('origin');
   
   // Check if origin is allowed
-  if (origin && allowedOrigins.includes(origin)) {
+  if (origin && origins.includes(origin)) {
     response.headers.set('Access-Control-Allow-Origin', origin);
     response.headers.set('Access-Control-Allow-Credentials', 'true');
     response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
@@ -205,10 +241,11 @@ export function handleCors(
  */
 export function handlePreflight(
   request: NextRequest,
-  allowedOrigins: string[] = ALLOWED_ORIGINS
+  allowedOrigins?: string[]
 ): NextResponse {
+  const origins = allowedOrigins ?? getAllowedOrigins();
   const response = new NextResponse(null, { status: 204 });
-  return handleCors(request, response, allowedOrigins);
+  return handleCors(request, response, origins);
 }
 
 // ============================================================================

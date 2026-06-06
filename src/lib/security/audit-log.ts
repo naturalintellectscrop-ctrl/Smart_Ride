@@ -344,3 +344,32 @@ export async function logSecurityEvent(
     newValues: params.details,
   });
 }
+
+// ============================================================================
+// Graceful Shutdown — flush pending audit entries
+// ============================================================================
+
+if (typeof process !== 'undefined') {
+  const flushAndExit = async (signal: string) => {
+    try {
+      await securityAudit.flush();
+    } catch (e) {
+      console.error('[AuditLog] Failed to flush on shutdown:', e);
+    }
+    process.exit(signal === 'SIGTERM' ? 0 : 1);
+  };
+
+  process.on('SIGTERM', () => flushAndExit('SIGTERM'));
+  process.on('SIGINT', () => flushAndExit('SIGINT'));
+
+  // Handle unhandled promise rejections
+  process.on('unhandledRejection', (reason) => {
+    console.error('[SmartRide] Unhandled Promise Rejection:', reason);
+  });
+
+  process.on('uncaughtException', (error) => {
+    console.error('[SmartRide] Uncaught Exception:', error);
+    // For uncaught exceptions, try to flush and exit
+    securityAudit.flush().finally(() => process.exit(1));
+  });
+}

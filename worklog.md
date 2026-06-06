@@ -474,3 +474,130 @@ Stage Summary:
 - Lint: passes cleanly
 - Dev server: 200 OK, clean compilation
 - All changes pushed to GitHub (commit 552bf3b)
+
+---
+Task ID: 5-b
+Agent: P3-B Agent
+Task: Create Next.js middleware + fix rate limiter fail-closed + fix CORS
+
+Work Log:
+- Created `src/middleware.ts` — Next.js Edge middleware running on every matched request:
+  - Generates/propagates `x-request-id` header (uses `crypto.randomUUID()` if missing from incoming request)
+  - Sets `x-request-id` on both request headers (for downstream handlers) and response headers
+  - Handles CORS preflight (OPTIONS) for `/api/*` routes — returns 204 immediately via `handlePreflight()`
+  - Applies full security headers + CORS to API routes via `addSecurityHeaders()` and `handleCors()`
+  - Applies lighter security headers (X-Frame-Options: SAMEORIGIN, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy) to page routes
+  - Removes X-Powered-By and Server headers from page responses
+  - Matcher: `/api/:path*` and `/((?!_next/static|_next/image|favicon.ico).*)`
+  - No Node.js-specific APIs used (Edge runtime compatible)
+  - No Prisma/db imports (incompatible with Edge runtime)
+
+- Updated `src/lib/security/security-headers.ts` — environment-dependent CORS origins:
+  - Replaced hardcoded `ALLOWED_ORIGINS` array with `getAllowedOrigins()` function
+  - Production: reads `CORS_ALLOWED_ORIGINS` env var (comma-separated) + `NEXT_PUBLIC_APP_URL` + legacy `NEXT_PUBLIC_API_URL`
+  - Development: also includes localhost origins (localhost:3000, :3001, :19006, exp://localhost:19000)
+  - Production does NOT include any localhost origins
+  - Exported `getAllowedOrigins()` for use by middleware
+  - Updated `handleCors()` and `handlePreflight()` to call `getAllowedOrigins()` dynamically when no explicit origins provided
+  - Added deduplication via `new Set()`
+
+- Fixed `src/lib/security/rate-limiting.service.ts` — fail-closed error handling:
+  - Changed `checkRateLimit()` catch block from fail-open (`allowed: true`) to fail-closed (`allowed: false`)
+  - `remaining` set to 0 instead of `limits.maxRequests`
+  - `resetAt` set to `new Date(Date.now() + limits.windowMs)` (future window) instead of stale `resetAt`
+  - Prevents attackers from bypassing rate limits by causing DB errors
+
+- Ran `bun run lint` — zero errors
+- Verified TypeScript: no errors in modified files (middleware.ts, security-headers.ts, rate-limiting.service.ts)
+
+Stage Summary:
+- Next.js Edge middleware created at `src/middleware.ts` with request ID propagation, security headers, and CORS handling
+- CORS origins now environment-dependent: production uses env vars only, development allows localhost
+- Rate limiter changed from fail-open to fail-closed — blocks requests when rate limit cannot be verified
+- Zero lint errors
+
+---
+Task ID: 5-a
+Agent: P3-A Agent
+Task: Remove dangerous debug/setup routes + Create health check endpoints
+
+Work Log:
+- Deleted `/src/app/api/debug/db/route.ts` — leaked DATABASE_URL host info, exposed Prisma error messages, no auth required
+- Deleted `/src/app/api/debug/` parent directory (was empty after route deletion)
+- Deleted `/src/app/api/setup/route.ts` — exposed env var presence, DATABASE_URL components (hostname, port, username prefix, password length, special chars), admin user count, told attackers to use JWT_SECRET as setup key
+- Deleted `/src/app/api/admin/setup/route.ts` — contained HARDCODED credentials (email: naturalintellectscrop@gmail.com, password: Admin@123), HARDCODED setup key 'smartride-setup-2024', returned admin credentials in response body, no auth required in dev mode
+- Created `/src/app/api/health/route.ts` — Liveness probe: GET returns `{ status: "ok", timestamp }`, no auth, no DB check, `force-dynamic`
+- Created `/src/app/api/health/ready/route.ts` — Readiness probe: GET tests DB with `db.$queryRaw\`SELECT 1\``, returns 200/503 based on DB connectivity, `force-dynamic`
+- Created `/src/app/api/health/startup/route.ts` — Startup probe: GET checks JWT_SECRET and DATABASE_URL presence (boolean only, never values), returns 200/503, `force-dynamic`
+- Verified all deletions and creations with file existence checks
+- Ran `bun run lint` — passed with no errors
+- Checked dev server log — no errors, server running normally
+
+Stage Summary:
+- 3 dangerous routes removed (debug/db, setup, admin/setup) with empty directories cleaned up
+- 3 K8s-compatible health check endpoints created (liveness, readiness, startup) following standard probe patterns
+- All health endpoints use `force-dynamic` to prevent caching, no auth required, lightweight responses
+- Startup probe never exposes env var values, only boolean presence
+- Readiness probe uses `db.$queryRaw\`SELECT 1\`` for DB connectivity check
+- Lint clean, dev server running without errors
+---
+Task ID: 5-d
+Agent: P3-D Agent
+Task: DB connection resilience + webhook dedup + graceful shutdown + RLS context fix
+
+Work Log:
+- Read src/lib/db.ts, src/lib/security/audit-log.ts, and all 4 webhook route files
+- Added getDatasourceUrl() function in db.ts that appends connection_limit=10 and pool_timeout=10 to PostgreSQL URLs, with SQLite (file:) URL passthrough and URL parse error fallback
+- Changed PrismaClient log config from dev-only to always: `log: ['error']`
+- Updated getDb() to use getDatasourceUrl() for the datasourceUrl parameter
+- Enhanced RLS context error messages in setRLSContext, resetRLSContext, and setServiceRoleContext catch blocks with CRITICAL prefix and security risk commentary
+- Replaced duplicate MTN callback route (/api/payments/mtn/callback) with re-export delegating to primary (/api/payments/mtn-callback), exporting only POST as confirmed from primary handler
+- Replaced duplicate Airtel callback route (/api/payments/airtel/callback) with re-export delegating to primary (/api/payments/airtel-callback), exporting only POST as confirmed from primary handler
+- Added graceful shutdown handlers in audit-log.ts: SIGTERM, SIGINT flush pending audit entries then exit; unhandledRejection logs error; uncaughtException flushes then exits with code 1; all guarded with `typeof process !== 'undefined'`
+- Ran ESLint — no errors
+- Verified dev server running cleanly
+
+Stage Summary:
+- Prisma connection pool params now applied automatically for PostgreSQL URLs (connection_limit, pool_timeout), with env var overrides (DB_CONNECTION_LIMIT, DB_POOL_TIMEOUT)
+- Error logging enabled in all environments for Prisma DB errors
+- RLS context failures now prominently flagged as CRITICAL security risks
+- Webhook duplicate routes simplified to thin re-exports (~5 lines vs ~190 lines each)
+- Audit log entries are flushed on process shutdown signals, preventing data loss
+
+---
+Task ID: 5-c
+Agent: P3-C Agent
+Task: Create structured logger + global-error.tsx + fix wallet response consistency
+
+Work Log:
+- Created `src/lib/logging/logger.ts` — structured logging utility
+  - Supports log levels: debug, info, warn, error, fatal with numeric severity ordering
+  - JSON output in production (parseable by log aggregators), pretty-print with colors in development
+  - Automatic context enrichment: timestamp (ISO 8601), service name, requestId, userId
+  - Logger class with child() method for creating sub-loggers with inherited context
+  - Pre-configured named loggers exported: logger (api), authLogger, paymentLogger, dbLogger, dispatchLogger, realtimeLogger, notificationLogger
+  - LOG_LEVEL env var support; defaults to 'debug' in dev, 'info' in production
+  - Pure JS/TypeScript — no Node.js-specific imports that would break Edge runtime
+- Created `src/app/global-error.tsx` — root layout error boundary
+  - Client component ('use client') as required by Next.js convention
+  - Wraps content in <html> and <body> tags (required for global-error.tsx since it replaces root layout)
+  - Uses CSS variable classes for theme compatibility: bg-background, text-foreground, text-muted-foreground, bg-card, border-border, bg-muted
+  - Primary action button uses Stitch green (#0e7a4d)
+  - Logs error details to console on mount (placeholder for Sentry/Datadog integration)
+  - Displays error digest ID when available
+  - Provides "Try Again" and "Go Home" actions
+- Fixed wallet route response consistency in `src/app/api/wallet/route.ts`
+  - GET success: `{ wallet, transactions, paymentMethods }` → `{ success: true, data: { wallet, transactions, paymentMethods } }`
+  - GET error: `{ error }` → `{ success: false, error }`
+  - POST success: `{ success: true, wallet }` → `{ success: true, data: { wallet } }`
+  - POST error: `{ error }` → `{ success: false, error }`
+  - POST validation: `{ error }` → `{ success: false, error }`
+  - Now matches standard ApiResponse shape used by all other routes
+- Ran `bun run lint` — zero errors
+- Checked dev server log — running cleanly, no errors
+
+Stage Summary:
+- Structured logger created with 7 pre-configured named loggers, dual output format (dev/production)
+- Global error boundary added as companion to existing error.tsx for root layout crash recovery
+- Wallet API route responses now consistent with standard ApiResponse shape ({ success, data/error })
+- All three deliverables complete with zero lint errors and clean dev server

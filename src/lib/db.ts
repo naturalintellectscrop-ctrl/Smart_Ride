@@ -101,6 +101,30 @@ function resolveDatabaseUrl(): string {
   throw new Error('DATABASE_URL must be a PostgreSQL connection string. Set DB_HOST, DB_USER, DB_PASSWORD or DATABASE_URL.')
 }
 
+/**
+ * Add connection pool parameters to the datasource URL.
+ * For SQLite (file:) URLs, skip URL parsing and return as-is.
+ * Prevents connection exhaustion on serverless platforms (e.g. Vercel).
+ */
+function getDatasourceUrl(databaseUrl: string): string {
+  // SQLite URLs don't support connection pool params
+  if (databaseUrl.startsWith('file:')) return databaseUrl
+
+  try {
+    const url = new URL(databaseUrl)
+    if (!url.searchParams.has('connection_limit')) {
+      url.searchParams.set('connection_limit', process.env.DB_CONNECTION_LIMIT || '10')
+    }
+    if (!url.searchParams.has('pool_timeout')) {
+      url.searchParams.set('pool_timeout', process.env.DB_POOL_TIMEOUT || '10')
+    }
+    return url.toString()
+  } catch {
+    // If URL parsing fails, return as-is
+    return databaseUrl
+  }
+}
+
 function isPostgres(): boolean {
   const url = resolveDatabaseUrl()
   return url.startsWith('postgresql://') || url.startsWith('postgres://')
@@ -112,8 +136,8 @@ function getDb(): PrismaClient {
   if (globalForPrisma.prisma) return globalForPrisma.prisma
   const databaseUrl = resolveDatabaseUrl()
   prismaClient = new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['error'] : [],
-    datasourceUrl: databaseUrl,
+    log: ['error'],
+    datasourceUrl: getDatasourceUrl(databaseUrl),
   })
   if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prismaClient
   return prismaClient
@@ -169,7 +193,11 @@ export async function setRLSContext(
     await client.$executeRawUnsafe(`SET app.is_service_role = '${isServiceRole ? 'true' : 'false'}'`)
     await client.$executeRawUnsafe(`SET app.current_user_id = '${userId.replace(/'/g, "''")}'`)
     await client.$executeRawUnsafe(`SET app.current_user_role = '${userRole.replace(/'/g, "''")}'`)
-  } catch (e) { console.error('[RLS] setRLSContext error:', e) }
+  } catch (e) {
+    console.error('[RLS] CRITICAL: setRLSContext failed — RLS policies may not be enforced!', e);
+    // In production, a failed RLS context is a security risk
+    // Consider whether to throw or continue based on your security posture
+  }
 }
 
 export async function resetRLSContext(): Promise<void> {
@@ -182,7 +210,11 @@ export async function resetRLSContext(): Promise<void> {
     await client.$executeRawUnsafe('RESET app.is_service_role')
     await client.$executeRawUnsafe('RESET app.current_user_id')
     await client.$executeRawUnsafe('RESET app.current_user_role')
-  } catch (e) { console.error('[RLS] resetRLSContext error:', e) }
+  } catch (e) {
+    console.error('[RLS] CRITICAL: resetRLSContext failed — RLS policies may not be enforced!', e);
+    // In production, a failed RLS context is a security risk
+    // Consider whether to throw or continue based on your security posture
+  }
 }
 
 /**
@@ -197,7 +229,11 @@ export async function setServiceRoleContext(): Promise<void> {
     await client.$executeRawUnsafe(`SET app.is_service_role = 'true'`)
     await client.$executeRawUnsafe(`SET app.current_user_id = ''`)
     await client.$executeRawUnsafe(`SET app.current_user_role = 'SYSTEM'`)
-  } catch (e) { console.error('[RLS] setServiceRoleContext error:', e) }
+  } catch (e) {
+    console.error('[RLS] CRITICAL: setServiceRoleContext failed — RLS policies may not be enforced!', e);
+    // In production, a failed RLS context is a security risk
+    // Consider whether to throw or continue based on your security posture
+  }
 }
 
 export const db = new Proxy({} as PrismaClient, {

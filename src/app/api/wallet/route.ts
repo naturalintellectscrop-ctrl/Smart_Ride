@@ -72,38 +72,41 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      wallet: {
-        id: wallet.id,
-        balance: wallet.balance,
-        pendingBalance: wallet.pendingBalance,
-        status: wallet.status,
-        totalDeposited: wallet.totalDeposited,
-        totalWithdrawn: wallet.totalWithdrawn,
-        totalSpent: wallet.totalSpent,
+      success: true,
+      data: {
+        wallet: {
+          id: wallet.id,
+          balance: wallet.balance,
+          pendingBalance: wallet.pendingBalance,
+          status: wallet.status,
+          totalDeposited: wallet.totalDeposited,
+          totalWithdrawn: wallet.totalWithdrawn,
+          totalSpent: wallet.totalSpent,
+        },
+        transactions: wallet.transactions.map(t => ({
+          id: t.id,
+          type: t.transactionType,
+          amount: t.amount,
+          balanceAfter: t.balanceAfter,
+          description: t.description,
+          status: t.status,
+          createdAt: t.createdAt,
+          referenceType: t.referenceType,
+        })),
+        paymentMethods: paymentMethods.map(pm => ({
+          id: pm.id,
+          type: pm.type,
+          name: pm.name,
+          accountNumber: pm.accountNumber,
+          isDefault: pm.isDefault,
+          cardLastFour: pm.cardLastFour,
+          cardBrand: pm.cardBrand,
+          phoneNumber: pm.phoneNumber,
+        })),
       },
-      transactions: wallet.transactions.map(t => ({
-        id: t.id,
-        type: t.transactionType,
-        amount: t.amount,
-        balanceAfter: t.balanceAfter,
-        description: t.description,
-        status: t.status,
-        createdAt: t.createdAt,
-        referenceType: t.referenceType,
-      })),
-      paymentMethods: paymentMethods.map(pm => ({
-        id: pm.id,
-        type: pm.type,
-        name: pm.name,
-        accountNumber: pm.accountNumber,
-        isDefault: pm.isDefault,
-        cardLastFour: pm.cardLastFour,
-        cardBrand: pm.cardBrand,
-        phoneNumber: pm.phoneNumber,
-      })),
     });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch wallet' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch wallet' }, { status: 500 });
   } finally {
     await resetRLSContext();
   }
@@ -130,7 +133,7 @@ export async function POST(request: NextRequest) {
     const { amount, paymentMethod, phoneNumber } = body;
 
     if (!amount || amount <= 0) {
-      return NextResponse.json({ error: 'Valid amount is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Valid amount is required' }, { status: 400 });
     }
 
     // Users can only top up their own wallet
@@ -211,10 +214,10 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      wallet: updatedWallet,
+      data: { wallet: updatedWallet },
     });
   } catch (error) {
-    return NextResponse.json({ error: 'Failed to top up wallet' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to top up wallet' }, { status: 500 });
   } finally {
     await resetRLSContext();
   }
