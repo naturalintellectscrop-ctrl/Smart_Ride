@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { readFile, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
+import { requireAuth } from '@/lib/auth-utils';
 
 // Serve uploaded files
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
+  // Require authentication for file access
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   try {
     const { path: pathSegments } = await params;
     const filePath = path.join(process.cwd(), 'uploads', ...pathSegments);
@@ -45,12 +52,18 @@ export async function GET(
     // Read and return file
     const fileBuffer = await readFile(resolvedPath);
     
+    const headers: Record<string, string> = {
+      'Content-Type': contentType,
+      'Content-Length': fileStat.size.toString(),
+      'Cache-Control': 'private, no-cache, no-store, max-age=0',
+    };
+
+    if (contentType === 'application/pdf') {
+      headers['Content-Disposition'] = `attachment; filename="${path.basename(resolvedPath)}"`;
+    }
+
     return new NextResponse(fileBuffer, {
-      headers: {
-        'Content-Type': contentType,
-        'Content-Length': fileStat.size.toString(),
-        'Cache-Control': 'public, max-age=31536000',
-      },
+      headers,
     });
   } catch (error) {
     console.error('Error serving file:', error);

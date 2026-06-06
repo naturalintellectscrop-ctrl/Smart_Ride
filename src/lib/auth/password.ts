@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomInt } from 'crypto';
 
 const SALT_ROUNDS = 12;
 
@@ -55,7 +55,7 @@ export function generateOTP(length: number = 6): string {
   const digits = '0123456789';
   let otp = '';
   for (let i = 0; i < length; i++) {
-    otp += digits[Math.floor(Math.random() * digits.length)];
+    otp += digits[randomInt(0, digits.length)];
   }
   return otp;
 }

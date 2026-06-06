@@ -90,6 +90,7 @@ export function generateTokenPair(user: Pick<User, 'id' | 'email' | 'role' | 'na
 export function verifyAccessToken(token: string): JWTPayload | null {
   try {
     const decoded = jwt.verify(token, getJwtSecret(), {
+      algorithms: ['HS256'],
       issuer: 'smart-ride',
       audience: 'smart-ride-api',
     }) as JWTPayload;
@@ -106,6 +107,7 @@ export function verifyAccessToken(token: string): JWTPayload | null {
 export function verifyRefreshToken(token: string): { userId: string } | null {
   try {
     const decoded = jwt.verify(token, getJwtSecret(), {
+      algorithms: ['HS256'],
       issuer: 'smart-ride',
       audience: 'smart-ride-api',
     }) as { userId: string; type: string };

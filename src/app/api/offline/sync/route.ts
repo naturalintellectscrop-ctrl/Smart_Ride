@@ -72,8 +72,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     ConnectionManager.updateQuality(0, false);
+    console.error('[Offline Sync] POST error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {
@@ -136,8 +137,9 @@ export async function GET(request: NextRequest) {
         });
     }
   } catch (error: any) {
+    console.error('[Offline Sync] GET error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {
@@ -190,8 +192,9 @@ export async function DELETE(request: NextRequest) {
         );
     }
   } catch (error: any) {
+    console.error('[Offline Sync] DELETE error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

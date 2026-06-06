@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
   } catch (error: any) {
     console.error('Dashboard API error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {
@@ -115,8 +115,9 @@ export async function DELETE(request: NextRequest) {
     DashboardService.invalidateCache();
     return NextResponse.json({ success: true, message: 'Dashboard cache invalidated' });
   } catch (error: any) {
+    console.error('Dashboard cache invalidation error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

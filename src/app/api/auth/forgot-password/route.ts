@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     // Always return success to prevent email enumeration
     if (!user || !user.passwordHash) {
       // Log attempt for security monitoring
-      console.log(`Forgot password attempt for unrecognized email: ${email}`);
+      console.log('Forgot password attempt for unrecognized email: [REDACTED_EMAIL]');
       return NextResponse.json({
         success: true,
         message: 'If an account with that email exists, a reset link has been sent.',
@@ -73,8 +73,8 @@ export async function POST(request: NextRequest) {
 
     // In development mode (no RESEND_API_KEY), log the reset link
     if (!process.env.RESEND_API_KEY) {
-      console.log(`🔗 PASSWORD RESET LINK (dev mode): ${resetUrl}?token=${resetToken}`);
-      console.log(`   Email: ${email}, Token expires in 1 hour`);
+      console.log('PASSWORD RESET LINK (dev mode): [REDACTED_URL]?token=[REDACTED_TOKEN]');
+      console.log('   Email: [REDACTED_EMAIL], Token expires in 1 hour');
     }
 
     // Create audit log

@@ -32,7 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   } catch (error: any) {
     console.error('Get task history error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   }
@@ -246,7 +246,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   } catch (error: any) {
     console.error('Task transition error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

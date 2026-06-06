@@ -3,9 +3,18 @@ import { writeFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import { requireAuth } from '@/lib/auth-utils';
+import { JWTPayload } from '@/lib/auth/jwt';
 
 // POST /api/uploads/documents - Upload a document
 export async function POST(request: NextRequest) {
+  // Require authentication for uploads
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+  const user = authResult as JWTPayload;
+
   try {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;

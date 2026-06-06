@@ -601,3 +601,69 @@ Stage Summary:
 - Global error boundary added as companion to existing error.tsx for root layout crash recovery
 - Wallet API route responses now consistent with standard ApiResponse shape ({ success, data/error })
 - All three deliverables complete with zero lint errors and clean dev server
+
+---
+Task ID: 6-c
+Agent: P4-C Agent
+Task: Update .env.example with missing vars + fix cookie cleanup on logout + admin IP warning
+
+Work Log:
+- Read current .env.example (99 lines) — identified missing sections: Database (individual components, pool settings), Authentication (JWT expiry, admin setup), Application URLs (APP_URL, API_URL, CORS), Mapbox server-side token, Firebase NEXT_PUBLIC_* vars + VAPID_KEY_SECONDARY, Payment gateways (full MTN/Airtel/Flutterwave config), Email (Resend), Security (CRON_SECRET, INTERNAL_API_KEY, SYSTEM_API_KEY, ADMIN_ALLOWED_IPS, ADMIN_SESSION_TIMEOUT), Logging (LOG_LEVEL), Calling (CALLING_PROVIDER, SUPPORT_PHONE)
+- Removed NEXTAUTH_URL (project doesn't use NextAuth)
+- Rewrote .env.example with all missing env vars organized into 10 clear sections with comments
+- Updated logout route (src/app/api/auth/logout/route.ts) — added deletion of admin-session and admin_refresh_token cookies with maxAge: 0, matching httpOnly, secure, sameSite: strict, path: / options
+- Updated admin-safety.ts isAdminIpAllowed() — added production console.warn when ADMIN_ALLOWED_IPS is not configured
+- Ran bun run lint — zero errors
+
+Stage Summary:
+- .env.example updated from 99 lines to comprehensive 10-section file with 50+ env vars (removed NEXTAUTH_URL)
+- Logout handler now clears all 3 cookie types: refreshToken, admin-session, admin_refresh_token
+- Admin IP allowlist logs production warning when unconfigured (no behavioral change, still allows all IPs)
+- Zero lint errors
+
+---
+Task ID: 6-b
+Agent: P4-B Agent
+Task: Fix SQL injection in db-rls.ts + RLS silent failure + error message leaks
+
+Work Log:
+- Fixed SQL injection in db-rls.ts: Added `.replace(/'/g, "''")` sanitization to `userRole` in 3 places (line 113 fallback SET in $allOperations, line 149 SET LOCAL in setRLSSession, line 156 fallback SET in setRLSSession). Line 104 was already sanitized.
+- Fixed RLS context silent failure: Replaced bare `catch {}` blocks with `catch (setError)` that logs a CRITICAL error in production via `console.error('[RLS] CRITICAL: Failed to set RLS session variables — queries will run without row-level security!', setError)` in both the $allOperations middleware and setRLSSession function.
+- Fixed error message leak in admin/login/route.ts: Replaced detailed Prisma error translation (lines 142-176) that exposed DB config details with a generic `'Authentication service temporarily unavailable'` response (503) plus server-side `console.error('[Admin Login] Database error:', error)`.
+- Fixed error message leak in offline/sync/route.ts: Replaced `error.message` with `'An internal error occurred'` in all 3 catch blocks (POST, GET, DELETE), adding contextual `console.error` for each.
+- Fixed error message leak in tasks/[id]/transition/route.ts: Replaced `error.message` with `'An internal error occurred'` in both GET and POST catch blocks.
+- Fixed error message leak in analytics/dashboard/route.ts: Replaced `error.message` with `'An internal error occurred'` in both GET and DELETE catch blocks, added `console.error` for DELETE.
+- Fixed error message leak in dispatch/assign/route.ts: Replaced `error.message` with `'An internal error occurred'` in POST catch block.
+- Ran `bun run lint` — zero errors.
+
+Stage Summary:
+- SQL injection vulnerability patched: userRole is now sanitized with `.replace(/'/g, "''")` in all interpolation sites
+- RLS silent failure now logs CRITICAL warning in production instead of silently continuing
+- 5 API routes no longer expose internal error details to clients; all use generic error messages with server-side logging
+
+---
+Task ID: 6-a
+Agent: P4-A Agent
+Task: Fix critical security issues (admin header trust, Math.random OTP, JWT verify, upload auth, PII logs)
+
+Work Log:
+- Fixed x-admin-id header trust in src/lib/security/admin-safety.ts: replaced client-controllable header extraction with JWT-based extraction using verifyAccessToken from @/lib/auth/jwt
+- Fixed Math.random() OTP in src/lib/auth/password.ts: replaced Math.floor(Math.random() * digits.length) with crypto.randomInt(0, digits.length) for cryptographically secure OTP generation
+- Fixed JWT verify missing algorithms in src/lib/auth/jwt.ts: added algorithms: ['HS256'] to both verifyAccessToken() and verifyRefreshToken() to prevent algorithm confusion attacks
+- Added requireAuth to src/app/api/uploads/documents/route.ts POST handler for upload authentication
+- Added requireAuth to src/app/api/uploads/[...path]/route.ts GET handler for file access authentication
+- Fixed cache-control header in upload serving route: changed from public, max-age=31536000 to private, no-cache, no-store, max-age=0
+- Added Content-Disposition: attachment header for PDF files in upload serving route to prevent XSS
+- Redacted PII in otp-service.ts logs: phone numbers → [REDACTED_PHONE], OTP values in messages → [REDACTED_OTP]
+- Redacted PII in auth/forgot-password/route.ts: email → [REDACTED_EMAIL], reset token → [REDACTED_TOKEN], reset URL → [REDACTED_URL]
+- Redacted PII in admin/forgot-password/route.ts: same patterns as auth/forgot-password
+- Ran bun run lint — zero errors
+
+Stage Summary:
+- Admin safety: x-admin-id header bypass eliminated — admin identity now verified via JWT
+- OTP generation: cryptographically secure using crypto.randomInt() instead of Math.random()
+- JWT verification: algorithm confusion attack prevented by explicitly requiring HS256
+- Upload routes: authentication required for both upload and file access
+- File serving: private cache-control and PDF attachment disposition prevent caching/XSS
+- PII logging: all phone numbers, OTP values, email addresses, and reset tokens redacted in server logs
+- Zero lint errors

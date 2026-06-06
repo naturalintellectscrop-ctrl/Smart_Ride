@@ -28,6 +28,23 @@ export async function POST(request: NextRequest) {
 
     response.cookies.delete('refreshToken');
 
+    // Also clear admin cookies
+    response.cookies.set('admin-session', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 0,
+      path: '/',
+    });
+
+    response.cookies.set('admin_refresh_token', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 0,
+      path: '/',
+    });
+
     return response;
   } catch (error) {
     console.error('Logout error:', error);

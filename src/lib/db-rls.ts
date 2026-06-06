@@ -101,7 +101,7 @@ export function createRLSEnabledPrismaClient(datasourceUrl: string): PrismaClien
           await client.$executeRawUnsafe(
             `SET LOCAL app.is_service_role = '${isServiceRole}'; ` +
             `SET LOCAL app.current_user_id = '${userId.replace(/'/g, "''")}'; ` +
-            `SET LOCAL app.current_user_role = '${userRole}';`
+            `SET LOCAL app.current_user_role = '${userRole.replace(/'/g, "''")}';`
           )
         } catch {
           // If SET LOCAL fails (e.g., outside a transaction), try SET
@@ -110,11 +110,14 @@ export function createRLSEnabledPrismaClient(datasourceUrl: string): PrismaClien
             await client.$executeRawUnsafe(
               `SET app.is_service_role = '${isServiceRole}'; ` +
               `SET app.current_user_id = '${userId.replace(/'/g, "''")}'; ` +
-              `SET app.current_user_role = '${userRole}';`
+              `SET app.current_user_role = '${userRole.replace(/'/g, "''")}';`
             )
-          } catch {
-            // If SET also fails, continue without RLS context
-            // (e.g., SQLite doesn't support SET statements)
+          } catch (setError) {
+            // RLS context could not be set — this is a security concern for PostgreSQL
+            if (process.env.NODE_ENV === 'production') {
+              console.error('[RLS] CRITICAL: Failed to set RLS session variables — queries will run without row-level security!', setError);
+            }
+            // Continue for SQLite compatibility
           }
         }
 
@@ -146,17 +149,21 @@ export async function setRLSSession(
     await prisma.$executeRawUnsafe(
       `SET LOCAL app.is_service_role = 'true'; ` +
       `SET LOCAL app.current_user_id = '${userId.replace(/'/g, "''")}'; ` +
-      `SET LOCAL app.current_user_role = '${userRole}';`
+      `SET LOCAL app.current_user_role = '${userRole.replace(/'/g, "''")}';`
     )
   } catch {
     try {
       await prisma.$executeRawUnsafe(
         `SET app.is_service_role = 'true'; ` +
         `SET app.current_user_id = '${userId.replace(/'/g, "''")}'; ` +
-        `SET app.current_user_role = '${userRole}';`
+        `SET app.current_user_role = '${userRole.replace(/'/g, "''")}';`
       )
-    } catch {
-      // SQLite or unsupported - silently ignore
+    } catch (setError) {
+      // RLS context could not be set — this is a security concern for PostgreSQL
+      if (process.env.NODE_ENV === 'production') {
+        console.error('[RLS] CRITICAL: Failed to set RLS session variables — queries will run without row-level security!', setError);
+      }
+      // Continue for SQLite compatibility
     }
   }
 }

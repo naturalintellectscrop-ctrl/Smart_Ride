@@ -486,8 +486,11 @@ const ADMIN_ALLOWED_IPS = process.env.ADMIN_ALLOWED_IPS
  * Check if IP is in allowed range for admin access
  */
 export function isAdminIpAllowed(request: NextRequest): boolean {
-  // If no restrictions configured, allow all
+  // If no restrictions configured, allow all (with warning in production)
   if (ADMIN_ALLOWED_IPS.length === 0) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[AdminSafety] ADMIN_ALLOWED_IPS not configured — admin access allowed from all IPs. Set ADMIN_ALLOWED_IPS for production.');
+    }
     return true;
   }
   
@@ -518,9 +521,22 @@ export function withAdminSafety(
   handler: (req: NextRequest, context: { adminId: string; confirmation?: AdminActionConfirmation }) => Promise<NextResponse>
 ) {
   return async (req: NextRequest): Promise<NextResponse> => {
-    // Get admin ID from auth context (assumes requireAdmin was already called)
-    const adminId = req.headers.get('x-admin-id');
-    
+    // Extract admin ID from verified JWT token (NOT from client-controllable header)
+    let adminId: string | null = null;
+    try {
+      const authHeader = req.headers.get('authorization');
+      if (authHeader?.startsWith('Bearer ')) {
+        const { verifyAccessToken } = await import('@/lib/auth/jwt');
+        const token = authHeader.substring(7);
+        const payload = verifyAccessToken(token);
+        if (payload?.userId) {
+          adminId = payload.userId;
+        }
+      }
+    } catch {
+      // Token verification failed
+    }
+
     if (!adminId) {
       return NextResponse.json(
         { success: false, error: 'Admin authentication required' },

@@ -146,8 +146,8 @@ async function sendSMS(
 ): Promise<SMSResult> {
   // Check if SMS is enabled
   if (!SMS_CONFIG.enabled) {
-    console.log('[SMS] SMS disabled - would have sent to:', phone);
-    console.log('[SMS] Message:', message);
+    console.log('[SMS] SMS disabled - would have sent to: [REDACTED_PHONE]');
+    console.log('[SMS] Message: [REDACTED_OTP]');
     return { success: true }; // Pretend success in dev/disabled mode
   }
 
@@ -267,10 +267,10 @@ export async function sendOTP(
         };
       }
       
-      console.log(`[OTP] SMS sent to ${normalizedPhone} (Purpose: ${purpose})`);
+      console.log(`[OTP] SMS sent to [REDACTED_PHONE] (Purpose: ${purpose})`);
     } else {
       // Development mode - log OTP
-      console.log(`[OTP] DEV MODE - OTP for ${normalizedPhone}: ${otp} (Purpose: ${purpose})`);
+      console.log('[OTP] DEV MODE - OTP generated for [REDACTED_PHONE]');
     }
 
     // SECURITY: Only include OTP in response in development mode with explicit opt-in
