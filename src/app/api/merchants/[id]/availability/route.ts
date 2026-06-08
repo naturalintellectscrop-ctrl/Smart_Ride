@@ -21,12 +21,12 @@ export async function PATCH(
   const token = authHeader?.replace('Bearer ', '');
 
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   // Allow merchants to update their own availability, or admins
@@ -34,7 +34,7 @@ export async function PATCH(
   const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'].includes(decoded.role);
 
   if (!isMerchant && !isAdmin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
   await setRLSContext(decoded);
@@ -57,8 +57,7 @@ export async function PATCH(
         isOpen: body.isOpen,
       });
     } else {
-      return NextResponse.json(
-        { error: 'Invalid request body. Provide { isOpen: boolean } or { action: "pause", reason?: string }' },
+      return NextResponse.json({ success: false, error: 'Invalid request body. Provide { isOpen: boolean } or { action: "pause", reason?: string }' },
         { status: 400 }
       );
     }
@@ -72,12 +71,12 @@ export async function PATCH(
         isOpen: updatedMerchant.isOpen,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Merchant availability error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to update merchant availability';
-    const status = message.includes('not found') || message.includes('Cannot') ? 400 : 500;
+    const isClientError = error instanceof Error && (error.message.includes('not found') || error.message.includes('Cannot'));
+    const status = isClientError ? 400 : 500;
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: isClientError ? 'Invalid availability update' : 'An internal error occurred' },
       { status }
     );
   } finally {

@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       forceFullSync = false 
     } = body;
 
-    const results: any = {
+    const results: Record<string, unknown> = {
       syncId: `sync_${Date.now()}`,
       timestamp: new Date().toISOString(),
       connectionMode: ConnectionManager.getRecommendedMode(),
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       success: true,
       data: results,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     ConnectionManager.updateQuality(0, false);
     console.error('[Offline Sync] POST error:', error);
     return NextResponse.json(
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
           },
         });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Offline Sync] GET error:', error);
     return NextResponse.json(
       { success: false, error: 'An internal error occurred' },
@@ -191,7 +191,7 @@ export async function DELETE(request: NextRequest) {
           { status: 400 }
         );
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[Offline Sync] DELETE error:', error);
     return NextResponse.json(
       { success: false, error: 'An internal error occurred' },

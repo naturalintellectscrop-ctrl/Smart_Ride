@@ -35,12 +35,11 @@ export async function GET(request: NextRequest) {
         return await exportAuditLogsDocx(actorType, entityType, source, startDate, endDate, search);
 
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
     console.error('Audit API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch audit logs' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch audit logs' },
       { status: 500 }
     );
   } finally {
@@ -56,8 +55,7 @@ export async function POST(request: NextRequest) {
     const { action, entityType, entityId, actorType, actorId, description, oldValues, newValues, userId, riderId, merchantId, orderId, taskId } = body;
 
     if (!action || !entityType || !entityId) {
-      return NextResponse.json(
-        { error: 'Missing required fields: action, entityType, entityId' },
+      return NextResponse.json({ success: false, error: 'Missing required fields: action, entityType, entityId' },
         { status: 400 }
       );
     }
@@ -91,8 +89,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, log: auditLog }, { status: 201 });
   } catch (error) {
     console.error('Audit log creation error:', error);
-    return NextResponse.json(
-      { error: 'Failed to create audit log' },
+    return NextResponse.json({ success: false, error: 'Failed to create audit log' },
       { status: 500 }
     );
   } finally {

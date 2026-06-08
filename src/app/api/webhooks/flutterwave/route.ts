@@ -47,8 +47,7 @@ export async function POST(request: NextRequest) {
     
     // Verify signature
     if (!verifyWebhookSignature(rawBody, signature, WEBHOOK_SECRET)) {
-      return NextResponse.json(
-        { error: 'Invalid signature' },
+      return NextResponse.json({ success: false, error: 'Invalid signature' },
         { status: 401 }
       );
     }
@@ -82,8 +81,7 @@ export async function POST(request: NextRequest) {
     });
     
     if (!payment) {
-      return NextResponse.json(
-        { error: 'Payment not found' },
+      return NextResponse.json({ success: false, error: 'Payment not found' },
         { status: 404 }
       );
     }
@@ -151,8 +149,7 @@ export async function POST(request: NextRequest) {
     
   } catch (error) {
     // Log error but return 200 to prevent retries for invalid data
-    return NextResponse.json(
-      { error: 'Processing failed' },
+    return NextResponse.json({ success: false, error: 'Processing failed' },
       { status: 500 }
     );
   } finally {
@@ -164,8 +161,7 @@ export async function POST(request: NextRequest) {
 export async function GET() {
   await setServiceRoleContext();
   try {
-    return NextResponse.json(
-      { error: 'Method not allowed' },
+    return NextResponse.json({ success: false, error: 'Method not allowed' },
       { status: 405 }
     );
   } finally {

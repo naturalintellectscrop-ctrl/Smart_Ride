@@ -15,8 +15,7 @@ export async function GET(request: NextRequest) {
     const variantId = searchParams.get('variantId');
 
     if (!menuItemId) {
-      return NextResponse.json(
-        { error: 'menuItemId is required' },
+      return NextResponse.json({ success: false, error: 'menuItemId is required' },
         { status: 400 }
       );
     }
@@ -24,8 +23,7 @@ export async function GET(request: NextRequest) {
     const quantity = quantityStr ? parseInt(quantityStr, 10) : 1;
 
     if (isNaN(quantity) || quantity < 1) {
-      return NextResponse.json(
-        { error: 'quantity must be a positive integer' },
+      return NextResponse.json({ success: false, error: 'quantity must be a positive integer' },
         { status: 400 }
       );
     }
@@ -45,11 +43,10 @@ export async function GET(request: NextRequest) {
       variantAvailable: result.variantAvailable,
       variantAvailableQuantity: result.variantAvailableQuantity,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    console.error('[InventoryAPI] GET /inventory failed:', message);
-    return NextResponse.json(
-      { error: message },
+  } catch (error: unknown) {
+    const logMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[InventoryAPI] GET /inventory failed:', logMessage);
+    return NextResponse.json({ success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   }
@@ -66,15 +63,13 @@ export async function POST(request: NextRequest) {
     };
 
     if (!body.menuItemId) {
-      return NextResponse.json(
-        { error: 'menuItemId is required' },
+      return NextResponse.json({ success: false, error: 'menuItemId is required' },
         { status: 400 }
       );
     }
 
     if (!body.quantity || body.quantity < 1) {
-      return NextResponse.json(
-        { error: 'quantity is required and must be a positive integer' },
+      return NextResponse.json({ success: false, error: 'quantity is required and must be a positive integer' },
         { status: 400 }
       );
     }
@@ -100,11 +95,10 @@ export async function POST(request: NextRequest) {
       { success: false, error: result.error },
       { status: 409 }
     );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    console.error('[InventoryAPI] POST /inventory failed:', message);
-    return NextResponse.json(
-      { error: message },
+  } catch (error: unknown) {
+    const logMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[InventoryAPI] POST /inventory failed:', logMessage);
+    return NextResponse.json({ success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   }

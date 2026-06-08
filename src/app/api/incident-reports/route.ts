@@ -50,8 +50,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching incident reports:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch incident reports' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch incident reports' },
       { status: 500 }
     );
   } finally {
@@ -73,8 +72,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!sosAlertId) {
-      return NextResponse.json(
-        { error: 'SOS Alert ID is required' },
+      return NextResponse.json({ success: false, error: 'SOS Alert ID is required' },
         { status: 400 }
       );
     }
@@ -84,8 +82,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!report) {
-      return NextResponse.json(
-        { error: 'Incident report not found' },
+      return NextResponse.json({ success: false, error: 'Incident report not found' },
         { status: 404 }
       );
     }
@@ -106,8 +103,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, report: updatedReport });
   } catch (error) {
     console.error('Error updating incident report:', error);
-    return NextResponse.json(
-      { error: 'Failed to update incident report' },
+    return NextResponse.json({ success: false, error: 'Failed to update incident report' },
       { status: 500 }
     );
   } finally {

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       success: true,
       data: history,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get task history error:', error);
     return NextResponse.json(
       { success: false, error: 'An internal error occurred' },
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         transition: result.transition,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Task transition error:', error);
     return NextResponse.json(
       { success: false, error: 'An internal error occurred' },

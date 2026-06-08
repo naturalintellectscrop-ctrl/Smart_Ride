@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { z } from 'zod';
+import { phoneSchema } from '@/lib/validation/api-schemas';
 
 // GET /api/emergency-contacts - List emergency contacts for a user
 export async function GET(request: NextRequest) {
@@ -11,8 +13,7 @@ export async function GET(request: NextRequest) {
     const userType = searchParams.get('userType') || 'CLIENT';
 
     if (!userId && !riderId) {
-      return NextResponse.json(
-        { error: 'User ID or Rider ID is required' },
+      return NextResponse.json({ success: false, error: 'User ID or Rider ID is required' },
         { status: 400 }
       );
     }
@@ -31,8 +32,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ contacts });
   } catch (error) {
     console.error('Error fetching emergency contacts:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch emergency contacts' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch emergency contacts' },
       { status: 500 }
     );
   } finally {
@@ -58,15 +58,13 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!name || !phone) {
-      return NextResponse.json(
-        { error: 'Name and phone are required' },
+      return NextResponse.json({ success: false, error: 'Name and phone are required' },
         { status: 400 }
       );
     }
 
     if (!userId && !riderId) {
-      return NextResponse.json(
-        { error: 'User ID or Rider ID is required' },
+      return NextResponse.json({ success: false, error: 'User ID or Rider ID is required' },
         { status: 400 }
       );
     }
@@ -106,8 +104,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating emergency contact:', error);
-    return NextResponse.json(
-      { error: 'Failed to create emergency contact' },
+    return NextResponse.json({ success: false, error: 'Failed to create emergency contact' },
       { status: 500 }
     );
   } finally {
@@ -120,11 +117,28 @@ export async function PUT(request: NextRequest) {
   await setServiceRoleContext();
   try {
     const body = await request.json();
-    const { id, ...updateData } = body;
+
+    const updateContactSchema = z.object({
+      id: z.string().min(1),
+      name: z.string().max(100).optional(),
+      phone: phoneSchema.optional(),
+      email: z.string().email().optional(),
+      relationship: z.string().max(50).optional(),
+      isPrimary: z.boolean().optional(),
+    });
+
+    const parsed = updateContactSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues.map(i => i.message).join(', ') },
+        { status: 400 }
+      );
+    }
+
+    const { id, ...updateData } = parsed.data;
 
     if (!id) {
-      return NextResponse.json(
-        { error: 'Contact ID is required' },
+      return NextResponse.json({ success: false, error: 'Contact ID is required' },
         { status: 400 }
       );
     }
@@ -154,8 +168,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true, contact });
   } catch (error) {
     console.error('Error updating emergency contact:', error);
-    return NextResponse.json(
-      { error: 'Failed to update emergency contact' },
+    return NextResponse.json({ success: false, error: 'Failed to update emergency contact' },
       { status: 500 }
     );
   } finally {
@@ -171,8 +184,7 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json(
-        { error: 'Contact ID is required' },
+      return NextResponse.json({ success: false, error: 'Contact ID is required' },
         { status: 400 }
       );
     }
@@ -184,8 +196,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting emergency contact:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete emergency contact' },
+    return NextResponse.json({ success: false, error: 'Failed to delete emergency contact' },
       { status: 500 }
     );
   } finally {

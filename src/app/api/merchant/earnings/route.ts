@@ -31,12 +31,11 @@ export async function GET(request: NextRequest) {
         return await getEarningsByMerchantType();
       
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
     console.error('Merchant earnings API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch merchant earnings' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch merchant earnings' },
       { status: 500 }
     );
   } finally {
@@ -59,12 +58,11 @@ export async function POST(request: NextRequest) {
         return await updateCommissionRate(body);
       
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
     console.error('Merchant earnings POST error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process request' },
+    return NextResponse.json({ success: false, error: 'Failed to process request' },
       { status: 500 }
     );
   } finally {
@@ -213,7 +211,7 @@ async function getMerchantEarnings(merchantId?: string | null, startDate?: strin
     });
 
     if (!merchant) {
-      return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Merchant not found' }, { status: 404 });
     }
 
     const orders = merchant.orders;
@@ -518,7 +516,7 @@ async function recordPayout(data: { merchantId: string; amount: number; referenc
   });
 
   if (!merchant) {
-    return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
+    return NextResponse.json({ success: false, error: 'Merchant not found' }, { status: 404 });
   }
 
   // Log the payout
@@ -551,7 +549,7 @@ async function updateCommissionRate(data: { merchantId: string; commissionRate: 
   const { merchantId, commissionRate } = data;
 
   if (commissionRate < 0 || commissionRate > 1) {
-    return NextResponse.json({ error: 'Commission rate must be between 0 and 1' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Commission rate must be between 0 and 1' }, { status: 400 });
   }
 
   const merchant = await db.merchant.update({

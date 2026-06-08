@@ -57,12 +57,12 @@ export async function GET(request: NextRequest) {
       success: true,
       configs,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Commission API error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get commission data',
+        error: 'An internal error occurred',
       },
       { status: 500 }
     );
@@ -204,12 +204,12 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Invalid action. Use: estimate, calculate, or record' },
       { status: 400 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Commission calculation error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to calculate commission',
+        error: 'An internal error occurred',
       },
       { status: 500 }
     );

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { Prisma, VerificationStatus, HealthProviderType } from '@prisma/client';
 
 // GET /api/admin/health-providers - List all health providers
 export async function GET(request: NextRequest) {
@@ -11,12 +12,12 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const type = searchParams.get('type');
 
-    const where: any = {};
+    const where: Prisma.HealthProviderWhereInput = {};
     if (status) {
-      where.verificationStatus = status;
+      where.verificationStatus = status as VerificationStatus;
     }
     if (type) {
-      where.providerType = type;
+      where.providerType = type as HealthProviderType;
     }
 
     const providers = await db.healthProvider.findMany({
@@ -45,8 +46,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching health providers:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch health providers' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch health providers' },
       { status: 500 }
     );
   } finally {
@@ -97,8 +97,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!businessName || !providerType || !licenseNumber || !ownerFullName || !ownerPhone || !address) {
-      return NextResponse.json(
-        { error: 'Missing required fields: businessName, providerType, licenseNumber, ownerFullName, ownerPhone, address' },
+      return NextResponse.json({ success: false, error: 'Missing required fields: businessName, providerType, licenseNumber, ownerFullName, ownerPhone, address' },
         { status: 400 }
       );
     }
@@ -109,8 +108,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingLicense) {
-      return NextResponse.json(
-        { error: 'License number already registered' },
+      return NextResponse.json({ success: false, error: 'License number already registered' },
         { status: 400 }
       );
     }
@@ -172,8 +170,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating health provider:', error);
-    return NextResponse.json(
-      { error: 'Failed to create health provider' },
+    return NextResponse.json({ success: false, error: 'Failed to create health provider' },
       { status: 500 }
     );
   } finally {

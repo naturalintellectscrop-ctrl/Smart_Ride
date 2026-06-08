@@ -112,10 +112,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       data: updatedTask,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Task status update error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update task status' },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

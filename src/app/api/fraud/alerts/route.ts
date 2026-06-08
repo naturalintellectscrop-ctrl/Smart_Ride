@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (status) where.status = status;
     if (severity) where.severity = severity;
     if (entityType) where.entityType = entityType;
@@ -39,8 +39,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching fraud alerts:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch fraud alerts' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch fraud alerts' },
       { status: 500 }
     );
   } finally {
@@ -96,8 +95,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(alert);
   } catch (error) {
     console.error('Error creating fraud alert:', error);
-    return NextResponse.json(
-      { error: 'Failed to create fraud alert' },
+    return NextResponse.json({ success: false, error: 'Failed to create fraud alert' },
       { status: 500 }
     );
   }
@@ -115,13 +113,12 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!alert) {
-      return NextResponse.json(
-        { error: 'Alert not found' },
+      return NextResponse.json({ success: false, error: 'Alert not found' },
         { status: 404 }
       );
     }
 
-    let updateData: any = {};
+    let updateData: Record<string, unknown> = {};
 
     switch (action) {
       case 'review':
@@ -175,8 +172,7 @@ export async function PATCH(request: NextRequest) {
         break;
 
       default:
-        return NextResponse.json(
-          { error: 'Invalid action' },
+        return NextResponse.json({ success: false, error: 'Invalid action' },
           { status: 400 }
         );
     }
@@ -189,8 +185,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json(updatedAlert);
   } catch (error) {
     console.error('Error updating fraud alert:', error);
-    return NextResponse.json(
-      { error: 'Failed to update fraud alert' },
+    return NextResponse.json({ success: false, error: 'Failed to update fraud alert' },
       { status: 500 }
     );
   } finally {
@@ -218,9 +213,9 @@ async function applyAdminAction(
   // Create admin action record
   await db.adminFraudAction.create({
     data: {
-      entityType: entityType as any,
+      entityType: entityType as string,
       entityId,
-      actionType: action as any,
+      actionType: action as string,
       actionReason: notes,
       adminId,
       durationHours: action === 'TEMPORARY_RESTRICTION' ? 72 : null,
@@ -271,7 +266,7 @@ async function applyAdminAction(
 }
 
 // Record ML feedback for improving detection
-async function recordMLFeedback(alert: any, isFalsePositive: boolean) {
+async function recordMLFeedback(alert: { id: string; detectedPatterns: string | null; [key: string]: unknown }, isFalsePositive: boolean) {
   // Update the alert
   await db.fraudAlert.update({
     where: { id: alert.id },

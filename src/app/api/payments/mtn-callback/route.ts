@@ -31,8 +31,7 @@ export async function POST(request: NextRequest) {
         hasSecretKey: hasKey,
         signaturePresent: !!request.headers.get('x-mtn-signature'),
       });
-      return NextResponse.json(
-        { error: hasKey ? 'Invalid signature' : 'Webhook secret key not configured (MTN_MOMO_SECRET_KEY)' },
+      return NextResponse.json({ success: false, error: hasKey ? 'Invalid signature' : 'Webhook secret key not configured (MTN_MOMO_SECRET_KEY)' },
         { status: hasKey ? 401 : 500 }
       );
     }
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     if (!payment) {
       console.error('Payment not found for callback:', { referenceId, externalId });
-      return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Payment not found' }, { status: 404 });
     }
 
     // Check for duplicate webhook
@@ -180,8 +179,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('MTN MoMo callback error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process callback' },
+    return NextResponse.json({ success: false, error: 'Failed to process callback' },
       { status: 500 }
     );
   } finally {

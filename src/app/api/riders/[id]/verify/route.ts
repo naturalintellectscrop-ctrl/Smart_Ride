@@ -19,12 +19,12 @@ export async function POST(
   const token = authHeader?.replace('Bearer ', '');
 
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
-    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden - Admin access required' }, { status: 403 });
   }
 
   await setRLSContext(decoded);
@@ -34,15 +34,13 @@ export async function POST(
     const { action, notes, reason } = body;
 
     if (!action) {
-      return NextResponse.json(
-        { error: 'action is required (APPROVE or REJECT)' },
+      return NextResponse.json({ success: false, error: 'action is required (APPROVE or REJECT)' },
         { status: 400 }
       );
     }
 
     if (!['APPROVE', 'REJECT'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Invalid action. Must be APPROVE or REJECT' },
+      return NextResponse.json({ success: false, error: 'Invalid action. Must be APPROVE or REJECT' },
         { status: 400 }
       );
     }
@@ -66,12 +64,12 @@ export async function POST(
       },
       message: `Rider ${action === 'APPROVE' ? 'approved' : 'rejected'} successfully`,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Rider verification error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to verify rider';
-    const status = message.includes('not found') || message.includes('Cannot verify') ? 400 : 500;
+    const isClientError = error instanceof Error && (error.message.includes('not found') || error.message.includes('Cannot verify'));
+    const status = isClientError ? 400 : 500;
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: isClientError ? 'Invalid verification request' : 'An internal error occurred' },
       { status }
     );
   } finally {

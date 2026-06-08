@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { randomUUID } from 'crypto';
+import { Prisma } from '@prisma/client';
 
 // GET /api/alerts - Get connection alerts
 export async function GET(request: NextRequest) {
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     const unacknowledged = searchParams.get('unacknowledged') === 'true';
     const limit = parseInt(searchParams.get('limit') || '50');
 
-    const where: any = {};
+    const where: Prisma.ConnectionAlertWhereInput = {};
     
     if (riderId) {
       where.riderId = riderId;
@@ -53,8 +54,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Error fetching alerts:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
+    return NextResponse.json({ success: false, error: 'Internal server error' },
       { status: 500 }
     );
   } finally {
@@ -77,8 +77,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!riderId || !alertType || !severity || !message) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
+      return NextResponse.json({ success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
@@ -99,8 +98,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Error creating alert:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
+    return NextResponse.json({ success: false, error: 'Internal server error' },
       { status: 500 }
     );
   } finally {
@@ -116,13 +114,12 @@ export async function PATCH(request: NextRequest) {
     const { alertId, acknowledgedBy, resolutionNotes, isResolved } = body;
 
     if (!alertId) {
-      return NextResponse.json(
-        { error: 'Missing alertId' },
+      return NextResponse.json({ success: false, error: 'Missing alertId' },
         { status: 400 }
       );
     }
 
-    const updateData: any = {};
+    const updateData: Prisma.ConnectionAlertUpdateInput = {};
     
     if (acknowledgedBy) {
       updateData.isAcknowledged = true;
@@ -148,8 +145,7 @@ export async function PATCH(request: NextRequest) {
 
   } catch (error) {
     console.error('Error updating alert:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
+    return NextResponse.json({ success: false, error: 'Internal server error' },
       { status: 500 }
     );
   } finally {

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = user.userId as string;
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error fetching notification preferences:', error);
-    return NextResponse.json({ error: 'Failed to fetch notification preferences' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch notification preferences' }, { status: 500 });
   }
 }
 
@@ -41,7 +41,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = user.userId as string;
@@ -56,6 +56,6 @@ export async function PATCH(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error updating notification preferences:', error);
-    return NextResponse.json({ error: 'Failed to update notification preferences' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to update notification preferences' }, { status: 500 });
   }
 }

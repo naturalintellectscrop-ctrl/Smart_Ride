@@ -156,14 +156,14 @@ export class ConnectionManager {
     } = {}
   ): Promise<T> {
     const { maxAttempts = 3, onRetry } = options;
-    let lastError: any;
+    let lastError: unknown;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
         const result = await operation();
         this.recordSuccess();
         return result;
-      } catch (error: any) {
+      } catch (error: unknown) {
         lastError = error;
         this.recordFailure();
 

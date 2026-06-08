@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
-import { VerificationStatus } from '@prisma/client';
+import { VerificationStatus, Prisma, HealthProviderType } from '@prisma/client';
 
 // GET - Fetch pending health providers
 export async function GET(request: NextRequest) {
@@ -15,12 +15,12 @@ export async function GET(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
-    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden - Admin access required' }, { status: 403 });
   }
 
   await setRLSContext(decoded);
@@ -29,12 +29,12 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'PENDING';
     const providerType = searchParams.get('providerType');
 
-    const where: any = {
+    const where: Prisma.HealthProviderWhereInput = {
       verificationStatus: status as VerificationStatus,
     };
 
     if (providerType) {
-      where.providerType = providerType;
+      where.providerType = providerType as HealthProviderType;
     }
 
     const providers = await db.healthProvider.findMany({
@@ -56,8 +56,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ providers });
   } catch (error) {
     console.error('Error fetching health providers:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch health providers' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch health providers' },
       { status: 500 }
     );
   } finally {
@@ -71,12 +70,12 @@ export async function POST(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
-    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden - Admin access required' }, { status: 403 });
   }
 
   await setRLSContext(decoded);
@@ -85,15 +84,13 @@ export async function POST(request: NextRequest) {
     const { providerId, action, notes, rejectionReason } = body;
 
     if (!providerId || !action) {
-      return NextResponse.json(
-        { error: 'providerId and action are required' },
+      return NextResponse.json({ success: false, error: 'providerId and action are required' },
         { status: 400 }
       );
     }
 
     if (!['approve', 'reject', 'suspend', 'activate', 'request_documents'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Invalid action. Must be: approve, reject, suspend, activate, or request_documents' },
+      return NextResponse.json({ success: false, error: 'Invalid action. Must be: approve, reject, suspend, activate, or request_documents' },
         { status: 400 }
       );
     }
@@ -104,14 +101,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!provider) {
-      return NextResponse.json(
-        { error: 'Health provider not found' },
+      return NextResponse.json({ success: false, error: 'Health provider not found' },
         { status: 404 }
       );
     }
 
     let newStatus: VerificationStatus;
-    let updateData: any = {
+    let updateData: Prisma.HealthProviderUpdateInput = {
       verifiedBy: decoded.userId,
       verifiedAt: new Date(),
     };
@@ -139,7 +135,7 @@ export async function POST(request: NextRequest) {
         updateData.verificationNotes = notes;
         break;
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
 
     // Update provider
@@ -205,8 +201,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error verifying health provider:', error);
-    return NextResponse.json(
-      { error: 'Failed to verify health provider' },
+    return NextResponse.json({ success: false, error: 'Failed to verify health provider' },
       { status: 500 }
     );
   } finally {

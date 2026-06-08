@@ -172,9 +172,9 @@ export function ClientOrders() {
       });
 
       setOrders(mapped);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[ClientOrders] Failed to fetch orders:', err);
-      setError(err.message || 'Failed to load orders');
+      setError(err instanceof Error ? err.message : 'Failed to load orders');
     } finally {
       setIsLoading(false);
     }

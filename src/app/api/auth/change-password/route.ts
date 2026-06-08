@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     // Get token from cookie
     const token = request.cookies.get('admin-session')?.value;
     if (!token) {
-      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
     // Verify token
@@ -48,13 +48,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user || !user.passwordHash) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
     // Verify current password
     const passwordValid = await compare(currentPassword, user.passwordHash);
     if (!passwordValid) {
-      return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Current password is incorrect' }, { status: 400 });
     }
 
     // Hash new password
@@ -81,10 +81,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, message: 'Password updated successfully' });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+      return NextResponse.json({ success: false, error: error.issues[0].message }, { status: 400 });
     }
     console.error('Change password error:', error);
-    return NextResponse.json({ error: 'Failed to change password' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to change password' }, { status: 500 });
   } finally {
     await resetRLSContext();
   }

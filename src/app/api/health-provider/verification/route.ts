@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 // GET /api/health-provider/verification - Get providers pending verification
 export async function GET(request: NextRequest) {
@@ -11,7 +12,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    const where: any = {};
+    const where: Prisma.HealthProviderWhereInput = {};
     if (status !== 'ALL') {
       where.verificationStatus = status;
     }
@@ -39,8 +40,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching providers for verification:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch providers' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch providers' },
       { status: 500 }
     );
   } finally {
@@ -56,8 +56,7 @@ export async function PATCH(request: NextRequest) {
     const { providerId, action, adminId, notes, rejectionReason } = body;
 
     if (!providerId || !action || !adminId) {
-      return NextResponse.json(
-        { error: 'providerId, action, and adminId are required' },
+      return NextResponse.json({ success: false, error: 'providerId, action, and adminId are required' },
         { status: 400 }
       );
     }
@@ -67,13 +66,12 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!provider) {
-      return NextResponse.json(
-        { error: 'Provider not found' },
+      return NextResponse.json({ success: false, error: 'Provider not found' },
         { status: 404 }
       );
     }
 
-    let updateData: any = {
+    let updateData: Prisma.HealthProviderUpdateInput = {
       verifiedBy: adminId,
       verifiedAt: new Date(),
       verificationNotes: notes,
@@ -111,8 +109,7 @@ export async function PATCH(request: NextRequest) {
         break;
 
       default:
-        return NextResponse.json(
-          { error: 'Invalid action' },
+        return NextResponse.json({ success: false, error: 'Invalid action' },
           { status: 400 }
         );
     }
@@ -169,8 +166,7 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating provider verification:', error);
-    return NextResponse.json(
-      { error: 'Failed to update verification status' },
+    return NextResponse.json({ success: false, error: 'Failed to update verification status' },
       { status: 500 }
     );
   } finally {

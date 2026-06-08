@@ -166,11 +166,11 @@ export class DispatchService {
           expiresAt: match.expiresAt,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Dispatch error:', error);
       return {
         success: false,
-        error: error.message || 'Failed to dispatch',
+        error: 'An internal error occurred',
       };
     }
   }
@@ -460,9 +460,9 @@ export class DispatchService {
       }
 
       return { success: true, taskId: match.taskId };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Accept match error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: 'An internal error occurred' };
     }
   }
 
@@ -517,9 +517,9 @@ export class DispatchService {
         await this.autoCancelTask(match.taskId, 'Max dispatch attempts reached');
         return { success: true };
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Reject match error:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: 'An internal error occurred' };
     }
   }
 

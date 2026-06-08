@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
-import { DocumentStatus } from '@prisma/client';
+import { DocumentStatus, Prisma, DocumentType } from '@prisma/client';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse, paginatedResponse } from '@/lib/api/response';
 import { createAuditLog } from '@/lib/api/audit';
 import { requireAdmin } from '@/lib/auth/guards';
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       }
 
       // Calculate expiry info
-      const expiresAt = (document as any).expiresAt as Date | null;
+      const expiresAt = ('expiresAt' in document ? (document as Record<string, unknown>).expiresAt : null) as Date | null;
       const now = new Date();
       const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -88,11 +88,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Build query
-    const where: any = {};
+    const where: Prisma.DocumentWhereInput = {};
 
     if (riderId) where.riderId = riderId;
     if (status) where.status = status;
-    if (documentType) where.documentType = documentType;
+    if (documentType) where.documentType = documentType as DocumentType;
 
     // Get paginated documents
     const skip = (page - 1) * limit;
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
 
     // Add expiry info to documents
     const documentsWithExpiry = documents.map((doc) => {
-      const expiresAt = (doc as any).expiresAt as Date | null;
+      const expiresAt = ('expiresAt' in doc ? (doc as Record<string, unknown>).expiresAt : null) as Date | null;
       const now = new Date();
       const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       const result = await documentTracker.requestReverification(
         {
           riderId,
-          documentTypes: validatedData.documentTypes as any[],
+          documentTypes: validatedData.documentTypes as DocumentType[],
           reason: validatedData.reason,
           deadline,
         },
@@ -262,7 +262,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Build update data
-    const updateData: any = {};
+    const updateData: Prisma.DocumentUpdateInput = {};
 
     if (validatedData.status) {
       updateData.status = validatedData.status;

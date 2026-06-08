@@ -54,7 +54,7 @@ function verifyAdmin(request: NextRequest): {
   if (!token) {
     return {
       decoded: null,
-      error: NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 }),
+      error: NextResponse.json({ success: false, error: 'Unauthorized - No token provided' }, { status: 401 }),
     };
   }
 
@@ -62,14 +62,14 @@ function verifyAdmin(request: NextRequest): {
   if (!decoded) {
     return {
       decoded: null,
-      error: NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 }),
+      error: NextResponse.json({ success: false, error: 'Unauthorized - Invalid token' }, { status: 401 }),
     };
   }
 
   if (!['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'].includes(decoded.role)) {
     return {
       decoded: null,
-      error: NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 }),
+      error: NextResponse.json({ success: false, error: 'Forbidden - Admin access required' }, { status: 403 }),
     };
   }
 
@@ -869,15 +869,13 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!taskId) {
-      return NextResponse.json(
-        { error: 'taskId is required' },
+      return NextResponse.json({ success: false, error: 'taskId is required' },
         { status: 400 }
       );
     }
 
     if (!action) {
-      return NextResponse.json(
-        { error: 'action is required' },
+      return NextResponse.json({ success: false, error: 'action is required' },
         { status: 400 }
       );
     }
@@ -891,23 +889,20 @@ export async function POST(request: NextRequest) {
     ];
 
     if (!validActions.includes(action)) {
-      return NextResponse.json(
-        { error: `Invalid action. Must be one of: ${validActions.join(', ')}` },
+      return NextResponse.json({ success: false, error: `Invalid action. Must be one of: ${validActions.join(', ')}` },
         { status: 400 }
       );
     }
 
     if (!reason || reason.trim().length === 0) {
-      return NextResponse.json(
-        { error: 'reason is required for all admin override actions' },
+      return NextResponse.json({ success: false, error: 'reason is required for all admin override actions' },
         { status: 400 }
       );
     }
 
     // Validate riderId for actions that require it
     if ((action === 'emergency_reassign' || action === 'force_assign') && !riderId) {
-      return NextResponse.json(
-        { error: `riderId is required for ${action} action` },
+      return NextResponse.json({ success: false, error: `riderId is required for ${action} action` },
         { status: 400 }
       );
     }
@@ -936,8 +931,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!result.success) {
-      return NextResponse.json(
-        { error: result.error },
+      return NextResponse.json({ success: false, error: result.error },
         { status: result.status || 400 }
       );
     }
@@ -950,8 +944,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[AdminOverride] POST error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error during task override' },
+    return NextResponse.json({ success: false, error: 'Internal server error during task override' },
       { status: 500 }
     );
   } finally {

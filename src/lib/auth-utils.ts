@@ -116,7 +116,7 @@ export async function requireAuth(request: NextRequest): Promise<JWTPayload | Ne
   
   if (!authResult.success) {
     return NextResponse.json(
-      { error: authResult.error },
+      { success: false, error: authResult.error },
       { status: authResult.statusCode }
     );
   }
@@ -125,7 +125,7 @@ export async function requireAuth(request: NextRequest): Promise<JWTPayload | Ne
   const userResult = await verifyActiveUser(authResult.userId);
   if (!userResult.success) {
     return NextResponse.json(
-      { error: userResult.error },
+      { success: false, error: userResult.error },
       { status: 401 }
     );
   }
@@ -152,7 +152,7 @@ export async function requireAdmin(request: NextRequest): Promise<JWTPayload | N
   
   if (!isAdmin(user.role)) {
     return NextResponse.json(
-      { error: 'Admin access required' },
+      { success: false, error: 'Admin access required' },
       { status: 403 }
     );
   }
@@ -176,7 +176,7 @@ export async function requireRole(
   
   if (!hasRole(user.role, allowedRoles)) {
     return NextResponse.json(
-      { error: 'Insufficient permissions' },
+      { success: false, error: 'Insufficient permissions' },
       { status: 403 }
     );
   }
@@ -209,7 +209,7 @@ export async function requireOwnershipOrAdmin(
   }
   
   return NextResponse.json(
-    { error: 'Access denied' },
+    { success: false, error: 'Access denied' },
     { status: 403 }
   );
 }
@@ -232,7 +232,7 @@ export async function getOptionalAuth(request: NextRequest): Promise<JWTPayload 
  */
 export function unauthorizedResponse(message: string = 'Authentication required'): NextResponse {
   return NextResponse.json(
-    { error: message },
+    { success: false, error: message },
     { status: 401 }
   );
 }
@@ -242,7 +242,7 @@ export function unauthorizedResponse(message: string = 'Authentication required'
  */
 export function forbiddenResponse(message: string = 'Access denied'): NextResponse {
   return NextResponse.json(
-    { error: message },
+    { success: false, error: message },
     { status: 403 }
   );
 }
@@ -252,7 +252,7 @@ export function forbiddenResponse(message: string = 'Access denied'): NextRespon
  */
 export function notFoundResponse(message: string = 'Resource not found'): NextResponse {
   return NextResponse.json(
-    { error: message },
+    { success: false, error: message },
     { status: 404 }
   );
 }

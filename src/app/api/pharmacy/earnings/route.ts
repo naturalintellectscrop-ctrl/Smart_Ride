@@ -28,12 +28,11 @@ export async function GET(request: NextRequest) {
         return await getEarningsAnalytics(startDate, endDate);
       
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
     console.error('Pharmacy earnings API error:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch pharmacy earnings' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch pharmacy earnings' },
       { status: 500 }
     );
   } finally {
@@ -56,12 +55,11 @@ export async function POST(request: NextRequest) {
         return await updateCommissionRate(body);
       
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
     console.error('Pharmacy earnings POST error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process request' },
+    return NextResponse.json({ success: false, error: 'Failed to process request' },
       { status: 500 }
     );
   } finally {
@@ -200,7 +198,7 @@ async function getProviderEarnings(providerId?: string | null, startDate?: strin
     });
 
     if (!provider) {
-      return NextResponse.json({ error: 'Provider not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Provider not found' }, { status: 404 });
     }
 
     const orders = provider.healthOrders;
@@ -438,11 +436,11 @@ async function recordPayout(data: { providerId: string; amount: number; referenc
   });
 
   if (!provider) {
-    return NextResponse.json({ error: 'Provider not found' }, { status: 404 });
+    return NextResponse.json({ success: false, error: 'Provider not found' }, { status: 404 });
   }
 
   if (provider.pendingPayout < amount) {
-    return NextResponse.json({ error: 'Insufficient pending payout balance' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Insufficient pending payout balance' }, { status: 400 });
   }
 
   // Update provider's pending payout
@@ -481,7 +479,7 @@ async function updateCommissionRate(data: { providerId: string; commissionRate: 
   const { providerId, commissionRate } = data;
 
   if (commissionRate < 0 || commissionRate > 1) {
-    return NextResponse.json({ error: 'Commission rate must be between 0 and 1' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Commission rate must be between 0 and 1' }, { status: 400 });
   }
 
   const provider = await db.healthProvider.update({

@@ -93,10 +93,10 @@ export async function GET(request: NextRequest) {
         features: data.features,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Mapbox reverse geocoding error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to reverse geocode' },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   }

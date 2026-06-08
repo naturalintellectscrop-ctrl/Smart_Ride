@@ -156,8 +156,8 @@ export function MerchantRegistration({ onBack, onComplete }: MerchantRegistratio
           verificationStatus: 'PENDING_APPROVAL',
         });
       }, 2000);
-    } catch (err: any) {
-      setError(err.message || 'Registration failed. Please try again.');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
     }

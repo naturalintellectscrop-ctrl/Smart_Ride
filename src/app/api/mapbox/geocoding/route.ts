@@ -32,8 +32,7 @@ export async function GET(request: NextRequest) {
   const token = process.env.MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
   if (!token) {
-    return NextResponse.json(
-      { error: 'Mapbox access token not configured' },
+    return NextResponse.json({ success: false, error: 'Mapbox access token not configured' },
       { status: 500 }
     );
   }
@@ -45,8 +44,7 @@ export async function GET(request: NextRequest) {
 
   // Otherwise, do forward geocoding (search)
   if (!query) {
-    return NextResponse.json(
-      { error: 'Search query required' },
+    return NextResponse.json({ success: false, error: 'Search query required' },
       { status: 400 }
     );
   }
@@ -88,8 +86,7 @@ async function handleForwardGeocode(
     if (!response.ok) {
       const error = await response.text();
       console.error('Mapbox geocoding error:', error);
-      return NextResponse.json(
-        { error: 'Failed to geocode location' },
+      return NextResponse.json({ success: false, error: 'Failed to geocode location' },
         { status: response.status }
       );
     }
@@ -116,8 +113,7 @@ async function handleForwardGeocode(
     });
   } catch (error) {
     console.error('Geocoding error:', error);
-    return NextResponse.json(
-      { error: 'Failed to search for places' },
+    return NextResponse.json({ success: false, error: 'Failed to search for places' },
       { status: 500 }
     );
   }
@@ -136,8 +132,7 @@ async function handleReverseGeocode(lat: number, lng: number, token: string) {
     const response = await fetch(url);
     
     if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Failed to reverse geocode' },
+      return NextResponse.json({ success: false, error: 'Failed to reverse geocode' },
         { status: response.status }
       );
     }
@@ -161,8 +156,7 @@ async function handleReverseGeocode(lat: number, lng: number, token: string) {
     });
   } catch (error) {
     console.error('Reverse geocoding error:', error);
-    return NextResponse.json(
-      { error: 'Failed to reverse geocode' },
+    return NextResponse.json({ success: false, error: 'Failed to reverse geocode' },
       { status: 500 }
     );
   }

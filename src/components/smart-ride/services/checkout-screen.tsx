@@ -173,9 +173,9 @@ export function CheckoutScreen({ cartType, onBack, onOrderComplete }: CheckoutSc
       });
 
       setStep('success');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Checkout] Order creation failed:', err);
-      setErrorMessage(err.message || 'Failed to place order. Please try again.');
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to place order. Please try again.');
       setStep('error');
     } finally {
       setIsProcessing(false);

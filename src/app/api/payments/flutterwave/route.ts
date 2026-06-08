@@ -45,8 +45,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!FLUTTERWAVE_SECRET_KEY) {
-    return NextResponse.json(
-      { error: 'Payment gateway not configured' },
+    return NextResponse.json({ success: false, error: 'Payment gateway not configured' },
       { status: 503 }
     );
   }
@@ -62,7 +61,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
     const txRef = generateTxRef();
@@ -92,8 +91,7 @@ export async function POST(request: NextRequest) {
     if (['mtn_ug', 'airtel_ug'].includes(validatedData.paymentMethod)) {
       const phoneNumber = validatedData.phoneNumber || user.phone;
       if (!phoneNumber) {
-        return NextResponse.json(
-          { error: 'Phone number is required for mobile money payments' },
+        return NextResponse.json({ success: false, error: 'Phone number is required for mobile money payments' },
           { status: 400 }
         );
       }
@@ -144,8 +142,7 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      return NextResponse.json(
-        { error: result.message || 'Failed to initiate payment' },
+      return NextResponse.json({ success: false, error: result.message || 'Failed to initiate payment' },
         { status: 400 }
       );
     }
@@ -175,13 +172,11 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
+      return NextResponse.json({ success: false, error: error.issues[0].message },
         { status: 400 }
       );
     }
-    return NextResponse.json(
-      { error: 'Failed to initiate payment' },
+    return NextResponse.json({ success: false, error: 'Failed to initiate payment' },
       { status: 500 }
     );
   } finally {
@@ -200,8 +195,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (!FLUTTERWAVE_SECRET_KEY) {
-    return NextResponse.json(
-      { error: 'Payment gateway not configured' },
+    return NextResponse.json({ success: false, error: 'Payment gateway not configured' },
       { status: 503 }
     );
   }
@@ -212,8 +206,7 @@ export async function GET(request: NextRequest) {
     const txRef = searchParams.get('txRef');
 
     if (!transactionId && !txRef) {
-      return NextResponse.json(
-        { error: 'Transaction ID or reference is required' },
+      return NextResponse.json({ success: false, error: 'Transaction ID or reference is required' },
         { status: 400 }
       );
     }
@@ -234,8 +227,7 @@ export async function GET(request: NextRequest) {
     const result = await response.json();
 
     if (!response.ok || result.status !== 'success') {
-      return NextResponse.json(
-        { error: 'Failed to verify payment' },
+      return NextResponse.json({ success: false, error: 'Failed to verify payment' },
         { status: 400 }
       );
     }
@@ -301,8 +293,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch {
-    return NextResponse.json(
-      { error: 'Failed to verify payment' },
+    return NextResponse.json({ success: false, error: 'Failed to verify payment' },
       { status: 500 }
     );
   } finally {

@@ -26,8 +26,7 @@ export async function POST(request: NextRequest) {
     const { recipientPhone, amount, note } = body;
 
     if (!recipientPhone || !amount || amount <= 0) {
-      return NextResponse.json(
-        { error: 'Recipient phone and valid amount are required' },
+      return NextResponse.json({ success: false, error: 'Recipient phone and valid amount are required' },
         { status: 400 }
       );
     }
@@ -45,15 +44,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!senderWallet) {
-      return NextResponse.json(
-        { error: 'Wallet not found' },
+      return NextResponse.json({ success: false, error: 'Wallet not found' },
         { status: 404 }
       );
     }
 
     if (senderWallet.balance < totalAmount) {
-      return NextResponse.json(
-        { error: 'Insufficient balance' },
+      return NextResponse.json({ success: false, error: 'Insufficient balance' },
         { status: 400 }
       );
     }
@@ -64,16 +61,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (!recipientUser) {
-      return NextResponse.json(
-        { error: 'Recipient not found. Please verify the phone number.' },
+      return NextResponse.json({ success: false, error: 'Recipient not found. Please verify the phone number.' },
         { status: 404 }
       );
     }
 
     // Prevent self-transfer
     if (recipientUser.id === senderId) {
-      return NextResponse.json(
-        { error: 'Cannot transfer to yourself' },
+      return NextResponse.json({ success: false, error: 'Cannot transfer to yourself' },
         { status: 400 }
       );
     }
@@ -198,8 +193,7 @@ export async function POST(request: NextRequest) {
       totalAmount,
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to process transfer' },
+    return NextResponse.json({ success: false, error: 'Failed to process transfer' },
       { status: 500 }
     );
   } finally {

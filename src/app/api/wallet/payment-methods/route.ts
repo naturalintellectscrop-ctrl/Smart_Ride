@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { z } from 'zod';
 
 // GET /api/wallet/payment-methods - Get user payment methods
 export async function GET(request: NextRequest) {
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
 
     if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'userId is required' }, { status: 400 });
     }
 
     const paymentMethods = await db.userPaymentMethod.findMany({
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ paymentMethods });
   } catch (error) {
     console.error('Error fetching payment methods:', error);
-    return NextResponse.json({ error: 'Failed to fetch payment methods' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch payment methods' }, { status: 500 });
   } finally {
     await resetRLSContext();
   }
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { userId, type, name, accountNumber, cardLastFour, cardBrand, phoneNumber } = body;
 
     if (!userId || !type || !name) {
-      return NextResponse.json({ error: 'userId, type, and name are required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'userId, type, and name are required' }, { status: 400 });
     }
 
     // Check if this is the first payment method (make it default)
@@ -59,22 +60,35 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, paymentMethod });
   } catch (error) {
     console.error('Error adding payment method:', error);
-    return NextResponse.json({ error: 'Failed to add payment method' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to add payment method' }, { status: 500 });
   } finally {
     await resetRLSContext();
   }
 }
+
+const putPaymentMethodSchema = z.object({
+  paymentMethodId: z.string().min(1),
+  userId: z.string().min(1).optional(),
+});
+
+const deletePaymentMethodSchema = z.object({
+  userId: z.string().min(1),
+  paymentMethodId: z.string().min(1),
+});
 
 // PUT /api/wallet/payment-methods - Set default payment method
 export async function PUT(request: NextRequest) {
   await setServiceRoleContext();
   try {
     const body = await request.json();
-    const { userId, paymentMethodId } = body;
-
-    if (!userId || !paymentMethodId) {
-      return NextResponse.json({ error: 'userId and paymentMethodId are required' }, { status: 400 });
+    const parsed = putPaymentMethodSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues.map(i => i.message).join(', ') },
+        { status: 400 }
+      );
     }
+    const { userId, paymentMethodId } = parsed.data;
 
     // Verify the payment method belongs to the user
     const paymentMethod = await db.userPaymentMethod.findFirst({
@@ -82,7 +96,7 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!paymentMethod) {
-      return NextResponse.json({ error: 'Payment method not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Payment method not found' }, { status: 404 });
     }
 
     // Update all payment methods for this user
@@ -102,7 +116,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error setting default payment method:', error);
-    return NextResponse.json({ error: 'Failed to set default payment method' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to set default payment method' }, { status: 500 });
   } finally {
     await resetRLSContext();
   }
@@ -113,12 +127,18 @@ export async function DELETE(request: NextRequest) {
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const paymentMethodId = searchParams.get('paymentMethodId');
-
-    if (!userId || !paymentMethodId) {
-      return NextResponse.json({ error: 'userId and paymentMethodId are required' }, { status: 400 });
+    const queryParams = {
+      userId: searchParams.get('userId') || '',
+      paymentMethodId: searchParams.get('paymentMethodId') || '',
+    };
+    const parsed = deletePaymentMethodSchema.safeParse(queryParams);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues.map(i => i.message).join(', ') },
+        { status: 400 }
+      );
     }
+    const { userId, paymentMethodId } = parsed.data;
 
     // Verify the payment method belongs to the user
     const paymentMethod = await db.userPaymentMethod.findFirst({
@@ -126,7 +146,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!paymentMethod) {
-      return NextResponse.json({ error: 'Payment method not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Payment method not found' }, { status: 404 });
     }
 
     // Soft delete by setting isActive to false
@@ -152,7 +172,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error removing payment method:', error);
-    return NextResponse.json({ error: 'Failed to remove payment method' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to remove payment method' }, { status: 500 });
   } finally {
     await resetRLSContext();
   }

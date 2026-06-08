@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 
 // GET /api/health-provider/catalog - Get medicine catalog for provider
 export async function GET(request: NextRequest) {
@@ -15,13 +17,12 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     if (!providerId) {
-      return NextResponse.json(
-        { error: 'providerId is required' },
+      return NextResponse.json({ success: false, error: 'providerId is required' },
         { status: 400 }
       );
     }
 
-    const where: any = { providerId };
+    const where: Prisma.MedicineCatalogWhereInput = { providerId };
     if (category) where.category = category;
     if (requiresPrescription !== null) {
       where.requiresPrescription = requiresPrescription === 'true';
@@ -70,8 +71,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching medicine catalog:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch medicine catalog' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch medicine catalog' },
       { status: 500 }
     );
   } finally {
@@ -84,6 +84,40 @@ export async function POST(request: NextRequest) {
   await setServiceRoleContext();
   try {
     const body = await request.json();
+
+    const medicineCatalogSchema = z.object({
+      providerId: z.string().min(1),
+      name: z.string().min(1).max(200),
+      genericName: z.string().max(200).optional(),
+      description: z.string().max(1000).optional(),
+      category: z.string().min(1).max(100),
+      manufacturer: z.string().max(200).optional(),
+      dosageForm: z.string().max(100).optional(),
+      strength: z.string().max(100).optional(),
+      packSize: z.string().max(50).optional(),
+      price: z.number().positive(),
+      discountedPrice: z.number().positive().optional(),
+      isAvailable: z.boolean().optional(),
+      stockQuantity: z.number().int().min(0).optional(),
+      lowStockThreshold: z.number().int().min(0).optional(),
+      requiresPrescription: z.boolean().optional(),
+      isControlled: z.boolean().optional(),
+      controlledLevel: z.string().max(50).optional(),
+      storageCondition: z.string().max(200).optional(),
+      handlingInstructions: z.string().max(500).optional(),
+      shelfLife: z.string().max(100).optional(),
+      imageUrl: z.string().url().optional(),
+      searchKeywords: z.array(z.string()).optional(),
+    });
+
+    const parsed = medicineCatalogSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues.map(i => i.message).join(', ') },
+        { status: 400 }
+      );
+    }
+
     const {
       providerId,
       name,
@@ -107,14 +141,7 @@ export async function POST(request: NextRequest) {
       shelfLife,
       imageUrl,
       searchKeywords,
-    } = body;
-
-    if (!providerId || !name || !category || price === undefined) {
-      return NextResponse.json(
-        { error: 'providerId, name, category, and price are required' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Verify provider exists and is approved
     const provider = await db.healthProvider.findUnique({
@@ -122,15 +149,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!provider) {
-      return NextResponse.json(
-        { error: 'Provider not found' },
+      return NextResponse.json({ success: false, error: 'Provider not found' },
         { status: 404 }
       );
     }
 
     if (provider.verificationStatus !== 'APPROVED') {
-      return NextResponse.json(
-        { error: 'Provider is not verified' },
+      return NextResponse.json({ success: false, error: 'Provider is not verified' },
         { status: 403 }
       );
     }
@@ -188,8 +213,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error adding medicine to catalog:', error);
-    return NextResponse.json(
-      { error: 'Failed to add medicine to catalog' },
+    return NextResponse.json({ success: false, error: 'Failed to add medicine to catalog' },
       { status: 500 }
     );
   } finally {
@@ -205,8 +229,7 @@ export async function PATCH(request: NextRequest) {
     const { medicineId, ...updateData } = body;
 
     if (!medicineId) {
-      return NextResponse.json(
-        { error: 'medicineId is required' },
+      return NextResponse.json({ success: false, error: 'medicineId is required' },
         { status: 400 }
       );
     }
@@ -216,14 +239,13 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!medicine) {
-      return NextResponse.json(
-        { error: 'Medicine not found' },
+      return NextResponse.json({ success: false, error: 'Medicine not found' },
         { status: 404 }
       );
     }
 
     // Prepare update data
-    const data: any = {};
+    const data: Prisma.MedicineCatalogUpdateInput = {};
     
     // Basic fields
     const updatableFields = [
@@ -257,8 +279,7 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating medicine:', error);
-    return NextResponse.json(
-      { error: 'Failed to update medicine' },
+    return NextResponse.json({ success: false, error: 'Failed to update medicine' },
       { status: 500 }
     );
   } finally {
@@ -274,8 +295,7 @@ export async function DELETE(request: NextRequest) {
     const medicineId = searchParams.get('medicineId');
 
     if (!medicineId) {
-      return NextResponse.json(
-        { error: 'medicineId is required' },
+      return NextResponse.json({ success: false, error: 'medicineId is required' },
         { status: 400 }
       );
     }
@@ -291,8 +311,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (activeOrders > 0) {
-      return NextResponse.json(
-        { error: 'Cannot delete medicine with active orders. Mark as unavailable instead.' },
+      return NextResponse.json({ success: false, error: 'Cannot delete medicine with active orders. Mark as unavailable instead.' },
         { status: 400 }
       );
     }
@@ -307,8 +326,7 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error deleting medicine:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete medicine' },
+    return NextResponse.json({ success: false, error: 'Failed to delete medicine' },
       { status: 500 }
     );
   } finally {

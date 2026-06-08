@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     // Verify admin access
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const status = await RecoveryService.getRecoveryStatus();
@@ -34,8 +34,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[Admin Recovery] GET error:', error);
-    return NextResponse.json(
-      { error: 'Failed to get recovery status' },
+    return NextResponse.json({ success: false, error: 'Failed to get recovery status' },
       { status: 500 }
     );
   } finally {
@@ -50,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Verify admin access
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const summary = await RecoveryService.runRecoveryChecks();
@@ -62,8 +61,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[Admin Recovery] POST error:', error);
-    return NextResponse.json(
-      { error: 'Failed to run recovery checks' },
+    return NextResponse.json({ success: false, error: 'Failed to run recovery checks' },
       { status: 500 }
     );
   } finally {

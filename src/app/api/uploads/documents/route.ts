@@ -22,8 +22,7 @@ export async function POST(request: NextRequest) {
     const documentType = formData.get('documentType') as string || 'document';
 
     if (!file) {
-      return NextResponse.json(
-        { error: 'No file provided' },
+      return NextResponse.json({ success: false, error: 'No file provided' },
         { status: 400 }
       );
     }
@@ -31,8 +30,7 @@ export async function POST(request: NextRequest) {
     // Validate file size (max 10MB)
     const maxSize = 10 * 1024 * 1024;
     if (file.size > maxSize) {
-      return NextResponse.json(
-        { error: 'File size exceeds 10MB limit' },
+      return NextResponse.json({ success: false, error: 'File size exceeds 10MB limit' },
         { status: 400 }
       );
     }
@@ -46,8 +44,7 @@ export async function POST(request: NextRequest) {
       'application/pdf',
     ];
     if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json(
-        { error: 'Invalid file type. Only images and PDFs are allowed.' },
+      return NextResponse.json({ success: false, error: 'Invalid file type. Only images and PDFs are allowed.' },
         { status: 400 }
       );
     }
@@ -86,8 +83,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error uploading document:', error);
-    return NextResponse.json(
-      { error: 'Failed to upload document' },
+    return NextResponse.json({ success: false, error: 'Failed to upload document' },
       { status: 500 }
     );
   }

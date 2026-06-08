@@ -19,8 +19,7 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
 
     if (!internalKey && !authHeader) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Requires x-internal-key or authorization header.' },
+      return NextResponse.json({ success: false, error: 'Unauthorized. Requires x-internal-key or authorization header.' },
         { status: 401 }
       );
     }
@@ -67,11 +66,10 @@ export async function POST(request: NextRequest) {
         totalExpired,
       },
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    console.error('[InventoryAPI] POST /inventory/cleanup failed:', message);
-    return NextResponse.json(
-      { error: message },
+  } catch (error: unknown) {
+    const logMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[InventoryAPI] POST /inventory/cleanup failed:', logMessage);
+    return NextResponse.json({ success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   }
@@ -87,8 +85,7 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
 
     if (!internalKey && !authHeader) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Requires x-internal-key or authorization header.' },
+      return NextResponse.json({ success: false, error: 'Unauthorized. Requires x-internal-key or authorization header.' },
         { status: 401 }
       );
     }
@@ -153,11 +150,10 @@ export async function GET(request: NextRequest) {
           : null,
       },
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    console.error('[InventoryAPI] GET /inventory/cleanup failed:', message);
-    return NextResponse.json(
-      { error: message },
+  } catch (error: unknown) {
+    const logMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[InventoryAPI] GET /inventory/cleanup failed:', logMessage);
+    return NextResponse.json({ success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   }

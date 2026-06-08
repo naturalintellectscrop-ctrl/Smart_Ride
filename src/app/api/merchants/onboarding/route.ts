@@ -27,14 +27,12 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Merchant onboarding error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to register merchant';
-    const status = message.includes('required') || message.includes('Invalid') || message.includes('already exists')
-      ? 400
-      : 500;
+    const isClientError = error instanceof Error && (error.message.includes('required') || error.message.includes('Invalid') || error.message.includes('already exists'));
+    const status = isClientError ? 400 : 500;
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: isClientError ? 'Invalid registration data' : 'An internal error occurred' },
       { status }
     );
   }

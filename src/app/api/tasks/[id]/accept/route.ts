@@ -115,10 +115,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       data: updatedTask,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Task accept error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to accept task' },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

@@ -257,8 +257,7 @@ export async function GET(request: NextRequest) {
     const merchantId = searchParams.get('merchantId');
 
     if (!merchantId) {
-      return NextResponse.json(
-        { error: 'merchantId is required' },
+      return NextResponse.json({ success: false, error: 'merchantId is required' },
         { status: 400 }
       );
     }
@@ -286,8 +285,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching merchant registration:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch registration status' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch registration status' },
       { status: 500 }
     );
   } finally {

@@ -35,15 +35,13 @@ export async function POST(request: NextRequest) {
 
     // Validate config
     if (config.fraudSampleRatio < 0.1 || config.fraudSampleRatio > 0.5) {
-      return NextResponse.json(
-        { error: 'fraudSampleRatio must be between 0.1 and 0.5' },
+      return NextResponse.json({ success: false, error: 'fraudSampleRatio must be between 0.1 and 0.5' },
         { status: 400 }
       );
     }
 
     if (config.trainTestSplit < 0.5 || config.trainTestSplit > 0.9) {
-      return NextResponse.json(
-        { error: 'trainTestSplit must be between 0.5 and 0.9' },
+      return NextResponse.json({ success: false, error: 'trainTestSplit must be between 0.5 and 0.9' },
         { status: 400 }
       );
     }
@@ -72,10 +70,9 @@ export async function POST(request: NextRequest) {
         currentStep: job.currentStep,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error starting training:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to start training' },
+    return NextResponse.json({ success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {
@@ -123,8 +120,7 @@ export async function GET(request: NextRequest) {
     return await getTrainingStatus();
   } catch (error) {
     console.error('Error getting training info:', error);
-    return NextResponse.json(
-      { error: 'Failed to get training information' },
+    return NextResponse.json({ success: false, error: 'Failed to get training information' },
       { status: 500 }
     );
   } finally {
@@ -215,14 +211,12 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    return NextResponse.json(
-      { error: 'Invalid action' },
+    return NextResponse.json({ success: false, error: 'Invalid action' },
       { status: 400 }
     );
   } catch (error) {
     console.error('Error in PUT request:', error);
-    return NextResponse.json(
-      { error: 'Failed to process request' },
+    return NextResponse.json({ success: false, error: 'Failed to process request' },
       { status: 500 }
     );
   } finally {
@@ -275,8 +269,7 @@ async function getMetrics(versionId?: string): Promise<NextResponse> {
   }
 
   if (!version) {
-    return NextResponse.json(
-      { error: 'Model version not found' },
+    return NextResponse.json({ success: false, error: 'Model version not found' },
       { status: 404 }
     );
   }
@@ -335,8 +328,7 @@ async function getCurrentVersion(): Promise<NextResponse> {
   const version = await ModelTrainingService.getCurrentModelVersion();
 
   if (!version) {
-    return NextResponse.json(
-      { error: 'No current model version found' },
+    return NextResponse.json({ success: false, error: 'No current model version found' },
       { status: 404 }
     );
   }
@@ -360,8 +352,7 @@ async function getFeatureImportance(versionId?: string): Promise<NextResponse> {
   }
 
   if (!version || !version.metrics.featureImportance) {
-    return NextResponse.json(
-      { error: 'Feature importance not available' },
+    return NextResponse.json({ success: false, error: 'Feature importance not available' },
       { status: 404 }
     );
   }

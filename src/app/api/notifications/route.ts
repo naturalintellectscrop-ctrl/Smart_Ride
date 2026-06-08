@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { getAuthUser } from '@/lib/auth/middleware';
+import { Prisma, NotificationType } from '@prisma/client';
 
 /**
  * GET /api/notifications
@@ -10,7 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     await setRLSContext(user);
@@ -20,7 +21,7 @@ export async function GET(request: NextRequest) {
       const limit = parseInt(searchParams.get('limit') || '20', 10);
       const unreadOnly = searchParams.get('unreadOnly') === 'true';
 
-      const where: any = { userId: user.userId };
+      const where: Prisma.NotificationWhereInput = { userId: user.userId };
       if (unreadOnly) {
         where.isRead = false;
       }
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error fetching notifications:', error);
-    return NextResponse.json({ error: 'Failed to fetch notifications' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to fetch notifications' }, { status: 500 });
   }
 }
 
@@ -63,15 +64,14 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const { userId, title, message, type, referenceId, referenceType } = body;
 
     if (!userId || !title || !message || !type) {
-      return NextResponse.json(
-        { error: 'Missing required fields: userId, title, message, type' },
+      return NextResponse.json({ success: false, error: 'Missing required fields: userId, title, message, type' },
         { status: 400 }
       );
     }
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
           userId,
           title,
           message,
-          type: type as any,
+          type: type as NotificationType,
           referenceId,
           referenceType,
         },
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error creating notification:', error);
-    return NextResponse.json({ error: 'Failed to create notification' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to create notification' }, { status: 500 });
   }
 }
 
@@ -108,7 +108,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -132,8 +132,7 @@ export async function PATCH(request: NextRequest) {
       }
 
       if (!notificationId) {
-        return NextResponse.json(
-          { error: 'Missing notificationId or markAllAsRead' },
+        return NextResponse.json({ success: false, error: 'Missing notificationId or markAllAsRead' },
           { status: 400 }
         );
       }
@@ -155,6 +154,6 @@ export async function PATCH(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error updating notification:', error);
-    return NextResponse.json({ error: 'Failed to update notification' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to update notification' }, { status: 500 });
   }
 }

@@ -12,12 +12,12 @@ export async function GET(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN'].includes(decoded.role)) {
-    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden - Admin access required' }, { status: 403 });
   }
 
   await setRLSContext(decoded);
@@ -158,8 +158,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch dashboard stats' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch dashboard stats' },
       { status: 500 }
     );
   } finally {

@@ -51,10 +51,10 @@ export async function GET(request: NextRequest) {
         pendingBalance: wallet.pendingBalance,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get wallet balance error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch wallet balance' },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

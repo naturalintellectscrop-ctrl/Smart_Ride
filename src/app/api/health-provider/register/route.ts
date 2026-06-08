@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 // GET /api/health-provider/register - Get registration status
 export async function GET(request: NextRequest) {
@@ -9,8 +10,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
 
     if (!userId) {
-      return NextResponse.json(
-        { error: 'userId is required' },
+      return NextResponse.json({ success: false, error: 'userId is required' },
         { status: 400 }
       );
     }
@@ -35,8 +35,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching provider registration:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch registration status' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch registration status' },
       { status: 500 }
     );
   } finally {
@@ -89,8 +88,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!businessName || !providerType || !licenseNumber || !ownerFullName || !ownerPhone || !address) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
+      return NextResponse.json({ success: false, error: 'Missing required fields' },
         { status: 400 }
       );
     }
@@ -101,8 +99,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingProvider) {
-      return NextResponse.json(
-        { error: 'Provider already registered', provider: existingProvider },
+      return NextResponse.json({ success: false, error: 'Provider already registered', provider: existingProvider },
         { status: 400 }
       );
     }
@@ -113,8 +110,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingLicense) {
-      return NextResponse.json(
-        { error: 'License number already registered' },
+      return NextResponse.json({ success: false, error: 'License number already registered' },
         { status: 400 }
       );
     }
@@ -198,8 +194,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error registering health provider:', error);
-    return NextResponse.json(
-      { error: 'Failed to register health provider' },
+    return NextResponse.json({ success: false, error: 'Failed to register health provider' },
       { status: 500 }
     );
   } finally {
@@ -215,8 +210,7 @@ export async function PATCH(request: NextRequest) {
     const { providerId, ...updateData } = body;
 
     if (!providerId) {
-      return NextResponse.json(
-        { error: 'providerId is required' },
+      return NextResponse.json({ success: false, error: 'providerId is required' },
         { status: 400 }
       );
     }
@@ -226,22 +220,20 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!provider) {
-      return NextResponse.json(
-        { error: 'Provider not found' },
+      return NextResponse.json({ success: false, error: 'Provider not found' },
         { status: 404 }
       );
     }
 
     // Only allow updates if status is PENDING or DOCUMENTS_REQUESTED
     if (!['PENDING', 'DOCUMENTS_REQUESTED'].includes(provider.verificationStatus)) {
-      return NextResponse.json(
-        { error: 'Cannot update registration in current status' },
+      return NextResponse.json({ success: false, error: 'Cannot update registration in current status' },
         { status: 400 }
       );
     }
 
     // Prepare update data
-    const data: any = {};
+    const data: Prisma.HealthProviderUpdateInput = {};
     
     // Basic info
     if (updateData.businessName) data.businessName = updateData.businessName;
@@ -299,8 +291,7 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating provider registration:', error);
-    return NextResponse.json(
-      { error: 'Failed to update registration' },
+    return NextResponse.json({ success: false, error: 'Failed to update registration' },
       { status: 500 }
     );
   } finally {

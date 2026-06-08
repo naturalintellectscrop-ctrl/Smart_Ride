@@ -10,8 +10,7 @@ export async function GET(request: NextRequest) {
     const entityId = searchParams.get('entityId');
 
     if (!entityType || !entityId) {
-      return NextResponse.json(
-        { error: 'entityType and entityId are required' },
+      return NextResponse.json({ success: false, error: 'entityType and entityId are required' },
         { status: 400 }
       );
     }
@@ -41,8 +40,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(riskScore);
   } catch (error) {
     console.error('Error fetching risk score:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch risk score' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch risk score' },
       { status: 500 }
     );
   } finally {
@@ -58,8 +56,7 @@ export async function POST(request: NextRequest) {
     const { entityType, entityId } = body;
 
     if (!entityType || !entityId) {
-      return NextResponse.json(
-        { error: 'entityType and entityId are required' },
+      return NextResponse.json({ success: false, error: 'entityType and entityId are required' },
         { status: 400 }
       );
     }
@@ -111,8 +108,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(riskScore);
   } catch (error) {
     console.error('Error calculating risk score:', error);
-    return NextResponse.json(
-      { error: 'Failed to calculate risk score' },
+    return NextResponse.json({ success: false, error: 'Failed to calculate risk score' },
       { status: 500 }
     );
   } finally {

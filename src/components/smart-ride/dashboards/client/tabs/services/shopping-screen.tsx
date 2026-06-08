@@ -368,9 +368,9 @@ export function ShoppingScreen({ onBack }: ShoppingScreenProps) {
       });
       setCart([]);
       setStep('tracking');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('[Shopping] Order creation failed:', err);
-      setOrderError(err.message || 'Failed to place order. Please try again.');
+      setOrderError(err instanceof Error ? err.message : 'Failed to place order. Please try again.');
     } finally {
       setIsPlacingOrder(false);
     }

@@ -9,8 +9,7 @@ export async function GET(request: NextRequest) {
     const userId = searchParams.get('userId');
 
     if (!providerId && !userId) {
-      return NextResponse.json(
-        { error: 'Provider ID or User ID is required' },
+      return NextResponse.json({ success: false, error: 'Provider ID or User ID is required' },
         { status: 400 }
       );
     }
@@ -46,8 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!provider) {
-      return NextResponse.json(
-        { error: 'Provider not found' },
+      return NextResponse.json({ success: false, error: 'Provider not found' },
         { status: 404 }
       );
     }
@@ -89,8 +87,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching provider status:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch provider status' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch provider status' },
       { status: 500 }
     );
   } finally {

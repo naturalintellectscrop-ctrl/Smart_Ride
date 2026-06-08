@@ -145,13 +145,13 @@ export class OfflineQueue {
             failed++;
           }
         }
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Network error - keep in queue for retry
         if (this.isNetworkError(error)) {
           request.status = 'PENDING';
         } else {
           request.status = 'FAILED';
-          request.error = error.message;
+          request.error = error instanceof Error ? error.message : 'Unknown error';
           failed++;
         }
       }

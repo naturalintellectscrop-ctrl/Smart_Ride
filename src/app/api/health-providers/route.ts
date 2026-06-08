@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 // GET - Fetch health providers (for admin dashboard and public listing)
 export async function GET(request: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type');
     const search = searchParams.get('search');
 
-    const where: any = {};
+    const where: Prisma.HealthProviderWhereInput = {};
     
     // Filter by verification status
     if (status) {
@@ -75,8 +76,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching health providers:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch health providers' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch health providers' },
       { status: 500 }
     );
   } finally {

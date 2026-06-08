@@ -16,12 +16,12 @@ export async function GET(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!merchant) {
-      return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Merchant not found' }, { status: 404 });
     }
 
     const menuItems = await db.menuItem.findMany({
@@ -48,8 +48,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ menuItems });
   } catch (error) {
     console.error('Error fetching menu items:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch menu items' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch menu items' },
       { status: 500 }
     );
   } finally {
@@ -63,12 +62,12 @@ export async function POST(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -84,13 +83,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!merchant) {
-      return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Merchant not found' }, { status: 404 });
     }
 
     // Check if merchant is approved
     if (merchant.status !== 'APPROVED') {
-      return NextResponse.json(
-        { error: 'Merchant not approved. Please wait for verification.' },
+      return NextResponse.json({ success: false, error: 'Merchant not approved. Please wait for verification.' },
         { status: 403 }
       );
     }
@@ -99,8 +97,7 @@ export async function POST(request: NextRequest) {
     const { name, description, price, category, imageUrl, preparationTime, isAvailable } = body;
 
     if (!name || !price) {
-      return NextResponse.json(
-        { error: 'Name and price are required' },
+      return NextResponse.json({ success: false, error: 'Name and price are required' },
         { status: 400 }
       );
     }
@@ -125,8 +122,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating menu item:', error);
-    return NextResponse.json(
-      { error: 'Failed to create menu item' },
+    return NextResponse.json({ success: false, error: 'Failed to create menu item' },
       { status: 500 }
     );
   } finally {
@@ -140,12 +136,12 @@ export async function PUT(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -161,15 +157,14 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!merchant) {
-      return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Merchant not found' }, { status: 404 });
     }
 
     const body = await request.json();
     const { itemId, ...updateData } = body;
 
     if (!itemId) {
-      return NextResponse.json(
-        { error: 'Item ID is required' },
+      return NextResponse.json({ success: false, error: 'Item ID is required' },
         { status: 400 }
       );
     }
@@ -180,8 +175,7 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!existingItem) {
-      return NextResponse.json(
-        { error: 'Menu item not found' },
+      return NextResponse.json({ success: false, error: 'Menu item not found' },
         { status: 404 }
       );
     }
@@ -208,8 +202,7 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating menu item:', error);
-    return NextResponse.json(
-      { error: 'Failed to update menu item' },
+    return NextResponse.json({ success: false, error: 'Failed to update menu item' },
       { status: 500 }
     );
   } finally {
@@ -223,12 +216,12 @@ export async function DELETE(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -244,15 +237,14 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!merchant) {
-      return NextResponse.json({ error: 'Merchant not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Merchant not found' }, { status: 404 });
     }
 
     const { searchParams } = new URL(request.url);
     const itemId = searchParams.get('itemId');
 
     if (!itemId) {
-      return NextResponse.json(
-        { error: 'Item ID is required' },
+      return NextResponse.json({ success: false, error: 'Item ID is required' },
         { status: 400 }
       );
     }
@@ -263,8 +255,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!existingItem) {
-      return NextResponse.json(
-        { error: 'Menu item not found' },
+      return NextResponse.json({ success: false, error: 'Menu item not found' },
         { status: 404 }
       );
     }
@@ -279,8 +270,7 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error deleting menu item:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete menu item' },
+    return NextResponse.json({ success: false, error: 'Failed to delete menu item' },
       { status: 500 }
     );
   } finally {

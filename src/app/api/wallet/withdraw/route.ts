@@ -154,10 +154,10 @@ export async function POST(request: NextRequest) {
         newBalance: result.wallet.balance,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Wallet withdraw error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to process withdrawal' },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

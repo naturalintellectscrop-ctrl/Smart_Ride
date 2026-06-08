@@ -23,18 +23,18 @@ export async function GET(
     const uploadsDir = path.join(process.cwd(), 'uploads');
     const resolvedPath = path.resolve(filePath);
     if (!resolvedPath.startsWith(uploadsDir)) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
     }
 
     // Check if file exists
     if (!existsSync(resolvedPath)) {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'File not found' }, { status: 404 });
     }
 
     // Get file info
     const fileStat = await stat(resolvedPath);
     if (!fileStat.isFile()) {
-      return NextResponse.json({ error: 'Not a file' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Not a file' }, { status: 400 });
     }
 
     // Determine content type
@@ -67,6 +67,6 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error serving file:', error);
-    return NextResponse.json({ error: 'Failed to serve file' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to serve file' }, { status: 500 });
   }
 }

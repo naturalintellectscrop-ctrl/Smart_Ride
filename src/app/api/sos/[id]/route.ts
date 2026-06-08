@@ -22,8 +22,7 @@ export async function GET(
     });
 
     if (!alert) {
-      return NextResponse.json(
-        { error: 'SOS alert not found' },
+      return NextResponse.json({ success: false, error: 'SOS alert not found' },
         { status: 404 }
       );
     }
@@ -82,8 +81,7 @@ export async function GET(
     });
   } catch (error) {
     console.error('Error fetching SOS alert:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch SOS alert' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch SOS alert' },
       { status: 500 }
     );
   } finally {
@@ -169,8 +167,7 @@ export async function PATCH(
     return NextResponse.json({ success: true, alert });
   } catch (error) {
     console.error('Error updating SOS alert:', error);
-    return NextResponse.json(
-      { error: 'Failed to update SOS alert' },
+    return NextResponse.json({ success: false, error: 'Failed to update SOS alert' },
       { status: 500 }
     );
   } finally {

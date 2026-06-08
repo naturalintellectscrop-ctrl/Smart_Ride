@@ -105,12 +105,12 @@ export async function GET(request: NextRequest) {
       success: true,
       ...result,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Settlement API error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get settlements',
+        error: 'An internal error occurred',
       },
       { status: 500 }
     );
@@ -267,12 +267,12 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Invalid action. Use: create, process, batch, retry, or calculate' },
       { status: 400 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Settlement processing error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to process settlement',
+        error: 'An internal error occurred',
       },
       { status: 500 }
     );

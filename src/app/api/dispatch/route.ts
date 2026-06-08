@@ -27,9 +27,21 @@ import {
   Provider,
 } from '@/lib/dispatch/types';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { z } from 'zod';
+import { coordinatesSchema } from '@/lib/validation/api-schemas';
+import { requireAuth } from '@/lib/auth/guards';
+import { NextRequest as NWRequest, NextResponse as NWResponse } from 'next/server';
 
 // GET /api/dispatch - Get dispatch stats and pending requests
 export async function GET(request: NextRequest) {
+  // Require authentication
+  const authResult = requireAuth(request as unknown as NWRequest);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error || 'Authentication required' },
+      { status: authResult.statusCode || 401 }
+    );
+  }
   const searchParams = request.nextUrl.searchParams;
   const action = searchParams.get('action');
 
@@ -129,48 +141,108 @@ export async function GET(request: NextRequest) {
 
 // POST /api/dispatch - Various dispatch actions
 export async function POST(request: NextRequest) {
+  // Require authentication
+  const authResult = requireAuth(request as unknown as NWRequest);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error || 'Authentication required' },
+      { status: authResult.statusCode || 401 }
+    );
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const action = searchParams.get('action');
 
   try {
     const body = await request.json();
 
+    // Validate body per action type
+    const actionSchema = z.discriminatedUnion('action', [
+      z.object({ action: z.literal('create'), clientId: z.string().min(1), serviceType: z.string().max(50), pickup: coordinatesSchema, destination: coordinatesSchema }),
+      z.object({ action: z.literal('accept'), requestId: z.string().min(1), providerId: z.string().min(1) }),
+      z.object({ action: z.literal('reject'), requestId: z.string().min(1), providerId: z.string().min(1), reason: z.string().optional() }),
+      z.object({ action: z.literal('cancel'), requestId: z.string().min(1), reason: z.string().optional() }),
+      z.object({ action: z.literal('register'), provider: z.object({ id: z.string().min(1) }).passthrough() }),
+      z.object({ action: z.literal('unregister'), providerId: z.string().min(1) }),
+      z.object({ action: z.literal('update-location'), providerId: z.string().min(1), latitude: z.number().min(-90).max(90), longitude: z.number().min(-180).max(180) }),
+      z.object({ action: z.literal('update-status'), providerId: z.string().min(1), isOnline: z.boolean().optional(), isAvailable: z.boolean().optional(), currentTaskId: z.string().optional() }),
+      z.object({ action: z.literal('complete'), providerId: z.string().min(1), taskId: z.string().min(1) }),
+    ]);
+
+    // For the 'create' action, the dispatch route uses a different body shape
+    // that wraps the request in { request: DispatchRequest, config? }
+    // So we validate based on the query-param action instead
+    const queryAction = action;
+    let validatedData: Record<string, unknown>;
+
+    if (queryAction === 'create') {
+      const createSchema = z.object({
+        request: z.object({
+          id: z.string().min(1),
+          serviceType: z.string().max(50),
+          clientId: z.string().min(1),
+          pickup: coordinatesSchema.optional(),
+          destination: coordinatesSchema.optional(),
+        }).passthrough(),
+        config: z.object({}).passthrough().optional(),
+      });
+      const parsed = createSchema.safeParse(body);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { success: false, error: parsed.error.issues.map(i => i.message).join(', ') },
+          { status: 400 }
+        );
+      }
+      validatedData = parsed.data as Record<string, unknown>;
+    } else {
+      // For other actions, add action field and validate with discriminated union
+      const bodyWithAction = { ...body, action: queryAction || 'unknown' };
+      const parsed = actionSchema.safeParse(bodyWithAction);
+      if (!parsed.success) {
+        return NextResponse.json(
+          { success: false, error: parsed.error.issues.map(i => i.message).join(', ') },
+          { status: 400 }
+        );
+      }
+      validatedData = parsed.data as Record<string, unknown>;
+    }
+
     switch (action) {
       case 'create':
         // Create and start a new dispatch
-        return await handleCreateDispatch(body);
+        return await handleCreateDispatch(validatedData);
 
       case 'accept':
         // Provider accepts an offer
-        return await handleAcceptOffer(body);
+        return await handleAcceptOffer(validatedData as any);
 
       case 'reject':
         // Provider rejects an offer
-        return await handleRejectOffer(body);
+        return await handleRejectOffer(validatedData as any);
 
       case 'cancel':
         // Cancel a dispatch
-        return await handleCancelDispatch(body);
+        return await handleCancelDispatch(validatedData as any);
 
       case 'register':
         // Register a provider
-        return await handleRegisterProvider(body);
+        return await handleRegisterProvider(validatedData as any);
 
       case 'unregister':
         // Unregister a provider
-        return await handleUnregisterProvider(body);
+        return await handleUnregisterProvider(validatedData as any);
 
       case 'update-location':
         // Update provider location
-        return await handleUpdateLocation(body);
+        return await handleUpdateLocation(validatedData as any);
 
       case 'update-status':
         // Update provider status
-        return await handleUpdateStatus(body);
+        return await handleUpdateStatus(validatedData as any);
 
       case 'complete':
         // Complete a task
-        return await handleCompleteTask(body);
+        return await handleCompleteTask(validatedData as any);
 
       default:
         return NextResponse.json(

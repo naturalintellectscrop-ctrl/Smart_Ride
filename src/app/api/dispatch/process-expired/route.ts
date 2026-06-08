@@ -74,10 +74,10 @@ export async function POST(request: NextRequest) {
       durationMs,
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[ProcessExpired] Error processing expired matches:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to process expired matches' },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {
@@ -127,10 +127,10 @@ export async function GET(request: NextRequest) {
       },
       timestamp: new Date().toISOString(),
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('[ProcessExpired] Error fetching stats:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

@@ -111,10 +111,10 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(totalCount / limit),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get available tasks error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch available tasks' },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

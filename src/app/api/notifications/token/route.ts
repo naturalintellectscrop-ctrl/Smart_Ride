@@ -10,14 +10,14 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const { token, deviceInfo } = body;
 
     if (!token) {
-      return NextResponse.json({ error: 'Token is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Token is required' }, { status: 400 });
     }
 
     // Store or update the FCM token
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, message: 'Token registered' });
   } catch (error) {
     console.error('Error registering FCM token:', error);
-    return NextResponse.json({ error: 'Failed to register token' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to register token' }, { status: 500 });
   }
 }
 
@@ -53,14 +53,14 @@ export async function DELETE(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
     const { token } = body;
 
     if (!token) {
-      return NextResponse.json({ error: 'Token is required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Token is required' }, { status: 400 });
     }
 
     // Remove the FCM token from database
@@ -71,6 +71,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true, message: 'Token removed' });
   } catch (error) {
     console.error('Error removing FCM token:', error);
-    return NextResponse.json({ error: 'Failed to remove token' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to remove token' }, { status: 500 });
   }
 }

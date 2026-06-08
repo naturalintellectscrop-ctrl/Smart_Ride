@@ -52,10 +52,10 @@ export async function GET(request: NextRequest) {
         currency: 'UGX',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Revenue analytics error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

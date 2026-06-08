@@ -26,8 +26,7 @@ export async function GET(request: NextRequest) {
     if (!isCronRequest) {
       const authResult = requireAdmin(request);
       if (!authResult.success) {
-        return NextResponse.json(
-          { error: authResult.error },
+        return NextResponse.json({ success: false, error: authResult.error },
           { status: authResult.statusCode || 401 }
         );
       }
@@ -112,8 +111,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Admin cleanup error:', error);
-    return NextResponse.json(
-      { error: 'Failed to perform cleanup' },
+    return NextResponse.json({ success: false, error: 'Failed to perform cleanup' },
       { status: 500 }
     );
   }

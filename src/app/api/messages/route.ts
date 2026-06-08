@@ -14,12 +14,12 @@ export async function GET(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       });
 
       if (!conversation) {
-        return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+        return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
       }
 
       // Mark messages as read
@@ -121,8 +121,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ conversations: conversationsWithUnread });
   } catch (error) {
     console.error('Error fetching conversations:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch conversations' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch conversations' },
       { status: 500 }
     );
   } finally {
@@ -136,12 +135,12 @@ export async function POST(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -159,7 +158,7 @@ export async function POST(request: NextRequest) {
       });
 
       if (!conversation) {
-        return NextResponse.json({ error: 'Conversation not found' }, { status: 404 });
+        return NextResponse.json({ success: false, error: 'Conversation not found' }, { status: 404 });
       }
 
       // Create message
@@ -251,11 +250,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, conversation });
     }
 
-    return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
   } catch (error) {
     console.error('Error creating conversation:', error);
-    return NextResponse.json(
-      { error: 'Failed to create conversation' },
+    return NextResponse.json({ success: false, error: 'Failed to create conversation' },
       { status: 500 }
     );
   } finally {
@@ -269,12 +267,12 @@ export async function PATCH(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -283,7 +281,7 @@ export async function PATCH(request: NextRequest) {
     const { conversationId } = body;
 
     if (!conversationId) {
-      return NextResponse.json({ error: 'conversationId required' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'conversationId required' }, { status: 400 });
     }
 
     // Mark all messages in conversation as read
@@ -299,8 +297,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error marking messages as read:', error);
-    return NextResponse.json(
-      { error: 'Failed to mark messages as read' },
+    return NextResponse.json({ success: false, error: 'Failed to mark messages as read' },
       { status: 500 }
     );
   } finally {

@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
-import { MerchantStatus, DocumentStatus } from '@prisma/client';
+import { MerchantStatus, DocumentStatus, Prisma } from '@prisma/client';
 
 // GET - Fetch pending merchants
 export async function GET(request: NextRequest) {
@@ -15,12 +15,12 @@ export async function GET(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
-    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden - Admin access required' }, { status: 403 });
   }
 
   await setRLSContext(decoded);
@@ -44,8 +44,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ merchants });
   } catch (error) {
     console.error('Error fetching merchants:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch merchants' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch merchants' },
       { status: 500 }
     );
   } finally {
@@ -59,12 +58,12 @@ export async function POST(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
-    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden - Admin access required' }, { status: 403 });
   }
 
   await setRLSContext(decoded);
@@ -73,15 +72,13 @@ export async function POST(request: NextRequest) {
     const { merchantId, action, notes, rejectionReason } = body;
 
     if (!merchantId || !action) {
-      return NextResponse.json(
-        { error: 'merchantId and action are required' },
+      return NextResponse.json({ success: false, error: 'merchantId and action are required' },
         { status: 400 }
       );
     }
 
     if (!['approve', 'reject', 'suspend', 'activate'].includes(action)) {
-      return NextResponse.json(
-        { error: 'Invalid action. Must be: approve, reject, suspend, or activate' },
+      return NextResponse.json({ success: false, error: 'Invalid action. Must be: approve, reject, suspend, or activate' },
         { status: 400 }
       );
     }
@@ -91,14 +88,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!merchant) {
-      return NextResponse.json(
-        { error: 'Merchant not found' },
+      return NextResponse.json({ success: false, error: 'Merchant not found' },
         { status: 404 }
       );
     }
 
     let newStatus: MerchantStatus;
-    let updateData: any = {
+    let updateData: Prisma.MerchantUpdateInput & Record<string, unknown> = {
       verifiedBy: decoded.userId,
       verifiedAt: new Date(),
     };
@@ -121,7 +117,7 @@ export async function POST(request: NextRequest) {
         updateData.isOpen = true;
         break;
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
 
     // Update merchant
@@ -192,8 +188,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error verifying merchant:', error);
-    return NextResponse.json(
-      { error: 'Failed to verify merchant' },
+    return NextResponse.json({ success: false, error: 'Failed to verify merchant' },
       { status: 500 }
     );
   } finally {

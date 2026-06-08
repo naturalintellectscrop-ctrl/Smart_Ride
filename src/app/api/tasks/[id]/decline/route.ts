@@ -112,10 +112,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       data: { taskId, status: targetStatus },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Task decline error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to decline task' },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

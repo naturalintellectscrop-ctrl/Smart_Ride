@@ -118,12 +118,12 @@ export async function GET(request: NextRequest) {
       success: true,
       ...result,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Cash tracking API error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to get cash tracking data',
+        error: 'An internal error occurred',
       },
       { status: 500 }
     );
@@ -291,12 +291,12 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Invalid action. Use: collect, deposit, verify, adjust, or reconcile' },
       { status: 400 }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Cash tracking error:', error);
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to process cash tracking request',
+        error: 'An internal error occurred',
       },
       { status: 500 }
     );

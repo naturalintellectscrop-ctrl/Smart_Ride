@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 
 // GET /api/health-provider/orders - Get orders for provider
 export async function GET(request: NextRequest) {
@@ -15,13 +17,12 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     if (!providerId) {
-      return NextResponse.json(
-        { error: 'providerId is required' },
+      return NextResponse.json({ success: false, error: 'providerId is required' },
         { status: 400 }
       );
     }
 
-    const where: any = { providerId };
+    const where: Prisma.ProviderOrderWhereInput = { providerId };
     if (status) where.status = status;
     if (orderType) where.orderType = orderType;
     if (dateFrom || dateTo) {
@@ -86,8 +87,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching provider orders:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch orders' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch orders' },
       { status: 500 }
     );
   } finally {
@@ -100,6 +100,37 @@ export async function POST(request: NextRequest) {
   await setServiceRoleContext();
   try {
     const body = await request.json();
+
+    const healthOrderSchema = z.object({
+      providerId: z.string().min(1),
+      customerId: z.string().min(1),
+      customerName: z.string().max(200).optional(),
+      customerPhone: z.string().max(20).optional(),
+      orderType: z.enum(['OTC_MEDICINE', 'PRESCRIPTION_MEDICINE', 'HEALTH_CONSULTATION']).optional(),
+      prescriptionId: z.string().optional(),
+      items: z.union([
+        z.string(),
+        z.array(z.object({
+          price: z.number().positive(),
+          quantity: z.number().int().positive(),
+        }).passthrough()),
+      ]),
+      deliveryAddress: z.string().min(1),
+      deliveryLatitude: z.number().min(-90).max(90).optional(),
+      deliveryLongitude: z.number().min(-180).max(180).optional(),
+      deliveryInstructions: z.string().max(500).optional(),
+      paymentMethod: z.string().min(1),
+      customerNotes: z.string().max(500).optional(),
+    });
+
+    const parsed = healthOrderSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues.map(i => i.message).join(', ') },
+        { status: 400 }
+      );
+    }
+
     const {
       providerId,
       customerId,
@@ -114,15 +145,7 @@ export async function POST(request: NextRequest) {
       deliveryInstructions,
       paymentMethod,
       customerNotes,
-    } = body;
-
-    // Validate required fields
-    if (!providerId || !customerId || !items || !deliveryAddress || !paymentMethod) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Verify provider is active
     const provider = await db.healthProvider.findUnique({
@@ -130,8 +153,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!provider || provider.verificationStatus !== 'APPROVED') {
-      return NextResponse.json(
-        { error: 'Provider not found or not verified' },
+      return NextResponse.json({ success: false, error: 'Provider not found or not verified' },
         { status: 404 }
       );
     }
@@ -216,8 +238,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating order:', error);
-    return NextResponse.json(
-      { error: 'Failed to create order' },
+    return NextResponse.json({ success: false, error: 'Failed to create order' },
       { status: 500 }
     );
   } finally {
@@ -233,8 +254,7 @@ export async function PATCH(request: NextRequest) {
     const { orderId, action, notes, rejectionReason, riderId } = body;
 
     if (!orderId || !action) {
-      return NextResponse.json(
-        { error: 'orderId and action are required' },
+      return NextResponse.json({ success: false, error: 'orderId and action are required' },
         { status: 400 }
       );
     }
@@ -244,13 +264,12 @@ export async function PATCH(request: NextRequest) {
     });
 
     if (!order) {
-      return NextResponse.json(
-        { error: 'Order not found' },
+      return NextResponse.json({ success: false, error: 'Order not found' },
         { status: 404 }
       );
     }
 
-    const updateData: any = {};
+    const updateData: Prisma.ProviderOrderUpdateInput = {};
     const now = new Date();
 
     switch (action) {
@@ -309,8 +328,7 @@ export async function PATCH(request: NextRequest) {
         break;
 
       default:
-        return NextResponse.json(
-          { error: 'Invalid action' },
+        return NextResponse.json({ success: false, error: 'Invalid action' },
           { status: 400 }
         );
     }
@@ -352,8 +370,7 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating order:', error);
-    return NextResponse.json(
-      { error: 'Failed to update order' },
+    return NextResponse.json({ success: false, error: 'Failed to update order' },
       { status: 500 }
     );
   } finally {

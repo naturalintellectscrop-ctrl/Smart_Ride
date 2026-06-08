@@ -26,15 +26,14 @@ export async function POST(request: NextRequest) {
     const AIRTEL_SECRET = process.env.AIRTEL_MONEY_WEBHOOK_SECRET;
     if (!AIRTEL_SECRET) {
       console.error('Airtel callback: AIRTEL_MONEY_WEBHOOK_SECRET not configured');
-      return NextResponse.json(
-        { error: 'Webhook secret key not configured (AIRTEL_MONEY_WEBHOOK_SECRET)' },
+      return NextResponse.json({ success: false, error: 'Webhook secret key not configured (AIRTEL_MONEY_WEBHOOK_SECRET)' },
         { status: 500 }
       );
     }
     const signature = request.headers.get('X-Airtel-Signature');
     if (!signature || signature !== AIRTEL_SECRET) {
       console.error('Airtel callback: Invalid signature');
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Invalid signature' }, { status: 401 });
     }
 
     await setServiceRoleContext();
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     if (!payment) {
       console.error('Payment not found for callback:', { referenceId });
-      return NextResponse.json({ error: 'Payment not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Payment not found' }, { status: 404 });
     }
 
     // Check for duplicate webhook
@@ -189,8 +188,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Airtel Money callback error:', error);
-    return NextResponse.json(
-      { error: 'Failed to process callback' },
+    return NextResponse.json({ success: false, error: 'Failed to process callback' },
       { status: 500 }
     );
   } finally {

@@ -19,8 +19,7 @@ export async function POST(request: NextRequest) {
   // Verify authentication
   const authHeader = request.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
+    return NextResponse.json({ success: false, error: 'Unauthorized' },
       { status: 401 }
     );
   }
@@ -29,8 +28,7 @@ export async function POST(request: NextRequest) {
   const decoded = verifyAccessToken(token);
   
   if (!decoded) {
-    return NextResponse.json(
-      { error: 'Invalid token' },
+    return NextResponse.json({ success: false, error: 'Invalid token' },
       { status: 401 }
     );
   }
@@ -51,16 +49,14 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!amount || !paymentMethod) {
-      return NextResponse.json(
-        { error: 'Amount and payment method are required' },
+      return NextResponse.json({ success: false, error: 'Amount and payment method are required' },
         { status: 400 }
       );
     }
 
     // Validate phone number for mobile money
     if (['MTN_MOMO', 'AIRTEL_MONEY'].includes(paymentMethod) && !phoneNumber) {
-      return NextResponse.json(
-        { error: 'Phone number is required for mobile money payments' },
+      return NextResponse.json({ success: false, error: 'Phone number is required for mobile money payments' },
         { status: 400 }
       );
     }
@@ -88,15 +84,13 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
-      return NextResponse.json(
-        { error: result.message },
+      return NextResponse.json({ success: false, error: result.message },
         { status: 400 }
       );
     }
   } catch (error) {
     console.error('Payment initiation error:', error);
-    return NextResponse.json(
-      { error: 'Failed to initiate payment' },
+    return NextResponse.json({ success: false, error: 'Failed to initiate payment' },
       { status: 500 }
     );
   } finally {
@@ -108,8 +102,7 @@ export async function GET(request: NextRequest) {
   // Verify authentication
   const authHeader = request.headers.get('authorization');
   if (!authHeader?.startsWith('Bearer ')) {
-    return NextResponse.json(
-      { error: 'Unauthorized' },
+    return NextResponse.json({ success: false, error: 'Unauthorized' },
       { status: 401 }
     );
   }
@@ -118,8 +111,7 @@ export async function GET(request: NextRequest) {
   const decoded = verifyAccessToken(token);
   
   if (!decoded) {
-    return NextResponse.json(
-      { error: 'Invalid token' },
+    return NextResponse.json({ success: false, error: 'Invalid token' },
       { status: 401 }
     );
   }
@@ -131,8 +123,7 @@ export async function GET(request: NextRequest) {
     const paymentId = searchParams.get('paymentId');
 
     if (!paymentId) {
-      return NextResponse.json(
-        { error: 'Payment ID is required' },
+      return NextResponse.json({ success: false, error: 'Payment ID is required' },
         { status: 400 }
       );
     }
@@ -151,8 +142,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Payment status check error:', error);
-    return NextResponse.json(
-      { error: 'Failed to check payment status' },
+    return NextResponse.json({ success: false, error: 'Failed to check payment status' },
       { status: 500 }
     );
   } finally {

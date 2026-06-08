@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { Prisma } from '@prisma/client';
 
 // POST /api/health-provider/verify - Admin approves/rejects provider
 export async function POST(request: NextRequest) {
@@ -9,8 +10,7 @@ export async function POST(request: NextRequest) {
     const { providerId, action, adminId, notes, rejectionReason } = body;
 
     if (!providerId || !action || !adminId) {
-      return NextResponse.json(
-        { error: 'Provider ID, action, and admin ID are required' },
+      return NextResponse.json({ success: false, error: 'Provider ID, action, and admin ID are required' },
         { status: 400 }
       );
     }
@@ -18,8 +18,7 @@ export async function POST(request: NextRequest) {
     // Validate action
     const validActions = ['approve', 'reject', 'suspend', 'request_documents', 'reactivate'];
     if (!validActions.includes(action)) {
-      return NextResponse.json(
-        { error: 'Invalid action. Valid actions: approve, reject, suspend, request_documents, reactivate' },
+      return NextResponse.json({ success: false, error: 'Invalid action. Valid actions: approve, reject, suspend, request_documents, reactivate' },
         { status: 400 }
       );
     }
@@ -31,14 +30,13 @@ export async function POST(request: NextRequest) {
     });
 
     if (!currentProvider) {
-      return NextResponse.json(
-        { error: 'Provider not found' },
+      return NextResponse.json({ success: false, error: 'Provider not found' },
         { status: 404 }
       );
     }
 
     let newStatus: string;
-    let updateData: any = {
+    let updateData: Prisma.HealthProviderUpdateInput = {
       verifiedBy: adminId,
       verificationNotes: notes,
     };
@@ -109,8 +107,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating provider verification:', error);
-    return NextResponse.json(
-      { error: 'Failed to update provider verification' },
+    return NextResponse.json({ success: false, error: 'Failed to update provider verification' },
       { status: 500 }
     );
   } finally {
@@ -128,7 +125,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
 
-    const where: any = {};
+    const where: Prisma.HealthProviderWhereInput = {};
     
     if (status !== 'ALL') {
       where.verificationStatus = status;
@@ -175,8 +172,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching providers for verification:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch providers' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch providers' },
       { status: 500 }
     );
   } finally {

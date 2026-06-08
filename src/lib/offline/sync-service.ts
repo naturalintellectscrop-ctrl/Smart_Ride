@@ -113,8 +113,8 @@ export class SyncService {
         });
 
         synced++;
-      } catch (error: any) {
-        errors.push(`Location sync failed: ${error.message}`);
+      } catch (error: unknown) {
+        errors.push(`Location sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
         failed++;
       }
     }
@@ -181,8 +181,8 @@ export class SyncService {
         });
 
         synced++;
-      } catch (error: any) {
-        errors.push(`Task state sync failed for ${change.taskId}: ${error.message}`);
+      } catch (error: unknown) {
+        errors.push(`Task state sync failed for ${change.taskId}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         failed++;
       }
     }
@@ -263,8 +263,8 @@ export class SyncService {
     if (ConnectionManager.isOnline()) {
       try {
         results.offlineQueue = await OfflineQueue.processQueue();
-      } catch (error: any) {
-        errors.push(`Queue processing error: ${error.message}`);
+      } catch (error: unknown) {
+        errors.push(`Queue processing error: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
 
       // Sync cached data
@@ -274,8 +274,8 @@ export class SyncService {
           await CacheManager.cacheRiderActiveTasks(options.riderId);
           await CacheManager.cachePricingConfig();
           results.cacheRefresh = 3;
-        } catch (error: any) {
-          errors.push(`Cache refresh error: ${error.message}`);
+        } catch (error: unknown) {
+          errors.push(`Cache refresh error: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
 

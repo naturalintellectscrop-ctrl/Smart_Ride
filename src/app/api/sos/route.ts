@@ -43,8 +43,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to fetch SOS alerts' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch SOS alerts' },
       { status: 500 }
     );
   } finally {
@@ -74,8 +73,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!latitude || !longitude) {
-      return NextResponse.json(
-        { error: 'Location is required' },
+      return NextResponse.json({ success: false, error: 'Location is required' },
         { status: 400 }
       );
     }
@@ -155,8 +153,7 @@ export async function POST(request: NextRequest) {
       alert,
     });
   } catch (error) {
-    return NextResponse.json(
-      { error: 'Failed to create SOS alert' },
+    return NextResponse.json({ success: false, error: 'Failed to create SOS alert' },
       { status: 500 }
     );
   } finally {

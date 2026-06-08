@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     // Verify admin access
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     // Run all reconciliation checks in parallel
@@ -72,8 +72,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[Admin FinanceIntegrity] GET error:', error);
-    return NextResponse.json(
-      { error: 'Failed to get finance integrity data' },
+    return NextResponse.json({ success: false, error: 'Failed to get finance integrity data' },
       { status: 500 }
     );
   } finally {

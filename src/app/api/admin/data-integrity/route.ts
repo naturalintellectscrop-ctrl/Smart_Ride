@@ -55,7 +55,7 @@ function verifyAdmin(request: NextRequest): {
   if (!token) {
     return {
       decoded: null,
-      error: NextResponse.json({ error: 'Unauthorized - No token provided' }, { status: 401 }),
+      error: NextResponse.json({ success: false, error: 'Unauthorized - No token provided' }, { status: 401 }),
     };
   }
 
@@ -63,14 +63,14 @@ function verifyAdmin(request: NextRequest): {
   if (!decoded) {
     return {
       decoded: null,
-      error: NextResponse.json({ error: 'Unauthorized - Invalid token' }, { status: 401 }),
+      error: NextResponse.json({ success: false, error: 'Unauthorized - Invalid token' }, { status: 401 }),
     };
   }
 
   if (!['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN'].includes(decoded.role)) {
     return {
       decoded: null,
-      error: NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 }),
+      error: NextResponse.json({ success: false, error: 'Forbidden - Admin access required' }, { status: 403 }),
     };
   }
 
@@ -668,8 +668,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[DataIntegrity] GET error:', error);
-    return NextResponse.json(
-      { error: 'Failed to run data integrity checks' },
+    return NextResponse.json({ success: false, error: 'Failed to run data integrity checks' },
       { status: 500 }
     );
   } finally {

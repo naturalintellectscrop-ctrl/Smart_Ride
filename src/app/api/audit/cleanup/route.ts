@@ -34,23 +34,20 @@ export async function DELETE(request: NextRequest) {
     const isAdminRequest = authHeader?.startsWith('Bearer ');
 
     if (!isCronRequest && !isAdminRequest) {
-      return NextResponse.json(
-        { error: 'Unauthorized — provide Bearer token or cronSecret' },
+      return NextResponse.json({ success: false, error: 'Unauthorized — provide Bearer token or cronSecret' },
         { status: 401 }
       );
     }
 
     // Validate retention days
     if (retentionDays < 7) {
-      return NextResponse.json(
-        { error: 'Retention period must be at least 7 days for compliance' },
+      return NextResponse.json({ success: false, error: 'Retention period must be at least 7 days for compliance' },
         { status: 400 }
       );
     }
 
     if (retentionDays > 365) {
-      return NextResponse.json(
-        { error: 'Retention period cannot exceed 365 days' },
+      return NextResponse.json({ success: false, error: 'Retention period cannot exceed 365 days' },
         { status: 400 }
       );
     }
@@ -197,8 +194,7 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error) {
     console.error('Audit cleanup error:', error);
-    return NextResponse.json(
-      { error: 'Failed to cleanup audit logs' },
+    return NextResponse.json({ success: false, error: 'Failed to cleanup audit logs' },
       { status: 500 }
     );
   }
@@ -266,8 +262,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Audit cleanup status error:', error);
-    return NextResponse.json(
-      { error: 'Failed to get cleanup status' },
+    return NextResponse.json({ success: false, error: 'Failed to get cleanup status' },
       { status: 500 }
     );
   }

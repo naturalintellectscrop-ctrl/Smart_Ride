@@ -1,6 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
+interface RiskIndicators {
+  highFrequency?: boolean;
+  unusualPattern?: boolean;
+  suspiciousDevice?: boolean;
+  locationMismatch?: boolean;
+  [key: string]: unknown;
+}
+
+interface SuspiciousActivity {
+  id: string;
+  entityType: string;
+  entityId: string;
+  activityType: string;
+  riskScore: number;
+  riskIndicators: string | null;
+  [key: string]: unknown;
+}
+
 // GET /api/fraud/activity - Get suspicious activity logs
 export async function GET(request: NextRequest) {
   await setServiceRoleContext();
@@ -13,7 +31,7 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    const where: any = {};
+    const where: Record<string, unknown> = {};
     if (entityType) where.entityType = entityType;
     if (entityId) where.entityId = entityId;
     if (activityCategory) where.activityCategory = activityCategory;
@@ -39,8 +57,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching suspicious activities:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch activities' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch activities' },
       { status: 500 }
     );
   } finally {
@@ -118,8 +135,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(activity);
   } catch (error) {
     console.error('Error logging suspicious activity:', error);
-    return NextResponse.json(
-      { error: 'Failed to log activity' },
+    return NextResponse.json({ success: false, error: 'Failed to log activity' },
       { status: 500 }
     );
   } finally {
@@ -128,7 +144,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Calculate risk score for a specific activity
-function calculateActivityRiskScore(activityType: string, riskIndicators: any): number {
+function calculateActivityRiskScore(activityType: string, riskIndicators: RiskIndicators | null): number {
   let score = 0;
 
   // Base scores for different activity types
@@ -158,7 +174,7 @@ function calculateActivityRiskScore(activityType: string, riskIndicators: any): 
 }
 
 // Match activity against known fraud patterns
-async function matchPatterns(entityType: string, activityType: string, riskIndicators: any): Promise<string[]> {
+async function matchPatterns(entityType: string, activityType: string, riskIndicators: RiskIndicators | null): Promise<string[]> {
   const patterns = await db.fraudPattern.findMany({
     where: { isActive: true },
   });
@@ -189,7 +205,7 @@ async function matchPatterns(entityType: string, activityType: string, riskIndic
 }
 
 // Create fraud alert from suspicious activity
-async function createFraudAlertFromActivity(activity: any, matchedPatterns: string[]) {
+async function createFraudAlertFromActivity(activity: SuspiciousActivity, matchedPatterns: string[]) {
   await db.fraudAlert.create({
     data: {
       alertNumber: `FRA-${Date.now()}`,
@@ -235,7 +251,7 @@ async function updateDeviceFingerprint(fingerprintHash: string, entityType: stri
   if (existing) {
     // Update existing fingerprint
     const accounts = JSON.parse(existing.associatedAccounts);
-    const existingAccount = accounts.find((a: any) => a.entityId === entityId);
+    const existingAccount = accounts.find((a: { entityId: string; [key: string]: unknown }) => a.entityId === entityId);
     
     if (existingAccount) {
       existingAccount.lastSeen = new Date().toISOString();
@@ -269,7 +285,7 @@ async function updateDeviceFingerprint(fingerprintHash: string, entityType: stri
       await db.fraudAlert.create({
         data: {
           alertNumber: `FRA-${Date.now()}`,
-          entityType: entityType as any,
+          entityType: entityType as string,
           entityId,
           alertType: 'MULTIPLE_ACCOUNTS_SAME_DEVICE',
           severity: 'HIGH',

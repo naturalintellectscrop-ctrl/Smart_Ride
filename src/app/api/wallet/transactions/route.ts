@@ -71,10 +71,10 @@ export async function GET(request: NextRequest) {
         totalPages: Math.ceil(totalCount / limit),
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get wallet transactions error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch transactions' },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

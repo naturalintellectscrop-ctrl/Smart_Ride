@@ -20,12 +20,12 @@ export async function GET(
   const token = authHeader?.replace('Bearer ', '');
 
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   // Allow riders to view their own metrics, or admins
@@ -33,7 +33,7 @@ export async function GET(
   const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'].includes(decoded.role);
 
   if (!isRider && !isAdmin) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
   }
 
   await setRLSContext(decoded);
@@ -45,12 +45,12 @@ export async function GET(
       success: true,
       metrics,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Rider metrics error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to get rider metrics';
-    const status = message.includes('not found') ? 404 : 500;
+    const isNotFound = error instanceof Error && error.message.includes('not found');
+    const status = isNotFound ? 404 : 500;
     return NextResponse.json(
-      { success: false, error: message },
+      { success: false, error: isNotFound ? 'Rider metrics not found' : 'An internal error occurred' },
       { status }
     );
   } finally {

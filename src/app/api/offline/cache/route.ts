@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const scope = searchParams.get('scope') || 'minimal'; // minimal, standard, full
     const riderId = searchParams.get('riderId');
 
-    const cachedData: any = {
+    const cachedData: Record<string, unknown> = {
       cachedAt: new Date().toISOString(),
       scope,
       userId: user.id,
@@ -122,7 +122,7 @@ export async function GET(request: NextRequest) {
 
       // Get system config
       const configs = await db.systemConfig.findMany();
-      cachedData.systemConfig = configs.reduce((acc: any, c) => {
+      cachedData.systemConfig = configs.reduce((acc: Record<string, string>, c) => {
         acc[c.key] = c.value;
         return acc;
       }, {});
@@ -155,10 +155,10 @@ export async function GET(request: NextRequest) {
         'Cache-Control': `private, max-age=${maxAge}`,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Offline cache error:', error);
     return NextResponse.json(
-      { success: false, error: error.message },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

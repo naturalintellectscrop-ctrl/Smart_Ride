@@ -14,8 +14,7 @@ export async function PATCH(
     const { id } = await params;
 
     if (!id) {
-      return NextResponse.json(
-        { error: 'Reservation ID is required' },
+      return NextResponse.json({ success: false, error: 'Reservation ID is required' },
         { status: 400 }
       );
     }
@@ -26,8 +25,7 @@ export async function PATCH(
     };
 
     if (!body.action || !['confirm', 'release'].includes(body.action)) {
-      return NextResponse.json(
-        { error: 'action is required and must be "confirm" or "release"' },
+      return NextResponse.json({ success: false, error: 'action is required and must be "confirm" or "release"' },
         { status: 400 }
       );
     }
@@ -58,15 +56,13 @@ export async function PATCH(
       );
     }
 
-    return NextResponse.json(
-      { error: 'Invalid action' },
+    return NextResponse.json({ success: false, error: 'Invalid action' },
       { status: 400 }
     );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    console.error('[InventoryAPI] PATCH /inventory/reservation/[id] failed:', message);
-    return NextResponse.json(
-      { error: message },
+  } catch (error: unknown) {
+    const logMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[InventoryAPI] PATCH /inventory/reservation/[id] failed:', logMessage);
+    return NextResponse.json({ success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   }

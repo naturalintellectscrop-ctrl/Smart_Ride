@@ -37,8 +37,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (!rider) {
-      return NextResponse.json(
-        { error: 'Rider profile not found. Please register as a driver first.' },
+      return NextResponse.json({ success: false, error: 'Rider profile not found. Please register as a driver first.' },
         { status: 404 }
       );
     }
@@ -60,8 +59,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (latitude === undefined || longitude === undefined) {
-      return NextResponse.json(
-        { error: 'Missing required fields: latitude, longitude' },
+      return NextResponse.json({ success: false, error: 'Missing required fields: latitude, longitude' },
         { status: 400 }
       );
     }
@@ -150,8 +148,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Heartbeat error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
+    return NextResponse.json({ success: false, error: 'Internal server error' },
       { status: 500 }
     );
   } finally {
@@ -186,8 +183,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!rider) {
-      return NextResponse.json(
-        { error: 'Rider not found' },
+      return NextResponse.json({ success: false, error: 'Rider not found' },
         { status: 404 }
       );
     }
@@ -235,8 +231,7 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Get heartbeat status error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
+    return NextResponse.json({ success: false, error: 'Internal server error' },
       { status: 500 }
     );
   } finally {

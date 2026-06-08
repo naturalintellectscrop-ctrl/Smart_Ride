@@ -8,6 +8,7 @@ import { FraudDetectionService } from '@/lib/fraud/fraud-detection.service';
 import { db } from '@/lib/db';
 import { requireAdmin, resetRLSContext } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
+import { z } from 'zod';
 
 // ============================================
 // GET - Fetch fraud data (Admin only)
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
         return getDashboardData();
     }
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   } finally {
     await resetRLSContext();
   }
@@ -63,6 +64,31 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const { action } = body;
 
+  // Validate POST body per action
+  const fraudPostSchema = z.discriminatedUnion('action', [
+    z.object({ action: z.literal('analyze'), taskId: z.string().min(1) }),
+    z.object({
+      action: z.literal('gps-check'),
+      riderId: z.string().min(1),
+      taskId: z.string().optional(),
+      currentLat: z.number(),
+      currentLng: z.number(),
+      previousLat: z.number().nullable().optional(),
+      previousLng: z.number().nullable().optional(),
+      timestamp: z.string(),
+    }),
+    z.object({ action: z.literal('create-alert'), type: z.string().min(1), severity: z.string().min(1), title: z.string().min(1) }).passthrough(),
+    z.object({ action: z.literal('update-interaction'), riderId: z.string().min(1), clientId: z.string().min(1) }).passthrough(),
+  ]);
+
+  const postParsed = fraudPostSchema.safeParse(body);
+  if (!postParsed.success) {
+    return NextResponse.json(
+      { success: false, error: postParsed.error.issues.map(i => i.message).join(', ') },
+      { status: 400 }
+    );
+  }
+
   try {
     switch (action) {
       case 'analyze':
@@ -74,10 +100,10 @@ export async function POST(request: NextRequest) {
       case 'update-interaction':
         return await updateInteraction(body);
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   } finally {
     await resetRLSContext();
   }
@@ -98,6 +124,20 @@ export async function PUT(request: NextRequest) {
   const body = await request.json();
   const { action } = body;
 
+  // Validate PUT body per action
+  const fraudPutSchema = z.discriminatedUnion('action', [
+    z.object({ action: z.literal('resolve-alert'), alertId: z.string().min(1), resolution: z.string().min(1) }),
+    z.object({ action: z.literal('update-profile'), riderId: z.string().min(1), updates: z.record(z.unknown()) }),
+  ]);
+
+  const putParsed = fraudPutSchema.safeParse(body);
+  if (!putParsed.success) {
+    return NextResponse.json(
+      { success: false, error: putParsed.error.issues.map(i => i.message).join(', ') },
+      { status: 400 }
+    );
+  }
+
   try {
     switch (action) {
       case 'resolve-alert':
@@ -105,10 +145,10 @@ export async function PUT(request: NextRequest) {
       case 'update-profile':
         return await updateRiderProfile(body);
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
   } catch (error) {
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
   } finally {
     await resetRLSContext();
   }
@@ -148,7 +188,7 @@ async function getAlerts(params: URLSearchParams) {
 
 async function getAlert(id: string | null) {
   if (!id) {
-    return NextResponse.json({ error: 'Alert ID required' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Alert ID required' }, { status: 400 });
   }
 
   const alert = await db.fraudAlert.findUnique({
@@ -156,7 +196,7 @@ async function getAlert(id: string | null) {
   });
 
   if (!alert) {
-    return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
+    return NextResponse.json({ success: false, error: 'Alert not found' }, { status: 404 });
   }
 
   return NextResponse.json({ alert });
@@ -169,7 +209,7 @@ async function getStatistics() {
 
 async function getRiderProfile(riderId: string | null) {
   if (!riderId) {
-    return NextResponse.json({ error: 'Rider ID required' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Rider ID required' }, { status: 400 });
   }
 
   const profile = await db.riderFraudProfile.findUnique({
@@ -253,7 +293,7 @@ async function getDashboardData() {
 
 async function analyzeTask(taskId: string) {
   if (!taskId) {
-    return NextResponse.json({ error: 'Task ID required' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Task ID required' }, { status: 400 });
   }
 
   const result = await FraudDetectionService.analyzeTask(taskId);
@@ -285,7 +325,7 @@ async function checkGPS(data: {
   timestamp: string;
 }) {
   if (!data.riderId) {
-    return NextResponse.json({ error: 'Rider ID required' }, { status: 400 });
+    return NextResponse.json({ success: false, error: 'Rider ID required' }, { status: 400 });
   }
 
   const result = await FraudDetectionService.detectGPSAnomaly(

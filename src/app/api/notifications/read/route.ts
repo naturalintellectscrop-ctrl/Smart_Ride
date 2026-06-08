@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getAuthUser(request);
     if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       if (body.markAll) {
         const result = await markAllNotificationsAsRead(userId);
         if (!result.success) {
-          return NextResponse.json({ error: result.error }, { status: 500 });
+          return NextResponse.json({ success: false, error: result.error }, { status: 500 });
         }
         return NextResponse.json({ success: true, message: 'All notifications marked as read' });
       }
@@ -32,15 +32,14 @@ export async function POST(request: NextRequest) {
       // Mark single notification as read
       const { notificationId } = body;
       if (!notificationId) {
-        return NextResponse.json(
-          { error: 'Missing notificationId or markAll' },
+        return NextResponse.json({ success: false, error: 'Missing notificationId or markAll' },
           { status: 400 }
         );
       }
 
       const result = await markNotificationAsRead(notificationId, userId);
       if (!result.success) {
-        return NextResponse.json({ error: result.error }, { status: 404 });
+        return NextResponse.json({ success: false, error: result.error }, { status: 404 });
       }
 
       return NextResponse.json({ success: true });
@@ -49,6 +48,6 @@ export async function POST(request: NextRequest) {
     }
   } catch (error) {
     console.error('Error marking notification as read:', error);
-    return NextResponse.json({ error: 'Failed to mark notification as read' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to mark notification as read' }, { status: 500 });
   }
 }

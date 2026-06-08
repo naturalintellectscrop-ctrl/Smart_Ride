@@ -669,11 +669,11 @@ export class EnhancedTaskStateMachine {
         preTransitionTask: task,
         fromStatus,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Task state transition error:', error);
       return { 
         success: false, 
-        error: error.message || 'Failed to transition task state' 
+        error: 'An internal error occurred' 
       };
     }
   }
@@ -1199,11 +1199,11 @@ export class EnhancedTaskStateMachine {
         preTransitionTask: task,
         fromStatus,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[StateMachine] transitionInTx error:', error);
       return {
         success: false,
-        error: error.message || 'Failed to transition task state in transaction',
+        error: 'An internal error occurred',
         preTransitionTask: undefined,
         fromStatus: undefined,
       };

@@ -109,10 +109,10 @@ export async function GET(request: NextRequest) {
       success: true,
       data: activeTask,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Get active task error:', error);
     return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch active task' },
+      { success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

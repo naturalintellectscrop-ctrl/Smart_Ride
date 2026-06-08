@@ -16,12 +16,12 @@ export async function GET(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!provider) {
-      return NextResponse.json({ error: 'Health provider not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Health provider not found' }, { status: 404 });
     }
 
     const medicines = await db.medicineCatalog.findMany({
@@ -49,8 +49,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ medicines });
   } catch (error) {
     console.error('Error fetching medicines:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch medicines' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch medicines' },
       { status: 500 }
     );
   } finally {
@@ -64,12 +63,12 @@ export async function POST(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -86,13 +85,12 @@ export async function POST(request: NextRequest) {
     });
 
     if (!provider) {
-      return NextResponse.json({ error: 'Health provider not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Health provider not found' }, { status: 404 });
     }
 
     // Check if provider is approved
     if (provider.verificationStatus !== 'APPROVED') {
-      return NextResponse.json(
-        { error: 'Provider not approved. Please wait for verification.' },
+      return NextResponse.json({ success: false, error: 'Provider not approved. Please wait for verification.' },
         { status: 403 }
       );
     }
@@ -114,8 +112,7 @@ export async function POST(request: NextRequest) {
     } = body;
 
     if (!name || !price || !category) {
-      return NextResponse.json(
-        { error: 'Name, price, and category are required' },
+      return NextResponse.json({ success: false, error: 'Name, price, and category are required' },
         { status: 400 }
       );
     }
@@ -145,8 +142,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error creating medicine:', error);
-    return NextResponse.json(
-      { error: 'Failed to add medicine' },
+    return NextResponse.json({ success: false, error: 'Failed to add medicine' },
       { status: 500 }
     );
   } finally {
@@ -160,12 +156,12 @@ export async function PUT(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -182,15 +178,14 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!provider) {
-      return NextResponse.json({ error: 'Health provider not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Health provider not found' }, { status: 404 });
     }
 
     const body = await request.json();
     const { medicineId, ...updateData } = body;
 
     if (!medicineId) {
-      return NextResponse.json(
-        { error: 'Medicine ID is required' },
+      return NextResponse.json({ success: false, error: 'Medicine ID is required' },
         { status: 400 }
       );
     }
@@ -201,8 +196,7 @@ export async function PUT(request: NextRequest) {
     });
 
     if (!existingMedicine) {
-      return NextResponse.json(
-        { error: 'Medicine not found' },
+      return NextResponse.json({ success: false, error: 'Medicine not found' },
         { status: 404 }
       );
     }
@@ -234,8 +228,7 @@ export async function PUT(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating medicine:', error);
-    return NextResponse.json(
-      { error: 'Failed to update medicine' },
+    return NextResponse.json({ success: false, error: 'Failed to update medicine' },
       { status: 500 }
     );
   } finally {
@@ -249,12 +242,12 @@ export async function DELETE(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
   await setRLSContext(decoded);
@@ -271,15 +264,14 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!provider) {
-      return NextResponse.json({ error: 'Health provider not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Health provider not found' }, { status: 404 });
     }
 
     const { searchParams } = new URL(request.url);
     const medicineId = searchParams.get('medicineId');
 
     if (!medicineId) {
-      return NextResponse.json(
-        { error: 'Medicine ID is required' },
+      return NextResponse.json({ success: false, error: 'Medicine ID is required' },
         { status: 400 }
       );
     }
@@ -290,8 +282,7 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!existingMedicine) {
-      return NextResponse.json(
-        { error: 'Medicine not found' },
+      return NextResponse.json({ success: false, error: 'Medicine not found' },
         { status: 404 }
       );
     }
@@ -306,8 +297,7 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error deleting medicine:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete medicine' },
+    return NextResponse.json({ success: false, error: 'Failed to delete medicine' },
       { status: 500 }
     );
   } finally {

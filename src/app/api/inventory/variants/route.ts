@@ -15,8 +15,7 @@ export async function GET(request: NextRequest) {
     const menuItemId = searchParams.get('menuItemId');
 
     if (!menuItemId) {
-      return NextResponse.json(
-        { error: 'menuItemId is required' },
+      return NextResponse.json({ success: false, error: 'menuItemId is required' },
         { status: 400 }
       );
     }
@@ -30,11 +29,10 @@ export async function GET(request: NextRequest) {
       success: true,
       variants,
     });
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    console.error('[InventoryAPI] GET /inventory/variants failed:', message);
-    return NextResponse.json(
-      { error: message },
+  } catch (error: unknown) {
+    const logMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[InventoryAPI] GET /inventory/variants failed:', logMessage);
+    return NextResponse.json({ success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {
@@ -56,22 +54,19 @@ export async function POST(request: NextRequest) {
     };
 
     if (!body.menuItemId) {
-      return NextResponse.json(
-        { error: 'menuItemId is required' },
+      return NextResponse.json({ success: false, error: 'menuItemId is required' },
         { status: 400 }
       );
     }
 
     if (!body.variantName) {
-      return NextResponse.json(
-        { error: 'variantName is required' },
+      return NextResponse.json({ success: false, error: 'variantName is required' },
         { status: 400 }
       );
     }
 
     if (!body.variantValue) {
-      return NextResponse.json(
-        { error: 'variantValue is required' },
+      return NextResponse.json({ success: false, error: 'variantValue is required' },
         { status: 400 }
       );
     }
@@ -99,11 +94,10 @@ export async function POST(request: NextRequest) {
       { success: false, error: result.error },
       { status: 400 }
     );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Internal server error';
-    console.error('[InventoryAPI] POST /inventory/variants failed:', message);
-    return NextResponse.json(
-      { error: message },
+  } catch (error: unknown) {
+    const logMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[InventoryAPI] POST /inventory/variants failed:', logMessage);
+    return NextResponse.json({ success: false, error: 'An internal error occurred' },
       { status: 500 }
     );
   } finally {

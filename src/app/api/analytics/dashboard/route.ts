@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
         'GET /api/analytics/dashboard?type=metrics': 'Get dashboard metrics for charts',
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Dashboard API error:', error);
     return NextResponse.json(
       { success: false, error: 'An internal error occurred' },
@@ -114,7 +114,7 @@ export async function DELETE(request: NextRequest) {
 
     DashboardService.invalidateCache();
     return NextResponse.json({ success: true, message: 'Dashboard cache invalidated' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Dashboard cache invalidation error:', error);
     return NextResponse.json(
       { success: false, error: 'An internal error occurred' },

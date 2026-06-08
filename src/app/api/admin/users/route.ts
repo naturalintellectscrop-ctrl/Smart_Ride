@@ -6,20 +6,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
-import { UserRole, UserStatus } from '@prisma/client';
+import { UserRole, UserStatus, Prisma } from '@prisma/client';
 import { generateCSV, csvResponse } from '@/lib/export';
+import { z } from 'zod';
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization');
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded || !['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
-    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden - Admin access required' }, { status: 403 });
   }
 
   await setRLSContext(decoded);
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.UserWhereInput = {};
     
     if (role && role !== 'all') {
       where.role = role as UserRole;
@@ -159,8 +160,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching users:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch users' },
+    return NextResponse.json({ success: false, error: 'Failed to fetch users' },
       { status: 500 }
     );
   } finally {
@@ -174,29 +174,46 @@ export async function PATCH(request: NextRequest) {
   const token = authHeader?.replace('Bearer ', '');
   
   if (!token) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
 
   const decoded = verifyAccessToken(token);
   if (!decoded || !['ADMIN', 'SUPER_ADMIN'].includes(decoded.role)) {
-    return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
+    return NextResponse.json({ success: false, error: 'Forbidden - Admin access required' }, { status: 403 });
   }
 
   await setRLSContext(decoded);
   try {
     const body = await request.json();
-    const { userId, action, role, data } = body;
 
-    if (!userId) {
-      return NextResponse.json({ error: 'userId is required' }, { status: 400 });
+    const adminUserPatchSchema = z.object({
+      userId: z.string().min(1),
+      action: z.enum(['activate', 'suspend', 'ban', 'change_role', 'update']),
+      role: z.enum(['CLIENT', 'RIDER', 'MERCHANT', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN', 'HEALTH_PROVIDER']).optional(),
+      data: z.object({
+        name: z.string().min(1).optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        role: z.enum(['CLIENT', 'RIDER', 'MERCHANT', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN', 'HEALTH_PROVIDER']).optional(),
+      }).optional(),
+    });
+
+    const parsed = adminUserPatchSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: parsed.error.issues.map(i => i.message).join(', ') },
+        { status: 400 }
+      );
     }
+
+    const { userId, action, role, data } = parsed.data;
 
     const user = await db.user.findUnique({ where: { id: userId } });
     if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    let updateData: any = {};
+    let updateData: Prisma.UserUpdateInput = {};
 
     switch (action) {
       case 'activate':
@@ -210,9 +227,9 @@ export async function PATCH(request: NextRequest) {
         break;
       case 'change_role':
         if (!role) {
-          return NextResponse.json({ error: 'role is required for change_role action' }, { status: 400 });
+          return NextResponse.json({ success: false, error: 'role is required for change_role action' }, { status: 400 });
         }
-        updateData.role = role;
+        updateData.role = role as UserRole;
         break;
       case 'update':
         // Full user update
@@ -220,11 +237,11 @@ export async function PATCH(request: NextRequest) {
           if (data.name) updateData.name = data.name;
           if (data.email) updateData.email = data.email;
           if (data.phone !== undefined) updateData.phone = data.phone || null;
-          if (data.role) updateData.role = data.role;
+          if (data.role) updateData.role = data.role as UserRole;
         }
         break;
       default:
-        return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+        return NextResponse.json({ success: false, error: 'Invalid action' }, { status: 400 });
     }
 
     const updatedUser = await db.user.update({
@@ -252,8 +269,7 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error updating user:', error);
-    return NextResponse.json(
-      { error: 'Failed to update user' },
+    return NextResponse.json({ success: false, error: 'Failed to update user' },
       { status: 500 }
     );
   } finally {
