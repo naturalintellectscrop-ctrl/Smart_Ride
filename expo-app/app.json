@@ -67,6 +67,13 @@
         {
           "RNMapboxMapsImpl": "mapbox"
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#00FF88"
+        }
       ]
     ],
     "experiments": {

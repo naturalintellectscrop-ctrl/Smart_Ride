@@ -1,12 +1,13 @@
 // ============================================
 // SMART RIDE MOBILE - SHOPPING SCREEN
 // ============================================
-// VERSION: DARK-THEME-002
+// VERSION: DARK-THEME-003
 // PURPOSE: Browse and order groceries/shopping items
 // DESIGN: Dark theme with StyleSheet, GlassCard, GlowHeader
+// FEATURE: Category-aware API fetching
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -48,14 +49,15 @@ interface CategoryItem {
   emoji: string;
   serviceKey: string;
   customColor: string;
+  apiType: string | undefined; // undefined = api.getPharmacies(), string = api.getMerchants(type)
 }
 
 const CATEGORIES: CategoryItem[] = [
-  { label: 'All', emoji: '🏷️', serviceKey: 'custom', customColor: COLORS.primary },
-  { label: 'Groceries', emoji: '🥬', serviceKey: 'SHOPPING', customColor: '#8B5CF6' },
-  { label: 'Electronics', emoji: '📱', serviceKey: 'custom', customColor: '#3B82F6' },
-  { label: 'Pharmacy', emoji: '💊', serviceKey: 'HEALTH', customColor: '#F43F5E' },
-  { label: 'Household', emoji: '🏠', serviceKey: 'custom', customColor: '#F59E0B' },
+  { label: 'All', emoji: '🏷️', serviceKey: 'custom', customColor: COLORS.primary, apiType: undefined }, // getMerchants() no type filter
+  { label: 'Groceries', emoji: '🥬', serviceKey: 'SHOPPING', customColor: '#8B5CF6', apiType: 'GROCERY' },
+  { label: 'Electronics', emoji: '📱', serviceKey: 'custom', customColor: '#3B82F6', apiType: 'RETAIL_STORE' },
+  { label: 'Pharmacy', emoji: '💊', serviceKey: 'HEALTH', customColor: '#F43F5E', apiType: 'PHARMACY' },
+  { label: 'Household', emoji: '🏠', serviceKey: 'custom', customColor: '#F59E0B', apiType: 'GROCERY' },
 ];
 
 export default function ShoppingScreen() {
@@ -66,25 +68,39 @@ export default function ShoppingScreen() {
   const [selectedCategory, setSelectedCategory] = useState(0);
   const cart = useCartStore();
 
-  useEffect(() => {
-    loadMerchants();
-  }, []);
-
-  const loadMerchants = async () => {
+  const loadMerchants = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await api.getMerchants('GROCERY');
+      const category = CATEGORIES[selectedCategory];
+      let response;
+
+      if (category.label === 'Pharmacy') {
+        // Use dedicated pharmacies endpoint
+        response = await api.getPharmacies();
+      } else if (category.apiType) {
+        // Use typed merchant filter
+        response = await api.getMerchants(category.apiType);
+      } else {
+        // "All" — no type filter
+        response = await api.getMerchants();
+      }
+
       if (response.success && response.data) {
         setMerchants(response.data);
+      } else {
+        setMerchants([]);
       }
     } catch (error) {
       console.error('Failed to load merchants:', error);
-      // Set empty array on error
       setMerchants([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    loadMerchants();
+  }, [loadMerchants]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -93,6 +109,12 @@ export default function ShoppingScreen() {
   };
 
   const totalCartItems = cart.totalItems;
+
+  const handleCategoryPress = (index: number) => {
+    if (index !== selectedCategory) {
+      setSelectedCategory(index);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -134,7 +156,7 @@ export default function ShoppingScreen() {
                 entering={ZoomIn.delay(150 + index * 50).duration(200)}
               >
                 <TouchableOpacity
-                  onPress={() => setSelectedCategory(index)}
+                  onPress={() => handleCategoryPress(index)}
                   activeOpacity={0.7}
                 >
                   <GlassCard
@@ -185,21 +207,29 @@ export default function ShoppingScreen() {
           entering={FadeIn.duration(300)}
           style={styles.sectionTitle}
         >
-          Nearby Stores
+          {CATEGORIES[selectedCategory].label === 'All' ? 'Nearby Stores' : `${CATEGORIES[selectedCategory].label} Stores`}
         </Animated.Text>
 
         {merchants.length > 0 ? (
-          merchants.map((merchant, index) => (
-            <Animated.View
-              key={merchant.id}
-              entering={SlideInRight.duration(300).delay(index * 80)}
-            >
-              <MerchantCard
-                merchant={merchant}
-                onPress={() => router.push(`/orders/merchant/${merchant.id}`)}
-              />
-            </Animated.View>
-          ))
+          merchants.map((merchant, index) => {
+            // For Pharmacy category, navigate to pharmacy detail; otherwise merchant detail
+            const isPharmacy = CATEGORIES[selectedCategory].label === 'Pharmacy' || merchant.type === 'PHARMACY';
+            const detailRoute = isPharmacy
+              ? `/health/pharmacy/${merchant.id}`
+              : `/orders/merchant/${merchant.id}`;
+
+            return (
+              <Animated.View
+                key={merchant.id}
+                entering={SlideInRight.duration(300).delay(index * 80)}
+              >
+                <MerchantCard
+                  merchant={merchant}
+                  onPress={() => router.push(detailRoute)}
+                />
+              </Animated.View>
+            );
+          })
         ) : (
           <Animated.View
             entering={FadeIn.duration(400)}

@@ -53,6 +53,14 @@ export const COLORS = {
   // Text dim (for icons, placeholders)
   textDim: 'rgba(255, 255, 255, 0.3)',
 
+  // Service brand colors (matches SERVICES config)
+  serviceBoda: '#00FF88',
+  serviceCar: '#00D4FF',
+  serviceFood: '#F59E0B',
+  serviceDelivery: '#14B8A6',
+  serviceShop: '#8B5CF6',
+  serviceHealth: '#F43F5E',
+
   // Legacy compatibility
   accent: '#F59E0B',
 };
@@ -209,6 +217,17 @@ export const PAYMENT_METHOD_DISPLAY: Record<string, string> = {
 // Prefer useTheme().colors for dynamic switching
 export { DarkColors as DARK_COLORS } from '@/src/context/theme-context';
 export { LightColors as LIGHT_COLORS } from '@/src/context/theme-context';
+
+// Notification Types
+export const NOTIFICATION_TYPES = {
+  RIDE_UPDATE: 'RIDE_UPDATE',
+  ORDER_UPDATE: 'ORDER_UPDATE',
+  PAYMENT: 'PAYMENT',
+  PROMO: 'PROMO',
+  SOS: 'SOS',
+  CHAT: 'CHAT',
+  SYSTEM: 'SYSTEM',
+} as const;
 
 // Storage Keys
 export const STORAGE_KEYS = {

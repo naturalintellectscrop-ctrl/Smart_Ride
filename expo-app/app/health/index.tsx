@@ -1,12 +1,13 @@
 // ============================================
 // SMART RIDE MOBILE - HEALTH SCREEN
 // ============================================
-// VERSION: DARK-THEME-002
+// VERSION: DARK-THEME-003
 // PURPOSE: Health services - pharmacy, prescriptions
 // DESIGN: Dark theme with StyleSheet, custom components
+// FEATURE: Search filters pharmacies list
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -44,15 +45,6 @@ interface Pharmacy {
   deliveryTime?: string;
 }
 
-interface Medicine {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  image?: string;
-  inStock: boolean;
-}
-
 export default function HealthScreen() {
   const router = useRouter();
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
@@ -85,6 +77,14 @@ export default function HealthScreen() {
     await loadData();
     setRefreshing(false);
   };
+
+  // Filter pharmacies by search query
+  const filteredPharmacies = searchQuery.trim().length > 0
+    ? pharmacies.filter(p =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (p.address && p.address.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : pharmacies;
 
   if (isLoading) {
     return (
@@ -207,8 +207,8 @@ export default function HealthScreen() {
         {activeTab === 'pharmacies' ? (
           <>
             <Text style={styles.sectionTitle}>Nearby Pharmacies</Text>
-            {pharmacies.length > 0 ? (
-              pharmacies.map((pharmacy, index) => (
+            {filteredPharmacies.length > 0 ? (
+              filteredPharmacies.map((pharmacy, index) => (
                 <Animated.View
                   key={pharmacy.id}
                   entering={SlideInRight.duration(300).delay(index * 80)}
@@ -225,20 +225,45 @@ export default function HealthScreen() {
                 style={styles.emptyState}
               >
                 <Text style={styles.emptyEmoji}>💊</Text>
-                <Text style={styles.emptyText}>No pharmacies available</Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery.trim().length > 0
+                    ? `No pharmacies matching "${searchQuery}"`
+                    : 'No pharmacies available'}
+                </Text>
               </Animated.View>
             )}
           </>
         ) : (
           <>
-            <Text style={styles.sectionTitle}>Popular Medicines</Text>
-            <Animated.View
-              entering={FadeIn.duration(400)}
-              style={styles.emptyState}
-            >
-              <Text style={styles.emptyEmoji}>💊</Text>
-              <Text style={styles.emptyText}>Search for medicines above</Text>
-            </Animated.View>
+            <Text style={styles.sectionTitle}>Order Medicine</Text>
+            <Text style={styles.sectionSubtitle}>
+              Search for pharmacies above, then browse their medicine catalog
+            </Text>
+            {filteredPharmacies.length > 0 ? (
+              filteredPharmacies.map((pharmacy, index) => (
+                <Animated.View
+                  key={pharmacy.id}
+                  entering={SlideInRight.duration(300).delay(index * 80)}
+                >
+                  <MedicinePharmacyCard
+                    pharmacy={pharmacy}
+                    onPress={() => router.push(`/health/pharmacy/${pharmacy.id}`)}
+                  />
+                </Animated.View>
+              ))
+            ) : (
+              <Animated.View
+                entering={FadeIn.duration(400)}
+                style={styles.emptyState}
+              >
+                <Text style={styles.emptyEmoji}>🔍</Text>
+                <Text style={styles.emptyText}>
+                  {searchQuery.trim().length > 0
+                    ? `No pharmacies found for "${searchQuery}"`
+                    : 'Search for a pharmacy to browse medicines'}
+                </Text>
+              </Animated.View>
+            )}
           </>
         )}
       </ScrollView>
@@ -271,7 +296,7 @@ function QuickAction({
 }
 
 // ============================================
-// PHARMACY CARD COMPONENT
+// PHARMACY CARD COMPONENT (for pharmacies tab)
 // ============================================
 function PharmacyCard({
   pharmacy,
@@ -341,6 +366,76 @@ function PharmacyCard({
                 </Text>
               )}
             </View>
+          </View>
+        </View>
+      </GlassCard>
+    </TouchableOpacity>
+  );
+}
+
+// ============================================
+// MEDICINE PHARMACY CARD (for medicines tab — compact)
+// ============================================
+function MedicinePharmacyCard({
+  pharmacy,
+  onPress,
+}: {
+  pharmacy: Pharmacy;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
+      <GlassCard variant="default" style={styles.pharmacyCard}>
+        <View style={styles.pharmacyRow}>
+          <View style={styles.pharmacyImageContainer}>
+            {pharmacy.image ? (
+              <Image source={{ uri: pharmacy.image }} style={styles.pharmacyImage} />
+            ) : (
+              <ServiceIcon service="HEALTH" size="md" customEmoji="💊" />
+            )}
+          </View>
+
+          <View style={styles.pharmacyInfo}>
+            <View style={styles.pharmacyNameRow}>
+              <Text style={styles.pharmacyName} numberOfLines={1}>
+                {pharmacy.name}
+              </Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: pharmacy.isOpen
+                      ? 'rgba(0, 255, 136, 0.1)'
+                      : 'rgba(239, 68, 68, 0.1)',
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    {
+                      color: pharmacy.isOpen ? COLORS.success : COLORS.error,
+                    },
+                  ]}
+                >
+                  {pharmacy.isOpen ? 'Open' : 'Closed'}
+                </Text>
+              </View>
+            </View>
+
+            <Text style={styles.pharmacyAddress} numberOfLines={1}>
+              {pharmacy.address}
+            </Text>
+          </View>
+
+          <View style={styles.browseAction}>
+            <GradientButton
+              title="Browse"
+              onPress={onPress}
+              variant="outline"
+              size="sm"
+              fullWidth={false}
+            />
           </View>
         </View>
       </GlassCard>
@@ -442,6 +537,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: COLORS.text,
+    marginBottom: 4,
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: COLORS.textMuted,
     marginBottom: 12,
   },
 
@@ -457,6 +557,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: COLORS.textMuted,
+    textAlign: 'center',
   },
 
   // Pharmacy Card
@@ -529,5 +630,8 @@ const styles = StyleSheet.create({
   deliveryText: {
     fontSize: 13,
     color: COLORS.textMuted,
+  },
+  browseAction: {
+    marginLeft: 8,
   },
 });

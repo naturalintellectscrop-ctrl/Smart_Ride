@@ -580,6 +580,18 @@ class ApiService {
   }
 
   // ==========================================
+  // PUSH NOTIFICATION TOKENS
+  // ==========================================
+
+  async registerPushToken(token: string, platform?: string, deviceId?: string): Promise<ApiResponse<void>> {
+    return this.request<void>('/notifications/token', 'POST', { token, deviceInfo: { platform, deviceId } });
+  }
+
+  async unregisterPushToken(token: string): Promise<ApiResponse<void>> {
+    return this.request<void>('/notifications/token', 'DELETE', { token });
+  }
+
+  // ==========================================
   // NOTIFICATIONS
   // ==========================================
 

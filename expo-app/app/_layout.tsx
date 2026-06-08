@@ -14,13 +14,14 @@ import './global.css';
 
 import React, { Component, ReactNode, useEffect } from 'react';
 import { View, Text, StyleSheet, LogBox } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configureGoogleSignIn } from '../src/config/google';
 import { ThemeProvider, useTheme } from '../src/context/theme-context';
+import { notificationService } from '../src/services';
 
 // Suppress known benign warnings in production
 LogBox.ignoreLogs([
@@ -90,6 +91,42 @@ function ThemedRootLayout() {
     configureGoogleSignIn();
   }, []);
 
+  // Initialize push notifications and set up listeners
+  useEffect(() => {
+    const initNotifications = async () => {
+      try {
+        const token = await notificationService.initialize();
+        if (token) {
+          console.log('[App] Push notifications initialized, token:', token.substring(0, 20) + '...');
+        }
+      } catch (error) {
+        console.log('[App] Push notification init failed:', error);
+      }
+    };
+
+    initNotifications();
+
+    // Set up listeners
+    const cleanup = notificationService.setupListeners(
+      (notification) => {
+        console.log('[App] Foreground notification:', notification.title);
+        // Could show an in-app banner/toast here
+      },
+      (response) => {
+        const data = response.notification.request.content.data as any;
+        if (data?.entityType === 'task' || data?.type?.includes('RIDE')) {
+          router.push('/(tabs)/rides');
+        } else if (data?.entityType === 'order' || data?.type?.includes('ORDER')) {
+          router.push('/(tabs)/orders');
+        } else if (data?.entityType === 'chat' || data?.type?.includes('CHAT')) {
+          router.push('/chat');
+        }
+      }
+    );
+
+    return cleanup;
+  }, []);
+
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
@@ -119,6 +156,9 @@ function ThemedRootLayout() {
           <Stack.Screen name="profile/edit" />
           <Stack.Screen name="orders/restaurants" />
           <Stack.Screen name="orders/order-tracking" />
+          <Stack.Screen name="health/pharmacy/[id]" />
+          <Stack.Screen name="health/prescriptions" />
+          <Stack.Screen name="notifications/index" />
         </Stack>
       </ProviderErrorBoundary>
     </>

@@ -3,9 +3,10 @@
 // ============================================
 // Organized notification center with filter tabs,
 // glassmorphism cards, and pull-to-refresh
+// Connected to real API
 // ============================================
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -29,6 +30,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, GRADIENTS, NOTIFICATION_TYPES } from '@/src/constants';
+import { api } from '@/src/services';
 import { GlassCard, GradientButton, StatusBadge } from '@/src/components';
 
 // ============================================
@@ -123,103 +125,6 @@ const FILTER_TABS = [
 ];
 
 // ============================================
-// MOCK DATA
-// ============================================
-
-const MOCK_NOTIFICATIONS: AppNotification[] = [
-  {
-    id: '1',
-    type: 'RIDE_UPDATE',
-    title: 'Ride Completed',
-    description: 'Your Smart Boda ride from Kampala Road to Ntinda has been completed. Total fare: UGX 8,500.',
-    timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    isRead: false,
-    entityId: 'task-001',
-    entityType: 'task',
-  },
-  {
-    id: '2',
-    type: 'ORDER_UPDATE',
-    title: 'Order On The Way',
-    description: 'Your order from Cafe Javas is being delivered. Estimated arrival in 15 minutes.',
-    timestamp: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-    isRead: false,
-    entityId: 'order-001',
-    entityType: 'order',
-  },
-  {
-    id: '3',
-    type: 'PAYMENT',
-    title: 'Payment Received',
-    description: 'UGX 50,000 has been added to your Smart Ride wallet via MTN MoMo.',
-    timestamp: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-    isRead: false,
-  },
-  {
-    id: '4',
-    type: 'PROMO',
-    title: 'Weekend Special!',
-    description: 'Get 20% off your next 3 rides this weekend. Use code WEEKEND20 at checkout.',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-    isRead: true,
-  },
-  {
-    id: '5',
-    type: 'CHAT',
-    title: 'New Message from Driver',
-    description: 'James: "I am at the pickup point, near the blue gate."',
-    timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-    isRead: true,
-    entityId: 'conv-001',
-    entityType: 'chat',
-  },
-  {
-    id: '6',
-    type: 'RIDE_UPDATE',
-    title: 'Driver Arrived',
-    description: 'Your Smart Car driver has arrived at the pickup location. Please head to the vehicle.',
-    timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-    isRead: true,
-    entityId: 'task-002',
-    entityType: 'task',
-  },
-  {
-    id: '7',
-    type: 'SYSTEM',
-    title: 'App Update Available',
-    description: 'A new version of Smart Ride is available. Update now for the best experience.',
-    timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-    isRead: true,
-  },
-  {
-    id: '8',
-    type: 'PAYMENT',
-    title: 'Withdrawal Processed',
-    description: 'Your withdrawal of UGX 30,000 to Airtel Money has been processed successfully.',
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-    isRead: true,
-  },
-  {
-    id: '9',
-    type: 'ORDER_UPDATE',
-    title: 'Order Delivered',
-    description: 'Your pharmacy order from MedPlus has been delivered. Thank you for using Smart Ride!',
-    timestamp: new Date(Date.now() - 28 * 60 * 60 * 1000).toISOString(),
-    isRead: true,
-    entityId: 'order-002',
-    entityType: 'order',
-  },
-  {
-    id: '10',
-    type: 'SOS',
-    title: 'Emergency Resolved',
-    description: 'Your SOS alert from yesterday has been resolved by our emergency response team.',
-    timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(),
-    isRead: true,
-  },
-];
-
-// ============================================
 // HELPERS
 // ============================================
 
@@ -238,6 +143,20 @@ function formatTimestamp(isoString: string): string {
   return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+/** Map raw API notification to AppNotification interface */
+function mapApiNotification(raw: any): AppNotification {
+  return {
+    id: raw.id,
+    type: raw.type || 'SYSTEM',
+    title: raw.title || 'Notification',
+    description: raw.message || '',
+    timestamp: raw.createdAt || new Date().toISOString(),
+    isRead: raw.isRead || false,
+    entityId: raw.referenceId || undefined,
+    entityType: raw.referenceType || undefined,
+  };
+}
+
 // ============================================
 // MAIN COMPONENT
 // ============================================
@@ -245,7 +164,7 @@ function formatTimestamp(isoString: string): string {
 export default function NotificationsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [notifications, setNotifications] = useState<AppNotification[]>(MOCK_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -255,21 +174,52 @@ export default function NotificationsScreen() {
     ? notifications
     : notifications.filter(n => n.type === activeFilter);
 
+  // Load notifications on mount
+  useEffect(() => {
+    loadNotifications();
+  }, []);
+
+  const loadNotifications = async () => {
+    try {
+      const response = await api.getNotifications();
+      if (response.success && response.data) {
+        // API may return { notifications: [...] } or directly an array
+        const rawList = Array.isArray(response.data)
+          ? response.data
+          : response.data.notifications || [];
+        setNotifications(rawList.map(mapApiNotification));
+      }
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
+  };
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    await loadNotifications();
     setRefreshing(false);
   }, []);
 
-  const handleMarkAsRead = (notificationId: string) => {
+  const handleMarkAsRead = async (notificationId: string) => {
+    // Optimistic update
     setNotifications(prev =>
       prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
     );
+    try {
+      await api.markNotificationRead(notificationId);
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
   };
 
-  const handleMarkAllRead = () => {
+  const handleMarkAllRead = async () => {
+    // Optimistic update
     setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    try {
+      await api.markNotificationRead(undefined, true);
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
   };
 
   const handleNotificationPress = (notification: AppNotification) => {
