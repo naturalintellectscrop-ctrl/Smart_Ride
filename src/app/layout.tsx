@@ -26,6 +26,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://smartride.ug"),
   title: {
     default: "Smart Ride - Multi-Service Mobility Platform",
     template: "%s | Smart Ride",

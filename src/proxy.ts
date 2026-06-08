@@ -1,5 +1,5 @@
 /**
- * Next.js Edge Middleware
+ * Next.js Edge Proxy
  *
  * Runs on every matched request and:
  * - Generates and propagates x-request-id headers
@@ -26,7 +26,7 @@ const PAGE_SECURITY_HEADERS: Record<string, string> = {
   'Referrer-Policy': 'strict-origin-when-cross-origin',
 };
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isApiRoute = pathname.startsWith('/api');
 
