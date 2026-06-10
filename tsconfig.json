@@ -51,6 +51,19 @@
     "App.tsx",
     "capacitor.config.ts",
     "fix-admin-password.ts",
-    "src/__tests__"
+    "src/__tests__",
+    "src/services/api.ts",
+    "src/services/google-signin.ts",
+    "src/services/notifications.ts",
+    "src/services/index.ts",
+    "src/store/authStore.ts",
+    "src/store/locationStore.ts",
+    "src/constants/index.ts",
+    "src/animations",
+    "src/components/animations",
+    "src/components/mobile",
+    "sentry.client.config.ts",
+    "sentry.server.config.ts",
+    "sentry.edge.config.ts"
   ]
 }

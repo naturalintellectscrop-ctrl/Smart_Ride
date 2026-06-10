@@ -19,3 +19,34 @@ skills/
 
 # Examples
 examples/
+
+# Mobile-only source files (contain react-native/expo imports that fail on Vercel)
+src/services/api.ts
+src/services/google-signin.ts
+src/services/notifications.ts
+src/store/authStore.ts
+src/store/locationStore.ts
+src/constants/index.ts
+src/animations/
+src/components/animations/
+src/components/mobile/
+
+# Build artifacts
+.next/
+node_modules/
+
+# Misc development files
+docs/
+download/
+scripts/
+prisma/seed-admin.ts
+fix-admin-password.ts
+analyze-design.ts
+generate_smart_ride_docs.py
+migrate-data.js
+migrate-db.js
+migrate-db-pg.js
+part2/
+part3/
+stitch-designs/
+android-dist/
