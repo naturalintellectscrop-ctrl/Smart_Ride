@@ -86,18 +86,23 @@ function resolveDatabaseUrl(): string {
   // Priority 1: Build from individual DB_ env vars (preferred for RLS)
   const builtUrl = buildDatabaseUrl()
   if (builtUrl) return builtUrl
-  // Priority 2: DATABASE_URL from system environment
+
+  // Priority 2: PostgreSQL URLs from system environment (skip file: URLs — those are for SQLite dev)
   const systemUrl = process.env.DATABASE_URL
-  if (systemUrl) {
-    if (systemUrl.startsWith('postgresql://') || systemUrl.startsWith('postgres://')) return repairDatabaseUrl(systemUrl)
-    if (systemUrl.startsWith('file:')) return systemUrl
+  if (systemUrl && (systemUrl.startsWith('postgresql://') || systemUrl.startsWith('postgres://'))) {
+    return repairDatabaseUrl(systemUrl)
   }
-  // Priority 3: DATABASE_URL from .env file
+
+  // Priority 3: PostgreSQL URLs from .env file (override system file: URLs)
   const envFileUrl = readEnvFileVar('DATABASE_URL')
-  if (envFileUrl) {
-    if (envFileUrl.startsWith('postgresql://') || envFileUrl.startsWith('postgres://')) return envFileUrl
-    if (envFileUrl.startsWith('file:')) return envFileUrl
+  if (envFileUrl && (envFileUrl.startsWith('postgresql://') || envFileUrl.startsWith('postgres://'))) {
+    return envFileUrl
   }
+
+  // Priority 4: Fallback to file: URLs (SQLite) only if no PostgreSQL URL found anywhere
+  if (systemUrl && systemUrl.startsWith('file:')) return systemUrl
+  if (envFileUrl && envFileUrl.startsWith('file:')) return envFileUrl
+
   throw new Error('DATABASE_URL must be a PostgreSQL connection string. Set DB_HOST, DB_USER, DB_PASSWORD or DATABASE_URL.')
 }
 
