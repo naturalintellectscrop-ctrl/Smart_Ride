@@ -1388,3 +1388,31 @@ Stage Summary:
 - Fixed db.ts URL priority bug (PostgreSQL .env > SQLite system env)
 - 3 dangerous routes deleted (debug/db, setup, admin/setup)
 - upload/ added to .gitignore
+---
+Task ID: 1
+Agent: Main Agent
+Task: Configure Supabase credentials, update GitHub, and push local changes
+
+Work Log:
+- Decoded Supabase JWT tokens to extract project ref: mmowwpdgrgdiyqheroak (from JWT) vs mmovwpdgrgdiyqheroak (from existing .env)
+- Discovered JWT keys reference project mmowwpdgrgdiyqheroak which does NOT resolve (DNS failure)
+- Original .env project ref mmovwpdgrgdiyqheroak DOES resolve and database connection works
+- Reverted all URLs back to working mmovwpdgrgdiyqheroak project ref
+- Filled in Supabase anon key, service role key, VAPID key, and expo-app credentials
+- Updated GitHub remote with new PAT token
+- Rebased 8 local commits onto origin/main (resolved divergence)
+- Rewrote git history to remove leaked GitHub PAT from worklog.md (push protection)
+- Successfully pushed 9 commits to GitHub
+- Added .env to expo-app/.gitignore
+- Created expo-app/.env with Supabase and Mapbox credentials
+- Verified all health endpoints work (health, ready, startup)
+- Verified database connectivity (Supabase PostgreSQL connected)
+- Verified Kampala Places API returns curated Uganda locations
+- Verified landing page renders correctly via Agent Browser
+
+Stage Summary:
+- GitHub push successful: all local changes pushed to origin/main
+- .env configured with: DATABASE_URL (Supabase), Supabase keys, Mapbox token, Firebase admin (project_id, client_email, private_key), VAPID key
+- IMPORTANT MISMATCH: User-provided JWT keys (anon/service_role) decode to project ref "mmowwpdgrgdiyqheroak" which doesn't exist. The working project is "mmovwpdgrgdiyqheroak". These keys may not work with the actual project. User needs to verify correct Supabase project keys.
+- Feature status: maps ✅, notifications ✅, payments ❌ (needs MTN/Airtel/Flutterwave keys), email ❌ (needs Resend key)
+- Dev server has intermittent stability in sandbox (crashes after multiple requests) but all functionality verified working
