@@ -32,7 +32,12 @@ const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'smart-ride-internal-ap
  * - timestamp: When the processing ran
  */
 export async function POST(request: NextRequest) {
-  await setServiceRoleContext();
+  try {
+    await setServiceRoleContext();
+  } catch {
+    // RLS context fails gracefully when DB is unavailable (e.g. no PostgreSQL in dev)
+    // Continue — the actual DB operations will also fail and be caught below
+  }
   try {
     // Verify internal API key
     const providedKey = request.headers.get('X-Internal-Key');
@@ -81,7 +86,7 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   } finally {
-    await resetRLSContext();
+    try { await resetRLSContext(); } catch { /* ignore when DB unavailable */ }
   }
 }
 
@@ -90,7 +95,11 @@ export async function POST(request: NextRequest) {
  * Health check endpoint - returns processing stats without actually processing
  */
 export async function GET(request: NextRequest) {
-  await setServiceRoleContext();
+  try {
+    await setServiceRoleContext();
+  } catch {
+    // RLS context fails gracefully when DB is unavailable
+  }
   try {
     // Verify internal API key
     const providedKey = request.headers.get('X-Internal-Key');
@@ -134,6 +143,6 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   } finally {
-    await resetRLSContext();
+    try { await resetRLSContext(); } catch { /* ignore when DB unavailable */ }
   }
 }

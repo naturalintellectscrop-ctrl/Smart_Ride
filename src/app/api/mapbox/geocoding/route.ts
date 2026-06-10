@@ -15,7 +15,7 @@ const MAPBOX_API_BASE = 'https://api.mapbox.com';
 const COUNTRY_CODE = 'ug';
 
 // Place types for comprehensive search
-const PLACE_TYPES = 'poi,address,place,locality,neighborhood,street,poi.landmark';
+const PLACE_TYPES = 'poi,address,place,locality,neighborhood,poi.landmark';
 
 // Kampala center for proximity bias [lng, lat]
 const KAMPALA_CENTER = '32.58,0.34';
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const limit = searchParams.get('limit') || '10';
   const country = searchParams.get('country') || COUNTRY_CODE;
 
-  const token = process.env.MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const token = process.env.MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   if (!token) {
     return NextResponse.json({ success: false, error: 'Mapbox access token not configured' },

@@ -8,6 +8,7 @@
  */
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
+import { notificationLogger } from '@/lib/logging/logger';
 import { 
   getAuth, 
   GoogleAuthProvider, 
@@ -122,6 +123,17 @@ export function isFirebaseConfigured(): boolean {
   const config = getFirebaseConfig();
   return config !== null;
 }
+
+/**
+ * Check if Firebase push notifications are properly configured.
+ * Requires at minimum NEXT_PUBLIC_FIREBASE_PROJECT_ID and VAPID key.
+ */
+export function isConfigured(): boolean {
+  return isFirebaseConfigured();
+}
+
+/** Boolean export for quick checks */
+export const firebaseConfigured = isFirebaseConfigured();
 
 // ==========================================
 // Google Sign-In Functions
@@ -433,6 +445,11 @@ export interface PushNotificationToken {
 }
 
 export async function getFCMToken(): Promise<PushNotificationToken> {
+  if (!isConfigured()) {
+    notificationLogger.warn('Firebase push notifications not configured. Set NEXT_PUBLIC_FIREBASE_PROJECT_ID and related environment variables.');
+    return { token: '', success: false, error: 'Firebase not configured' };
+  }
+
   if (!messaging) {
     return { token: '', success: false, error: 'Messaging not supported' };
   }

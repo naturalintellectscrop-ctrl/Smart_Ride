@@ -80,8 +80,8 @@ export function MapboxMap({
   // Initialize map
   useEffect(() => {
     // Expo release builds require EXPO_PUBLIC_ prefix
-    const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-    
+    const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
     if (!token) {
       setMapError('Mapbox token not configured');
       setIsLoading(false);
@@ -359,8 +359,8 @@ function fitMapToBounds(map: any, pickup: MapLocation, destination: MapLocation)
 
 async function drawRoute(map: any, pickup: MapLocation, destination: MapLocation) {
   // Expo release builds require EXPO_PUBLIC_ prefix
-  const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
-  
+  const token = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+
   if (!token) return;
 
   try {

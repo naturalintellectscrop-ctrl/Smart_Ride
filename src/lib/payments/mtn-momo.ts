@@ -5,6 +5,8 @@
  * Supports Uganda and other African countries
  */
 
+import { paymentLogger } from '@/lib/logging/logger';
+
 // MTN MoMo Configuration
 const MTN_CONFIG = {
   baseUrl: process.env.MTN_MOMO_ENVIRONMENT === 'production' 
@@ -15,6 +17,19 @@ const MTN_CONFIG = {
   apiKey: process.env.MTN_MOMO_API_KEY || '',
   callbackUrl: process.env.MTN_MOMO_CALLBACK_URL || '',
 };
+
+/**
+ * Check if MTN MoMo service is properly configured
+ */
+export function isConfigured(): boolean {
+  return Boolean(MTN_CONFIG.apiUser && MTN_CONFIG.apiKey && MTN_CONFIG.primaryKey);
+}
+
+/** Boolean export for quick checks */
+export const mtnMomoConfigured = isConfigured();
+
+/** Structured unavailability message */
+const UNAVAILABLE_MESSAGE = 'MTN MoMo service not configured. Set MTN_MOMO_API_USER, MTN_MOMO_API_KEY, and MTN_MOMO_SUBSCRIPTION_KEY environment variables.';
 
 // Token cache
 let cachedToken: { token: string; expiresAt: number } | null = null;
@@ -40,8 +55,8 @@ async function getAccessToken(): Promise<string> {
   }
 
   // Check if credentials are configured
-  if (!MTN_CONFIG.apiUser || !MTN_CONFIG.apiKey || !MTN_CONFIG.primaryKey) {
-    throw new Error('MTN MoMo credentials not configured');
+  if (!isConfigured()) {
+    throw new Error(UNAVAILABLE_MESSAGE);
   }
 
   const auth = Buffer.from(`${MTN_CONFIG.apiUser}:${MTN_CONFIG.apiKey}`).toString('base64');
@@ -88,6 +103,12 @@ export async function requestPayment(params: {
   referenceId?: string;
   error?: string;
 }> {
+  // Check if gateway is configured before attempting
+  if (!isConfigured()) {
+    paymentLogger.warn(UNAVAILABLE_MESSAGE);
+    return { success: false, error: UNAVAILABLE_MESSAGE };
+  }
+
   try {
     const token = await getAccessToken();
     const referenceId = generateUUID();
@@ -127,7 +148,7 @@ export async function requestPayment(params: {
       error: error.message || 'Payment request failed' 
     };
   } catch (error) {
-    console.error('MTN MoMo payment request error:', error);
+    paymentLogger.error('MTN MoMo payment request error:', { error: String(error) });
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Payment request failed' 
@@ -146,6 +167,11 @@ export async function getPaymentStatus(referenceId: string): Promise<{
   currency?: string;
   error?: string;
 }> {
+  if (!isConfigured()) {
+    paymentLogger.warn(UNAVAILABLE_MESSAGE);
+    return { success: false, error: UNAVAILABLE_MESSAGE };
+  }
+
   try {
     const token = await getAccessToken();
 
@@ -196,6 +222,11 @@ export async function disburseFunds(params: {
   referenceId?: string;
   error?: string;
 }> {
+  if (!isConfigured()) {
+    paymentLogger.warn(UNAVAILABLE_MESSAGE);
+    return { success: false, error: UNAVAILABLE_MESSAGE };
+  }
+
   try {
     const token = await getAccessToken();
     const referenceId = generateUUID();
@@ -280,6 +311,7 @@ function formatUgandaPhone(phone: string): string {
 }
 
 export const mtnMomoService = {
+  isConfigured,
   requestPayment,
   getPaymentStatus,
   disburseFunds,

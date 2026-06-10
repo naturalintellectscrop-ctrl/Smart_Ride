@@ -7,13 +7,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { z } from 'zod';
-
-// Flutterwave API configuration
-const FLUTTERWAVE_BASE_URL = process.env.FLUTTERWAVE_ENVIRONMENT === 'production'
-  ? 'https://api.flutterwave.com/v3'
-  : 'https://api.flutterwave.com/v3';
-
-const FLUTTERWAVE_SECRET_KEY = process.env.FLUTTERWAVE_SECRET_KEY;
+import { flutterwaveService } from '@/lib/payments/flutterwave-service';
+import { paymentLogger } from '@/lib/logging/logger';
 
 // Validation schemas
 const initiatePaymentSchema = z.object({
@@ -27,13 +22,6 @@ const initiatePaymentSchema = z.object({
   description: z.string().optional(),
 });
 
-// Generate unique transaction reference
-function generateTxRef(): string {
-  const timestamp = Date.now();
-  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
-  return `SR-${timestamp}-${random}`;
-}
-
 // ============================================
 // POST - Initiate Payment
 // ============================================
@@ -44,7 +32,7 @@ export async function POST(request: NextRequest) {
     return authResult;
   }
 
-  if (!FLUTTERWAVE_SECRET_KEY) {
+  if (!flutterwaveService.isConfigured()) {
     return NextResponse.json({ success: false, error: 'Payment gateway not configured' },
       { status: 503 }
     );
@@ -64,52 +52,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
     }
 
-    const txRef = generateTxRef();
-
-    // Prepare Flutterwave payload
-    const payload: Record<string, unknown> = {
-      tx_ref: txRef,
-      amount: validatedData.amount,
-      currency: validatedData.currency,
-      customer: {
-        email: validatedData.email || user.email,
-        phonenumber: validatedData.phoneNumber || user.phone,
-        name: user.name,
-      },
-      customizations: {
-        title: 'Smart Ride Payment',
-        description: validatedData.description || 'Service payment',
-      },
-      meta: {
-        user_id: user.id,
-        task_id: validatedData.taskId,
-        order_id: validatedData.orderId,
-      },
-    };
-
-    // Mobile Money specific payload
-    if (['mtn_ug', 'airtel_ug'].includes(validatedData.paymentMethod)) {
-      const phoneNumber = validatedData.phoneNumber || user.phone;
-      if (!phoneNumber) {
-        return NextResponse.json({ success: false, error: 'Phone number is required for mobile money payments' },
-          { status: 400 }
-        );
-      }
-
-      // Format phone number for Flutterwave (256 for Uganda)
-      let formattedPhone = phoneNumber.replace(/\D/g, '');
-      if (formattedPhone.startsWith('0')) {
-        formattedPhone = '256' + formattedPhone.substring(1);
-      }
-
-      payload.payment_options = 'mobilemoneyuganda';
-      payload.redirect_url = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/payment/callback`;
-    }
-
-    // Create payment record
+    // Create payment record first
     const payment = await db.payment.create({
       data: {
-        paymentReference: txRef,
+        paymentReference: `SR-${Date.now()}-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
         userId: user.id,
         amount: validatedData.amount,
         currency: validatedData.currency,
@@ -117,32 +63,36 @@ export async function POST(request: NextRequest) {
                       validatedData.paymentMethod === 'airtel_ug' ? 'AIRTEL_MONEY' :
                       validatedData.paymentMethod === 'card' ? 'VISA' : 'CASH',
         status: 'PENDING',
+        orderId: validatedData.orderId || null,
       },
     });
 
-    // Call Flutterwave API
-    const response = await fetch(`${FLUTTERWAVE_BASE_URL}/payments`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${FLUTTERWAVE_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
+    // Use Flutterwave service to initiate payment
+    const result = await flutterwaveService.initiatePayment({
+      txRef: payment.paymentReference,
+      amount: validatedData.amount,
+      currency: validatedData.currency,
+      paymentMethod: validatedData.paymentMethod,
+      phoneNumber: validatedData.phoneNumber || user.phone || undefined,
+      email: validatedData.email || user.email || undefined,
+      customerName: user.name || undefined,
+      description: validatedData.description,
+      taskId: validatedData.taskId,
+      orderId: validatedData.orderId,
+      userId: user.id,
     });
 
-    const result = await response.json();
-
-    if (!response.ok) {
+    if (!result.success) {
       // Update payment status to failed
       await db.payment.update({
         where: { id: payment.id },
         data: { 
           status: 'FAILED',
-          failureReason: result.message || 'Payment initiation failed',
+          failureReason: result.error || 'Payment initiation failed',
         },
       });
 
-      return NextResponse.json({ success: false, error: result.message || 'Failed to initiate payment' },
+      return NextResponse.json({ success: false, error: result.error || 'Failed to initiate payment' },
         { status: 400 }
       );
     }
@@ -151,8 +101,8 @@ export async function POST(request: NextRequest) {
     await db.payment.update({
       where: { id: payment.id },
       data: {
-        transactionId: result.data?.id?.toString(),
-        providerResponse: JSON.stringify(result.data),
+        transactionId: result.transactionId || null,
+        providerResponse: JSON.stringify(result),
       },
     });
 
@@ -160,14 +110,14 @@ export async function POST(request: NextRequest) {
       success: true,
       payment: {
         id: payment.id,
-        reference: txRef,
+        reference: result.txRef,
         amount: validatedData.amount,
         currency: validatedData.currency,
         status: 'PENDING',
       },
       flutterwave: {
-        link: result.data?.link,
-        transactionId: result.data?.id,
+        link: result.link,
+        transactionId: result.transactionId,
       },
     });
   } catch (error) {
@@ -176,6 +126,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    paymentLogger.error('Flutterwave payment initiation error:', { error: String(error) });
     return NextResponse.json({ success: false, error: 'Failed to initiate payment' },
       { status: 500 }
     );
@@ -194,7 +145,7 @@ export async function GET(request: NextRequest) {
     return authResult;
   }
 
-  if (!FLUTTERWAVE_SECRET_KEY) {
+  if (!flutterwaveService.isConfigured()) {
     return NextResponse.json({ success: false, error: 'Payment gateway not configured' },
       { status: 503 }
     );
@@ -211,66 +162,56 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify with Flutterwave
-    const verifyUrl = transactionId
-      ? `${FLUTTERWAVE_BASE_URL}/transactions/${transactionId}/verify`
-      : `${FLUTTERWAVE_BASE_URL}/transactions/verify_by_reference?tx_ref=${txRef}`;
+    // Use Flutterwave service to verify
+    let result;
+    if (txRef) {
+      result = await flutterwaveService.verifyTransaction(txRef);
+    } else {
+      // If only transactionId provided, use getTransactionStatus
+      result = await flutterwaveService.getTransactionStatus(transactionId!);
+    }
 
-    const response = await fetch(verifyUrl, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${FLUTTERWAVE_SECRET_KEY}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || result.status !== 'success') {
-      return NextResponse.json({ success: false, error: 'Failed to verify payment' },
+    if (!result.success) {
+      return NextResponse.json({ success: false, error: result.error || 'Failed to verify payment' },
         { status: 400 }
       );
     }
 
-    const data = result.data;
-    
+    const mappedStatus = flutterwaveService.mapStatus(result.status || '');
+
     // Update local payment record
     const payment = await db.payment.findFirst({
       where: {
         OR: [
-          { paymentReference: data.tx_ref },
-          { transactionId: data.id?.toString() },
+          { paymentReference: result.txRef },
+          { transactionId: result.transactionId },
         ],
       },
     });
 
     if (payment) {
-      const newStatus = data.status === 'successful' ? 'COMPLETED' :
-                       data.status === 'failed' ? 'FAILED' :
-                       data.status === 'cancelled' ? 'FAILED' : 'PROCESSING';
-
       await db.payment.update({
         where: { id: payment.id },
         data: {
-          status: newStatus,
-          transactionId: data.id?.toString(),
-          providerResponse: JSON.stringify(data),
-          processedAt: newStatus === 'COMPLETED' ? new Date() : undefined,
+          status: mappedStatus,
+          transactionId: result.transactionId || payment.transactionId,
+          providerResponse: JSON.stringify(result),
+          processedAt: mappedStatus === 'COMPLETED' ? new Date() : undefined,
         },
       });
 
       // If payment successful, update related task/order
-      if (newStatus === 'COMPLETED') {
-        const meta = data.meta || {};
+      if (mappedStatus === 'COMPLETED') {
+        const meta = (result as { meta?: Record<string, unknown> }).meta || {};
         if (meta.task_id) {
           await db.task.update({
-            where: { id: meta.task_id },
+            where: { id: meta.task_id as string },
             data: { paymentStatus: 'COMPLETED' },
           });
         }
         if (meta.order_id) {
           await db.order.update({
-            where: { id: meta.order_id },
+            where: { id: meta.order_id as string },
             data: { paymentStatus: 'COMPLETED' },
           });
         }
@@ -280,15 +221,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       payment: {
-        reference: data.tx_ref,
-        transactionId: data.id,
-        amount: data.amount,
-        currency: data.currency,
-        status: data.status,
-        paidAt: data.paid_at,
+        reference: result.txRef,
+        transactionId: result.transactionId,
+        amount: result.amount,
+        currency: result.currency,
+        status: result.status,
+        paidAt: 'paidAt' in result ? (result as { paidAt?: string }).paidAt : undefined,
         customer: {
-          email: data.customer?.email,
-          phone: data.customer?.phone_number,
+          email: 'customerEmail' in result ? (result as { customerEmail?: string }).customerEmail : undefined,
+          phone: 'customerPhone' in result ? (result as { customerPhone?: string }).customerPhone : undefined,
         },
       },
     });

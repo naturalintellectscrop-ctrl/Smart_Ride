@@ -13,11 +13,11 @@ import {
   Clock
 } from 'lucide-react';
 import {
-  searchPlaces,
-  reverseGeocode,
+  searchPlacesDetailed,
+  reverseGeocodeDetailed,
   GeocodingResult,
   Coordinates,
-} from '@/lib/maps/mapbox-service';
+} from '@/lib/mapbox/mapbox-service';
 
 // ==========================================
 // Types
@@ -70,7 +70,7 @@ export function PlaceSearch({
 
     setIsLoading(true);
     try {
-      const searchResults = await searchPlaces(searchQuery, {
+      const searchResults = await searchPlacesDetailed(searchQuery, {
         proximity,
         country: 'ug',
         limit: 8,
@@ -148,7 +148,7 @@ export function PlaceSearch({
           longitude: position.coords.longitude,
         };
 
-        const result = await reverseGeocode(coords);
+        const result = await reverseGeocodeDetailed(coords);
         if (result) {
           handleSelectPlace(result);
         } else {

@@ -4,24 +4,30 @@
   "description": "Multi-Service Mobility Platform for Uganda - Ride, Food Delivery, Shopping & More",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0D0D12",
-  "theme_color": "#00FF88",
+  "background_color": "#111827",
+  "theme_color": "#005f3a",
   "orientation": "portrait-primary",
   "scope": "/",
   "lang": "en",
   "categories": ["transportation", "food", "shopping", "delivery"],
   "icons": [
     {
-      "src": "/smartride-logo.jpeg",
-      "sizes": "1024x1024",
-      "type": "image/jpeg",
+      "src": "/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/favicon.jpg",
-      "sizes": "any",
-      "type": "image/jpeg",
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
   "screenshots": [],
@@ -30,19 +36,37 @@
       "name": "Book a Ride",
       "short_name": "Ride",
       "description": "Book a Smart Boda or Smart Car ride",
-      "url": "/?action=ride"
+      "url": "/?action=ride",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Order Food",
       "short_name": "Food",
       "description": "Order food delivery from restaurants",
-      "url": "/?action=food"
+      "url": "/?action=food",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Shopping",
       "short_name": "Shop",
       "description": "Order groceries and shopping delivery",
-      "url": "/?action=shopping"
+      "url": "/?action=shopping",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
   "related_applications": [],

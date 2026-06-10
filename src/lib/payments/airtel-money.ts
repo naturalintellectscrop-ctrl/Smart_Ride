@@ -5,6 +5,8 @@
  * Supports Uganda, Kenya, Tanzania, Rwanda, DRC, Niger, Chad, Congo, Gabon
  */
 
+import { paymentLogger } from '@/lib/logging/logger';
+
 // Airtel Money Configuration
 const AIRTEL_CONFIG = {
   baseUrl: process.env.AIRTEL_MONEY_ENVIRONMENT === 'production'
@@ -14,6 +16,19 @@ const AIRTEL_CONFIG = {
   clientSecret: process.env.AIRTEL_MONEY_CLIENT_SECRET || '',
   callbackUrl: process.env.AIRTEL_MONEY_CALLBACK_URL || '',
 };
+
+/**
+ * Check if Airtel Money service is properly configured
+ */
+export function isConfigured(): boolean {
+  return Boolean(AIRTEL_CONFIG.clientId && AIRTEL_CONFIG.clientSecret);
+}
+
+/** Boolean export for quick checks */
+export const airtelMoneyConfigured = isConfigured();
+
+/** Structured unavailability message */
+const UNAVAILABLE_MESSAGE = 'Airtel Money service not configured. Set AIRTEL_MONEY_CLIENT_ID and AIRTEL_MONEY_CLIENT_SECRET environment variables.';
 
 // Token cache
 let cachedToken: { token: string; expiresAt: number } | null = null;
@@ -34,8 +49,8 @@ async function getAccessToken(): Promise<string> {
     return cachedToken.token;
   }
 
-  if (!AIRTEL_CONFIG.clientId || !AIRTEL_CONFIG.clientSecret) {
-    throw new Error('Airtel Money credentials not configured');
+  if (!isConfigured()) {
+    throw new Error(UNAVAILABLE_MESSAGE);
   }
 
   const response = await fetch(
@@ -84,6 +99,12 @@ export async function requestPayment(params: {
   transactionId?: string;
   error?: string;
 }> {
+  // Check if gateway is configured before attempting
+  if (!isConfigured()) {
+    paymentLogger.warn(UNAVAILABLE_MESSAGE);
+    return { success: false, error: UNAVAILABLE_MESSAGE };
+  }
+
   try {
     const token = await getAccessToken();
     const reference = params.reference || generateReference();
@@ -135,7 +156,7 @@ export async function requestPayment(params: {
       transactionId: data.transaction?.id,
     };
   } catch (error) {
-    console.error('Airtel Money payment request error:', error);
+    paymentLogger.error('Airtel Money payment request error:', { error: String(error) });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Payment request failed',
@@ -157,6 +178,12 @@ export async function collectPayment(params: {
   referenceId?: string;
   error?: string;
 }> {
+  // Check if gateway is configured before attempting
+  if (!isConfigured()) {
+    paymentLogger.warn(UNAVAILABLE_MESSAGE);
+    return { success: false, error: UNAVAILABLE_MESSAGE };
+  }
+
   try {
     const token = await getAccessToken();
     const reference = params.reference || generateReference();
@@ -222,6 +249,11 @@ export async function getTransactionStatus(referenceId: string): Promise<{
   currency?: string;
   error?: string;
 }> {
+  if (!isConfigured()) {
+    paymentLogger.warn(UNAVAILABLE_MESSAGE);
+    return { success: false, error: UNAVAILABLE_MESSAGE };
+  }
+
   try {
     const token = await getAccessToken();
 
@@ -272,6 +304,12 @@ export async function disburseFunds(params: {
   transactionId?: string;
   error?: string;
 }> {
+  // Check if gateway is configured before attempting
+  if (!isConfigured()) {
+    paymentLogger.warn(UNAVAILABLE_MESSAGE);
+    return { success: false, error: UNAVAILABLE_MESSAGE };
+  }
+
   try {
     const token = await getAccessToken();
     const reference = params.reference || generateReference();
@@ -339,6 +377,11 @@ export async function getAccountBalance(): Promise<{
   currency?: string;
   error?: string;
 }> {
+  if (!isConfigured()) {
+    paymentLogger.warn(UNAVAILABLE_MESSAGE);
+    return { success: false, error: UNAVAILABLE_MESSAGE };
+  }
+
   try {
     const token = await getAccessToken();
 
@@ -421,6 +464,7 @@ async function getPaymentStatus(referenceId: string) {
 }
 
 export const airtelMoneyService = {
+  isConfigured,
   requestPayment,
   collectPayment,
   getTransactionStatus,

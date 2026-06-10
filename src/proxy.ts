@@ -1,5 +1,5 @@
 /**
- * Next.js Edge Proxy
+ * Next.js Edge Proxy (Next.js 16 convention)
  *
  * Runs on every matched request and:
  * - Generates and propagates x-request-id headers

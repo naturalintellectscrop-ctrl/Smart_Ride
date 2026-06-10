@@ -3,37 +3,13 @@
  * Processes payment callbacks from Flutterwave
  * 
  * IMPORTANT: This endpoint must be publicly accessible
- * Verify webhook signature to prevent fraud
+ * Webhook signature verification is MANDATORY — requests without valid signatures are rejected.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import crypto from 'crypto';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
-
-// Flutterwave webhook secret for signature verification
-const WEBHOOK_SECRET = process.env.FLUTTERWAVE_WEBHOOK_SECRET || '';
-
-/**
- * Verify Flutterwave webhook signature
- * Prevents fraudulent payment callbacks
- */
-function verifyWebhookSignature(
-  payload: string,
-  signature: string,
-  secret: string
-): boolean {
-  if (!secret) {
-    // If no secret configured, log warning but accept (for initial setup)
-    return true;
-  }
-  
-  const expectedSignature = crypto
-    .createHmac('sha256', secret)
-    .update(payload)
-    .digest('hex');
-  
-  return signature === expectedSignature;
-}
+import { flutterwaveService } from '@/lib/payments/flutterwave-service';
+import { paymentLogger } from '@/lib/logging/logger';
 
 /**
  * POST /api/webhooks/flutterwave
@@ -41,12 +17,24 @@ function verifyWebhookSignature(
  */
 export async function POST(request: NextRequest) {
   try {
+    // Check if webhook secret is configured — MANDATORY for security
+    if (!flutterwaveService.isWebhookConfigured()) {
+      paymentLogger.error('CRITICAL: FLUTTERWAVE_WEBHOOK_SECRET is not set. Webhook requests cannot be verified and are being rejected. Set the FLUTTERWAVE_WEBHOOK_SECRET environment variable to fix this.');
+      return NextResponse.json(
+        { success: false, error: 'Webhook secret not configured. Payment callbacks cannot be processed safely.' },
+        { status: 500 }
+      );
+    }
+
     // Get raw body for signature verification
     const rawBody = await request.text();
     const signature = request.headers.get('verif-hash') || '';
     
-    // Verify signature
-    if (!verifyWebhookSignature(rawBody, signature, WEBHOOK_SECRET)) {
+    // Verify signature using the service
+    if (!flutterwaveService.verifyWebhookSignature(rawBody, signature)) {
+      paymentLogger.warn('Flutterwave webhook: invalid signature', {
+        hasSignature: Boolean(signature),
+      });
       return NextResponse.json({ success: false, error: 'Invalid signature' },
         { status: 401 }
       );
@@ -148,6 +136,7 @@ export async function POST(request: NextRequest) {
     });
     
   } catch (error) {
+    paymentLogger.error('Flutterwave webhook processing error:', { error: String(error) });
     // Log error but return 200 to prevent retries for invalid data
     return NextResponse.json({ success: false, error: 'Processing failed' },
       { status: 500 }

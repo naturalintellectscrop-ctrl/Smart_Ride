@@ -5,8 +5,9 @@
 
 import { db } from '@/lib/db';
 import { PaymentMethod, TaskType, TransactionType } from '@prisma/client';
-import { MTN_MOMO, generateReferenceId as generateMTNReference } from './mtn-momo';
-import { AIRTEL_MONEY, generateReferenceId as generateAirtelReference } from './airtel-money';
+import { MTN_MOMO, generateReferenceId as generateMTNReference, isConfigured as isMTNConfigured } from './mtn-momo';
+import { AIRTEL_MONEY, generateReferenceId as generateAirtelReference, isConfigured as isAirtelConfigured } from './airtel-money';
+import { paymentLogger } from '@/lib/logging/logger';
 
 // ==========================================
 // Types
@@ -87,9 +88,31 @@ export async function initiatePayment(params: InitiatePaymentParams): Promise<Pa
     // Process based on payment method
     switch (paymentMethod) {
       case 'MTN_MOMO':
+        if (!isMTNConfigured()) {
+          paymentLogger.warn('MTN MoMo gateway not configured. Set MTN_MOMO_API_USER, MTN_MOMO_API_KEY, and MTN_MOMO_SUBSCRIPTION_KEY environment variables.');
+          await updatePaymentStatus(payment.id, 'FAILED', 'MTN MoMo gateway not configured');
+          return {
+            success: false,
+            paymentId: payment.id,
+            reference,
+            status: 'FAILED',
+            message: 'MTN MoMo gateway not configured. Please try another payment method.',
+          };
+        }
         return await processMTNPayment(payment.id, reference, amount, phoneNumber!, description);
       
       case 'AIRTEL_MONEY':
+        if (!isAirtelConfigured()) {
+          paymentLogger.warn('Airtel Money gateway not configured. Set AIRTEL_MONEY_CLIENT_ID and AIRTEL_MONEY_CLIENT_SECRET environment variables.');
+          await updatePaymentStatus(payment.id, 'FAILED', 'Airtel Money gateway not configured');
+          return {
+            success: false,
+            paymentId: payment.id,
+            reference,
+            status: 'FAILED',
+            message: 'Airtel Money gateway not configured. Please try another payment method.',
+          };
+        }
         return await processAirtelPayment(payment.id, reference, amount, phoneNumber!, description);
       
       case 'CASH':
@@ -102,7 +125,7 @@ export async function initiatePayment(params: InitiatePaymentParams): Promise<Pa
         throw new Error(`Unsupported payment method: ${paymentMethod}`);
     }
   } catch (error) {
-    console.error('Payment initiation error:', error);
+    paymentLogger.error('Payment initiation error:', { error: String(error) });
     return {
       success: false,
       paymentId: '',
@@ -638,6 +661,8 @@ export const PaymentService = {
   handleMTNCallback,
   handleAirtelCallback,
   handleSuccessfulPayment,
+  isMTNConfigured,
+  isAirtelConfigured,
 };
 
 export default PaymentService;

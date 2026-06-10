@@ -51,6 +51,7 @@ export async function GET(request: NextRequest) {
 
     // Get Mapbox access token
     const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ||
+                        process.env.NEXT_PUBLIC_MAPBOX_TOKEN ||
                         process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
 
     if (!mapboxToken) {

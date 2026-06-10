@@ -6,7 +6,8 @@
 import { db } from '@/lib/db';
 import { NotificationType } from '@prisma/client';
 import { broadcastToUser } from '@/lib/realtime-server';
-import { sendPushNotification } from './push-notification.service';
+import { sendPushNotification, isConfigured as isPushConfigured } from './push-notification.service';
+import { notificationLogger } from '@/lib/logging/logger';
 
 export interface CreateNotificationInput {
   userId: string;
@@ -52,22 +53,26 @@ export async function createNotification(input: CreateNotificationInput): Promis
     });
 
     // Send push notification (non-blocking — don't fail if push fails)
-    try {
-      await sendPushNotification({
-        userId: input.userId,
-        title: input.title,
-        message: input.message,
-        data: {
-          notificationId: notification.id,
-          type: input.type,
-          referenceId: input.referenceId,
-          referenceType: input.referenceType,
-          ...input.data,
-        },
-      });
-    } catch (pushError) {
-      console.error('[Notification] Push notification failed:', pushError);
-      // Don't fail the notification creation if push fails
+    if (isPushConfigured()) {
+      try {
+        await sendPushNotification({
+          userId: input.userId,
+          title: input.title,
+          message: input.message,
+          data: {
+            notificationId: notification.id,
+            type: input.type,
+            referenceId: input.referenceId,
+            referenceType: input.referenceType,
+            ...input.data,
+          },
+        });
+      } catch (pushError) {
+        notificationLogger.warn('Push notification failed:', { error: String(pushError) });
+        // Don't fail the notification creation if push fails
+      }
+    } else {
+      notificationLogger.warn('Push notifications not configured, skipping push notification delivery.');
     }
 
     return { success: true, notification };
@@ -107,22 +112,26 @@ export async function createNotifications(
     }
 
     // Send push notifications (non-blocking — don't fail if push fails)
-    for (const input of inputs) {
-      try {
-        await sendPushNotification({
-          userId: input.userId,
-          title: input.title,
-          message: input.message,
-          data: {
-            type: input.type,
-            referenceId: input.referenceId,
-            referenceType: input.referenceType,
-            ...input.data,
-          },
-        });
-      } catch (pushError) {
-        console.error('[Notification] Push notification failed:', pushError);
+    if (isPushConfigured()) {
+      for (const input of inputs) {
+        try {
+          await sendPushNotification({
+            userId: input.userId,
+            title: input.title,
+            message: input.message,
+            data: {
+              type: input.type,
+              referenceId: input.referenceId,
+              referenceType: input.referenceType,
+              ...input.data,
+            },
+          });
+        } catch (pushError) {
+          notificationLogger.warn('Push notification failed:', { error: String(pushError) });
+        }
       }
+    } else {
+      notificationLogger.warn('Push notifications not configured, skipping batch push delivery.');
     }
 
     return { success: true };
@@ -590,22 +599,26 @@ export async function createNotificationsForUsers(
   }
 
   // Send push notifications (non-blocking — don't fail if push fails)
-  for (const userId of userIds) {
-    try {
-      await sendPushNotification({
-        userId,
-        title: notification.title,
-        message: notification.message,
-        data: {
-          type: notification.type,
-          referenceId: notification.referenceId,
-          referenceType: notification.referenceType,
-          ...notification.data,
-        },
-      });
-    } catch (pushError) {
-      console.error('[Notification] Push notification failed:', pushError);
+  if (isPushConfigured()) {
+    for (const userId of userIds) {
+      try {
+        await sendPushNotification({
+          userId,
+          title: notification.title,
+          message: notification.message,
+          data: {
+            type: notification.type,
+            referenceId: notification.referenceId,
+            referenceType: notification.referenceType,
+            ...notification.data,
+          },
+        });
+      } catch (pushError) {
+        notificationLogger.warn('Push notification failed:', { error: String(pushError) });
+      }
     }
+  } else {
+    notificationLogger.warn('Push notifications not configured, skipping multi-user push delivery.');
   }
 
   return notifications;

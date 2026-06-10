@@ -6,10 +6,10 @@ import { cn } from '@/lib/utils';
 import { 
   MAPBOX_CONFIG, 
   Coordinates, 
-  getDirections,
+  getDirectionsMulti as getDirections,
   formatDistance,
   formatDuration
-} from '@/lib/maps/mapbox-service';
+} from '@/lib/mapbox/mapbox-service';
 
 // ==========================================
 // Types

@@ -10,21 +10,40 @@
 //   await broadcastToUser(userId, 'notification', { type: 'task', title: 'Ride Updated', message: '...' });
 
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
+import { realtimeLogger } from '@/lib/logging/logger';
+
+// ============================================
+// CONFIGURATION CHECK
+// ============================================
+
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+
+/**
+ * Check if Supabase Realtime is properly configured.
+ * Requires NEXT_PUBLIC_SUPABASE_URL and (SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY).
+ */
+export function isConfigured(): boolean {
+  return Boolean(SUPABASE_URL && SERVICE_ROLE_KEY);
+}
+
+/** Boolean export for quick checks */
+export const realtimeConfigured = isConfigured();
+
+/** Structured unavailability message */
+const UNAVAILABLE_MESSAGE = 'Realtime service not configured. Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables.';
 
 // Singleton server-side Supabase client (uses service role key for full access)
 let serverClient: SupabaseClient | null = null;
 
-function getServerClient(): SupabaseClient {
-  if (serverClient) return serverClient;
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('[Realtime Server] Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
+function getServerClient(): SupabaseClient | null {
+  if (!isConfigured()) {
+    return null;
   }
 
-  serverClient = createClient(supabaseUrl, serviceRoleKey, {
+  if (serverClient) return serverClient;
+
+  serverClient = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     realtime: {
       params: {
         eventsPerSecond: 50,
@@ -44,8 +63,10 @@ function getServerClient(): SupabaseClient {
 const channelCache = new Map<string, { channel: RealtimeChannel; lastUsedAt: number }>();
 const CHANNEL_IDLE_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 
-function getOrCreateChannel(name: string): RealtimeChannel {
+function getOrCreateChannel(name: string): RealtimeChannel | null {
   const client = getServerClient();
+  if (!client) return null;
+
   const cached = channelCache.get(name);
 
   // Reuse if channel exists and is not closed
@@ -68,6 +89,7 @@ function getOrCreateChannel(name: string): RealtimeChannel {
 function cleanupIdleChannels(): void {
   const now = Date.now();
   const client = getServerClient();
+  if (!client) return;
 
   for (const [name, entry] of channelCache.entries()) {
     if (now - entry.lastUsedAt > CHANNEL_IDLE_TIMEOUT) {
@@ -112,8 +134,18 @@ export async function broadcastEvent(
   event: string,
   payload: unknown
 ): Promise<void> {
+  // Gracefully no-op when realtime is not configured
+  if (!isConfigured()) {
+    realtimeLogger.warn(UNAVAILABLE_MESSAGE);
+    return;
+  }
+
   try {
     const channel = getOrCreateChannel(channelName);
+    if (!channel) {
+      realtimeLogger.warn('Failed to create realtime channel — client not available.');
+      return;
+    }
 
     await channel.send({
       type: 'broadcast',
@@ -123,7 +155,7 @@ export async function broadcastEvent(
 
     // Don't remove the channel — let it be reused from cache
   } catch (error) {
-    console.error(`[Realtime Server] Failed to broadcast to ${channelName}:`, error);
+    realtimeLogger.error(`Failed to broadcast to ${channelName}:`, { error: String(error) });
   }
 }
 

@@ -1,154 +1,160 @@
 /**
- * Environment Configuration Validation
- * Ensures all required environment variables are set for production
- * 
- * IMPORTANT: Expo release builds require EXPO_PUBLIC_ prefix for client-side env vars
- * NEXT_PUBLIC_ is for Next.js web, EXPO_PUBLIC_ is for Expo mobile
+ * Startup Environment Validation
+ *
+ * Validates critical and feature-specific environment variables on server startup.
+ * NEVER logs or exposes actual env var values — only checks their presence.
  */
 
-// Required environment variables for Expo mobile
-const requiredEnvVars = [
-  'EXPO_PUBLIC_FIREBASE_API_KEY',
-  'EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN',
-  'EXPO_PUBLIC_FIREBASE_PROJECT_ID',
-  'EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN',
-  'JWT_SECRET',
-  'DATABASE_URL',
-] as const;
-
-// Optional environment variables (with defaults)
-const optionalEnvVars = {
-  EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET: '',
-  EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: '',
-  EXPO_PUBLIC_FIREBASE_APP_ID: '',
-  EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID: '',
-  EXPO_PUBLIC_FIREBASE_VAPID_KEY: '',
-  MTN_MOMO_SUBSCRIPTION_KEY: '',
-  MTN_MOMO_API_KEY: '',
-  MTN_MOMO_USER_ID: '',
-  MTN_MOMO_ENVIRONMENT: 'sandbox',
-  AIRTEL_MONEY_CLIENT_ID: '',
-  AIRTEL_MONEY_CLIENT_SECRET: '',
-  AIRTEL_MONEY_ENVIRONMENT: 'sandbox',
+/**
+ * Environment variable categories and their members.
+ * CRITICAL vars must be present for the server to start in production.
+ * Other categories enable optional features.
+ */
+const ENV_CATEGORIES = {
+  CRITICAL: ['JWT_SECRET', 'DATABASE_URL'],
+  PAYMENT: [
+    'MTN_MOMO_SUBSCRIPTION_KEY',
+    'MTN_MOMO_API_KEY',
+    'MTN_MOMO_SECRET_KEY',
+    'AIRTEL_MONEY_CLIENT_ID',
+    'AIRTEL_MONEY_CLIENT_SECRET',
+  ],
+  NOTIFICATION: [
+    'NEXT_PUBLIC_FIREBASE_PROJECT_ID',
+    'NEXT_PUBLIC_FIREBASE_VAPID_KEY',
+  ],
+  EMAIL: ['RESEND_API_KEY'],
+  MAPS: ['NEXT_PUBLIC_MAPBOX_TOKEN'],
 } as const;
 
-export interface EnvConfig {
-  // Firebase
-  firebase: {
-    apiKey: string;
-    authDomain: string;
-    projectId: string;
-    storageBucket: string;
-    messagingSenderId: string;
-    appId: string;
-    measurementId: string;
-    vapidKey: string;
-  };
-  // Mapbox
-  mapbox: {
-    accessToken: string;
-  };
-  // Payments
-  payments: {
-    mtn: {
-      subscriptionKey: string;
-      apiKey: string;
-      userId: string;
-      environment: 'sandbox' | 'production';
-      isConfigured: boolean;
-    };
-    airtel: {
-      clientId: string;
-      clientSecret: string;
-      environment: 'sandbox' | 'production';
-      isConfigured: boolean;
-    };
-  };
-  // Security
-  security: {
-    jwtSecret: string;
-  };
-  // Database
-  database: {
-    url: string;
-  };
+type CategoryName = keyof typeof ENV_CATEGORIES;
+
+/**
+ * Map from feature name to the env var category it requires.
+ */
+const FEATURE_CATEGORY_MAP: Record<string, CategoryName> = {
+  payments: 'PAYMENT',
+  notifications: 'NOTIFICATION',
+  email: 'EMAIL',
+  maps: 'MAPS',
+};
+
+/**
+ * Check whether a single env var is present (non-empty string).
+ */
+function isPresent(key: string): boolean {
+  const value = process.env[key];
+  return typeof value === 'string' && value.length > 0;
 }
 
-// Validate and get environment configuration
-export function getEnvConfig(): EnvConfig {
-  // Check for missing required variables (log warning only, don't throw)
-  const missingVars = requiredEnvVars.filter(
-    (key) => !process.env[key] || process.env[key] === ''
-  );
+/**
+ * Get the list of missing env vars for a given category.
+ */
+function getMissingForCategory(category: CategoryName): string[] {
+  return ENV_CATEGORIES[category].filter((key) => !isPresent(key));
+}
 
-  if (missingVars.length > 0) {
-    console.warn(`[ENV] Missing environment variables: ${missingVars.join(', ')}`);
-  }
+/**
+ * Validate environment variables on server startup.
+ *
+ * - Always checks CRITICAL vars:
+ *   - In production (NODE_ENV=production): throws if any are missing.
+ *   - In development: logs warnings but does not throw.
+ * - For all other categories: logs warnings about missing vars and
+ *   which features will be unavailable.
+ * - Returns an object with validation status, missing vars per category,
+ *   and warning messages.
+ */
+export function validateEnv(): {
+  isValid: boolean;
+  missing: Record<string, string[]>;
+  warnings: string[];
+} {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const missing: Record<string, string[]> = {};
+  const warnings: string[] = [];
 
-  // Check for placeholder values
-  const placeholderVars: string[] = [];
-  Object.entries(process.env).forEach(([key, value]) => {
-    if (value && (value.startsWith('your_') || value.includes('change_this'))) {
-      placeholderVars.push(key);
+  // --- CRITICAL vars ---
+  const criticalMissing = getMissingForCategory('CRITICAL');
+  missing.CRITICAL = criticalMissing;
+
+  if (criticalMissing.length > 0) {
+    const msg = `[ENV] CRITICAL: Missing required environment variables: ${criticalMissing.join(', ')}`;
+
+    if (isProduction) {
+      throw new Error(
+        `Server cannot start without required environment variables: ${criticalMissing.join(', ')}. ` +
+          `Please set them before deploying to production.`
+      );
     }
-  });
 
-  if (placeholderVars.length > 0) {
-    console.warn(`[ENV] Variables with placeholder values: ${placeholderVars.join(', ')}`);
+    // Development: warn only
+    console.warn(msg);
+    warnings.push(msg);
   }
 
-  return {
-    firebase: {
-      apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY || '',
-      authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-      projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID || '',
-      storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
-      messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-      appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID || '',
-      measurementId: process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID || '',
-      vapidKey: process.env.EXPO_PUBLIC_FIREBASE_VAPID_KEY || '',
-    },
-    mapbox: {
-      accessToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '',
-    },
-    payments: {
-      mtn: {
-        subscriptionKey: process.env.MTN_MOMO_SUBSCRIPTION_KEY || '',
-        apiKey: process.env.MTN_MOMO_API_KEY || '',
-        userId: process.env.MTN_MOMO_USER_ID || '',
-        environment: (process.env.MTN_MOMO_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox',
-        isConfigured: !!(process.env.MTN_MOMO_SUBSCRIPTION_KEY && process.env.MTN_MOMO_API_KEY),
-      },
-      airtel: {
-        clientId: process.env.AIRTEL_MONEY_CLIENT_ID || '',
-        clientSecret: process.env.AIRTEL_MONEY_CLIENT_SECRET || '',
-        environment: (process.env.AIRTEL_MONEY_ENVIRONMENT as 'sandbox' | 'production') || 'sandbox',
-        isConfigured: !!(process.env.AIRTEL_MONEY_CLIENT_ID && process.env.AIRTEL_MONEY_CLIENT_SECRET),
-      },
-    },
-    security: {
-      jwtSecret: process.env.JWT_SECRET || 'dev-secret-key-not-for-production',
-    },
-    database: {
-      url: process.env.DATABASE_URL || '',
-    },
-  };
+  // --- Optional feature categories ---
+  const optionalCategories: CategoryName[] = [
+    'PAYMENT',
+    'NOTIFICATION',
+    'EMAIL',
+    'MAPS',
+  ];
+
+  for (const category of optionalCategories) {
+    const categoryMissing = getMissingForCategory(category);
+    missing[category] = categoryMissing;
+
+    if (categoryMissing.length > 0) {
+      const featureLabel = category.toLowerCase();
+      const msg =
+        `[ENV] ${category}: Missing variables [${categoryMissing.join(', ')}]. ` +
+        `The '${featureLabel}' feature will be unavailable until these are configured.`;
+      console.warn(msg);
+      warnings.push(msg);
+    }
+  }
+
+  // Overall validity: all CRITICAL vars must be present
+  const isValid = criticalMissing.length === 0;
+
+  return { isValid, missing, warnings };
 }
 
-// Check if payments are configured
-export function isPaymentConfigured(): { mtn: boolean; airtel: boolean } {
-  const config = getEnvConfig();
-  return {
-    mtn: config.payments.mtn.isConfigured,
-    airtel: config.payments.airtel.isConfigured,
-  };
+/**
+ * Check if a feature is available based on whether its required env vars are set.
+ *
+ * Supported features: 'payments', 'notifications', 'email', 'maps'
+ * Returns false for unknown feature names.
+ */
+export function isFeatureAvailable(feature: string): boolean {
+  const category = FEATURE_CATEGORY_MAP[feature];
+  if (!category) return false;
+
+  const required = ENV_CATEGORIES[category];
+  return required.every((key) => isPresent(key));
 }
 
-// Check if Firebase is configured
-export function isFirebaseConfigured(): boolean {
-  const config = getEnvConfig();
-  return !!(config.firebase.apiKey && config.firebase.projectId);
-}
+/**
+ * Get a summary of which features are configured.
+ *
+ * Returns a plain object mapping feature names to boolean presence checks.
+ * No env var values are ever included — only booleans indicating whether
+ * the required variables for each feature are set.
+ * Useful for the health/startup endpoint.
+ */
+export function getEnvStatus(): Record<string, boolean> {
+  const features = Object.keys(FEATURE_CATEGORY_MAP);
+  const status: Record<string, boolean> = {};
 
-// Export singleton config
-export const envConfig = getEnvConfig();
+  for (const feature of features) {
+    status[feature] = isFeatureAvailable(feature);
+  }
+
+  // Also include critical vars presence (boolean only)
+  for (const key of ENV_CATEGORIES.CRITICAL) {
+    status[key] = isPresent(key);
+  }
+
+  return status;
+}

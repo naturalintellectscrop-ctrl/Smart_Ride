@@ -120,7 +120,7 @@ interface MiniMapProps {
 function MiniMap({ pickup, dropoff, riderLocation, taskStatus }: MiniMapProps) {
   // Mock map for demo - in production use Mapbox
   // Expo release builds require EXPO_PUBLIC_ prefix
-  const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+  const mapboxToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
   
   return (
     <div className="relative w-full h-40 bg-[#f3f4f5] rounded-xl overflow-hidden">

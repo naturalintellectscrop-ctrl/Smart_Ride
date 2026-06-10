@@ -1079,3 +1079,278 @@ Stage Summary:
 - Push notifications: end-to-end flow now works (mobile gets token → backend stores it → backend sends push via Expo API)
 - NativeWind: tailwind config fixed with missing content glob and secondary color scale
 - Zero lint errors, all new files follow existing code patterns
+
+---
+Task ID: 2
+Agent: pwa-icons-sw-agent
+Task: Create PWA Icons, Service Worker, and Fix Manifest
+
+Work Log:
+- Created /public/icons/ directory with brand-colored PNG icons generated via Node.js sharp:
+  - icon-192x192.png (6.4KB, 192x192) — location pin icon with deep green (#005f3a) background, bright green (#22C55E) pin, speed lines
+  - icon-512x512.png (23KB, 512x512) — same design at higher resolution
+- Generated favicon PNGs in /public/:
+  - favicon.png (512x512) — same icon as icon-512x512.png
+  - favicon-32x32.png (32x32) — scaled down favicon
+  - favicon-16x16.png (16x16) — scaled down favicon
+- Icon design: rounded square with linear gradient from #005f3a to #004a2e, location pin in #22C55E→#16a34a gradient, white inner circle, three speed lines in white with decreasing opacity
+- Rewrote /public/sw.js with improved service worker:
+  - Three separate caches: static (app shell), dynamic (navigation), API (network-first with TTL)
+  - Cache versioning: CACHE_VERSION = 2, all cache names include version suffix
+  - Cache-First strategy for static assets (.js, .css, .png, .svg, fonts, etc.)
+  - Network-First strategy for API requests (/api/*) with 5-minute TTL via sw-cache-date header
+  - Stale-While-Revalidate strategy for navigation requests
+  - LRU cache trimming: max 100 dynamic entries, max 50 API entries
+  - Proper cache cleanup on activate (removes old version caches)
+  - Background sync for rides and orders preserved
+  - Push notification and notification click handling preserved
+  - API cache fallback returns JSON { success: false, error: 'You are offline' }
+- Fixed /public/manifest.json:
+  - background_color: #0D0D12 → #111827 (matches dark theme)
+  - theme_color: #00FF88 → #005f3a (matches brand primary)
+  - Replaced icon entries: /smartride-logo.jpeg (1024x1024) and /favicon.jpg → /icons/icon-192x192.png and /icons/icon-512x512.png
+  - Added maskable icon entry: /icons/icon-512x512.png with purpose "maskable"
+  - Added icons to shortcuts for richer PWA shortcuts on mobile
+  - All other fields preserved (name, short_name, display: standalone, shortcuts, share_target, protocol_handlers, etc.)
+- Cleaned up temporary generate-icons.cjs script
+- Verified: manifest.json is valid JSON with correct fields
+- Verified: all PNG files have correct dimensions via sharp metadata
+- Ran bun run lint — zero errors
+
+Stage Summary:
+- 5 PNG icon files created with Smart Ride brand colors (deep green bg, bright green pin)
+- Service worker upgraded with proper cache versioning, 3 cache types, and 3 caching strategies (cache-first, network-first, stale-while-revalidate)
+- Manifest.json fixed with correct brand colors and proper icon paths
+- Zero lint errors
+
+---
+Task ID: 3
+Agent: fallback-agent
+Task: Add Graceful Fallbacks for All External API Services
+
+Work Log:
+- **Mapbox Service (src/lib/maps/mapbox-service.ts)**: Added `isConfigured()`, `mapboxConfigured` boolean, `UNAVAILABLE_MESSAGE`. Added early-return checks in `searchPlaces()`, `reverseGeocode()`, `getDirections()`, `getDistanceMatrix()`, `getStaticMapUrl()`. Uses structured `logger` from `@/lib/logging/logger`.
+- **Mapbox Service (src/lib/mapbox/mapbox-service.ts)**: Added `isConfigured()`, `mapboxConfigured` boolean, `UNAVAILABLE_MESSAGE`. Changed all `!MAPBOX_ACCESS_TOKEN` checks to `!isConfigured()` with `console.warn(UNAVAILABLE_MESSAGE)`. Added `isConfigured` to default export.
+- **Firebase Service (src/lib/firebase/firebase-service.ts)**: Added `isConfigured()` method (wraps `isFirebaseConfigured()`), `firebaseConfigured` boolean. Added early-return in `getFCMToken()` when not configured. Uses `notificationLogger`.
+- **Push Notification Service (src/lib/services/push-notification.service.ts)**: Added `isConfigured()` (returns true — Expo Push has no API key), `pushConfigured` boolean. Changed `console.error` to `notificationLogger.warn`.
+- **Notification Service (src/lib/services/notification.service.ts)**: Added `isPushConfigured()` check at all 3 push call sites (createNotification, createNotifications, createNotificationsForUsers). When push not configured, logs warning and skips push delivery. Uses `notificationLogger`.
+- **Email Service (src/lib/email/index.ts)**: Added `isConfigured()`, `emailConfigured` boolean, `UNAVAILABLE_MESSAGE`. Uses `logger` from structured logger. Added `isConfigured` to `emailService` export.
+- **MTN MoMo (src/lib/payments/mtn-momo.ts)**: Added `isConfigured()` checking apiUser+apiKey+primaryKey, `mtnMomoConfigured` boolean, `UNAVAILABLE_MESSAGE`. Added early-return in `requestPayment()`, `getPaymentStatus()`, `disburseFunds()`. Uses `paymentLogger`.
+- **Airtel Money (src/lib/payments/airtel-money.ts)**: Added `isConfigured()` checking clientId+clientSecret, `airtelMoneyConfigured` boolean, `UNAVAILABLE_MESSAGE`. Added early-return in all 5 public functions. Uses `paymentLogger`.
+- **Payment Service (src/lib/payments/payment-service.ts)**: Added gateway-configuration checks before dispatching to MTN/Airtel. Marks payment FAILED with structured error message. Uses `paymentLogger`. Added `isMTNConfigured`, `isAirtelConfigured` to PaymentService export.
+- **Realtime Service (src/lib/realtime-server.ts)**: Added `isConfigured()`, `realtimeConfigured` boolean, `UNAVAILABLE_MESSAGE`. `getServerClient()` returns null instead of throwing. `broadcastEvent()` gracefully no-ops with warning log. `getOrCreateChannel()` returns null when client unavailable. Uses `realtimeLogger`.
+
+Stage Summary:
+- All 5 external API service categories now have consistent graceful degradation pattern
+- Every service exports `isConfigured()` + boolean constant + structured unavailability message
+- When configured: no behavior change whatsoever
+- When NOT configured: structured error response + warning log, no unhandled throws
+- All `console.error/warn` replaced with structured logger named loggers
+- `bun run lint`: zero errors
+---
+Task ID: DevOps-API-Fixes
+Agent: Main Agent (with subagents)
+Task: Revert SQLite→PostgreSQL, fix DevOps/Deployment and API Completeness
+
+Work Log:
+- Reverted prisma/schema.prisma provider from "sqlite" back to "postgresql"
+- Updated .env with comprehensive production-ready config (50+ env vars across 10 sections)
+- Added JWT_SECRET to .env (cryptographically random 64-char hex)
+- Renamed middleware.ts → proxy.ts, export middleware() → export proxy() per Next.js 16 convention (no more deprecation warning)
+- Added metadataBase to layout.tsx metadata export (fixes Open Graph image resolution warning)
+- Fixed placeholder social links in page.tsx (href="#" → actual URLs: facebook.com/SmartRideUganda, etc.)
+- Fixed placeholder legal links in page.tsx (href="#" → /help#privacy, /help#terms)
+- Subagent created PWA icons (192x192, 512x512, favicon variants) with Smart Ride brand design
+- Subagent created production-grade service worker (sw.js) with cache versioning, LRU, offline fallbacks
+- Subagent fixed manifest.json (correct icon paths, theme_color #005f3a, background_color #111827)
+- Subagent added graceful fallbacks to all external API services:
+  - Mapbox: isConfigured() + early return with UNAVAILABLE_MESSAGE
+  - Firebase: isConfigured() + graceful no-op when unconfigured
+  - Email (Resend): isConfigured() + graceful return when API key missing
+  - MTN MoMo: isConfigured() + structured error responses
+  - Airtel Money: isConfigured() + structured error responses
+  - Payment Service: gateway config checks before dispatching
+  - Realtime (Supabase): isConfigured() + graceful no-op for broadcasts
+  - Push Notifications: check isPushConfigured() before sending
+- Fixed process-expired route: wrapped setServiceRoleContext/resetRLSContext in try/catch for DB-unavailable resilience
+- Verified: lint passes, landing page 200 OK, health/startup probes return correct responses
+
+Stage Summary:
+- Prisma provider: postgresql (production-correct)
+- All external services have graceful degradation when API keys unconfigured
+- PWA fully configured: icons, manifest, service worker
+- No middleware deprecation warning (proxy convention)
+- No metadataBase warning
+- No placeholder href="#" links remaining
+- Dev server: 200 OK, health/startup probes pass, zero lint errors
+
+---
+Task ID: 7-a
+Agent: 7-a Code Agent
+Task: Create startup environment validation + Production Dockerfile + wire env validation into startup route
+
+Work Log:
+- Rewrote `/src/lib/config/env.ts` — complete startup environment validation module:
+  - Defined `ENV_CATEGORIES` with CRITICAL (JWT_SECRET, DATABASE_URL), PAYMENT (MTN_MOMO_* x3, AIRTEL_MONEY_* x2), NOTIFICATION (FIREBASE_PROJECT_ID, VAPID_KEY), EMAIL (RESEND_API_KEY), MAPS (MAPBOX_TOKEN)
+  - `validateEnv()`: checks CRITICAL vars (throws in production, warns in development); logs warnings for optional categories with feature unavailability messages; returns `{ isValid, missing, warnings }`
+  - `isFeatureAvailable(feature)`: checks if all env vars for a given feature are set; supports 'payments', 'notifications', 'email', 'maps'; returns false for unknown features
+  - `getEnvStatus()`: returns boolean summary of all features + critical var presence (no values ever exposed)
+  - Internal helpers: `isPresent()`, `getMissingForCategory()`
+  - NEVER logs or exposes actual env var values
+
+- Created `/Dockerfile` — multi-stage production build:
+  - Stage 1 (deps): node:20-alpine, installs bun, installs dependencies, copies prisma schema, generates client
+  - Stage 2 (builder): copies node_modules + prisma from deps, copies source, sets NODE_ENV=production, runs npm build
+  - Stage 3 (runner): node:20-alpine minimal image, installs curl for healthcheck, creates non-root user (nextjs:nodejs), copies standalone output + static + prisma client, HEALTHCHECK on /api/health, runs as nextjs user, EXPOSE 3000
+  - Includes OCI labels for metadata
+
+- Created `/.dockerignore` — excludes node_modules, .next, .git, expo-app, mini-services, *.md, .env, .env.local
+
+- Created `/docker-compose.yml` — local development setup:
+  - postgres service: postgres:16-alpine, smartride db/user/password, port 5432, persistent volume, healthcheck via pg_isready
+  - app service: builds from Dockerfile, depends_on postgres (service_healthy), port 3000, production env vars (DATABASE_URL, JWT_SECRET, APP_URL, API_URL), healthcheck on /api/health
+
+- Updated `/src/app/api/health/startup/route.ts` — wired `getEnvStatus()`:
+  - Imported `getEnvStatus` from `@/lib/config/env`
+  - Added `features` object to both 200 and 503 responses
+  - Features include: payments, notifications, email, maps booleans + JWT_SECRET, DATABASE_URL booleans
+  - Still never exposes actual env var values
+
+- Ran `bun run lint` — zero errors
+- Verified dev server: /api/health/startup returns 200 with features object
+
+Stage Summary:
+- Startup environment validation module with 3 exported functions (validateEnv, isFeatureAvailable, getEnvStatus)
+- Production-ready Dockerfile with 3-stage build, non-root user, healthcheck
+- Docker Compose for local development with PostgreSQL persistence
+- Startup health endpoint now reports feature availability alongside critical var checks
+- Zero lint errors
+
+---
+Task ID: 7-b
+Agent: Sub-agent
+Task: Create Flutterwave payment service + fix webhook security + create server-side FCM push notification service
+
+Work Log:
+- **Task 1: Flutterwave Payment Service**
+  - Created `/src/lib/payments/flutterwave-service.ts` with `FlutterwaveService` class (singleton pattern matching mtn-momo.ts)
+  - Methods: `initiatePayment()`, `verifyTransaction()`, `getTransactionStatus()`, `refundTransaction()`, `isConfigured()`, `isWebhookConfigured()`, `verifyWebhookSignature()`, `mapStatus()`, `validatePhoneNumber()`, `isValidMTNNumber()`, `isValidAirtelNumber()`
+  - Uses API key authentication (no OAuth — Flutterwave uses secret key directly)
+  - Phone number validation for MTN (077/078/039) and Airtel (070/075/074/020) Uganda networks
+  - Status mapping: Flutterwave `successful` → `COMPLETED`, `failed`/`cancelled` → `FAILED`, `pending` → `PENDING`, `processing`/`charged` → `PROCESSING`
+  - Typed error responses with proper logging via `paymentLogger`
+  - Updated `/src/app/api/payments/flutterwave/route.ts` to use `flutterwaveService.initiatePayment()` and `flutterwaveService.verifyTransaction()` / `getTransactionStatus()`
+
+- **Task 2: Fix Flutterwave Webhook Security**
+  - Updated `/src/app/api/webhooks/flutterwave/route.ts`
+  - Removed the dangerous fallback that accepted all requests when `FLUTTERWAVE_WEBHOOK_SECRET` was not set
+  - Now returns HTTP 500 with clear error if secret is not configured
+  - Logs CRITICAL-level server-side error about missing webhook secret
+  - HMAC verification is now mandatory — uses `flutterwaveService.verifyWebhookSignature()`
+
+- **Task 3: Server-Side FCM Push Notification Service**
+  - Installed `firebase-admin@14.0.0` package
+  - Created `/src/lib/firebase/fcm-server-service.ts` with `FCMServerService` class (singleton)
+  - `initialize()` — initializes Firebase Admin with service account from env vars (priority: individual `FIREBASE_PROJECT_ID`/`FIREBASE_CLIENT_EMAIL`/`FIREBASE_PRIVATE_KEY` → fallback `FIREBASE_SERVICE_ACCOUNT` JSON string)
+  - `sendToDevice(token, message)` — sends to single device with proper Android/APNS config
+  - `sendToDevices(tokens, message)` — batch send (up to 500 per Firebase limit) with `sendEachForMulticast`
+  - `sendToTopic(topic, message)` — broadcasts to a topic/zone
+  - `subscribeToTopic(tokens, topic)` — subscribes devices to a topic
+  - `isConfigured()` — checks if Firebase Admin credentials are set
+  - Invalid tokens auto-detected and reported for cleanup; rate limits handled gracefully
+  - Updated `/src/lib/services/push-notification.service.ts` to use FCM server-side as fallback:
+    - Strategy 1: Expo Push tokens (mobile app users)
+    - Strategy 2: FCM server-side via firebase-admin (web/PWA users with non-Expo tokens)
+  - Added Firebase Admin env vars to `.env` file:
+    - `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `FIREBASE_SERVICE_ACCOUNT`
+  - Fixed `.env` comment: `FLUTTERWAVE_WEBHOOK_HASH` → `FLUTTERWAVE_WEBHOOK_SECRET`
+
+- Ran `bun run lint` — zero errors
+
+Stage Summary:
+- Flutterwave payment logic extracted into proper service class with full API coverage (initiate, verify, status, refund)
+- Flutterwave webhook security fixed — secret verification is now mandatory (no bypass when unconfigured)
+- Server-side FCM push notification service created with firebase-admin SDK
+- Push notification service now falls back to FCM server-side when Expo tokens are unavailable
+- All new env vars documented in .env
+- Zero lint errors
+
+---
+Task ID: 7-c
+Agent: Consolidation Agent
+Task: Consolidate duplicate Mapbox services
+
+Work Log:
+- Read both Mapbox service files thoroughly:
+  - Primary: /src/lib/mapbox/mapbox-service.ts (568 lines) — searchPlaces, reverseGeocode, getPlacesByCategory, getDirections, getStaticMapUrl, getRouteMapUrl, Kampala fallback
+  - Secondary: /src/lib/maps/mapbox-service.ts (527 lines) — searchPlaces, reverseGeocode, getDirections (multi-waypoint, driving-traffic), getDistanceMatrix, calculateDistance (Haversine), estimateETA, formatDistance, formatDuration, getMapTileUrl, MAPBOX_CONFIG
+- Created unified service at /src/lib/mapbox/mapbox-service.ts combining ALL functionality:
+  - All types from both files (PlaceResult, GeocodingResult, RouteResult, DirectionsResult, Coordinates, DistanceMatrixResult, etc.)
+  - searchPlaces — merged, accepts both [lng,lat] and Coordinates for proximity, returns PlaceResult[] with Kampala fallback
+  - searchPlacesDetailed — returns GeocodingResult[] with context parsing (secondary's searchPlaces)
+  - reverseGeocode — accepts both (lat, lng) and (Coordinates) calling patterns
+  - reverseGeocodeDetailed — returns GeocodingResult with context (secondary's reverseGeocode)
+  - getDirections — supports both 2-point ([lng,lat], [lng,lat]) and multi-waypoint (Coordinates[]) calling patterns
+  - getDirectionsMulti — full multi-waypoint routing with driving-traffic profile (secondary's getDirections)
+  - getDistanceMatrix — from secondary
+  - calculateDistance (Haversine) — from secondary
+  - estimateETA (by vehicle type) — from secondary
+  - formatDistance, formatDuration — from secondary
+  - getStaticMapUrl — merged from both (supports both coordinate formats, path overlay, style options)
+  - getRouteMapUrl — from primary
+  - getMapTileUrl — from secondary
+  - getPlacesByCategory — from primary
+  - POI_CATEGORIES, KAMPALA_CENTER, MAPBOX_CONFIG — from both
+  - MapboxService class — static methods wrapping all functions
+  - isConfigured(), mapboxConfigured, UNAVAILABLE_MESSAGE — unified config check
+  - getFallbackPlaces, getFallbackPlacesByCategory — Kampala fallback from primary
+- Updated secondary file (/src/lib/maps/mapbox-service.ts) to thin re-export with deprecation notice:
+  - Maps searchPlaces → searchPlacesDetailed (secondary API returns GeocodingResult[])
+  - Maps reverseGeocode → reverseGeocodeDetailed (secondary API returns GeocodingResult)
+  - Maps getDirections → getDirectionsMulti (secondary API accepts Coordinates[], returns DirectionsResult)
+  - All other exports pass through with same names
+- Updated consumer files to import from primary path:
+  - place-search.tsx: searchPlaces → searchPlacesDetailed, reverseGeocode → reverseGeocodeDetailed, import from @/lib/mapbox/
+  - mapbox-map.tsx: getDirections → getDirectionsMulti as getDirections, import from @/lib/mapbox/
+- Searched entire codebase for @/lib/maps/ imports — no remaining references
+- Ran bun run lint — zero errors
+
+Stage Summary:
+- Duplicate Mapbox services consolidated into single unified service at /src/lib/mapbox/mapbox-service.ts
+- Secondary path (/src/lib/maps/mapbox-service.ts) is now a thin re-export with deprecation notice
+- All consumer files updated to import from primary path (@/lib/mapbox/mapbox-service)
+- Both calling conventions preserved: simple (PlaceResult, RouteResult) and detailed (GeocodingResult, DirectionsResult)
+- MapboxService class provides static method access pattern alongside named function exports
+- Zero lint errors
+---
+Task ID: 7
+Agent: Main Agent
+Task: Complete remaining DevOps/Deployment and API Completeness items
+
+Work Log:
+- Fixed proxy.ts → confirmed Next.js 16 uses "proxy" convention (not "middleware"). File correctly named proxy.ts with export function proxy(). No deprecation warning.
+- Created startup environment validation at /src/lib/config/env.ts with validateEnv(), isFeatureAvailable(), getEnvStatus()
+- Wired getEnvStatus() into /api/health/startup endpoint — shows feature availability (payments, notifications, email, maps) as booleans
+- Created Flutterwave payment service at /src/lib/payments/flutterwave-service.ts with initiatePayment, verifyTransaction, refundTransaction, verifyWebhookSignature, isConfigured
+- Updated /src/app/api/payments/flutterwave/route.ts to use flutterwaveService instead of inline logic
+- Fixed Flutterwave webhook security — now returns 500 if FLUTTERWAVE_WEBHOOK_SECRET not set (previously accepted all requests)
+- Created server-side FCM push notification service at /src/lib/firebase/fcm-server-service.ts with sendToDevice, sendToDevices, sendToTopic, subscribeToTopic
+- Installed firebase-admin@14.0.0 package
+- Updated push-notification.service.ts with dual-strategy: Expo Push first, FCM server-side fallback
+- Fixed fcm-server-service.ts: removed eager initialization at module load (was causing ERROR log), made it lazy with isFCMServerConfigured()
+- Changed Firebase Admin missing credentials log level from ERROR to DEBUG (expected in dev)
+- Consolidated duplicate Mapbox services: unified /src/lib/mapbox/mapbox-service.ts combines all functions from both services; /src/lib/maps/mapbox-service.ts now thin re-export with deprecation notice
+- Updated consumers (place-search.tsx, mapbox-map.tsx) to import from canonical @/lib/mapbox/mapbox-service
+- Created production Dockerfile (3-stage build: deps → builder → runner, node:20-alpine, non-root user, healthcheck)
+- Created .dockerignore
+- Created docker-compose.yml with PostgreSQL 16 + app service
+- Added Firebase Admin env vars to .env (FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, FIREBASE_SERVICE_ACCOUNT)
+- Fixed FLUTTERWAVE_WEBHOOK_HASH → FLUTTERWAVE_WEBHOOK_SECRET in .env
+
+Stage Summary:
+- DevOps/Deployment items completed: proxy confirmed working, startup env validation, production Dockerfile, docker-compose, health endpoints with feature status
+- API Completeness items completed: Flutterwave service (full SDK client), server-side FCM push notifications, Mapbox service consolidated, Flutterwave webhook security fixed
+- All lint checks pass with zero errors
+- Dev server runs, landing page renders correctly with all sections
+- Health endpoints return 200 with proper feature availability reporting
+- Security headers (x-request-id, CSP, X-Frame-Options, etc.) all active via proxy.ts

@@ -9,9 +9,24 @@
  * 4. Add RESEND_API_KEY to environment variables
  */
 
+import { logger } from '@/lib/logging/logger';
+
 // Email configuration
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const FROM_EMAIL = process.env.EMAIL_FROM || 'noreply@smartride.ug';
+
+/**
+ * Check if email service is properly configured
+ */
+export function isConfigured(): boolean {
+  return Boolean(RESEND_API_KEY);
+}
+
+/** Boolean export for quick checks */
+export const emailConfigured = isConfigured();
+
+/** Structured unavailability message */
+const UNAVAILABLE_MESSAGE = 'Email service not configured. Set RESEND_API_KEY environment variable.';
 
 // Types
 export interface SendEmailParams {
@@ -37,10 +52,10 @@ export async function sendEmail(params: SendEmailParams): Promise<{
   error?: string;
 }> {
   // Check if API key is configured
-  if (!RESEND_API_KEY) {
-    console.warn('Email service not configured. Set RESEND_API_KEY environment variable.');
+  if (!isConfigured()) {
+    logger.warn(UNAVAILABLE_MESSAGE);
     // In development, log the email instead of sending
-    console.log('📧 Email would be sent:', {
+    logger.info('Email would be sent:', {
       to: params.to,
       subject: params.subject,
     });
@@ -72,7 +87,7 @@ export async function sendEmail(params: SendEmailParams): Promise<{
     const data = await response.json();
     return { success: true, id: data.id };
   } catch (error) {
-    console.error('Email send error:', error);
+    logger.error('Email send error:', { error: String(error) });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to send email',
@@ -474,6 +489,7 @@ function generateRiderStatus(params: {
 
 // Export email service
 export const emailService = {
+  isConfigured,
   send: sendEmail,
   templates: {
     generateOTP,
