@@ -71,6 +71,9 @@ dist/
 db/*.db
 *.db
 
+# Uploaded files (may contain sensitive credentials)
+upload/
+
 # Generated expo exports
 android-dist/
 dist/
