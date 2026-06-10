@@ -1416,3 +1416,20 @@ Stage Summary:
 - IMPORTANT MISMATCH: User-provided JWT keys (anon/service_role) decode to project ref "mmowwpdgrgdiyqheroak" which doesn't exist. The working project is "mmovwpdgrgdiyqheroak". These keys may not work with the actual project. User needs to verify correct Supabase project keys.
 - Feature status: maps ✅, notifications ✅, payments ❌ (needs MTN/Airtel/Flutterwave keys), email ❌ (needs Resend key)
 - Dev server has intermittent stability in sandbox (crashes after multiple requests) but all functionality verified working
+
+---
+Task ID: 3
+Agent: Sub-agent
+Task: Fix expo-app maps issues (API param mismatch, missing KAMPALA_POPULAR_PLACES, EAS token note)
+
+Work Log:
+- Fixed API parameter mismatch in expo-app/src/services/api.ts line 407: changed `query=${encodeURIComponent(query)}` to `search=${encodeURIComponent(query)}` to match backend route expecting `searchParams.get('search')` at /api/mapbox/geocoding
+- Added KAMPALA_POPULAR_PLACES export to expo-app/src/constants/index.ts with 16 popular Kampala locations matching backend /api/mapbox/kampala-places data (Acacia Mall, Garden City, Cafe Javas, Metroplex Mall, Parliament, Makerere University, Entebbe Airport, Serena Hotel, Ntinda, Kololo, Bugolobi, Mulago Hospital, Village Mall, Freedom City, Lugogo, Kampala Road)
+- Added comment in constants file noting that RNMAPBOX_MAPS_DOWNLOAD_TOKEN must be set as an EAS environment variable via `eas secret:push`, NOT in app.json (secret token)
+- Ran bun run lint — zero errors
+
+Stage Summary:
+- Geocoding API now sends `search` param matching backend expectation (was `query` → now `search`)
+- KAMPALA_POPULAR_PLACES now exported from constants, fixing TypeScript/build error in location-picker.tsx
+- EAS secret guidance documented in constants file (not in app.json)
+- Zero lint errors

@@ -404,7 +404,7 @@ class ApiService {
   // ==========================================
 
   async searchPlaces(query: string): Promise<ApiResponse<any[]>> {
-    return this.request<any[]>(`/mapbox/geocoding?query=${encodeURIComponent(query)}`);
+    return this.request<any[]>(`/mapbox/geocoding?search=${encodeURIComponent(query)}`);
   }
 
   async reverseGeocode(latitude: number, longitude: number): Promise<ApiResponse<any>> {

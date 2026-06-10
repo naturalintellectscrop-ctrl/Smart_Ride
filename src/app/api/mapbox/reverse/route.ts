@@ -6,19 +6,10 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/guards';
 
 // GET /api/mapbox/reverse - Reverse geocode coordinates
+// No auth required — location picking happens before login
 export async function GET(request: NextRequest) {
-  const authResult = requireAuth(request);
-
-  if (!authResult.success || !authResult.user) {
-    return NextResponse.json(
-      { success: false, error: authResult.error || 'Authentication required' },
-      { status: authResult.statusCode || 401 }
-    );
-  }
-
   try {
     const { searchParams } = new URL(request.url);
     const lat = searchParams.get('lat');

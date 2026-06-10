@@ -121,6 +121,31 @@ export const DEFAULT_LOCATION = {
   address: 'Kampala, Uganda',
 };
 
+// Popular Kampala Places (matches backend /api/mapbox/kampala-places data)
+export const KAMPALA_POPULAR_PLACES = [
+  { id: 'kla-acacia-mall', name: 'Acacia Mall', icon: 'shopping-bag', latitude: 0.3328, longitude: 32.5883, address: 'Kololo, Kampala' },
+  { id: 'kla-garden-city', name: 'Garden City', icon: 'storefront', latitude: 0.3175, longitude: 32.5900, address: 'Yusuf Lule Road, Kampala' },
+  { id: 'kla-cafe-javas', name: 'Cafe Javas', icon: 'restaurant', latitude: 0.3180, longitude: 32.5815, address: 'Kampala Road' },
+  { id: 'kla-metroplex', name: 'Metroplex Mall', icon: 'shopping-bag', latitude: 0.3710, longitude: 32.6440, address: 'Naalya, Kampala' },
+  { id: 'kla-parliament', name: 'Parliament', icon: 'business', latitude: 0.3176, longitude: 32.5825, address: 'Parliament Avenue' },
+  { id: 'kla-makerere', name: 'Makerere University', icon: 'school', latitude: 0.3350, longitude: 32.5700, address: 'Makerere Hill' },
+  { id: 'kla-entebbe-airport', name: 'Entebbe Airport', icon: 'airplane', latitude: 0.0480, longitude: 32.4430, address: 'Entebbe' },
+  { id: 'kla-serena-hotel', name: 'Serena Hotel', icon: 'bed', latitude: 0.3190, longitude: 32.5820, address: 'Kintu Road' },
+  { id: 'kla-ntinda', name: 'Ntinda', icon: 'location', latitude: 0.3544, longitude: 32.6136, address: 'Ntinda, Kampala' },
+  { id: 'kla-kololo', name: 'Kololo', icon: 'location', latitude: 0.3290, longitude: 32.5880, address: 'Kololo, Kampala' },
+  { id: 'kla-bugolobi', name: 'Bugolobi', icon: 'location', latitude: 0.3139, longitude: 32.6220, address: 'Bugolobi, Kampala' },
+  { id: 'kla-mulago-hospital', name: 'Mulago Hospital', icon: 'medkit', latitude: 0.3420, longitude: 32.5730, address: 'Mulago Hill' },
+  { id: 'kla-village-mall', name: 'Village Mall', icon: 'storefront', latitude: 0.3110, longitude: 32.6200, address: 'Bugolobi' },
+  { id: 'kla-freedom-city', name: 'Freedom City', icon: 'shopping-bag', latitude: 0.2970, longitude: 32.5690, address: 'Entebbe Road' },
+  { id: 'kla-lugogo', name: 'Lugogo', icon: 'location', latitude: 0.3275, longitude: 32.6000, address: 'Lugogo, Kampala' },
+  { id: 'kla-kampala-road', name: 'Kampala Road', icon: 'navigate', latitude: 0.3175, longitude: 32.5810, address: 'Kampala CBD' },
+];
+
+// NOTE: RNMAPBOX_MAPS_DOWNLOAD_TOKEN must be set as an EAS environment variable
+// for EAS builds to download the Mapbox SDK. Set it via:
+//   eas secret:push --scope project --type environment --key RNMAPBOX_MAPS_DOWNLOAD_TOKEN --value <your-token>
+// Do NOT put the secret token directly in app.json or source code.
+
 // Task Status Colors
 export const TASK_STATUS_COLORS: Record<string, string> = {
   CREATED: '#3B82F6',
