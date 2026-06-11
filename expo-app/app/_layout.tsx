@@ -199,23 +199,23 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0D0D12',
+    backgroundColor: '#f8f9fa',
     padding: 20,
   },
   errorTitle: {
-    color: '#FF6B35',
+    color: '#EF4444',
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 12,
   },
   errorText: {
-    color: '#FFFFFF',
+    color: '#191c1d',
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 20,
   },
   errorHint: {
-    color: 'rgba(255,255,255,0.5)',
+    color: '#6f7a71',
     fontSize: 12,
   },
 });

@@ -11,9 +11,9 @@ import { View, StyleSheet, Animated, Dimensions } from 'react-native';
 const { width, height } = Dimensions.get('window');
 
 const COLORS = {
-  primary: '#00FF88',
-  accent: '#00FFF3',
-  background: '#0D0D12',
+  primary: '#22C55E',
+  accent: '#0e7a4d',
+  background: '#f8f9fa',
 };
 
 interface Particle {

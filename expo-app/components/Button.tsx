@@ -34,16 +34,18 @@ interface ButtonProps {
 }
 
 const COLORS = {
-  primary: '#00FF88',
-  primaryDark: '#00CC6D',
-  accent: '#00FFF3',
-  background: '#0D0D12',
-  backgroundElevated: '#1A1A24',
-  text: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textMuted: 'rgba(255, 255, 255, 0.5)',
-  border: 'rgba(255, 255, 255, 0.1)',
+  primary: '#005f3a',
+  primaryDark: '#00522f',
+  accent: '#0e7a4d',
+  background: '#f8f9fa',
+  backgroundElevated: '#ffffff',
+  text: '#191c1d',
+  textSecondary: 'rgba(25, 28, 29, 0.7)',
+  textMuted: '#6f7a71',
+  border: '#bec9bf',
   error: '#F43F5E',
+  success: '#22C55E',
+  white: '#FFFFFF',
 };
 
 const variantStyles: Record<ButtonVariant, { container: ViewStyle; text: TextStyle }> = {
@@ -184,7 +186,7 @@ export function Button({
         {loading ? (
           <ActivityIndicator
             size="small"
-            color={variant === 'primary' ? COLORS.background : COLORS.primary}
+            color={variant === 'primary' ? COLORS.white : COLORS.primary}
           />
         ) : (
           <>

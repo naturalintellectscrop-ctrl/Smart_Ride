@@ -5,42 +5,44 @@
 // ============================================
 
 // ============================================
-// NOTE: COLORS is the DARK palette kept for backward compatibility.
+// NOTE: COLORS now matches the Stitch Design System (Light theme).
+// The Stitch spec defines a LIGHT theme with Deep Green (#005f3a)
+// as primary, white/light backgrounds, and Plus Jakarta Sans / Inter fonts.
 // New code should use `useTheme().colors` from @/src/context/theme-context
 // which automatically switches between LightColors and DarkColors.
 // ============================================
 
-// Brand Colors (Dark palette — legacy, still the default export)
+// Brand Colors — Stitch Design System (Light palette, default export)
 export const COLORS = {
-  // Primary - Neon Green (Main brand color)
-  primary: '#00FF88',
-  primaryLight: '#10B981',
-  primaryDark: '#059669',
+  // Primary - Deep Green (Stitch Design System)
+  primary: '#005f3a',
+  primaryLight: '#0e7a4d',
+  primaryDark: '#00522f',
 
   // Secondary - Electric Blue
   secondary: '#3B82F6',
   secondaryLight: '#60A5FA',
   secondaryDark: '#1D4ED8',
 
-  // Background - Dark Theme
-  background: '#0D0D12',
-  backgroundElevated: '#1A1A24',
-  backgroundSurface: '#252530',
-  backgroundSecondary: '#1A1A24',
+  // Background - Light Theme (Stitch spec: #f8f9fa)
+  background: '#f8f9fa',
+  backgroundElevated: '#ffffff',
+  backgroundSurface: '#f3f4f5',
+  backgroundSecondary: '#edeeef',
 
-  // Text
-  text: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textMuted: 'rgba(255, 255, 255, 0.5)',
-  textDisabled: 'rgba(255, 255, 255, 0.3)',
+  // Text - Dark on light (Stitch spec: #191c1d)
+  text: '#191c1d',
+  textSecondary: 'rgba(25, 28, 29, 0.7)',
+  textMuted: '#6f7a71',
+  textDisabled: 'rgba(25, 28, 29, 0.3)',
 
-  // Borders
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderLight: 'rgba(255, 255, 255, 0.05)',
-  borderStrong: 'rgba(255, 255, 255, 0.15)',
+  // Borders (Stitch spec: outline #6f7a71, outline-variant #bec9bf)
+  border: '#bec9bf',
+  borderLight: '#d9dadb',
+  borderStrong: '#6f7a71',
 
   // Status Colors
-  success: '#00FF88',
+  success: '#22C55E',
   error: '#EF4444',
   warning: '#F59E0B',
   info: '#3B82F6',
@@ -51,52 +53,56 @@ export const COLORS = {
   transparent: 'transparent',
 
   // Text dim (for icons, placeholders)
-  textDim: 'rgba(255, 255, 255, 0.3)',
+  textDim: 'rgba(25, 28, 29, 0.3)',
 
   // Service brand colors (matches SERVICES config)
-  serviceBoda: '#00FF88',
-  serviceCar: '#00D4FF',
+  serviceBoda: '#0e7a4d',
+  serviceCar: '#3B82F6',
   serviceFood: '#F59E0B',
   serviceDelivery: '#14B8A6',
   serviceShop: '#8B5CF6',
   serviceHealth: '#F43F5E',
 
-  // Legacy compatibility
+  // Stitch accent colors
   accent: '#F59E0B',
+  neonGreen: '#22C55E',
+  primaryFixed: '#98f6be',
+  primaryFixedDim: '#7cd9a4',
 };
 
-// Gradients
+// Gradients (Stitch Design System)
 export const GRADIENTS = {
-  primary: ['#00FF88', '#00D4FF'],
+  primary: ['#005f3a', '#0e7a4d'],
   danger: ['#EF4444', '#DC2626'],
-  accent: ['#00D4FF', '#00FF88'],
-  // Light mode variants
-  light: {
-    primary: ['#005f3a', '#0e7a4d'],
+  accent: ['#0e7a4d', '#005f3a'],
+  neonGreen: ['#22C55E', '#0e7a4d'],
+  // Dark mode variants
+  dark: {
+    primary: ['#00FF88', '#00D4FF'],
     danger: ['#EF4444', '#DC2626'],
-    accent: ['#0e7a4d', '#005f3a'],
+    accent: ['#00D4FF', '#00FF88'],
   },
 };
 
-// Glass styles
+// Glass styles (Stitch Design System - Light mode default)
 export const GLASS = {
-  background: 'rgba(19, 19, 26, 0.7)',
-  border: 'rgba(255, 255, 255, 0.05)',
-  shadow: 'rgba(0, 0, 0, 0.3)',
-  elevated: 'rgba(30, 30, 40, 0.8)',
-  // Light mode variants
-  light: {
-    background: 'rgba(255, 255, 255, 0.8)',
-    border: 'rgba(0, 95, 58, 0.08)',
-    shadow: 'rgba(0, 0, 0, 0.08)',
-    elevated: 'rgba(255, 255, 255, 0.9)',
+  background: 'rgba(255, 255, 255, 0.8)',
+  border: 'rgba(0, 95, 58, 0.08)',
+  shadow: 'rgba(0, 0, 0, 0.08)',
+  elevated: 'rgba(255, 255, 255, 0.9)',
+  // Dark mode variants
+  dark: {
+    background: 'rgba(19, 19, 26, 0.7)',
+    border: 'rgba(255, 255, 255, 0.05)',
+    shadow: 'rgba(0, 0, 0, 0.3)',
+    elevated: 'rgba(30, 30, 40, 0.8)',
   },
 };
 
-// Services config for ServiceIcon component
+// Services config for ServiceIcon component (Stitch Design System colors)
 export const SERVICES: Record<string, { icon: string; color: string; colorDim: string; colorBorder: string }> = {
-  BODA: { icon: 'bicycle', color: '#00FF88', colorDim: 'rgba(0, 255, 136, 0.08)', colorBorder: 'rgba(0, 255, 136, 0.15)' },
-  CAR: { icon: 'car', color: '#00D4FF', colorDim: 'rgba(0, 212, 255, 0.08)', colorBorder: 'rgba(0, 212, 255, 0.15)' },
+  BODA: { icon: 'bicycle', color: '#0e7a4d', colorDim: 'rgba(14, 122, 77, 0.08)', colorBorder: 'rgba(14, 122, 77, 0.15)' },
+  CAR: { icon: 'car', color: '#3B82F6', colorDim: 'rgba(59, 130, 246, 0.08)', colorBorder: 'rgba(59, 130, 246, 0.15)' },
   FOOD: { icon: 'restaurant', color: '#F59E0B', colorDim: 'rgba(245, 158, 11, 0.08)', colorBorder: 'rgba(245, 158, 11, 0.15)' },
   DELIVERY: { icon: 'cube', color: '#14B8A6', colorDim: 'rgba(20, 184, 166, 0.08)', colorBorder: 'rgba(20, 184, 166, 0.15)' },
   SHOPPING: { icon: 'bag', color: '#8B5CF6', colorDim: 'rgba(139, 92, 246, 0.08)', colorBorder: 'rgba(139, 92, 246, 0.15)' },
