@@ -18,27 +18,28 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import Mapbox from '@rnmapbox/maps';
-
-// Safe token access - uses environment variable or empty string
-// The token is set via EAS secrets: RNMAPBOX_MAPS_DOWNLOAD_TOKEN for builds
-// EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN for runtime
+// CRITICAL: Lazy-load Mapbox to prevent app crash on open
+// If the native SDK isn't properly linked, calling setAccessToken at module scope
+// will crash the app immediately. We wrap everything in try-catch.
+let Mapbox: any = null;
+let isMapboxInitialized = false;
 const MAPBOX_ACCESS_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 
-// Track if Mapbox was initialized
-let isMapboxInitialized = false;
-
-// Initialize Mapbox SAFELY - only if token exists
-if (MAPBOX_ACCESS_TOKEN && MAPBOX_ACCESS_TOKEN.length > 10) {
-  try {
-    Mapbox.setAccessToken(MAPBOX_ACCESS_TOKEN);
-    isMapboxInitialized = true;
-    console.log('[Mapbox] Initialized successfully');
-  } catch (error) {
-    console.error('[Mapbox] Failed to initialize:', error);
+try {
+  if (Platform.OS !== 'web') {
+    Mapbox = require('@rnmapbox/maps').default;
+    if (MAPBOX_ACCESS_TOKEN && MAPBOX_ACCESS_TOKEN.length > 10 && Mapbox) {
+      Mapbox.setAccessToken(MAPBOX_ACCESS_TOKEN);
+      isMapboxInitialized = true;
+      console.log('[Mapbox] Initialized successfully');
+    } else {
+      console.warn('[Mapbox] No valid access token found - map features disabled');
+    }
   }
-} else {
-  console.warn('[Mapbox] No valid access token found - map features disabled');
+} catch (error) {
+  console.warn('[Mapbox] SDK not available:', error);
+  Mapbox = null;
+  isMapboxInitialized = false;
 }
 
 // Kampala center coordinates

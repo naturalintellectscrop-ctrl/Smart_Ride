@@ -1461,3 +1461,24 @@ Stage Summary:
 - Mobile deps live exclusively in expo-app/package.json
 - Vercel should now correctly detect Next.js framework and build successfully
 - Commit: b6ffaaf pushed to origin/main
+
+---
+Task ID: 3
+Agent: Main Agent
+Task: Fix APK crash-on-open issue
+
+Work Log:
+- Diagnosed root cause: Mapbox.setAccessToken() called at module scope crashes if native SDK not properly linked
+- Both SmartRideMap.tsx and MapboxMap.tsx had module-level Mapbox initialization that would crash the app before React even mounts
+- The @rnmapbox/maps import + setAccessToken at module scope = guaranteed crash if native SDK missing or misconfigured
+- Fixed SmartRideMap.tsx: wrapped Mapbox import in try-catch with lazy require(), only init on native platforms
+- Fixed MapboxMap.tsx: same treatment - lazy require with try-catch, never crash at module scope
+- Added .env file with EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN and EXPO_PUBLIC_API_BASE_URL
+- Added detailed comments explaining RNMAPBOX_MAPS_DOWNLOAD_TOKEN requirement
+- The app will now show a map placeholder instead of crashing if Mapbox SDK is unavailable
+
+Stage Summary:
+- App crash-on-open FIXED: Mapbox init is now safe with try-catch + lazy require
+- Missing .env file created with Mapbox public token
+- User needs to set RNMAPBOX_MAPS_DOWNLOAD_TOKEN env var before running expo prebuild
+- App gracefully degrades to placeholder when map SDK unavailable
