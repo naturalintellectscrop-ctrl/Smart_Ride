@@ -83,82 +83,7 @@ interface ChatState {
   onReadReceipt: (data: { conversationId: string; messageIds: string[]; readAt: string }) => void;
 }
 
-// ============================================
-// MOCK DATA (fallback when API doesn't work)
-// ============================================
-
-const MOCK_CONVERSATIONS: Conversation[] = [
-  {
-    id: 'conv-1',
-    taskId: 'task-1',
-    taskNumber: 'SR-2024-001',
-    taskType: 'SMART_BODA_RIDE',
-    otherUser: { id: 'rider-1', name: 'James Okello', role: 'RIDER' },
-    lastMessage: { id: 'msg-10', content: "I'm on my way, 3 minutes away!", type: 'TEXT', createdAt: new Date(Date.now() - 120000).toISOString(), senderId: 'rider-1' },
-    unreadCount: 2,
-    updatedAt: new Date(Date.now() - 120000).toISOString(),
-  },
-  {
-    id: 'conv-2',
-    taskId: 'task-2',
-    taskNumber: 'SR-2024-002',
-    taskType: 'FOOD_DELIVERY',
-    otherUser: { id: 'merchant-1', name: 'Cafe Javas', role: 'MERCHANT' },
-    lastMessage: { id: 'msg-20', content: 'Your order is being prepared', type: 'TEXT', createdAt: new Date(Date.now() - 600000).toISOString(), senderId: 'merchant-1' },
-    unreadCount: 1,
-    updatedAt: new Date(Date.now() - 600000).toISOString(),
-  },
-  {
-    id: 'conv-3',
-    taskId: 'task-3',
-    taskNumber: 'SR-2024-003',
-    taskType: 'SMART_CAR_RIDE',
-    otherUser: { id: 'rider-2', name: 'Sarah Nakamya', role: 'RIDER' },
-    lastMessage: { id: 'msg-30', content: 'Thanks for the ride!', type: 'TEXT', createdAt: new Date(Date.now() - 3600000).toISOString(), senderId: 'client-1' },
-    unreadCount: 0,
-    updatedAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-  {
-    id: 'conv-4',
-    taskId: 'task-4',
-    taskNumber: 'SR-2024-004',
-    taskType: 'ITEM_DELIVERY',
-    otherUser: { id: 'rider-3', name: 'Peter Mugisha', role: 'RIDER' },
-    lastMessage: { id: 'msg-40', content: 'Package delivered successfully', type: 'SYSTEM', createdAt: new Date(Date.now() - 86400000).toISOString(), senderId: 'system' },
-    unreadCount: 0,
-    updatedAt: new Date(Date.now() - 86400000).toISOString(),
-  },
-];
-
-const MOCK_MESSAGES: Record<string, Message[]> = {
-  'conv-1': [
-    { id: 'msg-1', conversationId: 'conv-1', senderId: 'client-1', content: 'Hello, where are you?', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 600000).toISOString() },
-    { id: 'msg-2', conversationId: 'conv-1', senderId: 'rider-1', senderName: 'James Okello', content: "I'm at the pickup point, waiting for you", type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 540000).toISOString() },
-    { id: 'msg-3', conversationId: 'conv-1', senderId: 'client-1', content: 'Coming now, 2 minutes', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 480000).toISOString() },
-    { id: 'msg-4', conversationId: 'conv-1', senderId: 'rider-1', senderName: 'James Okello', content: 'Great! I have a white helmet, you can spot me easily', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 420000).toISOString() },
-    { id: 'msg-5', conversationId: 'conv-1', senderId: 'system', content: 'Driver has arrived at pickup location', type: 'SYSTEM', isRead: true, createdAt: new Date(Date.now() - 300000).toISOString() },
-    { id: 'msg-6', conversationId: 'conv-1', senderId: 'rider-1', senderName: 'James Okello', content: "I'm on my way, 3 minutes away!", type: 'TEXT', isRead: false, createdAt: new Date(Date.now() - 120000).toISOString() },
-  ],
-  'conv-2': [
-    { id: 'msg-7', conversationId: 'conv-2', senderId: 'merchant-1', senderName: 'Cafe Javas', content: 'Hello! We received your order #SR-2024-002', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 900000).toISOString() },
-    { id: 'msg-8', conversationId: 'conv-2', senderId: 'client-1', content: 'Great, can I add extra sauce?', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 840000).toISOString() },
-    { id: 'msg-9', conversationId: 'conv-2', senderId: 'merchant-1', senderName: 'Cafe Javas', content: 'Sure! Added at no extra cost 😊', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 780000).toISOString() },
-    { id: 'msg-10', conversationId: 'conv-2', senderId: 'system', content: 'Order status updated: Preparing', type: 'SYSTEM', isRead: true, createdAt: new Date(Date.now() - 700000).toISOString() },
-    { id: 'msg-20', conversationId: 'conv-2', senderId: 'merchant-1', senderName: 'Cafe Javas', content: 'Your order is being prepared', type: 'TEXT', isRead: false, createdAt: new Date(Date.now() - 600000).toISOString() },
-  ],
-  'conv-3': [
-    { id: 'msg-11', conversationId: 'conv-3', senderId: 'rider-2', senderName: 'Sarah Nakamya', content: 'Good morning! I will be your driver today', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 7200000).toISOString() },
-    { id: 'msg-12', conversationId: 'conv-3', senderId: 'client-1', content: 'Morning! How far are you?', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 7100000).toISOString() },
-    { id: 'msg-13', conversationId: 'conv-3', senderId: 'rider-2', senderName: 'Sarah Nakamya', content: 'About 5 mins away, a blue Toyota Premio', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 7000000).toISOString() },
-    { id: 'msg-14', conversationId: 'conv-3', senderId: 'system', content: 'Trip completed successfully', type: 'SYSTEM', isRead: true, createdAt: new Date(Date.now() - 4000000).toISOString() },
-    { id: 'msg-30', conversationId: 'conv-3', senderId: 'client-1', content: 'Thanks for the ride!', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 3600000).toISOString() },
-  ],
-  'conv-4': [
-    { id: 'msg-15', conversationId: 'conv-4', senderId: 'rider-3', senderName: 'Peter Mugisha', content: 'I have picked up your package', type: 'TEXT', isRead: true, createdAt: new Date(Date.now() - 100000000).toISOString() },
-    { id: 'msg-16', conversationId: 'conv-4', senderId: 'system', content: 'Package picked up', type: 'SYSTEM', isRead: true, createdAt: new Date(Date.now() - 95000000).toISOString() },
-    { id: 'msg-40', conversationId: 'conv-4', senderId: 'system', content: 'Package delivered successfully', type: 'SYSTEM', isRead: true, createdAt: new Date(Date.now() - 86400000).toISOString() },
-  ],
-};
+// Mock data removed — show empty state instead of fake data when API fails
 
 // ============================================
 // CHAT STORE
@@ -181,13 +106,13 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       if (response.success && response.data) {
         set({ conversations: response.data, isLoadingConversations: false });
       } else {
-        // Fall back to mock data
-        console.log('[CHAT-STORE] API failed, using mock conversations');
-        set({ conversations: MOCK_CONVERSATIONS, isLoadingConversations: false });
+        // Show empty state instead of mock data
+        console.warn('[CHAT-STORE] API failed to load conversations');
+        set({ conversations: [], isLoadingConversations: false });
       }
     } catch (error) {
-      console.log('[CHAT-STORE] Error loading conversations, using mock data:', error);
-      set({ conversations: MOCK_CONVERSATIONS, isLoadingConversations: false });
+      console.warn('[CHAT-STORE] Error loading conversations:', error);
+      set({ conversations: [], isLoadingConversations: false });
     }
   },
 
@@ -198,15 +123,13 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       if (response.success && response.data) {
         set({ messages: response.data, isLoadingMessages: false });
       } else {
-        // Fall back to mock data
-        console.log('[CHAT-STORE] API failed, using mock messages');
-        const mockMsgs = MOCK_MESSAGES[conversationId] || [];
-        set({ messages: mockMsgs, isLoadingMessages: false });
+        // Show empty state instead of mock data
+        console.warn('[CHAT-STORE] API failed to load messages');
+        set({ messages: [], isLoadingMessages: false });
       }
     } catch (error) {
-      console.log('[CHAT-STORE] Error loading messages, using mock data:', error);
-      const mockMsgs = MOCK_MESSAGES[conversationId] || [];
-      set({ messages: mockMsgs, isLoadingMessages: false });
+      console.warn('[CHAT-STORE] Error loading messages:', error);
+      set({ messages: [], isLoadingMessages: false });
     }
   },
 
@@ -420,5 +343,3 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     }));
   },
 }));
-
-console.log('[CHAT-STORE] Store initialized');

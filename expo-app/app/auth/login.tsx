@@ -25,7 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes } from '@react-native-google-signin/google-signin';
 import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
-import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData } from '../../services/auth';
+import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData } from '@/src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
 import { COLORS } from '../../src/constants';
 import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';

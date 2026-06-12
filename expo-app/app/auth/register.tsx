@@ -20,7 +20,7 @@ import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp, SlideInRight } from 'react-native-reanimated';
 import { statusCodes } from '@react-native-google-signin/google-signin';
 import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
-import { registerUser, isAuthenticated, saveTokens, saveUserData } from '../../services/auth';
+import { registerUser, isAuthenticated, saveTokens, saveUserData } from '@/src/services/auth';
 import { COLORS } from '../../src/constants';
 import { GlowHeader } from '../../src/components/GlowHeader';
 import { GlassCard } from '../../src/components/GlassCard';

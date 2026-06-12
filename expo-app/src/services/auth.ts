@@ -5,8 +5,8 @@
 // ============================================
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useAuthStore } from '../src/store/authStore';
-import { STORAGE_KEYS } from '../src/constants';
+import { useAuthStore } from '../store/authStore';
+import { STORAGE_KEYS } from '../constants';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api';
 

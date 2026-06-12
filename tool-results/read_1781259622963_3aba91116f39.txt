@@ -1,0 +1,954 @@
+     1→/* eslint-disable react-hooks/immutability */
+     2→// ============================================
+     3→// SMART RIDE MOBILE - DRIVER HOME SCREEN
+     4→// ============================================
+     5→// Dark theme with StyleSheet, GlassCard, GlowHeader,
+     6→// GradientButton, StatusBadge, Reanimated animations
+     7→// ============================================
+     8→
+     9→import React, { useState, useEffect, useCallback } from 'react';
+    10→import {
+    11→  View,
+    12→  Text,
+    13→  TouchableOpacity,
+    14→  Switch,
+    15→  ActivityIndicator,
+    16→  Alert,
+    17→  StyleSheet,
+    18→} from 'react-native';
+    19→import { useRouter } from 'expo-router';
+    20→import { SmartRideMap } from '@/src/components/SmartRideMap';
+    21→import * as Location from 'expo-location';
+    22→import Animated, {
+    23→  useSharedValue,
+    24→  useAnimatedStyle,
+    25→  withSpring,
+    26→  withRepeat,
+    27→  withSequence,
+    28→  withTiming,
+    29→  FadeIn,
+    30→  FadeInUp,
+    31→  FadeInDown,
+    32→  SlideInUp,
+    33→  ZoomIn,
+    34→  SlideInRight,
+    35→} from 'react-native-reanimated';
+    36→import { useAuthStore, useTaskStore, useLocationStore } from '@/src/store';
+    37→import { api, socketService } from '@/src/services';
+    38→import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS, DEFAULT_LOCATION, API_CONFIG } from '@/src/constants';
+    39→import { GlassCard } from '@/src/components/GlassCard';
+    40→import { GradientButton } from '@/src/components/GradientButton';
+    41→import { GlowHeader } from '@/src/components/GlowHeader';
+    42→import { StatusBadge } from '@/src/components/StatusBadge';
+    43→import { Task, Rider } from '@/src/types';
+    44→
+    45→export default function DriverHomeScreen() {
+    46→  const router = useRouter();
+    47→  const { user } = useAuthStore();
+    48→  const { incomingRequest, setIncomingRequest, clearIncomingRequest } = useTaskStore();
+    49→  const { latitude, longitude, getCurrentLocation } = useLocationStore();
+    50→
+    51→  const [isOnline, setIsOnline] = useState(false);
+    52→  const [rider, setRider] = useState<Rider | null>(null);
+    53→  const [isLoading, setIsLoading] = useState(true);
+    54→  const [profileError, setProfileError] = useState<string | null>(null);
+    55→  const [isAccepting, setIsAccepting] = useState(false);
+    56→  const [requestTimer, setRequestTimer] = useState<number | null>(null);
+    57→
+    58→  // Location tracking
+    59→  const [locationSubscription, setLocationSubscription] = useState<Location.LocationSubscription | null>(null);
+    60→
+    61→  // Load rider profile on mount - NON-BLOCKING
+    62→  useEffect(() => {
+    63→    loadRiderProfile();
+    64→
+    65→    // Connect socket and listen for ride requests
+    66→    const initSocket = async () => {
+    67→      try {
+    68→        await socketService.connect();
+    69→        console.log('[DriverHome] Socket connected');
+    70→      } catch (e) {
+    71→        console.warn('[DriverHome] Socket connection failed, will retry:', e);
+    72→      }
+    73→    };
+    74→    initSocket();
+    75→
+    76→    const unsubscribeRequest = socketService.on('driver:request', handleIncomingRequest);
+    77→    const unsubscribeExpired = socketService.on('driver:request:expired', handleRequestExpired);
+    78→
+    79→    return () => {
+    80→      unsubscribeRequest();
+    81→      unsubscribeExpired();
+    82→      stopLocationTracking();
+    83→      socketService.disconnect();
+    84→    };
+    85→  }, []);
+    86→
+    87→  useEffect(() => {
+    88→    if (isOnline) {
+    89→      startLocationTracking();
+    90→    } else {
+    91→      stopLocationTracking();
+    92→    }
+    93→  }, [isOnline]);
+    94→
+    95→  // Load rider profile - NON-BLOCKING with proper error handling and data validation
+    96→  const loadRiderProfile = useCallback(async () => {
+    97→    setIsLoading(true);
+    98→    setProfileError(null);
+    99→
+   100→    try {
+   101→      const response = await api.getRiderProfile();
+   102→      if (response.success && response.data) {
+   103→        const riderData = response.data;
+   104→        const normalizedRider: Rider = {
+   105→          id: riderData.id,
+   106→          userId: riderData.userId || '',
+   107→          fullName: riderData.fullName || 'Driver',
+   108→          phone: riderData.phone || '',
+   109→          email: riderData.email,
+   110→          riderRole: riderData.riderRole || 'SMART_BODA_RIDER',
+   111→          status: riderData.status || 'APPROVED',
+   112→          isOnline: typeof riderData.isOnline === 'boolean' ? riderData.isOnline : false,
+   113→          currentLatitude: riderData.currentLatitude,
+   114→          currentLongitude: riderData.currentLongitude,
+   115→          rating: typeof riderData.rating === 'number' ? riderData.rating : 5.0,
+   116→          totalTrips: riderData.totalTrips || 0,
+   117→          completedTrips: riderData.completedTrips || 0,
+   118→          walletBalance: riderData.walletBalance || 0,
+   119→          vehicle: riderData.vehicle,
+   120→        };
+   121→        setRider(normalizedRider);
+   122→        setIsOnline(normalizedRider.isOnline);
+   123→      } else {
+   124→        setProfileError(response.error || 'Failed to load profile');
+   125→      }
+   126→    } catch (error) {
+   127→      console.error('Failed to load profile:', error);
+   128→      setProfileError('Unable to load driver profile');
+   129→    } finally {
+   130→      setIsLoading(false);
+   131→    }
+   132→  }, [user]);
+   133→
+   134→  const toggleOnlineStatus = async (value: boolean) => {
+   135→    try {
+   136→      const response = await api.setRiderOnline(value);
+   137→      if (response.success) {
+   138→        setIsOnline(value);
+   139→        if (value) {
+   140→          getCurrentLocation().catch(() => {});
+   141→          // Join driver room so server can route dispatch events to this rider
+   142→          const driverId = rider?.id || user?.id;
+   143→          if (driverId) {
+   144→            try {
+   145→              await socketService.joinDriverRoom(driverId);
+   146→              console.log('[DriverHome] Joined driver room:', driverId);
+   147→            } catch (e) {
+   148→              console.warn('[DriverHome] Failed to join driver room:', e);
+   149→            }
+   150→          }
+   151→        } else {
+   152→          // Leave driver room when going offline
+   153→          const driverId = rider?.id || user?.id;
+   154→          if (driverId) {
+   155→            socketService.leaveDriverRoom(driverId);
+   156→          }
+   157→        }
+   158→      } else {
+   159→        Alert.alert('Error', response.error || 'Failed to update status');
+   160→      }
+   161→    } catch (error) {
+   162→      Alert.alert('Error', 'Failed to update status');
+   163→    }
+   164→  };
+   165→
+   166→  const startLocationTracking = async () => {
+   167→    try {
+   168→      const { status } = await Location.requestForegroundPermissionsAsync();
+   169→      if (status !== 'granted') {
+   170→        Alert.alert('Permission Required', 'Location permission is required for driver mode');
+   171→        return;
+   172→      }
+   173→
+   174→      const subscription = await Location.watchPositionAsync(
+   175→        {
+   176→          accuracy: Location.Accuracy.High,
+   177→          distanceInterval: 10,
+   178→          timeInterval: 5000,
+   179→        },
+   180→        (location) => {
+   181→          const { latitude: lat, longitude: lng } = location.coords;
+   182→
+   183→          socketService.updateLocation({
+   184→            latitude: lat,
+   185→            longitude: lng,
+   186→            heading: location.coords.heading,
+   187→            speed: location.coords.speed,
+   188→          });
+   189→
+   190→          api.sendHeartbeat({
+   191→            latitude: lat,
+   192→            longitude: lng,
+   193→            heading: location.coords.heading,
+   194→            speed: location.coords.speed,
+   195→          }).catch(() => {});
+   196→        }
+   197→      );
+   198→
+   199→      setLocationSubscription(subscription);
+   200→    } catch (error) {
+   201→      console.error('Failed to start location tracking:', error);
+   202→    }
+   203→  };
+   204→
+   205→  const stopLocationTracking = () => {
+   206→    if (locationSubscription) {
+   207→      locationSubscription.remove();
+   208→      setLocationSubscription(null);
+   209→    }
+   210→  };
+   211→
+   212→  const handleIncomingRequest = (data: any) => {
+   213→    setIncomingRequest(data);
+   214→
+   215→    const expiresAt = new Date(data.expiresAt).getTime();
+   216→    const now = Date.now();
+   217→    const secondsLeft = Math.max(0, Math.floor((expiresAt - now) / 1000));
+   218→
+   219→    setRequestTimer(secondsLeft);
+   220→  };
+   221→
+   222→  const handleRequestExpired = (data: { taskId: string }) => {
+   223→    if (incomingRequest?.task.id === data.taskId) {
+   224→      clearIncomingRequest();
+   225→      setRequestTimer(null);
+   226→    }
+   227→  };
+   228→
+   229→  const handleAcceptRequest = async () => {
+   230→    if (!incomingRequest) return;
+   231→
+   232→    setIsAccepting(true);
+   233→    try {
+   234→      const matchId = (incomingRequest as any).matchId;
+   235→      if (matchId) {
+   236→        const { accessToken } = useAuthStore.getState();
+   237→        const dispatchResponse = await fetch(`${API_CONFIG.baseUrl}/dispatch/${matchId}/accept`, {
+   238→          method: 'POST',
+   239→          headers: {
+   240→            'Content-Type': 'application/json',
+   241→            'Authorization': `Bearer ${accessToken}`,
+   242→          },
+   243→        });
+   244→        const dispatchResult = await dispatchResponse.json();
+   245→        if (dispatchResult.success) {
+   246→          clearIncomingRequest();
+   247→          setRequestTimer(null);
+   248→          router.push(`/driver/driver-task?taskId=${incomingRequest.task.id}`);
+   249→          return;
+   250→        }
+   251→      }
+   252→
+   253→      const { accessToken } = useAuthStore.getState();
+   254→      const response = await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
+   255→        method: 'POST',
+   256→        headers: {
+   257→          'Content-Type': 'application/json',
+   258→          'Authorization': `Bearer ${accessToken}`,
+   259→        },
+   260→        body: JSON.stringify({
+   261→          toStatus: 'ACCEPTED',
+   262→          riderId: rider?.id,
+   263→        }),
+   264→      });
+   265→      const result = await response.json();
+   266→      if (result.success) {
+   267→        clearIncomingRequest();
+   268→        setRequestTimer(null);
+   269→        router.push(`/driver/driver-task?taskId=${incomingRequest.task.id}`);
+   270→      } else {
+   271→        Alert.alert('Error', result.error || 'Failed to accept request');
+   272→      }
+   273→    } catch (error) {
+   274→      Alert.alert('Error', 'Failed to accept request');
+   275→    } finally {
+   276→      setIsAccepting(false);
+   277→    }
+   278→  };
+   279→
+   280→  const handleDeclineRequest = async () => {
+   281→    if (!incomingRequest) return;
+   282→
+   283→    try {
+   284→      const matchId = (incomingRequest as any).matchId;
+   285→      if (matchId) {
+   286→        const { accessToken } = useAuthStore.getState();
+   287→        await fetch(`${API_CONFIG.baseUrl}/dispatch/${matchId}/reject`, {
+   288→          method: 'POST',
+   289→          headers: {
+   290→            'Content-Type': 'application/json',
+   291→            'Authorization': `Bearer ${accessToken}`,
+   292→          },
+   293→          body: JSON.stringify({
+   294→            reason: 'Declined by rider',
+   295→          }),
+   296→        });
+   297→      } else {
+   298→        const { accessToken } = useAuthStore.getState();
+   299→        await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
+   300→          method: 'POST',
+   301→          headers: {
+   302→            'Content-Type': 'application/json',
+   303→            'Authorization': `Bearer ${accessToken}`,
+   304→          },
+   305→          body: JSON.stringify({
+   306→            toStatus: 'CANCELLED',
+   307→            riderId: rider?.id,
+   308→            reason: 'Declined by rider',
+   309→          }),
+   310→        });
+   311→      }
+   312→      clearIncomingRequest();
+   313→      setRequestTimer(null);
+   314→    } catch (error) {
+   315→      console.error('Failed to decline request:', error);
+   316→      clearIncomingRequest();
+   317→      setRequestTimer(null);
+   318→    }
+   319→  };
+   320→
+   321→  // Countdown timer effect
+   322→  useEffect(() => {
+   323→    if (requestTimer === null || requestTimer <= 0) return;
+   324→
+   325→    const interval = setInterval(() => {
+   326→      setRequestTimer((prev) => {
+   327→        if (prev === null || prev <= 1) {
+   328→          clearIncomingRequest();
+   329→          return null;
+   330→        }
+   331→        return prev - 1;
+   332→      });
+   333→    }, 1000);
+   334→
+   335→    return () => clearInterval(interval);
+   336→  }, [requestTimer, clearIncomingRequest]);
+   337→
+   338→  // Show loading state
+   339→  if (isLoading) {
+   340→    return (
+   341→      <View style={styles.loadingContainer}>
+   342→        <PulsingLoader />
+   343→        <Text style={styles.loadingText}>Loading driver profile...</Text>
+   344→      </View>
+   345→    );
+   346→  }
+   347→
+   348→  // Show error state if rider profile failed to load
+   349→  if (profileError && !rider) {
+   350→    return (
+   351→      <View style={styles.errorContainer}>
+   352→        <Text style={styles.errorEmoji}>⚠️</Text>
+   353→        <Text style={styles.errorTitle}>Profile Load Error</Text>
+   354→        <Text style={styles.errorSubtitle}>{profileError}</Text>
+   355→        <GradientButton
+   356→          title="Retry"
+   357→          onPress={loadRiderProfile}
+   358→          variant="primary"
+   359→          size="md"
+   360→          style={{ marginTop: 24, width: 180 }}
+   361→        />
+   362→      </View>
+   363→    );
+   364→  }
+   365→
+   366→  const taskStatus = incomingRequest?.task?.status as string | undefined;
+   367→
+   368→  return (
+   369→    <View style={styles.root}>
+   370→      {/* Map with Error Boundary */}
+   371→      <SmartRideMap
+   372→        style={StyleSheet.absoluteFill}
+   373→        initialLatitude={latitude || DEFAULT_LOCATION.latitude}
+   374→        initialLongitude={longitude || DEFAULT_LOCATION.longitude}
+   375→        showUserLocation
+   376→      />
+   377→
+   378→      {/* GlowHeader overlay */}
+   379→      <Animated.View
+   380→        entering={FadeInDown.duration(500).springify()}
+   381→        style={styles.headerOverlay}
+   382→      >
+   383→        <GlowHeader
+   384→          title={rider?.fullName || 'Driver'}
+   385→          subtitle={isOnline ? '● Online — Receiving requests' : '● Offline'}
+   386→          rightAction={
+   387→            isOnline
+   388→              ? {
+   389→                  icon: 'notifications-outline' as const,
+   390→                  onPress: () => {},
+   391→                }
+   392→              : undefined
+   393→          }
+   394→        >
+   395→          {/* Online status card inside the header */}
+   396→          <View style={styles.onlineCardRow}>
+   397→            <View style={styles.profileRow}>
+   398→              <Animated.View entering={ZoomIn.delay(200).duration(300)}>
+   399→                <View style={styles.avatarCircle}>
+   400→                  <Text style={styles.avatarEmoji}>👤</Text>
+   401→                </View>
+   402→              </Animated.View>
+   403→              <Animated.View entering={SlideInRight.delay(300).duration(300)}>
+   404→                <View style={styles.ratingRow}>
+   405→                  <Text style={styles.ratingStar}>⭐</Text>
+   406→                  <Text style={styles.ratingText}>{rider?.rating?.toFixed(1) || '5.0'}</Text>
+   407→                </View>
+   408→                {taskStatus && (
+   409→                  <StatusBadge
+   410→                    label={TASK_STATUS_LABELS[taskStatus] || taskStatus}
+   411→                    color={TASK_STATUS_COLORS[taskStatus] || COLORS.primary}
+   412→                    size="sm"
+   413→                  />
+   414→                )}
+   415→              </Animated.View>
+   416→            </View>
+   417→            <View style={styles.switchRow}>
+   418→              <Text style={[styles.switchLabel, { color: isOnline ? COLORS.primary : COLORS.textMuted }]}>
+   419→                {isOnline ? 'Online' : 'Offline'}
+   420→              </Text>
+   421→              <Switch
+   422→                value={isOnline}
+   423→                onValueChange={toggleOnlineStatus}
+   424→                trackColor={{ false: COLORS.backgroundSurface, true: 'rgba(0, 255, 136, 0.3)' }}
+   425→                thumbColor={isOnline ? COLORS.primary : COLORS.textDim}
+   426→              />
+   427→            </View>
+   428→          </View>
+   429→        </GlowHeader>
+   430→
+   431→        {/* Profile Error Banner */}
+   432→        {profileError && (
+   433→          <Animated.View entering={SlideInRight.duration(300)}>
+   434→            <GlassCard variant="accent" style={styles.errorBanner}>
+   435→              <View style={styles.errorBannerRow}>
+   436→                <Text style={styles.errorBannerText}>{profileError}</Text>
+   437→                <TouchableOpacity onPress={loadRiderProfile}>
+   438→                  <Text style={styles.errorBannerAction}>Retry</Text>
+   439→                </TouchableOpacity>
+   440→              </View>
+   441→            </GlassCard>
+   442→          </Animated.View>
+   443→        )}
+   444→      </Animated.View>
+   445→
+   446→      {/* Incoming Request Modal */}
+   447→      {incomingRequest && (
+   448→        <Animated.View
+   449→          entering={SlideInUp.duration(400).springify()}
+   450→          style={styles.requestModal}
+   451→        >
+   452→          <GlassCard variant="elevated" padding={20} borderRadius={24}>
+   453→            {/* Timer & Title */}
+   454→            <View style={styles.requestHeaderRow}>
+   455→              <Text style={styles.requestTitle}>New Ride Request</Text>
+   456→              <Animated.View entering={ZoomIn.duration(300)}>
+   457→                <View
+   458→                  style={[
+   459→                    styles.timerCircle,
+   460→                    {
+   461→                      backgroundColor:
+   462→                        (requestTimer || 0) < 10
+   463→                          ? 'rgba(239, 68, 68, 0.15)'
+   464→                          : 'rgba(0, 255, 136, 0.1)',
+   465→                    },
+   466→                  ]}
+   467→                >
+   468→                  <Text
+   469→                    style={[
+   470→                      styles.timerText,
+   471→                      {
+   472→                        color:
+   473→                          (requestTimer || 0) < 10 ? COLORS.error : COLORS.primary,
+   474→                      },
+   475→                    ]}
+   476→                  >
+   477→                    {requestTimer}s
+   478→                  </Text>
+   479→                </View>
+   480→              </Animated.View>
+   481→            </View>
+   482→
+   483→            {/* Route Info */}
+   484→            <GlassCard variant="default" style={styles.routeCard}>
+   485→              <View style={styles.routePointRow}>
+   486→                <Animated.View
+   487→                  entering={ZoomIn.delay(100).duration(200)}
+   488→                  style={styles.pickupDot}
+   489→                />
+   490→                <View style={styles.routePointContent}>
+   491→                  <Text style={styles.routePointLabel}>Pickup</Text>
+   492→                  <Text style={styles.routePointAddress}>
+   493→                    {incomingRequest.pickup?.address || 'Pickup location'}
+   494→                  </Text>
+   495→                </View>
+   496→              </View>
+   497→              <View style={styles.routeDivider} />
+   498→              <View style={styles.routePointRow}>
+   499→                <Animated.View
+   500→                  entering={ZoomIn.delay(200).duration(200)}
+   501→                  style={styles.dropoffDot}
+   502→                />
+   503→                <View style={styles.routePointContent}>
+   504→                  <Text style={styles.routePointLabel}>Dropoff</Text>
+   505→                  <Text style={styles.routePointAddress}>
+   506→                    {incomingRequest.task?.dropoffAddress || 'Dropoff location'}
+   507→                  </Text>
+   508→                </View>
+   509→              </View>
+   510→            </GlassCard>
+   511→
+   512→            {/* Fare */}
+   513→            <Animated.View
+   514→              entering={FadeIn.delay(300).duration(300)}
+   515→              style={styles.fareRow}
+   516→            >
+   517→              <Text style={styles.fareLabel}>Estimated Earnings</Text>
+   518→              <Text style={styles.fareValue}>
+   519→                UGX {(incomingRequest.task?.totalAmount || 0).toLocaleString()}
+   520→              </Text>
+   521→            </Animated.View>
+   522→
+   523→            {/* Actions */}
+   524→            <View style={styles.actionRow}>
+   525→              <AnimatedPressable onPress={handleDeclineRequest}>
+   526→                <View style={styles.declineButtonWrapper}>
+   527→                  <GradientButton
+   528→                    title="Decline"
+   529→                    onPress={handleDeclineRequest}
+   530→                    variant="secondary"
+   531→                    size="lg"
+   532→                    fullWidth
+   533→                  />
+   534→                </View>
+   535→              </AnimatedPressable>
+   536→              <AnimatedPressable onPress={handleAcceptRequest} disabled={isAccepting}>
+   537→                <View style={styles.acceptButtonWrapper}>
+   538→                  <GradientButton
+   539→                    title={isAccepting ? 'Accepting...' : 'Accept'}
+   540→                    onPress={handleAcceptRequest}
+   541→                    variant={isAccepting ? 'secondary' : 'primary'}
+   542→                    loading={isAccepting}
+   543→                    disabled={isAccepting}
+   544→                    size="lg"
+   545→                    fullWidth
+   546→                  />
+   547→                </View>
+   548→              </AnimatedPressable>
+   549→            </View>
+   550→          </GlassCard>
+   551→        </Animated.View>
+   552→      )}
+   553→
+   554→      {/* Bottom Stats */}
+   555→      {!incomingRequest && (
+   556→        <Animated.View
+   557→          entering={SlideInUp.duration(500).delay(300).springify()}
+   558→          style={styles.bottomStats}
+   559→        >
+   560→          <GlassCard variant="elevated" padding={20} borderRadius={24}>
+   561→            <View style={styles.statsRow}>
+   562→              <StatItem
+   563→                label="Today's Earnings"
+   564→                value={`UGX ${(rider?.walletBalance || 0).toLocaleString()}`}
+   565→                delay={400}
+   566→              />
+   567→              <View style={styles.statsDivider} />
+   568→              <StatItem
+   569→                label="Trips"
+   570→                value={String(rider?.completedTrips || 0)}
+   571→                delay={500}
+   572→              />
+   573→            </View>
+   574→
+   575→            {!isOnline && (
+   576→              <Animated.View entering={FadeIn.delay(600).duration(400)}>
+   577→                <GlassCard variant="accent" style={styles.offlineHint}>
+   578→                  <Text style={styles.offlineHintText}>
+   579→                    Go online to start receiving ride requests
+   580→                  </Text>
+   581→                </GlassCard>
+   582→              </Animated.View>
+   583→            )}
+   584→
+   585→            {/* Go Online / Go Offline Button */}
+   586→            <View style={styles.toggleButtonContainer}>
+   587→              <GradientButton
+   588→                title={isOnline ? 'Go Offline' : 'Go Online'}
+   589→                onPress={() => toggleOnlineStatus(!isOnline)}
+   590→                variant={isOnline ? 'danger' : 'primary'}
+   591→                size="lg"
+   592→                fullWidth
+   593→              />
+   594→            </View>
+   595→          </GlassCard>
+   596→        </Animated.View>
+   597→      )}
+   598→    </View>
+   599→  );
+   600→}
+   601→
+   602→// ============================================
+   603→// SUB-COMPONENTS
+   604→// ============================================
+   605→
+   606→// Pulsing Loader Component
+   607→function PulsingLoader() {
+   608→  const scale = useSharedValue(1);
+   609→
+   610→  useEffect(() => {
+   611→    scale.value = withRepeat(
+   612→      withSequence(
+   613→        withTiming(1.2, { duration: 600 }),
+   614→        withTiming(1, { duration: 600 })
+   615→      ),
+   616→      -1,
+   617→      true
+   618→    );
+   619→  }, []);
+   620→
+   621→  const animatedStyle = useAnimatedStyle(() => ({
+   622→    transform: [{ scale: scale.value }],
+   623→  }));
+   624→
+   625→  return (
+   626→    <Animated.View style={animatedStyle}>
+   627→      <ActivityIndicator size="large" color={COLORS.primary} />
+   628→    </Animated.View>
+   629→  );
+   630→}
+   631→
+   632→// Animated Stat Item
+   633→function StatItem({ label, value, delay }: { label: string; value: string; delay: number }) {
+   634→  return (
+   635→    <Animated.View entering={FadeInUp.delay(delay).duration(400).springify()} style={styles.statItem}>
+   636→      <Text style={styles.statValue}>{value}</Text>
+   637→      <Text style={styles.statLabel}>{label}</Text>
+   638→    </Animated.View>
+   639→  );
+   640→}
+   641→
+   642→// Animated Pressable Wrapper (for button press scale effect)
+   643→function AnimatedPressable({ children, onPress, disabled }: { children: React.ReactNode; onPress: () => void; disabled?: boolean }) {
+   644→  const scale = useSharedValue(1);
+   645→
+   646→  const handlePressIn = () => {
+   647→    if (!disabled) {
+   648→      scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
+   649→    }
+   650→  };
+   651→
+   652→  const handlePressOut = () => {
+   653→    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+   654→  };
+   655→
+   656→  const animatedStyle = useAnimatedStyle(() => ({
+   657→    transform: [{ scale: scale.value }],
+   658→  }));
+   659→
+   660→  return (
+   661→    <TouchableOpacity
+   662→      onPress={onPress}
+   663→      onPressIn={handlePressIn}
+   664→      onPressOut={handlePressOut}
+   665→      disabled={disabled}
+   666→      activeOpacity={0.95}
+   667→      style={{ flex: 1 }}
+   668→    >
+   669→      <Animated.View style={animatedStyle}>
+   670→        {children}
+   671→      </Animated.View>
+   672→    </TouchableOpacity>
+   673→  );
+   674→}
+   675→
+   676→// ============================================
+   677→// STYLESHEET
+   678→// ============================================
+   679→
+   680→const styles = StyleSheet.create({
+   681→  // Root
+   682→  root: {
+   683→    flex: 1,
+   684→    backgroundColor: COLORS.background,
+   685→  },
+   686→
+   687→  // Loading
+   688→  loadingContainer: {
+   689→    flex: 1,
+   690→    alignItems: 'center',
+   691→    justifyContent: 'center',
+   692→    backgroundColor: COLORS.background,
+   693→  },
+   694→  loadingText: {
+   695→    marginTop: 16,
+   696→    color: COLORS.textMuted,
+   697→    fontSize: 14,
+   698→  },
+   699→
+   700→  // Error state
+   701→  errorContainer: {
+   702→    flex: 1,
+   703→    alignItems: 'center',
+   704→    justifyContent: 'center',
+   705→    backgroundColor: COLORS.background,
+   706→    paddingHorizontal: 24,
+   707→  },
+   708→  errorEmoji: {
+   709→    fontSize: 40,
+   710→    marginBottom: 16,
+   711→  },
+   712→  errorTitle: {
+   713→    fontSize: 18,
+   714→    fontWeight: 'bold',
+   715→    color: COLORS.text,
+   716→    marginBottom: 8,
+   717→  },
+   718→  errorSubtitle: {
+   719→    color: COLORS.textMuted,
+   720→    textAlign: 'center',
+   721→    marginBottom: 8,
+   722→  },
+   723→
+   724→  // Header overlay
+   725→  headerOverlay: {
+   726→    position: 'absolute',
+   727→    top: 0,
+   728→    left: 0,
+   729→    right: 0,
+   730→    zIndex: 10,
+   731→  },
+   732→
+   733→  // Online card row (inside GlowHeader children)
+   734→  onlineCardRow: {
+   735→    flexDirection: 'row',
+   736→    alignItems: 'center',
+   737→    justifyContent: 'space-between',
+   738→    marginTop: 8,
+   739→  },
+   740→  profileRow: {
+   741→    flexDirection: 'row',
+   742→    alignItems: 'center',
+   743→    flex: 1,
+   744→  },
+   745→  avatarCircle: {
+   746→    width: 48,
+   747→    height: 48,
+   748→    borderRadius: 24,
+   749→    backgroundColor: COLORS.backgroundSurface,
+   750→    alignItems: 'center',
+   751→    justifyContent: 'center',
+   752→    marginRight: 12,
+   753→  },
+   754→  avatarEmoji: {
+   755→    fontSize: 24,
+   756→  },
+   757→  ratingRow: {
+   758→    flexDirection: 'row',
+   759→    alignItems: 'center',
+   760→  },
+   761→  ratingStar: {
+   762→    fontSize: 12,
+   763→    marginRight: 4,
+   764→  },
+   765→  ratingText: {
+   766→    color: COLORS.textSecondary,
+   767→    fontSize: 14,
+   768→  },
+   769→  switchRow: {
+   770→    flexDirection: 'row',
+   771→    alignItems: 'center',
+   772→  },
+   773→  switchLabel: {
+   774→    fontWeight: '500',
+   775→    marginRight: 8,
+   776→    fontSize: 14,
+   777→  },
+   778→
+   779→  // Error banner
+   780→  errorBanner: {
+   781→    marginTop: 8,
+   782→  },
+   783→  errorBannerRow: {
+   784→    flexDirection: 'row',
+   785→    alignItems: 'center',
+   786→    justifyContent: 'space-between',
+   787→  },
+   788→  errorBannerText: {
+   789→    color: COLORS.warning,
+   790→    fontSize: 13,
+   791→    flex: 1,
+   792→  },
+   793→  errorBannerAction: {
+   794→    color: COLORS.warning,
+   795→    fontWeight: '600',
+   796→    fontSize: 13,
+   797→    marginLeft: 12,
+   798→  },
+   799→
+   800→  // Incoming Request Modal
+   801→  requestModal: {
+   802→    position: 'absolute',
+   803→    bottom: 0,
+   804→    left: 0,
+   805→    right: 0,
+   806→    zIndex: 20,
+   807→  },
+   808→  requestHeaderRow: {
+   809→    flexDirection: 'row',
+   810→    justifyContent: 'space-between',
+   811→    alignItems: 'center',
+   812→    marginBottom: 16,
+   813→  },
+   814→  requestTitle: {
+   815→    fontSize: 20,
+   816→    fontWeight: 'bold',
+   817→    color: COLORS.text,
+   818→  },
+   819→  timerCircle: {
+   820→    width: 40,
+   821→    height: 40,
+   822→    borderRadius: 20,
+   823→    alignItems: 'center',
+   824→    justifyContent: 'center',
+   825→  },
+   826→  timerText: {
+   827→    fontWeight: 'bold',
+   828→    fontSize: 14,
+   829→  },
+   830→
+   831→  // Route card
+   832→  routeCard: {
+   833→    marginBottom: 16,
+   834→  },
+   835→  routePointRow: {
+   836→    flexDirection: 'row',
+   837→    alignItems: 'flex-start',
+   838→  },
+   839→  pickupDot: {
+   840→    width: 12,
+   841→    height: 12,
+   842→    borderRadius: 6,
+   843→    backgroundColor: COLORS.secondary,
+   844→    marginTop: 4,
+   845→    marginRight: 12,
+   846→  },
+   847→  dropoffDot: {
+   848→    width: 12,
+   849→    height: 12,
+   850→    borderRadius: 6,
+   851→    backgroundColor: COLORS.primary,
+   852→    marginTop: 4,
+   853→    marginRight: 12,
+   854→  },
+   855→  routePointContent: {
+   856→    flex: 1,
+   857→  },
+   858→  routePointLabel: {
+   859→    color: COLORS.textMuted,
+   860→    fontSize: 11,
+   861→    textTransform: 'uppercase',
+   862→    letterSpacing: 0.5,
+   863→  },
+   864→  routePointAddress: {
+   865→    color: COLORS.text,
+   866→    fontSize: 15,
+   867→    marginTop: 2,
+   868→  },
+   869→  routeDivider: {
+   870→    width: 1.5,
+   871→    height: 16,
+   872→    backgroundColor: COLORS.textDim,
+   873→    marginLeft: 5,
+   874→    marginVertical: 4,
+   875→  },
+   876→
+   877→  // Fare
+   878→  fareRow: {
+   879→    flexDirection: 'row',
+   880→    justifyContent: 'space-between',
+   881→    alignItems: 'center',
+   882→    marginBottom: 16,
+   883→  },
+   884→  fareLabel: {
+   885→    color: COLORS.textMuted,
+   886→    fontSize: 14,
+   887→  },
+   888→  fareValue: {
+   889→    fontSize: 22,
+   890→    fontWeight: 'bold',
+   891→    color: COLORS.primary,
+   892→  },
+   893→
+   894→  // Action buttons
+   895→  actionRow: {
+   896→    flexDirection: 'row',
+   897→    gap: 12,
+   898→  },
+   899→  declineButtonWrapper: {
+   900→    flex: 1,
+   901→  },
+   902→  acceptButtonWrapper: {
+   903→    flex: 1,
+   904→  },
+   905→
+   906→  // Bottom Stats
+   907→  bottomStats: {
+   908→    position: 'absolute',
+   909→    bottom: 0,
+   910→    left: 0,
+   911→    right: 0,
+   912→    zIndex: 20,
+   913→  },
+   914→  statsRow: {
+   915→    flexDirection: 'row',
+   916→    alignItems: 'center',
+   917→    justifyContent: 'space-around',
+   918→  },
+   919→  statsDivider: {
+   920→    width: 1,
+   921→    height: 32,
+   922→    backgroundColor: COLORS.border,
+   923→  },
+   924→  statItem: {
+   925→    alignItems: 'center',
+   926→    flex: 1,
+   927→  },
+   928→  statValue: {
+   929→    fontSize: 22,
+   930→    fontWeight: 'bold',
+   931→    color: COLORS.text,
+   932→  },
+   933→  statLabel: {
+   934→    color: COLORS.textMuted,
+   935→    fontSize: 13,
+   936→    marginTop: 2,
+   937→  },
+   938→
+   939→  // Offline hint
+   940→  offlineHint: {
+   941→    marginTop: 16,
+   942→  },
+   943→  offlineHintText: {
+   944→    color: COLORS.primary,
+   945→    textAlign: 'center',
+   946→    fontSize: 14,
+   947→  },
+   948→
+   949→  // Toggle button
+   950→  toggleButtonContainer: {
+   951→    marginTop: 16,
+   952→  },
+   953→});
+   954→

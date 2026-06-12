@@ -23,7 +23,7 @@ import {
   Easing,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { resetPassword } from '../../services/auth';
+import { resetPassword } from '@/src/services/auth';
 
 const { height } = Dimensions.get('window');
 

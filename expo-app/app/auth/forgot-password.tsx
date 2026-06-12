@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { forgotPassword } from '../../services/auth';
+import { forgotPassword } from '@/src/services/auth';
 import { COLORS } from '../../src/constants';
 import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
 

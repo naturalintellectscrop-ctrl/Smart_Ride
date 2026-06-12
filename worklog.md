@@ -42,3 +42,25 @@ Stage Summary:
 - APK size optimization: ABI splits + R8 + ProGuard + shrink configured via plugins
 - Next.js web app fully functional at localhost:3000
 - All react-native-maps references removed from expo-app
+
+---
+Task ID: 2
+Agent: main
+Task: Fix several production issues in the expo-app
+
+Work Log:
+- Added custom inline Babel plugin (removeConsolePlugin) to babel.config.js to strip console.log/info/debug in production builds while keeping console.warn and console.error; babel-plugin-transform-remove-console was not installed so a custom visitor-based plugin was used instead
+- Updated eas.json: added RNMAPBOX_MAPS_DOWNLOAD_TOKEN (empty string, value supplied via EAS secrets) to all 4 build profiles (development, preview, production, apk); changed production profile distribution from "internal" to "store"
+- Cleaned up duplicate root-level directories and files:
+  - Removed: auth/, services/, health/, shopping/, wallet/, delivery/, profile/, screens/, navigation/, (tabs)/, App.tsx, index.tsx, _layout.tsx, minimal-test.tsx
+  - Before deletion, verified imports: app/auth/ files imported from root services/auth.ts
+  - Moved services/auth.ts → src/services/auth.ts and fixed internal relative imports (../src/store → ../store, ../src/constants → ../constants)
+  - Updated 4 app/auth/ files (login, register, forgot-password, reset-password) to import from @/src/services/auth instead of ../../services/auth
+  - Added auth re-exports to src/services/index.ts
+- Fixed chatStore mock data fallback: removed MOCK_CONVERSATIONS and MOCK_MESSAGES data blocks; replaced fallback to empty arrays ([]) in loadConversations and loadMessages; changed console.log to console.warn for API failure logging; removed trailing console.log('[CHAT-STORE] Store initialized')
+
+Stage Summary:
+- Production builds will strip console.log/info/debug (keeps warn/error) via custom Babel plugin
+- EAS builds now include RNMAPBOX_MAPS_DOWNLOAD_TOKEN env var; production uses "store" distribution
+- All duplicate root-level directories/files removed; auth service properly relocated to src/services/
+- Chat store no longer falls back to fake data — shows empty state when API is unavailable
