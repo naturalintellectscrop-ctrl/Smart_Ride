@@ -3,8 +3,10 @@
 // ============================================
 // Premium futuristic design matching admin page
 // Glassmorphism + animated background + neon accents
-// Email/Password PRIMARY (gradient CTA), Google SECONDARY
-// Uses shared design-system components & constants
+// PRIMARY: Phone OTP (most popular in Uganda)
+// SECONDARY: Email/Password
+// Google Sign-In removed (requires Google Play Services
+// which is unreliable on user devices in Uganda)
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -23,18 +25,12 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { statusCodes } from '@react-native-google-signin/google-signin';
-import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
-import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData } from '@/src/services/auth';
+import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
 import { COLORS } from '../../src/constants';
 import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
 
 const { height } = Dimensions.get('window');
-
-const GOOGLE_BLUE = '#4285F4';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -43,7 +39,6 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,72 +112,12 @@ export default function LoginScreen() {
     }
   };
 
-  // SECONDARY: Google Sign-In
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    setError(null);
-
-    try {
-      configureGoogleSignIn();
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      const userInfo = await GoogleSignin.signIn();
-      
-      if (userInfo.data?.idToken) {
-        const response = await fetch(`${API_BASE_URL}/auth/google`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken: userInfo.data.idToken }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          if (result.data?.accessToken) {
-            await saveTokens(result.data.accessToken, result.data.refreshToken);
-            if (result.data.user) await saveUserData(result.data.user);
-          } else if (result.tokens?.accessToken) {
-            await saveTokens(result.tokens.accessToken, result.tokens.refreshToken);
-            if (result.user) await saveUserData(result.user);
-          }
-          // Sync with auth store for screens that use useAuthStore
-          const token = await getAccessToken();
-          const userData = await getUserData();
-          if (token && userData) {
-            useAuthStore.getState().login({
-              id: userData.id,
-              email: userData.email,
-              name: userData.name,
-              phone: userData.phone,
-              role: userData.role,
-            }, token);
-          }
-          router.replace('/(tabs)');
-        } else {
-          setError(result.error || 'Google login failed. Please try again.');
-        }
-      } else {
-        setError('Failed to get Google ID token. Please try again.');
-      }
-    } catch (err: any) {
-      console.error('Google Sign-In error:', err);
-      
-      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
-        // User cancelled - don't show error
-      } else if (err.message?.includes('DEVELOPER_ERROR') || err.code === 'DEVELOPER_ERROR') {
-        setError('Google Sign-In is not yet configured for this device. Please use email login instead.');
-      } else if (err.code === statusCodes.IN_PROGRESS) {
-        setError('Sign in is already in progress');
-      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        setError('Google Play Services not available. Please use email login instead.');
-      } else {
-        setError('Google Sign-In is unavailable. Please use email login instead.');
-      }
-    } finally {
-      setGoogleLoading(false);
-    }
+  // PRIMARY: Phone OTP Login
+  const handlePhoneLogin = () => {
+    router.push('/auth/phone-login');
   };
 
-  // PRIMARY: Email/Password Login
+  // SECONDARY: Email/Password Login
   const handleEmailLogin = async () => {
     if (!email.trim()) {
       setError('Please enter your email');
@@ -239,7 +174,6 @@ export default function LoginScreen() {
     >
       {/* Animated Background */}
       <View style={styles.backgroundGradient}>
-        {/* Ambient gradient circles */}
         <View style={styles.ambientGreen} />
         <View style={styles.ambientCyan} />
         <View style={styles.ambientPurple} />
@@ -273,6 +207,42 @@ export default function LoginScreen() {
           </GlowHeader>
         </Animated.View>
 
+        {/* PRIMARY: Phone OTP Button */}
+        <Animated.View 
+          style={[
+            styles.phoneSection,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          <GradientButton
+            title="Continue with Phone Number"
+            onPress={handlePhoneLogin}
+            variant="primary"
+            size="lg"
+            icon={
+              <Ionicons name="call" size={20} color={COLORS.background} />
+            }
+          />
+          <Text style={styles.phoneHint}>
+            Quick sign in with OTP — no password needed
+          </Text>
+        </Animated.View>
+
+        {/* Divider */}
+        <Animated.View 
+          style={[
+            styles.dividerContainer,
+            { opacity: fadeAnim }
+          ]}
+        >
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or sign in with email</Text>
+          <View style={styles.dividerLine} />
+        </Animated.View>
+
         {/* Form Card */}
         <Animated.View 
           style={[
@@ -299,7 +269,8 @@ export default function LoginScreen() {
               icon="mail-outline"
               keyboardType="email-address"
               autoCapitalize="none"
-              editable={!isLoading && !googleLoading}
+              editable={!isLoading}
+              returnKeyType="next"
             />
 
             {/* Password Input */}
@@ -313,7 +284,9 @@ export default function LoginScreen() {
               rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
               onRightIconPress={() => setShowPassword(!showPassword)}
               autoCapitalize="none"
-              editable={!isLoading && !googleLoading}
+              editable={!isLoading}
+              returnKeyType="go"
+              onSubmitEditing={handleEmailLogin}
             />
 
             {/* Forgot Password */}
@@ -325,35 +298,16 @@ export default function LoginScreen() {
               <Text style={styles.forgotText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            {/* PRIMARY: Email Sign In Button */}
+            {/* Email Sign In Button */}
             <GradientButton
-              title="Sign In"
+              title="Sign In with Email"
               onPress={handleEmailLogin}
-              variant="primary"
-              loading={isLoading}
-              disabled={googleLoading}
-              size="lg"
-            />
-
-            {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* SECONDARY: Google Sign-In Button */}
-            <GradientButton
-              title="Continue with Google"
-              onPress={handleGoogleSignIn}
               variant="secondary"
-              loading={googleLoading}
-              disabled={isLoading}
+              loading={isLoading}
+              size="lg"
               icon={
-                !googleLoading ? (
-                  <View style={styles.googleIconContainer}>
-                    <Text style={styles.googleIcon}>G</Text>
-                  </View>
+                !isLoading ? (
+                  <Ionicons name="mail" size={20} color={COLORS.text} />
                 ) : undefined
               }
             />
@@ -370,7 +324,7 @@ export default function LoginScreen() {
           <Text style={styles.signUpText}>Don't have an account? </Text>
           <TouchableOpacity 
             onPress={() => router.push('/auth/register')}
-            disabled={isLoading || googleLoading}
+            disabled={isLoading}
             activeOpacity={0.7}
           >
             <Text style={styles.signUpLink}>Sign Up</Text>
@@ -455,9 +409,35 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     letterSpacing: -1,
   },
-  formCard: {
+  phoneSection: {
     marginHorizontal: 20,
     marginTop: 8,
+  },
+  phoneHint: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    color: COLORS.textDim,
+    marginHorizontal: 14,
+    fontSize: 13,
+  },
+  formCard: {
+    marginHorizontal: 20,
+    marginTop: 0,
   },
   errorContainer: {
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
@@ -485,34 +465,6 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '500',
     fontSize: 13,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.border,
-  },
-  dividerText: {
-    color: COLORS.textDim,
-    marginHorizontal: 14,
-    fontSize: 13,
-  },
-  googleIconContainer: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: GOOGLE_BLUE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleIcon: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 12,
   },
   signUpContainer: {
     flexDirection: 'row',

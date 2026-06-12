@@ -1,9 +1,10 @@
 // ============================================
 // SMART RIDE MOBILE - OTP VERIFICATION SCREEN
 // ============================================
-// VERSION: PRODUCTION-001
+// VERSION: PRODUCTION-002
 // PURPOSE: Verify OTP code and complete authentication
 // FLOW: Enter OTP → Verify → Login → Home
+// Uses design system: GlowHeader, GlassCard, GradientButton
 // FEATURES:
 // - 6-digit OTP input with auto-focus
 // - Countdown timer (5 minutes)
@@ -25,10 +26,14 @@ import {
   Animated,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS } from '@/src/constants';
+import { GlowHeader } from '@/src/components/GlowHeader';
+import { GlassCard } from '@/src/components/GlassCard';
+import { GradientButton } from '@/src/components/GradientButton';
 
 // OTP Configuration
 const OTP_LENGTH = 6;
@@ -63,7 +68,7 @@ export default function VerifyOTPScreen() {
   
   // Animations
   const [shakeAnim] = useState(new Animated.Value(0));
-  const [successAnim] = useState(new Animated.Value(0));
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   
   // Get params
   const phone = params.phone || '';
@@ -75,6 +80,15 @@ export default function VerifyOTPScreen() {
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, router]);
+
+  // Fade in
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
   
   // Countdown timer
   useEffect(() => {
@@ -156,32 +170,13 @@ export default function VerifyOTPScreen() {
     ]).start();
   }, [shakeAnim]);
   
-  // Success animation
-  const animateSuccess = useCallback(() => {
-    Animated.sequence([
-      Animated.timing(successAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(successAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [successAnim]);
-  
   // Handle OTP input change
   const handleOtpChange = (text: string, index: number) => {
-    // Clear error when user types
     if (error) setError(null);
     
-    // Only allow digits
     const digit = text.replace(/[^0-9]/g, '');
     
     if (digit.length > 1) {
-      // Handle paste of full OTP
       const digits = digit.slice(0, OTP_LENGTH).split('');
       const newOtp = [...otp];
       digits.forEach((d, i) => {
@@ -191,18 +186,15 @@ export default function VerifyOTPScreen() {
       });
       setOtp(newOtp);
       
-      // Focus last input or submit
       const lastFilledIndex = Math.min(digits.length - 1, OTP_LENGTH - 1);
       inputRefs.current[lastFilledIndex]?.focus();
       return;
     }
     
-    // Single digit input
     const newOtp = [...otp];
     newOtp[index] = digit;
     setOtp(newOtp);
     
-    // Auto-focus next input
     if (digit && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
@@ -211,7 +203,6 @@ export default function VerifyOTPScreen() {
   // Handle backspace
   const handleKeyPress = (key: string, index: number) => {
     if (key === 'Backspace' && !otp[index] && index > 0) {
-      // Move to previous input if current is empty
       inputRefs.current[index - 1]?.focus();
     }
   };
@@ -220,7 +211,6 @@ export default function VerifyOTPScreen() {
   const handleVerifyOTP = async (otpString?: string) => {
     const otpToVerify = otpString || otp.join('');
     
-    // Validate OTP
     if (otpToVerify.length !== OTP_LENGTH) {
       setError(`Please enter all ${OTP_LENGTH} digits`);
       shake();
@@ -237,11 +227,8 @@ export default function VerifyOTPScreen() {
     setError(null);
     
     try {
-      console.log('[VERIFY-OTP] Verifying OTP for:', phone);
-      
-      // Get device info
       const deviceInfo = {
-        deviceId: 'mobile-' + Date.now(), // In production, use actual device ID
+        deviceId: 'mobile-' + Date.now(),
         deviceName: Platform.OS === 'ios' ? 'iPhone' : 'Android',
         deviceType: Platform.OS as 'ios' | 'android',
       };
@@ -254,43 +241,29 @@ export default function VerifyOTPScreen() {
       });
       
       if (response.success && response.data) {
-        console.log('[VERIFY-OTP] Verification successful');
-        
-        // Validate tokens
         const accessToken = response.data.accessToken;
         const refreshToken = response.data.refreshToken;
         const user = response.data.user;
         
         if (!accessToken || !refreshToken || !user) {
-          console.error('[VERIFY-OTP] Missing tokens or user in response');
           setError('Authentication error. Please try again.');
           shake();
           setIsLoading(false);
           return;
         }
         
-        // Animate success
-        animateSuccess();
-        
         // Login using authStore
         await login(user, accessToken);
         
-        // Store refresh token separately if needed
         if (refreshToken) {
           await AsyncStorage.setItem('smart_ride_refresh_token', refreshToken);
         }
         
-        console.log('[VERIFY-OTP] Login successful, navigating to home');
-        
-        // Navigate to home
         setTimeout(() => {
           router.replace('/(tabs)');
         }, 500);
         
       } else {
-        console.error('[VERIFY-OTP] Verification failed:', response.error);
-        
-        // Handle specific errors
         const errorMsg = response.error || 'Verification failed';
         
         if (errorMsg.toLowerCase().includes('expired')) {
@@ -298,7 +271,6 @@ export default function VerifyOTPScreen() {
           setOtpExpired(true);
         } else if (errorMsg.toLowerCase().includes('invalid') || errorMsg.toLowerCase().includes('incorrect')) {
           setError('Invalid OTP. Please try again.');
-          // Clear OTP
           setOtp(Array(OTP_LENGTH).fill(''));
           inputRefs.current[0]?.focus();
         } else if (errorMsg.toLowerCase().includes('attempts')) {
@@ -312,7 +284,6 @@ export default function VerifyOTPScreen() {
         setIsLoading(false);
       }
     } catch (err) {
-      console.error('[VERIFY-OTP] Unexpected error:', err);
       setError('An unexpected error occurred. Please try again.');
       shake();
       setIsLoading(false);
@@ -327,29 +298,19 @@ export default function VerifyOTPScreen() {
     setError(null);
     
     try {
-      console.log('[VERIFY-OTP] Resending OTP to:', phone);
-      
       const response = await api.sendOTP(phone, purpose as 'login' | 'register');
       
       if (response.success) {
-        console.log('[VERIFY-OTP] OTP resent successfully');
-        
-        // Reset state
         setOtp(Array(OTP_LENGTH).fill(''));
         setOtpExpired(false);
         setCountdown(response.data?.expiresIn || OTP_EXPIRY_SECONDS);
         setResendCooldown(RESEND_COOLDOWN_SECONDS);
-        
-        // Focus first input
         inputRefs.current[0]?.focus();
-        
       } else {
-        console.error('[VERIFY-OTP] Failed to resend OTP:', response.error);
         setError(response.error || 'Failed to send OTP. Please try again.');
         shake();
       }
     } catch (err) {
-      console.error('[VERIFY-OTP] Resend error:', err);
       setError('Failed to resend OTP. Please check your connection.');
       shake();
     } finally {
@@ -370,109 +331,103 @@ export default function VerifyOTPScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            disabled={isLoading}
+        <Animated.View style={{ opacity: fadeAnim }}>
+          <GlowHeader 
+            title={otpExpired ? 'OTP Expired' : 'Enter Verification Code'}
+            subtitle={
+              otpExpired
+                ? 'Your verification code has expired. Please request a new one.'
+                : `We sent a 6-digit code to\n${displayPhone}`
+            }
           >
-            <Text style={styles.backButtonText}>←</Text>
-          </TouchableOpacity>
-          
-          {/* Countdown Timer */}
-          <View style={styles.timerContainer}>
-            <Text style={[styles.timerText, countdown <= 30 && styles.timerWarning]}>
-              {formatTime(countdown)}
-            </Text>
-          </View>
-        </View>
-        
-        {/* Icon */}
-        <View style={styles.iconContainer}>
-          <View style={[styles.iconCircle, otpExpired && styles.iconCircleExpired]}>
-            <Text style={styles.iconEmoji}>{otpExpired ? '⏰' : '🔐'}</Text>
-          </View>
-        </View>
-        
-        {/* Title */}
-        <Text style={styles.title}>
-          {otpExpired ? 'OTP Expired' : 'Enter Verification Code'}
-        </Text>
-        <Text style={styles.subtitle}>
-          {otpExpired
-            ? 'Your verification code has expired. Please request a new one.'
-            : `We sent a 6-digit code to\n${displayPhone}`}
-        </Text>
+            {/* Timer and icon */}
+            <View style={styles.headerContent}>
+              <View style={styles.iconCircle}>
+                <Ionicons 
+                  name={otpExpired ? 'time-outline' : 'shield-checkmark'} 
+                  size={32} 
+                  color={otpExpired ? COLORS.warning : COLORS.primary} 
+                />
+              </View>
+              {!otpExpired && (
+                <View style={styles.timerContainer}>
+                  <Ionicons name="timer-outline" size={14} color={countdown <= 30 ? COLORS.warning : COLORS.textMuted} />
+                  <Text style={[styles.timerText, countdown <= 30 && styles.timerWarning]}>
+                    {formatTime(countdown)}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </GlowHeader>
+        </Animated.View>
         
         {/* OTP Input Card */}
-        <Animated.View
-          style={[
-            styles.inputCard,
-            { transform: [{ translateX: shakeAnim }] },
-          ]}
-        >
-          {/* Error Message */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <Text style={styles.errorIcon}>⚠️</Text>
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
-          
-          {/* OTP Inputs */}
-          {!otpExpired && (
-            <View style={styles.otpContainer}>
-              {otp.map((digit, index) => (
-                <TextInput
-                  key={index}
-                  ref={(ref) => { inputRefs.current[index] = ref; }}
-                  style={[
-                    styles.otpInput,
-                    digit && styles.otpInputFilled,
-                    error && styles.otpInputError,
-                  ]}
-                  value={digit}
-                  onChangeText={(text) => handleOtpChange(text, index)}
-                  onKeyPress={({ nativeEvent }) =>
-                    handleKeyPress(nativeEvent.key, index)
-                  }
-                  keyboardType="number-pad"
-                  maxLength={index === 0 ? OTP_LENGTH : 1}
-                  selectTextOnFocus
-                  editable={!isLoading && !otpExpired}
-                  textContentType="oneTimeCode"
-                  autoFocus={index === 0}
-                />
-              ))}
-            </View>
-          )}
-          
-          {/* Loading Indicator */}
-          {isLoading && (
-            <View style={styles.loadingOverlay}>
-              <ActivityIndicator color={COLORS.primary} size="large" />
-              <Text style={styles.loadingText}>Verifying...</Text>
-            </View>
-          )}
+        <Animated.View style={[{ opacity: fadeAnim }]}>
+          <Animated.View style={{ transform: [{ translateX: shakeAnim }] }}>
+            <GlassCard variant="elevated" padding={24} borderRadius={24} style={styles.inputCard}>
+              {/* Error Message */}
+              {error && (
+                <View style={styles.errorContainer}>
+                  <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
+              
+              {/* OTP Inputs */}
+              {!otpExpired && (
+                <View style={styles.otpContainer}>
+                  {otp.map((digit, index) => (
+                    <TextInput
+                      key={index}
+                      ref={(ref) => { inputRefs.current[index] = ref; }}
+                      style={[
+                        styles.otpInput,
+                        digit && styles.otpInputFilled,
+                        error && styles.otpInputError,
+                      ]}
+                      value={digit}
+                      onChangeText={(text) => handleOtpChange(text, index)}
+                      onKeyPress={({ nativeEvent }) =>
+                        handleKeyPress(nativeEvent.key, index)
+                      }
+                      keyboardType="number-pad"
+                      maxLength={index === 0 ? OTP_LENGTH : 1}
+                      selectTextOnFocus
+                      editable={!isLoading && !otpExpired}
+                      textContentType="oneTimeCode"
+                      autoFocus={index === 0}
+                    />
+                  ))}
+                </View>
+              )}
+              
+              {/* Loading Indicator */}
+              {isLoading && (
+                <View style={styles.loadingOverlay}>
+                  <ActivityIndicator color={COLORS.primary} size="large" />
+                  <Text style={styles.loadingText}>Verifying...</Text>
+                </View>
+              )}
+            </GlassCard>
+          </Animated.View>
         </Animated.View>
         
         {/* Resend Section */}
-        <View style={styles.resendSection}>
+        <Animated.View style={[styles.resendSection, { opacity: fadeAnim }]}>
           {otpExpired ? (
-            <TouchableOpacity
-              style={styles.resendButton}
+            <GradientButton
+              title="Send New Code"
               onPress={handleResendOTP}
+              variant="primary"
+              loading={isResending}
               disabled={isResending || resendCooldown > 0}
-            >
-              {isResending ? (
-                <ActivityIndicator color={COLORS.primary} size="small" />
-              ) : (
-                <>
-                  <Text style={styles.resendIcon}>🔄</Text>
-                  <Text style={styles.resendButtonText}>Send New Code</Text>
-                </>
-              )}
-            </TouchableOpacity>
+              size="md"
+              icon={
+                !isResending ? (
+                  <Ionicons name="refresh" size={18} color={COLORS.background} />
+                ) : undefined
+              }
+            />
           ) : (
             <View style={styles.resendInfo}>
               <Text style={styles.resendText}>Didn't receive the code? </Text>
@@ -494,10 +449,10 @@ export default function VerifyOTPScreen() {
               )}
             </View>
           )}
-        </View>
+        </Animated.View>
         
         {/* Help Section */}
-        <View style={styles.helpSection}>
+        <Animated.View style={[styles.helpSection, { opacity: fadeAnim }]}>
           <TouchableOpacity
             onPress={() => router.back()}
             disabled={isLoading}
@@ -506,7 +461,7 @@ export default function VerifyOTPScreen() {
               Wrong phone number? Go back
             </Text>
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -519,33 +474,34 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
     paddingBottom: 40,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  headerContent: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginTop: 16,
+    gap: 12,
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.backgroundElevated,
+  iconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  backButtonText: {
-    color: COLORS.text,
-    fontSize: 24,
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
   },
   timerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.backgroundElevated,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
+    gap: 6,
   },
   timerText: {
     color: COLORS.text,
@@ -556,69 +512,25 @@ const styles = StyleSheet.create({
   timerWarning: {
     color: COLORS.warning,
   },
-  iconContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  iconCircleExpired: {
-    backgroundColor: COLORS.warning,
-  },
-  iconEmoji: {
-    fontSize: 40,
-  },
-  title: {
-    color: COLORS.text,
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  subtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 32,
-    lineHeight: 24,
-  },
   inputCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    marginHorizontal: 20,
+    marginTop: 8,
     position: 'relative',
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderWidth: 1,
     borderRadius: 12,
     padding: 12,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-  },
-  errorIcon: {
-    fontSize: 16,
-    marginRight: 8,
+    gap: 8,
   },
   errorText: {
     color: COLORS.error,
-    fontSize: 14,
+    fontSize: 13,
     flex: 1,
   },
   otpContainer: {
@@ -629,14 +541,14 @@ const styles = StyleSheet.create({
   otpInput: {
     flex: 1,
     aspectRatio: 0.8,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: 'rgba(37, 37, 48, 0.8)',
     borderRadius: 12,
     fontSize: 24,
     fontWeight: 'bold',
     color: COLORS.text,
     textAlign: 'center',
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
   },
   otpInputFilled: {
     backgroundColor: COLORS.backgroundElevated,
@@ -652,7 +564,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(13, 13, 18, 0.9)',
-    borderRadius: 20,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -663,7 +575,8 @@ const styles = StyleSheet.create({
   },
   resendSection: {
     alignItems: 'center',
-    marginBottom: 24,
+    marginTop: 24,
+    paddingHorizontal: 20,
   },
   resendInfo: {
     flexDirection: 'row',
@@ -683,27 +596,9 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  resendButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.backgroundElevated,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    gap: 8,
-  },
-  resendIcon: {
-    fontSize: 18,
-  },
-  resendButtonText: {
-    color: COLORS.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
   helpSection: {
     alignItems: 'center',
+    marginTop: 16,
   },
   helpLink: {
     color: COLORS.textMuted,
