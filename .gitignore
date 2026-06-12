@@ -77,3 +77,4 @@ upload/
 # Generated expo exports
 android-dist/
 dist/
+tool-results/
