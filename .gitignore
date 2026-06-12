@@ -78,3 +78,7 @@ upload/
 android-dist/
 dist/
 tool-results/
+
+# Screenshots
+*-screenshot.png
+*-screenshot.jpeg
