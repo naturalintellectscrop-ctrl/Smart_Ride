@@ -87,3 +87,5 @@ desktop-landing.png
 mobile-landing.png
 expo-app/Smart_Ride.env
 expo-app/.env
+smart-ride-mobile/GoogleService-Info.plist
+google-services.json

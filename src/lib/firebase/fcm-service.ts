@@ -10,8 +10,7 @@ import { firebaseApp, isFirebaseConfigured } from './firebase-service';
 // VAPID Key - supports both env variable names
 // Expo release builds require EXPO_PUBLIC_ prefix
 const FIREBASE_VAPID_KEY = process.env.EXPO_PUBLIC_FIREBASE_VAPID_KEY || 
-  (process.env as Record<string, string | undefined>)['PUBLIC_FIREBASE_VAPID_KEY'] ||
-  'BPixEzgMt0vTH5V15cEsBFB3MEl51T66idGs5dJn-zTt_4gjeZrPHINEEjC7WgXZByiPC4bYTrt9JJOab5djb0U';
+  (process.env as Record<string, string | undefined>)['PUBLIC_FIREBASE_VAPID_KEY'] || '';
 
 // Types
 export interface FCMTokenResult {
