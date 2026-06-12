@@ -1,7 +1,7 @@
 /**
  * Smart Ride Design System Theme Configuration
  * 
- * Updated to match Stitch Visual Design System
+ * Updated to match Smart Ride Visual Design System
  * 
  * Primary Theme: Light mode interface
  * Background: White / Light grey (#f8f9fa, #ffffff)
@@ -12,7 +12,7 @@
 
 export const smartRideTheme = {
   // ============================================
-  // Color Palette - Stitch Design System
+  // Color Palette - Smart Ride Design System
   // ============================================
   colors: {
     // Background Colors - Light Mode
@@ -120,7 +120,7 @@ export const smartRideTheme = {
   },
   
   // ============================================
-  // Elevation & Shadows (Stitch)
+  // Elevation & Shadows (Smart Ride)
   // ============================================
   elevation: {
     level0: 'none',                              // Floor: Maps
@@ -130,7 +130,7 @@ export const smartRideTheme = {
   },
   
   // ============================================
-  // Glass Morphism Effects (Stitch - Light Mode)
+  // Glass Morphism Effects (Smart Ride - Light Mode)
   // ============================================
   glass: {
     default: {
@@ -153,7 +153,7 @@ export const smartRideTheme = {
   },
   
   // ============================================
-  // Glow Effects (Stitch - Green based)
+  // Glow Effects (Smart Ride - Green based)
   // ============================================
   glow: {
     primary: {
@@ -197,7 +197,7 @@ export const smartRideTheme = {
   },
   
   // ============================================
-  // Typography - Stitch Design System
+  // Typography - Smart Ride Design System
   // ============================================
   typography: {
     fontFamily: {
@@ -241,7 +241,7 @@ export const smartRideTheme = {
   },
   
   // ============================================
-  // Border Radius - Stitch Design System
+  // Border Radius - Smart Ride Design System
   // ============================================
   borderRadius: {
     sm: '0.25rem',       // 4px - small elements
@@ -267,7 +267,7 @@ export const smartRideTheme = {
   },
   
   // ============================================
-  // Shadows - Stitch Elevation
+  // Shadows - Smart Ride Elevation
   // ============================================
   shadows: {
     sm: '0 2px 4px rgba(0, 0, 0, 0.05)',
