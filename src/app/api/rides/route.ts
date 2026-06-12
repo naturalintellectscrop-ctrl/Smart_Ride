@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { verifyAccessToken } from '@/lib/auth/jwt';
 
 export async function GET(req: NextRequest) {
-  await setServiceRoleContext();
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -12,11 +12,23 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const parts = authHeader.split(' ')[1].split('_');
-    const userId = parts[1];
+    const token = authHeader.split(' ')[1];
+    const payload = verifyAccessToken(token);
+    if (!payload) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
 
-    const rides = await db.ride.findMany({
-      where: { clientId: userId },
+    await setRLSContext({ userId: payload.userId, role: payload.role });
+
+    // Use Task model for rides (RIDE type tasks)
+    const rides = await db.task.findMany({
+      where: {
+        clientId: payload.userId,
+        type: { in: ['RIDE_BODA', 'RIDE_CAR', 'RIDE'] },
+      },
       orderBy: { createdAt: 'desc' },
       take: 20,
     });
@@ -34,7 +46,6 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  await setServiceRoleContext();
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader?.startsWith('Bearer ')) {
@@ -44,12 +55,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const parts = authHeader.split(' ')[1].split('_');
-    const userId = parts[1];
+    const token = authHeader.split(' ')[1];
+    const payload = verifyAccessToken(token);
+    if (!payload) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    await setRLSContext({ userId: payload.userId, role: payload.role });
 
     const body = await req.json();
     const {
-      type = 'BODA',
+      type = 'RIDE_BODA',
       pickupAddress,
       pickupLat,
       pickupLng,
@@ -69,10 +88,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ride = await db.ride.create({
+    // Create a ride task using the Task model
+    const ride = await db.task.create({
       data: {
-        clientId: userId,
+        clientId: payload.userId,
         type,
+        status: 'PENDING',
         pickupAddress,
         pickupLat: pickupLat || 0.3476,
         pickupLng: pickupLng || 32.5825,

@@ -82,3 +82,6 @@ tool-results/
 # Screenshots
 *-screenshot.png
 *-screenshot.jpeg
+*.next-dev-pid
+desktop-landing.png
+mobile-landing.png
