@@ -93,6 +93,137 @@ export const GLASS = {
   },
 };
 
+// ============================================
+// DESIGN SYSTEM COLORS (Stitch - Professional)
+// Updated brand palette: Deep Green + Light Surface
+// ============================================
+export const DESIGN_SYSTEM_COLORS = {
+  // Primary - Deep Green (matches Stitch design system)
+  primary: '#005f3a',
+  primaryDark: '#003d26',
+  primaryLight: '#0e7a4d',
+  primaryContainer: '#0e7a4d',
+  onPrimary: '#ffffff',
+  onPrimaryContainer: '#a6ffc9',
+
+  // Secondary - Bright Green (actions, success)
+  secondary: '#006e2f',
+  secondaryContainer: '#6bff8f',
+  onSecondary: '#ffffff',
+  onSecondaryContainer: '#007432',
+
+  // Background & Surface - Light Professional
+  background: '#f8f9fa',
+  surface: '#f8f9fa',
+  surfaceContainer: '#edeeef',
+  surfaceContainerLow: '#f3f4f5',
+  surfaceContainerHigh: '#e7e8e9',
+  onSurface: '#191c1d',
+  onSurfaceVariant: '#3f4941',
+
+  // Error - Red
+  error: '#ba1a1a',
+  errorContainer: '#ffdad6',
+  onError: '#ffffff',
+  onErrorContainer: '#93000a',
+
+  // Neutral/Text
+  outline: '#6f7a71',
+  outlineVariant: '#bec9bf',
+
+  // Utility
+  white: '#ffffff',
+  black: '#000000',
+  transparent: 'transparent',
+};
+
+// ============================================
+// TYPOGRAPHY SCALE (Stitch Design System)
+// ============================================
+export const TYPOGRAPHY = {
+  // Display - Headlines
+  displayLg: {
+    fontFamily: 'Plus Jakarta Sans',
+    fontSize: 32,
+    fontWeight: '700',
+    lineHeight: 40,
+    letterSpacing: -0.02,
+  },
+
+  // Headlines
+  headlineLg: {
+    fontFamily: 'Plus Jakarta Sans',
+    fontSize: 24,
+    fontWeight: '700',
+    lineHeight: 32,
+  },
+  headlineMd: {
+    fontFamily: 'Plus Jakarta Sans',
+    fontSize: 20,
+    fontWeight: '600',
+    lineHeight: 28,
+  },
+
+  // Body - Functional text
+  bodyLg: {
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '400',
+    lineHeight: 28,
+  },
+  bodyMd: {
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '400',
+    lineHeight: 24,
+  },
+  bodySm: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '400',
+    lineHeight: 20,
+  },
+
+  // Labels
+  labelLg: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 20,
+    letterSpacing: 0.02,
+  },
+  labelMd: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '500',
+    lineHeight: 16,
+  },
+};
+
+// ============================================
+// SPACING SCALE (4px baseline grid)
+// ============================================
+export const SPACING_SCALE = {
+  xs: 4,     // 4px
+  sm: 8,     // 8px
+  md: 16,    // 16px
+  lg: 24,    // 24px
+  xl: 32,    // 32px
+  xxl: 48,   // 48px
+};
+
+// ============================================
+// BORDER RADIUS SCALE
+// ============================================
+export const RADIUS_SCALE = {
+  sm: 6,      // Small components
+  md: 8,      // Standard buttons, inputs
+  lg: 12,     // Standard cards
+  xl: 16,     // Large containers
+  xxl: 24,    // Extra large containers
+  full: 9999, // Fully rounded (pills, avatars)
+};
+
 // Services config for ServiceIcon component
 export const SERVICES: Record<string, { icon: string; color: string; colorDim: string; colorBorder: string }> = {
   BODA: { icon: 'bicycle', color: '#00FF88', colorDim: 'rgba(0, 255, 136, 0.08)', colorBorder: 'rgba(0, 255, 136, 0.15)' },

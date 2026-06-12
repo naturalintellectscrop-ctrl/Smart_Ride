@@ -264,17 +264,37 @@ export async function registerUser(data: RegisterData): Promise<AuthResponse> {
 
 /**
  * Login with Google ID token
+ * This endpoint accepts the idToken from Google Sign-In and returns auth tokens
  */
 export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
   try {
+    if (!idToken) {
+      throw new Error('Invalid Google ID token');
+    }
+
     const response = await apiRequest<AuthResponse>('/auth/google', 'POST', {
       idToken,
     });
     
-    if (response.success && response.user && response.tokens) {
-      await saveTokens(response.tokens.accessToken, response.tokens.refreshToken);
-      await saveUserData(response.user);
-      syncAuthStore(response.user, response.tokens.accessToken);
+    // Handle both response formats for maximum compatibility
+    if (response.success) {
+      // Format 1: response.data (standard)
+      if (response.data?.user && response.data?.accessToken) {
+        await saveTokens(response.data.accessToken, response.data.refreshToken);
+        await saveUserData(response.data.user);
+        syncAuthStore(response.data.user, response.data.accessToken);
+      } 
+      // Format 2: response.user + response.tokens (alternative)
+      else if (response.user && response.tokens?.accessToken) {
+        await saveTokens(response.tokens.accessToken, response.tokens.refreshToken);
+        await saveUserData(response.user);
+        syncAuthStore(response.user, response.tokens.accessToken);
+      } 
+      // Format mismatch - fail loud
+      else {
+        console.error('[AUTH] Google login response missing tokens or user:', response);
+        throw new Error('Invalid Google login response from server');
+      }
     }
     
     return response;

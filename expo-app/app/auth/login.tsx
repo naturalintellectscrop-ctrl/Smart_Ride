@@ -25,9 +25,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes } from '@react-native-google-signin/google-signin';
 import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
-import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData } from '@/src/services/auth';
+import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData, loginWithGoogle } from '@/src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
-import { COLORS } from '../../src/constants';
+import { COLORS, DESIGN_SYSTEM_COLORS, TYPOGRAPHY, SPACING_SCALE, RADIUS_SCALE } from '../../src/constants';
 import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
 
 const { height } = Dimensions.get('window');
@@ -123,59 +123,61 @@ export default function LoginScreen() {
     setError(null);
 
     try {
+      // Ensure Google Sign-In is configured
       configureGoogleSignIn();
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      
+      // Check if Google Play Services are available (Android)
+      if (Platform.OS === 'android') {
+        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      }
+      
+      // Perform the sign-in
       const userInfo = await GoogleSignin.signIn();
       
-      if (userInfo.data?.idToken) {
-        const response = await fetch(`${API_BASE_URL}/auth/google`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken: userInfo.data.idToken }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          if (result.data?.accessToken) {
-            await saveTokens(result.data.accessToken, result.data.refreshToken);
-            if (result.data.user) await saveUserData(result.data.user);
-          } else if (result.tokens?.accessToken) {
-            await saveTokens(result.tokens.accessToken, result.tokens.refreshToken);
-            if (result.user) await saveUserData(result.user);
-          }
-          // Sync with auth store for screens that use useAuthStore
-          const token = await getAccessToken();
-          const userData = await getUserData();
-          if (token && userData) {
-            useAuthStore.getState().login({
-              id: userData.id,
-              email: userData.email,
-              name: userData.name,
-              phone: userData.phone,
-              role: userData.role,
-            }, token);
-          }
-          router.replace('/(tabs)');
-        } else {
-          setError(result.error || 'Google login failed. Please try again.');
-        }
-      } else {
+      // Validate we got the ID token
+      if (!userInfo.data?.idToken) {
         setError('Failed to get Google ID token. Please try again.');
+        console.error('[GoogleSignIn] No idToken in response:', userInfo);
+        return;
+      }
+
+      // Use the auth service function for consistency
+      const response = await loginWithGoogle(userInfo.data.idToken);
+
+      if (response.success) {
+        // Sync with auth store for screens that use useAuthStore
+        const token = await getAccessToken();
+        const userData = await getUserData();
+        if (token && userData) {
+          useAuthStore.getState().login({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            phone: userData.phone,
+            role: userData.role,
+          }, token);
+        }
+        router.replace('/(tabs)');
+      } else {
+        setError(response.error || response.message || 'Google login failed. Please try again.');
       }
     } catch (err: any) {
-      console.error('Google Sign-In error:', err);
+      console.error('[GoogleSignIn] Error:', err);
       
+      // Handle specific error codes
       if (err.code === statusCodes.SIGN_IN_CANCELLED) {
         // User cancelled - don't show error
+        console.log('[GoogleSignIn] User cancelled sign-in');
       } else if (err.message?.includes('DEVELOPER_ERROR') || err.code === 'DEVELOPER_ERROR') {
-        setError('Google Sign-In is not yet configured for this device. Please use email login instead.');
+        setError('Google Sign-In configuration error. Please use email login or contact support.');
       } else if (err.code === statusCodes.IN_PROGRESS) {
-        setError('Sign in is already in progress');
+        setError('Sign in is already in progress. Please wait.');
       } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        setError('Google Play Services not available. Please use email login instead.');
+        setError('Google Play Services not available. Please update Google Play Services and try again.');
+      } else if (err.message?.includes('Network error') || err.message?.includes('timeout')) {
+        setError('Network error. Please check your connection and try again.');
       } else {
-        setError('Google Sign-In is unavailable. Please use email login instead.');
+        setError('Google Sign-In failed. Please try email login instead.');
       }
     } finally {
       setGoogleLoading(false);
@@ -390,7 +392,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: DESIGN_SYSTEM_COLORS.background,
   },
   backgroundGradient: {
     position: 'absolute',
@@ -399,43 +401,16 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
-  ambientGreen: {
-    position: 'absolute',
-    top: -60,
-    left: -40,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: 'rgba(0, 255, 136, 0.06)',
-  },
-  ambientCyan: {
-    position: 'absolute',
-    bottom: height * 0.15,
-    right: -60,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(0, 255, 243, 0.04)',
-  },
-  ambientPurple: {
-    position: 'absolute',
-    top: height * 0.38,
-    right: -80,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(139, 92, 246, 0.04)',
-  },
   scrollContent: {
     flexGrow: 1,
   },
   logoContainer: {
     width: 80,
     height: 80,
-    borderRadius: 24,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: DESIGN_SYSTEM_COLORS.surfaceContainer,
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.2)',
+    borderColor: DESIGN_SYSTEM_COLORS.outlineVariant,
+    borderRadius: RADIUS_SCALE.lg,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -447,64 +422,67 @@ const styles = StyleSheet.create({
     right: -20,
     bottom: -20,
     borderRadius: 40,
-    backgroundColor: 'rgba(0, 255, 136, 0.15)',
+    backgroundColor: 'rgba(0, 95, 58, 0.1)',
   },
   logoText: {
     fontSize: 28,
     fontWeight: '900',
-    color: COLORS.primary,
+    color: DESIGN_SYSTEM_COLORS.primary,
     letterSpacing: -1,
   },
   formCard: {
-    marginHorizontal: 20,
-    marginTop: 8,
+    marginHorizontal: SPACING_SCALE.md,
+    marginTop: SPACING_SCALE.md,
+    borderWidth: 1,
+    borderColor: DESIGN_SYSTEM_COLORS.outlineVariant,
+    backgroundColor: DESIGN_SYSTEM_COLORS.surface,
   },
   errorContainer: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: 'rgba(186, 26, 26, 0.08)',
+    borderColor: DESIGN_SYSTEM_COLORS.error,
     borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    borderRadius: RADIUS_SCALE.md,
+    padding: SPACING_SCALE.md,
+    marginBottom: SPACING_SCALE.md,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: SPACING_SCALE.sm,
   },
   errorText: {
-    color: COLORS.error,
+    color: DESIGN_SYSTEM_COLORS.error,
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
   },
   forgotButton: {
     alignItems: 'flex-end',
-    marginBottom: 20,
-    marginTop: 4,
+    marginBottom: SPACING_SCALE.lg,
+    marginTop: SPACING_SCALE.xs,
   },
   forgotText: {
-    color: COLORS.primary,
+    color: DESIGN_SYSTEM_COLORS.primary,
     fontWeight: '500',
     fontSize: 13,
   },
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    marginVertical: SPACING_SCALE.xl,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: DESIGN_SYSTEM_COLORS.outlineVariant,
   },
   dividerText: {
-    color: COLORS.textDim,
-    marginHorizontal: 14,
+    color: DESIGN_SYSTEM_COLORS.outline,
+    marginHorizontal: SPACING_SCALE.md,
     fontSize: 13,
   },
   googleIconContainer: {
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: RADIUS_SCALE.md,
     backgroundColor: GOOGLE_BLUE,
     alignItems: 'center',
     justifyContent: 'center',
@@ -517,14 +495,14 @@ const styles = StyleSheet.create({
   signUpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: SPACING_SCALE.lg,
   },
   signUpText: {
-    color: COLORS.textMuted,
+    color: DESIGN_SYSTEM_COLORS.onSurfaceVariant,
     fontSize: 14,
   },
   signUpLink: {
-    color: COLORS.primary,
+    color: DESIGN_SYSTEM_COLORS.primary,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -532,12 +510,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    marginTop: 16,
-    marginBottom: 8,
+    gap: SPACING_SCALE.xs,
+    marginTop: SPACING_SCALE.md,
+    marginBottom: SPACING_SCALE.xs,
   },
   securityText: {
-    color: COLORS.textDim,
+    color: DESIGN_SYSTEM_COLORS.outline,
     fontSize: 11,
   },
 });
