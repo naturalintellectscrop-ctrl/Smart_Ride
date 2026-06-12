@@ -5,11 +5,11 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#00FF88"
+      "backgroundColor": "#005f3a"
     },
     "scheme": "smartride",
     "ios": {
@@ -30,7 +30,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#00FF88"
+        "backgroundColor": "#005f3a"
       },
       "package": "ug.smartride.app",
       "googleServicesFile": "./google-services.json",
@@ -72,9 +72,20 @@
         "expo-notifications",
         {
           "icon": "./assets/icon.png",
-          "color": "#00FF88"
+          "color": "#005f3a"
         }
-      ]
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkInReleaseBuilds": true,
+            "useLegacyPackaging": true
+          }
+        }
+      ],
+      "./plugins/withAbiSplits"
     ],
     "experiments": {
       "typedRoutes": true

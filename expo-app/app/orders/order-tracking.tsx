@@ -12,16 +12,9 @@ import {
   Alert,
   ScrollView,
   Linking,
-  Platform
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-// Conditional import for web compatibility
-const MapView = Platform.OS === 'web'
-  ? require('@/src/mocks/react-native-maps').MapView
-  : require('react-native-maps').default;
-const { Marker } = Platform.OS === 'web'
-  ? require('@/src/mocks/react-native-maps')
-  : require('react-native-maps');
+import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS } from '@/src/constants';
@@ -233,25 +226,20 @@ export default function OrderTrackingScreen() {
     <View className="flex-1 bg-white">
       {/* Map */}
       {order.deliveryLatitude && order.deliveryLongitude && (
-        <MapView
-          className="h-48"
-          initialRegion={{
-            latitude: order.deliveryLatitude,
-            longitude: order.deliveryLongitude,
-            latitudeDelta: 0.01,
-            longitudeDelta: 0.01,
-          }}
-          showsUserLocation
-        >
-          <Marker
-            coordinate={{
+        <SmartRideMap
+          style={{ height: 192 }}
+          initialLatitude={order.deliveryLatitude}
+          initialLongitude={order.deliveryLongitude}
+          markers={[
+            {
+              id: 'delivery',
               latitude: order.deliveryLatitude,
               longitude: order.deliveryLongitude,
-            }}
-            title="Delivery Location"
-            pinColor={COLORS.primary}
-          />
-        </MapView>
+              title: 'Delivery Location',
+            },
+          ]}
+          showUserLocation
+        />
       )}
 
       <ScrollView className="flex-1">

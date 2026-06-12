@@ -5,65 +5,57 @@
  * - Generates and propagates x-request-id headers
  * - Applies security headers to API responses
  * - Handles CORS for API routes (including OPTIONS preflight)
- * - Applies a lighter set of security headers to page responses
  *
  * IMPORTANT: This runs in the Edge runtime — do NOT use Node.js-specific
  * APIs (Buffer, fs, etc.) or import Prisma/db code.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import {
-  addSecurityHeaders,
-  handleCors,
-  handlePreflight,
-} from '@/lib/security/security-headers';
-
-// Lighter security headers for page (non-API) responses
-const PAGE_SECURITY_HEADERS: Record<string, string> = {
-  'X-Frame-Options': 'SAMEORIGIN', // Allow framing from same origin (less restrictive than DENY)
-  'X-Content-Type-Options': 'nosniff',
-  'X-XSS-Protection': '1; mode=block',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-};
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isApiRoute = pathname.startsWith('/api');
 
-  // 1. Generate or propagate request ID
-  const requestId =
-    request.headers.get('x-request-id') || crypto.randomUUID();
+  // Generate or propagate request ID
+  const requestId = request.headers.get('x-request-id') || crypto.randomUUID();
 
-  // 2. Handle CORS preflight for API routes (return immediately)
+  // Handle CORS preflight for API routes
   if (isApiRoute && request.method === 'OPTIONS') {
-    const response = handlePreflight(request);
+    const response = new NextResponse(null, { status: 204 });
     response.headers.set('x-request-id', requestId);
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-request-id');
+    response.headers.set('Access-Control-Max-Age', '86400');
     return response;
   }
 
-  // 3. Clone request headers with x-request-id for downstream handlers
+  // Clone request headers with x-request-id
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-request-id', requestId);
 
-  // 4. Continue processing the request
+  // Continue processing the request
   const response = NextResponse.next({
     request: { headers: requestHeaders },
   });
 
-  // 5. Add request ID to response so callers can trace the request
+  // Add request ID to response
   response.headers.set('x-request-id', requestId);
 
-  // 6. Apply security headers based on route type
+  // Apply security headers
   if (isApiRoute) {
-    // Full security headers + CORS for API routes
-    addSecurityHeaders(response);
-    handleCors(request, response);
+    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-XSS-Protection', '1; mode=block');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set('Access-Control-Allow-Origin', '*');
+    response.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-request-id');
   } else {
-    // Lighter security headers for page routes
-    for (const [key, value] of Object.entries(PAGE_SECURITY_HEADERS)) {
-      response.headers.set(key, value);
-    }
-    // Remove server identification from page responses too
+    response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-XSS-Protection', '1; mode=block');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     response.headers.delete('X-Powered-By');
     response.headers.delete('Server');
   }

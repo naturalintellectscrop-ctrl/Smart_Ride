@@ -30,13 +30,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-// Conditional import for web compatibility
-const MapView = Platform.OS === 'web'
-  ? require('@/src/mocks/react-native-maps').MapView
-  : require('react-native-maps').default;
-const { Marker, Polyline } = Platform.OS === 'web'
-  ? require('@/src/mocks/react-native-maps')
-  : require('react-native-maps');
+import { SmartRideMap } from '@/src/components/SmartRideMap';
 import * as Location from 'expo-location';
 import { useTaskStore, useLocationStore, useAuthStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
@@ -320,39 +314,22 @@ export default function DriverTaskScreen() {
   return (
     <View style={styles.container}>
       {/* Map */}
-      <MapView
+      <SmartRideMap
         style={styles.map}
-        initialRegion={{
-          latitude: task.pickupLatitude || 0.3476,
-          longitude: task.pickupLongitude || 32.5825,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
-        showsUserLocation
-        showsMyLocationButton={false}
-      >
-        {/* Pickup Marker */}
-        <Marker
-          coordinate={{
-            latitude: task.pickupLatitude || 0.3476,
-            longitude: task.pickupLongitude || 32.5825,
-          }}
-          title="Pickup"
-          pinColor={COLORS.secondary}
-        />
-
-        {/* Dropoff Marker */}
-        {task.dropoffLatitude && task.dropoffLongitude && (
-          <Marker
-            coordinate={{
-              latitude: task.dropoffLatitude,
-              longitude: task.dropoffLongitude,
-            }}
-            title="Dropoff"
-            pinColor={COLORS.primary}
-          />
-        )}
-      </MapView>
+        initialLatitude={task.pickupLatitude || 0.3476}
+        initialLongitude={task.pickupLongitude || 32.5825}
+        pickup={
+          task.pickupLatitude
+            ? { latitude: task.pickupLatitude, longitude: task.pickupLongitude || 32.5825, title: 'Pickup' }
+            : undefined
+        }
+        dropoff={
+          task.dropoffLatitude && task.dropoffLongitude
+            ? { latitude: task.dropoffLatitude, longitude: task.dropoffLongitude, title: 'Dropoff' }
+            : undefined
+        }
+        showUserLocation
+      />
 
       {/* Bottom Card */}
       <Animated.View

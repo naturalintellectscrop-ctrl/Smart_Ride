@@ -10,17 +10,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Linking,
-  Platform
+  Linking
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-// Conditional import for web compatibility
-const MapView = Platform.OS === 'web'
-  ? require('@/src/mocks/react-native-maps').MapView
-  : require('react-native-maps').default;
-const { Marker, Polyline } = Platform.OS === 'web'
-  ? require('@/src/mocks/react-native-maps')
-  : require('react-native-maps');
+import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useTaskStore, useAuthStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS, TASK_STATUS_LABELS, TASK_STATUS_COLORS } from '@/src/constants';
@@ -339,60 +332,26 @@ export default function RideTrackingScreen() {
   const statusColor = TASK_STATUS_COLORS[task.status] || COLORS.primary;
   const statusLabel = TASK_STATUS_LABELS[task.status] || task.status;
 
-  // Map region
-  const region = {
-    latitude: task.pickupLatitude || 0.3476,
-    longitude: task.pickupLongitude || 32.5825,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
-  };
-
   return (
     <View className="flex-1 bg-white">
       {/* Map */}
-      <MapView
-        className="flex-1"
-        initialRegion={region}
-        showsUserLocation
-        showsMyLocationButton={false}
-      >
-        {/* Pickup Marker */}
-        <Marker
-          coordinate={{
-            latitude: task.pickupLatitude || 0.3476,
-            longitude: task.pickupLongitude || 32.5825,
-          }}
-          title="Pickup"
-          pinColor={COLORS.secondary}
-        />
-
-        {/* Dropoff Marker */}
-        {task.dropoffLatitude && task.dropoffLongitude && (
-          <Marker
-            coordinate={{
-              latitude: task.dropoffLatitude,
-              longitude: task.dropoffLongitude,
-            }}
-            title="Dropoff"
-            pinColor={COLORS.primary}
-          />
-        )}
-
-        {/* Driver Location */}
-        {driverLocation && (
-          <Marker
-            coordinate={{
-              latitude: driverLocation.latitude,
-              longitude: driverLocation.longitude,
-            }}
-            title="Driver"
-          >
-            <View className="w-10 h-10 bg-primary-500 rounded-full items-center justify-center">
-              <Text className="text-xl">{task.taskType.includes('BODA') ? '🏍️' : '🚗'}</Text>
-            </View>
-          </Marker>
-        )}
-      </MapView>
+      <SmartRideMap
+        style={{ flex: 1 }}
+        initialLatitude={task.pickupLatitude || 0.3476}
+        initialLongitude={task.pickupLongitude || 32.5825}
+        pickup={
+          task.pickupLatitude
+            ? { latitude: task.pickupLatitude, longitude: task.pickupLongitude || 32.5825, title: 'Pickup' }
+            : undefined
+        }
+        dropoff={
+          task.dropoffLatitude && task.dropoffLongitude
+            ? { latitude: task.dropoffLatitude, longitude: task.dropoffLongitude, title: 'Dropoff' }
+            : undefined
+        }
+        driverLocation={driverLocation || undefined}
+        showUserLocation
+      />
 
       {/* Status Card */}
       <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-lg px-4 pt-4 pb-8">

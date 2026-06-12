@@ -6,7 +6,7 @@
 // GradientButton, StatusBadge, Reanimated animations
 // ============================================
 
-import React, { useState, useEffect, useCallback, Component, ReactNode } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -14,18 +14,10 @@ import {
   Switch,
   ActivityIndicator,
   Alert,
-  Platform,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-// Conditional import for web compatibility
-const MapView = Platform.OS === 'web'
-  ? require('@/src/mocks/react-native-maps').MapView
-  : require('react-native-maps').default;
-const { Marker } = Platform.OS === 'web'
-  ? require('@/src/mocks/react-native-maps')
-  : require('react-native-maps');
-type MapViewProps = any;
+import { SmartRideMap } from '@/src/components/SmartRideMap';
 import * as Location from 'expo-location';
 import Animated, {
   useSharedValue,
@@ -49,41 +41,6 @@ import { GradientButton } from '@/src/components/GradientButton';
 import { GlowHeader } from '@/src/components/GlowHeader';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Task, Rider } from '@/src/types';
-
-// Error Boundary for Map Component
-class MapErrorBoundary extends Component<{ children: ReactNode; fallback: ReactNode }, { hasError: boolean }> {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return this.props.fallback;
-    }
-    return this.props.children;
-  }
-}
-
-// Safe Map Component with fallback
-function SafeMapView(props: MapViewProps) {
-  const fallback = (
-    <View style={styles.mapFallback}>
-      <Text style={styles.mapFallbackEmoji}>🗺️</Text>
-      <Text style={styles.mapFallbackText}>Map unavailable</Text>
-      <Text style={styles.mapFallbackSubtext}>
-        Location: {props.initialRegion?.latitude?.toFixed(4)}, {props.initialRegion?.longitude?.toFixed(4)}
-      </Text>
-    </View>
-  );
-
-  return (
-    <MapErrorBoundary fallback={fallback}>
-      <MapView {...props} />
-    </MapErrorBoundary>
-  );
-}
 
 export default function DriverHomeScreen() {
   const router = useRouter();
@@ -411,16 +368,11 @@ export default function DriverHomeScreen() {
   return (
     <View style={styles.root}>
       {/* Map with Error Boundary */}
-      <SafeMapView
+      <SmartRideMap
         style={StyleSheet.absoluteFill}
-        initialRegion={{
-          latitude: latitude || DEFAULT_LOCATION.latitude,
-          longitude: longitude || DEFAULT_LOCATION.longitude,
-          latitudeDelta: 0.01,
-          longitudeDelta: 0.01,
-        }}
-        showsUserLocation
-        showsMyLocationButton={false}
+        initialLatitude={latitude || DEFAULT_LOCATION.latitude}
+        initialLongitude={longitude || DEFAULT_LOCATION.longitude}
+        showUserLocation
       />
 
       {/* GlowHeader overlay */}
@@ -767,26 +719,6 @@ const styles = StyleSheet.create({
     color: COLORS.textMuted,
     textAlign: 'center',
     marginBottom: 8,
-  },
-
-  // Map fallback
-  mapFallback: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  mapFallbackEmoji: {
-    fontSize: 40,
-    marginBottom: 8,
-  },
-  mapFallbackText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-  },
-  mapFallbackSubtext: {
-    color: COLORS.textDim,
-    fontSize: 12,
   },
 
   // Header overlay
