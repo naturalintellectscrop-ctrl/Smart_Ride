@@ -3,9 +3,12 @@
 // ============================================
 // Glass input with icon matching admin dashboard
 // Pattern: glass-input with icon prefix + glow on focus
+// FIX: Dynamic padding based on icon presence
+// FIX: blurOnSubmit to prevent cursor jumping
+// FIX: minHeight instead of fixed height
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../constants';
@@ -25,6 +28,9 @@ interface IconInputProps {
   style?: ViewStyle;
   multiline?: boolean;
   error?: string;
+  returnKeyType?: 'done' | 'next' | 'go' | 'search' | 'send';
+  onSubmitEditing?: () => void;
+  autoFocus?: boolean;
 }
 
 export function IconInput({
@@ -42,8 +48,12 @@ export function IconInput({
   style,
   multiline = false,
   error,
+  returnKeyType = 'done',
+  onSubmitEditing,
+  autoFocus = false,
 }: IconInputProps) {
   const [focused, setFocused] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
   return (
     <View style={[styles.container, style]}>
@@ -58,7 +68,12 @@ export function IconInput({
           />
         )}
         <TextInput
-          style={[styles.input, multiline && styles.multilineInput]}
+          ref={inputRef}
+          style={[
+            styles.input,
+            !icon && styles.inputNoIcon,
+            multiline && styles.multilineInput,
+          ]}
           placeholder={placeholder}
           placeholderTextColor={COLORS.textDim}
           value={value}
@@ -71,6 +86,10 @@ export function IconInput({
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
           multiline={multiline}
+          blurOnSubmit={false}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          autoFocus={autoFocus}
         />
         {rightIcon && (
           <TouchableOpacity onPress={onRightIconPress} style={styles.rightIcon}>
@@ -120,13 +139,17 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     paddingRight: 14,
-    paddingLeft: iconPaddingLeft(),
+    paddingLeft: 4,
     fontSize: 15,
     color: COLORS.text,
-    height: 48,
+    minHeight: 48,
+    paddingVertical: 12,
+  },
+  inputNoIcon: {
+    paddingLeft: 14,
   },
   multilineInput: {
-    height: 100,
+    minHeight: 100,
     textAlignVertical: 'top',
     paddingTop: 12,
   },
@@ -140,7 +163,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-
-function iconPaddingLeft(): number {
-  return 0; // When icon is present, it handles the left padding
-}

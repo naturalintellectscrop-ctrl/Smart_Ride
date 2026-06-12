@@ -3,6 +3,8 @@
 // ============================================
 // Premium branded launch screen
 // Clean, modern, production-ready
+// PRIMARY CTA: Phone OTP (most popular in Uganda)
+// SECONDARY CTA: Email/Password login
 // ============================================
 
 import React from 'react';
@@ -11,25 +13,12 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  ActivityIndicator,
   StatusBar,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-// ============================================
-// BRAND COLORS - Smart Ride Uganda
-// ============================================
-const COLORS = {
-  primaryGreen: '#00FF88',       // Neon Green - Main brand
-  primaryGreenDark: '#00CC6D',
-  accent: '#00FFF3',             // Cyan - Secondary
-  darkSurface: '#0D0D12',        // Dark background
-  accentGold: '#F59E0B',
-  white: '#FFFFFF',
-  mutedText: '#D1D5DB',
-  subtleText: '#9CA3AF',
-};
+import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../src/constants';
 
 // ============================================
 // LOGO COMPONENT - Location Pin Icon
@@ -71,7 +60,7 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryGreen} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
       
       {/* Main content - centered */}
       <View style={styles.centerContent}>
@@ -89,26 +78,35 @@ export default function SplashScreen() {
       <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 24 }]}>
         {/* Action buttons */}
         <View style={styles.buttonContainer}>
+          {/* PRIMARY: Phone OTP Sign In */}
           <TouchableOpacity
             style={styles.primaryButton}
+            onPress={() => router.push('/auth/phone-login')}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="call" size={22} color={COLORS.background} style={styles.buttonIcon} />
+            <Text style={styles.primaryButtonText}>Get Started with Phone</Text>
+          </TouchableOpacity>
+
+          {/* SECONDARY: Email Sign In */}
+          <TouchableOpacity
+            style={styles.secondaryButton}
             onPress={() => router.push('/auth/login')}
             activeOpacity={0.85}
           >
-            <Text style={styles.primaryButtonText}>Get Started</Text>
+            <Ionicons name="mail" size={20} color={COLORS.white} style={styles.buttonIcon} />
+            <Text style={styles.secondaryButtonText}>Sign In with Email</Text>
           </TouchableOpacity>
 
+          {/* Create Account link */}
           <TouchableOpacity
-            style={styles.secondaryButton}
             onPress={() => router.push('/auth/register')}
-            activeOpacity={0.85}
+            activeOpacity={0.7}
           >
-            <Text style={styles.secondaryButtonText}>Create Account</Text>
+            <Text style={styles.createAccountText}>
+              Don't have an account? <Text style={styles.createAccountLink}>Create one</Text>
+            </Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Loading indicator */}
-        <View style={styles.loadingRow}>
-          <ActivityIndicator size="small" color={COLORS.white} />
         </View>
         
         {/* Version */}
@@ -127,24 +125,21 @@ const PIN_HEAD_SIZE = 48;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primaryGreen,
+    backgroundColor: COLORS.primary,
   },
   
-  // Center content
   centerContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   
-  // Logo wrapper with glow
   logoWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 32,
   },
   
-  // Outer glow ring
   logoGlowRing: {
     position: 'absolute',
     width: BADGE_SIZE + 30,
@@ -154,15 +149,13 @@ const styles = StyleSheet.create({
     opacity: 0.15,
   },
   
-  // Main badge
   logoBadge: {
     width: BADGE_SIZE,
     height: BADGE_SIZE,
     borderRadius: BADGE_SIZE / 2,
-    backgroundColor: COLORS.darkSurface,
+    backgroundColor: COLORS.background,
     alignItems: 'center',
     justifyContent: 'center',
-    // Shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
@@ -170,25 +163,22 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   
-  // Pin container
   pinContainer: {
     alignItems: 'center',
     marginTop: -8,
   },
   
-  // Pin head (top circle)
   pinHead: {
     width: PIN_HEAD_SIZE,
     height: PIN_HEAD_SIZE,
     borderRadius: PIN_HEAD_SIZE / 2,
-    backgroundColor: COLORS.primaryGreen,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: COLORS.white,
   },
   
-  // Inner white dot
   pinInner: {
     width: 14,
     height: 14,
@@ -196,7 +186,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.white,
   },
   
-  // Pin body (triangle)
   pinBody: {
     width: 0,
     height: 0,
@@ -205,11 +194,10 @@ const styles = StyleSheet.create({
     borderTopWidth: 28,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: COLORS.primaryGreen,
+    borderTopColor: COLORS.primary,
     marginTop: -6,
   },
   
-  // Motion trail
   motionTrail: {
     position: 'absolute',
     left: 12,
@@ -233,7 +221,6 @@ const styles = StyleSheet.create({
     opacity: 0.35,
   },
   
-  // Brand name
   brandName: {
     fontSize: 42,
     fontWeight: '800',
@@ -242,7 +229,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   
-  // Tagline
   tagline: {
     fontSize: 16,
     fontWeight: '500',
@@ -251,26 +237,30 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   
-  // Bottom section
   bottomSection: {
     alignItems: 'center',
     paddingHorizontal: 28,
   },
   
-  // Button container
   buttonContainer: {
     width: '100%',
     maxWidth: 340,
-    marginBottom: 24,
+    alignItems: 'center',
   },
   
-  // Primary button
+  buttonIcon: {
+    marginRight: 8,
+  },
+
   primaryButton: {
-    backgroundColor: COLORS.darkSurface,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
     paddingVertical: 18,
     borderRadius: 16,
     marginBottom: 14,
-    alignItems: 'center',
+    width: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
@@ -284,32 +274,40 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   
-  // Secondary button
   secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: COLORS.white,
     paddingVertical: 16,
     borderRadius: 16,
-    alignItems: 'center',
+    width: '100%',
+    marginBottom: 20,
   },
   secondaryButtonText: {
     color: COLORS.white,
     fontSize: 17,
     fontWeight: '600',
   },
-  
-  // Loading row
-  loadingRow: {
-    marginBottom: 16,
-    opacity: 0.7,
+
+  createAccountText: {
+    color: COLORS.white,
+    fontSize: 14,
+    opacity: 0.8,
+    marginBottom: 12,
+  },
+  createAccountLink: {
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   
-  // Version text
   versionText: {
     fontSize: 12,
     color: COLORS.white,
     opacity: 0.5,
     fontWeight: '500',
+    marginTop: 8,
   },
 });
