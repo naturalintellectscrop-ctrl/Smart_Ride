@@ -7,25 +7,44 @@
  * Note: This runs alongside the main sw.js service worker.
  */
 
-// Firebase Configuration
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDummyKeyForPlaceholder",
-  authDomain: "smart-ride-489806.firebaseapp.com",
-  projectId: "smart-ride-489806",
-  storageBucket: "smart-ride-489806.appspot.com",
-  messagingSenderId: "123456789012",
-  appId: "1:123456789012:web:abcdef123456789"
-};
+// Firebase Configuration - loaded from runtime config injected by the app
+// Service workers can't access process.env, so config is injected via postMessage or indexedDB
+let FIREBASE_CONFIG = null;
 
 // Import Firebase scripts (required for background message handling)
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
 
-// Initialize Firebase
-firebase.initializeApp(FIREBASE_CONFIG);
+// Initialize Firebase - wait for config to be injected
+// The main app will send config via postMessage before FCM is needed
+let messaging = null;
 
-// Get Messaging instance
-const messaging = firebase.messaging();
+// Fallback: try to initialize with config from IndexedDB (if previously stored)
+async function tryInitFromIDB() {
+  try {
+    const db = await indexedDB.open('smart-ride-firebase-config', 1);
+    db.onsuccess = (event) => {
+      const database = event.target.result;
+      try {
+        const tx = database.transaction('config', 'readonly');
+        const store = tx.objectStore('config');
+        const req = store.get('firebase-config');
+        req.onsuccess = () => {
+          if (req.result && !FIREBASE_CONFIG) {
+            FIREBASE_CONFIG = req.result.value;
+            firebase.initializeApp(FIREBASE_CONFIG);
+            messaging = firebase.messaging();
+          }
+        };
+      } catch (e) {
+        // IndexedDB config not available yet
+      }
+    };
+  } catch (e) {
+    // IndexedDB not available
+  }
+}
+tryInitFromIDB();
 
 // ==========================================
 // Background Message Handler
@@ -35,7 +54,9 @@ const messaging = firebase.messaging();
  * Handle background messages
  * This is triggered when a message is received while the app is in the background
  */
-messaging.onBackgroundMessage((payload) => {
+function setupBackgroundMessageHandler() {
+  if (!messaging) return;
+  messaging.onBackgroundMessage((payload) => {
   console.log('[Firebase SW] Background message received:', payload);
 
   const notificationTitle = payload.notification?.title || 'Smart Ride';
@@ -69,7 +90,20 @@ messaging.onBackgroundMessage((payload) => {
 
   // Show notification
   return self.registration.showNotification(notificationTitle, notificationOptions);
-});
+  });
+}
+
+// Set up background message handler after initialization
+// Retry mechanism in case messaging isn't ready yet
+function initBackgroundHandler() {
+  if (messaging) {
+    setupBackgroundMessageHandler();
+  } else {
+    // Retry after a short delay
+    setTimeout(initBackgroundHandler, 1000);
+  }
+}
+initBackgroundHandler();
 
 // ==========================================
 // Notification Click Handler
@@ -309,7 +343,18 @@ self.addEventListener('activate', (event) => {
  * Handle messages from the main app
  */
 self.addEventListener('message', (event) => {
+  // Handle Firebase config injection from main app
+  if (event.data && event.data.type === 'FIREBASE_CONFIG' && !FIREBASE_CONFIG) {
+    FIREBASE_CONFIG = event.data.config;
+    firebase.initializeApp(FIREBASE_CONFIG);
+    messaging = firebase.messaging();
+    setupBackgroundMessageHandler();
+    return;
+  }
+
   console.log('[Firebase SW] Message received:', event.data);
+
+  if (!messaging) return;
 
   if (event.data.type === 'GET_TOKEN') {
     // Handle token request
