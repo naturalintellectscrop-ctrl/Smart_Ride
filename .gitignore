@@ -85,3 +85,5 @@ tool-results/
 *.next-dev-pid
 desktop-landing.png
 mobile-landing.png
+expo-app/Smart_Ride.env
+expo-app/.env
