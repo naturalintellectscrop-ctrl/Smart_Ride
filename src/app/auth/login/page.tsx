@@ -172,12 +172,12 @@ export default function UserLoginPage() {
 
                 {/* Forgot Password */}
                 <div className="text-right animate-fade-up delay-500">
-                  <button
-                    type="button"
+                  <Link
+                    href="/forgot-password"
                     className="text-sm text-[#00FF88] hover:text-[#00FFF3] transition-colors duration-200"
                   >
                     Forgot password?
-                  </button>
+                  </Link>
                 </div>
 
                 {/* Submit Button */}
@@ -214,6 +214,7 @@ export default function UserLoginPage() {
               <div className="grid grid-cols-2 gap-3 animate-fade-up delay-800">
                 <button
                   type="button"
+                  onClick={() => window.location.href = '/api/auth/google'}
                   className="h-11 bg-[#252530]/50 border border-white/10 rounded-xl flex items-center justify-center gap-2 text-white/70 hover:bg-[#252530] hover:border-[#00FF88]/30 transition-all duration-300"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -226,7 +227,8 @@ export default function UserLoginPage() {
                 </button>
                 <button
                   type="button"
-                  className="h-11 bg-[#252530]/50 border border-white/10 rounded-xl flex items-center justify-center gap-2 text-white/70 hover:bg-[#252530] hover:border-[#00FF88]/30 transition-all duration-300"
+                  className="h-11 bg-[#252530]/50 border border-white/10 rounded-xl flex items-center justify-center gap-2 text-white/70 hover:bg-[#252530] hover:border-[#00FF88]/30 transition-all duration-300 opacity-50 cursor-not-allowed"
+                  disabled
                 >
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C6.477 2 2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.879V14.89h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.989C18.343 21.129 22 16.99 22 12c0-5.523-4.477-10-10-10z"/>

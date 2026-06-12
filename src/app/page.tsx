@@ -1,622 +1,954 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion } from 'framer-motion';
 import Logo from '@/components/Logo';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '@/components/ui/sheet';
+import {
+  Bike,
+  Car,
+  UtensilsCrossed,
+  Package,
+  ShoppingCart,
+  HeartPulse,
+  Smartphone,
+  Search,
+  UserCheck,
+  Star,
+  Banknote,
+  Phone,
+  Facebook,
+  Twitter,
+  Instagram,
+  Menu,
+  Download,
+  ChevronRight,
+  MapPin,
+  Mail,
+  CheckCircle2,
+  ArrowRight,
+  Shield,
+  Clock,
+  DollarSign,
+  Users,
+} from 'lucide-react';
 
-// ============================================
-// SMART RIDE - LANDING PAGE
-// ============================================
-// Design System: Stitch Visual Design (Dark Theme)
-// Primary: #005f3a (deep green)
-// Accent: #22C55E (bright green)
-// Background: #111827 (dark surface)
-// Headlines: Plus Jakarta Sans
-// Body: Inter
-// ============================================
+// ─── Animation helpers ───────────────────────────────────────────────────────
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 30 },
+  visible: (i: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { delay: i * 0.1, duration: 0.6, ease: 'easeOut' },
+  }),
+};
+
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.08 } },
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.85 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.5, ease: 'easeOut' } },
+};
+
+// ─── Data ────────────────────────────────────────────────────────────────────
+
+const navLinks = [
+  { label: 'About', href: '/about' },
+  { label: 'Help', href: '/help' },
+  { label: 'Contact', href: '/contact' },
+  { label: 'Blog', href: '/blog' },
+];
+
+const services = [
+  {
+    icon: Bike,
+    title: 'Smart Boda',
+    description: 'Quick & affordable motorcycle taxi rides across town. Skip the traffic with our vast boda network.',
+    color: '#22C55E',
+  },
+  {
+    icon: Car,
+    title: 'Smart Car',
+    description: 'Comfortable car rides with professional drivers. Perfect for longer trips and special occasions.',
+    color: '#3B82F6',
+  },
+  {
+    icon: UtensilsCrossed,
+    title: 'Smart Food',
+    description: 'Order from your favourite restaurants. Hot meals delivered fast to your doorstep.',
+    color: '#F59E0B',
+  },
+  {
+    icon: Package,
+    title: 'Smart Delivery',
+    description: 'Send and receive packages seamlessly. Reliable delivery for documents, parcels & more.',
+    color: '#8B5CF6',
+  },
+  {
+    icon: ShoppingCart,
+    title: 'Smart Shopping',
+    description: 'Groceries and essentials from local stores. Shop from home and get it delivered fresh.',
+    color: '#EC4899',
+  },
+  {
+    icon: HeartPulse,
+    title: 'Smart Health',
+    description: 'Pharmacy & health products delivered discreetly. Order prescriptions and OTC medicine anytime.',
+    color: '#EF4444',
+  },
+];
+
+const steps = [
+  {
+    icon: Smartphone,
+    title: 'Open the App',
+    description: 'Download Smart Ride and create your account in seconds.',
+  },
+  {
+    icon: Search,
+    title: 'Choose Service',
+    description: 'Pick from rides, food, delivery, shopping, or health.',
+  },
+  {
+    icon: UserCheck,
+    title: 'Get Matched',
+    description: "We'll connect you with the nearest available rider or driver.",
+  },
+  {
+    icon: Star,
+    title: 'Pay & Rate',
+    description: 'Pay your way — cash or mobile money — then rate your experience.',
+  },
+];
+
+const testimonials = [
+  {
+    quote: 'Smart Ride made my daily commute so easy!',
+    name: 'Sarah K.',
+    location: 'Kampala',
+    avatar: 'SK',
+  },
+  {
+    quote: 'I earn a great living as a Smart Ride driver',
+    name: 'James M.',
+    location: 'Entebbe',
+    avatar: 'JM',
+  },
+  {
+    quote: 'Food delivery in under 30 minutes — amazing!',
+    name: 'Grace N.',
+    location: 'Makindye',
+    avatar: 'GN',
+  },
+];
+
+const paymentMethods = [
+  {
+    icon: Banknote,
+    label: 'Cash',
+    description: 'Pay with cash on delivery',
+    color: '#22C55E',
+  },
+  {
+    icon: Phone,
+    label: 'MTN MoMo',
+    description: 'MTN Mobile Money',
+    color: '#F5A623',
+  },
+  {
+    icon: Phone,
+    label: 'Airtel Money',
+    description: 'Airtel mobile payments',
+    color: '#E4002B',
+  },
+];
+
+const footerLinks = {
+  quickLinks: [
+    { label: 'About Us', href: '/about' },
+    { label: 'Help Center', href: '/help' },
+    { label: 'Contact', href: '/contact' },
+    { label: 'Blog', href: '/blog' },
+    { label: 'Admin Portal', href: '/admin/login' },
+  ],
+  legal: [
+    { label: 'Privacy Policy', href: '/privacy' },
+    { label: 'Terms of Service', href: '/terms' },
+  ],
+};
+
+// ─── Component ───────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-background font-sans flex flex-col">
-      
-      {/* ============================================ */}
-      {/* NAVIGATION */}
-      {/* ============================================ */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-md border-b border-border">
+    <div className="min-h-screen bg-[#111827] text-white flex flex-col">
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* NAVIGATION                                                        */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#111827]/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Logo />
-            
+            <Logo variant="dark" />
+
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-8">
-              <Link href="/about" className="text-muted-foreground hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium">
-                About
-              </Link>
-              <Link href="/help" className="text-muted-foreground hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium">
-                Help
-              </Link>
-              <Link href="/contact" className="text-muted-foreground hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium">
-                Contact
-              </Link>
-              <Link href="/blog" className="text-muted-foreground hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium">
-                Blog
-              </Link>
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-gray-300 hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium"
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
-            
-            {/* CTA Buttons */}
-            <div className="flex items-center gap-3">
-              <Link 
-                href="/admin/login" 
-                className="text-muted-foreground hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium hidden sm:block"
-              >
-                Admin
+
+            {/* Desktop CTA Buttons */}
+            <div className="hidden md:flex items-center gap-3">
+              <Link href="/admin/login">
+                <Button
+                  variant="ghost"
+                  className="text-gray-300 hover:text-white hover:bg-white/10"
+                >
+                  Admin
+                </Button>
               </Link>
-              <a 
-                href="https://play.google.com/store" 
-                target="_blank" 
+              <a
+                href="https://play.google.com/store"
+                target="_blank"
                 rel="noopener noreferrer"
-                className="bg-[#005f3a] text-white px-5 py-2.5 rounded-xl font-semibold text-sm hover:bg-[#0e7a4d] transition-all duration-300 active:scale-95 shadow-lg shadow-[#005f3a]/20"
               >
-                Get the App
+                <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white shadow-lg shadow-[#005f3a]/20 transition-all duration-300 active:scale-95">
+                  <Download className="w-4 h-4 mr-1.5" />
+                  Get the App
+                </Button>
               </a>
+            </div>
+
+            {/* Mobile Hamburger Menu */}
+            <div className="md:hidden flex items-center gap-2">
+              <a
+                href="https://play.google.com/store"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button
+                  size="sm"
+                  className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white"
+                >
+                  <Download className="w-3.5 h-3.5 mr-1" />
+                  App
+                </Button>
+              </a>
+              <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+                <SheetTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+                    <Menu className="w-6 h-6" />
+                    <span className="sr-only">Open menu</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent
+                  side="right"
+                  className="bg-[#111827] border-white/10 text-white w-[280px]"
+                >
+                  <SheetHeader>
+                    <SheetTitle className="text-white">
+                      <Logo variant="dark" showText size="sm" linkToHome={false} />
+                    </SheetTitle>
+                  </SheetHeader>
+                  <div className="flex flex-col gap-1 mt-4">
+                    {navLinks.map((link) => (
+                      <Link
+                        key={link.href}
+                        href={link.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:text-[#22C55E] hover:bg-white/5 transition-colors text-base font-medium"
+                      >
+                        <ChevronRight className="w-4 h-4 text-[#22C55E]" />
+                        {link.label}
+                      </Link>
+                    ))}
+                    <div className="border-t border-white/10 my-3" />
+                    <Link
+                      href="/admin/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-base font-medium"
+                    >
+                      <Shield className="w-4 h-4 text-gray-400" />
+                      Admin Portal
+                    </Link>
+                    <a
+                      href="https://play.google.com/store"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <Button className="w-full mt-4 bg-[#005f3a] hover:bg-[#0e7a4d] text-white">
+                        <Download className="w-4 h-4 mr-2" />
+                        Get the App
+                      </Button>
+                    </a>
+                  </div>
+                </SheetContent>
+              </Sheet>
             </div>
           </div>
         </div>
       </nav>
 
-      {/* ============================================ */}
-      {/* HERO SECTION */}
-      {/* ============================================ */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-[#111827] via-[#0f172a] to-[#0a1f15] pt-16">
-        {/* Decorative Circles */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#005f3a]/15 rounded-full blur-[128px] animate-pulse" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#0e7a4d]/10 rounded-full blur-[128px] animate-pulse" style={{ animationDelay: '1s' }} />
-        
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* HERO SECTION                                                      */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-16">
+        {/* Animated gradient background blobs */}
+        <motion.div
+          className="absolute top-1/4 left-1/6 w-[500px] h-[500px] bg-[#005f3a]/20 rounded-full blur-[160px]"
+          animate={{
+            scale: [1, 1.15, 1],
+            opacity: [0.3, 0.5, 0.3],
+          }}
+          transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+        />
+        <motion.div
+          className="absolute bottom-1/4 right-1/6 w-[400px] h-[400px] bg-[#22C55E]/10 rounded-full blur-[140px]"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.2, 0.4, 0.2],
+          }}
+          transition={{
+            duration: 7,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: 1,
+          }}
+        />
+        <motion.div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#0e7a4d]/8 rounded-full blur-[180px]"
+          animate={{
+            scale: [1, 1.1, 1],
+            opacity: [0.15, 0.25, 0.15],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: 'easeInOut',
+            delay: 2,
+          }}
+        />
+
         {/* Content */}
-        <div className="relative z-10 text-center px-4 pt-8 pb-20">
-          <h1 className="font-[family-name:var(--font-plus-jakarta)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-foreground leading-tight max-w-4xl mx-auto">
-            Your All-in-One Mobility
-            <span className="block mt-2 text-[#22C55E]">
-              & Delivery App
-            </span>
-          </h1>
-          
-          <p className="mt-6 text-lg sm:text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Book rides, order food, get items delivered, and shop from local stores — all from one app. Fast, reliable, and affordable services across Uganda.
-          </p>
-          
-          {/* CTA Buttons */}
-          <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <a 
-              href="https://play.google.com/store" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 bg-[#005f3a] text-white px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-[#0e7a4d] transition-all duration-300 active:scale-95 shadow-lg shadow-[#005f3a]/20"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Get the App
-            </a>
-            <Link 
-              href="/about#drivers"
-              className="inline-flex items-center justify-center gap-2 bg-card border-2 border-border text-[#22C55E] px-8 py-4 rounded-2xl font-semibold text-lg hover:bg-muted hover:border-[#22C55E]/30 transition-all duration-300"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              Become a Rider
-            </Link>
-          </div>
-          
-          {/* Phone Mockup */}
-          <div className="mt-16 relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-[#111827] via-transparent to-transparent z-10 pointer-events-none" />
-            <div className="flex justify-center">
-              <div className="relative">
-                {/* Glow Effect */}
-                <div className="absolute -inset-8 bg-gradient-to-r from-[#005f3a]/20 to-[#0e7a4d]/10 rounded-[48px] blur-2xl" />
-                
-                {/* Phone Frame */}
-                <div className="relative bg-card rounded-[32px] p-3 border border-border shadow-2xl shadow-[#005f3a]/15">
-                  <div className="w-72 sm:w-80 h-[500px] sm:h-[560px] bg-gradient-to-b from-[#1f2937] to-[#111827] rounded-[24px] flex flex-col items-center justify-center overflow-hidden">
-                    {/* App Logo */}
-                    <div className="w-24 h-24 rounded-3xl flex items-center justify-center shadow-lg shadow-[#005f3a]/20 mb-6 overflow-hidden">
-                      <Image
-                        src="/smartride-logo.jpeg"
-                        alt="Smart Ride Logo"
-                        width={96}
-                        height={96}
-                        className="object-cover w-full h-full"
-                        priority
-                      />
-                    </div>
-                    <h3 className="font-[family-name:var(--font-plus-jakarta)] text-foreground font-bold text-2xl mb-2">Smart Ride</h3>
-                    <p className="text-muted-foreground text-sm mb-8">Uganda&apos;s #1 Mobility App</p>
-                    
-                    {/* Feature Pills */}
-                    <div className="flex flex-wrap gap-2 justify-center px-4">
-                      <span className="px-3 py-1.5 bg-[#005f3a]/20 border border-[#0e7a4d]/30 rounded-full text-[#22C55E] text-xs font-medium">Rides</span>
-                      <span className="px-3 py-1.5 bg-[#006e2f]/15 border border-[#006e2f]/25 rounded-full text-[#4ae176] text-xs font-medium">Food</span>
-                      <span className="px-3 py-1.5 bg-[#4b5264]/20 border border-[#636a7c]/30 rounded-full text-[#9ca3af] text-xs font-medium">Shopping</span>
-                      <span className="px-3 py-1.5 bg-[#005f3a]/15 border border-[#005f3a]/25 rounded-full text-[#7cd9a4] text-xs font-medium">Delivery</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+        <div className="relative z-10 text-center px-4 sm:px-6 pt-12 pb-20 max-w-7xl mx-auto w-full">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={stagger}
+          >
+            <motion.div variants={fadeUp} custom={0}>
+              <Badge className="mb-6 bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20 px-4 py-1.5 text-sm font-medium">
+                Uganda&apos;s #1 Mobility Platform
+              </Badge>
+            </motion.div>
 
-      {/* ============================================ */}
-      {/* SERVICES SECTION */}
-      {/* ============================================ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
-        <div className="max-w-7xl mx-auto">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <h2 className="font-[family-name:var(--font-plus-jakarta)] text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
-              Everything You Need,{' '}
-              <span className="text-[#22C55E]">
-                One App
+            <motion.h1
+              variants={fadeUp}
+              custom={1}
+              className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-tight max-w-4xl mx-auto tracking-tight"
+            >
+              Your All-in-One Mobility
+              <span className="block mt-2 bg-gradient-to-r from-[#22C55E] to-[#0e7a4d] bg-clip-text text-transparent">
+                &amp; Delivery App
               </span>
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              From daily commutes to food delivery, Smart Ride connects you with reliable services at your fingertips.
-            </p>
-          </div>
-          
-          {/* Services Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            
-            {/* Smart Ride */}
-            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#005f3a]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#005f3a]/10">
-              <div className="w-14 h-14 bg-[#005f3a]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-[#22C55E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                </svg>
-              </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Ride</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                Book a Boda Boda or Car ride in seconds. Safe, affordable, and reliable transportation across Uganda.
-              </p>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#22C55E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Smart Boda - From UGX 2,000
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#22C55E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Smart Car - From UGX 5,000
-                </li>
-              </ul>
-            </div>
-            
-            {/* Smart Food */}
-            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#F97316]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#F97316]/10">
-              <div className="w-14 h-14 bg-[#F97316]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-[#F97316]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                </svg>
-              </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Food</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                Order from your favorite restaurants. Fast delivery from local cafes and kitchens to your doorstep.
-              </p>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#F97316]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  100+ Local Restaurants
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#F97316]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  30 Min Average Delivery
-                </li>
-              </ul>
-            </div>
-            
-            {/* Smart Delivery */}
-            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#14B8A6]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#14B8A6]/10">
-              <div className="w-14 h-14 bg-[#14B8A6]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-[#14B8A6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Delivery</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                Send packages, documents, or any items across town. Reliable pickup and drop-off service.
-              </p>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#14B8A6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Package Delivery
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#14B8A6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Real-time Tracking
-                </li>
-              </ul>
-            </div>
-            
-            {/* Smart Shopping */}
-            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#8B5CF6]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#8B5CF6]/10">
-              <div className="w-14 h-14 bg-[#8B5CF6]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-[#8B5CF6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                </svg>
-              </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Shopping</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                Shop groceries, pharmacy items, and more from local stores. Quality products delivered to you.
-              </p>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#8B5CF6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Groceries
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#8B5CF6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Pharmacy Items
-                </li>
-              </ul>
-            </div>
-            
-            {/* Smart Health */}
-            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#F43F5E]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#F43F5E]/10">
-              <div className="w-14 h-14 bg-[#F43F5E]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-[#F43F5E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                </svg>
-              </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Health</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                Order medicines, book pharmacy deliveries, and access healthcare services from trusted providers.
-              </p>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#F43F5E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Medicine Delivery
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#F43F5E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Pharmacy Partners
-                </li>
-              </ul>
-            </div>
-            
-            {/* Smart Pay */}
-            <div className="group bg-card rounded-2xl p-6 border border-border hover:border-[#005f3a]/40 transition-all duration-300 hover:-translate-y-2 hover:shadow-xl hover:shadow-[#005f3a]/10">
-              <div className="w-14 h-14 bg-[#005f3a]/15 rounded-xl flex items-center justify-center mb-5 shadow-sm group-hover:scale-110 transition-transform duration-300">
-                <svg className="w-7 h-7 text-[#22C55E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-xl font-bold text-foreground mb-2">Smart Pay</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                Seamless payments with cash. Mobile money options coming soon!
-              </p>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#22C55E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                  Cash
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#FFCC00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  MTN MoMo — Coming Soon
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <svg className="w-4 h-4 text-[#ED1C24]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Airtel Money — Coming Soon
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
+            </motion.h1>
 
-      {/* ============================================ */}
-      {/* HOW IT WORKS SECTION */}
-      {/* ============================================ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-muted">
-        <div className="max-w-7xl mx-auto">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <h2 className="font-[family-name:var(--font-plus-jakarta)] text-3xl sm:text-4xl md:text-5xl font-bold text-foreground mb-4">
-              How It Works
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Getting started is easy. Follow these simple steps to enjoy our services.
-            </p>
-          </div>
-          
-          {/* Steps */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
-            {/* Connection Line - Desktop Only */}
-            <div className="hidden md:block absolute top-12 left-[12.5%] right-[12.5%] h-1 bg-gradient-to-r from-[#005f3a] to-[#22C55E] rounded-full" />
-            
-            {/* Step 1 */}
-            <div className="relative text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#005f3a] shadow-[#005f3a]/30">
-                1
-              </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-foreground mb-2">Request</h3>
-              <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                Open the app and request a ride, food order, or delivery service.
-              </p>
-            </div>
-            
-            {/* Step 2 */}
-            <div className="relative text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#0e7a4d] shadow-[#0e7a4d]/30">
-                2
-              </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-foreground mb-2">Match</h3>
-              <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                We connect you with the nearest available rider or driver.
-              </p>
-            </div>
-            
-            {/* Step 3 */}
-            <div className="relative text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#22C55E] shadow-[#22C55E]/30">
-                3
-              </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-foreground mb-2">Ride</h3>
-              <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                Track in real-time as your rider arrives and completes your request.
-              </p>
-            </div>
-            
-            {/* Step 4 */}
-            <div className="relative text-center">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl font-bold text-white shadow-lg relative z-10 bg-[#4ae176] shadow-[#4ae176]/30">
-                4
-              </div>
-              <h3 className="font-[family-name:var(--font-plus-jakarta)] text-lg font-semibold text-foreground mb-2">Pay</h3>
-              <p className="text-muted-foreground text-sm max-w-xs mx-auto">
-                Pay with cash (mobile money coming soon!). Rate your experience!
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+            <motion.p
+              variants={fadeUp}
+              custom={2}
+              className="mt-6 text-lg sm:text-xl md:text-2xl text-gray-400 max-w-2xl mx-auto leading-relaxed"
+            >
+              Book rides, order food, get items delivered, and shop from local stores — all from Uganda&apos;s smartest ride-hailing platform.
+            </motion.p>
 
-      {/* ============================================ */}
-      {/* DRIVER CTA SECTION */}
-      {/* ============================================ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-[#005f3a] relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#0e7a4d] rounded-full blur-[128px] opacity-30" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#98f6be] rounded-full blur-[128px] opacity-10" />
-        
-        <div className="max-w-7xl mx-auto relative">
-          <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-8 md:p-12 border border-white/10 relative overflow-hidden">
-            {/* Inner Pattern */}
-            <div className="absolute top-0 right-0 w-64 h-64 bg-[#98f6be]/10 rounded-full blur-3xl" />
-            
-            <div className="relative z-10 flex flex-col lg:flex-row items-center gap-12">
-              {/* Content */}
-              <div className="flex-1 text-center lg:text-left">
-                <h2 className="font-[family-name:var(--font-plus-jakarta)] text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4">
-                  Earn with Smart Ride
-                </h2>
-                <p className="text-white/80 text-lg mb-8 max-w-xl">
-                  Join thousands of riders and drivers earning on their own schedule. Be your own boss, set your own hours, and earn money delivering rides, food, and packages.
-                </p>
-                
-                {/* Benefits */}
-                <div className="flex flex-wrap gap-4 justify-center lg:justify-start mb-8">
-                  <div className="flex items-center gap-2 text-white/80">
-                    <svg className="w-5 h-5 text-[#98f6be]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Flexible Hours
-                  </div>
-                  <div className="flex items-center gap-2 text-white/80">
-                    <svg className="w-5 h-5 text-[#98f6be]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Weekly Earnings
-                  </div>
-                  <div className="flex items-center gap-2 text-white/80">
-                    <svg className="w-5 h-5 text-[#98f6be]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    In-App Support
-                  </div>
-                </div>
-                
-                {/* CTA */}
-                <a 
-                  href="https://play.google.com/store" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-white text-[#005f3a] px-8 py-4 rounded-2xl font-semibold hover:bg-[#98f6be] transition-all duration-300 active:scale-95 shadow-lg"
+            {/* CTAs */}
+            <motion.div
+              variants={fadeUp}
+              custom={3}
+              className="mt-10 flex flex-col sm:flex-row gap-4 justify-center"
+            >
+              <a
+                href="https://play.google.com/store"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white px-8 py-6 text-lg rounded-2xl shadow-xl shadow-[#005f3a]/25 transition-all duration-300 active:scale-95 h-auto">
+                  <Download className="w-5 h-5 mr-2" />
+                  Get the App
+                </Button>
+              </a>
+              <Link href="/auth/signup">
+                <Button
+                  variant="outline"
+                  className="border-white/20 text-white hover:bg-white/10 hover:text-white px-8 py-6 text-lg rounded-2xl transition-all duration-300 active:scale-95 h-auto bg-transparent"
                 >
-                  Start Earning Today
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </a>
-              </div>
-              
-              {/* Illustration */}
-              <div className="flex-shrink-0">
-                <div className="w-48 h-48 sm:w-56 sm:h-56 bg-white/10 rounded-3xl flex items-center justify-center border border-white/10 relative">
-                  <div className="absolute inset-0 bg-[#98f6be]/5 rounded-3xl" />
-                  <svg className="w-24 h-24 text-[#98f6be] relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+                  Become a Rider
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+            </motion.div>
 
-      {/* ============================================ */}
-      {/* PAYMENT METHODS */}
-      {/* ============================================ */}
-      <section className="py-24 px-4 sm:px-6 lg:px-8 bg-background">
-        <div className="max-w-7xl mx-auto text-center">
-          <h2 className="font-[family-name:var(--font-plus-jakarta)] text-2xl sm:text-3xl font-bold text-foreground mb-12">
-            Accepted Payment Methods
-          </h2>
-          
-          <div className="flex flex-wrap justify-center gap-6 sm:gap-8">
-            {/* Cash - Active */}
-            <div className="bg-card rounded-2xl p-6 border border-[#005f3a]/30 flex items-center gap-4 hover:border-[#005f3a]/50 transition-all duration-300 hover:-translate-y-1 shadow-sm">
-              <div className="w-14 h-14 bg-[#005f3a] rounded-xl flex items-center justify-center">
-                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-              </div>
-              <div>
-                <span className="text-foreground font-medium block">Cash</span>
-                <span className="text-[#22C55E] text-xs font-medium">Active</span>
-              </div>
-            </div>
-            
-            {/* MTN MoMo - Coming Soon */}
-            <div className="bg-card rounded-2xl p-6 border border-border flex items-center gap-4 opacity-60">
-              <div className="w-14 h-14 bg-[#FFCC00] rounded-xl flex items-center justify-center">
-                <span className="text-[#0D0D12] font-bold text-sm">MTN</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground font-medium block">MTN MoMo</span>
-                <span className="text-[#FFCC00] text-xs font-medium">Coming Soon</span>
-              </div>
-            </div>
-            
-            {/* Airtel Money - Coming Soon */}
-            <div className="bg-card rounded-2xl p-6 border border-border flex items-center gap-4 opacity-60">
-              <div className="w-14 h-14 bg-[#ED1C24] rounded-xl flex items-center justify-center">
-                <span className="text-white font-bold text-lg">A</span>
-              </div>
-              <div>
-                <span className="text-muted-foreground font-medium block">Airtel Money</span>
-                <span className="text-[#ED1C24] text-xs font-medium">Coming Soon</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ============================================ */}
-      {/* FOOTER */}
-      {/* ============================================ */}
-      <footer className="py-16 px-4 sm:px-6 lg:px-8 bg-[#0a0f1a] border-t border-white/5 mt-auto">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
-            
-            {/* Brand */}
-            <div className="col-span-1 md:col-span-2">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg">
+            {/* App mockup */}
+            <motion.div
+              variants={scaleIn}
+              className="mt-16 flex justify-center"
+            >
+              <div className="relative w-[260px] sm:w-[300px] md:w-[340px]">
+                <div className="absolute -inset-4 bg-gradient-to-t from-[#005f3a]/20 via-[#22C55E]/10 to-transparent rounded-3xl blur-xl" />
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10">
                   <Image
                     src="/smartride-logo.jpeg"
-                    alt="Smart Ride Logo"
-                    width={40}
-                    height={40}
-                    className="object-cover w-full h-full"
+                    alt="Smart Ride App"
+                    width={340}
+                    height={680}
+                    className="w-full h-auto"
+                    priority
                   />
                 </div>
-                <span className="text-xl font-bold text-white font-[family-name:var(--font-plus-jakarta)]">Smart Ride</span>
               </div>
-              <p className="text-white/50 max-w-md mb-6 leading-relaxed">
-                Uganda&apos;s premier mobility platform. Connecting riders, drivers, and businesses for seamless transportation and delivery services.
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* SERVICES GRID                                                     */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative py-20 sm:py-28 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={stagger}
+            className="text-center mb-16"
+          >
+            <motion.div variants={fadeUp} custom={0}>
+              <Badge className="mb-4 bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20">
+                Our Services
+              </Badge>
+            </motion.div>
+            <motion.h2
+              variants={fadeUp}
+              custom={1}
+              className="text-3xl sm:text-4xl md:text-5xl font-bold"
+            >
+              Everything You Need,
+              <span className="block text-[#22C55E]">One App</span>
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              custom={2}
+              className="mt-4 text-gray-400 text-lg max-w-xl mx-auto"
+            >
+              Six powerful services designed for Uganda&apos;s vibrant cities.
+            </motion.p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+            variants={stagger}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {services.map((service, i) => {
+              const Icon = service.icon;
+              return (
+                <motion.div
+                  key={service.title}
+                  variants={fadeUp}
+                  custom={i}
+                  whileHover={{ y: -4, transition: { duration: 0.25 } }}
+                  className="group relative rounded-2xl bg-white/5 backdrop-blur-lg border border-white/10 p-6 hover:border-white/20 transition-all duration-300 cursor-pointer overflow-hidden"
+                >
+                  {/* Glow on hover */}
+                  <div
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"
+                    style={{
+                      background: `radial-gradient(circle at 50% 0%, ${service.color}12, transparent 70%)`,
+                    }}
+                  />
+
+                  <div className="relative z-10">
+                    <div className="flex items-start justify-between mb-4">
+                      <div
+                        className="w-12 h-12 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: `${service.color}18` }}
+                      >
+                        <Icon
+                          className="w-6 h-6"
+                          style={{ color: service.color }}
+                        />
+                      </div>
+                      <Badge className="bg-[#22C55E]/15 text-[#22C55E] border-0 text-xs font-semibold">
+                        Active
+                      </Badge>
+                    </div>
+                    <h3 className="text-xl font-bold mb-2 group-hover:text-white transition-colors">
+                      {service.title}
+                    </h3>
+                    <p className="text-gray-400 text-sm leading-relaxed group-hover:text-gray-300 transition-colors">
+                      {service.description}
+                    </p>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* HOW IT WORKS                                                      */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative py-20 sm:py-28 px-4 sm:px-6 bg-[#0d1117]">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={stagger}
+            className="text-center mb-16"
+          >
+            <motion.div variants={fadeUp} custom={0}>
+              <Badge className="mb-4 bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20">
+                How It Works
+              </Badge>
+            </motion.div>
+            <motion.h2
+              variants={fadeUp}
+              custom={1}
+              className="text-3xl sm:text-4xl md:text-5xl font-bold"
+            >
+              Get Started in
+              <span className="text-[#22C55E]"> 4 Easy Steps</span>
+            </motion.h2>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+            variants={stagger}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8"
+          >
+            {steps.map((step, i) => {
+              const Icon = step.icon;
+              return (
+                <motion.div
+                  key={step.title}
+                  variants={fadeUp}
+                  custom={i}
+                  className="relative text-center group"
+                >
+                  {/* Connector line (hidden on last item and mobile) */}
+                  {i < steps.length - 1 && (
+                    <div className="hidden lg:block absolute top-10 left-[calc(50%+32px)] w-[calc(100%-64px)] h-px bg-gradient-to-r from-[#22C55E]/40 to-[#22C55E]/10" />
+                  )}
+
+                  <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-[#005f3a]/20 border border-[#22C55E]/20 mb-5 group-hover:bg-[#005f3a]/30 transition-colors duration-300">
+                    <Icon className="w-8 h-8 text-[#22C55E]" />
+                    <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-[#22C55E] text-[#111827] text-xs font-bold flex items-center justify-center">
+                      {i + 1}
+                    </span>
+                  </div>
+
+                  <h3 className="text-lg font-bold mb-2">{step.title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed max-w-[240px] mx-auto">
+                    {step.description}
+                  </p>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* TESTIMONIALS                                                      */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative py-20 sm:py-28 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={stagger}
+            className="text-center mb-16"
+          >
+            <motion.div variants={fadeUp} custom={0}>
+              <Badge className="mb-4 bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20">
+                Testimonials
+              </Badge>
+            </motion.div>
+            <motion.h2
+              variants={fadeUp}
+              custom={1}
+              className="text-3xl sm:text-4xl md:text-5xl font-bold"
+            >
+              Loved by
+              <span className="text-[#22C55E]"> Thousands</span>
+            </motion.h2>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+            variants={stagger}
+            className="grid grid-cols-1 md:grid-cols-3 gap-6"
+          >
+            {testimonials.map((t, i) => (
+              <motion.div
+                key={t.name}
+                variants={fadeUp}
+                custom={i}
+                whileHover={{ y: -4, transition: { duration: 0.25 } }}
+                className="rounded-2xl bg-white/5 backdrop-blur-lg border border-white/10 p-6 hover:border-white/20 transition-all duration-300"
+              >
+                <div className="flex items-center gap-1 mb-4">
+                  {[...Array(5)].map((_, j) => (
+                    <Star
+                      key={j}
+                      className="w-4 h-4 fill-[#22C55E] text-[#22C55E]"
+                    />
+                  ))}
+                </div>
+                <p className="text-lg text-gray-200 leading-relaxed mb-6">
+                  &ldquo;{t.quote}&rdquo;
+                </p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-[#005f3a] flex items-center justify-center text-sm font-bold text-[#22C55E]">
+                    {t.avatar}
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm">{t.name}</p>
+                    <p className="text-gray-400 text-xs flex items-center gap-1">
+                      <MapPin className="w-3 h-3" />
+                      {t.location}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* DRIVER / RIDER CTA                                                */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative py-20 sm:py-28 px-4 sm:px-6 bg-[#0d1117] overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#005f3a]/15 rounded-full blur-[160px]" />
+
+        <div className="relative z-10 max-w-4xl mx-auto text-center">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={stagger}
+          >
+            <motion.div variants={fadeUp} custom={0}>
+              <Badge className="mb-4 bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20">
+                Drive With Us
+              </Badge>
+            </motion.div>
+            <motion.h2
+              variants={fadeUp}
+              custom={1}
+              className="text-3xl sm:text-4xl md:text-5xl font-bold"
+            >
+              Earn with
+              <span className="text-[#22C55E]"> Smart Ride</span>
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              custom={2}
+              className="mt-4 text-gray-400 text-lg max-w-xl mx-auto"
+            >
+              Turn your motorcycle or car into a money-making machine. Join thousands of riders already earning on Smart Ride.
+            </motion.p>
+
+            <motion.div
+              variants={fadeUp}
+              custom={3}
+              className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-6 text-left"
+            >
+              {[
+                {
+                  icon: DollarSign,
+                  title: 'Competitive Earnings',
+                  desc: 'Keep more of what you earn with our fair commission structure.',
+                },
+                {
+                  icon: Clock,
+                  title: 'Flexible Hours',
+                  desc: 'Work when you want — full-time, part-time, or just weekends.',
+                },
+                {
+                  icon: Users,
+                  title: 'Growing Community',
+                  desc: 'Join 10,000+ riders across Uganda with 24/7 support.',
+                },
+              ].map((benefit) => {
+                const BIcon = benefit.icon;
+                return (
+                  <div
+                    key={benefit.title}
+                    className="rounded-2xl bg-white/5 backdrop-blur-lg border border-white/10 p-6"
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-[#005f3a]/20 flex items-center justify-center mb-3">
+                      <BIcon className="w-5 h-5 text-[#22C55E]" />
+                    </div>
+                    <h3 className="font-bold text-sm mb-1">{benefit.title}</h3>
+                    <p className="text-gray-400 text-xs leading-relaxed">
+                      {benefit.desc}
+                    </p>
+                  </div>
+                );
+              })}
+            </motion.div>
+
+            <motion.div variants={fadeUp} custom={4} className="mt-10">
+              <Link href="/auth/signup">
+                <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white px-8 py-6 text-lg rounded-2xl shadow-xl shadow-[#005f3a]/25 transition-all duration-300 active:scale-95 h-auto">
+                  Start Earning Today
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+              </Link>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* PAYMENT METHODS                                                   */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <section className="relative py-20 sm:py-28 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={stagger}
+            className="text-center mb-16"
+          >
+            <motion.div variants={fadeUp} custom={0}>
+              <Badge className="mb-4 bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20">
+                Payments
+              </Badge>
+            </motion.div>
+            <motion.h2
+              variants={fadeUp}
+              custom={1}
+              className="text-3xl sm:text-4xl md:text-5xl font-bold"
+            >
+              Pay Your Way,
+              <span className="text-[#22C55E]"> Your Way</span>
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              custom={2}
+              className="mt-4 text-gray-400 text-lg max-w-xl mx-auto"
+            >
+              Multiple secure payment options built for Uganda.
+            </motion.p>
+          </motion.div>
+
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+            variants={stagger}
+            className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto"
+          >
+            {paymentMethods.map((pm, i) => {
+              const PIcon = pm.icon;
+              return (
+                <motion.div
+                  key={pm.label}
+                  variants={fadeUp}
+                  custom={i}
+                  whileHover={{ y: -4, transition: { duration: 0.25 } }}
+                  className="rounded-2xl bg-white/5 backdrop-blur-lg border border-white/10 p-6 text-center hover:border-white/20 transition-all duration-300"
+                >
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                    style={{ backgroundColor: `${pm.color}18` }}
+                  >
+                    <PIcon
+                      className="w-7 h-7"
+                      style={{ color: pm.color }}
+                    />
+                  </div>
+                  <h3 className="font-bold text-lg mb-1">{pm.label}</h3>
+                  <p className="text-gray-400 text-sm">{pm.description}</p>
+                  <Badge className="mt-3 bg-[#22C55E]/15 text-[#22C55E] border-0 text-xs font-semibold">
+                    <CheckCircle2 className="w-3 h-3 mr-1" />
+                    Active
+                  </Badge>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* FOOTER                                                            */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <footer className="mt-auto bg-[#0a0f1a] border-t border-white/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+            {/* Brand column */}
+            <div className="sm:col-span-2 lg:col-span-1">
+              <Logo variant="dark" showText linkToHome={false} size="sm" />
+              <p className="mt-4 text-gray-400 text-sm leading-relaxed max-w-xs">
+                Uganda&apos;s smartest ride-hailing and delivery platform. Fast, reliable, and affordable services at your fingertips.
               </p>
-              
-              {/* Social Links */}
-              <div className="flex gap-4">
-                <a href="https://facebook.com/SmartRideUganda" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white/50 hover:text-[#98f6be] hover:bg-white/15 transition-all duration-200" aria-label="Facebook">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                  </svg>
+              {/* Social links */}
+              <div className="flex items-center gap-3 mt-5">
+                <a
+                  href="https://facebook.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-[#22C55E] hover:border-[#22C55E]/30 transition-all duration-200"
+                  aria-label="Facebook"
+                >
+                  <Facebook className="w-4 h-4" />
                 </a>
-                <a href="https://x.com/SmartRideUganda" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white/50 hover:text-[#98f6be] hover:bg-white/15 transition-all duration-200" aria-label="Twitter">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/>
-                  </svg>
+                <a
+                  href="https://twitter.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-[#22C55E] hover:border-[#22C55E]/30 transition-all duration-200"
+                  aria-label="Twitter"
+                >
+                  <Twitter className="w-4 h-4" />
                 </a>
-                <a href="https://instagram.com/SmartRideUganda" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white/50 hover:text-[#98f6be] hover:bg-white/15 transition-all duration-200" aria-label="Instagram">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-                  </svg>
+                <a
+                  href="https://instagram.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-[#22C55E] hover:border-[#22C55E]/30 transition-all duration-200"
+                  aria-label="Instagram"
+                >
+                  <Instagram className="w-4 h-4" />
                 </a>
               </div>
             </div>
-            
+
             {/* Quick Links */}
             <div>
-              <h4 className="text-white font-semibold mb-6 font-[family-name:var(--font-plus-jakarta)]">Quick Links</h4>
-              <ul className="space-y-4">
-                <li><Link href="/about" className="text-white/50 hover:text-[#98f6be] transition-colors duration-200">About Us</Link></li>
-                <li><Link href="/help" className="text-white/50 hover:text-[#98f6be] transition-colors duration-200">Help Center</Link></li>
-                <li><Link href="/contact" className="text-white/50 hover:text-[#98f6be] transition-colors duration-200">Contact</Link></li>
-                <li><Link href="/blog" className="text-white/50 hover:text-[#98f6be] transition-colors duration-200">Blog</Link></li>
-                <li><Link href="/admin/login" className="text-white/50 hover:text-[#98f6be] transition-colors duration-200">Admin Portal</Link></li>
+              <h4 className="font-semibold text-sm uppercase tracking-wider text-gray-300 mb-4">
+                Quick Links
+              </h4>
+              <ul className="space-y-3">
+                {footerLinks.quickLinks.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-gray-400 hover:text-[#22C55E] transition-colors duration-200 text-sm"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
-            
+
             {/* Contact */}
             <div>
-              <h4 className="text-white font-semibold mb-6 font-[family-name:var(--font-plus-jakarta)]">Contact</h4>
-              <ul className="space-y-4">
-                <li className="text-white/50">
-                  <span className="text-white">Email:</span>{' '}
-                  <a href="mailto:support@smartride.ug" className="hover:text-[#98f6be] transition-colors duration-200">support@smartride.ug</a>
+              <h4 className="font-semibold text-sm uppercase tracking-wider text-gray-300 mb-4">
+                Contact
+              </h4>
+              <ul className="space-y-3">
+                <li className="flex items-start gap-2 text-gray-400 text-sm">
+                  <Mail className="w-4 h-4 mt-0.5 shrink-0 text-[#22C55E]" />
+                  <a
+                    href="mailto:support@smartride.ug"
+                    className="hover:text-[#22C55E] transition-colors"
+                  >
+                    support@smartride.ug
+                  </a>
                 </li>
-                <li className="text-white/50">
-                  <span className="text-white">Phone:</span>{' '}
-                  <a href="tel:+256700123456" className="hover:text-[#98f6be] transition-colors duration-200">+256 700 123 456</a>
+                <li className="flex items-start gap-2 text-gray-400 text-sm">
+                  <Phone className="w-4 h-4 mt-0.5 shrink-0 text-[#22C55E]" />
+                  <a
+                    href="tel:+256700123456"
+                    className="hover:text-[#22C55E] transition-colors"
+                  >
+                    +256 700 123 456
+                  </a>
                 </li>
-                <li className="text-white/50">
-                  <span className="text-white">Location:</span> Kampala, Uganda
+                <li className="flex items-start gap-2 text-gray-400 text-sm">
+                  <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-[#22C55E]" />
+                  Kampala, Uganda
                 </li>
+              </ul>
+            </div>
+
+            {/* Legal */}
+            <div>
+              <h4 className="font-semibold text-sm uppercase tracking-wider text-gray-300 mb-4">
+                Legal
+              </h4>
+              <ul className="space-y-3">
+                {footerLinks.legal.map((link) => (
+                  <li key={link.href}>
+                    <Link
+                      href={link.href}
+                      className="text-gray-400 hover:text-[#22C55E] transition-colors duration-200 text-sm"
+                    >
+                      {link.label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>
-          
-          {/* Bottom Bar */}
-          <div className="border-t border-white/10 pt-8">
-            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-              <p className="text-white/30 text-sm">
-                © {new Date().getFullYear()} Smart Ride Uganda. All rights reserved.
-              </p>
-              <div className="flex gap-6 text-sm">
-                <Link href="/help#privacy" className="text-white/30 hover:text-white transition-colors duration-200">Privacy Policy</Link>
-                <Link href="/help#terms" className="text-white/30 hover:text-white transition-colors duration-200">Terms of Service</Link>
-              </div>
+
+          {/* Bottom bar */}
+          <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-gray-500 text-sm">
+              &copy; 2026 Smart Ride Uganda. All rights reserved.
+            </p>
+            <div className="flex items-center gap-4">
+              {footerLinks.legal.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-gray-500 hover:text-gray-300 text-xs transition-colors"
+                >
+                  {link.label}
+                </Link>
+              ))}
             </div>
           </div>
         </div>
