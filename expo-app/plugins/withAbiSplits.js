@@ -42,11 +42,11 @@ function withAbiSplits(config) {
     }
 
     // 2. Enable R8 full mode, minification, and resource shrinking for release
+    // Note: useProguard is removed in AGP 8+ — R8 is the default compiler now
     const releaseConfig = `
             // Smart Ride: R8 full mode + minify + shrink for smaller APK
             minifyEnabled true
-            shrinkResources true
-            useProguard true`;
+            shrinkResources true`;
 
     const modContents = config.modResults.contents;
 
