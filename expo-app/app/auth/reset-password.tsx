@@ -21,9 +21,11 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { resetPassword } from '@/src/services/auth';
+import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
 
 const { height } = Dimensions.get('window');
 
@@ -388,7 +390,11 @@ export default function ResetPasswordScreen() {
           <Animated.View style={{ transform: [{ translateY: logoFloat }] }}>
             <View style={styles.logoContainer}>
               <Animated.View style={[styles.logoGlow, { opacity: glowOpacity }]} />
-              <Text style={styles.logoText}>SR</Text>
+              <Image
+                source={SmartRideLogoImage}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
           </Animated.View>
 
@@ -509,11 +515,10 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     backgroundColor: 'rgba(0, 255, 136, 0.15)',
   },
-  logoText: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: COLORS.primary,
-    letterSpacing: -1,
+  logoImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
   },
   headerTitle: {
     color: COLORS.text,

@@ -421,7 +421,7 @@ export default function LandingPage() {
                 <div className="absolute -inset-4 bg-gradient-to-t from-[#005f3a]/20 via-[#22C55E]/10 to-transparent rounded-3xl blur-xl" />
                 <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-black/40 border border-white/10">
                   <Image
-                    src="/smartride-logo.jpeg"
+                    src="/smartride-logo-transparent.png"
                     alt="Smart Ride App"
                     width={340}
                     height={680}

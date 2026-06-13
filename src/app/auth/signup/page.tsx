@@ -107,7 +107,7 @@ export default function UserSignupPage() {
                   }}
                 >
                   <Image
-                    src="/smartride-logo.jpeg"
+                    src="/smartride-logo-transparent.png"
                     alt="Smart Ride Logo"
                     width={80}
                     height={80}

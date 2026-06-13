@@ -32,6 +32,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { COLORS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../../src/constants';
 import { IconInput } from '../../src/components/IconInput';
 import { GradientButton } from '../../src/components/GradientButton';
+import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
 
 const { width, height } = Dimensions.get('window');
 
@@ -247,7 +248,11 @@ export default function RegisterScreen() {
         >
           <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
         </TouchableOpacity>
-        <Text style={styles.appBarTitle}>Smart Ride</Text>
+        <Image
+          source={SmartRideLogoImage}
+          style={styles.appBarLogo}
+          resizeMode="contain"
+        />
         <View style={styles.appBarSpacer} />
       </View>
 
@@ -515,13 +520,10 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.DEFAULT,
     marginLeft: -SPACING.xs,
   },
-  appBarTitle: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.primary,
-    letterSpacing: -0.3,
+  appBarLogo: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.sm,
   },
   appBarSpacer: {
     width: 40,

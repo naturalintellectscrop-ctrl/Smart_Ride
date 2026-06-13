@@ -133,7 +133,7 @@ export default function UserLoginPage() {
                   }}
                 >
                   <Image
-                    src="/smartride-logo.jpeg"
+                    src="/smartride-logo-transparent.png"
                     alt="Smart Ride Logo"
                     width={96}
                     height={96}

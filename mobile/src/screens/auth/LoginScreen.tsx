@@ -17,10 +17,12 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useAuthStore } from '../../store';
 import api from '../../services/api';
+import SmartRideLogoImage from '../../../assets/smartride-logo.png';
 
 export function LoginScreen() {
   const navigation = useNavigation();
@@ -67,7 +69,7 @@ export function LoginScreen() {
         {/* Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.logoIcon}>
-            <Text style={styles.logoIconText}>SR</Text>
+          <Image source={SmartRideLogoImage} style={styles.logoImage} resizeMode="contain" />
           </View>
           <Text style={styles.logoText}>Smart Ride</Text>
           <Text style={styles.tagline}>Your journey, our priority</Text>
@@ -170,10 +172,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  logoIconText: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#0D0D12',
+  logoImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
   },
   logoText: {
     fontSize: 32,

@@ -16,11 +16,13 @@ import {
   StatusBar,
   Animated,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, RADIUS } from '../src/constants';
+import SmartRideLogoImage from '../assets/images/smartride-logo.png';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -118,21 +120,11 @@ function SmartRideLogo() {
 
       {/* Main logo badge — 128×128, rounded-xl, white/5% bg */}
       <View style={styles.logoBadge}>
-        {/* Location pin icon built with Views */}
-        <View style={styles.pinContainer}>
-          {/* Pin head */}
-          <View style={styles.pinHead}>
-            <View style={styles.pinInner} />
-          </View>
-          {/* Pin body (triangle) */}
-          <View style={styles.pinBody} />
-        </View>
-
-        {/* Motion trail lines */}
-        <View style={styles.motionTrail}>
-          <View style={[styles.motionLine, styles.motionLine1]} />
-          <View style={[styles.motionLine, styles.motionLine2]} />
-        </View>
+        <Image
+          source={SmartRideLogoImage}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
       </View>
     </View>
   );
@@ -326,58 +318,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  pinContainer: {
-    alignItems: 'center',
-    marginTop: -6,
-  },
-  pinHead: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 3,
-    borderColor: COLORS.primaryContainer,
-  },
-  pinInner: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: COLORS.primaryContainer,
-  },
-  pinBody: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 18,
-    borderRightWidth: 18,
-    borderTopWidth: 26,
-    borderLeftColor: 'transparent',
-    borderRightColor: 'transparent',
-    borderTopColor: COLORS.white,
-    marginTop: -5,
-  },
-  motionTrail: {
-    position: 'absolute',
-    left: 14,
-    top: '50%',
-    marginTop: -8,
-  },
-  motionLine: {
-    position: 'absolute',
-    height: 2.5,
-    borderRadius: 2,
-    backgroundColor: COLORS.white,
-  },
-  motionLine1: {
-    width: 14,
-    top: 0,
-    opacity: 0.5,
-  },
-  motionLine2: {
-    width: 9,
-    top: 8,
-    opacity: 0.3,
+  logoImage: {
+    width: LOGO_SIZE - 16,
+    height: LOGO_SIZE - 16,
+    borderRadius: RADIUS.lg,
   },
 
   // ── Brand Name — "Smart Ride" white, 22px bold ──

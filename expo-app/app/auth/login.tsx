@@ -20,6 +20,7 @@ import {
   TextInput,
   StatusBar,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +32,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
 import { IconInput } from '../../src/components/IconInput';
 import { GradientButton } from '../../src/components/GradientButton';
+import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -227,7 +229,11 @@ export default function LoginScreen() {
         {/* ─── Logo Section ──────────────────────── */}
         <View style={styles.logoSection}>
           <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>SR</Text>
+            <Image
+              source={SmartRideLogoImage}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
           </View>
           <Text style={styles.welcomeTitle}>Welcome to Smart Ride</Text>
           <Text style={styles.welcomeSubtitle}>
@@ -487,11 +493,10 @@ const styles = StyleSheet.create({
     borderColor: COLORS.outlineVariant,
     ...SHADOWS.card,
   },
-  logoText: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: COLORS.primary,
-    letterSpacing: -1,
+  logoImage: {
+    width: 72,
+    height: 72,
+    borderRadius: RADIUS.lg,
   },
   welcomeTitle: {
     ...TYPOGRAPHY.headlineLgMobile, // 22px bold

@@ -54,7 +54,7 @@ export function LoginPage() {
         <div className="flex flex-col items-center mb-8">
           <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-[#7CDA28] shadow-lg mb-4">
             <Image 
-              src="/smartride-logo.jpeg" 
+              src="/smartride-logo-transparent.png" 
               alt="SmartRide Logo" 
               fill 
               className="object-cover"
