@@ -19,8 +19,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-// Google Sign-In removed - Phone OTP is primary auth method for Uganda
-// configureGoogleSignIn is kept in source but not called on startup
+import { configureGoogleSignIn } from '../src/config/google';
 import { ThemeProvider, useTheme } from '../src/context/theme-context';
 import { notificationService } from '../src/services';
 
@@ -87,10 +86,13 @@ const queryClient = createQueryClient();
 function ThemedRootLayout() {
   const { isDark, colors } = useTheme();
 
-  // Google Sign-In config removed from startup
-  // Phone OTP is the primary auth method for Ugandan market
+  // Configure Google Sign-In once on app startup
   useEffect(() => {
-    // No Google Sign-In configuration needed
+    try {
+      configureGoogleSignIn();
+    } catch (e) {
+      console.warn('[App] Google Sign-In config failed:', e);
+    }
   }, []);
 
   // Initialize push notifications and set up listeners

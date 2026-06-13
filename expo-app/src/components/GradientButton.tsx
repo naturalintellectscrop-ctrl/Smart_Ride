@@ -1,13 +1,16 @@
 // ============================================
 // SMART RIDE MOBILE - GRADIENT BUTTON COMPONENT
 // ============================================
-// Brand gradient button matching admin dashboard
+// Stitch Design System — Material Design 3
+// Primary: bg-primary, rounded-xl/full, h-14
+// Secondary: bg-surface, border-outlineVariant
+// Outline: border-primary
 // ============================================
 
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, GRADIENTS } from '../constants';
+import { COLORS, GRADIENTS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../constants';
 
 interface GradientButtonProps {
   title: string;
@@ -64,7 +67,7 @@ export function GradientButton({
         activeOpacity={0.7}
       >
         {loading ? (
-          <ActivityIndicator color={COLORS.textSecondary} size="small" />
+          <ActivityIndicator color={COLORS.onSurface} size="small" />
         ) : (
           <>
             {icon}
@@ -75,6 +78,7 @@ export function GradientButton({
     );
   }
 
+  // Primary and Danger use gradient
   const colors = variant === 'danger' ? GRADIENTS.danger : GRADIENTS.primary;
 
   return (
@@ -91,7 +95,7 @@ export function GradientButton({
         style={[styles.gradient, sizeStyle]}
       >
         {loading ? (
-          <ActivityIndicator color={variant === 'danger' ? '#FFFFFF' : COLORS.background} size="small" />
+          <ActivityIndicator color={variant === 'danger' ? '#FFFFFF' : COLORS.onPrimary} size="small" />
         ) : (
           <>
             {icon}
@@ -106,23 +110,19 @@ export function GradientButton({
 function getSizeStyle(size: string): ViewStyle {
   switch (size) {
     case 'sm':
-      return { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 10 };
+      return { paddingVertical: SPACING.sm + 4, paddingHorizontal: SPACING.md, borderRadius: RADIUS.md };
     case 'lg':
-      return { paddingVertical: 18, paddingHorizontal: 28, borderRadius: 14 };
+      return { paddingVertical: SPACING.md + 2, paddingHorizontal: SPACING.lg, borderRadius: RADIUS.xl, minHeight: 56 };
     default:
-      return { paddingVertical: 14, paddingHorizontal: 24, borderRadius: 12 };
+      return { paddingVertical: SPACING.md, paddingHorizontal: SPACING.lg, borderRadius: RADIUS.xl };
   }
 }
 
 const styles = StyleSheet.create({
   buttonWrapper: {
-    borderRadius: 12,
+    borderRadius: RADIUS.xl,
     overflow: 'hidden',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 4,
+    ...SHADOWS.button,
   },
   fullWidth: {
     width: '100%',
@@ -131,12 +131,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: SPACING.sm,
   },
   text: {
-    color: COLORS.background,
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onPrimary,
   },
   textWhite: {
     color: '#FFFFFF',
@@ -145,31 +144,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: SPACING.sm,
     backgroundColor: 'transparent',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: COLORS.primary,
-    borderRadius: 12,
+    borderRadius: RADIUS.xl,
   },
   outlineText: {
+    ...TYPOGRAPHY.labelLg,
     color: COLORS.primary,
-    fontSize: 16,
-    fontWeight: '600',
   },
   secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: COLORS.backgroundElevated,
+    gap: SPACING.sm,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
+    borderColor: COLORS.outlineVariant,
+    borderRadius: RADIUS.xl,
   },
   secondaryText: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '600',
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
   },
   disabled: {
     opacity: 0.5,

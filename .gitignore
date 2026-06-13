@@ -89,3 +89,5 @@ expo-app/Smart_Ride.env
 expo-app/.env
 smart-ride-mobile/GoogleService-Info.plist
 google-services.json
+design-files/
+upload/

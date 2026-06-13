@@ -1,46 +1,133 @@
 // ============================================
 // SMART RIDE MOBILE - SPLASH SCREEN
 // ============================================
-// Premium branded launch screen
-// Clean, modern, production-ready
-// PRIMARY CTA: Phone OTP (most popular in Uganda)
-// SECONDARY CTA: Email/Password login
+// Stitch Design System — Material Design 3 Green Theme
+// Premium branded launch screen with atmospheric effects
+// PRIMARY CTA: Continue with Phone (with phone icon)
+// SECONDARY CTA: Sign In with Email (with mail icon)
 // ============================================
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   StatusBar,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../src/constants';
+import { COLORS, TYPOGRAPHY, RADIUS } from '../src/constants';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // ============================================
-// LOGO COMPONENT - Location Pin Icon
+// ANIMATED WRAPPER — slide-up entrance
+// ============================================
+function SlideUpView({
+  children,
+  delay = 0,
+  style,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  style?: any;
+}) {
+  const translateY = useRef(new Animated.Value(30)).current;
+  const opacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 700,
+        delay,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 700,
+        delay,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [delay]);
+
+  return (
+    <Animated.View style={[{ transform: [{ translateY }], opacity }, style]}>
+      {children}
+    </Animated.View>
+  );
+}
+
+// ============================================
+// LOGO COMPONENT — Stitch Design System
+// 128×128, white/5% overlay bg, rounded-xl, shadow-2xl
 // ============================================
 function SmartRideLogo() {
+  // Pulse-soft animation for glow
+  const glowScale = useRef(new Animated.Value(1)).current;
+  const glowOpacity = useRef(new Animated.Value(0.15)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(glowScale, {
+            toValue: 1.15,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowOpacity, {
+            toValue: 0.08,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(glowScale, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(glowOpacity, {
+            toValue: 0.15,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ]),
+      ])
+    ).start();
+  }, []);
+
   return (
     <View style={styles.logoWrapper}>
-      {/* Outer glow ring */}
-      <View style={styles.logoGlowRing} />
-      
-      {/* Main logo badge */}
+      {/* Logo glow — secondaryContainer/10 blur-3xl equivalent */}
+      <Animated.View
+        style={[
+          styles.logoGlow,
+          {
+            transform: [{ scale: glowScale }],
+            opacity: glowOpacity,
+          },
+        ]}
+      />
+
+      {/* Main logo badge — 128×128, rounded-xl, white/5% bg */}
       <View style={styles.logoBadge}>
-        {/* Location pin icon */}
+        {/* Location pin icon built with Views */}
         <View style={styles.pinContainer}>
           {/* Pin head */}
           <View style={styles.pinHead}>
             <View style={styles.pinInner} />
           </View>
-          {/* Pin body */}
+          {/* Pin body (triangle) */}
           <View style={styles.pinBody} />
         </View>
-        
+
         {/* Motion trail lines */}
         <View style={styles.motionTrail}>
           <View style={[styles.motionLine, styles.motionLine1]} />
@@ -48,6 +135,21 @@ function SmartRideLogo() {
         </View>
       </View>
     </View>
+  );
+}
+
+// ============================================
+// ATMOSPHERIC BLUR BLOBS
+// secondary-container at top-left, primary at bottom-right
+// ============================================
+function AtmosphericBlobs() {
+  return (
+    <>
+      {/* Top-left blob — secondaryContainer */}
+      <View style={styles.blobTopLeft} />
+      {/* Bottom-right blob — primary */}
+      <View style={styles.blobBottomRight} />
+    </>
   );
 }
 
@@ -60,41 +162,76 @@ export default function SplashScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={COLORS.primary} />
-      
-      {/* Main content - centered */}
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.primaryContainer} />
+
+      {/* Atmospheric blur blobs */}
+      <AtmosphericBlobs />
+
+      {/* Main content — centered vertically */}
       <View style={styles.centerContent}>
-        {/* Logo */}
-        <SmartRideLogo />
-        
-        {/* Brand name */}
-        <Text style={styles.brandName}>Smart Ride</Text>
-        
-        {/* Tagline */}
-        <Text style={styles.tagline}>Move smarter across Uganda</Text>
+        {/* Logo with glow */}
+        <SlideUpView delay={100}>
+          <SmartRideLogo />
+        </SlideUpView>
+
+        {/* "Smart Ride" title — white, 22px bold */}
+        <SlideUpView delay={200}>
+          <Text style={styles.brandName}>Smart Ride</Text>
+        </SlideUpView>
+
+        {/* Subtitle "Uganda's Premium Choice" — white/80%, label-md, tracking-widest uppercase */}
+        <SlideUpView delay={300}>
+          <Text style={styles.subtitle}>UGANDA'S PREMIUM CHOICE</Text>
+        </SlideUpView>
+
+        {/* Loading spinner — 24×24, white border ring */}
+        <SlideUpView delay={400}>
+          <View style={styles.spinnerContainer}>
+            <View style={styles.spinner} />
+          </View>
+        </SlideUpView>
+
+        {/* Sub-brand "Les Transporteurs" — white, headline-md */}
+        <SlideUpView delay={450}>
+          <Text style={styles.subBrand}>Les Transporteurs</Text>
+        </SlideUpView>
+
+        {/* Tagline "Reliable • Smart • Secure" — white/60%, label-md */}
+        <SlideUpView delay={500}>
+          <Text style={styles.tagline}>Reliable • Smart • Secure</Text>
+        </SlideUpView>
       </View>
 
-      {/* Bottom section */}
+      {/* Bottom section — buttons and version */}
       <View style={[styles.bottomSection, { paddingBottom: insets.bottom + 24 }]}>
-        {/* Action buttons */}
-        <View style={styles.buttonContainer}>
-          {/* PRIMARY: Phone OTP Sign In */}
+        <SlideUpView delay={600} style={styles.buttonContainer}>
+          {/* PRIMARY BUTTON: Continue with Phone */}
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => router.push('/auth/phone-login')}
             activeOpacity={0.85}
           >
-            <Ionicons name="call" size={22} color={COLORS.background} style={styles.buttonIcon} />
-            <Text style={styles.primaryButtonText}>Get Started with Phone</Text>
+            <Ionicons
+              name="phone-portrait"
+              size={22}
+              color={COLORS.onPrimary}
+              style={styles.buttonIcon}
+            />
+            <Text style={styles.primaryButtonText}>Continue with Phone</Text>
           </TouchableOpacity>
 
-          {/* SECONDARY: Email Sign In */}
+          {/* SECONDARY BUTTON: Sign In with Email */}
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => router.push('/auth/login')}
             activeOpacity={0.85}
           >
-            <Ionicons name="mail" size={20} color={COLORS.white} style={styles.buttonIcon} />
+            <Ionicons
+              name="mail"
+              size={20}
+              color={COLORS.white}
+              style={styles.buttonIcon}
+            />
             <Text style={styles.secondaryButtonText}>Sign In with Email</Text>
           </TouchableOpacity>
 
@@ -104,13 +241,16 @@ export default function SplashScreen() {
             activeOpacity={0.7}
           >
             <Text style={styles.createAccountText}>
-              Don't have an account? <Text style={styles.createAccountLink}>Create one</Text>
+              Don't have an account?{' '}
+              <Text style={styles.createAccountLink}>Create one</Text>
             </Text>
           </TouchableOpacity>
-        </View>
-        
-        {/* Version */}
-        <Text style={styles.versionText}>v1.0.0</Text>
+        </SlideUpView>
+
+        {/* Version — white/40%, label-md */}
+        <SlideUpView delay={700}>
+          <Text style={styles.versionText}>v1.0.0</Text>
+        </SlideUpView>
       </View>
     </View>
   );
@@ -119,161 +259,217 @@ export default function SplashScreen() {
 // ============================================
 // STYLES
 // ============================================
-const BADGE_SIZE = 140;
-const PIN_HEAD_SIZE = 48;
+const LOGO_SIZE = 128;
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.primaryContainer, // #0e7a4d — deep green
   },
-  
+
+  // ── Atmospheric Blur Blobs ──
+  blobTopLeft: {
+    position: 'absolute',
+    top: -80,
+    left: -80,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: COLORS.secondaryContainer, // #6bff8f
+    opacity: 0.1,
+  },
+  blobBottomRight: {
+    position: 'absolute',
+    bottom: -60,
+    right: -60,
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: COLORS.primary, // #005f3a
+    opacity: 0.15,
+  },
+
+  // ── Center Content ──
   centerContent: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 24,
   },
-  
+
+  // ── Logo ──
   logoWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 32,
+    marginBottom: 28,
   },
-  
-  logoGlowRing: {
+  logoGlow: {
     position: 'absolute',
-    width: BADGE_SIZE + 30,
-    height: BADGE_SIZE + 30,
-    borderRadius: (BADGE_SIZE + 30) / 2,
-    backgroundColor: COLORS.white,
-    opacity: 0.15,
+    width: LOGO_SIZE + 48,
+    height: LOGO_SIZE + 48,
+    borderRadius: (LOGO_SIZE + 48) / 2,
+    backgroundColor: COLORS.secondaryContainer, // glow = secondaryContainer/10
   },
-  
   logoBadge: {
-    width: BADGE_SIZE,
-    height: BADGE_SIZE,
-    borderRadius: BADGE_SIZE / 2,
-    backgroundColor: COLORS.background,
+    width: LOGO_SIZE,
+    height: LOGO_SIZE,
+    borderRadius: RADIUS.xl, // 24 — rounded-xl
+    backgroundColor: 'rgba(255, 255, 255, 0.05)', // white/5% overlay bg
     alignItems: 'center',
     justifyContent: 'center',
+    // shadow-2xl equivalent
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.35,
-    shadowRadius: 24,
-    elevation: 12,
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.4,
+    shadowRadius: 28,
+    elevation: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
-  
   pinContainer: {
     alignItems: 'center',
-    marginTop: -8,
+    marginTop: -6,
   },
-  
   pinHead: {
-    width: PIN_HEAD_SIZE,
-    height: PIN_HEAD_SIZE,
-    borderRadius: PIN_HEAD_SIZE / 2,
-    backgroundColor: COLORS.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.white,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: COLORS.white,
+    borderColor: COLORS.primaryContainer,
   },
-  
   pinInner: {
     width: 14,
     height: 14,
     borderRadius: 7,
-    backgroundColor: COLORS.white,
+    backgroundColor: COLORS.primaryContainer,
   },
-  
   pinBody: {
     width: 0,
     height: 0,
-    borderLeftWidth: 20,
-    borderRightWidth: 20,
-    borderTopWidth: 28,
+    borderLeftWidth: 18,
+    borderRightWidth: 18,
+    borderTopWidth: 26,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: COLORS.primary,
-    marginTop: -6,
+    borderTopColor: COLORS.white,
+    marginTop: -5,
   },
-  
   motionTrail: {
     position: 'absolute',
-    left: 12,
+    left: 14,
     top: '50%',
-    marginTop: -10,
+    marginTop: -8,
   },
   motionLine: {
     position: 'absolute',
-    height: 3,
+    height: 2.5,
     borderRadius: 2,
     backgroundColor: COLORS.white,
   },
   motionLine1: {
-    width: 16,
+    width: 14,
     top: 0,
-    opacity: 0.6,
+    opacity: 0.5,
   },
   motionLine2: {
-    width: 10,
-    top: 10,
-    opacity: 0.35,
+    width: 9,
+    top: 8,
+    opacity: 0.3,
   },
-  
+
+  // ── Brand Name — "Smart Ride" white, 22px bold ──
   brandName: {
-    fontSize: 42,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '700',
     color: COLORS.white,
-    letterSpacing: 1.5,
-    marginBottom: 8,
+    textAlign: 'center',
+    marginBottom: 6,
+    // Plus Jakarta Sans → system default bold in RN
   },
-  
+
+  // ── Subtitle — "Uganda's Premium Choice" white/80%, label-md, tracking-widest uppercase ──
+  subtitle: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.white,
+    opacity: 0.8,
+    textAlign: 'center',
+    letterSpacing: 3, // tracking-widest
+    textTransform: 'uppercase',
+    marginBottom: 20,
+  },
+
+  // ── Spinner — 24×24, white border ring ──
+  spinnerContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  spinner: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2.5,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderTopColor: COLORS.white,
+  },
+
+  // ── Sub-brand — "Les Transporteurs" white, headline-md ──
+  subBrand: {
+    ...TYPOGRAPHY.headlineMd,
+    color: COLORS.white,
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+
+  // ── Tagline — "Reliable • Smart • Secure" white/60%, label-md ──
   tagline: {
-    fontSize: 16,
-    fontWeight: '500',
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.white,
-    opacity: 0.9,
-    letterSpacing: 0.5,
+    opacity: 0.6,
+    textAlign: 'center',
   },
-  
+
+  // ── Bottom Section ──
   bottomSection: {
     alignItems: 'center',
     paddingHorizontal: 28,
   },
-  
   buttonContainer: {
     width: '100%',
     maxWidth: 340,
     alignItems: 'center',
   },
-  
   buttonIcon: {
     marginRight: 8,
   },
 
+  // ── Primary Button — bg-primary (#005f3a), text-on-primary (white), h-14, rounded-xl ──
   primaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
-    paddingVertical: 18,
-    borderRadius: 16,
+    backgroundColor: COLORS.primary, // #005f3a
+    paddingVertical: 0,
+    height: 56, // h-14
+    borderRadius: RADIUS.xl, // 24 — rounded-xl
     marginBottom: 14,
     width: '100%',
+    // Button shadow from design system
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   primaryButtonText: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    color: COLORS.onPrimary, // white
+    ...TYPOGRAPHY.labelLg, // font-label-lg
   },
-  
+
+  // ── Secondary Button — border-2 border-white, text-white, h-14, rounded-xl ──
   secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -281,17 +477,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: COLORS.white,
-    paddingVertical: 16,
-    borderRadius: 16,
+    height: 56, // h-14
+    borderRadius: RADIUS.xl, // 24 — rounded-xl
     width: '100%',
     marginBottom: 20,
   },
   secondaryButtonText: {
     color: COLORS.white,
-    fontSize: 17,
-    fontWeight: '600',
+    ...TYPOGRAPHY.labelLg, // font-label-lg
   },
 
+  // ── Create Account Link ──
   createAccountText: {
     color: COLORS.white,
     fontSize: 14,
@@ -302,12 +498,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
-  
+
+  // ── Version — white/40%, label-md ──
   versionText: {
-    fontSize: 12,
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.white,
-    opacity: 0.5,
-    fontWeight: '500',
-    marginTop: 8,
+    opacity: 0.4,
+    textAlign: 'center',
   },
 });
