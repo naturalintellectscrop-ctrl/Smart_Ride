@@ -25,3 +25,22 @@ Stage Summary:
 - ALL "SR" text placeholders replaced with actual SmartRide logo image across both expo-app and mobile app
 - ALL web app logo references now consistently use /smartride-logo-transparent.png
 - Single source of truth: public/smartride-logo-transparent.png (1024x1024 PNG with alpha transparency)
+
+---
+Task ID: 2
+Agent: Main
+Task: Fix Google Sign-In webClientId mismatch + analyze YouTube tutorial applicability
+
+Work Log:
+- Identified YouTube video as "Setting Up Google Sign In for Expo / React Native Apps" by ToThePointCode
+- Discovered critical webClientId mismatch: google.ts used wrong client ID (531949209415-ja4espd5h0m6p74esft4iv541os5ertj) that doesn't match google-services.json
+- Fixed webClientId in expo-app/src/config/google.ts to match google-services.json type-3 client: 531949209415-h0ri57i233r1l767tnc4i26brdt3asb3
+- Fixed same mismatch in src/services/google-signin.ts (backend)
+- Added GOOGLE_CLIENT_ID to .env for proper server-side audience verification
+- Verified no android/ directory exists (prebuild not done yet) - this is required for native Google Sign-In
+
+Stage Summary:
+- webClientId mismatch was the root cause of DEVELOPER_ERROR - now fixed
+- The YouTube tutorial is directly applicable - covers the exact setup needed
+- Still need: run `npx expo prebuild` to generate android/ directory, then build with Android Studio
+- Certificate hash in google-services.json must match the signing key used for the APK build
