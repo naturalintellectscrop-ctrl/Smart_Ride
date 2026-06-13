@@ -3,8 +3,10 @@
 // ============================================
 // Premium futuristic design matching admin page
 // Glassmorphism + animated background + neon accents
-// Email/Password PRIMARY (gradient CTA), Google SECONDARY
-// Uses shared design-system components & constants
+// PRIMARY: Phone OTP (most popular in Uganda)
+// SECONDARY: Email/Password
+// Google Sign-In removed (requires Google Play Services
+// which is unreliable on user devices in Uganda)
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -23,18 +25,12 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { statusCodes } from '@react-native-google-signin/google-signin';
-import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
-import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData, loginWithGoogle } from '@/src/services/auth';
+import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
-import { COLORS, DESIGN_SYSTEM_COLORS, TYPOGRAPHY, SPACING_SCALE, RADIUS_SCALE } from '../../src/constants';
+import { COLORS } from '../../src/constants';
 import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
 
 const { height } = Dimensions.get('window');
-
-const GOOGLE_BLUE = '#4285F4';
-
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -43,7 +39,6 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,74 +112,12 @@ export default function LoginScreen() {
     }
   };
 
-  // SECONDARY: Google Sign-In
-  const handleGoogleSignIn = async () => {
-    setGoogleLoading(true);
-    setError(null);
-
-    try {
-      // Ensure Google Sign-In is configured
-      configureGoogleSignIn();
-      
-      // Check if Google Play Services are available (Android)
-      if (Platform.OS === 'android') {
-        await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      }
-      
-      // Perform the sign-in
-      const userInfo = await GoogleSignin.signIn();
-      
-      // Validate we got the ID token
-      if (!userInfo.data?.idToken) {
-        setError('Failed to get Google ID token. Please try again.');
-        console.error('[GoogleSignIn] No idToken in response:', userInfo);
-        return;
-      }
-
-      // Use the auth service function for consistency
-      const response = await loginWithGoogle(userInfo.data.idToken);
-
-      if (response.success) {
-        // Sync with auth store for screens that use useAuthStore
-        const token = await getAccessToken();
-        const userData = await getUserData();
-        if (token && userData) {
-          useAuthStore.getState().login({
-            id: userData.id,
-            email: userData.email,
-            name: userData.name,
-            phone: userData.phone,
-            role: userData.role,
-          }, token);
-        }
-        router.replace('/(tabs)');
-      } else {
-        setError(response.error || response.message || 'Google login failed. Please try again.');
-      }
-    } catch (err: any) {
-      console.error('[GoogleSignIn] Error:', err);
-      
-      // Handle specific error codes
-      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
-        // User cancelled - don't show error
-        console.log('[GoogleSignIn] User cancelled sign-in');
-      } else if (err.message?.includes('DEVELOPER_ERROR') || err.code === 'DEVELOPER_ERROR') {
-        setError('Google Sign-In configuration error. Please use email login or contact support.');
-      } else if (err.code === statusCodes.IN_PROGRESS) {
-        setError('Sign in is already in progress. Please wait.');
-      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        setError('Google Play Services not available. Please update Google Play Services and try again.');
-      } else if (err.message?.includes('Network error') || err.message?.includes('timeout')) {
-        setError('Network error. Please check your connection and try again.');
-      } else {
-        setError('Google Sign-In failed. Please try email login instead.');
-      }
-    } finally {
-      setGoogleLoading(false);
-    }
+  // PRIMARY: Phone OTP Login
+  const handlePhoneLogin = () => {
+    router.push('/auth/phone-login');
   };
 
-  // PRIMARY: Email/Password Login
+  // SECONDARY: Email/Password Login
   const handleEmailLogin = async () => {
     if (!email.trim()) {
       setError('Please enter your email');
@@ -241,7 +174,6 @@ export default function LoginScreen() {
     >
       {/* Animated Background */}
       <View style={styles.backgroundGradient}>
-        {/* Ambient gradient circles */}
         <View style={styles.ambientGreen} />
         <View style={styles.ambientCyan} />
         <View style={styles.ambientPurple} />
@@ -275,6 +207,42 @@ export default function LoginScreen() {
           </GlowHeader>
         </Animated.View>
 
+        {/* PRIMARY: Phone OTP Button */}
+        <Animated.View 
+          style={[
+            styles.phoneSection,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            }
+          ]}
+        >
+          <GradientButton
+            title="Continue with Phone Number"
+            onPress={handlePhoneLogin}
+            variant="primary"
+            size="lg"
+            icon={
+              <Ionicons name="call" size={20} color={COLORS.background} />
+            }
+          />
+          <Text style={styles.phoneHint}>
+            Quick sign in with OTP — no password needed
+          </Text>
+        </Animated.View>
+
+        {/* Divider */}
+        <Animated.View 
+          style={[
+            styles.dividerContainer,
+            { opacity: fadeAnim }
+          ]}
+        >
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or sign in with email</Text>
+          <View style={styles.dividerLine} />
+        </Animated.View>
+
         {/* Form Card */}
         <Animated.View 
           style={[
@@ -301,7 +269,8 @@ export default function LoginScreen() {
               icon="mail-outline"
               keyboardType="email-address"
               autoCapitalize="none"
-              editable={!isLoading && !googleLoading}
+              editable={!isLoading}
+              returnKeyType="next"
             />
 
             {/* Password Input */}
@@ -315,7 +284,9 @@ export default function LoginScreen() {
               rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
               onRightIconPress={() => setShowPassword(!showPassword)}
               autoCapitalize="none"
-              editable={!isLoading && !googleLoading}
+              editable={!isLoading}
+              returnKeyType="go"
+              onSubmitEditing={handleEmailLogin}
             />
 
             {/* Forgot Password */}
@@ -327,35 +298,16 @@ export default function LoginScreen() {
               <Text style={styles.forgotText}>Forgot Password?</Text>
             </TouchableOpacity>
 
-            {/* PRIMARY: Email Sign In Button */}
+            {/* Email Sign In Button */}
             <GradientButton
-              title="Sign In"
+              title="Sign In with Email"
               onPress={handleEmailLogin}
-              variant="primary"
-              loading={isLoading}
-              disabled={googleLoading}
-              size="lg"
-            />
-
-            {/* Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or continue with</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* SECONDARY: Google Sign-In Button */}
-            <GradientButton
-              title="Continue with Google"
-              onPress={handleGoogleSignIn}
               variant="secondary"
-              loading={googleLoading}
-              disabled={isLoading}
+              loading={isLoading}
+              size="lg"
               icon={
-                !googleLoading ? (
-                  <View style={styles.googleIconContainer}>
-                    <Text style={styles.googleIcon}>G</Text>
-                  </View>
+                !isLoading ? (
+                  <Ionicons name="mail" size={20} color={COLORS.text} />
                 ) : undefined
               }
             />
@@ -372,7 +324,7 @@ export default function LoginScreen() {
           <Text style={styles.signUpText}>Don't have an account? </Text>
           <TouchableOpacity 
             onPress={() => router.push('/auth/register')}
-            disabled={isLoading || googleLoading}
+            disabled={isLoading}
             activeOpacity={0.7}
           >
             <Text style={styles.signUpLink}>Sign Up</Text>
@@ -392,7 +344,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: DESIGN_SYSTEM_COLORS.background,
+    backgroundColor: COLORS.background,
   },
   backgroundGradient: {
     position: 'absolute',
@@ -401,16 +353,43 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
   },
+  ambientGreen: {
+    position: 'absolute',
+    top: -60,
+    left: -40,
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: 'rgba(0, 255, 136, 0.06)',
+  },
+  ambientCyan: {
+    position: 'absolute',
+    bottom: height * 0.15,
+    right: -60,
+    width: 240,
+    height: 240,
+    borderRadius: 120,
+    backgroundColor: 'rgba(0, 255, 243, 0.04)',
+  },
+  ambientPurple: {
+    position: 'absolute',
+    top: height * 0.38,
+    right: -80,
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(139, 92, 246, 0.04)',
+  },
   scrollContent: {
     flexGrow: 1,
   },
   logoContainer: {
     width: 80,
     height: 80,
-    backgroundColor: DESIGN_SYSTEM_COLORS.surfaceContainer,
+    borderRadius: 24,
+    backgroundColor: COLORS.backgroundElevated,
     borderWidth: 1,
-    borderColor: DESIGN_SYSTEM_COLORS.outlineVariant,
-    borderRadius: RADIUS_SCALE.lg,
+    borderColor: 'rgba(0, 255, 136, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -422,87 +401,82 @@ const styles = StyleSheet.create({
     right: -20,
     bottom: -20,
     borderRadius: 40,
-    backgroundColor: 'rgba(0, 95, 58, 0.1)',
+    backgroundColor: 'rgba(0, 255, 136, 0.15)',
   },
   logoText: {
     fontSize: 28,
     fontWeight: '900',
-    color: DESIGN_SYSTEM_COLORS.primary,
+    color: COLORS.primary,
     letterSpacing: -1,
   },
-  formCard: {
-    marginHorizontal: SPACING_SCALE.md,
-    marginTop: SPACING_SCALE.md,
-    borderWidth: 1,
-    borderColor: DESIGN_SYSTEM_COLORS.outlineVariant,
-    backgroundColor: DESIGN_SYSTEM_COLORS.surface,
+  phoneSection: {
+    marginHorizontal: 20,
+    marginTop: 8,
   },
-  errorContainer: {
-    backgroundColor: 'rgba(186, 26, 26, 0.08)',
-    borderColor: DESIGN_SYSTEM_COLORS.error,
-    borderWidth: 1,
-    borderRadius: RADIUS_SCALE.md,
-    padding: SPACING_SCALE.md,
-    marginBottom: SPACING_SCALE.md,
+  phoneHint: {
+    color: COLORS.textMuted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING_SCALE.sm,
+    marginHorizontal: 20,
+    marginVertical: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border,
+  },
+  dividerText: {
+    color: COLORS.textDim,
+    marginHorizontal: 14,
+    fontSize: 13,
+  },
+  formCard: {
+    marginHorizontal: 20,
+    marginTop: 0,
+  },
+  errorContainer: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   errorText: {
-    color: DESIGN_SYSTEM_COLORS.error,
+    color: COLORS.error,
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
   },
   forgotButton: {
     alignItems: 'flex-end',
-    marginBottom: SPACING_SCALE.lg,
-    marginTop: SPACING_SCALE.xs,
+    marginBottom: 20,
+    marginTop: 4,
   },
   forgotText: {
-    color: DESIGN_SYSTEM_COLORS.primary,
+    color: COLORS.primary,
     fontWeight: '500',
     fontSize: 13,
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: SPACING_SCALE.xl,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: DESIGN_SYSTEM_COLORS.outlineVariant,
-  },
-  dividerText: {
-    color: DESIGN_SYSTEM_COLORS.outline,
-    marginHorizontal: SPACING_SCALE.md,
-    fontSize: 13,
-  },
-  googleIconContainer: {
-    width: 22,
-    height: 22,
-    borderRadius: RADIUS_SCALE.md,
-    backgroundColor: GOOGLE_BLUE,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleIcon: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 12,
   },
   signUpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: SPACING_SCALE.lg,
+    marginTop: 24,
   },
   signUpText: {
-    color: DESIGN_SYSTEM_COLORS.onSurfaceVariant,
+    color: COLORS.textMuted,
     fontSize: 14,
   },
   signUpLink: {
-    color: DESIGN_SYSTEM_COLORS.primary,
+    color: COLORS.primary,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -510,39 +484,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING_SCALE.xs,
-    marginTop: SPACING_SCALE.md,
-    marginBottom: SPACING_SCALE.xs,
+    gap: 6,
+    marginTop: 16,
+    marginBottom: 8,
   },
   securityText: {
-    color: DESIGN_SYSTEM_COLORS.outline,
+    color: COLORS.textDim,
     fontSize: 11,
-  },
-  ambientGreen: {
-    position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(14, 122, 77, 0.1)',
-    top: -50,
-    left: -50,
-  },
-  ambientCyan: {
-    position: 'absolute',
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: 'rgba(0, 150, 136, 0.08)',
-    bottom: -30,
-    right: -30,
-  },
-  ambientPurple: {
-    position: 'absolute',
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(103, 58, 183, 0.06)',
-    top: '50%',
-    right: '10%',
   },
 });
