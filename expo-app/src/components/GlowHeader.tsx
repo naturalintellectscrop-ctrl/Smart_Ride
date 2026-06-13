@@ -1,16 +1,15 @@
 // ============================================
 // SMART RIDE MOBILE - GLOW HEADER COMPONENT
 // ============================================
-// Dark header with gradient glow bottom border
-// Replaces the solid green headers in tab screens
+// Stitch Design System — Material Design 3
+// Light mode header with subtle bottom border
 // ============================================
 
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle, TextStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, GRADIENTS } from '../constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../constants';
 
 interface GlowHeaderProps {
   title: string;
@@ -37,7 +36,7 @@ export function GlowHeader({
 
   return (
     <View style={[styles.container, style]}>
-      <View style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.md || 56 }]}>
         <View style={styles.headerRow}>
           <View style={styles.titleContainer}>
             <Text style={[styles.title, titleStyle]}>{title}</Text>
@@ -48,7 +47,7 @@ export function GlowHeader({
               <Ionicons
                 name={rightAction.icon}
                 size={24}
-                color={COLORS.textSecondary}
+                color={COLORS.onSurfaceVariant}
                 onPress={rightAction.onPress}
               />
               {rightAction.badge !== undefined && rightAction.badge > 0 && (
@@ -63,24 +62,19 @@ export function GlowHeader({
         </View>
         {children}
       </View>
-      {/* Gradient glow border at bottom */}
-      <LinearGradient
-        colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.glowBorder}
-      />
+      {/* Subtle bottom border */}
+      <View style={styles.bottomBorder} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: SPACING.containerMargin,
+    paddingBottom: SPACING.md,
   },
   headerRow: {
     flexDirection: 'row',
@@ -91,14 +85,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
+    ...TYPOGRAPHY.headlineLgMobile,
+    color: COLORS.onBackground,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     marginTop: 2,
   },
   rightActions: {
@@ -116,11 +109,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   badgeText: {
-    color: '#FFFFFF',
+    color: COLORS.onError,
     fontSize: 10,
     fontWeight: 'bold',
   },
-  glowBorder: {
+  bottomBorder: {
     height: 1,
+    backgroundColor: COLORS.outlineVariant,
   },
 });

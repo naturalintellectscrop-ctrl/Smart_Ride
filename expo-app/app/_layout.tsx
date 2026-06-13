@@ -88,7 +88,11 @@ function ThemedRootLayout() {
 
   // Configure Google Sign-In once on app startup
   useEffect(() => {
-    configureGoogleSignIn();
+    try {
+      configureGoogleSignIn();
+    } catch (e) {
+      console.warn('[App] Google Sign-In config failed:', e);
+    }
   }, []);
 
   // Initialize push notifications and set up listeners

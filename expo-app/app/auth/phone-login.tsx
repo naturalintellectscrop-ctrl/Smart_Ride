@@ -1,9 +1,9 @@
 // ============================================
 // SMART RIDE MOBILE - PHONE LOGIN SCREEN
 // ============================================
-// VERSION: PRODUCTION-001
-// PURPOSE: Phone + OTP authentication entry point
-// FLOW: Phone Input → Send OTP → Verify OTP → Login
+// Stitch Design System — Material Design 3 Green Theme
+// Light mode surface background, MD3 components
+// Flow: Phone Input → Send OTP → Verify OTP → Login
 // ============================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -17,127 +17,105 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Animated,
   Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 
 // Uganda phone number validation
 const UGANDAN_PHONE_REGEX = /^(\+256|0)(7\d|4\d)\d{7}$/;
 
 function validateUgandanPhone(phone: string): { valid: boolean; error?: string } {
-  // Remove spaces and dashes
   const cleaned = phone.replace(/[\s\-]/g, '');
-  
+
   if (!cleaned) {
     return { valid: false, error: 'Phone number is required' };
   }
-  
-  // Check length
+
   if (cleaned.length < 10) {
     return { valid: false, error: 'Phone number is too short' };
   }
-  
+
   if (cleaned.length > 13) {
     return { valid: false, error: 'Phone number is too long' };
   }
-  
-  // Validate format
+
   if (!UGANDAN_PHONE_REGEX.test(cleaned)) {
     return { valid: false, error: 'Please enter a valid Ugandan phone number' };
   }
-  
+
   return { valid: true };
 }
 
 function normalizePhone(phone: string): string {
-  // Remove spaces and dashes
   let normalized = phone.replace(/[\s\-]/g, '');
-  
-  // Convert 0XXX to +256XXX
   if (normalized.startsWith('0')) {
     normalized = '+256' + normalized.substring(1);
   }
-  
-  // Add + if missing and starts with 256
   if (normalized.startsWith('256') && !normalized.startsWith('+')) {
     normalized = '+' + normalized;
   }
-  
   return normalized;
 }
 
 export default function PhoneLoginScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ purpose?: string }>();
+  const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
-  
+
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [buttonScale] = useState(new Animated.Value(1));
-  
+  const [isFocused, setIsFocused] = useState(false);
+
   const inputRef = useRef<TextInput>(null);
-  
-  // Purpose: 'login' | 'register' | 'reset_password'
+
+  // Purpose: 'login' | 'register'
   const purpose = (params.purpose as 'login' | 'register') || 'login';
-  
+
+  const isLogin = purpose === 'login';
+  const title = isLogin ? 'Sign In' : 'Create Account';
+  const subtitle = isLogin
+    ? 'Enter your phone number to receive a verification code'
+    : 'Enter your phone number to create an account';
+
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, router]);
-  
+
   // Auto-focus input on mount
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       inputRef.current?.focus();
-    }, 500);
+    }, 400);
+    return () => clearTimeout(timer);
   }, []);
-  
+
   const handleSendOTP = async () => {
-    // Clear previous error
     setError(null);
-    
-    // Validate phone
+
     const validation = validateUgandanPhone(phone);
     if (!validation.valid) {
       setError(validation.error || 'Invalid phone number');
       return;
     }
-    
-    // Normalize phone
+
     const normalizedPhone = normalizePhone(phone);
-    
-    // Animate button press
-    Animated.sequence([
-      Animated.timing(buttonScale, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-      Animated.timing(buttonScale, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-      }),
-    ]).start();
-    
     setIsLoading(true);
-    
+
     try {
-      console.log('[PHONE-LOGIN] Sending OTP to:', normalizedPhone);
-      
       const response = await api.sendOTP(normalizedPhone, purpose);
-      
+
       if (response.success) {
-        console.log('[PHONE-LOGIN] OTP sent successfully');
-        
-        // MVP FIX: Show OTP in alert for testing (no SMS required)
+        // Test mode: Show OTP in alert for testing (no SMS required)
         const otp = response.data?.otp;
         if (otp) {
           Alert.alert(
@@ -148,7 +126,7 @@ export default function PhoneLoginScreen() {
         } else {
           Alert.alert('OTP Sent', 'Check your phone for the verification code');
         }
-        
+
         // Navigate to OTP verification screen
         router.push({
           pathname: '/auth/verify-otp',
@@ -159,87 +137,94 @@ export default function PhoneLoginScreen() {
           },
         });
       } else {
-        console.error('[PHONE-LOGIN] Failed to send OTP:', response.error);
         setError(response.error || 'Failed to send OTP. Please try again.');
       }
     } catch (err) {
-      console.error('[PHONE-LOGIN] Unexpected error:', err);
       setError('An unexpected error occurred. Please check your connection and try again.');
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handlePhoneChange = (text: string) => {
-    // Only allow digits, spaces, dashes, and +
     const filtered = text.replace(/[^\d\s\-\+]/g, '');
     setPhone(filtered);
-    
-    // Clear error when user starts typing
     if (error) {
       setError(null);
     }
   };
-  
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom + SPACING.lg, 40) },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header */}
-        <View style={styles.header}>
+        {/* Top App Bar */}
+        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, SPACING.sm) }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            accessibilityLabel="Go back"
           >
-            <Text style={styles.backButtonText}>←</Text>
+            <Ionicons name="arrow-back" size={24} color={COLORS.onSurface} />
           </TouchableOpacity>
-        </View>
-        
-        {/* Logo */}
-        <View style={styles.logoContainer}>
-          <View style={styles.logoCircle}>
-            <Text style={styles.logoEmoji}>📱</Text>
+          <View style={styles.stepIndicator}>
+            <Text style={styles.stepText}>Step 1 of 2</Text>
           </View>
+          <View style={{ width: 40 }} />
         </View>
-        
-        {/* Title */}
-        <Text style={styles.title}>
-          {purpose === 'register' ? 'Create Account' : 'Sign In'}
-        </Text>
-        <Text style={styles.subtitle}>
-          Enter your phone number to receive a verification code
-        </Text>
-        
+
+        {/* Title Section */}
+        <View style={styles.titleSection}>
+          <Text style={styles.title}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
+
         {/* Phone Input Card */}
-        <View style={styles.inputCard}>
+        <View style={styles.inputSection}>
           {/* Error Message */}
           {error && (
             <View style={styles.errorContainer}>
-              <Text style={styles.errorIcon}>⚠️</Text>
+              <Ionicons name="alert-circle" size={18} color={COLORS.error} />
               <Text style={styles.errorText}>{error}</Text>
             </View>
           )}
-          
-          {/* Phone Label */}
-          <Text style={styles.inputLabel}>Phone Number</Text>
-          
-          {/* Phone Input */}
-          <View style={styles.phoneInputContainer}>
+
+          {/* Phone Input Container */}
+          <View
+            style={[
+              styles.phoneInputContainer,
+              isFocused && styles.phoneInputContainerFocused,
+              error && styles.phoneInputContainerError,
+            ]}
+          >
+            {/* Country Code */}
             <View style={styles.countryCode}>
-              <Text style={styles.countryCodeText}>🇺🇬 +256</Text>
+              <Text style={styles.flagEmoji}>🇺🇬</Text>
+              <Text style={styles.countryCodeText}>+256</Text>
             </View>
+
+            {/* Divider */}
+            <View style={styles.countryDivider} />
+
+            {/* Phone Input */}
             <TextInput
               ref={inputRef}
               style={styles.phoneInput}
-              placeholder="7XX XXX XXX"
-              placeholderTextColor={COLORS.textMuted}
+              placeholder="700 000 000"
+              placeholderTextColor={COLORS.outlineVariant}
               value={phone}
               onChangeText={handlePhoneChange}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
               keyboardType="phone-pad"
               autoComplete="tel"
               textContentType="telephoneNumber"
@@ -247,51 +232,64 @@ export default function PhoneLoginScreen() {
               editable={!isLoading}
             />
           </View>
-          
+
           {/* Helper Text */}
           <Text style={styles.helperText}>
             We'll send you a 6-digit verification code via SMS
           </Text>
-          
-          {/* Send OTP Button */}
-          <Animated.View style={{ transform: [{ scale: buttonScale }] }}>
-            <TouchableOpacity
-              style={[
-                styles.sendButton,
-                isLoading && styles.sendButtonDisabled,
-              ]}
-              onPress={handleSendOTP}
-              disabled={isLoading || !phone.trim()}
-              activeOpacity={0.8}
-            >
-              {isLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator color={COLORS.primary} size="small" />
-                  <Text style={styles.sendingText}>Sending...</Text>
-                </View>
-              ) : (
-                <Text style={styles.sendButtonText}>Send Verification Code</Text>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
+
+          {/* Send Verification Code Button */}
+          <TouchableOpacity
+            style={[
+              styles.primaryButton,
+              (!phone.trim() || isLoading) && styles.primaryButtonDisabled,
+            ]}
+            onPress={handleSendOTP}
+            disabled={isLoading || !phone.trim()}
+            activeOpacity={0.8}
+            accessibilityLabel="Send verification code"
+          >
+            {isLoading ? (
+              <ActivityIndicator size="small" color={COLORS.onPrimary} />
+            ) : (
+              <Text style={styles.primaryButtonText}>Send Verification Code</Text>
+            )}
+          </TouchableOpacity>
         </View>
-        
-        {/* Alternative Options */}
+
+        {/* Divider */}
+        <View style={styles.dividerSection}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        {/* Alternative Buttons */}
         <View style={styles.alternativeSection}>
-          <Text style={styles.alternativeText}>Or continue with</Text>
-          
-          <View style={styles.alternativeButtons}>
-            <TouchableOpacity
-              style={styles.alternativeButton}
-              onPress={() => router.push('/auth/login')}
-            >
-              <Text style={styles.alternativeButtonIcon}>📧</Text>
-              <Text style={styles.alternativeButtonText}>Email</Text>
-            </TouchableOpacity>
-          </View>
+          {/* Email Login Button */}
+          <TouchableOpacity
+            style={styles.alternativeButton}
+            onPress={() => router.push('/auth/login')}
+            activeOpacity={0.7}
+            accessibilityLabel="Continue with email"
+          >
+            <Ionicons name="mail-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.alternativeButtonText}>Email</Text>
+          </TouchableOpacity>
+
+          {/* Register Button */}
+          <TouchableOpacity
+            style={styles.alternativeButton}
+            onPress={() => router.push('/auth/register')}
+            activeOpacity={0.7}
+            accessibilityLabel="Create an account"
+          >
+            <Ionicons name="person-add-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.alternativeButtonText}>Register</Text>
+          </TouchableOpacity>
         </View>
-        
-        {/* Terms */}
+
+        {/* Footer Terms */}
         <View style={styles.termsSection}>
           <Text style={styles.termsText}>
             By continuing, you agree to our{' '}
@@ -307,201 +305,230 @@ export default function PhoneLoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
+
   scrollContent: {
     flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingTop: 60,
-    paddingBottom: 40,
   },
-  header: {
-    marginBottom: 20,
+
+  // ── Top App Bar ──
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
   },
+
   backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.backgroundElevated,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: RADIUS.full,
   },
-  backButtonText: {
-    color: COLORS.text,
-    fontSize: 24,
+
+  stepIndicator: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.full,
   },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 24,
+
+  stepText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
   },
-  logoCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+
+  // ── Title Section ──
+  titleSection: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
   },
-  logoEmoji: {
-    fontSize: 40,
-  },
+
   title: {
-    color: COLORS.text,
-    fontSize: 28,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 8,
+    ...TYPOGRAPHY.headlineLg,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.xs,
   },
+
   subtitle: {
-    color: COLORS.textSecondary,
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 32,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurfaceVariant,
+    lineHeight: 22,
   },
-  inputCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+
+  // ── Input Section ──
+  inputSection: {
+    paddingHorizontal: SPACING.lg,
   },
+
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: COLORS.errorContainer,
+    borderLeftWidth: 3,
+    borderLeftColor: COLORS.error,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
   },
-  errorIcon: {
-    fontSize: 16,
-    marginRight: 8,
-  },
+
   errorText: {
-    color: COLORS.error,
-    fontSize: 14,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onErrorContainer,
     flex: 1,
   },
-  inputLabel: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
+
+  // ── Phone Input Container ──
   phoneInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1.5,
+    borderColor: COLORS.outlineVariant,
     overflow: 'hidden',
+    ...SHADOWS.card,
   },
+
+  phoneInputContainerFocused: {
+    borderColor: COLORS.primary,
+    borderWidth: 2,
+  },
+
+  phoneInputContainerError: {
+    borderColor: COLORS.error,
+  },
+
   countryCode: {
-    backgroundColor: COLORS.backgroundElevated,
-    paddingHorizontal: 14,
-    paddingVertical: 16,
-    borderRightWidth: 1,
-    borderRightColor: COLORS.border,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: SPACING.md,
+    paddingRight: SPACING.sm,
+    paddingVertical: SPACING.md,
+    gap: SPACING.xs,
   },
+
+  flagEmoji: {
+    fontSize: 20,
+  },
+
   countryCodeText: {
-    color: COLORS.text,
-    fontSize: 16,
+    ...TYPOGRAPHY.bodyLg,
+    color: COLORS.onSurface,
     fontWeight: '500',
   },
+
+  countryDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: COLORS.outlineVariant,
+    marginRight: SPACING.sm,
+  },
+
   phoneInput: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingVertical: SPACING.md,
+    paddingRight: SPACING.md,
     fontSize: 18,
-    color: COLORS.text,
-    fontWeight: '500',
+    color: COLORS.onSurface,
+    fontWeight: '400',
+    letterSpacing: 0.5,
   },
+
   helperText: {
-    color: COLORS.textMuted,
-    fontSize: 13,
-    marginTop: 12,
-    textAlign: 'center',
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.outline,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
-  sendButton: {
+
+  // ── Primary Button ──
+  primaryButton: {
     backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 18,
+    height: 56,
+    borderRadius: RADIUS.xl,
     alignItems: 'center',
-    marginTop: 20,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    justifyContent: 'center',
+    ...SHADOWS.button,
   },
-  sendButtonDisabled: {
-    backgroundColor: COLORS.primaryDark,
-    opacity: 0.7,
+
+  primaryButtonDisabled: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+    shadowOpacity: 0,
+    elevation: 0,
   },
-  sendButtonText: {
-    color: COLORS.background,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  sendingText: {
-    color: COLORS.background,
-    fontSize: 16,
+
+  primaryButtonText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onPrimary,
     fontWeight: '600',
-    marginLeft: 10,
   },
+
+  // ── Divider ──
+  dividerSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    gap: SPACING.md,
+  },
+
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.outlineVariant,
+  },
+
+  dividerText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+    letterSpacing: 1,
+  },
+
+  // ── Alternative Buttons ──
   alternativeSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-  },
-  alternativeText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    marginBottom: 16,
-  },
-  alternativeButtons: {
     flexDirection: 'row',
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.md,
   },
+
   alternativeButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.backgroundElevated,
-    paddingHorizontal: 24,
-    paddingVertical: 14,
-    borderRadius: 14,
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceContainerLow,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.xl,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    gap: SPACING.sm,
   },
-  alternativeButtonIcon: {
-    fontSize: 20,
-    marginRight: 8,
-  },
+
   alternativeButtonText: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: '500',
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
+
+  // ── Terms ──
   termsSection: {
-    paddingHorizontal: 20,
+    paddingHorizontal: SPACING.xl,
+    paddingTop: SPACING.xl,
   },
+
   termsText: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.outline,
     textAlign: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
   },
+
   termsLink: {
     color: COLORS.primary,
     fontWeight: '500',
