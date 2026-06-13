@@ -12,16 +12,20 @@ import 'react-native-reanimated';
 // NativeWind global styles
 import './global.css';
 
-import React, { Component, ReactNode, useEffect } from 'react';
+import React, { Component, ReactNode, useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, LogBox } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { configureGoogleSignIn } from '../src/config/google';
 import { ThemeProvider, useTheme } from '../src/context/theme-context';
 import { notificationService } from '../src/services';
+
+// Prevent splash screen from auto-hiding so we control it manually
+SplashScreen.preventAutoHideAsync();
 
 // Suppress known benign warnings in production
 LogBox.ignoreLogs([
@@ -85,14 +89,27 @@ const queryClient = createQueryClient();
 // ============================================
 function ThemedRootLayout() {
   const { isDark, colors } = useTheme();
+  const [appIsReady, setAppIsReady] = useState(false);
 
-  // Configure Google Sign-In once on app startup
+  // Configure Google Sign-In and hide splash screen once ready
   useEffect(() => {
-    try {
-      configureGoogleSignIn();
-    } catch (e) {
-      console.warn('[App] Google Sign-In config failed:', e);
+    async function prepare() {
+      try {
+        // Configure Google Sign-In
+        configureGoogleSignIn();
+      } catch (e) {
+        console.warn('[App] Google Sign-In config failed:', e);
+      } finally {
+        // App is ready — hide splash screen
+        setAppIsReady(true);
+        try {
+          await SplashScreen.hideAsync();
+        } catch (e) {
+          console.warn('[App] Failed to hide splash screen:', e);
+        }
+      }
     }
+    prepare();
   }, []);
 
   // Initialize push notifications and set up listeners
