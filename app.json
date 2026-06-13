@@ -17,7 +17,7 @@
       "infoPlist": {
         "CFBundleURLTypes": [
           {
-            "CFBundleURLSchemes": ["com.googleusercontent.apps.531949209415-ja4espd5h0m6p74esft4iv541os5ertj"]
+            "CFBundleURLSchemes": ["com.googleusercontent.apps.531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar"]
           }
         ],
         "NSLocationWhenInUseUsageDescription": "Smart Ride needs your location to show nearby rides and provide accurate pickup/dropoff locations.",

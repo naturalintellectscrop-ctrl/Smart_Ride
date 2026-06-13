@@ -21,7 +21,7 @@
           {
             "CFBundleURLSchemes": [
               "smartride",
-              "com.googleusercontent.apps.531949209415-ja4espd5h0m6p74esft4iv541os5ertj"
+              "com.googleusercontent.apps.531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar"
             ]
           }
         ]
@@ -64,7 +64,7 @@
       [
         "@react-native-google-signin/google-signin",
         {
-          "iosUrlScheme": "com.googleusercontent.apps.531949209415-ja4espd5h0m6p74esft4iv541os5ertj"
+          "iosUrlScheme": "com.googleusercontent.apps.531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar"
         }
       ],
       [
