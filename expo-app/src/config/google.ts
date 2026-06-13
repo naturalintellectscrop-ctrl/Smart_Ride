@@ -13,9 +13,9 @@ import { Platform } from 'react-native';
 // OAuth Client IDs from Firebase/Google Cloud Console
 // IMPORTANT: webClientId MUST match the type-3 client in google-services.json
 const GOOGLE_CLIENT_IDS = {
-  // Web client ID (type 3) - from google-services.json oauth_client section
+  // Web client ID (type 3) - from updated google-services.json after adding SHA-1 fingerprint
   // This is the client ID that Google Play Services validates against
-  webClientId: '531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com',
+  webClientId: '531949209415-ja4espd5h0m6p74esft4iv541os5ertj.apps.googleusercontent.com',
   // Android client ID (type 1) - from google-services.json (matches our signing certificate)
   androidClientId: '531949209415-3fnqdkfo69dognl93ffp0keg0jusvq6t.apps.googleusercontent.com',
   // iOS client ID (type 2) - from GoogleService-Info.plist
