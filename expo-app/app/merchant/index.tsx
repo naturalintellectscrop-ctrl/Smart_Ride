@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuthStore, useMerchantStore } from '@/src/store';
-import { COLORS, ORDER_STATUS_COLORS } from '@/src/constants';
+import { COLORS, ORDER_STATUS_COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 
 export default function MerchantDashboardScreen() {
   const router = useRouter();
@@ -104,7 +104,7 @@ export default function MerchantDashboardScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
     >
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.md || 56 }]}>
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
             <Text style={styles.greeting}>Merchant Dashboard</Text>
@@ -288,59 +288,58 @@ function QuickAction({ icon, label, subtitle, color, onPress }: { icon: string; 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   loadingText: {
-    color: COLORS.textMuted,
-    marginTop: 12,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.md,
+    ...TYPOGRAPHY.bodySm,
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 24,
+    padding: SPACING.lg,
   },
   errorEmoji: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   errorTitle: {
     color: COLORS.error,
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    ...TYPOGRAPHY.headlineMd,
+    marginBottom: SPACING.sm,
   },
   errorText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
     textAlign: 'center',
-    marginBottom: 24,
+    marginBottom: SPACING.lg,
   },
   retryButton: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md - 4,
+    borderRadius: RADIUS.md,
   },
   retryButtonText: {
-    color: COLORS.background,
-    fontSize: 16,
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
   },
   header: {
-    backgroundColor: COLORS.backgroundElevated,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.md + 4,
+    paddingBottom: SPACING.md + 4,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   headerRow: {
     flexDirection: 'row',
@@ -351,22 +350,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greeting: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    marginBottom: 4,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+    marginBottom: SPACING.xs,
   },
   merchantName: {
-    color: COLORS.text,
-    fontSize: 22,
-    fontWeight: 'bold',
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineLgMobile,
   },
   availabilityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.sm,
   },
   availabilityLabel: {
-    fontSize: 14,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
   },
   openText: {
@@ -376,50 +374,51 @@ const styles = StyleSheet.create({
     color: COLORS.error,
   },
   revenueSection: {
-    paddingHorizontal: 20,
-    marginTop: 20,
+    paddingHorizontal: SPACING.md + 4,
+    marginTop: SPACING.md + 4,
   },
   sectionTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineMd,
+    marginBottom: SPACING.md - 4,
   },
   revenueGrid: {
     flexDirection: 'row',
-    gap: 10,
+    gap: SPACING.sm + 2,
   },
   revenueCard: {
     flex: 1,
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md - 2,
     borderWidth: 1,
+    ...SHADOWS.card,
   },
   revenueIcon: {
     fontSize: 20,
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   revenueAmount: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 15,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   revenueLabel: {
-    fontSize: 12,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '500',
   },
   section: {
-    paddingHorizontal: 20,
-    marginTop: 24,
+    paddingHorizontal: SPACING.md + 4,
+    marginTop: SPACING.lg,
   },
   summaryCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -430,84 +429,86 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryValue: {
-    fontSize: 22,
+    ...TYPOGRAPHY.headlineLgMobile,
     fontWeight: 'bold',
   },
   summaryLabel: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    marginTop: 4,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
+    marginTop: SPACING.xs,
   },
   summaryDivider: {
     width: 1,
     height: 30,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.outlineVariant,
   },
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: SPACING.sm + 2,
   },
   actionCard: {
     width: '48%',
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   actionIconContainer: {
     width: 44,
     height: 44,
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: SPACING.sm + 2,
   },
   actionIcon: {
     fontSize: 22,
   },
   actionLabel: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 2,
   },
   actionSubtitle: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING.md - 4,
   },
   seeAllText: {
     color: COLORS.primary,
-    fontSize: 14,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
   },
   emptyState: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 16,
-    padding: 32,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   emptyIcon: {
     fontSize: 40,
-    marginBottom: 12,
+    marginBottom: SPACING.md - 4,
   },
   emptyText: {
-    color: COLORS.text,
-    fontSize: 16,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   emptySubtext: {
-    color: COLORS.textMuted,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
   },
 });

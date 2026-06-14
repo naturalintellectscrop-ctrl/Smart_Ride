@@ -1,7 +1,7 @@
 // ============================================
 // SMART RIDE MOBILE - RIDES HISTORY SCREEN
 // ============================================
-// Dark Theme with Smart Ride Branding
+// Stitch Design System — Material Design 3 Green Theme
 // ============================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -27,7 +27,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTaskStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
 import { Task } from '@/src/types';
 
 export default function RidesScreen() {
@@ -285,162 +285,173 @@ function TaskCard({ item, statusColor, onPress }: { item: Task; statusColor: str
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   header: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.lg + SPACING.xs,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
+    fontSize: TYPOGRAPHY.headlineLg.fontSize,
+    fontWeight: TYPOGRAPHY.headlineLg.fontWeight as any,
+    color: COLORS.onSurface,
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: COLORS.backgroundElevated,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    gap: 8,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.lg + SPACING.xs,
+    paddingVertical: SPACING.sm + SPACING.xs,
+    gap: SPACING.sm,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: COLORS.background,
+    paddingVertical: SPACING.sm + SPACING.xs,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
+    alignItems: 'center',
   },
   tabButtonActive: {
     backgroundColor: COLORS.primary,
+    ...SHADOWS.button,
   },
   tabButtonText: {
     textAlign: 'center',
-    fontWeight: '600',
-    color: COLORS.textMuted,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
+    fontSize: TYPOGRAPHY.labelLg.fontSize,
+    color: COLORS.outline,
   },
   tabButtonTextActive: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
+    paddingVertical: SPACING.xl + SPACING.md,
   },
   loadingText: {
-    marginTop: 16,
-    color: COLORS.textMuted,
+    marginTop: SPACING.md,
+    color: COLORS.outline,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
+    paddingVertical: SPACING.xl + SPACING.md,
   },
   emptyIcon: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   emptyText: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   retryButton: {
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + SPACING.xs,
+    ...SHADOWS.button,
   },
   retryButtonText: {
-    color: COLORS.background,
-    fontWeight: '600',
+    color: COLORS.onPrimary,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
+    fontSize: TYPOGRAPHY.labelLg.fontSize,
   },
   bookButton: {
-    marginTop: 16,
+    marginTop: SPACING.md,
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + SPACING.xs,
+    ...SHADOWS.button,
   },
   bookButtonText: {
-    color: COLORS.background,
-    fontWeight: '600',
+    color: COLORS.onPrimary,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
+    fontSize: TYPOGRAPHY.labelLg.fontSize,
   },
   list: {
     flex: 1,
   },
   listContent: {
-    padding: 20,
+    padding: SPACING.lg + SPACING.xs,
   },
   taskCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.gutter,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   taskHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: SPACING.gutter,
   },
   taskNumber: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+    color: COLORS.outline,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
   },
   taskType: {
-    fontWeight: 'bold',
-    color: COLORS.text,
-    fontSize: 16,
-    marginTop: 2,
+    fontWeight: '700' as const,
+    color: COLORS.onSurface,
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+    marginTop: SPACING.xs / 2,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: SPACING.gutter,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.full,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelMd.fontWeight as any,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   locationDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
-    marginTop: 2,
+    width: SPACING.sm,
+    height: SPACING.sm,
+    borderRadius: SPACING.xs,
+    marginRight: SPACING.sm,
+    marginTop: SPACING.xs / 2,
   },
   locationText: {
     flex: 1,
-    color: COLORS.textSecondary,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   taskFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
-    marginTop: 12,
+    paddingTop: SPACING.gutter,
+    marginTop: SPACING.gutter,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
   },
   taskDate: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+    color: COLORS.outline,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
   },
   taskAmount: {
-    fontWeight: 'bold',
+    fontWeight: '700' as const,
     color: COLORS.primary,
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
 });

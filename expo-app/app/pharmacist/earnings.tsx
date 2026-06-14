@@ -17,7 +17,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -222,11 +222,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: COLORS.textMuted,
-    marginTop: 12,
+    marginTop: SPACING.sm,
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: SPACING.md,
   },
   headerRow: {
     flexDirection: 'row',
@@ -239,44 +239,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backText: {
-    fontSize: 24,
+    fontSize: TYPOGRAPHY.headlineLg.fontSize,
     color: COLORS.text,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
   },
   glowBorder: {
     height: 1,
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
     paddingBottom: 40,
   },
   totalCard: {
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   totalLabel: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
   },
   totalAmount: {
-    fontSize: 32,
+    fontSize: TYPOGRAPHY.displayLg.fontSize,
     fontWeight: 'bold',
     color: COLORS.primary,
-    marginTop: 4,
-    marginBottom: 16,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.md,
   },
   balanceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: SPACING.sm,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
@@ -285,13 +285,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   balanceLabel: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
   },
   balanceValue: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 4,
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
+    marginTop: SPACING.xs,
   },
   balanceDivider: {
     width: 1,
@@ -300,13 +300,13 @@ const styles = StyleSheet.create({
   },
   periodRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 16,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   periodBtn: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     backgroundColor: COLORS.backgroundSurface,
     alignItems: 'center',
     borderWidth: 1,
@@ -317,18 +317,18 @@ const styles = StyleSheet.create({
     borderColor: `${COLORS.primary}30`,
   },
   periodText: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
     fontWeight: '500',
   },
   periodTextActive: {
     color: COLORS.primary,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
   earningsGrid: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 24,
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
   earningsCard: {
     flex: 1,
@@ -347,17 +347,17 @@ const styles = StyleSheet.create({
   earningsPeriod: {
     fontSize: 11,
     color: COLORS.textMuted,
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
-    marginBottom: 12,
+    marginBottom: SPACING.gutter,
   },
   transactionCard: {
-    marginBottom: 8,
-    padding: 12,
+    marginBottom: SPACING.sm,
+    padding: SPACING.gutter,
   },
   transactionRow: {
     flexDirection: 'row',
@@ -369,30 +369,30 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.gutter,
   },
   transactionEmoji: {
-    fontSize: 18,
+    fontSize: TYPOGRAPHY.bodyLg.fontSize,
   },
   transactionInfo: {
     flex: 1,
   },
   transactionDesc: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.text,
     fontWeight: '500',
   },
   transactionDate: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   transactionAmount: {
     alignItems: 'flex-end',
   },
   transactionValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
   emptyCard: {
     alignItems: 'center',
@@ -400,16 +400,16 @@ const styles = StyleSheet.create({
   },
   emptyIcon: {
     fontSize: 40,
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   emptyTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   emptySubtitle: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
   },
 });

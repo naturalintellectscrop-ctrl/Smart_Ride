@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 
 const MERCHANT_TYPES = [
   { key: 'RESTAURANT', label: '🍽️ Restaurant', description: 'Food & beverage' },
@@ -95,7 +95,7 @@ export default function MerchantRegisterScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.md || 56 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backIcon}>←</Text>
@@ -214,14 +214,14 @@ export default function MerchantRegisterScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   header: {
-    backgroundColor: COLORS.backgroundElevated,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.md + 4,
+    paddingBottom: SPACING.md + 4,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   headerRow: {
     flexDirection: 'row',
@@ -231,130 +231,129 @@ const styles = StyleSheet.create({
   backButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backIcon: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 18,
     fontWeight: 'bold',
   },
   headerTitle: {
-    color: COLORS.text,
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineMd,
   },
   headerSpacer: {
     width: 36,
   },
   headerSubtitle: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    marginTop: 8,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+    marginTop: SPACING.sm,
     lineHeight: 20,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: SPACING.md + 4,
   },
   formLabel: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
-    marginBottom: 8,
-    marginTop: 16,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.md,
   },
   formInput: {
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: COLORS.text,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md - 2,
+    paddingVertical: SPACING.md - 4,
+    color: COLORS.onSurface,
     fontSize: 15,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   formInputMultiline: {
     minHeight: 80,
     textAlignVertical: 'top',
-    paddingTop: 12,
+    paddingTop: SPACING.md - 4,
   },
   typeGrid: {
-    gap: 8,
+    gap: SPACING.sm,
   },
   typeCard: {
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md - 2,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: SPACING.sm + 2,
   },
   typeCardSelected: {
-    backgroundColor: 'rgba(0, 255, 136, 0.05)',
+    backgroundColor: `${COLORS.primary}08`,
     borderColor: COLORS.primary,
   },
   typeLabel: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 15,
     fontWeight: '600',
   },
   typeDesc: {
-    color: COLORS.textMuted,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
   },
   typeDescSelected: {
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
   },
   errorCard: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderRadius: 10,
-    padding: 14,
+    backgroundColor: `${COLORS.error}15`,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md - 2,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
-    marginTop: 16,
+    borderColor: `${COLORS.error}30`,
+    marginTop: SPACING.md,
   },
   errorText: {
     color: COLORS.error,
-    fontSize: 14,
+    ...TYPOGRAPHY.bodySm,
   },
   submitButton: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.lg,
     alignItems: 'center',
-    marginTop: 28,
+    marginTop: SPACING.lg + 4,
   },
   submitButtonDisabled: {
     opacity: 0.6,
   },
   submitButtonText: {
-    color: COLORS.background,
-    fontSize: 16,
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
   },
   infoCard: {
-    backgroundColor: 'rgba(59, 130, 246, 0.05)',
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: `${COLORS.tertiary}08`,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md - 2,
     borderWidth: 1,
-    borderColor: 'rgba(59, 130, 246, 0.15)',
+    borderColor: `${COLORS.tertiary}15`,
     flexDirection: 'row',
-    marginTop: 20,
-    gap: 10,
+    marginTop: SPACING.md + 4,
+    gap: SPACING.sm + 2,
   },
   infoIcon: {
     fontSize: 18,
   },
   infoText: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
     flex: 1,
     lineHeight: 18,
   },

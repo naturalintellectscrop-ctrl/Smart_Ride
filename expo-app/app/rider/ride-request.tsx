@@ -10,12 +10,13 @@ import {
   TouchableOpacity, 
   ActivityIndicator,
   ScrollView,
-  Alert
+  Alert,
+  StyleSheet
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useLocationStore, useTaskStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, RIDE_TYPES, PAYMENT_METHODS, PAYMENT_METHOD_MAP } from '@/src/constants';
+import { COLORS, RIDE_TYPES, PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
 
 // Types for search results
@@ -201,21 +202,21 @@ export default function RideRequestScreen() {
   };
 
   return (
-    <View className="flex-1 bg-white">
+    <View style={styles.container}>
       {/* Header */}
-      <View className="bg-primary-500 pt-12 pb-4 px-4">
-        <View className="flex-row items-center">
+      <View style={styles.header}>
+        <View style={styles.headerRow}>
           <TouchableOpacity 
             onPress={() => {
               if (step === 'dropoff') setStep('pickup');
               else if (step === 'confirm') setStep('dropoff');
               else router.back();
             }}
-            className="w-10 h-10 bg-white/20 rounded-full items-center justify-center mr-3"
+            style={styles.backButton}
           >
-            <Text className="text-white text-xl">←</Text>
+            <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
-          <Text className="text-white text-xl font-bold">
+          <Text style={styles.headerTitle}>
             {step === 'pickup' ? 'Set Pickup' : 
              step === 'dropoff' ? 'Set Destination' : 'Confirm Ride'}
           </Text>
@@ -223,7 +224,7 @@ export default function RideRequestScreen() {
       </View>
 
       {/* Content */}
-      <ScrollView className="flex-1 px-4 py-4">
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {step === 'pickup' && (
           <PickupStep
             rideType={rideType}
@@ -297,48 +298,48 @@ function PickupStep({
   return (
     <View>
       {/* Ride Type */}
-      <View className="flex-row items-center bg-primary-50 rounded-xl p-4 mb-4">
-        <Text className="text-3xl mr-3">{rideType.id === 'BODA' ? '🏍️' : '🚗'}</Text>
+      <View style={styles.rideTypeCard}>
+        <Text style={styles.rideTypeEmoji}>{rideType.id === 'BODA' ? '🏍️' : '🚗'}</Text>
         <View>
-          <Text className="font-bold text-gray-900">{rideType.name}</Text>
-          <Text className="text-gray-500">{rideType.description}</Text>
+          <Text style={styles.rideTypeName}>{rideType.name}</Text>
+          <Text style={styles.rideTypeDesc}>{rideType.description}</Text>
         </View>
       </View>
 
       {/* Current Location Button */}
       <TouchableOpacity 
-        className="flex-row items-center bg-secondary-50 rounded-xl p-4 mb-4"
+        style={styles.currentLocationCard}
         onPress={onUseCurrentLocation}
       >
-        <Text className="text-2xl mr-3">📍</Text>
-        <View className="flex-1">
-          <Text className="font-medium text-gray-900">Use Current Location</Text>
-          <Text className="text-gray-500 text-sm" numberOfLines={1}>{pickupAddress}</Text>
+        <Text style={styles.currentLocationEmoji}>📍</Text>
+        <View style={styles.currentLocationContent}>
+          <Text style={styles.currentLocationLabel}>Use Current Location</Text>
+          <Text style={styles.currentLocationAddress} numberOfLines={1}>{pickupAddress}</Text>
         </View>
-        <Text className="text-secondary-500">→</Text>
+        <Text style={styles.currentLocationArrow}>→</Text>
       </TouchableOpacity>
 
       {/* Search Input */}
-      <Text className="text-gray-600 font-medium mb-2">Or search for pickup point</Text>
+      <Text style={styles.searchLabel}>Or search for pickup point</Text>
       <TextInput
-        className="bg-gray-100 rounded-xl px-4 py-4 text-base"
+        style={styles.searchInput}
         placeholder="Search for a place..."
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor={COLORS.onSurfaceVariant}
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
 
       {/* Search Results */}
-      {isSearching && <ActivityIndicator size="large" color={COLORS.primary} className="mt-4" />}
+      {isSearching && <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.md }} />}
       
       {searchResults.map((place, index) => (
         <TouchableOpacity
           key={index}
-          className="flex-row items-center py-3 border-b border-gray-100"
+          style={styles.searchResultItem}
           onPress={() => onSelectPlace(place)}
         >
-          <Text className="mr-3">📍</Text>
-          <Text className="flex-1 text-gray-900">{place.place_name}</Text>
+          <Text style={{ marginRight: SPACING.md }}>📍</Text>
+          <Text style={styles.searchResultText}>{place.place_name}</Text>
         </TouchableOpacity>
       ))}
     </View>
@@ -364,40 +365,40 @@ function DropoffStep({
   return (
     <View>
       {/* Pickup Summary */}
-      <View className="bg-gray-50 rounded-xl p-4 mb-4">
-        <Text className="text-gray-500 text-sm mb-1">Pickup</Text>
-        <Text className="text-gray-900 font-medium">{pickupAddress}</Text>
+      <View style={styles.pickupSummary}>
+        <Text style={styles.pickupSummaryLabel}>Pickup</Text>
+        <Text style={styles.pickupSummaryAddress}>{pickupAddress}</Text>
       </View>
 
       {/* Search Input */}
-      <Text className="text-gray-600 font-medium mb-2">Where are you going?</Text>
+      <Text style={styles.searchLabel}>Where are you going?</Text>
       <TextInput
-        className="bg-gray-100 rounded-xl px-4 py-4 text-base"
+        style={styles.searchInput}
         placeholder="Search for destination..."
-        placeholderTextColor="#9CA3AF"
+        placeholderTextColor={COLORS.onSurfaceVariant}
         value={searchQuery}
         onChangeText={setSearchQuery}
         autoFocus
       />
 
       {/* Search Results */}
-      {isSearching && <ActivityIndicator size="large" color={COLORS.primary} className="mt-4" />}
+      {isSearching && <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.md }} />}
       
       {searchResults.map((place, index) => (
         <TouchableOpacity
           key={index}
-          className="flex-row items-center py-3 border-b border-gray-100"
+          style={styles.searchResultItem}
           onPress={() => onSelectPlace(place)}
         >
-          <Text className="mr-3">📍</Text>
-          <Text className="flex-1 text-gray-900">{place.place_name}</Text>
+          <Text style={{ marginRight: SPACING.md }}>📍</Text>
+          <Text style={styles.searchResultText}>{place.place_name}</Text>
         </TouchableOpacity>
       ))}
 
       {/* Recent Destinations */}
-      <Text className="text-gray-600 font-medium mt-6 mb-2">Recent Destinations</Text>
-      <View className="bg-gray-50 rounded-xl p-4">
-        <Text className="text-gray-400 text-center">No recent destinations</Text>
+      <Text style={[styles.searchLabel, { marginTop: SPACING.lg }]}>Recent Destinations</Text>
+      <View style={styles.recentCard}>
+        <Text style={styles.recentEmptyText}>No recent destinations</Text>
       </View>
     </View>
   );
@@ -434,35 +435,35 @@ function ConfirmStep({
   return (
     <View>
       {/* Route Summary */}
-      <View className="bg-gray-50 rounded-xl p-4 mb-4">
-        <View className="flex-row items-start mb-3">
-          <View className="w-3 h-3 rounded-full bg-secondary-500 mt-1.5 mr-3" />
-          <View className="flex-1">
-            <Text className="text-gray-500 text-xs">Pickup</Text>
-            <Text className="text-gray-900">{pickupAddress}</Text>
+      <View style={styles.routeSummary}>
+        <View style={styles.routeRow}>
+          <View style={styles.routeDotSecondary} />
+          <View style={styles.routeContent}>
+            <Text style={styles.routeLabel}>Pickup</Text>
+            <Text style={styles.routeText}>{pickupAddress}</Text>
           </View>
         </View>
-        <View className="flex-row items-start">
-          <View className="w-3 h-3 rounded-full bg-primary-500 mt-1.5 mr-3" />
-          <View className="flex-1">
-            <Text className="text-gray-500 text-xs">Dropoff</Text>
-            <Text className="text-gray-900">{dropoffAddress}</Text>
+        <View style={styles.routeRow}>
+          <View style={styles.routeDotPrimary} />
+          <View style={styles.routeContent}>
+            <Text style={styles.routeLabel}>Dropoff</Text>
+            <Text style={styles.routeText}>{dropoffAddress}</Text>
           </View>
         </View>
       </View>
 
       {/* Fare Estimate */}
-      <View className="bg-white rounded-xl p-4 border border-gray-200 mb-4">
-        <Text className="text-gray-500 text-sm mb-2">Estimated Fare</Text>
+      <View style={styles.fareCard}>
+        <Text style={styles.fareLabel}>Estimated Fare</Text>
         {isCalculating ? (
           <ActivityIndicator size="small" color={COLORS.primary} />
         ) : (
           <>
-            <Text className="text-3xl font-bold text-gray-900">
+            <Text style={styles.fareAmount}>
               UGX {estimatedFare.toLocaleString()}
             </Text>
             {distance && (
-              <Text className="text-gray-500 text-sm mt-1">
+              <Text style={styles.fareDistance}>
                 ~{distance.toFixed(1)} km
               </Text>
             )}
@@ -471,20 +472,22 @@ function ConfirmStep({
       </View>
 
       {/* Payment Method */}
-      <Text className="text-gray-600 font-medium mb-2">Payment Method</Text>
-      <View className="flex-row flex-wrap gap-2 mb-4">
+      <Text style={styles.paymentLabel}>Payment Method</Text>
+      <View style={styles.paymentRow}>
         {PAYMENT_METHODS.slice(0, 3).map((method) => (
           <TouchableOpacity
             key={method.id}
-            className={`flex-row items-center px-4 py-3 rounded-xl border ${
-              paymentMethod === method.id 
-                ? 'border-primary-500 bg-primary-50' 
-                : 'border-gray-200 bg-white'
-            }`}
+            style={[
+              styles.paymentChip,
+              paymentMethod === method.id && styles.paymentChipActive,
+            ]}
             onPress={() => setPaymentMethod(method.id as PaymentMethod)}
           >
-            <Text className="mr-2">{method.icon === 'phone' ? '📱' : method.icon === 'banknote' ? '💵' : '💳'}</Text>
-            <Text className={paymentMethod === method.id ? 'text-primary-500 font-medium' : 'text-gray-700'}>
+            <Text style={{ marginRight: SPACING.sm }}>{method.icon === 'phone' ? '📱' : method.icon === 'banknote' ? '💵' : '💳'}</Text>
+            <Text style={[
+              styles.paymentChipText,
+              paymentMethod === method.id && styles.paymentChipTextActive,
+            ]}>
               {method.name}
             </Text>
           </TouchableOpacity>
@@ -494,9 +497,9 @@ function ConfirmStep({
       {/* Phone Number for Mobile Money */}
       {paymentMethod !== 'CASH' && (
         <TextInput
-          className="bg-gray-100 rounded-xl px-4 py-4 text-base mb-4"
+          style={styles.phoneInput}
           placeholder="Enter phone number"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={COLORS.onSurfaceVariant}
           value={phoneNumber}
           onChangeText={setPhoneNumber}
           keyboardType="phone-pad"
@@ -505,14 +508,14 @@ function ConfirmStep({
 
       {/* Request Button */}
       <TouchableOpacity
-        className={`rounded-xl py-4 ${isRequesting ? 'bg-primary-300' : 'bg-primary-500'}`}
+        style={[styles.requestButton, isRequesting && styles.requestButtonDisabled]}
         onPress={onRequestRide}
         disabled={isRequesting}
       >
         {isRequesting ? (
-          <ActivityIndicator color="white" />
+          <ActivityIndicator color={COLORS.onPrimary} />
         ) : (
-          <Text className="text-white text-center text-lg font-semibold">
+          <Text style={styles.requestButtonText}>
             Request {rideType.name}
           </Text>
         )}
@@ -520,3 +523,275 @@ function ConfirmStep({
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+  },
+  header: {
+    backgroundColor: COLORS.primary,
+    paddingTop: 48,
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
+  },
+  backButtonText: {
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.headlineMd,
+  },
+  headerTitle: {
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.headlineMd,
+    fontWeight: 'bold',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+  },
+  // Pickup step
+  rideTypeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${COLORS.primary}10`,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  rideTypeEmoji: {
+    fontSize: 28,
+    marginRight: SPACING.md,
+  },
+  rideTypeName: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: 'bold',
+    color: COLORS.onSurface,
+  },
+  rideTypeDesc: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  // Current location
+  currentLocationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${COLORS.secondary}10`,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  currentLocationEmoji: {
+    fontSize: 22,
+    marginRight: SPACING.md,
+  },
+  currentLocationContent: {
+    flex: 1,
+  },
+  currentLocationLabel: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '500',
+    color: COLORS.onSurface,
+  },
+  currentLocationAddress: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  currentLocationArrow: {
+    ...TYPOGRAPHY.bodyLg,
+    color: COLORS.secondary,
+  },
+  // Search
+  searchLabel: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    fontWeight: '500',
+    marginBottom: SPACING.sm,
+  },
+  searchInput: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+  },
+  searchResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
+  },
+  searchResultText: {
+    flex: 1,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+  },
+  // Dropoff step
+  pickupSummary: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  pickupSummaryLabel: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.xs,
+  },
+  pickupSummaryAddress: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '500',
+    color: COLORS.onSurface,
+  },
+  recentCard: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+  },
+  recentEmptyText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.outlineVariant,
+    textAlign: 'center',
+  },
+  // Confirm step
+  routeSummary: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: SPACING.md,
+  },
+  routeDotSecondary: {
+    width: 12,
+    height: 12,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.secondaryFixedDim,
+    marginTop: 4,
+    marginRight: SPACING.md,
+  },
+  routeDotPrimary: {
+    width: 12,
+    height: 12,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
+    marginTop: 4,
+    marginRight: SPACING.md,
+  },
+  routeContent: {
+    flex: 1,
+  },
+  routeLabel: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+  },
+  routeText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+  },
+  // Fare
+  fareCard: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    marginBottom: SPACING.md,
+    ...SHADOWS.card,
+  },
+  fareLabel: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.sm,
+  },
+  fareAmount: {
+    ...TYPOGRAPHY.headlineLg,
+    fontWeight: 'bold',
+    color: COLORS.onSurface,
+  },
+  fareDistance: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.xs,
+  },
+  // Payment
+  paymentLabel: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    fontWeight: '500',
+    marginBottom: SPACING.sm,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  paymentChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    backgroundColor: COLORS.surfaceContainerLowest,
+  },
+  paymentChipActive: {
+    borderColor: COLORS.primary,
+    backgroundColor: `${COLORS.primary}10`,
+  },
+  paymentChipText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  paymentChipTextActive: {
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  // Phone input
+  phoneInput: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.md,
+  },
+  // Request button
+  requestButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+  },
+  requestButtonDisabled: {
+    backgroundColor: COLORS.primaryContainer,
+  },
+  requestButtonText: {
+    ...TYPOGRAPHY.bodyLg,
+    color: COLORS.onPrimary,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+});

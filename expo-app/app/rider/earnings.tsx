@@ -24,7 +24,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -201,7 +201,7 @@ export default function RiderEarningsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={[COLORS.background, COLORS.backgroundElevated]}
+        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
         style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
       >
         <View style={styles.headerRow}>
@@ -456,7 +456,7 @@ export default function RiderEarningsScreen() {
               value={withdrawAmount}
               onChangeText={setWithdrawAmount}
               placeholder="Enter amount (min 1,000)"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               keyboardType="number-pad"
             />
 
@@ -467,7 +467,7 @@ export default function RiderEarningsScreen() {
               value={withdrawPhone}
               onChangeText={setWithdrawPhone}
               placeholder={`e.g. 077${withdrawProvider === 'MTN' ? '7' : '0'}123456`}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               keyboardType="phone-pad"
             />
 
@@ -491,21 +491,22 @@ export default function RiderEarningsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingText: {
-    color: COLORS.textMuted,
-    marginTop: 12,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.md,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
   },
   headerRow: {
     flexDirection: 'row',
@@ -518,50 +519,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backText: {
-    fontSize: 24,
-    color: COLORS.text,
+    ...TYPOGRAPHY.headlineLg,
+    color: COLORS.onSurface,
   },
   headerTitle: {
-    fontSize: 20,
+    ...TYPOGRAPHY.headlineMd,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   walletBtn: {
     backgroundColor: `${COLORS.primary}20`,
     paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.xl,
   },
   walletBtnText: {
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.primary,
-    fontSize: 14,
     fontWeight: '600',
   },
   glowBorder: {
     height: 1,
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
     paddingBottom: 40,
   },
   mainEarningsCard: {
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   earningsLabel: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    marginBottom: 4,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.xs,
   },
   earningsAmount: {
-    fontSize: 36,
-    fontWeight: 'bold',
+    ...TYPOGRAPHY.displayLg,
     color: COLORS.primary,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   periodRow: {
     flexDirection: 'row',
@@ -569,10 +569,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   periodChip: {
-    paddingVertical: 8,
+    paddingVertical: SPACING.sm,
     paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: RADIUS.xl,
+    backgroundColor: COLORS.surfaceContainerLow,
   },
   periodChipActive: {
     backgroundColor: `${COLORS.primary}25`,
@@ -580,8 +580,8 @@ const styles = StyleSheet.create({
     borderColor: `${COLORS.primary}40`,
   },
   periodChipText: {
-    fontSize: 13,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     fontWeight: '500',
   },
   periodChipTextActive: {
@@ -590,8 +590,8 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 24,
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
   statCard: {
     flex: 1,
@@ -599,29 +599,29 @@ const styles = StyleSheet.create({
   },
   statIcon: {
     fontSize: 20,
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   statAmount: {
-    fontSize: 18,
+    ...TYPOGRAPHY.bodyLg,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   statLabel: {
-    fontSize: 11,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     marginTop: 2,
   },
   statLink: {
-    fontSize: 12,
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.primary,
     fontWeight: '600',
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   sectionTitle: {
-    fontSize: 16,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 12,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.md,
   },
   // Commission styles
   commissionContainer: {
@@ -630,19 +630,19 @@ const styles = StyleSheet.create({
   commissionBarBg: {
     flexDirection: 'row',
     height: 12,
-    borderRadius: 6,
+    borderRadius: RADIUS.full,
     overflow: 'hidden',
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
   },
   commissionBarRider: {
     backgroundColor: COLORS.primary,
-    borderTopLeftRadius: 6,
-    borderBottomLeftRadius: 6,
+    borderTopLeftRadius: RADIUS.full,
+    borderBottomLeftRadius: RADIUS.full,
   },
   commissionBarPlatform: {
     backgroundColor: COLORS.warning,
-    borderTopRightRadius: 6,
-    borderBottomRightRadius: 6,
+    borderTopRightRadius: RADIUS.full,
+    borderBottomRightRadius: RADIUS.full,
   },
   commissionRow: {
     flexDirection: 'row',
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
   commissionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.sm,
   },
   commissionDot: {
     width: 10,
@@ -659,38 +659,38 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   commissionLabel: {
-    fontSize: 11,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
   },
   commissionValue: {
-    fontSize: 13,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   ratesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    paddingTop: 8,
+    gap: SPACING.sm,
+    paddingTop: SPACING.sm,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
   },
   rateChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.backgroundSurface,
+    gap: SPACING.xs,
+    backgroundColor: COLORS.surfaceContainerLow,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
+    paddingVertical: SPACING.xs + 2,
+    borderRadius: RADIUS.md,
   },
   rateLabel: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     fontWeight: '500',
   },
   rateValue: {
-    fontSize: 11,
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.primary,
     fontWeight: '700',
   },
@@ -698,40 +698,40 @@ const styles = StyleSheet.create({
   metricsGrid: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingBottom: 12,
+    paddingBottom: SPACING.md,
   },
   metricsRow2: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
   },
   metricItem: {
     flex: 1,
     alignItems: 'center',
   },
   metricValue: {
-    fontSize: 20,
+    ...TYPOGRAPHY.headlineMd,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   metricLabel: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    marginTop: 4,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.xs,
   },
   metricDivider: {
     width: 1,
     height: 30,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.outlineVariant,
   },
   // Breakdown styles
   breakdownGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 24,
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
   },
   breakdownCard: {
     width: '48%',
@@ -740,21 +740,21 @@ const styles = StyleSheet.create({
   },
   breakdownEmoji: {
     fontSize: 20,
-    marginBottom: 6,
+    marginBottom: SPACING.xs,
   },
   breakdownAmount: {
-    fontSize: 15,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   breakdownLabel: {
-    fontSize: 11,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     marginTop: 2,
   },
   breakdownTrips: {
-    fontSize: 10,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     marginTop: 2,
   },
   // Wallet summary styles
@@ -765,17 +765,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   walletLabel: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
   },
   walletValue: {
-    fontSize: 14,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   walletDivider: {
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.outlineVariant,
   },
   // Modal styles
   modalOverlay: {
@@ -784,10 +784,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   modalContent: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
     paddingBottom: 40,
   },
   modalHeader: {
@@ -797,65 +797,65 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 20,
+    ...TYPOGRAPHY.headlineMd,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   modalCloseBtn: {
     width: 36,
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 18,
-    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
   },
   modalCloseText: {
-    color: COLORS.textMuted,
-    fontSize: 16,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodyMd,
   },
   modalBalanceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: `${COLORS.primary}15`,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.md,
     marginBottom: 20,
   },
   modalBalanceLabel: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
   },
   modalBalanceValue: {
-    fontSize: 18,
+    ...TYPOGRAPHY.bodyLg,
     fontWeight: '700',
     color: COLORS.primary,
   },
   modalFieldLabel: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     fontWeight: '600',
-    marginBottom: 8,
-    marginTop: 4,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.xs,
   },
   // Provider selection
   providerRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
+    gap: SPACING.md,
+    marginBottom: SPACING.md,
   },
   providerBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: SPACING.sm,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.backgroundSurface,
+    borderColor: COLORS.outlineVariant,
+    backgroundColor: COLORS.surfaceContainerLow,
   },
   providerBtnActive: {
     borderColor: COLORS.primary,
@@ -867,36 +867,36 @@ const styles = StyleSheet.create({
     borderRadius: 7,
   },
   providerText: {
-    fontSize: 14,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     fontWeight: '500',
   },
   providerTextActive: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontWeight: '700',
   },
   // Quick amounts
   quickAmountRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
   },
   quickAmountBtn: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   quickAmountBtnActive: {
     borderColor: COLORS.primary,
     backgroundColor: `${COLORS.primary}15`,
   },
   quickAmountText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     fontWeight: '500',
   },
   quickAmountTextActive: {
@@ -905,20 +905,20 @@ const styles = StyleSheet.create({
   },
   // Input
   modalInput: {
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    paddingHorizontal: 16,
+    borderColor: COLORS.outlineVariant,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
     paddingVertical: 14,
-    fontSize: 16,
-    color: COLORS.text,
-    marginBottom: 16,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.md,
   },
   modalNote: {
-    fontSize: 11,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: SPACING.md,
   },
 });

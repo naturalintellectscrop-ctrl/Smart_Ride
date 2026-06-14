@@ -20,7 +20,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useAuthStore, useLocationStore, useTaskStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP } from '@/src/constants';
+import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
 
 // ============================================
@@ -651,7 +651,7 @@ function StepLocations({
             <TextInput
               style={styles.searchInput}
               placeholder="Search pickup location..."
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               value={pickupSearchQuery}
               onChangeText={onPickupSearchChange}
               onFocus={() => setActiveSearchField('pickup')}
@@ -700,7 +700,7 @@ function StepLocations({
           <TextInput
             style={styles.searchInput}
             placeholder="Search drop-off location..."
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={COLORS.onSurfaceVariant}
             value={dropoffSearchQuery}
             onChangeText={onDropoffSearchChange}
             onFocus={() => setActiveSearchField('dropoff')}
@@ -736,7 +736,7 @@ function StepLocations({
         <TextInput
           style={styles.descriptionInput}
           placeholder="Describe what you are sending (e.g. documents, small box, electronics)"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={COLORS.onSurfaceVariant}
           value={packageDescription}
           onChangeText={setPackageDescription}
           multiline
@@ -930,7 +930,7 @@ function StepConfirm({
         activeOpacity={0.8}
       >
         {isSubmitting ? (
-          <ActivityIndicator size="small" color={COLORS.background} />
+          <ActivityIndicator size="small" color={COLORS.surface} />
         ) : (
           <Text style={styles.primaryButtonText}>Request Delivery</Text>
         )}
@@ -949,7 +949,7 @@ function StepConfirm({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
   // Header
@@ -957,23 +957,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingTop: 50,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
-    backgroundColor: COLORS.backgroundElevated,
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backButtonText: {
-    color: COLORS.text,
-    fontSize: 20,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineMd,
     fontWeight: '600',
   },
   headerCenter: {
@@ -981,13 +981,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    color: COLORS.text,
-    fontSize: 18,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyLg,
     fontWeight: 'bold',
   },
   headerSubtitle: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
     marginTop: 2,
   },
   headerRight: {
@@ -999,10 +999,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    backgroundColor: COLORS.backgroundElevated,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   stepRow: {
     flexDirection: 'row',
@@ -1011,10 +1011,10 @@ const styles = StyleSheet.create({
   stepDot: {
     width: 10,
     height: 10,
-    borderRadius: 5,
-    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1.5,
-    borderColor: COLORS.textDisabled,
+    borderColor: COLORS.outlineVariant,
   },
   stepDotActive: {
     backgroundColor: COLORS.primary,
@@ -1027,8 +1027,8 @@ const styles = StyleSheet.create({
   stepLine: {
     width: 40,
     height: 2,
-    backgroundColor: COLORS.backgroundSurface,
-    marginHorizontal: 4,
+    backgroundColor: COLORS.surfaceContainerLow,
+    marginHorizontal: SPACING.xs,
   },
   stepLineCompleted: {
     backgroundColor: COLORS.primary,
@@ -1039,30 +1039,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stepContainer: {
-    padding: 20,
+    padding: SPACING.lg,
   },
   stepTitle: {
-    color: COLORS.text,
-    fontSize: 20,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineMd,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   stepDescription: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    marginBottom: 20,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+    marginBottom: SPACING.lg,
   },
 
   // Type cards
   typeCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   typeCardSelected: {
     borderColor: COLORS.primary,
@@ -1071,8 +1072,8 @@ const styles = StyleSheet.create({
   typeIconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -1082,15 +1083,15 @@ const styles = StyleSheet.create({
   },
   typeIconLabel: {
     color: COLORS.primary,
-    fontSize: 12,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: 'bold',
   },
   typeInfo: {
     flex: 1,
   },
   typeName: {
-    color: COLORS.text,
-    fontSize: 16,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
     marginBottom: 2,
   },
@@ -1098,28 +1099,28 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   typeDescription: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
     marginBottom: 2,
   },
   typeVehicle: {
-    color: COLORS.textDisabled,
-    fontSize: 11,
+    color: COLORS.outlineVariant,
+    ...TYPOGRAPHY.labelMd,
   },
   typeRight: {
     alignItems: 'flex-end',
   },
   typeTime: {
-    color: COLORS.textMuted,
-    fontSize: 11,
-    marginBottom: 8,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
+    marginBottom: SPACING.sm,
   },
   typeRadio: {
     width: 22,
     height: 22,
-    borderRadius: 11,
+    borderRadius: RADIUS.full,
     borderWidth: 2,
-    borderColor: COLORS.textDisabled,
+    borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -1129,22 +1130,23 @@ const styles = StyleSheet.create({
   typeRadioInner: {
     width: 10,
     height: 10,
-    borderRadius: 5,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.primary,
   },
 
   // Fare info card
   fareInfoCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   fareInfoTitle: {
-    color: COLORS.text,
-    fontSize: 14,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
     marginBottom: 10,
   },
@@ -1154,48 +1156,48 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   fareInfoLabel: {
-    color: COLORS.textMuted,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
   },
   fareInfoValue: {
     color: COLORS.primary,
-    fontSize: 13,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
   },
 
   // Section label
   sectionLabel: {
-    color: COLORS.textMuted,
-    fontSize: 11,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '700',
     letterSpacing: 1.2,
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
 
   // Location card
   locationCard: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 12,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.md,
     padding: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   locationDotGreen: {
     width: 12,
     height: 12,
-    borderRadius: 6,
-    backgroundColor: '#00FF88',
-    marginRight: 12,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.secondaryFixedDim,
+    marginRight: SPACING.md,
     marginTop: 4,
   },
   locationDotPrimary: {
     width: 12,
     height: 12,
-    borderRadius: 6,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.secondary,
-    marginRight: 12,
+    marginRight: SPACING.md,
     marginTop: 14,
   },
 
@@ -1208,20 +1210,20 @@ const styles = StyleSheet.create({
   },
   locationSetText: {
     flex: 1,
-    color: COLORS.text,
-    fontSize: 14,
-    marginRight: 8,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
+    marginRight: SPACING.sm,
   },
   locationChangeText: {
     color: COLORS.primary,
-    fontSize: 12,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '600',
   },
 
   // Current location button
   currentLocationButton: {
     backgroundColor: `${COLORS.primary}15`,
-    borderRadius: 8,
+    borderRadius: RADIUS.sm,
     paddingHorizontal: 14,
     paddingVertical: 10,
     marginBottom: 10,
@@ -1229,39 +1231,39 @@ const styles = StyleSheet.create({
   },
   currentLocationLabel: {
     color: COLORS.primary,
-    fontSize: 13,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
   },
   orText: {
-    color: COLORS.textDisabled,
-    fontSize: 12,
-    marginBottom: 8,
+    color: COLORS.outlineVariant,
+    ...TYPOGRAPHY.labelMd,
+    marginBottom: SPACING.sm,
   },
 
   // Search input
   searchInput: {
     flex: 1,
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.md,
     paddingVertical: 10,
-    color: COLORS.text,
-    fontSize: 14,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
   },
 
   // Search results
   searchResultsContainer: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 12,
-    marginTop: 4,
-    marginBottom: 8,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.sm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     maxHeight: 200,
     overflow: 'hidden',
   },
   searchLoader: {
-    marginVertical: 8,
+    marginVertical: SPACING.sm,
   },
   searchResultItem: {
     flexDirection: 'row',
@@ -1269,72 +1271,73 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   searchResultDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.secondary,
     marginRight: 10,
   },
   searchResultText: {
     flex: 1,
-    color: COLORS.text,
-    fontSize: 13,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
   },
   noResultsText: {
-    color: COLORS.textMuted,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
     textAlign: 'center',
-    paddingVertical: 12,
+    paddingVertical: SPACING.md,
   },
 
   // Description
   descriptionCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 12,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.md,
     padding: 2,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   descriptionInput: {
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 10,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: COLORS.text,
-    fontSize: 14,
+    paddingVertical: SPACING.md,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
     minHeight: 80,
   },
 
   // Primary button
   primaryButton: {
     backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: SPACING.lg,
   },
   primaryButtonDisabled: {
-    backgroundColor: COLORS.textDisabled,
+    backgroundColor: COLORS.outlineVariant,
   },
   primaryButtonText: {
-    color: COLORS.background,
-    fontSize: 16,
+    color: COLORS.surface,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '700',
   },
   primaryButtonTextDisabled: {
-    color: COLORS.backgroundSurface,
+    color: COLORS.surfaceContainerLow,
   },
 
   // Summary card
   summaryCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 16,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
     padding: 18,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -1343,12 +1346,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   summaryLabel: {
-    color: COLORS.textMuted,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
   },
   summaryValue: {
-    color: COLORS.text,
-    fontSize: 13,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '500',
   },
   summaryValueRow: {
@@ -1357,19 +1360,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   summaryBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: RADIUS.sm,
   },
   summaryBadgeText: {
     color: COLORS.primary,
-    fontSize: 11,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '700',
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: COLORS.border,
-    marginVertical: 8,
+    backgroundColor: COLORS.outlineVariant,
+    marginVertical: SPACING.sm,
   },
 
   // Route section
@@ -1383,13 +1386,13 @@ const styles = StyleSheet.create({
   routeDotGreen: {
     width: 10,
     height: 10,
-    borderRadius: 5,
-    backgroundColor: '#00FF88',
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.secondaryFixedDim,
   },
   routeLineVertical: {
     width: 2,
     height: 30,
-    backgroundColor: COLORS.textDisabled,
+    backgroundColor: COLORS.outlineVariant,
   },
   routeTexts: {
     flex: 1,
@@ -1399,26 +1402,26 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   routeTextLabel: {
-    color: COLORS.textDisabled,
-    fontSize: 10,
+    color: COLORS.outlineVariant,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '600',
     letterSpacing: 0.8,
     marginBottom: 1,
   },
   routeTextValue: {
-    color: COLORS.text,
-    fontSize: 13,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
   },
 
   // Total
   totalLabel: {
-    color: COLORS.text,
-    fontSize: 15,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '700',
   },
   totalValue: {
     color: COLORS.primary,
-    fontSize: 18,
+    ...TYPOGRAPHY.bodyLg,
     fontWeight: 'bold',
   },
 
@@ -1429,12 +1432,12 @@ const styles = StyleSheet.create({
   paymentCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 12,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.md,
     paddingVertical: 14,
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.md,
     borderWidth: 1.5,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   paymentCardSelected: {
     borderColor: COLORS.primary,
@@ -1443,12 +1446,12 @@ const styles = StyleSheet.create({
   paymentRadio: {
     width: 20,
     height: 20,
-    borderRadius: 10,
+    borderRadius: RADIUS.full,
     borderWidth: 2,
-    borderColor: COLORS.textDisabled,
+    borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.md,
   },
   paymentRadioSelected: {
     borderColor: COLORS.primary,
@@ -1456,12 +1459,12 @@ const styles = StyleSheet.create({
   paymentRadioInner: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.primary,
   },
   paymentName: {
-    color: COLORS.text,
-    fontSize: 14,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '500',
   },
   paymentNameSelected: {
@@ -1472,15 +1475,15 @@ const styles = StyleSheet.create({
   // Error
   errorCard: {
     backgroundColor: `${COLORS.error}15`,
-    borderRadius: 10,
-    padding: 12,
-    marginTop: 12,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
     borderWidth: 1,
     borderColor: `${COLORS.error}30`,
   },
   errorText: {
     color: COLORS.error,
-    fontSize: 13,
+    ...TYPOGRAPHY.bodySm,
     textAlign: 'center',
   },
 });

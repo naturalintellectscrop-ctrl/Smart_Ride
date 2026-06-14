@@ -1,7 +1,7 @@
 // ============================================
 // SMART RIDE MOBILE - ORDERS SCREEN
 // ============================================
-// Dark Theme with Smart Ride Branding
+// Stitch Design System — Material Design 3 Green Theme
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -27,7 +27,7 @@ import Animated, {
   Layout,
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { Order } from '@/src/types';
 
 export default function OrdersScreen() {
@@ -273,44 +273,46 @@ function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   header: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     paddingTop: 60,
-    paddingBottom: 16,
-    paddingHorizontal: 20,
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.lg + SPACING.xs,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: COLORS.text,
+    fontSize: TYPOGRAPHY.headlineLg.fontSize,
+    fontWeight: TYPOGRAPHY.headlineLg.fontWeight as any,
+    color: COLORS.onSurface,
   },
   quickActions: {
     flexDirection: 'row',
-    backgroundColor: COLORS.backgroundElevated,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    gap: 8,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.lg + SPACING.xs,
+    paddingVertical: SPACING.sm + SPACING.xs,
+    gap: SPACING.sm,
   },
   quickActionItem: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.sm + SPACING.xs,
+    ...SHADOWS.card,
   },
   quickActionIcon: {
     fontSize: 20,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
     textAlign: 'center',
   },
   quickActionLabel: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    fontWeight: '500',
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    color: COLORS.outline,
+    fontWeight: TYPOGRAPHY.labelMd.fontWeight as any,
     textAlign: 'center',
   },
   loadingContainer: {
@@ -322,45 +324,49 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   listContent: {
-    padding: 20,
+    padding: SPACING.lg + SPACING.xs,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 48,
+    paddingVertical: SPACING.xl + SPACING.md,
   },
   emptyIcon: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   emptyText: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textAlign: 'center',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   orderButton: {
-    marginTop: 16,
+    marginTop: SPACING.md,
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + SPACING.xs,
+    ...SHADOWS.button,
   },
   orderButtonText: {
-    color: COLORS.background,
-    fontWeight: '600',
+    color: COLORS.onPrimary,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
+    fontSize: TYPOGRAPHY.labelLg.fontSize,
   },
   orderCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.gutter,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: SPACING.gutter,
   },
   orderInfo: {
     flexDirection: 'row',
@@ -369,65 +375,66 @@ const styles = StyleSheet.create({
   orderIconContainer: {
     width: 48,
     height: 48,
-    borderRadius: 12,
-    backgroundColor: COLORS.background,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.gutter,
+    ...SHADOWS.card,
   },
   orderIcon: {
     fontSize: 24,
   },
   orderNumber: {
-    fontWeight: 'bold',
-    color: COLORS.text,
-    fontSize: 16,
+    fontWeight: '700' as const,
+    color: COLORS.onSurface,
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
   },
   orderMerchant: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    marginTop: 2,
+    color: COLORS.outline,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    marginTop: SPACING.xs / 2,
   },
   statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: SPACING.gutter,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.full,
   },
   statusText: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelMd.fontWeight as any,
   },
   itemsContainer: {
-    backgroundColor: COLORS.background,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.md,
+    padding: SPACING.gutter,
+    marginBottom: SPACING.gutter,
   },
   itemText: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    marginBottom: 2,
+    color: COLORS.onSurfaceVariant,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    marginBottom: SPACING.xs / 2,
   },
   moreItemsText: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    marginTop: 4,
+    color: COLORS.outline,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    marginTop: SPACING.xs,
   },
   orderFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: 12,
+    paddingTop: SPACING.gutter,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
   },
   orderDate: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+    color: COLORS.outline,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
   },
   orderAmount: {
-    fontWeight: 'bold',
+    fontWeight: '700' as const,
     color: COLORS.primary,
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
 });

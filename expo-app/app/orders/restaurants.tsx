@@ -1,5 +1,6 @@
 // ============================================
 // SMART RIDE MOBILE - RESTAURANTS LIST
+// Stitch Design System Applied
 // ============================================
 
 import { useState, useEffect } from 'react';
@@ -11,11 +12,12 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
-  Image
+  Image,
+  StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { Merchant } from '@/src/types';
 
 export default function RestaurantsScreen() {
@@ -76,29 +78,30 @@ export default function RestaurantsScreen() {
 
   const renderMerchant = ({ item }: { item: Merchant }) => (
     <TouchableOpacity 
-      className="flex-row bg-white rounded-2xl p-3 mb-3 shadow-sm"
+      style={styles.merchantCard}
       onPress={() => router.push(`/orders/merchant/${item.id}`)}
+      activeOpacity={0.7}
     >
       {/* Image */}
-      <View className="w-20 h-20 bg-gray-100 rounded-xl items-center justify-center mr-3">
-        <Text className="text-3xl">🍽️</Text>
+      <View style={styles.merchantImageContainer}>
+        <Text style={styles.merchantEmoji}>🍽️</Text>
       </View>
 
       {/* Details */}
-      <View className="flex-1 justify-center">
-        <Text className="font-bold text-gray-900" numberOfLines={1}>{item.name}</Text>
-        <Text className="text-gray-500 text-sm" numberOfLines={1}>{item.description}</Text>
+      <View style={styles.merchantDetails}>
+        <Text style={styles.merchantName} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.merchantDescription} numberOfLines={1}>{item.description}</Text>
         
-        <View className="flex-row items-center mt-2">
-          <Text className="text-yellow-500 mr-1">⭐</Text>
-          <Text className="text-gray-600 text-sm">{item.rating.toFixed(1)}</Text>
-          <Text className="text-gray-300 mx-2">•</Text>
-          <Text className="text-gray-500 text-sm">{item.address}</Text>
+        <View style={styles.merchantMetaRow}>
+          <Text style={styles.ratingStar}>⭐</Text>
+          <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+          <Text style={styles.metaSeparator}>•</Text>
+          <Text style={styles.merchantAddress}>{item.address}</Text>
         </View>
 
-        <View className="flex-row items-center mt-1">
-          <View className={`px-2 py-0.5 rounded-full ${item.isOpen ? 'bg-secondary-50' : 'bg-gray-100'}`}>
-            <Text className={`text-xs font-medium ${item.isOpen ? 'text-secondary-500' : 'text-gray-400'}`}>
+        <View style={styles.statusRow}>
+          <View style={[styles.statusBadge, item.isOpen ? styles.statusBadgeOpen : styles.statusBadgeClosed]}>
+            <Text style={[styles.statusText, item.isOpen ? styles.statusTextOpen : styles.statusTextClosed]}>
               {item.isOpen ? 'Open' : 'Closed'}
             </Text>
           </View>
@@ -108,42 +111,38 @@ export default function RestaurantsScreen() {
   );
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
-      <View className="bg-white pt-12 pb-4 px-4 border-b border-gray-100">
-        <View className="flex-row items-center mb-4">
+      <View style={styles.header}>
+        <View style={styles.headerRow}>
           <TouchableOpacity 
             onPress={() => router.back()}
-            className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3"
+            style={styles.backButton}
           >
-            <Text className="text-gray-600">←</Text>
+            <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          <Text className="text-2xl font-bold text-gray-900">Restaurants</Text>
+          <Text style={styles.headerTitle}>Restaurants</Text>
         </View>
 
         {/* Search */}
         <TextInput
-          className="bg-gray-100 rounded-xl px-4 py-3"
+          style={styles.searchInput}
           placeholder="Search restaurants..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={COLORS.onSurfaceVariant}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
       </View>
 
       {/* Categories */}
-      <View className="flex-row bg-white px-4 py-3 gap-2">
+      <View style={styles.categoriesRow}>
         {categories.map((cat) => (
           <TouchableOpacity
             key={cat.id}
-            className={`px-4 py-2 rounded-full ${
-              selectedCategory === cat.id ? 'bg-primary-500' : 'bg-gray-100'
-            }`}
+            style={[styles.categoryTab, selectedCategory === cat.id && styles.categoryTabActive]}
             onPress={() => setSelectedCategory(cat.id)}
           >
-            <Text className={`font-medium ${
-              selectedCategory === cat.id ? 'text-white' : 'text-gray-600'
-            }`}>
+            <Text style={[styles.categoryTabText, selectedCategory === cat.id && styles.categoryTabTextActive]}>
               {cat.label}
             </Text>
           </TouchableOpacity>
@@ -152,22 +151,23 @@ export default function RestaurantsScreen() {
 
       {/* List */}
       {isLoading ? (
-        <View className="flex-1 items-center justify-center">
+        <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
       ) : (
         <FlatList
-          className="flex-1 px-4 pt-4"
+          style={styles.list}
           data={filteredMerchants}
           keyExtractor={(item) => item.id}
           renderItem={renderMerchant}
+          contentContainerStyle={styles.listContent}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
           }
           ListEmptyComponent={
-            <View className="items-center justify-center py-12">
-              <Text className="text-4xl mb-4">🍽️</Text>
-              <Text className="text-gray-500 text-center">No restaurants found</Text>
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyIcon}>🍽️</Text>
+              <Text style={styles.emptyText}>No restaurants found</Text>
             </View>
           }
         />
@@ -175,3 +175,185 @@ export default function RestaurantsScreen() {
     </View>
   );
 }
+
+// ============================================
+// STYLES
+// ============================================
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+  },
+  header: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingTop: 48,
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md - 4,
+  },
+  backIcon: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 18,
+  },
+  headerTitle: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineLg,
+    fontSize: 24,
+  },
+  searchInput: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md - 4,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
+  },
+  categoriesRow: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md - 4,
+    gap: SPACING.sm,
+  },
+  categoryTab: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
+  },
+  categoryTabActive: {
+    backgroundColor: COLORS.primary,
+  },
+  categoryTabText: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '500',
+  },
+  categoryTabTextActive: {
+    color: COLORS.onPrimary,
+  },
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  merchantCard: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md - 4,
+    marginBottom: SPACING.md - 4,
+    ...SHADOWS.card,
+  },
+  merchantImageContainer: {
+    width: 80,
+    height: 80,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md - 4,
+  },
+  merchantEmoji: {
+    fontSize: 28,
+  },
+  merchantDetails: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  merchantName: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: 'bold',
+  },
+  merchantDescription: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+  },
+  merchantMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+  },
+  ratingStar: {
+    fontSize: 13,
+    marginRight: SPACING.xs,
+    color: COLORS.warning,
+  },
+  ratingText: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+  },
+  metaSeparator: {
+    color: COLORS.outlineVariant,
+    marginHorizontal: SPACING.sm,
+  },
+  merchantAddress: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SPACING.xs,
+  },
+  statusBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: RADIUS.full,
+  },
+  statusBadgeOpen: {
+    backgroundColor: `${COLORS.secondary}15`,
+  },
+  statusBadgeClosed: {
+    backgroundColor: COLORS.surfaceContainerLow,
+  },
+  statusText: {
+    ...TYPOGRAPHY.labelMd,
+    fontSize: 11,
+    fontWeight: '500',
+  },
+  statusTextOpen: {
+    color: COLORS.secondary,
+  },
+  statusTextClosed: {
+    color: COLORS.outlineVariant,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 48,
+  },
+  emptyIcon: {
+    fontSize: 40,
+    marginBottom: SPACING.md,
+  },
+  emptyText: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodyMd,
+    textAlign: 'center',
+  },
+});

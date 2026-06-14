@@ -29,7 +29,7 @@ import Animated, {
   Layout,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, GRADIENTS, NOTIFICATION_TYPES } from '@/src/constants';
+import { COLORS, GRADIENTS, NOTIFICATION_TYPES, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { api } from '@/src/services';
 import { GlassCard, GradientButton, StatusBadge } from '@/src/components';
 
@@ -522,14 +522,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
     letterSpacing: -0.5,
   },
   unreadBadge: {
     backgroundColor: COLORS.error,
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
     minWidth: 22,
     height: 22,
     alignItems: 'center',
@@ -538,12 +538,12 @@ const styles = StyleSheet.create({
   },
   unreadBadgeText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     fontWeight: 'bold',
   },
   headerGlowBorder: {
     height: 1,
-    marginTop: 12,
+    marginTop: SPACING.sm,
   },
 
   // ---- Tabs ----
@@ -564,12 +564,12 @@ const styles = StyleSheet.create({
   },
   activeTabText: {
     color: COLORS.background,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
   tabCountBadge: {
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: 8,
+    borderRadius: RADIUS.md,
     minWidth: 16,
     height: 16,
     alignItems: 'center',
@@ -594,18 +594,18 @@ const styles = StyleSheet.create({
   },
   inactiveTabText: {
     color: COLORS.textMuted,
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     fontWeight: '500',
   },
 
   // ---- List ----
   listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.gutter,
     paddingBottom: 100,
   },
   cardSeparator: {
-    height: 8,
+    height: SPACING.sm,
   },
 
   // ---- Notification Card ----
@@ -640,14 +640,14 @@ const styles = StyleSheet.create({
   },
   notificationTitle: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
     flex: 1,
   },
   unreadDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
+    borderRadius: RADIUS.md,
     backgroundColor: COLORS.primary,
   },
   notificationDescription: {
@@ -658,16 +658,16 @@ const styles = StyleSheet.create({
   notificationMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
   },
   notificationTime: {
     fontSize: 11,
     color: COLORS.textDim,
   },
   chevron: {
-    marginTop: 8,
-    marginLeft: 4,
+    marginTop: SPACING.sm,
+    marginLeft: SPACING.xs,
   },
 
   // ---- Empty State ----
@@ -683,20 +683,20 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: 22,
+    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   emptyDescription: {
     fontSize: 15,
     color: COLORS.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   emptySubtext: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
     textAlign: 'center',
   },
@@ -708,7 +708,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: SPACING.sm,
     backgroundColor: COLORS.background,
     borderTopWidth: 1,
     borderTopColor: COLORS.borderLight,

@@ -10,13 +10,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Linking
+  Linking,
+  StyleSheet
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useTaskStore, useAuthStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import { COLORS, TASK_STATUS_LABELS, TASK_STATUS_COLORS } from '@/src/constants';
+import { COLORS, TASK_STATUS_LABELS, TASK_STATUS_COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { Task, TaskStatus } from '@/src/types';
 
 // Polling intervals (in ms)
@@ -308,22 +309,22 @@ export default function RideTrackingScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text className="mt-4 text-gray-500">Loading ride details...</Text>
+        <Text style={styles.loadingText}>Loading ride details...</Text>
       </View>
     );
   }
 
   if (!task) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">No active ride found</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.noRideText}>No active ride found</Text>
         <TouchableOpacity 
-          className="mt-4 bg-primary-500 rounded-xl px-6 py-3"
+          style={styles.goHomeButton}
           onPress={() => router.replace('/(tabs)')}
         >
-          <Text className="text-white font-semibold">Go Home</Text>
+          <Text style={styles.goHomeButtonText}>Go Home</Text>
         </TouchableOpacity>
       </View>
     );
@@ -333,7 +334,7 @@ export default function RideTrackingScreen() {
   const statusLabel = TASK_STATUS_LABELS[task.status] || task.status;
 
   return (
-    <View className="flex-1 bg-white">
+    <View style={styles.container}>
       {/* Map */}
       <SmartRideMap
         style={{ flex: 1 }}
@@ -354,23 +355,21 @@ export default function RideTrackingScreen() {
       />
 
       {/* Status Card */}
-      <View className="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-lg px-4 pt-4 pb-8">
+      <View style={styles.statusCard}>
         {/* Status */}
-        <View className="flex-row items-center justify-between mb-4">
+        <View style={styles.statusRow}>
           <View>
             <Text 
-              className="text-lg font-bold"
-              style={{ color: statusColor }}
+              style={[styles.statusLabel, { color: statusColor }]}
             >
               {statusLabel}
             </Text>
-            <Text className="text-gray-500 text-sm">
+            <Text style={styles.taskNumber}>
               {task.taskNumber}
             </Text>
           </View>
           <View 
-            className="w-12 h-12 rounded-full items-center justify-center"
-            style={{ backgroundColor: `${statusColor}20` }}
+            style={[styles.statusIndicator, { backgroundColor: `${statusColor}20` }]}
           >
             <ActivityIndicator size="small" color={statusColor} />
           </View>
@@ -378,21 +377,21 @@ export default function RideTrackingScreen() {
 
         {/* Driver Info */}
         {task.rider && (
-          <View className="flex-row items-center bg-gray-50 rounded-xl p-4 mb-4">
-            <View className="w-14 h-14 bg-gray-200 rounded-full items-center justify-center mr-3">
-              <Text className="text-2xl">👤</Text>
+          <View style={styles.driverCard}>
+            <View style={styles.driverAvatar}>
+              <Text style={styles.driverAvatarEmoji}>👤</Text>
             </View>
-            <View className="flex-1">
-              <Text className="font-bold text-gray-900">{task.rider.fullName}</Text>
-              <View className="flex-row items-center">
-                <Text className="text-yellow-500 mr-1">⭐</Text>
-                <Text className="text-gray-600">{task.rider.rating.toFixed(1)}</Text>
-                <Text className="text-gray-400 mx-2">•</Text>
-                <Text className="text-gray-600">{task.rider.totalTrips} trips</Text>
+            <View style={styles.driverInfo}>
+              <Text style={styles.driverName}>{task.rider.fullName}</Text>
+              <View style={styles.driverRatingRow}>
+                <Text style={styles.driverRatingStar}>⭐</Text>
+                <Text style={styles.driverRating}>{task.rider.rating.toFixed(1)}</Text>
+                <Text style={styles.driverTripsSeparator}>•</Text>
+                <Text style={styles.driverTrips}>{task.rider.totalTrips} trips</Text>
               </View>
             </View>
             <TouchableOpacity 
-              className="w-10 h-10 bg-secondary-500 rounded-full items-center justify-center"
+              style={styles.callButton}
               onPress={handleCallDriver}
             >
               <Text>📞</Text>
@@ -401,52 +400,260 @@ export default function RideTrackingScreen() {
         )}
 
         {/* Route Info */}
-        <View className="flex-row items-center mb-4">
-          <View className="flex-1">
-            <View className="flex-row items-center mb-2">
-              <View className="w-2 h-2 rounded-full bg-secondary-500 mr-2" />
-              <Text className="text-gray-500 text-xs">Pickup</Text>
-            </View>
-            <Text className="text-gray-900" numberOfLines={1}>{task.pickupAddress}</Text>
+        <View style={styles.routeSection}>
+          <View style={styles.routePoint}>
+            <View style={styles.routeDotSecondary} />
+            <Text style={styles.routePointLabel}>Pickup</Text>
           </View>
+          <Text style={styles.routePointAddress} numberOfLines={1}>{task.pickupAddress}</Text>
         </View>
-        <View className="flex-row items-center mb-4">
-          <View className="flex-1">
-            <View className="flex-row items-center mb-2">
-              <View className="w-2 h-2 rounded-full bg-primary-500 mr-2" />
-              <Text className="text-gray-500 text-xs">Dropoff</Text>
-            </View>
-            <Text className="text-gray-900" numberOfLines={1}>{task.dropoffAddress}</Text>
+        <View style={styles.routeSection}>
+          <View style={styles.routePoint}>
+            <View style={styles.routeDotPrimary} />
+            <Text style={styles.routePointLabel}>Dropoff</Text>
           </View>
+          <Text style={styles.routePointAddress} numberOfLines={1}>{task.dropoffAddress}</Text>
         </View>
 
         {/* Fare */}
-        <View className="flex-row items-center justify-between py-3 border-t border-gray-100">
-          <Text className="text-gray-500">Estimated Fare</Text>
-          <Text className="text-xl font-bold text-primary-500">
+        <View style={styles.fareRow}>
+          <Text style={styles.fareLabel}>Estimated Fare</Text>
+          <Text style={styles.fareAmount}>
             UGX {task.totalAmount.toLocaleString()}
           </Text>
         </View>
 
         {/* Actions */}
-        <View className="flex-row gap-3">
+        <View style={styles.actionsRow}>
           <TouchableOpacity
-            className="flex-1 bg-red-50 rounded-xl py-4 flex-row items-center justify-center"
+            style={styles.cancelButton}
             onPress={handleCancel}
             disabled={isCancelling || task.status === 'COMPLETED'}
           >
-            <Text className="text-red-500 font-semibold">
+            <Text style={styles.cancelButtonText}>
               {isCancelling ? 'Cancelling...' : 'Cancel Ride'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            className="flex-1 bg-red-500 rounded-xl py-4 flex-row items-center justify-center"
+            style={styles.sosButton}
             onPress={handleSOS}
           >
-            <Text className="text-white font-semibold">SOS</Text>
+            <Text style={styles.sosButtonText}>SOS</Text>
           </TouchableOpacity>
         </View>
       </View>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surface,
+  },
+  loadingText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.md,
+  },
+  noRideText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurfaceVariant,
+  },
+  goHomeButton: {
+    marginTop: SPACING.md,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+  },
+  goHomeButtonText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onPrimary,
+    fontWeight: '600',
+  },
+  // Status card (bottom sheet)
+  statusCard: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xl,
+    ...SHADOWS.active,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.md,
+  },
+  statusLabel: {
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: 'bold',
+  },
+  taskNumber: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  statusIndicator: {
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Driver card
+  driverCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  driverAvatar: {
+    width: 56,
+    height: 56,
+    backgroundColor: COLORS.surfaceContainer,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
+  },
+  driverAvatarEmoji: {
+    fontSize: 24,
+  },
+  driverInfo: {
+    flex: 1,
+  },
+  driverName: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: 'bold',
+    color: COLORS.onSurface,
+  },
+  driverRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  driverRatingStar: {
+    ...TYPOGRAPHY.bodySm,
+    marginRight: SPACING.xs,
+  },
+  driverRating: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  driverTripsSeparator: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.outlineVariant,
+    marginHorizontal: SPACING.sm,
+  },
+  driverTrips: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  callButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: COLORS.secondary,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Route section
+  routeSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  routePoint: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: SPACING.sm,
+  },
+  routeDotSecondary: {
+    width: 8,
+    height: 8,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.secondaryFixedDim,
+    marginRight: SPACING.sm,
+  },
+  routeDotPrimary: {
+    width: 8,
+    height: 8,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
+    marginRight: SPACING.sm,
+  },
+  routePointLabel: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+  },
+  routePointAddress: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    flex: 1,
+  },
+  // Fare
+  fareRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.outlineVariant,
+  },
+  fareLabel: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurfaceVariant,
+  },
+  fareAmount: {
+    ...TYPOGRAPHY.headlineMd,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  },
+  // Actions
+  actionsRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: `${COLORS.error}10`,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelButtonText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.error,
+    fontWeight: '600',
+  },
+  sosButton: {
+    flex: 1,
+    backgroundColor: COLORS.error,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sosButtonText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onError,
+    fontWeight: '600',
+  },
+});

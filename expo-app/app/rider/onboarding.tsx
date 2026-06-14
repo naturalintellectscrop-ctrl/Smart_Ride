@@ -19,7 +19,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -230,7 +230,7 @@ export default function RiderOnboardingScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={[COLORS.background, COLORS.backgroundElevated]}
+        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
         style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
       >
         <View style={styles.headerRow}>
@@ -274,7 +274,7 @@ export default function RiderOnboardingScreen() {
             <TextInput
               style={styles.fieldInput}
               placeholder="Enter your full name"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               value={personalInfo.fullName}
               onChangeText={t => setPersonalInfo(p => ({ ...p, fullName: t }))}
             />
@@ -283,7 +283,7 @@ export default function RiderOnboardingScreen() {
             <TextInput
               style={styles.fieldInput}
               placeholder="e.g., +256 700 000 000"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               value={personalInfo.phone}
               onChangeText={t => setPersonalInfo(p => ({ ...p, phone: t }))}
               keyboardType="phone-pad"
@@ -293,7 +293,7 @@ export default function RiderOnboardingScreen() {
             <TextInput
               style={styles.fieldInput}
               placeholder="your@email.com"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               value={personalInfo.email}
               onChangeText={t => setPersonalInfo(p => ({ ...p, email: t }))}
               keyboardType="email-address"
@@ -304,7 +304,7 @@ export default function RiderOnboardingScreen() {
             <TextInput
               style={styles.fieldInput}
               placeholder="Your residential address"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               value={personalInfo.address}
               onChangeText={t => setPersonalInfo(p => ({ ...p, address: t }))}
             />
@@ -321,7 +321,7 @@ export default function RiderOnboardingScreen() {
             <TextInput
               style={styles.fieldInput}
               placeholder="Enter your National ID number"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               value={documents.nationalId}
               onChangeText={t => setDocuments(p => ({ ...p, nationalId: t }))}
             />
@@ -330,7 +330,7 @@ export default function RiderOnboardingScreen() {
             <TextInput
               style={styles.fieldInput}
               placeholder="Driving license number (if applicable)"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               value={documents.licenseNumber}
               onChangeText={t => setDocuments(p => ({ ...p, licenseNumber: t }))}
             />
@@ -339,7 +339,7 @@ export default function RiderOnboardingScreen() {
             <TextInput
               style={styles.fieldInput}
               placeholder="YYYY-MM-DD"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               value={documents.licenseExpiry}
               onChangeText={t => setDocuments(p => ({ ...p, licenseExpiry: t }))}
             />
@@ -389,7 +389,7 @@ export default function RiderOnboardingScreen() {
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="e.g., Honda"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={COLORS.onSurfaceVariant}
                   value={vehicleInfo.make}
                   onChangeText={t => setVehicleInfo(p => ({ ...p, make: t }))}
                 />
@@ -399,7 +399,7 @@ export default function RiderOnboardingScreen() {
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="e.g., Boxer"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={COLORS.onSurfaceVariant}
                   value={vehicleInfo.model}
                   onChangeText={t => setVehicleInfo(p => ({ ...p, model: t }))}
                 />
@@ -412,7 +412,7 @@ export default function RiderOnboardingScreen() {
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="2024"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={COLORS.onSurfaceVariant}
                   value={vehicleInfo.year}
                   onChangeText={t => setVehicleInfo(p => ({ ...p, year: t }))}
                   keyboardType="numeric"
@@ -423,7 +423,7 @@ export default function RiderOnboardingScreen() {
                 <TextInput
                   style={styles.fieldInput}
                   placeholder="e.g., Red"
-                  placeholderTextColor={COLORS.textMuted}
+                  placeholderTextColor={COLORS.onSurfaceVariant}
                   value={vehicleInfo.color}
                   onChangeText={t => setVehicleInfo(p => ({ ...p, color: t }))}
                 />
@@ -434,7 +434,7 @@ export default function RiderOnboardingScreen() {
             <TextInput
               style={styles.fieldInput}
               placeholder="e.g., UAX 123A"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceVariant}
               value={vehicleInfo.plateNumber}
               onChangeText={t => setVehicleInfo(p => ({ ...p, plateNumber: t }))}
               autoCapitalize="characters"
@@ -526,16 +526,16 @@ const reviewStyles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: SPACING.xs + 2,
   },
   label: {
-    fontSize: 13,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     flex: 1,
   },
   value: {
-    fontSize: 13,
-    color: COLORS.text,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurface,
     fontWeight: '500',
     flex: 2,
     textAlign: 'right',
@@ -545,27 +545,28 @@ const reviewStyles = StyleSheet.create({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingText: {
-    color: COLORS.textMuted,
-    marginTop: 12,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.md,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   backBtn: {
     width: 40,
@@ -573,86 +574,85 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backText: {
-    fontSize: 24,
-    color: COLORS.text,
+    ...TYPOGRAPHY.headlineLg,
+    color: COLORS.onSurface,
   },
   headerTitle: {
-    fontSize: 20,
+    ...TYPOGRAPHY.headlineMd,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   progressContainer: {
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
   progressTrack: {
     height: 4,
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 2,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.full,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
     backgroundColor: COLORS.primary,
-    borderRadius: 2,
+    borderRadius: RADIUS.full,
   },
   progressText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginTop: 8,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.sm,
   },
   glowBorder: {
     height: 1,
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
     paddingBottom: 120,
   },
   stepTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 4,
+    ...TYPOGRAPHY.headlineLgMobile,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.xs,
   },
   stepSubtitle: {
-    fontSize: 14,
-    color: COLORS.textMuted,
-    marginBottom: 24,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.lg,
   },
   fieldLabel: {
-    fontSize: 12,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     fontWeight: '600',
     textTransform: 'uppercase',
-    marginBottom: 6,
+    marginBottom: SPACING.xs,
     marginTop: 14,
   },
   fieldInput: {
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 10,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.md,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    color: COLORS.text,
-    fontSize: 14,
+    paddingVertical: SPACING.md,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   infoCard: {
-    marginTop: 16,
+    marginTop: SPACING.md,
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: SPACING.sm,
   },
   infoIcon: {
     fontSize: 18,
   },
   infoText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     flex: 1,
     lineHeight: 18,
   },
@@ -660,15 +660,16 @@ const styles = StyleSheet.create({
   vehicleTypeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 4,
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
   },
   vehicleTypeCard: {
     width: '48%',
-    backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 12,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.md,
     padding: 14,
     alignItems: 'center',
+    ...SHADOWS.card,
     borderWidth: 1,
     borderColor: 'transparent',
   },
@@ -678,46 +679,46 @@ const styles = StyleSheet.create({
   },
   vehicleTypeEmoji: {
     fontSize: 28,
-    marginBottom: 6,
+    marginBottom: SPACING.xs,
   },
   vehicleTypeLabel: {
-    fontSize: 14,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   vehicleTypeLabelActive: {
     color: COLORS.primary,
   },
   vehicleTypeDesc: {
-    fontSize: 11,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     marginTop: 2,
     textAlign: 'center',
   },
   vehicleFormRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: SPACING.sm,
   },
   halfField: {
     flex: 1,
   },
   // Review styles
   reviewCard: {
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   reviewHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   reviewTitle: {
-    fontSize: 16,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   reviewEdit: {
-    fontSize: 13,
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.primary,
     fontWeight: '600',
   },
@@ -727,10 +728,10 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.backgroundElevated,
-    paddingHorizontal: 20,
-    paddingTop: 16,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
   },
 });

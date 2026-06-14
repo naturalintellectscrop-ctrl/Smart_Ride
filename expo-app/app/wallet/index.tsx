@@ -25,7 +25,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
 import { GlowHeader } from '@/src/components/GlowHeader';
@@ -447,28 +447,28 @@ const styles = StyleSheet.create({
 
   // Balance Card
   balanceCardWrapper: {
-    marginTop: 12,
+    marginTop: SPACING.sm,
   },
   balanceLabel: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textSecondary,
     fontWeight: '500',
   },
   balanceAmount: {
-    fontSize: 32,
+    fontSize: TYPOGRAPHY.displayLg.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginTop: 4,
+    marginTop: SPACING.xs,
     letterSpacing: -1,
   },
   pendingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 8,
+    gap: SPACING.xs,
+    marginTop: SPACING.sm,
   },
   pendingText: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.warning,
     fontWeight: '500',
   },
@@ -476,31 +476,31 @@ const styles = StyleSheet.create({
   // Stats Row
   statsRow: {
     flexDirection: 'row',
-    gap: 16,
-    marginTop: 16,
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
     paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
   },
   statItem: {
     flex: 1,
-    gap: 2,
+    gap: SPACING.xs,
   },
   statLabel: {
     fontSize: 11,
     color: COLORS.textMuted,
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   statValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
-    marginTop: 1,
+    marginTop: SPACING.xs,
   },
 
   // Quick Actions
   quickActionsContainer: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.md,
     marginTop: -12,
   },
   quickActionsRow: {
@@ -514,13 +514,13 @@ const styles = StyleSheet.create({
   quickActionIcon: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: RADIUS.full,
     backgroundColor: 'rgba(0, 255, 136, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(0, 255, 136, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: SPACING.sm,
   },
   quickActionLabel: {
     fontSize: 11,
@@ -531,9 +531,9 @@ const styles = StyleSheet.create({
   // CTA Buttons
   ctaRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginTop: 16,
-    gap: 12,
+    paddingHorizontal: SPACING.md,
+    marginTop: SPACING.md,
+    gap: SPACING.md,
   },
   ctaButtonWrapper: {
     flex: 1,
@@ -542,12 +542,12 @@ const styles = StyleSheet.create({
   // Payment Methods
   paymentMethodsContainer: {
     marginTop: 20,
-    paddingLeft: 16,
+    paddingLeft: SPACING.md,
   },
   paymentMethodsScroll: {
-    paddingRight: 16,
-    gap: 8,
-    paddingVertical: 4,
+    paddingRight: SPACING.md,
+    gap: SPACING.sm,
+    paddingVertical: SPACING.xs,
   },
   paymentMethodItem: {
     marginRight: 8,

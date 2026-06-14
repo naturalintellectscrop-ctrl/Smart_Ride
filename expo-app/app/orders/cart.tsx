@@ -1,5 +1,6 @@
 // ============================================
 // SMART RIDE MOBILE - CART SCREEN
+// Stitch Design System Applied
 // FIXED: Connected to cartStore instead of mock data
 // ============================================
 
@@ -11,12 +12,13 @@ import {
   TouchableOpacity, 
   TextInput,
   ActivityIndicator,
-  Alert
+  Alert,
+  StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useLocationStore, useCartStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP } from '@/src/constants';
+import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
 
 export default function CartScreen() {
@@ -65,19 +67,19 @@ export default function CartScreen() {
     setIsPlacingOrder(true);
     try {
       const response = await api.placeOrder({
-        clientId: user?.id,              // Fixed: backend requires clientId
+        clientId: user?.id,
         merchantId,
         orderType: 'FOOD_DELIVERY',
         items: items.map(item => ({
           menuItemId: item.productId,
           quantity: item.quantity,
-          itemName: item.name,        // Fixed: backend expects itemName (not name)
-          unitPrice: item.price,      // Fixed: backend expects unitPrice (not price)
+          itemName: item.name,
+          unitPrice: item.price,
         })),
-        subtotal: totalPrice,          // Fixed: backend requires subtotal
+        subtotal: totalPrice,
         deliveryFee,
         serviceFee,
-        totalAmount: total,             // Fixed: backend requires totalAmount
+        totalAmount: total,
         deliveryAddress: address,
         deliveryLatitude: latitude,
         deliveryLongitude: longitude,
@@ -87,7 +89,6 @@ export default function CartScreen() {
       });
 
       if (response.success && response.data) {
-        // Confirm payment - this notifies the merchant and creates KOT
         try {
           await api.confirmOrderPayment(response.data.id);
         } catch {
@@ -106,80 +107,80 @@ export default function CartScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={styles.container}>
       {/* Header */}
-      <View className="bg-white pt-12 pb-4 px-4 border-b border-gray-100">
-        <View className="flex-row items-center">
+      <View style={styles.header}>
+        <View style={styles.headerRow}>
           <TouchableOpacity 
             onPress={() => router.back()}
-            className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-3"
+            style={styles.backButton}
           >
-            <Text className="text-gray-600">←</Text>
+            <Text style={styles.backIcon}>←</Text>
           </TouchableOpacity>
-          <Text className="text-xl font-bold text-gray-900">Your Cart</Text>
+          <Text style={styles.headerTitle}>Your Cart</Text>
         </View>
       </View>
 
-      <ScrollView className="flex-1 px-4 pt-4">
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Merchant Info */}
         {merchantName && (
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <Text className="text-gray-500 text-sm mb-1">Ordering from</Text>
-            <Text className="font-bold text-gray-900">{merchantName}</Text>
+          <View style={styles.card}>
+            <Text style={styles.merchantLabel}>Ordering from</Text>
+            <Text style={styles.merchantName}>{merchantName}</Text>
           </View>
         )}
 
         {/* Cart Items */}
-        <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-          <Text className="font-bold text-gray-900 mb-4">Order Items</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Order Items</Text>
           
           {items.map((item) => (
-            <View key={item.productId} className="flex-row items-center py-3 border-b border-gray-100">
-              <View className="flex-1">
-                <Text className="text-gray-900 font-medium">{item.name}</Text>
-                <Text className="text-gray-500 text-sm">
+            <View key={item.productId} style={styles.cartItemRow}>
+              <View style={styles.cartItemInfo}>
+                <Text style={styles.cartItemName}>{item.name}</Text>
+                <Text style={styles.cartItemPrice}>
                   UGX {item.price.toLocaleString()}
                 </Text>
               </View>
               
-              <View className="flex-row items-center">
+              <View style={styles.quantityRow}>
                 <TouchableOpacity 
-                  className="w-8 h-8 bg-gray-100 rounded-full items-center justify-center"
+                  style={styles.quantityButton}
                   onPress={() => handleQuantityChange(item.productId, -1)}
                 >
-                  <Text className="text-gray-600">-</Text>
+                  <Text style={styles.quantityButtonText}>-</Text>
                 </TouchableOpacity>
-                <Text className="w-8 text-center font-medium">{item.quantity}</Text>
+                <Text style={styles.quantityValue}>{item.quantity}</Text>
                 <TouchableOpacity 
-                  className="w-8 h-8 bg-primary-100 rounded-full items-center justify-center"
+                  style={[styles.quantityButton, styles.quantityButtonPrimary]}
                   onPress={() => handleQuantityChange(item.productId, 1)}
                 >
-                  <Text className="text-primary-500">+</Text>
+                  <Text style={styles.quantityButtonPrimaryText}>+</Text>
                 </TouchableOpacity>
               </View>
             </View>
           ))}
 
           {items.length === 0 && (
-            <Text className="text-gray-400 text-center py-4">Your cart is empty</Text>
+            <Text style={styles.emptyCartText}>Your cart is empty</Text>
           )}
         </View>
 
         {/* Delivery Address */}
-        <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-          <Text className="font-bold text-gray-900 mb-3">Delivery Address</Text>
-          <TouchableOpacity className="flex-row items-center bg-gray-50 rounded-xl p-3">
-            <Text className="mr-3">📍</Text>
-            <Text className="flex-1 text-gray-600" numberOfLines={2}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Delivery Address</Text>
+          <TouchableOpacity style={styles.addressRow}>
+            <Text style={styles.addressIcon}>📍</Text>
+            <Text style={styles.addressText} numberOfLines={2}>
               {address || 'Set delivery address'}
             </Text>
-            <Text className="text-primary-500">Change</Text>
+            <Text style={styles.addressChange}>Change</Text>
           </TouchableOpacity>
 
           <TextInput
-            className="bg-gray-50 rounded-xl px-4 py-3 mt-3"
+            style={styles.instructionsInput}
             placeholder="Add delivery instructions..."
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={COLORS.onSurfaceVariant}
             value={deliveryInstructions}
             onChangeText={setDeliveryInstructions}
             multiline
@@ -188,24 +189,26 @@ export default function CartScreen() {
         </View>
 
         {/* Payment Method */}
-        <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-          <Text className="font-bold text-gray-900 mb-3">Payment Method</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Payment Method</Text>
           
-          <View className="flex-row flex-wrap gap-2">
+          <View style={styles.paymentMethodsRow}>
             {PAYMENT_METHODS.slice(0, 3).map((method) => (
               <TouchableOpacity
                 key={method.id}
-                className={`flex-row items-center px-4 py-3 rounded-xl border ${
-                  paymentMethod === method.id 
-                    ? 'border-primary-500 bg-primary-50' 
-                    : 'border-gray-200'
-                }`}
+                style={[
+                  styles.paymentMethodCard,
+                  paymentMethod === method.id && styles.paymentMethodCardSelected,
+                ]}
                 onPress={() => setPaymentMethod(method.id as PaymentMethod)}
               >
-                <Text className="mr-2">
+                <Text style={styles.paymentMethodIcon}>
                   {method.icon === 'phone' ? '📱' : method.icon === 'banknote' ? '💵' : '💳'}
                 </Text>
-                <Text className={paymentMethod === method.id ? 'text-primary-500 font-medium' : 'text-gray-700'}>
+                <Text style={[
+                  styles.paymentMethodLabel,
+                  paymentMethod === method.id && styles.paymentMethodLabelSelected,
+                ]}>
                   {method.name}
                 </Text>
               </TouchableOpacity>
@@ -214,9 +217,9 @@ export default function CartScreen() {
 
           {paymentMethod !== 'CASH' && (
             <TextInput
-              className="bg-gray-50 rounded-xl px-4 py-3 mt-3"
+              style={styles.phoneInput}
               placeholder="Enter phone number"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={COLORS.onSurfaceVariant}
               value={phoneNumber}
               onChangeText={setPhoneNumber}
               keyboardType="phone-pad"
@@ -225,24 +228,24 @@ export default function CartScreen() {
         </View>
 
         {/* Order Summary */}
-        <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-          <Text className="font-bold text-gray-900 mb-3">Order Summary</Text>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Order Summary</Text>
           
-          <View className="flex-row justify-between py-2">
-            <Text className="text-gray-500">Subtotal</Text>
-            <Text className="text-gray-900">UGX {totalPrice.toLocaleString()}</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Subtotal</Text>
+            <Text style={styles.summaryValue}>UGX {totalPrice.toLocaleString()}</Text>
           </View>
-          <View className="flex-row justify-between py-2">
-            <Text className="text-gray-500">Delivery Fee</Text>
-            <Text className="text-gray-900">UGX {deliveryFee.toLocaleString()}</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Delivery Fee</Text>
+            <Text style={styles.summaryValue}>UGX {deliveryFee.toLocaleString()}</Text>
           </View>
-          <View className="flex-row justify-between py-2">
-            <Text className="text-gray-500">Service Fee</Text>
-            <Text className="text-gray-900">UGX {serviceFee.toLocaleString()}</Text>
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Service Fee</Text>
+            <Text style={styles.summaryValue}>UGX {serviceFee.toLocaleString()}</Text>
           </View>
-          <View className="flex-row justify-between py-3 border-t border-gray-100 mt-2">
-            <Text className="font-bold text-gray-900">Total</Text>
-            <Text className="font-bold text-primary-500 text-lg">
+          <View style={styles.summaryTotalRow}>
+            <Text style={styles.summaryTotalLabel}>Total</Text>
+            <Text style={styles.summaryTotalValue}>
               UGX {total.toLocaleString()}
             </Text>
           </View>
@@ -250,16 +253,16 @@ export default function CartScreen() {
       </ScrollView>
 
       {/* Place Order Button */}
-      <View className="bg-white px-4 py-4 border-t border-gray-100">
+      <View style={styles.bottomBar}>
         <TouchableOpacity
-          className={`rounded-xl py-4 ${isPlacingOrder ? 'bg-primary-300' : 'bg-primary-500'}`}
+          style={[styles.placeOrderButton, isPlacingOrder && styles.placeOrderButtonDisabled]}
           onPress={handlePlaceOrder}
           disabled={isPlacingOrder || items.length === 0}
         >
           {isPlacingOrder ? (
-            <ActivityIndicator color="white" />
+            <ActivityIndicator color={COLORS.onPrimary} />
           ) : (
-            <Text className="text-white text-center text-lg font-semibold">
+            <Text style={styles.placeOrderButtonText}>
               Place Order • UGX {total.toLocaleString()}
             </Text>
           )}
@@ -268,3 +271,251 @@ export default function CartScreen() {
     </View>
   );
 }
+
+// ============================================
+// STYLES
+// ============================================
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.surface,
+  },
+  header: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingTop: 48,
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md - 4,
+  },
+  backIcon: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 18,
+  },
+  headerTitle: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineMd,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+  },
+  card: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
+  },
+  merchantLabel: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+    marginBottom: SPACING.xs,
+  },
+  merchantName: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: 'bold',
+  },
+  cardTitle: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: 'bold',
+    marginBottom: SPACING.md,
+  },
+  cartItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.md - 4,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
+  },
+  cartItemInfo: {
+    flex: 1,
+  },
+  cartItemName: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '500',
+  },
+  cartItemPrice: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+  },
+  quantityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  quantityButton: {
+    width: 32,
+    height: 32,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityButtonText: {
+    color: COLORS.onSurfaceVariant,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  quantityButtonPrimary: {
+    backgroundColor: `${COLORS.primary}15`,
+  },
+  quantityButtonPrimaryText: {
+    color: COLORS.primary,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  quantityValue: {
+    width: 32,
+    textAlign: 'center',
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '500',
+  },
+  emptyCartText: {
+    color: COLORS.outlineVariant,
+    textAlign: 'center',
+    paddingVertical: SPACING.md,
+    ...TYPOGRAPHY.bodyMd,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md - 4,
+  },
+  addressIcon: {
+    marginRight: SPACING.md - 4,
+  },
+  addressText: {
+    flex: 1,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+  },
+  addressChange: {
+    color: COLORS.primary,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '500',
+  },
+  instructionsInput: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md - 4,
+    marginTop: SPACING.md - 4,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
+  },
+  paymentMethodsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  paymentMethodCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md - 4,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  paymentMethodCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: `${COLORS.primary}08`,
+  },
+  paymentMethodIcon: {
+    marginRight: SPACING.sm,
+  },
+  paymentMethodLabel: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+  },
+  paymentMethodLabelSelected: {
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  phoneInput: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md - 4,
+    marginTop: SPACING.md - 4,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.sm - 2,
+  },
+  summaryLabel: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+  },
+  summaryValue: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
+  },
+  summaryTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.md - 4,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.outlineVariant,
+    marginTop: SPACING.sm,
+  },
+  summaryTotalLabel: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: 'bold',
+  },
+  summaryTotalValue: {
+    color: COLORS.primary,
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: 'bold',
+  },
+  bottomBar: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.outlineVariant,
+  },
+  placeOrderButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+  },
+  placeOrderButtonDisabled: {
+    opacity: 0.6,
+  },
+  placeOrderButtonText: {
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '600',
+  },
+});

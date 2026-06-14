@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS, GRADIENTS } from '@/src/constants';
+import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -268,12 +268,12 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: COLORS.textMuted,
-    marginTop: 12,
-    fontSize: 14,
+    marginTop: SPACING.sm,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: SPACING.md,
   },
   headerRow: {
     flexDirection: 'row',
@@ -284,14 +284,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY.headlineLg.fontSize,
+    fontWeight: TYPOGRAPHY.headlineLg.fontWeight,
     color: COLORS.text,
   },
   headerSubtitle: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -299,25 +299,25 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   toggleLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelMd.fontWeight,
   },
   glowBorder: {
     height: 1,
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
     paddingBottom: 40,
   },
   summaryRow: {
     flexDirection: 'row',
     gap: 10,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   summaryCard: {
     flex: 1,
@@ -329,12 +329,12 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
   summaryLabel: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
   alertCard: {
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   alertRow: {
     flexDirection: 'row',
@@ -342,37 +342,37 @@ const styles = StyleSheet.create({
   },
   alertIcon: {
     fontSize: 24,
-    marginRight: 12,
+    marginRight: SPACING.gutter,
   },
   alertContent: {
     flex: 1,
   },
   alertTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
   },
   alertText: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   alertAction: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.primary,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
-    marginBottom: 12,
+    marginBottom: SPACING.gutter,
   },
   actionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    marginBottom: 24,
+    marginBottom: SPACING.lg,
   },
   actionCard: {
     width: '47%',
@@ -380,31 +380,31 @@ const styles = StyleSheet.create({
   },
   actionIcon: {
     fontSize: 28,
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   actionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
   },
   actionSubtitle: {
     fontSize: 11,
     color: COLORS.textMuted,
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   statusRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: SPACING.sm,
   },
   statusLabel: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textSecondary,
   },
   statusValue: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
   },
   statusDivider: {

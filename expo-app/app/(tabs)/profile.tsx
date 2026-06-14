@@ -12,6 +12,7 @@ import {
   TouchableOpacity, 
   Alert,
   Switch,
+  Linking,
   StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -122,10 +123,10 @@ export default function ProfileScreen() {
     {
       section: 'Support',
       items: [
-        { icon: '❓', label: 'Help Center', onPress: () => {} },
-        { icon: '💬', label: 'Contact Support', onPress: () => {} },
-        { icon: '📜', label: 'Terms of Service', onPress: () => {} },
-        { icon: '🔒', label: 'Privacy Policy', onPress: () => {} },
+        { icon: '❓', label: 'Help Center', onPress: () => Linking.openURL('https://smartrideug.vercel.app/help') },
+        { icon: '💬', label: 'Contact Support', onPress: () => Linking.openURL('https://smartrideug.vercel.app/contact') },
+        { icon: '📜', label: 'Terms of Service', onPress: () => Linking.openURL('https://smartrideug.vercel.app/terms') },
+        { icon: '🔒', label: 'Privacy Policy', onPress: () => Linking.openURL('https://smartrideug.vercel.app/privacy') },
       ],
     },
   ];

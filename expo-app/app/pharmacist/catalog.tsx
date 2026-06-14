@@ -21,7 +21,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -508,11 +508,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: COLORS.textMuted,
-    marginTop: 12,
+    marginTop: SPACING.sm,
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: SPACING.md,
   },
   headerRow: {
     flexDirection: 'row',
@@ -525,11 +525,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backText: {
-    fontSize: 24,
+    fontSize: TYPOGRAPHY.headlineLg.fontSize,
     color: COLORS.text,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
   },
@@ -537,51 +537,51 @@ const styles = StyleSheet.create({
     backgroundColor: `${COLORS.primary}20`,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: RADIUS.xl,
   },
   addBtnText: {
     color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
   glowBorder: {
     height: 1,
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
   summaryRow: {
     flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
   },
   summaryItem: {
     flex: 1,
     backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     padding: 10,
     alignItems: 'center',
     borderWidth: 1,
   },
   summaryNumber: {
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
     fontWeight: 'bold',
   },
   summaryLabel: {
-    fontSize: 10,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   searchContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
   },
   searchInput: {
     backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     color: COLORS.text,
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
@@ -589,8 +589,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
     paddingBottom: 40,
   },
   medicineCard: {
@@ -609,14 +609,14 @@ const styles = StyleSheet.create({
   },
   medicineName: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
   },
   rxBadge: {
     backgroundColor: `${COLORS.warning}20`,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: RADIUS.sm,
   },
   rxText: {
     color: COLORS.warning,
@@ -627,15 +627,15 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   medicineGeneric: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
     fontStyle: 'italic',
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   medicineCategory: {
     fontSize: 11,
     color: COLORS.info,
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   medicineDetails: {
     flexDirection: 'row',
@@ -656,19 +656,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.text,
     fontWeight: '500',
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   editStockBtn: {
     marginTop: 10,
-    paddingVertical: 8,
+    paddingVertical: SPACING.sm,
     alignItems: 'center',
     backgroundColor: `${COLORS.primary}10`,
-    borderRadius: 8,
+    borderRadius: RADIUS.DEFAULT,
   },
   editStockText: {
     color: COLORS.primary,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
   emptyContainer: {
     alignItems: 'center',
@@ -677,16 +677,16 @@ const styles = StyleSheet.create({
   },
   emptyIcon: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodyLg.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
     textAlign: 'center',
   },
@@ -699,38 +699,38 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     padding: 20,
     borderWidth: 1,
     borderColor: COLORS.border,
     maxHeight: '80%',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   fieldLabel: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.labelMd.fontWeight,
     textTransform: 'uppercase',
-    marginBottom: 6,
+    marginBottom: SPACING.xs,
     marginTop: 10,
   },
   fieldInput: {
     backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.gutter,
     paddingVertical: 10,
     color: COLORS.text,
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   prescriptionToggle: {
     flexDirection: 'row',

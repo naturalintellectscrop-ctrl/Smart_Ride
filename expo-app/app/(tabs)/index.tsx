@@ -18,7 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeInUp, SlideInRight, ZoomIn } from 'react-native-reanimated';
 import { useAuthStore, useLocationStore } from '@/src/store';
-import { COLORS, SERVICES } from '@/src/constants';
+import { COLORS, SERVICES, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlowHeader, GlassCard, GradientButton, ServiceIcon } from '@/src/components';
 
 // Local service data for the home grid (maps to SERVICES keys + custom entries)
@@ -124,7 +124,7 @@ export default function HomeScreen() {
 
         {/* Search Bar */}
         <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.searchContainer}>
-          <GlassCard variant="elevated" padding={14} borderRadius={14}>
+          <GlassCard variant="elevated" padding={SPACING.md} borderRadius={RADIUS.lg}>
             <TouchableOpacity style={styles.searchBar} onPress={() => router.push('/rider/ride-request?type=BODA')}>
               <Text style={styles.searchIcon}>🔍</Text>
               <Text style={styles.searchPlaceholder}>Where do you want to go?</Text>
@@ -165,7 +165,7 @@ export default function HomeScreen() {
           <View style={styles.rideOptions}>
             {/* Smart Boda */}
             <Animated.View entering={SlideInRight.duration(350).delay(550)} style={styles.rideCardWrapper}>
-              <GlassCard variant="accent" padding={16} borderRadius={16}>
+              <GlassCard variant="accent" padding={SPACING.md} borderRadius={RADIUS.lg}>
                 <View style={styles.rideCardInner}>
                   <ServiceIcon service="BODA" size="lg" />
                   <Text style={styles.rideIconEmoji}>🏍️</Text>
@@ -186,7 +186,7 @@ export default function HomeScreen() {
 
             {/* Smart Car */}
             <Animated.View entering={SlideInRight.duration(350).delay(650)} style={styles.rideCardWrapper}>
-              <GlassCard variant="cyan" padding={16} borderRadius={16}>
+              <GlassCard variant="cyan" padding={SPACING.md} borderRadius={RADIUS.lg}>
                 <View style={styles.rideCardInner}>
                   <ServiceIcon service="CAR" size="lg" />
                   <Text style={styles.rideIconEmoji}>🚗</Text>
@@ -209,7 +209,7 @@ export default function HomeScreen() {
 
         {/* Promo Banner */}
         <Animated.View entering={FadeInUp.duration(400).delay(700)} style={styles.section}>
-          <GlassCard variant="elevated" padding={20} borderRadius={16}>
+          <GlassCard variant="elevated" padding={SPACING.lg} borderRadius={RADIUS.lg}>
             <View style={styles.promoBanner}>
               <Text style={styles.promoTitle}>Welcome to Smart Ride!</Text>
               <Text style={styles.promoDesc}>
@@ -228,81 +228,82 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   content: {
-    paddingBottom: 20,
+    paddingBottom: SPACING.lg + SPACING.xs,
   },
   // ---- GlowHeader children ----
   headerChildren: {
-    marginTop: 12,
-    gap: 12,
+    marginTop: SPACING.gutter,
+    gap: SPACING.gutter,
   },
   greeting: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   userName: {
-    color: COLORS.text,
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginTop: 2,
+    color: COLORS.onSurface,
+    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
+    fontWeight: TYPOGRAPHY.headlineLgMobile.fontWeight as any,
+    marginTop: SPACING.xs / 2,
   },
   locationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + SPACING.xs,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   locationIcon: {
-    marginRight: 8,
-    fontSize: 14,
+    marginRight: SPACING.sm,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   locationText: {
     flex: 1,
-    color: COLORS.text,
-    fontSize: 14,
+    color: COLORS.onSurface,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   locationArrow: {
-    color: COLORS.textMuted,
-    marginLeft: 8,
-    fontSize: 10,
+    color: COLORS.outline,
+    marginLeft: SPACING.sm,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
   },
   // ---- Search ----
   searchContainer: {
-    paddingHorizontal: 20,
-    marginTop: 16,
+    paddingHorizontal: SPACING.lg + SPACING.xs,
+    marginTop: SPACING.md,
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   searchIcon: {
-    marginRight: 12,
-    fontSize: 16,
+    marginRight: SPACING.gutter,
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
   },
   searchPlaceholder: {
-    color: COLORS.textMuted,
-    fontSize: 16,
+    color: COLORS.outline,
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
   },
   // ---- Sections ----
   section: {
-    paddingHorizontal: 20,
-    marginTop: 24,
+    paddingHorizontal: SPACING.lg + SPACING.xs,
+    marginTop: SPACING.lg,
   },
   sectionTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    color: COLORS.onSurface,
+    fontSize: TYPOGRAPHY.bodyLg.fontSize,
+    fontWeight: '700' as const,
+    marginBottom: SPACING.md,
   },
   // ---- Services Grid ----
   servicesGrid: {
@@ -313,18 +314,18 @@ const styles = StyleSheet.create({
   serviceCard: {
     width: '18%',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   serviceName: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 8,
+    color: COLORS.onSurfaceVariant,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelMd.fontWeight as any,
+    marginTop: SPACING.sm,
   },
   // ---- Quick Ride ----
   rideOptions: {
     flexDirection: 'row',
-    gap: 12,
+    gap: SPACING.gutter,
   },
   rideCardWrapper: {
     flex: 1,
@@ -334,30 +335,30 @@ const styles = StyleSheet.create({
   },
   rideIconEmoji: {
     fontSize: 28,
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.xs,
   },
   rideName: {
-    color: COLORS.text,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 4,
+    color: COLORS.onSurface,
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+    fontWeight: '700' as const,
+    marginTop: SPACING.xs,
   },
   rideDesc: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    marginTop: 2,
+    color: COLORS.outline,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    marginTop: SPACING.xs / 2,
   },
   ridePrice: {
     color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 6,
-    marginBottom: 8,
+    fontSize: TYPOGRAPHY.labelLg.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
+    marginTop: SPACING.sm - SPACING.xs / 2,
+    marginBottom: SPACING.sm,
   },
   rideButtonContainer: {
     width: '100%',
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
   // ---- Promo ----
   promoBanner: {
@@ -365,13 +366,13 @@ const styles = StyleSheet.create({
   },
   promoTitle: {
     color: COLORS.primary,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    fontSize: TYPOGRAPHY.bodyLg.fontSize,
+    fontWeight: '700' as const,
+    marginBottom: SPACING.sm,
   },
   promoDesc: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     textAlign: 'center',
   },
 });

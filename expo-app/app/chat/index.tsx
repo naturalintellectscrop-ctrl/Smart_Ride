@@ -22,7 +22,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useChatStore } from '@/src/store/chatStore';
 import { socketService } from '@/src/services/socket.service';
-import { COLORS, GRADIENTS } from '@/src/constants';
+import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { Conversation } from '@/src/store/chatStore';
 
 export default function ConversationsScreen() {
@@ -269,13 +269,13 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS.xl,
     backgroundColor: COLORS.backgroundElevated,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.gutter,
   },
   headerTitleContainer: {
     flex: 1,
@@ -284,14 +284,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
     letterSpacing: -0.5,
   },
   headerBadge: {
     backgroundColor: COLORS.error,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     minWidth: 20,
     height: 20,
     alignItems: 'center',
@@ -300,13 +300,13 @@ const styles = StyleSheet.create({
   },
   headerBadgeText: {
     color: '#FFFFFF',
-    fontSize: 11,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     fontWeight: 'bold',
   },
   headerAction: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS.xl,
     backgroundColor: COLORS.backgroundElevated,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -315,12 +315,12 @@ const styles = StyleSheet.create({
   },
   glowBorder: {
     height: 1,
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
   listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 24,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.lg,
   },
   emptyList: {
     flexGrow: 1,
@@ -333,19 +333,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(19, 19, 26, 0.7)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     padding: 14,
     marginBottom: 10,
   },
   avatarContainer: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: RADIUS.xl,
     backgroundColor: COLORS.backgroundSurface,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.gutter,
   },
   conversationContent: {
     flex: 1,
@@ -358,13 +358,13 @@ const styles = StyleSheet.create({
   },
   conversationName: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
     flex: 1,
-    marginRight: 8,
+    marginRight: SPACING.sm,
   },
   conversationTime: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textDim,
   },
   conversationFooter: {
@@ -375,11 +375,11 @@ const styles = StyleSheet.create({
   messagePreviewContainer: {
     flex: 1,
     flexDirection: 'row',
-    marginRight: 8,
+    marginRight: SPACING.sm,
   },
   taskBadge: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
   messagePreview: {
     fontSize: 13,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     color: COLORS.textDim,
   },
   unreadBadge: {
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
     minWidth: 20,
     height: 20,
     alignItems: 'center',
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   },
   unreadBadgeText: {
     color: COLORS.background,
-    fontSize: 10,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     fontWeight: 'bold',
   },
 
@@ -420,34 +420,34 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(0, 255, 136, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: SPACING.lg,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
     textAlign: 'center',
     lineHeight: 20,
-    marginBottom: 32,
+    marginBottom: SPACING.xl,
   },
   emptyButton: {
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
     overflow: 'hidden',
   },
   emptyButtonGradient: {
     paddingVertical: 14,
     paddingHorizontal: 32,
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
   },
   emptyButtonText: {
     color: COLORS.background,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
 
   // Loading
@@ -457,8 +457,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: SPACING.sm,
     color: COLORS.textMuted,
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
 });

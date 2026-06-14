@@ -18,7 +18,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMerchantStore } from '@/src/store';
-import { COLORS, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/src/constants';
+import { COLORS, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { MerchantOrder } from '@/src/types';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -119,7 +119,7 @@ export default function MerchantOrdersScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.md || 56 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backIcon}>←</Text>
@@ -266,14 +266,14 @@ export default function MerchantOrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   header: {
-    backgroundColor: COLORS.backgroundElevated,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.md + 4,
+    paddingBottom: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   headerRow: {
     flexDirection: 'row',
@@ -283,59 +283,58 @@ const styles = StyleSheet.create({
   backButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backIcon: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 18,
     fontWeight: 'bold',
   },
   headerTitle: {
-    color: COLORS.text,
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineMd,
   },
   headerSpacer: {
     width: 36,
   },
   tabContainer: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     maxHeight: 52,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   tabContent: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
+    paddingHorizontal: SPACING.md - 4,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
   },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.backgroundSurface,
-    marginRight: 8,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
+    marginRight: SPACING.sm,
   },
   activeTab: {
     backgroundColor: COLORS.primary,
   },
   tabText: {
-    color: COLORS.textMuted,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '600',
   },
   activeTabText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
   },
   listContainer: {
     flex: 1,
   },
   listContent: {
-    padding: 16,
-    gap: 12,
+    padding: SPACING.md,
+    gap: SPACING.md - 4,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -343,9 +342,9 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   loadingText: {
-    color: COLORS.textMuted,
-    marginTop: 12,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.md,
+    ...TYPOGRAPHY.bodySm,
   },
   errorContainer: {
     alignItems: 'center',
@@ -354,23 +353,23 @@ const styles = StyleSheet.create({
   },
   errorEmoji: {
     fontSize: 40,
-    marginBottom: 12,
+    marginBottom: SPACING.md - 4,
   },
   errorText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   retryButton: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
   },
   retryButtonText: {
-    color: COLORS.background,
-    fontSize: 14,
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
   },
   emptyContainer: {
@@ -380,62 +379,63 @@ const styles = StyleSheet.create({
   },
   emptyIcon: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   emptyTitle: {
-    color: COLORS.text,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 8,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineMd,
+    marginBottom: SPACING.sm,
   },
   emptySubtitle: {
-    color: COLORS.textMuted,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
     textAlign: 'center',
     paddingHorizontal: 40,
   },
   orderCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING.md - 4,
   },
   orderInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: SPACING.sm + 2,
   },
   orderNumber: {
-    color: COLORS.text,
-    fontSize: 16,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: 'bold',
   },
   orderTime: {
-    color: COLORS.textMuted,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.full,
     borderWidth: 1,
   },
   statusText: {
-    fontSize: 11,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '600',
+    fontSize: 11,
   },
   orderDetails: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   orderMeta: {
     flexDirection: 'row',
@@ -446,26 +446,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   metaText: {
-    color: COLORS.textSecondary,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
   },
   orderTotal: {
     color: COLORS.primary,
-    fontSize: 16,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: 'bold',
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
-    paddingTop: 12,
+    gap: SPACING.sm,
+    marginTop: SPACING.md - 4,
+    paddingTop: SPACING.md - 4,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
   },
   actionButton: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -473,29 +473,29 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   actionDanger: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: `${COLORS.error}15`,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: `${COLORS.error}30`,
   },
   actionSecondary: {
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   actionDisabled: {
     opacity: 0.5,
   },
   actionButtonText: {
-    fontSize: 13,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '600',
   },
   actionPrimaryText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
   },
   actionDangerText: {
-    color: '#EF4444',
+    color: COLORS.error,
   },
   actionSecondaryText: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
 });

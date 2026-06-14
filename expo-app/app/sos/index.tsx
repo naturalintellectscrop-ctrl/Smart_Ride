@@ -36,7 +36,7 @@ import Animated, {
   cancelAnimation,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, GRADIENTS } from '@/src/constants';
+import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, GradientButton } from '@/src/components';
 
 // ============================================
@@ -500,32 +500,32 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: SPACING.lg,
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
     borderWidth: 1,
     borderColor: COLORS.borderLight,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.gutter,
   },
   titleContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
-    marginTop: 1,
+    marginTop: SPACING.xs,
   },
 
   // ---- SOS Button ----
@@ -580,14 +580,14 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
   },
   holdingText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.error,
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
   sosInstructions: {
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
   sosInstructionText: {
     fontSize: 15,
@@ -595,14 +595,14 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
   },
   sosInstructionSubtext: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
 
   // ---- Info Card ----
   infoCard: {
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
   infoRow: {
     flexDirection: 'row',
@@ -613,13 +613,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   infoTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   infoDescription: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
     lineHeight: 18,
   },
@@ -633,16 +633,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   activatedTitle: {
-    fontSize: 24,
+    fontSize: TYPOGRAPHY.headlineLg.fontSize,
     fontWeight: '900',
     color: COLORS.primary,
     letterSpacing: 2,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   activatedSubtitle: {
     fontSize: 15,
     color: COLORS.textSecondary,
-    marginBottom: 24,
+    marginBottom: SPACING.lg,
   },
 
   // ---- Location Card ----
@@ -675,19 +675,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   locationAddress: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     fontWeight: '500',
     color: COLORS.text,
-    marginTop: 1,
+    marginTop: SPACING.xs,
   },
   locationLiveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    borderRadius: 10,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
   },
   liveDot: {
     width: 6,
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.error,
   },
   liveText: {
-    fontSize: 10,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     fontWeight: '700',
     color: COLORS.error,
     letterSpacing: 0.5,
@@ -726,30 +726,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toggleTitle: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
   },
   toggleDescription: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
-    marginTop: 1,
+    marginTop: SPACING.xs,
   },
 
   // ---- Activated Actions ----
   activatedActions: {
     width: '100%',
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   cancelButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    paddingVertical: 12,
+    paddingVertical: SPACING.md,
   },
   cancelText: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
     fontWeight: '500',
   },
@@ -763,16 +763,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   resolvedTitle: {
-    fontSize: 22,
+    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   resolvedSubtitle: {
     fontSize: 15,
     color: COLORS.textSecondary,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: SPACING.xl,
     lineHeight: 22,
   },
   resolvedAction: {
@@ -784,15 +784,15 @@ const styles = StyleSheet.create({
     marginTop: 28,
   },
   contactsSectionTitle: {
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.textMuted,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   contactCard: {
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   contactRow: {
     flexDirection: 'row',
@@ -813,19 +813,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contactName: {
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
   },
   contactRelationship: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
-    marginTop: 1,
+    marginTop: SPACING.xs,
   },
   contactCallButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: RADIUS.xl,
     backgroundColor: 'rgba(0, 255, 136, 0.08)',
     borderWidth: 1,
     borderColor: 'rgba(0, 255, 136, 0.15)',
@@ -839,11 +839,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: 24,
+    marginTop: SPACING.lg,
     paddingHorizontal: 20,
   },
   bottomInfoText: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textDim,
     textAlign: 'center',
     flex: 1,

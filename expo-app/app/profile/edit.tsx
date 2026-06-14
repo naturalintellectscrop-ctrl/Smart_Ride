@@ -15,6 +15,7 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -25,7 +26,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 
 interface UserProfile {
   name: string;
@@ -77,113 +78,113 @@ export default function ProfileEditScreen() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
+    <View style={[styles.screen, { backgroundColor: COLORS.background }]}>
       {/* Header */}
-      <Animated.View 
+      <Animated.View
         entering={FadeInDown.duration(400).springify()}
-        className="bg-white pt-12 pb-4 px-4 border-b border-gray-100"
+        style={[styles.header, { paddingTop: 48 }]}
       >
-        <View className="flex-row items-center justify-between">
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text className="text-primary-500 text-lg">← Back</Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
-          <Text className="text-lg font-bold text-gray-900">Edit Profile</Text>
-          <TouchableOpacity onPress={handleSave} disabled={isSaving}>
-            <Text className="text-primary-500 text-lg font-medium">
+          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <TouchableOpacity onPress={handleSave} disabled={isSaving} style={styles.saveBtn}>
+            <Text style={styles.saveText}>
               {isSaving ? 'Saving...' : 'Save'}
             </Text>
           </TouchableOpacity>
         </View>
       </Animated.View>
 
-      <ScrollView className="flex-1 px-4 pt-4">
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Avatar */}
-        <Animated.View 
+        <Animated.View
           entering={ZoomIn.duration(400)}
-          className="items-center mb-6"
+          style={styles.avatarSection}
         >
           <TouchableOpacity>
-            <View className="w-24 h-24 bg-primary-100 rounded-full items-center justify-center">
+            <View style={styles.avatarContainer}>
               {profile.avatar ? (
-                <Image source={{ uri: profile.avatar }} className="w-24 h-24 rounded-full" />
+                <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
               ) : (
-                <Text className="text-4xl">👤</Text>
+                <Text style={styles.avatarEmoji}>👤</Text>
               )}
             </View>
-            <View className="absolute bottom-0 right-0 bg-primary-500 rounded-full p-2">
-              <Text className="text-white text-sm">📷</Text>
+            <View style={styles.avatarBadge}>
+              <Text style={styles.avatarBadgeIcon}>📷</Text>
             </View>
           </TouchableOpacity>
-          <Text className="text-gray-500 text-sm mt-2">Tap to change photo</Text>
+          <Text style={styles.avatarHint}>Tap to change photo</Text>
         </Animated.View>
 
         {/* Form */}
         <Animated.View entering={FadeInUp.duration(400).delay(100)}>
           {/* Name */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <Text className="text-gray-500 text-sm mb-2">Full Name</Text>
+          <View style={styles.formCard}>
+            <Text style={styles.formLabel}>Full Name</Text>
             <TextInput
               value={profile.name}
               onChangeText={(text) => setProfile(prev => ({ ...prev, name: text }))}
               placeholder="Enter your name"
-              placeholderTextColor="#9CA3AF"
-              className="text-gray-900 text-lg"
+              placeholderTextColor={COLORS.textMuted}
+              style={styles.formInput}
             />
           </View>
 
           {/* Email */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <Text className="text-gray-500 text-sm mb-2">Email Address</Text>
+          <View style={styles.formCard}>
+            <Text style={styles.formLabel}>Email Address</Text>
             <TextInput
               value={profile.email}
               onChangeText={(text) => setProfile(prev => ({ ...prev, email: text }))}
               placeholder="Enter your email"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={COLORS.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
-              className="text-gray-900 text-lg"
+              style={styles.formInput}
             />
           </View>
 
           {/* Phone */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <Text className="text-gray-500 text-sm mb-2">Phone Number</Text>
+          <View style={styles.formCard}>
+            <Text style={styles.formLabel}>Phone Number</Text>
             <TextInput
               value={profile.phone}
               onChangeText={(text) => setProfile(prev => ({ ...prev, phone: text }))}
               placeholder="Enter your phone number"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={COLORS.textMuted}
               keyboardType="phone-pad"
-              className="text-gray-900 text-lg"
+              style={styles.formInput}
             />
           </View>
 
           {/* Address */}
-          <View className="bg-white rounded-2xl p-4 mb-4 shadow-sm">
-            <Text className="text-gray-500 text-sm mb-2">Default Address</Text>
+          <View style={styles.formCard}>
+            <Text style={styles.formLabel}>Default Address</Text>
             <TextInput
               value={profile.address}
               onChangeText={(text) => setProfile(prev => ({ ...prev, address: text }))}
               placeholder="Enter your address"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={COLORS.textMuted}
               multiline
               numberOfLines={2}
-              className="text-gray-900 text-lg"
+              style={styles.formInput}
             />
           </View>
         </Animated.View>
 
         {/* Save Button */}
-        <Animated.View entering={FadeInUp.duration(400).delay(200)} className="mt-4 mb-8">
+        <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.saveButtonContainer}>
           <TouchableOpacity
             onPress={handleSave}
             disabled={isSaving}
-            className="bg-primary-500 rounded-2xl p-4 items-center"
+            style={styles.saveButton}
           >
             {isSaving ? (
-              <ActivityIndicator color="white" />
+              <ActivityIndicator color={COLORS.onPrimary} />
             ) : (
-              <Text className="text-white font-bold text-lg">Save Changes</Text>
+              <Text style={styles.saveButtonText}>Save Changes</Text>
             )}
           </TouchableOpacity>
         </Animated.View>
@@ -191,3 +192,118 @@ export default function ProfileEditScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  header: {
+    backgroundColor: COLORS.backgroundElevated,
+    paddingBottom: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backBtn: {
+    paddingVertical: SPACING.sm,
+  },
+  backText: {
+    color: COLORS.primary,
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+  },
+  headerTitle: {
+    fontSize: TYPOGRAPHY.bodyLg.fontSize,
+    fontWeight: 'bold',
+    color: COLORS.onSurface,
+  },
+  saveBtn: {
+    paddingVertical: SPACING.sm,
+  },
+  saveText: {
+    color: COLORS.primary,
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+    fontWeight: '500',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xl,
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  avatarContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.backgroundSurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImage: {
+    width: 96,
+    height: 96,
+    borderRadius: RADIUS.full,
+  },
+  avatarEmoji: {
+    fontSize: 40,
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.full,
+    padding: SPACING.sm,
+  },
+  avatarBadgeIcon: {
+    color: COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+  },
+  avatarHint: {
+    color: COLORS.textMuted,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    marginTop: SPACING.sm,
+  },
+  formCard: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    ...SHADOWS.card,
+  },
+  formLabel: {
+    color: COLORS.textMuted,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    marginBottom: SPACING.sm,
+  },
+  formInput: {
+    color: COLORS.onSurface,
+    fontSize: TYPOGRAPHY.bodyLg.fontSize,
+  },
+  saveButtonContainer: {
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xl,
+  },
+  saveButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: COLORS.onPrimary,
+    fontWeight: 'bold',
+    fontSize: TYPOGRAPHY.bodyLg.fontSize,
+  },
+});

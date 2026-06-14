@@ -26,7 +26,7 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import {
   GlowHeader,
   GlassCard,
@@ -449,7 +449,7 @@ function MedicinePharmacyCard({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
   // Loading
@@ -457,38 +457,39 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
   // Search
   searchWrapper: {
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
 
   // Emergency CTA
   emergencyWrapper: {
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 4,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.xs,
+    paddingBottom: SPACING.xs,
   },
 
   // Quick Actions
   quickActionsRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 8,
-    backgroundColor: COLORS.backgroundElevated,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    gap: SPACING.sm,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   quickActionButton: {
     flex: 1,
     alignItems: 'center',
   },
   quickActionLabel: {
+    ...TYPOGRAPHY.labelMd,
     fontSize: 11,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
     marginTop: 6,
     textAlign: 'center',
   },
@@ -496,27 +497,27 @@ const styles = StyleSheet.create({
   // Tabs
   tabRow: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    gap: 8,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    gap: SPACING.sm,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: SPACING.sm + 2,
     alignItems: 'center',
-    borderRadius: 10,
-    backgroundColor: COLORS.backgroundElevated,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   tabActive: {
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
-    borderColor: 'rgba(0, 255, 136, 0.2)',
+    backgroundColor: `${COLORS.primary}08`,
+    borderColor: `${COLORS.primary}30`,
   },
   tabText: {
-    fontSize: 14,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
-    color: COLORS.textMuted,
+    color: COLORS.onSurfaceVariant,
   },
   tabTextActive: {
     color: COLORS.primary,
@@ -527,22 +528,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 32,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.xl,
   },
 
   // Section Title
   sectionTitle: {
-    fontSize: 16,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 4,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.xs,
   },
   sectionSubtitle: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    marginBottom: 12,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.md - 4,
   },
 
   // Empty State
@@ -552,31 +553,31 @@ const styles = StyleSheet.create({
   },
   emptyEmoji: {
     fontSize: 40,
-    marginBottom: 12,
+    marginBottom: SPACING.md - 4,
   },
   emptyText: {
-    fontSize: 14,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     textAlign: 'center',
   },
 
   // Pharmacy Card
   pharmacyCard: {
-    marginBottom: 12,
+    marginBottom: SPACING.md - 4,
   },
   pharmacyRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   pharmacyImageContainer: {
-    marginRight: 14,
+    marginRight: SPACING.md - 2,
     justifyContent: 'center',
     alignItems: 'center',
   },
   pharmacyImage: {
     width: 56,
     height: 56,
-    borderRadius: 14,
+    borderRadius: RADIUS.lg,
   },
   pharmacyInfo: {
     flex: 1,
@@ -590,22 +591,22 @@ const styles = StyleSheet.create({
   pharmacyName: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     flex: 1,
-    marginRight: 8,
+    marginRight: SPACING.sm,
   },
   statusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 3,
-    borderRadius: 10,
+    borderRadius: RADIUS.md,
   },
   statusText: {
     fontSize: 11,
     fontWeight: '600',
   },
   pharmacyAddress: {
-    fontSize: 13,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     marginTop: 2,
   },
   pharmacyMetaRow: {
@@ -616,22 +617,22 @@ const styles = StyleSheet.create({
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: SPACING.md - 2,
   },
   ratingStar: {
     fontSize: 13,
-    marginRight: 4,
+    marginRight: SPACING.xs,
   },
   ratingText: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     fontWeight: '500',
   },
   deliveryText: {
-    fontSize: 13,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
   },
   browseAction: {
-    marginLeft: 8,
+    marginLeft: SPACING.sm,
   },
 });

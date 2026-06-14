@@ -1,5 +1,6 @@
 // ============================================
 // SMART RIDE MOBILE - ORDER TRACKING SCREEN
+// Stitch Design System Applied
 // FIXED: Added polling fallback, fixed event name
 // ============================================
 
@@ -12,12 +13,13 @@ import {
   Alert,
   ScrollView,
   Linking,
+  StyleSheet,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { Order } from '@/src/types';
 
 // Terminal states where polling should stop
@@ -205,17 +207,17 @@ export default function OrderTrackingScreen() {
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text className="mt-4 text-gray-500">Loading order details...</Text>
+        <Text style={styles.loadingText}>Loading order details...</Text>
       </View>
     );
   }
 
   if (!order) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
-        <Text className="text-gray-500">No order found</Text>
+      <View style={styles.loadingContainer}>
+        <Text style={styles.loadingText}>No order found</Text>
       </View>
     );
   }
@@ -223,7 +225,7 @@ export default function OrderTrackingScreen() {
   const currentStep = getCurrentStep();
 
   return (
-    <View className="flex-1 bg-white">
+    <View style={styles.container}>
       {/* Map */}
       {order.deliveryLatitude && order.deliveryLongitude && (
         <SmartRideMap
@@ -242,48 +244,51 @@ export default function OrderTrackingScreen() {
         />
       )}
 
-      <ScrollView className="flex-1">
-        {/* Order Status */}
-        <View className="px-4 pt-4">
-          <Text className="text-xl font-bold text-gray-900 mb-4">
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.content}>
+          {/* Order Status */}
+          <Text style={styles.orderNumber}>
             Order #{order.orderNumber}
           </Text>
 
           {/* Progress Steps */}
-          <View className="bg-gray-50 rounded-2xl p-4 mb-4">
+          <View style={styles.progressCard}>
             {ORDER_STATUS_FLOW.map((step, index) => {
               const isActive = index <= currentStep;
               const isCurrent = index === currentStep;
 
               return (
-                <View key={step.status} className="flex-row items-start">
+                <View key={step.status} style={styles.stepRow}>
                   {/* Line */}
                   {index > 0 && (
                     <View 
-                      className={`w-0.5 h-6 ml-4 -mb-2 ${
-                        index <= currentStep ? 'bg-secondary-500' : 'bg-gray-200'
-                      }`}
+                      style={[
+                        styles.stepLine,
+                        index <= currentStep ? styles.stepLineActive : styles.stepLineInactive,
+                      ]}
                     />
                   )}
 
                   {/* Icon & Content */}
-                  <View className="flex-row items-center flex-1 py-2">
+                  <View style={styles.stepContentRow}>
                     <View 
-                      className={`w-8 h-8 rounded-full items-center justify-center ${
-                        isActive ? 'bg-secondary-500' : 'bg-gray-200'
-                      }`}
+                      style={[
+                        styles.stepIconContainer,
+                        isActive ? styles.stepIconActive : styles.stepIconInactive,
+                      ]}
                     >
-                      <Text className="text-sm">{step.icon}</Text>
+                      <Text style={styles.stepIcon}>{step.icon}</Text>
                     </View>
                     <Text 
-                      className={`ml-3 flex-1 ${
-                        isCurrent ? 'font-bold text-gray-900' : 'text-gray-500'
-                      }`}
+                      style={[
+                        styles.stepLabel,
+                        isCurrent ? styles.stepLabelCurrent : styles.stepLabelInactive,
+                      ]}
                     >
                       {step.label}
                     </Text>
                     {isCurrent && !isTerminalState(order.status) && (
-                      <ActivityIndicator size="small" color={COLORS.secondary} />
+                      <ActivityIndicator size="small" color={COLORS.primary} />
                     )}
                   </View>
                 </View>
@@ -293,35 +298,35 @@ export default function OrderTrackingScreen() {
 
           {/* Merchant Info */}
           {order.merchant && (
-            <View className="bg-gray-50 rounded-2xl p-4 mb-4">
-              <Text className="text-gray-500 text-sm mb-2">Restaurant</Text>
-              <View className="flex-row items-center">
-                <View className="w-12 h-12 bg-gray-200 rounded-xl items-center justify-center mr-3">
-                  <Text className="text-2xl">🍽️</Text>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Restaurant</Text>
+              <View style={styles.merchantRow}>
+                <View style={styles.merchantImagePlaceholder}>
+                  <Text style={styles.merchantEmoji}>🍽️</Text>
                 </View>
-                <View className="flex-1">
-                  <Text className="font-bold text-gray-900">{order.merchant.name}</Text>
-                  <Text className="text-gray-500 text-sm">{order.merchant.address}</Text>
+                <View style={styles.merchantInfo}>
+                  <Text style={styles.merchantName}>{order.merchant.name}</Text>
+                  <Text style={styles.merchantAddress}>{order.merchant.address}</Text>
                 </View>
                 <TouchableOpacity 
-                  className="w-10 h-10 bg-secondary-50 rounded-full items-center justify-center"
+                  style={styles.callButton}
                   onPress={handleCallMerchant}
                 >
-                  <Text>📞</Text>
+                  <Text style={styles.callIcon}>📞</Text>
                 </TouchableOpacity>
               </View>
             </View>
           )}
 
           {/* Order Items */}
-          <View className="bg-gray-50 rounded-2xl p-4 mb-4">
-            <Text className="text-gray-500 text-sm mb-2">Order Items</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>Order Items</Text>
             {order.items.map((item, index) => (
-              <View key={index} className="flex-row justify-between py-2">
-                <Text className="text-gray-900">
+              <View key={index} style={styles.orderItemRow}>
+                <Text style={styles.orderItemName}>
                   {item.quantity}x {item.name}
                 </Text>
-                <Text className="text-gray-600">
+                <Text style={styles.orderItemPrice}>
                   UGX {item.totalPrice.toLocaleString()}
                 </Text>
               </View>
@@ -329,28 +334,28 @@ export default function OrderTrackingScreen() {
           </View>
 
           {/* Delivery Address */}
-          <View className="bg-gray-50 rounded-2xl p-4 mb-4">
-            <Text className="text-gray-500 text-sm mb-2">Delivery Address</Text>
-            <View className="flex-row items-start">
-              <Text className="mr-2">📍</Text>
-              <Text className="text-gray-900 flex-1">{order.deliveryAddress}</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>Delivery Address</Text>
+            <View style={styles.addressRow}>
+              <Text style={styles.addressIcon}>📍</Text>
+              <Text style={styles.addressText}>{order.deliveryAddress}</Text>
             </View>
           </View>
 
           {/* Payment Summary */}
-          <View className="bg-gray-50 rounded-2xl p-4 mb-4">
-            <Text className="text-gray-500 text-sm mb-2">Payment Summary</Text>
-            <View className="flex-row justify-between py-1">
-              <Text className="text-gray-500">Subtotal</Text>
-              <Text className="text-gray-900">UGX {order.subtotal.toLocaleString()}</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardLabel}>Payment Summary</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Subtotal</Text>
+              <Text style={styles.summaryValue}>UGX {order.subtotal.toLocaleString()}</Text>
             </View>
-            <View className="flex-row justify-between py-1">
-              <Text className="text-gray-500">Delivery</Text>
-              <Text className="text-gray-900">UGX {order.deliveryFee.toLocaleString()}</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Delivery</Text>
+              <Text style={styles.summaryValue}>UGX {order.deliveryFee.toLocaleString()}</Text>
             </View>
-            <View className="flex-row justify-between py-2 border-t border-gray-200 mt-2">
-              <Text className="font-bold text-gray-900">Total</Text>
-              <Text className="font-bold text-primary-500">
+            <View style={styles.summaryTotalRow}>
+              <Text style={styles.summaryTotalLabel}>Total</Text>
+              <Text style={styles.summaryTotalValue}>
                 UGX {order.totalAmount.toLocaleString()}
               </Text>
             </View>
@@ -359,29 +364,29 @@ export default function OrderTrackingScreen() {
       </ScrollView>
 
       {/* Bottom Action */}
-      <View className="bg-white px-4 py-4 border-t border-gray-100">
+      <View style={styles.bottomBar}>
         {order.status === 'DELIVERED' ? (
           <TouchableOpacity
-            className="bg-secondary-500 rounded-xl py-4"
+            style={styles.doneButton}
             onPress={() => router.replace('/(tabs)')}
           >
-            <Text className="text-white text-center text-lg font-semibold">
+            <Text style={styles.doneButtonText}>
               Done
             </Text>
           </TouchableOpacity>
         ) : (
-          <View className="flex-row gap-3">
+          <View style={styles.actionRow}>
             <TouchableOpacity
-              className="flex-1 bg-red-50 rounded-xl py-4"
+              style={styles.cancelButton}
               onPress={() => Alert.alert('Coming Soon', 'Order cancellation will be available soon')}
             >
-              <Text className="text-red-500 text-center font-semibold">Cancel</Text>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              className="flex-1 bg-primary-500 rounded-xl py-4"
+              style={styles.supportButton}
               onPress={handleCallDriver}
             >
-              <Text className="text-white text-center font-semibold">Contact Support</Text>
+              <Text style={styles.supportButtonText}>Contact Support</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -389,3 +394,244 @@ export default function OrderTrackingScreen() {
     </View>
   );
 }
+
+// ============================================
+// STYLES
+// ============================================
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceContainerLowest,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceContainerLowest,
+  },
+  loadingText: {
+    marginTop: SPACING.md,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodyMd,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  content: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+  },
+  orderNumber: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineMd,
+    marginBottom: SPACING.md,
+  },
+  progressCard: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  stepRow: {
+    alignItems: 'flex-start',
+  },
+  stepLine: {
+    width: 2,
+    height: SPACING.md + 8,
+    marginLeft: 14,
+    marginBottom: -SPACING.sm,
+  },
+  stepLineActive: {
+    backgroundColor: COLORS.primary,
+  },
+  stepLineInactive: {
+    backgroundColor: COLORS.outlineVariant,
+  },
+  stepContentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    paddingVertical: SPACING.sm,
+  },
+  stepIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepIconActive: {
+    backgroundColor: COLORS.primary,
+  },
+  stepIconInactive: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+  },
+  stepIcon: {
+    fontSize: 14,
+  },
+  stepLabel: {
+    marginLeft: SPACING.md - 4,
+    flex: 1,
+    ...TYPOGRAPHY.bodySm,
+  },
+  stepLabelCurrent: {
+    color: COLORS.onSurface,
+    fontWeight: 'bold',
+  },
+  stepLabelInactive: {
+    color: COLORS.onSurfaceVariant,
+  },
+  card: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+  },
+  cardLabel: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+    marginBottom: SPACING.sm,
+  },
+  merchantRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  merchantImagePlaceholder: {
+    width: 48,
+    height: 48,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: RADIUS.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md - 4,
+  },
+  merchantEmoji: {
+    fontSize: 24,
+  },
+  merchantInfo: {
+    flex: 1,
+  },
+  merchantName: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: 'bold',
+  },
+  merchantAddress: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+  },
+  callButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: `${COLORS.primary}10`,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  callIcon: {
+    fontSize: 16,
+  },
+  orderItemRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.sm - 2,
+  },
+  orderItemName: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
+  },
+  orderItemPrice: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+  },
+  addressRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  addressIcon: {
+    marginRight: SPACING.sm,
+  },
+  addressText: {
+    color: COLORS.onSurface,
+    flex: 1,
+    ...TYPOGRAPHY.bodySm,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.xs,
+  },
+  summaryLabel: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+  },
+  summaryValue: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
+  },
+  summaryTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: SPACING.md - 4,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.outlineVariant,
+    marginTop: SPACING.sm,
+  },
+  summaryTotalLabel: {
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: 'bold',
+  },
+  summaryTotalValue: {
+    color: COLORS.primary,
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: 'bold',
+  },
+  bottomBar: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.outlineVariant,
+  },
+  doneButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+  },
+  doneButtonText: {
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '600',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: SPACING.md - 4,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: `${COLORS.error}10`,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+  },
+  cancelButtonText: {
+    color: COLORS.error,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '600',
+  },
+  supportButton: {
+    flex: 1,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    alignItems: 'center',
+  },
+  supportButtonText: {
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '600',
+  },
+});

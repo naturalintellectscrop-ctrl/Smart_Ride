@@ -26,7 +26,7 @@ import Animated, { FadeIn, FadeInUp, withRepeat, withTiming, useSharedValue, use
 import { useChatStore, Conversation, Message } from '@/src/store/chatStore';
 import { socketService } from '@/src/services/socket.service';
 import { ChatBubble } from '@/src/components';
-import { COLORS, GRADIENTS } from '@/src/constants';
+import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 
 // ============================================
 // TYPING INDICATOR COMPONENT
@@ -101,7 +101,7 @@ const typingStyles = StyleSheet.create({
     backgroundColor: COLORS.textMuted,
   },
   text: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textDim,
     fontStyle: 'italic',
   },
@@ -487,13 +487,13 @@ const styles = StyleSheet.create({
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS.xl,
     backgroundColor: COLORS.backgroundElevated,
     borderWidth: 1,
     borderColor: COLORS.border,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 8,
+    marginRight: SPACING.sm,
   },
   headerCenter: {
     flex: 1,
@@ -525,7 +525,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   onlineText: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textDim,
   },
   onlineTextActive: {
@@ -534,13 +534,13 @@ const styles = StyleSheet.create({
   headerCallButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS.xl,
     backgroundColor: COLORS.backgroundElevated,
     borderWidth: 1,
     borderColor: 'rgba(0, 212, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    marginLeft: SPACING.sm,
   },
   glowBorder: {
     height: 1,
@@ -548,9 +548,9 @@ const styles = StyleSheet.create({
 
   // Messages
   messageList: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 8,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.gutter,
+    paddingBottom: SPACING.sm,
   },
   emptyList: {
     flexGrow: 1,
@@ -561,23 +561,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    marginTop: 12,
+    marginTop: SPACING.sm,
     color: COLORS.textMuted,
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
 
   // Date Separator
   dateSeparator: {
     alignItems: 'center',
-    marginVertical: 12,
+    marginVertical: SPACING.sm,
   },
   dateText: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textDim,
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.md,
   },
 
   // Empty State
@@ -599,13 +599,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
     textAlign: 'center',
     lineHeight: 20,
@@ -614,9 +614,9 @@ const styles = StyleSheet.create({
   // Quick Actions
   quickActions: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 12,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.borderLight,
   },
@@ -626,13 +626,13 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.backgroundSurface,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 20,
+    borderRadius: RADIUS.xl,
     paddingHorizontal: 14,
     paddingVertical: 7,
     gap: 6,
   },
   quickActionText: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textSecondary,
     fontWeight: '500',
   },
@@ -642,18 +642,18 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.backgroundElevated,
     borderTopWidth: 1,
     borderTopColor: COLORS.border,
-    paddingHorizontal: 12,
+    paddingHorizontal: SPACING.gutter,
     paddingTop: 10,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    gap: 8,
+    gap: SPACING.sm,
   },
   attachButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS.xl,
     backgroundColor: COLORS.backgroundSurface,
     borderWidth: 1,
     borderColor: COLORS.border,
@@ -666,8 +666,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.backgroundSurface,
     borderWidth: 1,
     borderColor: COLORS.border,
-    borderRadius: 22,
-    paddingHorizontal: 16,
+    borderRadius: RADIUS.xl,
+    paddingHorizontal: SPACING.md,
     paddingVertical: 10,
     fontSize: 15,
     color: COLORS.text,
@@ -675,9 +675,9 @@ const styles = StyleSheet.create({
     minHeight: 42,
   },
   sendButton: {
-    borderRadius: 22,
+    borderRadius: RADIUS.xl,
     overflow: 'hidden',
-    marginBottom: 2,
+    marginBottom: SPACING.xs,
   },
   sendGradient: {
     width: 42,

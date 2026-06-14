@@ -17,7 +17,7 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMerchantStore } from '@/src/store';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { MerchantTransaction } from '@/src/types';
 
 const PERIOD_TABS = [
@@ -98,7 +98,7 @@ export default function MerchantEarningsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}>
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.md || 56 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
             <Text style={styles.backIcon}>←</Text>
@@ -264,14 +264,14 @@ export default function MerchantEarningsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   header: {
-    backgroundColor: COLORS.backgroundElevated,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.md + 4,
+    paddingBottom: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   headerRow: {
     flexDirection: 'row',
@@ -281,20 +281,19 @@ const styles = StyleSheet.create({
   backButton: {
     width: 36,
     height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.backgroundSurface,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backIcon: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 18,
     fontWeight: 'bold',
   },
   headerTitle: {
-    color: COLORS.text,
-    fontSize: 20,
-    fontWeight: 'bold',
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.headlineMd,
   },
   headerSpacer: {
     width: 36,
@@ -304,17 +303,17 @@ const styles = StyleSheet.create({
   },
   periodTabs: {
     flexDirection: 'row',
-    padding: 16,
-    gap: 8,
+    padding: SPACING.md,
+    gap: SPACING.sm,
   },
   periodTab: {
     flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    backgroundColor: COLORS.backgroundSurface,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   activePeriodTab: {
     backgroundColor: COLORS.primary,
@@ -322,12 +321,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   periodTabText: {
-    color: COLORS.textMuted,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '600',
   },
   activePeriodTabText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -335,9 +334,9 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   loadingText: {
-    color: COLORS.textMuted,
-    marginTop: 12,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.md,
+    ...TYPOGRAPHY.bodySm,
   },
   errorContainer: {
     alignItems: 'center',
@@ -346,156 +345,160 @@ const styles = StyleSheet.create({
   },
   errorEmoji: {
     fontSize: 40,
-    marginBottom: 12,
+    marginBottom: SPACING.md - 4,
   },
   errorText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
     textAlign: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   retryButton: {
     backgroundColor: COLORS.primary,
-    paddingHorizontal: 24,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
   },
   retryButtonText: {
-    color: COLORS.background,
-    fontSize: 14,
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
   },
   balanceSection: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.md,
   },
   totalEarningsCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 16,
-    padding: 24,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
     borderWidth: 1,
     borderColor: `${COLORS.primary}20`,
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING.md - 4,
+    ...SHADOWS.card,
   },
   totalEarningsLabel: {
-    color: COLORS.textMuted,
-    fontSize: 14,
-    marginBottom: 8,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+    marginBottom: SPACING.sm,
   },
   totalEarningsAmount: {
     color: COLORS.primary,
-    fontSize: 32,
-    fontWeight: 'bold',
+    ...TYPOGRAPHY.displayLg,
   },
   balanceRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginBottom: 12,
+    gap: SPACING.sm + 2,
+    marginBottom: SPACING.md - 4,
   },
   balanceCard: {
     flex: 1,
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     borderWidth: 1,
     alignItems: 'center',
+    ...SHADOWS.card,
   },
   balanceIcon: {
     fontSize: 20,
     marginBottom: 6,
   },
   balanceLabel: {
-    color: COLORS.textMuted,
-    fontSize: 12,
-    marginBottom: 4,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
+    marginBottom: SPACING.xs,
   },
   balanceAmount: {
-    fontSize: 18,
+    ...TYPOGRAPHY.bodyLg,
     fontWeight: 'bold',
   },
   lastPayoutCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     flexDirection: 'row',
     alignItems: 'center',
+    ...SHADOWS.card,
   },
   lastPayoutIcon: {
     fontSize: 22,
-    marginRight: 12,
+    marginRight: SPACING.md - 4,
   },
   lastPayoutInfo: {
     flex: 1,
   },
   lastPayoutLabel: {
-    color: COLORS.text,
-    fontSize: 14,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
   },
   lastPayoutDate: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
     marginTop: 2,
   },
   lastPayoutAmount: {
-    color: '#F59E0B',
-    fontSize: 16,
+    color: COLORS.warning,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: 'bold',
   },
   section: {
-    paddingHorizontal: 16,
-    marginTop: 20,
+    paddingHorizontal: SPACING.md,
+    marginTop: SPACING.md + 4,
   },
   sectionTitle: {
-    color: COLORS.text,
-    fontSize: 16,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: SPACING.sm + 2,
   },
   payoutButton: {
     backgroundColor: COLORS.primary,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: SPACING.md - 2,
+    borderRadius: RADIUS.lg,
     alignItems: 'center',
   },
   payoutButtonText: {
-    color: COLORS.background,
-    fontSize: 16,
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
   },
   chartCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 14,
-    padding: 24,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.lg,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   chartPlaceholder: {
     alignItems: 'center',
   },
   chartIcon: {
     fontSize: 36,
-    marginBottom: 12,
+    marginBottom: SPACING.md - 4,
   },
   chartText: {
-    color: COLORS.textMuted,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
     textAlign: 'center',
   },
   transactionsList: {
-    gap: 8,
+    gap: SPACING.sm,
   },
   transactionCard: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md - 2,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    ...SHADOWS.card,
   },
   transactionLeft: {
     flexDirection: 'row',
@@ -504,58 +507,59 @@ const styles = StyleSheet.create({
   },
   transactionIcon: {
     fontSize: 20,
-    marginRight: 10,
+    marginRight: SPACING.sm + 2,
   },
   transactionInfo: {
     flex: 1,
   },
   transactionDesc: {
-    color: COLORS.text,
-    fontSize: 14,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '500',
   },
   transactionDate: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.labelMd,
     marginTop: 2,
   },
   transactionRight: {
     alignItems: 'flex-end',
   },
   transactionAmount: {
-    fontSize: 14,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
   },
   txStatusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 2,
-    borderRadius: 10,
-    marginTop: 4,
+    borderRadius: RADIUS.md,
+    marginTop: SPACING.xs,
   },
   txStatusText: {
     fontSize: 10,
     fontWeight: '600',
   },
   emptyTransactions: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 14,
-    padding: 32,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.xl,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
   },
   emptyIcon: {
     fontSize: 36,
-    marginBottom: 12,
+    marginBottom: SPACING.md - 4,
   },
   emptyTitle: {
-    color: COLORS.text,
-    fontSize: 16,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   emptySubtitle: {
-    color: COLORS.textMuted,
-    fontSize: 13,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
   },
 });

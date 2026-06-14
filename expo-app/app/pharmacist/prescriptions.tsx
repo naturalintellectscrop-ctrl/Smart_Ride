@@ -21,7 +21,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 
@@ -425,11 +425,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     color: COLORS.textMuted,
-    marginTop: 12,
+    marginTop: SPACING.sm,
   },
   header: {
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: SPACING.md,
   },
   headerRow: {
     flexDirection: 'row',
@@ -442,31 +442,31 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   backText: {
-    fontSize: 24,
+    fontSize: TYPOGRAPHY.headlineLg.fontSize,
     color: COLORS.text,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
   },
   glowBorder: {
     height: 1,
-    marginTop: 16,
+    marginTop: SPACING.md,
   },
   tabsContainer: {
     maxHeight: 52,
     backgroundColor: COLORS.backgroundElevated,
   },
   tabsContent: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 8,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    gap: SPACING.sm,
   },
   tab: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.xl,
     backgroundColor: COLORS.backgroundSurface,
     marginRight: 8,
   },
@@ -476,20 +476,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   tabText: {
-    fontSize: 13,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
     fontWeight: '500',
   },
   activeTabText: {
     color: COLORS.primary,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.gutter,
     paddingBottom: 40,
   },
   prescriptionCard: {
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
   },
   prescriptionId: {
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
   },
   prescriptionInfo: {
@@ -523,71 +523,71 @@ const styles = StyleSheet.create({
   },
   medicinesSection: {
     backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 8,
+    borderRadius: RADIUS.DEFAULT,
     padding: 10,
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   medicinesLabel: {
     fontSize: 11,
     color: COLORS.textMuted,
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   medicineText: {
     fontSize: 13,
     color: COLORS.textSecondary,
-    paddingVertical: 2,
+    paddingVertical: SPACING.xs,
   },
   imageButton: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    marginTop: SPACING.sm,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.gutter,
     backgroundColor: `${COLORS.info}15`,
-    borderRadius: 8,
+    borderRadius: RADIUS.DEFAULT,
     alignItems: 'center',
   },
   imageButtonText: {
     color: COLORS.info,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
   notesSection: {
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   notesText: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textSecondary,
     fontStyle: 'italic',
-    marginTop: 2,
+    marginTop: SPACING.xs,
   },
   rejectionSection: {
-    marginTop: 8,
+    marginTop: SPACING.sm,
     padding: 10,
     backgroundColor: `${COLORS.error}10`,
-    borderRadius: 8,
+    borderRadius: RADIUS.DEFAULT,
     borderWidth: 1,
     borderColor: `${COLORS.error}20`,
   },
   rejectionLabel: {
     fontSize: 11,
     color: COLORS.error,
-    fontWeight: '600',
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     textTransform: 'uppercase',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   rejectionText: {
     fontSize: 13,
     color: COLORS.textSecondary,
   },
   prescriptionDate: {
-    fontSize: 12,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.textMuted,
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   actionButtons: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 12,
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
   },
   actionBtn: {
     flex: 1,
@@ -602,13 +602,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   emptyTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: TYPOGRAPHY.bodyLg.fontSize,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   emptySubtitle: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
     textAlign: 'center',
   },
@@ -621,28 +621,28 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     padding: 20,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
     color: COLORS.text,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   modalSubtitle: {
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.textMuted,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   modalInput: {
     backgroundColor: COLORS.backgroundSurface,
-    borderRadius: 10,
-    padding: 12,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
     color: COLORS.text,
-    fontSize: 14,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
     minHeight: 80,
     marginBottom: 16,
   },
@@ -683,6 +683,6 @@ const styles = StyleSheet.create({
   prescriptionImage: {
     width: '90%',
     height: '70%',
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
   },
 });
