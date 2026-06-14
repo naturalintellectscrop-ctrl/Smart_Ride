@@ -106,11 +106,30 @@ export default function RegisterScreen() {
       // Ensure Google Sign-In is configured (safe to call multiple times)
       configureGoogleSignIn();
 
-      await GoogleSignin.hasPlayServices();
+      console.log('[REGISTER] GoogleSignin: Checking Play Services...');
+      const hasPlay = await GoogleSignin.hasPlayServices();
+      console.log('[REGISTER] GoogleSignin: hasPlayServices =', hasPlay);
+      if (!hasPlay) {
+        setError('Google Play Services is required. Please update your device.');
+        return;
+      }
+
+      console.log('[REGISTER] GoogleSignin: Calling signIn()...');
       const userInfo = await GoogleSignin.signIn();
+      console.log('[REGISTER] GoogleSignin: signIn() returned:', JSON.stringify({
+        type: userInfo.type,
+        hasData: !!userInfo.data,
+        hasIdToken: !!userInfo.data?.idToken,
+        user: userInfo.data?.user ? {
+          email: userInfo.data.user.email,
+          name: userInfo.data.user.name,
+          id: userInfo.data.user.id,
+        } : null,
+      }));
 
       // v16 API: userInfo.data contains the user info
       if (userInfo.data?.idToken) {
+        console.log('[REGISTER] GoogleSignin: Got idToken, sending to backend...');
         // Send the idToken to our backend
         const result = await loginWithGoogle(userInfo.data.idToken);
 
@@ -132,16 +151,29 @@ export default function RegisterScreen() {
           setError(result.error || 'Google sign-in failed');
         }
       } else {
+        console.warn('[REGISTER] GoogleSignin: No idToken in response. Full response:', JSON.stringify(userInfo));
         setError('Google Sign-In did not return a valid token. Please try again.');
       }
     } catch (err: any) {
-      console.error('[REGISTER] Google Sign-In error:', err);
+      console.error('[REGISTER] Google Sign-In error:', {
+        code: err.code,
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+        nativeErrorMessage: err.nativeErrorMessage,
+        allKeys: Object.keys(err),
+        stringified: JSON.stringify(err, Object.getOwnPropertyNames(err)),
+      });
 
       if (err.code === statusCodes.SIGN_IN_CANCELLED) {
-        // User cancelled — silent
+        console.log('[REGISTER] GoogleSignin: User cancelled sign-in');
       } else if (err.code === statusCodes.IN_PROGRESS) {
         // Sign-in already in progress — silent
       } else if (err.code === statusCodes.DEVELOPER_ERROR) {
+        console.error('[REGISTER] DEVELOPER_ERROR: This typically means the APK signing certificate ' +
+          'does not match any OAuth client in google-services.json. ' +
+          'Check: 1) SHA-1 of the APK cert matches Firebase, 2) androidClientId is NOT being passed in configure(), ' +
+          '3) google-services.json is bundled in the APK');
         setError(
           'Google Sign-In is not configured for this device. ' +
           'Please ensure Google Play Services is up to date, or try another registration method.'
@@ -310,20 +342,18 @@ export default function RegisterScreen() {
         {/* Email Registration Form - NO per-input FadeInDown animations */}
         <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
           <View style={styles.formCard}>
-            {/* Error Display */}
-            {error && (
-              <View style={styles.errorContainer}>
-                <Ionicons name="alert-circle" size={16} color={COLORS.error} />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
-            )}
+            {/* Error Display — always rendered to prevent layout shift (cursor jump) */}
+            <View style={[styles.errorContainer, !error && styles.errorHidden]}>
+              <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+              <Text style={styles.errorText}>{error || ''}</Text>
+            </View>
 
             {/* Full Name Input */}
             <IconInput
               label="Full Name"
               placeholder="Enter your full name"
               value={name}
-              onChangeText={(text) => { setName(text); if (error) setError(null); }}
+              onChangeText={setName}
               icon="person-outline"
               autoCapitalize="words"
               editable={!isLoading}
@@ -335,7 +365,7 @@ export default function RegisterScreen() {
               label="Email"
               placeholder="Enter your email"
               value={email}
-              onChangeText={(text) => { setEmail(text); if (error) setError(null); }}
+              onChangeText={setEmail}
               icon="mail-outline"
               keyboardType="email-address"
               autoCapitalize="none"
@@ -348,7 +378,7 @@ export default function RegisterScreen() {
               label="Phone Number"
               placeholder="7XX XXX XXX"
               value={phone}
-              onChangeText={(text) => { setPhone(text); if (error) setError(null); }}
+              onChangeText={setPhone}
               icon="call-outline"
               keyboardType="phone-pad"
               editable={!isLoading}
@@ -360,7 +390,7 @@ export default function RegisterScreen() {
               label="Password"
               placeholder="Min 8 chars, upper, lower, number"
               value={password}
-              onChangeText={(text) => { setPassword(text); if (error) setError(null); }}
+              onChangeText={setPassword}
               icon="lock-closed-outline"
               secureTextEntry={!showPassword}
               autoCapitalize="none"
@@ -375,7 +405,7 @@ export default function RegisterScreen() {
               label="Confirm Password"
               placeholder="Confirm your password"
               value={confirmPassword}
-              onChangeText={(text) => { setConfirmPassword(text); if (error) setError(null); }}
+              onChangeText={setConfirmPassword}
               icon="lock-closed-outline"
               secureTextEntry={!showConfirmPassword}
               autoCapitalize="none"
@@ -620,6 +650,15 @@ const styles = StyleSheet.create({
     color: COLORS.onErrorContainer,
     flex: 1,
     lineHeight: 18,
+  },
+  // Hidden error state — preserves layout height to prevent cursor jump
+  errorHidden: {
+    opacity: 0,
+    paddingVertical: 0,
+    marginBottom: 0,
+    borderWidth: 0,
+    height: 0,
+    overflow: 'hidden',
   },
   // Terms checkbox
   termsRow: {

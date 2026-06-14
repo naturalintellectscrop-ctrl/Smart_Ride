@@ -86,18 +86,32 @@ export default function LoginScreen() {
       // Configure Google Sign-In (safe to call multiple times)
       configureGoogleSignIn();
 
+      console.log('[LOGIN] GoogleSignin: Checking Play Services...');
       // Check if Play Services are available
       const hasPlay = await GoogleSignin.hasPlayServices();
+      console.log('[LOGIN] GoogleSignin: hasPlayServices =', hasPlay);
       if (!hasPlay) {
         setError('Google Play Services is required. Please update your device.');
         return;
       }
 
+      console.log('[LOGIN] GoogleSignin: Calling signIn()...');
       // Sign in
       const userInfo = await GoogleSignin.signIn();
+      console.log('[LOGIN] GoogleSignin: signIn() returned:', JSON.stringify({
+        type: userInfo.type,
+        hasData: !!userInfo.data,
+        hasIdToken: !!userInfo.data?.idToken,
+        user: userInfo.data?.user ? {
+          email: userInfo.data.user.email,
+          name: userInfo.data.user.name,
+          id: userInfo.data.user.id,
+        } : null,
+      }));
 
       // Check for ID token
       if (userInfo.data?.idToken) {
+        console.log('[LOGIN] GoogleSignin: Got idToken, sending to backend...');
         const result = await loginWithGoogle(userInfo.data.idToken);
 
         if (result.success) {
@@ -118,18 +132,33 @@ export default function LoginScreen() {
           setError(result.error || 'Google Sign-In failed. Please try again.');
         }
       } else {
+        console.warn('[LOGIN] GoogleSignin: No idToken in response. Full response:', JSON.stringify(userInfo));
         setError('Google Sign-In did not return a valid token. Please try again.');
       }
     } catch (err: any) {
-      console.error('[LOGIN] Google Sign-In error:', err);
+      console.error('[LOGIN] Google Sign-In error:', {
+        code: err.code,
+        message: err.message,
+        stack: err.stack,
+        name: err.name,
+        nativeErrorMessage: err.nativeErrorMessage,
+        // Dump all enumerable keys for full diagnostics
+        allKeys: Object.keys(err),
+        stringified: JSON.stringify(err, Object.getOwnPropertyNames(err)),
+      });
 
       // Handle specific error codes
       if (err.code === statusCodes.SIGN_IN_CANCELLED) {
         // User cancelled — silently ignore
+        console.log('[LOGIN] GoogleSignin: User cancelled sign-in');
         return;
       }
 
       if (err.code === statusCodes.DEVELOPER_ERROR) {
+        console.error('[LOGIN] DEVELOPER_ERROR: This typically means the APK signing certificate ' +
+          'does not match any OAuth client in google-services.json. ' +
+          'Check: 1) SHA-1 of the APK cert matches Firebase, 2) androidClientId is NOT being passed in configure(), ' +
+          '3) google-services.json is bundled in the APK');
         setError(
           'Google Sign-In is not configured for this device. ' +
           'Please ensure Google Play Services is up to date, or try another login method.'
@@ -342,13 +371,11 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          {/* Error Banner */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={18} color={COLORS.error} />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
+          {/* Error Banner — always rendered to prevent layout shift (cursor jump) */}
+          <View style={[styles.errorContainer, !error && styles.errorHidden]}>
+            <Ionicons name="alert-circle" size={18} color={COLORS.error} />
+            <Text style={styles.errorText}>{error || ''}</Text>
+          </View>
 
           {/* Email Input */}
           <IconInput
@@ -675,6 +702,15 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodySm,
     flex: 1,
     lineHeight: 20,
+  },
+  // Hidden error state — preserves layout height to prevent cursor jump
+  errorHidden: {
+    opacity: 0,
+    paddingVertical: 0,
+    marginBottom: 0,
+    borderWidth: 0,
+    height: 0,
+    overflow: 'hidden',
   },
   forgotButton: {
     alignItems: 'flex-end',

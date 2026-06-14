@@ -128,12 +128,9 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: COLORS.primary,
-    // borderWidth stays 1.5 — changing it causes layout shift → cursor jump
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 1,
+    // NOTE: NO elevation/shadow changes on focus — adding elevation on Android
+    // causes a layout recalculation that makes the cursor jump.
+    // Border color change alone provides sufficient visual feedback.
   },
   inputError: {
     borderColor: COLORS.error,

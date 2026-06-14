@@ -2,9 +2,16 @@
 // SMART RIDE MOBILE - GOOGLE SIGN-IN CONFIG
 // ============================================
 // Centralized configuration for Google Sign-In
-// Fixes DEVELOPER_ERROR by providing webClientId
-// and iosClientId (androidClientId comes from
-// google-services.json on Android)
+//
+// KEY INSIGHT (2025-03 fix):
+// On Android, DO NOT pass androidClientId in configure().
+// The library auto-detects the correct OAuth client from
+// google-services.json based on the APK's signing certificate.
+// Passing androidClientId explicitly OVERRIDES this auto-detection
+// and causes DEVELOPER_ERROR when the hardcoded client ID
+// doesn't match the certificate the APK was signed with.
+//
+// Only webClientId + iosClientId need to be set manually.
 // ============================================
 
 import { Platform } from 'react-native';
@@ -33,9 +40,15 @@ const GOOGLE_CLIENT_IDS = {
   // Web client ID (type 3) - MUST match google-services.json oauth_client client_type=3
   webClientId: '531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com',
   // Android client IDs (type 1) - from google-services.json
+  // NOTE: These are NOT passed to configure() on Android. The library reads
+  // them automatically from google-services.json at runtime based on the
+  // signing certificate. We keep them here for reference/debugging only.
   // Debug keystore: certificate_hash f28c61cc...0ae1 → client oc8o4mfd...
   // Upload keystore: certificate_hash 98ea9b4b...78f4 → client qpv85egp...
-  androidClientId: '531949209415-qpv85egps3qrq3ko6ecr7uckoko66qm2.apps.googleusercontent.com',
+  //
+  // androidClientId: '531949209415-qpv85egps3qrq3ko6ecr7uckoko66qm2.apps.googleusercontent.com',
+  // ← INTENTIONALLY REMOVED — passing this caused DEVELOPER_ERROR
+  //
   // iOS client ID (type 2) - from GoogleService-Info.plist
   iosClientId: '531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar.apps.googleusercontent.com',
 };
@@ -71,14 +84,25 @@ export function configureGoogleSignIn(): void {
     // Platform-specific configuration
     if (Platform.OS === 'ios') {
       config.iosClientId = GOOGLE_CLIENT_IDS.iosClientId;
-    } else if (Platform.OS === 'android') {
-      // Android client ID helps with Play Services sign-in
-      config.androidClientId = GOOGLE_CLIENT_IDS.androidClientId;
     }
+    // ANDROID: DO NOT set androidClientId here!
+    // The library auto-resolves the correct Android OAuth client from
+    // google-services.json based on the APK signing certificate at runtime.
+    // Passing androidClientId explicitly overrides this and causes
+    // DEVELOPER_ERROR when it doesn't match the actual signing cert.
+    // See: https://github.com/react-native-google-signin/google-signin/issues/917
+
+    console.log('[GoogleSignIn] Configuring with:', JSON.stringify({
+      platform: Platform.OS,
+      webClientId: config.webClientId,
+      iosClientId: config.iosClientId || '(not set - Android auto-detects)',
+      offlineAccess: config.offlineAccess,
+      forceCodeForRefreshToken: config.forceCodeForRefreshToken,
+    }));
 
     GoogleSignin.configure(config);
     isConfigured = true;
-    console.log('[GoogleSignIn] Configured successfully for', Platform.OS);
+    console.log('[GoogleSignIn] ✅ Configured successfully for', Platform.OS);
   } catch (error) {
     console.error('[GoogleSignIn] Configuration failed:', error);
     // Don't throw - app should still work without Google Sign-In
