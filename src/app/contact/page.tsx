@@ -121,7 +121,7 @@ export default function ContactPage() {
                       type="text"
                       id="name"
                       value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                       required
                       className="w-full bg-[#252530] border border-white/5 rounded-xl px-4 py-3.5 text-white placeholder-white/30 focus:outline-none focus:border-[#00FF88]/50 focus:ring-1 focus:ring-[#00FF88]/50 transition-all duration-200"
                       placeholder="Enter your name"
@@ -137,7 +137,7 @@ export default function ContactPage() {
                       type="email"
                       id="email"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                       required
                       className="w-full bg-[#252530] border border-white/5 rounded-xl px-4 py-3.5 text-white placeholder-white/30 focus:outline-none focus:border-[#00FF88]/50 focus:ring-1 focus:ring-[#00FF88]/50 transition-all duration-200"
                       placeholder="Enter your email"
@@ -153,7 +153,7 @@ export default function ContactPage() {
                       type="text"
                       id="subject"
                       value={formData.subject}
-                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                      onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
                       required
                       className="w-full bg-[#252530] border border-white/5 rounded-xl px-4 py-3.5 text-white placeholder-white/30 focus:outline-none focus:border-[#00FF88]/50 focus:ring-1 focus:ring-[#00FF88]/50 transition-all duration-200"
                       placeholder="What is this about?"
@@ -168,7 +168,7 @@ export default function ContactPage() {
                     <textarea
                       id="message"
                       value={formData.message}
-                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                      onChange={(e) => setFormData(prev => ({ ...prev, message: e.target.value }))}
                       required
                       rows={5}
                       className="w-full bg-[#252530] border border-white/5 rounded-xl px-4 py-3.5 text-white placeholder-white/30 focus:outline-none focus:border-[#00FF88]/50 focus:ring-1 focus:ring-[#00FF88]/50 transition-all duration-200 resize-none"

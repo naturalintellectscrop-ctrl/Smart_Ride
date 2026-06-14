@@ -360,9 +360,10 @@ export function ClientPromotions() {
           <div className="flex gap-3">
             <Input
               value={appliedCode}
-              onChange={(e) => { setAppliedCode(e.target.value.toUpperCase()); setCodeResult(null); }}
+              onChange={(e) => { setAppliedCode(e.target.value); setCodeResult(null); }}
+              onBlur={(e) => setAppliedCode(e.target.value.toUpperCase())}
               placeholder="Enter promo code"
-              className="h-14 bg-white border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#bec9bf] focus:border-[#005f3a]/30 rounded-xl text-sm"
+              className="h-14 bg-white border-[#bec9bf]/30 text-[#191c1d] placeholder:text-[#bec9bf] focus:border-[#005f3a]/30 rounded-xl text-sm uppercase"
             />
             <Button
               onClick={handleApplyCode}

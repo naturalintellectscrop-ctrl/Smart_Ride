@@ -310,7 +310,13 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
             <Input
               type="tel"
               value={ownerPhone}
-              onChange={(e) => setOwnerPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const digits = raw.replace(/\D/g, '').slice(0, 9);
+                if (digits !== ownerPhone) {
+                  setOwnerPhone(digits);
+                }
+              }}
               placeholder="7XX XXX XXX"
               className="pl-16 h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400"
             />
@@ -332,7 +338,8 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
           <label className="block text-sm font-medium text-[#3f4941] mb-2">National ID Number (NIN)</label>
           <Input
             value={ownerNIN}
-            onChange={(e) => setOwnerNIN(e.target.value.toUpperCase())}
+            onChange={(e) => setOwnerNIN(e.target.value)}
+            onBlur={(e) => setOwnerNIN(e.target.value.toUpperCase())}
             placeholder="Enter NIN"
             className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-rose-400 focus:ring-1 focus:ring-rose-400 uppercase"
           />
@@ -545,7 +552,13 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
           <label className="block text-sm font-medium text-[#3f4941] mb-2">Account Number *</label>
           <Input
             value={accountNumber}
-            onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const digits = raw.replace(/\D/g, '');
+              if (digits !== accountNumber) {
+                setAccountNumber(digits);
+              }
+            }}
             placeholder="Enter account number"
             className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
           />
@@ -558,7 +571,13 @@ export function HealthProviderRegistration({ onBack, onComplete }: HealthProvide
             <Input
               type="tel"
               value={mobileMoneyNumber}
-              onChange={(e) => setMobileMoneyNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const digits = raw.replace(/\D/g, '').slice(0, 9);
+                if (digits !== mobileMoneyNumber) {
+                  setMobileMoneyNumber(digits);
+                }
+              }}
               placeholder="7XX XXX XXX"
               className="pl-16 h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
             />

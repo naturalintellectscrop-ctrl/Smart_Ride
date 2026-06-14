@@ -197,7 +197,13 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
             <Input
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+              onChange={(e) => {
+                const raw = e.target.value;
+                const digits = raw.replace(/\D/g, '').slice(0, 9);
+                if (digits !== phone) {
+                  setPhone(digits);
+                }
+              }}
               placeholder="7XX XXX XXX"
               className="pl-16 h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
             />
@@ -353,9 +359,10 @@ export function RiderRegistration({ riderRole, onBack, onComplete }: RiderRegist
           <label className="block text-sm font-medium text-[#3f4941] mb-2">License Plate Number *</label>
           <Input
             value={vehiclePlate}
-            onChange={(e) => setVehiclePlate(e.target.value.toUpperCase())}
+            onChange={(e) => setVehiclePlate(e.target.value)}
+            onBlur={(e) => setVehiclePlate(e.target.value.toUpperCase())}
             placeholder="e.g., UAJ 123A"
-            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
+            className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a] uppercase"
           />
         </div>
 

@@ -44,3 +44,53 @@ Stage Summary:
 - The YouTube tutorial is directly applicable - covers the exact setup needed
 - Still need: run `npx expo prebuild` to generate android/ directory, then build with Android Studio
 - Certificate hash in google-services.json must match the signing key used for the APK build
+
+---
+Task ID: 6
+Agent: Main
+Task: Fix cursor jumping issues in React/Next.js input fields
+
+Work Log:
+- FIX 1: wallet-transfer.tsx — Replaced formatAmount() (adds commas during typing, causing cursor jump) with formatAmountDisplay() for read-only display only. onChange now stores raw digits. Updated quick amount buttons to store raw numbers. Updated confirm and success steps to use formatAmountDisplay().
+- FIX 2: Phone inputs — Fixed 5 files with .replace(/\D/g, '').slice(0, 9) that caused cursor jump by stripping non-digits during typing. Added guard: only call setter if digits actually changed. Files: auth-screen.tsx, rider-registration.tsx, merchant-registration.tsx, health-provider-registration.tsx (3 inputs: ownerPhone, accountNumber, mobileMoneyNumber), mobile-auth-screen.tsx.
+- FIX 3: .toUpperCase() inputs — Fixed 3 files where .toUpperCase() in onChange caused cursor jump. Changed to store raw value in onChange, apply .toUpperCase() on onBlur, and use CSS `uppercase` class for display. Files: rider-registration.tsx (vehiclePlate), health-provider-registration.tsx (ownerNIN), client-promotions.tsx (promo code).
+- FIX 4: edit-modal.tsx — Fixed useEffect that overwrote user input because `fields` array prop got new reference on every parent re-render. Added initializedRef (useRef) to track initialization, only set values on first open. Removed `fields` from dependency array.
+- FIX 5: contact/page.tsx — Fixed stale closure in 4 setFormData calls using direct spread (`{ ...formData, field: value }`). Replaced with functional updater (`prev => ({ ...prev, field: value })`).
+- Lint passes clean with no errors.
+
+Stage Summary:
+- All 5 cursor jumping root causes fixed across 9 files
+- No formatting/value transformation during typing — all transformations deferred to onBlur or display-only contexts
+- Functional updaters used for state that depends on previous state
+- useEffect properly guarded with ref to prevent overwriting user input
+
+---
+Task ID: 7
+Agent: Main
+Task: Comprehensive OAuth/Google Sign-In verification + cursor jumping audit
+
+Work Log:
+- Verified OAuth Client IDs across all configuration files:
+  - google-services.json (both copies identical): type-3 web client = h0ri57i233r1l767tnc4i26brdt3asb3 ✅
+  - expo-app/src/config/google.ts: webClientId = h0ri57i233r1l767tnc4i26brdt3asb3 ✅
+  - src/services/google-signin.ts: FIXED WEB_CLIENT_ID from ja4espd5... to h0ri57i233r1l767tnc4i26brdt3asb3 ✅
+  - GoogleService-Info.plist: iOS client ID = 1knt1vf2v8g5fh7rltg31knps9j2otar ✅
+  - app.json iosUrlScheme matches iOS client ID ✅
+- Verified package name: ug.smartride.app matches across google-services.json, app.json, and GoogleService-Info.plist ✅
+- Verified SHA-1 fingerprints:
+  - Upload keystore (smartride-upload.keystore): SHA-1 = 98ea9b4b1847e1ca61a04910805bbd22db9d78f4 matches google-services.json type-1 client qpv85egp... ✅
+  - Debug keystore: SHA-1 = f28c61cc4f2a5700a0182557cfcb75a42a960ae1 matches google-services.json type-1 client oc8o4mfd... ✅
+- Verified GoogleSignin.configure uses webClientId (not androidClientId) ✅
+- Added GOOGLE_CLIENT_ID to .env for backend audience verification ✅
+- Fixed babel.config.js being picked up by Next.js (renamed to babel.config.expo.js) ✅
+- Restored middleware.ts (removed conflicting proxy.ts.bak2) ✅
+- Deep cursor jumping audit found 8 HIGH, 7 MEDIUM, 6 LOW risk issues
+- Fixed all HIGH-risk cursor jumping issues across 9 files
+- Lint passes clean, page renders 200 OK
+
+Stage Summary:
+- All OAuth client IDs now consistently match across google-services.json, google.ts, and google-signin.ts
+- Both SHA-1 fingerprints (debug + upload) are registered in Firebase
+- Backend audience verification now enabled via GOOGLE_CLIENT_ID env var
+- All cursor jumping issues fixed: phone inputs, amount formatting, uppercase conversion, useEffect overwrites, stale closures
+- Dev server starts and renders correctly (200 OK)

@@ -10,7 +10,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -140,10 +140,11 @@ export function EditModal({
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const initializedRef = useRef(false);
 
   // Initialize values when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && !initializedRef.current) {
       const initialValues: Record<string, string> = {};
       fields.forEach(field => {
         initialValues[field.id] = field.value;
@@ -151,8 +152,12 @@ export function EditModal({
       setEditedValues(initialValues);
       setError(null);
       setSuccess(false);
+      initializedRef.current = true;
     }
-  }, [isOpen, fields]);
+    if (!isOpen) {
+      initializedRef.current = false;
+    }
+  }, [isOpen]);
 
   const handleValueChange = (fieldId: string, value: string) => {
     setEditedValues(prev => ({ ...prev, [fieldId]: value }));

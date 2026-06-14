@@ -310,7 +310,13 @@ export function MobileAuthScreen({ onBack, onAuthSuccess }: MobileAuthScreenProp
                   type="tel"
                   placeholder="7XX XXX XXX"
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const digits = raw.replace(/\D/g, '').slice(0, 9);
+                    if (digits !== phone) {
+                      setPhone(digits);
+                    }
+                  }}
                   className="pl-16 h-14 text-base bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
                 />
               </div>

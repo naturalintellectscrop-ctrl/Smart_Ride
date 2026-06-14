@@ -89,9 +89,11 @@ export function WalletTransfer({ balance, onBack, onComplete }: WalletTransferPr
     }, 2000);
   };
 
-  const formatAmount = (value: string) => {
+  // Format amount for display (not during typing)
+  const formatAmountDisplay = (value: string) => {
     const num = value.replace(/\D/g, '');
-    return num.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    if (!num) return '';
+    return parseInt(num).toLocaleString();
   };
 
   const quickAmounts = [5000, 10000, 20000, 50000, 100000];
@@ -222,7 +224,11 @@ export function WalletTransfer({ balance, onBack, onComplete }: WalletTransferPr
                 type="text"
                 placeholder="0"
                 value={amount}
-                onChange={(e) => setAmount(formatAmount(e.target.value))}
+                onChange={(e) => {
+                  // Only keep digits, no formatting during typing to prevent cursor jump
+                  const raw = e.target.value.replace(/\D/g, '');
+                  setAmount(raw);
+                }}
                 className="w-full bg-transparent outline-none text-[#191c1d] text-3xl font-bold placeholder-[#bec9bf] text-center"
               />
             </div>
@@ -244,10 +250,10 @@ export function WalletTransfer({ balance, onBack, onComplete }: WalletTransferPr
               {quickAmounts.map((quickAmount) => (
                 <button
                   key={quickAmount}
-                  onClick={() => setAmount(quickAmount.toLocaleString())}
+                  onClick={() => setAmount(String(quickAmount))}
                   className={cn(
                     "px-4 py-2 rounded-full text-sm font-medium transition-all",
-                    amount === quickAmount.toLocaleString()
+                    amount === String(quickAmount)
                       ? "bg-[#005f3a] text-white"
                       : "bg-white border border-[#bec9bf]/30 text-[#191c1d] hover:border-[#005f3a]/50"
                   )}
@@ -312,7 +318,7 @@ export function WalletTransfer({ balance, onBack, onComplete }: WalletTransferPr
           {/* Amount */}
           <div className="text-center py-8">
             <p className="text-[#6f7a71] text-sm">You're sending</p>
-            <p className="text-4xl font-bold text-[#191c1d] mt-2">UGX {amount}</p>
+            <p className="text-4xl font-bold text-[#191c1d] mt-2">UGX {formatAmountDisplay(amount)}</p>
           </div>
 
           {/* Details */}
@@ -383,7 +389,7 @@ export function WalletTransfer({ balance, onBack, onComplete }: WalletTransferPr
           </div>
           <h2 className="font-[family-name:var(--font-plus-jakarta)] text-2xl font-bold text-[#191c1d] ">Transfer Successful!</h2>
           <p className="text-[#6f7a71] mt-2">
-            UGX {amount} sent to {selectedRecipient?.name}
+            UGX {formatAmountDisplay(amount)} sent to {selectedRecipient?.name}
           </p>
           
           <Card className="mt-6 bg-white border-[#bec9bf]/20 p-4">
