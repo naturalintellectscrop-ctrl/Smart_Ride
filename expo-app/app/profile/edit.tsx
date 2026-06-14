@@ -124,7 +124,7 @@ export default function ProfileEditScreen() {
             <Text className="text-gray-500 text-sm mb-2">Full Name</Text>
             <TextInput
               value={profile.name}
-              onChangeText={(text) => setProfile({ ...profile, name: text })}
+              onChangeText={(text) => setProfile(prev => ({ ...prev, name: text }))}
               placeholder="Enter your name"
               placeholderTextColor="#9CA3AF"
               className="text-gray-900 text-lg"
@@ -136,7 +136,7 @@ export default function ProfileEditScreen() {
             <Text className="text-gray-500 text-sm mb-2">Email Address</Text>
             <TextInput
               value={profile.email}
-              onChangeText={(text) => setProfile({ ...profile, email: text })}
+              onChangeText={(text) => setProfile(prev => ({ ...prev, email: text }))}
               placeholder="Enter your email"
               placeholderTextColor="#9CA3AF"
               keyboardType="email-address"
@@ -150,7 +150,7 @@ export default function ProfileEditScreen() {
             <Text className="text-gray-500 text-sm mb-2">Phone Number</Text>
             <TextInput
               value={profile.phone}
-              onChangeText={(text) => setProfile({ ...profile, phone: text })}
+              onChangeText={(text) => setProfile(prev => ({ ...prev, phone: text }))}
               placeholder="Enter your phone number"
               placeholderTextColor="#9CA3AF"
               keyboardType="phone-pad"
@@ -163,7 +163,7 @@ export default function ProfileEditScreen() {
             <Text className="text-gray-500 text-sm mb-2">Default Address</Text>
             <TextInput
               value={profile.address}
-              onChangeText={(text) => setProfile({ ...profile, address: text })}
+              onChangeText={(text) => setProfile(prev => ({ ...prev, address: text }))}
               placeholder="Enter your address"
               placeholderTextColor="#9CA3AF"
               multiline

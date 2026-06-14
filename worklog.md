@@ -125,3 +125,26 @@ Stage Summary:
 - Google OAuth: All IDs, package names, SHA-1 fingerprints, and webClientId verified consistent across all config files
 - Cursor jumping: ALL remaining instances fixed — no .replace() in onChange without guard, no .toUpperCase() in onChange (deferred to onBlur + CSS)
 - App renders correctly on both desktop and mobile viewports with no errors
+
+---
+Task ID: 9
+Agent: Main
+Task: Fix cursor jumping in expo-app + provide Git Bash build instructions
+
+Work Log:
+- Audited all expo-app files for cursor jumping patterns (.replace in onChangeText, .toUpperCase, stale closures)
+- expo-app uses React Native TextInput — native cursor handling means most web cursor-jumping patterns don't apply
+- Found and fixed stale closure bug in expo-app/app/profile/edit.tsx:
+  - 4 setProfile({ ...profile, field: text }) → setProfile(prev => ({ ...prev, field: text }))
+  - Without functional updater, fast typing could lose state because `profile` from closure is stale
+- Confirmed all other expo-app inputs are clean:
+  - plateNumber uses autoCapitalize="characters" (not .toUpperCase()) ✅
+  - year/phone inputs use keyboardType="numeric" (no .replace() in handler) ✅
+  - OTP input uses .replace(/[^0-9]/g, '') which is acceptable for single-char OTP boxes ✅
+  - catalog.tsx already uses functional updaters p => ({ ...p, field: t }) ✅
+- Provided Git Bash build instructions for the Expo app
+
+Stage Summary:
+- expo-app cursor jumping: 1 stale closure fixed in profile/edit.tsx (4 instances)
+- All other expo-app inputs confirmed clean — no .replace() or .toUpperCase() in onChangeText
+- Build instructions provided for local build (prebuild + Android Studio) and EAS cloud build
