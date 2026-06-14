@@ -3,7 +3,9 @@ module.exports = function(api) {
   return {
     presets: [
       'babel-preset-expo',
-      'nativewind/babel',
+      // NOTE: 'nativewind/babel' removed — was causing style recalculation
+      // on every render, which makes TextInput cursor jump on Android.
+      // All styles use StyleSheet.create() directly instead.
     ],
     plugins: [
       'react-native-reanimated/plugin',

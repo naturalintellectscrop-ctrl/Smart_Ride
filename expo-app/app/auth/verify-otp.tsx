@@ -401,6 +401,7 @@ export default function VerifyOTPScreen() {
                       editable={!isLoading && !otpExpired}
                       textContentType="oneTimeCode"
                       autoFocus={index === 0}
+                      maxFontSizeMultiplier={1}
                       placeholder="•"
                       placeholderTextColor={COLORS.outlineVariant}
                     />
