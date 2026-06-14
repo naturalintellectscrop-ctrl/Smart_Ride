@@ -7,17 +7,34 @@
 // google-services.json on Android)
 // ============================================
 
-import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
 
+// Safe import of GoogleSignin — the native module may be undefined if:
+// 1. Running in Expo Go (native modules not available)
+// 2. The android/ios native folder hasn't been prebuilt
+// 3. The APK was built without the @react-native-google-signin plugin
+let GoogleSignin: any = null;
+let statusCodes: any = {};
+try {
+  const GoogleSignInModule = require('@react-native-google-signin/google-signin');
+  GoogleSignin = GoogleSignInModule.GoogleSignin;
+  statusCodes = GoogleSignInModule.statusCodes;
+} catch (e) {
+  console.warn('[GoogleSignIn] Native module not available. Google Sign-In will be disabled.', e);
+}
+
+// Re-export statusCodes for use in error handling
+export { statusCodes };
+
 // OAuth Client IDs from Firebase/Google Cloud Console
-// IMPORTANT: webClientId MUST match the type-3 client in google-services.json
+// IMPORTANT: These MUST match the google-services.json / GoogleService-Info.plist
+// Updated 2025-03: All IDs now match the Firebase project with correct SHA-1
 const GOOGLE_CLIENT_IDS = {
   // Web client ID (type 3) - MUST match google-services.json oauth_client client_type=3
-  // Updated to match the correct google-services.json (root copy with Android cert hash)
   webClientId: '531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com',
-  // Android client ID (type 1) - from google-services.json (matches our signing certificate)
-  androidClientId: '531949209415-3fnqdkfo69dognl93ffp0keg0jusvq6t.apps.googleusercontent.com',
+  // Android client ID (type 1) - from google-services.json (matches debug signing certificate)
+  // This is the client_type=1 entry with certificate_hash f28c61cc4f2a5700a0182557cfcb75a42a960ae1
+  androidClientId: '531949209415-oc8o4mfd2hd3l1mbqecdui2jfhrupe56.apps.googleusercontent.com',
   // iOS client ID (type 2) - from GoogleService-Info.plist
   iosClientId: '531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar.apps.googleusercontent.com',
 };
@@ -34,6 +51,14 @@ let isConfigured = false;
  */
 export function configureGoogleSignIn(): void {
   if (isConfigured) return;
+
+  // Guard: if the native module couldn't be loaded, skip configuration
+  if (!GoogleSignin) {
+    console.warn('[GoogleSignIn] Native module not loaded — Google Sign-In disabled. ' +
+      'Ensure you are using a development build (not Expo Go), and that ' +
+      'npx expo prebuild has been run with the @react-native-google-signin/google-signin plugin.');
+    return;
+  }
 
   try {
     const config: any = {
