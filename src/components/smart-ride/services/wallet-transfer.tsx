@@ -227,7 +227,9 @@ export function WalletTransfer({ balance, onBack, onComplete }: WalletTransferPr
                 onChange={(e) => {
                   // Only keep digits, no formatting during typing to prevent cursor jump
                   const raw = e.target.value.replace(/\D/g, '');
-                  setAmount(raw);
+                  if (raw !== amount) {
+                    setAmount(raw);
+                  }
                 }}
                 className="w-full bg-transparent outline-none text-[#191c1d] text-3xl font-bold placeholder-[#bec9bf] text-center"
               />

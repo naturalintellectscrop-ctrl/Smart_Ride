@@ -150,7 +150,13 @@ export function PersonalInfoScreen({ role, onSubmit, onBack }: PersonalInfoScree
                 id="phone"
                 placeholder="7XX XXX XXX"
                 value={formData.phone}
-                onChange={(e) => updateField('phone', e.target.value.replace(/[^0-9]/g, ''))}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const digits = raw.replace(/[^0-9]/g, '');
+                  if (digits !== formData.phone) {
+                    updateField('phone', digits);
+                  }
+                }}
                 maxLength={10}
                 className={`flex-1 ${errors.phone ? 'border-red-500' : ''}`}
               />

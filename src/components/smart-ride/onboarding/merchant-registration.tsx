@@ -483,7 +483,13 @@ export function MerchantRegistration({ onBack, onComplete }: MerchantRegistratio
           <label className="block text-sm font-medium text-[#3f4941] mb-2">Account Number *</label>
           <Input
             value={accountNumber}
-            onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+            onChange={(e) => {
+              const raw = e.target.value;
+              const digits = raw.replace(/\D/g, '');
+              if (digits !== accountNumber) {
+                setAccountNumber(digits);
+              }
+            }}
             placeholder="Enter account number"
             className="h-14 bg-[#f3f4f5] border border-[#bec9bf] rounded-xl text-[#191c1d] placeholder:text-[#6f7a71] focus:border-[#005f3a] focus:ring-1 focus:ring-[#005f3a]"
           />

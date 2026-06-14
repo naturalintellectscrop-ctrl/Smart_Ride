@@ -94,3 +94,34 @@ Stage Summary:
 - Backend audience verification now enabled via GOOGLE_CLIENT_ID env var
 - All cursor jumping issues fixed: phone inputs, amount formatting, uppercase conversion, useEffect overwrites, stale closures
 - Dev server starts and renders correctly (200 OK)
+
+---
+Task ID: 8
+Agent: Main
+Task: Final verification of Google OAuth configuration + cursor jumping fix confirmation
+
+Work Log:
+- Verified Google OAuth configuration across all files:
+  - google-services.json (root + expo-app): both identical ✅
+  - project_id: smart-ride-774e7 ✅
+  - package_name: ug.smartride.app matches app.json, GoogleService-Info.plist ✅
+  - Type-1 Android clients with both SHA-1 fingerprints registered ✅
+  - Type-3 web client ID: h0ri57i233r1l767tnc4i26brdt3asb3 ✅
+  - Type-2 iOS client: 1knt1vf2v8g5fh7rltg31knps9j2otar ✅
+  - GoogleSignin.configure uses webClientId (not androidClientId) ✅
+  - GOOGLE_CLIENT_ID in .env matches ✅
+  - app.json iosUrlScheme matches iOS client ID ✅
+- Found and fixed 4 additional cursor jumping issues missed in previous audit:
+  - merchant-registration.tsx:486 — accountNumber input using .replace(/\D/g,'') without guard
+  - vehicle-info.tsx:232 — year input using .replace(/[^0-9]/g,'') without guard
+  - vehicle-info.tsx:258 — plateNumber using .toUpperCase() in onChange (changed to onBlur + CSS uppercase)
+  - personal-info.tsx:153 — phone input using .replace(/[^0-9]/g,'') without guard
+  - wallet-transfer.tsx:230 — amount input .replace(/\D/g,'') without equality guard
+- Browser verification: page renders correctly, all sections visible, no console errors
+- Mobile viewport tested (375x812), footer sticks properly
+- Lint passes clean
+
+Stage Summary:
+- Google OAuth: All IDs, package names, SHA-1 fingerprints, and webClientId verified consistent across all config files
+- Cursor jumping: ALL remaining instances fixed — no .replace() in onChange without guard, no .toUpperCase() in onChange (deferred to onBlur + CSS)
+- App renders correctly on both desktop and mobile viewports with no errors

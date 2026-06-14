@@ -229,7 +229,13 @@ export function VehicleInfoScreen({ role, onSubmit, onBack }: VehicleInfoScreenP
               <Input
                 placeholder="e.g., 2020"
                 value={formData.year}
-                onChange={(e) => updateField('year', e.target.value.replace(/[^0-9]/g, ''))}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const digits = raw.replace(/[^0-9]/g, '');
+                  if (digits !== formData.year) {
+                    updateField('year', digits);
+                  }
+                }}
                 maxLength={4}
                 className={errors.year ? 'border-red-500' : ''}
               />
@@ -255,8 +261,9 @@ export function VehicleInfoScreen({ role, onSubmit, onBack }: VehicleInfoScreenP
               <Input
                 placeholder="e.g., UAX 123A"
                 value={formData.plateNumber}
-                onChange={(e) => updateField('plateNumber', e.target.value.toUpperCase())}
-                className={errors.plateNumber ? 'border-red-500' : ''}
+                onChange={(e) => updateField('plateNumber', e.target.value)}
+                onBlur={(e) => updateField('plateNumber', e.target.value.toUpperCase())}
+                className={`uppercase ${errors.plateNumber ? 'border-red-500' : ''}`}
               />
               {errors.plateNumber && <p className="text-red-500 text-xs mt-1">{errors.plateNumber}</p>}
             </MobileCard>
