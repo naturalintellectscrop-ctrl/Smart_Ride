@@ -54,6 +54,7 @@ export default function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    configureGoogleSignIn();
     checkAuth();
   }, []);
 
@@ -204,7 +205,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
     >
       <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />

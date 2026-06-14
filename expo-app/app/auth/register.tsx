@@ -103,10 +103,14 @@ export default function RegisterScreen() {
     setError(null);
 
     try {
+      // Ensure Google Sign-In is configured (safe to call multiple times)
+      configureGoogleSignIn();
+
       await GoogleSignin.hasPlayServices();
       const userInfo = await GoogleSignin.signIn();
 
-      if (userInfo.type === 'success') {
+      // v16 API: userInfo.data contains the user info
+      if (userInfo.data?.idToken) {
         // Send the idToken to our backend
         const result = await loginWithGoogle(userInfo.data.idToken);
 
@@ -127,8 +131,9 @@ export default function RegisterScreen() {
         } else {
           setError(result.error || 'Google sign-in failed');
         }
+      } else {
+        setError('Google Sign-In did not return a valid token. Please try again.');
       }
-      // If type is 'cancelled' or 'noData', user cancelled — do nothing
     } catch (err: any) {
       console.error('[REGISTER] Google Sign-In error:', err);
 
@@ -136,6 +141,11 @@ export default function RegisterScreen() {
         // User cancelled — silent
       } else if (err.code === statusCodes.IN_PROGRESS) {
         // Sign-in already in progress — silent
+      } else if (err.code === statusCodes.DEVELOPER_ERROR) {
+        setError(
+          'Google Sign-In is not configured for this device. ' +
+          'Please ensure Google Play Services is up to date, or try another registration method.'
+        );
       } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
         setError('Google Play Services is not available on this device');
       } else {
