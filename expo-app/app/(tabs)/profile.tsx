@@ -95,6 +95,7 @@ export default function ProfileScreen() {
       section: 'Account',
       items: [
         { icon: '👤', label: 'Edit Profile', onPress: () => router.push('/profile/edit') },
+        { icon: '🔄', label: `Switch Role (${user?.role || 'Client'})`, onPress: () => router.push('/auth/role-selection') },
         { icon: '📍', label: 'Saved Addresses', onPress: () => {} },
         { icon: '💳', label: 'Payment Methods', onPress: () => router.push('/wallet') },
         { icon: '👥', label: 'Emergency Contacts', onPress: () => {} },
@@ -123,7 +124,7 @@ export default function ProfileScreen() {
     {
       section: 'Support',
       items: [
-        { icon: '❓', label: 'Help Center', onPress: () => Linking.openURL('https://smartrideug.vercel.app/help') },
+        { icon: '❓', label: 'Help Center', onPress: () => Linking.openURL('https://smartrideug.vercel.app') },
         { icon: '💬', label: 'Contact Support', onPress: () => Linking.openURL('https://smartrideug.vercel.app/contact') },
         { icon: '📜', label: 'Terms of Service', onPress: () => Linking.openURL('https://smartrideug.vercel.app/terms') },
         { icon: '🔒', label: 'Privacy Policy', onPress: () => Linking.openURL('https://smartrideug.vercel.app/privacy') },
@@ -228,12 +229,12 @@ function StatItem({ label, value, delay, colors }: { label: string; value: strin
   const statStyles = useMemo(() => ({
     statItem: {
       flex: 1,
-      alignItems: 'center',
+      alignItems: 'center' as const,
       paddingVertical: 4,
     },
     statValue: {
       fontSize: 22,
-      fontWeight: 'bold',
+      fontWeight: 'bold' as const,
       color: colors.primary,
     },
     statLabel: {
@@ -270,7 +271,7 @@ function MenuItem({ item, isLast, colors }: { item: any; isLast: boolean; colors
     menuLabel: {
       flex: 1,
       fontSize: 16,
-      fontWeight: '500',
+      fontWeight: '500' as const,
       color: colors.text,
     },
     menuValue: {

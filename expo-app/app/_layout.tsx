@@ -150,6 +150,7 @@ function ThemedRootLayout() {
           <Stack.Screen name="auth/verify-otp" />
           <Stack.Screen name="auth/forgot-password" />
           <Stack.Screen name="auth/reset-password" />
+          <Stack.Screen name="auth/role-selection" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="delivery/index" />
           <Stack.Screen name="rider/ride-request" />

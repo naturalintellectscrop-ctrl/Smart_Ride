@@ -57,6 +57,7 @@ export interface RegisterData {
   email: string;
   phone: string;
   password: string;
+  role?: string;
 }
 
 // ============================================
@@ -247,6 +248,7 @@ export async function registerUser(data: RegisterData): Promise<AuthResponse> {
       email: data.email,
       phone: data.phone,
       password: data.password,
+      role: data.role || 'CLIENT',
     });
     
     if (response.success && response.data) {

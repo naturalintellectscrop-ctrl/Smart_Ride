@@ -1,7 +1,13 @@
 // ============================================
 // SMART RIDE MOBILE - RIDES HISTORY SCREEN
 // ============================================
-// Stitch Design System — Material Design 3 Green Theme
+// VERSION: STITCH-DS-001
+// PURPOSE: Ride history with filter tabs and ride cards
+// DESIGN: Stitch Design System — MD3 Green Theme
+// - GlowHeader with "My Rides" title
+// - Filter tabs (All, Active, Completed, Cancelled) with active indicator
+// - Ride cards with route info, status badges, fare, driver info
+// - Empty state with illustration
 // ============================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -25,10 +31,30 @@ import Animated, {
   SlideInRight,
   Layout,
 } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { useTaskStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
 import { Task } from '@/src/types';
+import { GlowHeader } from '@/src/components/GlowHeader';
+import { GlassCard } from '@/src/components/GlassCard';
+import { StatusBadge } from '@/src/components/StatusBadge';
+
+// ============================================
+// FILTER TABS CONFIG
+// ============================================
+type RideFilter = 'all' | 'active' | 'completed' | 'cancelled';
+
+const FILTER_TABS: { key: RideFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'cancelled', label: 'Cancelled' },
+];
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 
 export default function RidesScreen() {
   const router = useRouter();
@@ -37,7 +63,7 @@ export default function RidesScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'active' | 'history'>('history');
+  const [activeFilter, setActiveFilter] = useState<RideFilter>('all');
 
   const loadTasks = useCallback(async () => {
     setIsLoading(true);
@@ -76,19 +102,20 @@ export default function RidesScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const formatDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-      });
-    } catch {
-      return 'Invalid date';
+  // Filter tasks based on active tab
+  const filteredTasks = taskHistory.filter((task) => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'active') {
+      return !['COMPLETED', 'CANCELLED', 'FAILED', 'DELIVERED'].includes(task.status);
     }
-  };
+    if (activeFilter === 'completed') {
+      return ['COMPLETED', 'DELIVERED'].includes(task.status);
+    }
+    if (activeFilter === 'cancelled') {
+      return ['CANCELLED', 'FAILED'].includes(task.status);
+    }
+    return true;
+  });
 
   const renderTask = ({ item, index }: { item: Task; index: number }) => {
     const statusColor = TASK_STATUS_COLORS[item.status] || COLORS.primary;
@@ -98,7 +125,7 @@ export default function RidesScreen() {
         entering={SlideInRight.duration(400).delay(index * 80).springify()}
         layout={Layout.springify()}
       >
-        <TaskCard 
+        <RideCard 
           item={item} 
           statusColor={statusColor} 
           onPress={() => router.push(`/rider/ride-tracking?taskId=${item.id}`)}
@@ -120,8 +147,10 @@ export default function RidesScreen() {
     if (error && taskHistory.length === 0) {
       return (
         <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>📋</Text>
-          <Text style={styles.emptyText}>{error}</Text>
+          <View style={styles.emptyIconCircle}>
+            <Ionicons name="alert-circle-outline" size={36} color={COLORS.outline} />
+          </View>
+          <Text style={styles.emptyTitle}>{error}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={loadTasks}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
@@ -133,7 +162,7 @@ export default function RidesScreen() {
       <FlatList
         style={styles.list}
         contentContainerStyle={styles.listContent}
-        data={taskHistory}
+        data={filteredTasks}
         keyExtractor={(item) => item.id}
         renderItem={renderTask}
         refreshControl={
@@ -145,9 +174,17 @@ export default function RidesScreen() {
         }
         ListEmptyComponent={
           <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🚗</Text>
-            <Text style={styles.emptyText}>
-              {activeTab === 'active' ? 'No active rides' : 'No ride history yet'}
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="car-outline" size={40} color={COLORS.outline} />
+            </View>
+            <Text style={styles.emptyTitle}>
+              {activeFilter === 'active' ? 'No active rides' : 
+               activeFilter === 'completed' ? 'No completed rides' :
+               activeFilter === 'cancelled' ? 'No cancelled rides' :
+               'No ride history yet'}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {activeFilter === 'all' ? 'Book your first ride to get started' : 'Try a different filter'}
             </Text>
             <TouchableOpacity style={styles.bookButton} onPress={() => router.push('/rider/ride-request')}>
               <Text style={styles.bookButtonText}>Book a Ride</Text>
@@ -161,22 +198,18 @@ export default function RidesScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(400).springify()} style={styles.header}>
-        <Text style={styles.headerTitle}>My Rides</Text>
-      </Animated.View>
+      <GlowHeader title="My Rides" subtitle="Your ride history" />
 
-      {/* Tabs */}
+      {/* Filter Tabs */}
       <Animated.View entering={FadeInUp.duration(400).delay(100).springify()} style={styles.tabsContainer}>
-        <AnimatedTabButton
-          isActive={activeTab === 'active'}
-          onPress={() => setActiveTab('active')}
-          label="Active Ride"
-        />
-        <AnimatedTabButton
-          isActive={activeTab === 'history'}
-          onPress={() => setActiveTab('history')}
-          label="History"
-        />
+        {FILTER_TABS.map((tab) => (
+          <FilterTab
+            key={tab.key}
+            label={tab.label}
+            isActive={activeFilter === tab.key}
+            onPress={() => setActiveFilter(tab.key)}
+          />
+        ))}
       </Animated.View>
 
       {/* Content */}
@@ -185,8 +218,11 @@ export default function RidesScreen() {
   );
 }
 
-// Animated Tab Button
-function AnimatedTabButton({ 
+// ============================================
+// FILTER TAB COMPONENT
+// ============================================
+
+function FilterTab({ 
   isActive, 
   onPress, 
   label, 
@@ -213,18 +249,26 @@ function AnimatedTabButton({
     <TouchableOpacity 
       style={[styles.tabButton, isActive && styles.tabButtonActive]}
       onPress={handlePress}
+      activeOpacity={0.7}
     >
       <Animated.View style={animatedStyle}>
         <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>
           {label}
         </Text>
       </Animated.View>
+      {/* Active indicator dot */}
+      {isActive && (
+        <View style={styles.tabIndicator} />
+      )}
     </TouchableOpacity>
   );
 }
 
-// Animated Task Card
-function TaskCard({ item, statusColor, onPress }: { item: Task; statusColor: string; onPress: () => void }) {
+// ============================================
+// RIDE CARD COMPONENT
+// ============================================
+
+function RideCard({ item, statusColor, onPress }: { item: Task; statusColor: string; onPress: () => void }) {
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
@@ -239,81 +283,101 @@ function TaskCard({ item, statusColor, onPress }: { item: Task; statusColor: str
     }
   };
 
+  const rideIcon = item.taskType?.includes('BODA') ? 'bicycle' : 
+                   item.taskType?.includes('CAR') ? 'car' : 'cube-outline';
+  const rideLabel = item.taskType?.includes('BODA') ? 'Smart Boda' : 
+                    item.taskType?.includes('CAR') ? 'Smart Car' : 'Delivery';
+  const iconBgColor = item.taskType?.includes('BODA') ? COLORS.primaryFixed :
+                      item.taskType?.includes('CAR') ? COLORS.secondaryFixed :
+                      COLORS.tertiaryFixed;
+  const iconColor = item.taskType?.includes('BODA') ? COLORS.onPrimaryFixedVariant :
+                    item.taskType?.includes('CAR') ? COLORS.onSecondaryFixedVariant :
+                    COLORS.onTertiaryFixedVariant;
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.taskCard}>
-        <View style={styles.taskHeader}>
-          <View>
-            <Text style={styles.taskNumber}>#{item.taskNumber || item.id.slice(0, 8)}</Text>
-            <Text style={styles.taskType}>
-              {item.taskType?.includes('BODA') ? '🏍️ Smart Boda' : 
-               item.taskType?.includes('CAR') ? '🚗 Smart Car' : '📦 Delivery'}
-            </Text>
+      <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl}>
+        <View style={styles.rideCardContent}>
+          {/* Header: Ride type icon + number + status */}
+          <View style={styles.rideHeader}>
+            <View style={styles.rideHeaderLeft}>
+              <View style={[styles.rideTypeIconCircle, { backgroundColor: iconBgColor }]}>
+                <Ionicons name={rideIcon as any} size={18} color={iconColor} />
+              </View>
+              <View style={styles.rideHeaderText}>
+                <Text style={styles.rideTypeLabel}>{rideLabel}</Text>
+                <Text style={styles.rideNumber}>#{item.taskNumber || item.id.slice(0, 8)}</Text>
+              </View>
+            </View>
+            <StatusBadge
+              label={TASK_STATUS_LABELS[item.status] || item.status}
+              color={statusColor}
+              size="sm"
+            />
           </View>
-          <Animated.View 
-            entering={FadeIn.duration(300)}
-            style={[styles.statusBadge, { backgroundColor: `${statusColor}20` }]}
-          >
-            <Text style={[styles.statusText, { color: statusColor }]}>
-              {TASK_STATUS_LABELS[item.status] || item.status}
-            </Text>
-          </Animated.View>
-        </View>
 
-        <View style={styles.locationRow}>
-          <View style={[styles.locationDot, { backgroundColor: COLORS.secondary }]} />
-          <Text style={styles.locationText} numberOfLines={1}>
-            {item.pickupAddress || 'Pickup location'}
-          </Text>
-        </View>
-        <View style={styles.locationRow}>
-          <View style={[styles.locationDot, { backgroundColor: COLORS.primary }]} />
-          <Text style={styles.locationText} numberOfLines={1}>
-            {item.dropoffAddress || 'Dropoff location'}
-          </Text>
-        </View>
+          {/* Route info */}
+          <View style={styles.routeSection}>
+            <View style={styles.routeRow}>
+              <View style={[styles.routeDot, { backgroundColor: COLORS.secondaryFixed }]} />
+              <Text style={styles.routeText} numberOfLines={1}>
+                {item.pickupAddress || 'Pickup location'}
+              </Text>
+            </View>
+            {/* Route connector line */}
+            <View style={styles.routeConnector}>
+              <View style={styles.routeConnectorLine} />
+            </View>
+            <View style={styles.routeRow}>
+              <View style={[styles.routeDot, { backgroundColor: COLORS.primary }]} />
+              <Text style={styles.routeText} numberOfLines={1}>
+                {item.dropoffAddress || 'Dropoff location'}
+              </Text>
+            </View>
+          </View>
 
-        <View style={styles.taskFooter}>
-          <Text style={styles.taskDate}>{formatDate(item.createdAt)}</Text>
-          <Text style={styles.taskAmount}>UGX {(item.totalAmount || 0).toLocaleString()}</Text>
+          {/* Footer: date + fare + driver */}
+          <View style={styles.rideFooter}>
+            <View style={styles.rideFooterLeft}>
+              <Ionicons name="time-outline" size={14} color={COLORS.outline} />
+              <Text style={styles.rideDate}>{formatDate(item.createdAt)}</Text>
+            </View>
+            <Text style={styles.rideFare}>UGX {(item.totalAmount || 0).toLocaleString()}</Text>
+          </View>
         </View>
-      </View>
+      </GlassCard>
     </TouchableOpacity>
   );
 }
 
+// ============================================
+// STYLES
+// ============================================
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background,
   },
-  header: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    paddingTop: 60,
-    paddingBottom: SPACING.md,
-    paddingHorizontal: SPACING.lg + SPACING.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    fontWeight: TYPOGRAPHY.headlineLg.fontWeight as any,
-    color: COLORS.onSurface,
-  },
+
+  // Filter Tabs
   tabsContainer: {
     flexDirection: 'row',
     backgroundColor: COLORS.surfaceContainerLowest,
-    paddingHorizontal: SPACING.lg + SPACING.xs,
-    paddingVertical: SPACING.sm + SPACING.xs,
+    paddingHorizontal: SPACING.containerMargin,
+    paddingVertical: SPACING.sm,
     gap: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
   },
   tabButton: {
     flex: 1,
-    paddingVertical: SPACING.sm + SPACING.xs,
+    paddingVertical: SPACING.sm + 2,
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surfaceContainer,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   tabButtonActive: {
     backgroundColor: COLORS.primary,
@@ -322,12 +386,21 @@ const styles = StyleSheet.create({
   tabButtonText: {
     textAlign: 'center',
     fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
-    fontSize: TYPOGRAPHY.labelLg.fontSize,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
     color: COLORS.outline,
   },
   tabButtonTextActive: {
     color: COLORS.onPrimary,
   },
+  tabIndicator: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.onPrimary,
+    marginTop: SPACING.xs,
+  },
+
+  // Loading
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
@@ -335,30 +408,47 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.xl + SPACING.md,
   },
   loadingText: {
-    marginTop: SPACING.md,
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.outline,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    marginTop: SPACING.md,
   },
+
+  // Empty State
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SPACING.xl + SPACING.md,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: SPACING.md,
   },
-  emptyText: {
+  emptyTitle: {
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.outline,
     textAlign: 'center',
-    marginBottom: SPACING.md,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    marginTop: SPACING.xs,
   },
   retryButton: {
+    marginTop: SPACING.md,
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.xl,
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + SPACING.xs,
+    paddingVertical: SPACING.sm + 2,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...SHADOWS.button,
   },
   retryButtonText: {
@@ -369,9 +459,12 @@ const styles = StyleSheet.create({
   bookButton: {
     marginTop: SPACING.md,
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.xl,
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + SPACING.xs,
+    paddingVertical: SPACING.sm + 2,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...SHADOWS.button,
   },
   bookButtonText: {
@@ -379,79 +472,109 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
     fontSize: TYPOGRAPHY.labelLg.fontSize,
   },
+
+  // List
   list: {
     flex: 1,
   },
   listContent: {
-    padding: SPACING.lg + SPACING.xs,
+    padding: SPACING.containerMargin,
+    paddingBottom: 128,
+    gap: SPACING.gutter,
   },
-  taskCard: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
+
+  // Ride Card
+  rideCardContent: {
     padding: SPACING.md,
-    marginBottom: SPACING.gutter,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
   },
-  taskHeader: {
+  rideHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: SPACING.gutter,
+    alignItems: 'center',
+    marginBottom: SPACING.md,
   },
-  taskNumber: {
-    color: COLORS.outline,
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-  },
-  taskType: {
-    fontWeight: '700' as const,
-    color: COLORS.onSurface,
-    fontSize: TYPOGRAPHY.bodyMd.fontSize,
-    marginTop: SPACING.xs / 2,
-  },
-  statusBadge: {
-    paddingHorizontal: SPACING.gutter,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.full,
-  },
-  statusText: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    fontWeight: TYPOGRAPHY.labelMd.fontWeight as any,
-  },
-  locationRow: {
+  rideHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.xs,
-  },
-  locationDot: {
-    width: SPACING.sm,
-    height: SPACING.sm,
-    borderRadius: SPACING.xs,
-    marginRight: SPACING.sm,
-    marginTop: SPACING.xs / 2,
-  },
-  locationText: {
+    gap: SPACING.gutter,
     flex: 1,
-    color: COLORS.onSurfaceVariant,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
-  taskFooter: {
+  rideTypeIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rideHeaderText: {
+    flex: 1,
+  },
+  rideTypeLabel: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+  },
+  rideNumber: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+    marginTop: 1,
+  },
+
+  // Route Section
+  routeSection: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.gutter,
+    marginBottom: SPACING.md,
+  },
+  routeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  routeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  routeText: {
+    flex: 1,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  routeConnector: {
+    paddingLeft: 4,
+    height: 16,
+    justifyContent: 'center',
+  },
+  routeConnectorLine: {
+    width: 2,
+    height: 12,
+    backgroundColor: COLORS.outlineVariant,
+    borderRadius: 1,
+  },
+
+  // Ride Footer
+  rideFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingTop: SPACING.gutter,
-    marginTop: SPACING.gutter,
     borderTopWidth: 1,
     borderTopColor: COLORS.outlineVariant,
   },
-  taskDate: {
-    color: COLORS.outline,
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
+  rideFooterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
   },
-  taskAmount: {
-    fontWeight: '700' as const,
+  rideDate: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+  },
+  rideFare: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '700',
     color: COLORS.primary,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
 });

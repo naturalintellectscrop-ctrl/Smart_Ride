@@ -1,8 +1,12 @@
 // ============================================
 // SMART RIDE MOBILE - CHAT DETAIL SCREEN
 // ============================================
-// Full chat interface with messages, typing indicator,
-// quick actions, and real-time updates
+// Stitch Design System — Secure Chat Interface
+// Chat header with online status + call button,
+// Message bubbles (left: surfaceContainerHighest,
+// right: primaryContainer), Input bar with send
+// button (bg-surfaceContainerLow rounded-full),
+// Secure connection badge
 // ============================================
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -25,8 +29,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInUp, withRepeat, withTiming, useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { useChatStore, Conversation, Message } from '@/src/store/chatStore';
 import { socketService } from '@/src/services/socket.service';
-import { ChatBubble } from '@/src/components';
 import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { GlassCard } from '@/src/components/GlassCard';
 
 // ============================================
 // TYPING INDICATOR COMPONENT
@@ -78,32 +82,159 @@ const typingStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    marginLeft: 4,
-    marginBottom: 8,
-    gap: 8,
+    marginLeft: SPACING.md,
+    marginBottom: SPACING.sm,
+    gap: SPACING.sm,
   },
   bubble: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(37, 37, 48, 0.8)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
+    backgroundColor: COLORS.surfaceContainerHighest,
+    borderRadius: RADIUS.lg,
     borderBottomLeftRadius: 4,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 5,
+    paddingHorizontal: SPACING.md - 2,
+    paddingVertical: SPACING.sm + 2,
+    gap: SPACING.xs,
   },
   dot: {
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: COLORS.textMuted,
+    backgroundColor: COLORS.onSurfaceVariant,
   },
   text: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textDim,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     fontStyle: 'italic',
+  },
+});
+
+// ============================================
+// STITCH CHAT BUBBLE — Left: bg-surfaceContainerHighest, Right: bg-primaryContainer
+// ============================================
+
+function StitchChatBubble({
+  message,
+  time,
+  isOwn,
+  isRead,
+  senderName,
+  type,
+}: {
+  message: string;
+  time: string;
+  isOwn: boolean;
+  isRead?: boolean;
+  senderName?: string;
+  type?: 'text' | 'image' | 'system';
+}) {
+  if (type === 'system') {
+    return (
+      <View style={bubbleStyles.systemContainer}>
+        <Text style={bubbleStyles.systemText}>{message}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[bubbleStyles.container, isOwn ? bubbleStyles.ownContainer : bubbleStyles.otherContainer]}>
+      {senderName && !isOwn && (
+        <Text style={bubbleStyles.senderName}>{senderName}</Text>
+      )}
+      <View style={[bubbleStyles.bubble, isOwn ? bubbleStyles.ownBubble : bubbleStyles.otherBubble]}>
+        <Text style={[bubbleStyles.message, isOwn ? bubbleStyles.ownMessage : bubbleStyles.otherMessage]}>
+          {message}
+        </Text>
+      </View>
+      <View style={[bubbleStyles.meta, isOwn ? bubbleStyles.ownMeta : bubbleStyles.otherMeta]}>
+        <Text style={bubbleStyles.time}>{time}</Text>
+        {isOwn && (
+          <Ionicons
+            name={isRead ? 'checkmark-done' : 'checkmark'}
+            size={14}
+            color={isRead ? COLORS.secondary : COLORS.outline}
+            style={bubbleStyles.readIcon}
+          />
+        )}
+      </View>
+    </View>
+  );
+}
+
+const bubbleStyles = StyleSheet.create({
+  container: {
+    marginBottom: SPACING.md,
+    maxWidth: '78%',
+  },
+  ownContainer: {
+    alignSelf: 'flex-end',
+  },
+  otherContainer: {
+    alignSelf: 'flex-start',
+  },
+  senderName: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.xs,
+    marginLeft: SPACING.xs,
+    fontWeight: '500',
+  },
+  bubble: {
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+  },
+  // Right: bg-primaryContainer — Stitch Design
+  ownBubble: {
+    backgroundColor: COLORS.primaryContainer,
+    borderBottomRightRadius: 4,
+  },
+  // Left: bg-surfaceContainerHighest — Stitch Design
+  otherBubble: {
+    backgroundColor: COLORS.surfaceContainerHighest,
+    borderBottomLeftRadius: 4,
+  },
+  message: {
+    ...TYPOGRAPHY.bodyMd,
+    lineHeight: 20,
+  },
+  ownMessage: {
+    color: COLORS.onSurface,
+  },
+  otherMessage: {
+    color: COLORS.onSurface,
+  },
+  meta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SPACING.xs,
+    gap: SPACING.xs,
+  },
+  ownMeta: {
+    justifyContent: 'flex-end',
+    marginRight: SPACING.xs,
+  },
+  otherMeta: {
+    marginLeft: SPACING.xs,
+  },
+  time: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+  },
+  readIcon: {
+    marginTop: -1,
+  },
+  systemContainer: {
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  systemText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.md,
   },
 });
 
@@ -209,14 +340,12 @@ export default function ChatDetailScreen() {
     if (conversationId) {
       sendTyping(conversationId);
 
-      // Clear previous timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
 
-      // Stop typing after 3 seconds of inactivity
       typingTimeoutRef.current = setTimeout(() => {
-        socketService.chatTyping({ conversationId, isTyping: false });
+        socketService.chatTyping(conversationId, false);
       }, 3000);
     }
   }, [conversationId, sendTyping]);
@@ -254,7 +383,6 @@ export default function ChatDetailScreen() {
       {
         text: 'Photo',
         onPress: () => {
-          // Placeholder for image picker
           if (conversationId) {
             sendMessage(conversationId, {
               content: '📷 Sent a photo',
@@ -279,7 +407,6 @@ export default function ChatDetailScreen() {
     const isOwn = item.senderId === 'client-1';
     const isSystem = item.type === 'SYSTEM';
 
-    // Check if we should show a date separator
     const showDateSeparator = index === 0 || (() => {
       const prevDate = new Date(messages[index - 1].createdAt).toDateString();
       const currDate = new Date(item.createdAt).toDateString();
@@ -299,7 +426,7 @@ export default function ChatDetailScreen() {
             </Text>
           </View>
         )}
-        <ChatBubble
+        <StitchChatBubble
           message={item.content}
           time={formatMessageTime(item.createdAt)}
           isOwn={isOwn}
@@ -332,15 +459,15 @@ export default function ChatDetailScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 || 48 }]}>
+      {/* Chat Header — Stitch Design with online status and call button */}
+      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm || 48 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+            <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -355,22 +482,24 @@ export default function ChatDetailScreen() {
             </View>
           </View>
 
+          {/* Call button */}
           <TouchableOpacity
             style={styles.headerCallButton}
             onPress={handleCall}
             activeOpacity={0.7}
           >
-            <Ionicons name="call-outline" size={20} color={COLORS.secondary} />
+            <Ionicons name="call-outline" size={20} color={COLORS.primary} />
           </TouchableOpacity>
         </View>
 
-        {/* Gradient glow border */}
-        <LinearGradient
-          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
-        />
+        {/* Secure connection badge — Stitch Design */}
+        <View style={styles.secureBadge}>
+          <Ionicons name="shield-checkmark" size={12} color={COLORS.primary} />
+          <Text style={styles.secureBadgeText}>End-to-end encrypted</Text>
+        </View>
+
+        {/* Subtle bottom border */}
+        <View style={styles.headerBorder} />
       </View>
 
       {/* Messages */}
@@ -403,7 +532,7 @@ export default function ChatDetailScreen() {
           onPress={handleCall}
           activeOpacity={0.7}
         >
-          <Ionicons name="call-outline" size={18} color={COLORS.secondary} />
+          <Ionicons name="call-outline" size={16} color={COLORS.primary} />
           <Text style={styles.quickActionText}>Call</Text>
         </TouchableOpacity>
         <TouchableOpacity
@@ -411,20 +540,20 @@ export default function ChatDetailScreen() {
           onPress={handleShareLocation}
           activeOpacity={0.7}
         >
-          <Ionicons name="location-outline" size={18} color={COLORS.primary} />
+          <Ionicons name="location-outline" size={16} color={COLORS.primary} />
           <Text style={styles.quickActionText}>Location</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Message Input Bar */}
-      <View style={[styles.inputBar, { paddingBottom: insets.bottom || 16 }]}>
+      {/* Message Input Bar — Stitch: bg-surfaceContainerLow rounded-full with send button */}
+      <View style={[styles.inputBar, { paddingBottom: insets.bottom || SPACING.md }]}>
         <View style={styles.inputContainer}>
           <TouchableOpacity
             style={styles.attachButton}
             onPress={handleAttachment}
             activeOpacity={0.7}
           >
-            <Ionicons name="attach-outline" size={22} color={COLORS.textMuted} />
+            <Ionicons name="attach-outline" size={22} color={COLORS.onSurfaceVariant} />
           </TouchableOpacity>
 
           <TextInput
@@ -432,12 +561,13 @@ export default function ChatDetailScreen() {
             value={inputText}
             onChangeText={handleInputChange}
             placeholder="Type a message..."
-            placeholderTextColor={COLORS.textMuted}
+            placeholderTextColor={COLORS.onSurfaceVariant}
             multiline
             maxLength={1000}
             editable={!isSendingMessage}
           />
 
+          {/* Send button — Stitch: gradient circle */}
           <TouchableOpacity
             style={styles.sendButton}
             onPress={handleSend}
@@ -448,16 +578,16 @@ export default function ChatDetailScreen() {
               colors={
                 inputText.trim()
                   ? (GRADIENTS.primary as unknown as [string, string])
-                  : ['#333', '#444']
+                  : [COLORS.surfaceContainerHigh, COLORS.surfaceContainerHigh]
               }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.sendGradient}
             >
               {isSendingMessage ? (
-                <ActivityIndicator size="small" color={COLORS.background} />
+                <ActivityIndicator size="small" color={COLORS.onPrimary} />
               ) : (
-                <Ionicons name="send" size={18} color={inputText.trim() ? COLORS.background : COLORS.textDim} />
+                <Ionicons name="send" size={18} color={inputText.trim() ? COLORS.onPrimary : COLORS.onSurfaceVariant} />
               )}
             </LinearGradient>
           </TouchableOpacity>
@@ -467,55 +597,56 @@ export default function ChatDetailScreen() {
   );
 }
 
+// ============================================
+// STYLES
+// ============================================
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
-  // Header
+  // Header — Stitch Design
   header: {
-    backgroundColor: COLORS.background,
-    paddingBottom: 0,
+    backgroundColor: COLORS.surfaceContainerLowest,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingBottom: 12,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.backgroundElevated,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.sm,
   },
   headerCenter: {
     flex: 1,
-    marginLeft: 4,
+    marginLeft: SPACING.xs,
   },
   headerName: {
-    fontSize: 17,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '700',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     letterSpacing: -0.3,
   },
   onlineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: SPACING.xs,
     marginTop: 2,
   },
   onlineDot: {
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: COLORS.textDim,
+    backgroundColor: COLORS.outlineVariant,
   },
   onlineDotActive: {
     backgroundColor: COLORS.primary,
@@ -525,31 +656,44 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   onlineText: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textDim,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
   },
   onlineTextActive: {
     color: COLORS.primary,
   },
   headerCallButton: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.backgroundElevated,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 212, 255, 0.2)',
+    backgroundColor: COLORS.primaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: SPACING.sm,
   },
-  glowBorder: {
+
+  // Secure badge — Stitch Design
+  secureBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    paddingBottom: SPACING.sm,
+  },
+  secureBadgeText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+  headerBorder: {
     height: 1,
+    backgroundColor: COLORS.outlineVariant,
   },
 
   // Messages
   messageList: {
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.gutter,
+    paddingTop: SPACING.sm,
     paddingBottom: SPACING.sm,
   },
   emptyList: {
@@ -562,8 +706,8 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: SPACING.sm,
-    color: COLORS.textMuted,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
   },
 
   // Date Separator
@@ -572,9 +716,9 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.sm,
   },
   dateText: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textDim,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+    backgroundColor: COLORS.surfaceContainerHigh,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,
     borderRadius: RADIUS.md,
@@ -591,22 +735,20 @@ const styles = StyleSheet.create({
     width: 88,
     height: 88,
     borderRadius: 44,
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.15)',
+    backgroundColor: COLORS.primaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
   emptyTitle: {
-    fontSize: TYPOGRAPHY.headlineMd.fontSize,
+    ...TYPOGRAPHY.headlineMd,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.sm,
   },
   emptySubtitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     textAlign: 'center',
     lineHeight: 20,
   },
@@ -618,32 +760,30 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     gap: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.borderLight,
+    borderTopColor: COLORS.outlineVariant,
   },
   quickActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.backgroundSurface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.xl,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    gap: 6,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md - 2,
+    paddingVertical: SPACING.sm - 2,
+    gap: SPACING.xs,
   },
   quickActionText: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     fontWeight: '500',
   },
 
-  // Input Bar
+  // Input Bar — Stitch: bg-surfaceContainerLow rounded-full with send button
   inputBar: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    paddingHorizontal: SPACING.gutter,
-    paddingTop: 10,
+    borderTopColor: COLORS.outlineVariant,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm + 2,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -651,31 +791,27 @@ const styles = StyleSheet.create({
     gap: SPACING.sm,
   },
   attachButton: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.backgroundSurface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
   },
   textInput: {
     flex: 1,
-    backgroundColor: COLORS.backgroundSurface,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.xl,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
-    fontSize: 15,
-    color: COLORS.text,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md + 2,
+    paddingVertical: SPACING.sm + 2,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
     maxHeight: 100,
     minHeight: 42,
   },
   sendButton: {
-    borderRadius: RADIUS.xl,
+    borderRadius: 21,
     overflow: 'hidden',
     marginBottom: SPACING.xs,
   },

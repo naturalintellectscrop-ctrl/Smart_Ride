@@ -51,6 +51,15 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  // Role selection
+  const [selectedRole, setSelectedRole] = useState<string>('CLIENT');
+
+  const ROLES = [
+    { id: 'CLIENT', label: 'Client', icon: '🚗', desc: 'Book rides & order' },
+    { id: 'RIDER', label: 'Rider', icon: '🏍️', desc: 'Earn on the road' },
+    { id: 'MERCHANT', label: 'Merchant', icon: '🏪', desc: 'Sell & deliver' },
+  ];
+
   // Animation for initial entrance — switches to plain View after completion
   // to prevent Animated transforms from interfering with TextInput cursor on Android
   const [animationDone, setAnimationDone] = useState(false);
@@ -85,6 +94,13 @@ export default function RegisterScreen() {
     const authenticated = await isAuthenticated();
     const { isAuthenticated: storeAuth } = useAuthStore.getState();
     if (authenticated || storeAuth) {
+      // If user has a role, go to appropriate screen; otherwise go to role selection
+      const { user } = useAuthStore.getState();
+      if (user?.role && user.role !== 'CLIENT') {
+        // Already has a specific role
+      } else if (authenticated || storeAuth) {
+        // Will check role after navigation
+      }
       router.replace('/(tabs)');
     }
   };
@@ -254,6 +270,7 @@ export default function RegisterScreen() {
         email: email.trim().toLowerCase(),
         phone: formattedPhone,
         password,
+        role: selectedRole,
       });
 
       if (result.success) {
@@ -266,10 +283,17 @@ export default function RegisterScreen() {
             email: userData.email,
             name: userData.name,
             phone: userData.phone,
-            role: userData.role,
+            role: userData.role || selectedRole,
           }, token);
         }
-        router.replace('/(tabs)');
+        // Navigate based on role
+        if (selectedRole === 'RIDER') {
+          router.replace('/rider/onboarding');
+        } else if (selectedRole === 'MERCHANT') {
+          router.replace('/merchant/register');
+        } else {
+          router.replace('/(tabs)');
+        }
       } else {
         setError(result.error || 'Registration failed');
       }
@@ -447,6 +471,42 @@ export default function RegisterScreen() {
               returnKeyType="go"
               onSubmitEditing={handleRegister}
             />
+
+            {/* Role Selection */}
+            <View style={styles.roleSection}>
+              <Text style={styles.roleLabel}>I want to use Smart Ride as:</Text>
+              <View style={styles.roleGrid}>
+                {ROLES.map((role) => {
+                  const isSelected = selectedRole === role.id;
+                  return (
+                    <TouchableOpacity
+                      key={role.id}
+                      style={[
+                        styles.roleChip,
+                        isSelected && styles.roleChipSelected,
+                      ]}
+                      onPress={() => setSelectedRole(role.id)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.roleChipIcon}>{role.icon}</Text>
+                      <Text style={[
+                        styles.roleChipLabel,
+                        isSelected && styles.roleChipLabelSelected,
+                      ]}>
+                        {role.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              <Text style={styles.roleHint}>
+                {selectedRole === 'RIDER'
+                  ? 'You\'ll complete rider onboarding after registration'
+                  : selectedRole === 'MERCHANT'
+                  ? 'You\'ll set up your business after registration'
+                  : 'Book rides, order food, shop & more'}
+              </Text>
+            </View>
 
             {/* Terms Checkbox */}
             <TouchableOpacity
@@ -691,6 +751,51 @@ const styles = StyleSheet.create({
     borderWidth: 0,
     height: 0,
     overflow: 'hidden',
+  },
+  // Role selection
+  roleSection: {
+    marginTop: SPACING.md,
+  },
+  roleLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.sm,
+  },
+  roleGrid: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  roleChip: {
+    flex: 1,
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  roleChipSelected: {
+    backgroundColor: 'rgba(0, 95, 58, 0.06)',
+    borderColor: COLORS.primary,
+  },
+  roleChipIcon: {
+    fontSize: 24,
+    marginBottom: SPACING.xs,
+  },
+  roleChipLabel: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+  },
+  roleChipLabelSelected: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  roleHint: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+    marginTop: SPACING.sm,
+    textAlign: 'center',
   },
   // Terms checkbox
   termsRow: {

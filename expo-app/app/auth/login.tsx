@@ -61,8 +61,19 @@ export default function LoginScreen() {
 
   const checkAuth = async () => {
     const authenticated = await isAuthenticated();
-    const { isAuthenticated: storeAuth } = useAuthStore.getState();
+    const { isAuthenticated: storeAuth, user } = useAuthStore.getState();
     if (authenticated || storeAuth) {
+      // Route based on user role
+      navigateByRole(user?.role);
+    }
+  };
+
+  const navigateByRole = (role?: string) => {
+    if (role === 'RIDER') {
+      router.replace('/rider/onboarding');
+    } else if (role === 'MERCHANT') {
+      router.replace('/merchant/register');
+    } else {
       router.replace('/(tabs)');
     }
   };
@@ -128,7 +139,7 @@ export default function LoginScreen() {
               role: userData.role,
             }, token);
           }
-          router.replace('/(tabs)');
+          navigateByRole(userData?.role);
         } else {
           setError(result.error || 'Google Sign-In failed. Please try again.');
         }
@@ -222,7 +233,7 @@ export default function LoginScreen() {
             role: userData.role,
           }, token);
         }
-        router.replace('/(tabs)');
+        navigateByRole(userData?.role);
       } else {
         setError(result.error || 'Login failed');
       }
@@ -705,9 +716,9 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   forgotText: {
-    color: COLORS.primary,
-    fontWeight: '600',
     ...TYPOGRAPHY.bodySm,
+    color: COLORS.primary,
+    fontWeight: '600' as const,
   },
 
   // ─── Sign Up ────────────────────────────────────
@@ -721,9 +732,9 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodySm,
   },
   signUpLink: {
-    color: COLORS.primary,
-    fontWeight: '600',
     ...TYPOGRAPHY.bodySm,
+    color: COLORS.primary,
+    fontWeight: '600' as const,
   },
 
   // ─── Footer Policy ──────────────────────────────

@@ -211,3 +211,32 @@ export interface Location {
   longitude: number;
   address: string;
 }
+
+// Merchant Dashboard Types (for store compatibility)
+export interface MerchantOrder {
+  id: string;
+  orderNumber: string;
+  status: string;
+  customerName: string;
+  items: { name: string; quantity: number; price: number }[];
+  totalAmount: number;
+  createdAt: string;
+  paymentMethod: string;
+  paymentStatus: string;
+}
+
+export interface MerchantAnalytics {
+  totalOrders: number;
+  totalRevenue: number;
+  averageOrderValue: number;
+  pendingOrders: number;
+  completedOrders: number;
+}
+
+export interface MerchantEarnings {
+  today: number;
+  thisWeek: number;
+  thisMonth: number;
+  total: number;
+  pendingPayout: number;
+}

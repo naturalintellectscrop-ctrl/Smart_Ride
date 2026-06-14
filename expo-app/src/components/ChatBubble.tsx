@@ -1,13 +1,15 @@
 // ============================================
 // SMART RIDE MOBILE - CHAT BUBBLE COMPONENT
 // ============================================
-// Message bubble for in-app messaging
+// Stitch Design System — Material Design 3
+// Left: bg-surfaceContainerHighest
+// Right: bg-primaryContainer
 // ============================================
 
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../constants';
 
 interface ChatBubbleProps {
   message: string;
@@ -18,11 +20,11 @@ interface ChatBubbleProps {
   type?: 'text' | 'image' | 'system';
 }
 
-export function ChatBubble({ 
-  message, 
-  time, 
-  isOwn, 
-  isRead, 
+export function ChatBubble({
+  message,
+  time,
+  isOwn,
+  isRead,
   senderName,
   type = 'text',
 }: ChatBubbleProps) {
@@ -50,7 +52,7 @@ export function ChatBubble({
           <Ionicons
             name={isRead ? 'checkmark-done' : 'checkmark'}
             size={14}
-            color={isRead ? COLORS.secondary : COLORS.textDim}
+            color={isRead ? COLORS.secondary : COLORS.outline}
             style={styles.readIcon}
           />
         )}
@@ -61,8 +63,8 @@ export function ChatBubble({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 12,
-    maxWidth: '80%',
+    marginBottom: SPACING.md,
+    maxWidth: '78%',
   },
   ownContainer: {
     alignSelf: 'flex-end',
@@ -71,69 +73,67 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   senderName: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    marginBottom: 4,
-    marginLeft: 4,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.xs,
+    marginLeft: SPACING.xs,
     fontWeight: '500',
   },
   bubble: {
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
   },
+  // Right: bg-primaryContainer — Stitch Design
   ownBubble: {
-    backgroundColor: 'rgba(0, 255, 136, 0.15)',
+    backgroundColor: COLORS.primaryContainer,
     borderBottomRightRadius: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.2)',
   },
+  // Left: bg-surfaceContainerHighest — Stitch Design
   otherBubble: {
-    backgroundColor: 'rgba(37, 37, 48, 0.8)',
+    backgroundColor: COLORS.surfaceContainerHighest,
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   message: {
-    fontSize: 15,
+    ...TYPOGRAPHY.bodyMd,
     lineHeight: 20,
   },
   ownMessage: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   otherMessage: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   meta: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    gap: 4,
+    marginTop: SPACING.xs,
+    gap: SPACING.xs,
   },
   ownMeta: {
     justifyContent: 'flex-end',
-    marginRight: 4,
+    marginRight: SPACING.xs,
   },
   otherMeta: {
-    marginLeft: 4,
+    marginLeft: SPACING.xs,
   },
   time: {
-    fontSize: 11,
-    color: COLORS.textDim,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
   },
   readIcon: {
     marginTop: -1,
   },
   systemContainer: {
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   systemText: {
-    fontSize: 12,
-    color: COLORS.textDim,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.md,
   },
 });

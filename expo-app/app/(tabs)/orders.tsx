@@ -1,7 +1,13 @@
 // ============================================
 // SMART RIDE MOBILE - ORDERS SCREEN
 // ============================================
-// Stitch Design System — Material Design 3 Green Theme
+// VERSION: STITCH-DS-001
+// PURPOSE: Merchant orders with filter tabs and order cards
+// DESIGN: Stitch Design System — MD3 Green Theme
+// - GlowHeader with "Orders" title
+// - Order tabs (All, Active, Completed, Cancelled)
+// - Order cards with merchant info, item count, status, total amount
+// - Empty state with illustration
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -26,15 +32,37 @@ import Animated, {
   ZoomIn,
   Layout,
 } from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, TASK_STATUS_COLORS } from '@/src/constants';
 import { Order } from '@/src/types';
+import { GlowHeader } from '@/src/components/GlowHeader';
+import { GlassCard } from '@/src/components/GlassCard';
+import { StatusBadge } from '@/src/components/StatusBadge';
+import { ServiceIcon } from '@/src/components/ServiceIcon';
+
+// ============================================
+// FILTER TABS CONFIG
+// ============================================
+type OrderFilter = 'all' | 'active' | 'completed' | 'cancelled';
+
+const ORDER_TABS: { key: OrderFilter; label: string }[] = [
+  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'cancelled', label: 'Cancelled' },
+];
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 
 export default function OrdersScreen() {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<OrderFilter>('all');
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -74,8 +102,10 @@ export default function OrdersScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'DELIVERED':
+      case 'COMPLETED':
         return COLORS.success;
       case 'CANCELLED':
+      case 'FAILED':
         return COLORS.error;
       case 'PREPARING':
         return COLORS.warning;
@@ -83,6 +113,21 @@ export default function OrdersScreen() {
         return COLORS.primary;
     }
   };
+
+  // Filter orders based on active tab
+  const filteredOrders = orders.filter((order) => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'active') {
+      return !['DELIVERED', 'COMPLETED', 'CANCELLED', 'FAILED'].includes(order.status);
+    }
+    if (activeFilter === 'completed') {
+      return ['DELIVERED', 'COMPLETED'].includes(order.status);
+    }
+    if (activeFilter === 'cancelled') {
+      return ['CANCELLED', 'FAILED'].includes(order.status);
+    }
+    return true;
+  });
 
   const renderOrder = ({ item, index }: { item: Order; index: number }) => (
     <Animated.View
@@ -101,35 +146,45 @@ export default function OrdersScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <Animated.View entering={FadeInDown.duration(400).springify()} style={styles.header}>
-        <Text style={styles.headerTitle}>Orders</Text>
+      <GlowHeader title="Orders" subtitle="Your order history" />
+
+      {/* Filter Tabs */}
+      <Animated.View entering={FadeInUp.duration(400).delay(100).springify()} style={styles.tabsContainer}>
+        {ORDER_TABS.map((tab) => (
+          <OrderFilterTab
+            key={tab.key}
+            label={tab.label}
+            isActive={activeFilter === tab.key}
+            onPress={() => setActiveFilter(tab.key)}
+          />
+        ))}
       </Animated.View>
 
-      {/* Quick Actions */}
-      <Animated.View entering={FadeInUp.duration(400).delay(100).springify()} style={styles.quickActions}>
-        <QuickAction 
-          icon="🍔" 
-          label="Food" 
+      {/* Quick Service Actions */}
+      <Animated.View entering={FadeInUp.duration(400).delay(150).springify()} style={styles.quickActionsSection}>
+        <QuickServiceAction
+          icon="restaurant"
+          label="Food"
+          color={COLORS.primary}
           onPress={() => router.push('/orders/restaurants')}
-          delay={150}
         />
-        <QuickAction 
-          icon="🛒" 
-          label="Shop" 
+        <QuickServiceAction
+          icon="bag"
+          label="Shop"
+          color={COLORS.secondary}
           onPress={() => router.push('/shopping')}
-          delay={200}
         />
-        <QuickAction 
-          icon="📦" 
-          label="Delivery" 
+        <QuickServiceAction
+          icon="cube"
+          label="Delivery"
+          color={COLORS.tertiary}
           onPress={() => router.push('/delivery')}
-          delay={250}
         />
-        <QuickAction 
-          icon="💊" 
-          label="Health" 
+        <QuickServiceAction
+          icon="medkit"
+          label="Health"
+          color={COLORS.error}
           onPress={() => router.push('/health')}
-          delay={300}
         />
       </Animated.View>
 
@@ -137,12 +192,13 @@ export default function OrdersScreen() {
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading orders...</Text>
         </View>
       ) : (
         <FlatList
           style={styles.list}
           contentContainerStyle={styles.listContent}
-          data={orders}
+          data={filteredOrders}
           keyExtractor={(item) => item.id}
           renderItem={renderOrder}
           refreshControl={
@@ -154,8 +210,18 @@ export default function OrdersScreen() {
           }
           ListEmptyComponent={
             <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📦</Text>
-              <Text style={styles.emptyText}>No orders yet</Text>
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="bag-outline" size={40} color={COLORS.outline} />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {activeFilter === 'all' ? 'No orders yet' : 
+                 activeFilter === 'active' ? 'No active orders' :
+                 activeFilter === 'completed' ? 'No completed orders' :
+                 'No cancelled orders'}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {activeFilter === 'all' ? 'Order food, shop, or send a package' : 'Try a different filter'}
+              </Text>
               <TouchableOpacity style={styles.orderButton} onPress={() => router.push('/orders/restaurants')}>
                 <Text style={styles.orderButtonText}>Order Food</Text>
               </TouchableOpacity>
@@ -167,8 +233,64 @@ export default function OrdersScreen() {
   );
 }
 
-// Quick Action with Animation
-function QuickAction({ icon, label, onPress, delay }: { icon: string; label: string; onPress: () => void; delay: number }) {
+// ============================================
+// ORDER FILTER TAB COMPONENT
+// ============================================
+
+function OrderFilterTab({ 
+  isActive, 
+  onPress, 
+  label, 
+}: { 
+  isActive: boolean; 
+  onPress: () => void; 
+  label: string;
+}) {
+  const scale = useSharedValue(1);
+
+  const handlePress = () => {
+    scale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
+    setTimeout(() => {
+      scale.value = withSpring(1, { damping: 15, stiffness: 300 });
+    }, 100);
+    onPress();
+  };
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <TouchableOpacity 
+      style={[styles.tabButton, isActive && styles.tabButtonActive]}
+      onPress={handlePress}
+      activeOpacity={0.7}
+    >
+      <Animated.View style={animatedStyle}>
+        <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>
+          {label}
+        </Text>
+      </Animated.View>
+      {isActive && <View style={styles.tabIndicator} />}
+    </TouchableOpacity>
+  );
+}
+
+// ============================================
+// QUICK SERVICE ACTION COMPONENT
+// ============================================
+
+function QuickServiceAction({ 
+  icon, 
+  label, 
+  color, 
+  onPress 
+}: { 
+  icon: string; 
+  label: string; 
+  color: string; 
+  onPress: () => void;
+}) {
   const scale = useSharedValue(1);
 
   const handlePressIn = () => {
@@ -184,23 +306,27 @@ function QuickAction({ icon, label, onPress, delay }: { icon: string; label: str
   }));
 
   return (
-    <Animated.View entering={ZoomIn.delay(delay).duration(300).springify()} style={styles.quickActionItem}>
-      <TouchableOpacity 
-        onPress={onPress}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        activeOpacity={0.8}
-      >
-        <Animated.View style={animatedStyle}>
-          <Text style={styles.quickActionIcon}>{icon}</Text>
-          <Text style={styles.quickActionLabel}>{label}</Text>
-        </Animated.View>
-      </TouchableOpacity>
-    </Animated.View>
+    <TouchableOpacity
+      onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      activeOpacity={0.8}
+      style={styles.quickActionItem}
+    >
+      <Animated.View style={[styles.quickActionContent, animatedStyle]}>
+        <View style={[styles.quickActionIconCircle, { backgroundColor: `${color}15` }]}>
+          <Ionicons name={icon as any} size={22} color={color} />
+        </View>
+        <Text style={styles.quickActionLabel}>{label}</Text>
+      </Animated.View>
+    </TouchableOpacity>
   );
 }
 
-// Order Card with Animation
+// ============================================
+// ORDER CARD COMPONENT
+// ============================================
+
 function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order; onPress: () => void; getStatusColor: (s: string) => string; formatDate: (d: string) => string }) {
   const scale = useSharedValue(1);
 
@@ -216,6 +342,12 @@ function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order;
     transform: [{ scale: scale.value }],
   }));
 
+  const statusColor = getStatusColor(item.status);
+  const isFoodOrder = item.orderType === 'FOOD_DELIVERY';
+  const orderIconName = isFoodOrder ? 'restaurant' : 'bag';
+  const iconBgColor = isFoodOrder ? COLORS.primaryFixed : COLORS.tertiaryFixed;
+  const iconFgColor = isFoodOrder ? COLORS.onPrimaryFixedVariant : COLORS.onTertiaryFixedVariant;
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -223,129 +355,197 @@ function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order;
       onPressOut={handlePressOut}
       activeOpacity={0.9}
     >
-      <Animated.View style={[styles.orderCard, animatedStyle]}>
-        <View style={styles.orderHeader}>
-          <View style={styles.orderInfo}>
-            <View style={styles.orderIconContainer}>
-              <Text style={styles.orderIcon}>
-                {item.orderType === 'FOOD_DELIVERY' ? '🍔' : '🛒'}
-              </Text>
+      <Animated.View style={animatedStyle}>
+        <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl}>
+          <View style={styles.orderCardContent}>
+            {/* Header: icon + order info + status */}
+            <View style={styles.orderHeader}>
+              <View style={styles.orderHeaderLeft}>
+                <View style={[styles.orderTypeIconCircle, { backgroundColor: iconBgColor }]}>
+                  <Ionicons name={orderIconName as any} size={18} color={iconFgColor} />
+                </View>
+                <View style={styles.orderHeaderText}>
+                  <Text style={styles.orderMerchant}>{item.merchant?.name || 'Order'}</Text>
+                  <Text style={styles.orderNumber}>#{item.orderNumber} · {item.items?.length || 0} items</Text>
+                </View>
+              </View>
+              <StatusBadge
+                label={item.status.replace('_', ' ')}
+                color={statusColor}
+                size="sm"
+              />
             </View>
-            <View>
-              <Text style={styles.orderNumber}>#{item.orderNumber}</Text>
-              <Text style={styles.orderMerchant}>{item.merchant?.name || 'Order'}</Text>
+
+            {/* Items Summary */}
+            {item.items && item.items.length > 0 && (
+              <View style={styles.itemsSection}>
+                {item.items.slice(0, 2).map((orderItem, index) => (
+                  <Text key={index} style={styles.itemText} numberOfLines={1}>
+                    {orderItem.quantity}x {orderItem.name}
+                  </Text>
+                ))}
+                {item.items.length > 2 && (
+                  <Text style={styles.moreItemsText}>
+                    +{item.items.length - 2} more items
+                  </Text>
+                )}
+              </View>
+            )}
+
+            {/* Footer: date + amount */}
+            <View style={styles.orderFooter}>
+              <View style={styles.orderFooterLeft}>
+                <Ionicons name="time-outline" size={14} color={COLORS.outline} />
+                <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
+              </View>
+              <Text style={styles.orderAmount}>UGX {item.totalAmount.toLocaleString()}</Text>
             </View>
           </View>
-          <Animated.View 
-            entering={ZoomIn.duration(300)}
-            style={[styles.statusBadge, { backgroundColor: `${getStatusColor(item.status)}20` }]}
-          >
-            <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
-              {item.status.replace('_', ' ')}
-            </Text>
-          </Animated.View>
-        </View>
-
-        {/* Items Summary */}
-        <View style={styles.itemsContainer}>
-          {item.items.slice(0, 2).map((orderItem, index) => (
-            <Text key={index} style={styles.itemText} numberOfLines={1}>
-              {orderItem.quantity}x {orderItem.name}
-            </Text>
-          ))}
-          {item.items.length > 2 && (
-            <Text style={styles.moreItemsText}>
-              +{item.items.length - 2} more items
-            </Text>
-          )}
-        </View>
-
-        {/* Footer */}
-        <View style={styles.orderFooter}>
-          <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
-          <Text style={styles.orderAmount}>UGX {item.totalAmount.toLocaleString()}</Text>
-        </View>
+        </GlassCard>
       </Animated.View>
     </TouchableOpacity>
   );
 }
 
+// ============================================
+// STYLES
+// ============================================
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background,
   },
-  header: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    paddingTop: 60,
-    paddingBottom: SPACING.md,
-    paddingHorizontal: SPACING.lg + SPACING.xs,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    fontWeight: TYPOGRAPHY.headlineLg.fontWeight as any,
-    color: COLORS.onSurface,
-  },
-  quickActions: {
+
+  // Filter Tabs
+  tabsContainer: {
     flexDirection: 'row',
     backgroundColor: COLORS.surfaceContainerLowest,
-    paddingHorizontal: SPACING.lg + SPACING.xs,
-    paddingVertical: SPACING.sm + SPACING.xs,
+    paddingHorizontal: SPACING.containerMargin,
+    paddingVertical: SPACING.sm,
     gap: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceContainer,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  tabButtonActive: {
+    backgroundColor: COLORS.primary,
+    ...SHADOWS.button,
+  },
+  tabButtonText: {
+    textAlign: 'center',
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    color: COLORS.outline,
+  },
+  tabButtonTextActive: {
+    color: COLORS.onPrimary,
+  },
+  tabIndicator: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: COLORS.onPrimary,
+    marginTop: SPACING.xs,
+  },
+
+  // Quick Service Actions
+  quickActionsSection: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.containerMargin,
+    paddingVertical: SPACING.md,
+    gap: SPACING.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
   },
   quickActionItem: {
     flex: 1,
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
-    paddingVertical: SPACING.sm + SPACING.xs,
-    ...SHADOWS.card,
   },
-  quickActionIcon: {
-    fontSize: 20,
-    marginBottom: SPACING.xs,
-    textAlign: 'center',
+  quickActionContent: {
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  quickActionIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   quickActionLabel: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.outline,
-    fontWeight: TYPOGRAPHY.labelMd.fontWeight as any,
-    textAlign: 'center',
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    fontWeight: '600',
   },
+
+  // Loading
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: SPACING.xl + SPACING.md,
   },
+  loadingText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.outline,
+    marginTop: SPACING.md,
+  },
+
+  // List
   list: {
     flex: 1,
   },
   listContent: {
-    padding: SPACING.lg + SPACING.xs,
+    padding: SPACING.containerMargin,
+    paddingBottom: 128,
+    gap: SPACING.gutter,
   },
+
+  // Empty State
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: SPACING.xl + SPACING.md,
   },
-  emptyIcon: {
-    fontSize: 48,
+  emptyIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: SPACING.md,
   },
-  emptyText: {
+  emptyTitle: {
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.outline,
     textAlign: 'center',
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    marginTop: SPACING.xs,
   },
   orderButton: {
     marginTop: SPACING.md,
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.md,
+    borderRadius: RADIUS.xl,
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + SPACING.xs,
+    paddingVertical: SPACING.sm + 2,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...SHADOWS.button,
   },
   orderButtonText: {
@@ -353,73 +553,63 @@ const styles = StyleSheet.create({
     fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
     fontSize: TYPOGRAPHY.labelLg.fontSize,
   },
-  orderCard: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
+
+  // Order Card
+  orderCardContent: {
     padding: SPACING.md,
-    marginBottom: SPACING.gutter,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: SPACING.gutter,
   },
-  orderInfo: {
+  orderHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: SPACING.gutter,
+    flex: 1,
   },
-  orderIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface,
+  orderTypeIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: SPACING.gutter,
-    ...SHADOWS.card,
   },
-  orderIcon: {
-    fontSize: 24,
-  },
-  orderNumber: {
-    fontWeight: '700' as const,
-    color: COLORS.onSurface,
-    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+  orderHeaderText: {
+    flex: 1,
   },
   orderMerchant: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+  },
+  orderNumber: {
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.outline,
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    marginTop: SPACING.xs / 2,
+    marginTop: 1,
   },
-  statusBadge: {
-    paddingHorizontal: SPACING.gutter,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.full,
-  },
-  statusText: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    fontWeight: TYPOGRAPHY.labelMd.fontWeight as any,
-  },
-  itemsContainer: {
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.md,
+
+  // Items Section
+  itemsSection: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
     padding: SPACING.gutter,
     marginBottom: SPACING.gutter,
   },
   itemText: {
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurfaceVariant,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
     marginBottom: SPACING.xs / 2,
   },
   moreItemsText: {
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.outline,
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
     marginTop: SPACING.xs,
   },
+
+  // Order Footer
   orderFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -428,13 +618,18 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.outlineVariant,
   },
+  orderFooterLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
   orderDate: {
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.outline,
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
   },
   orderAmount: {
-    fontWeight: '700' as const,
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '700',
     color: COLORS.primary,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
 });

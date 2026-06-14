@@ -1,9 +1,13 @@
 // ============================================
 // SMART RIDE MOBILE - WALLET SCREEN
 // ============================================
-// VERSION: DARK-THEME-002
+// VERSION: STITCH-DS-001
 // PURPOSE: Manage user wallet and payments
-// DESIGN: Dark theme with StyleSheet, custom components
+// DESIGN: Stitch Design System — MD3 Green Theme
+// - Balance card with gradient (primaryContainer→primary), decorative circle
+// - Payment methods with MTN (yellow), Airtel (red), Cash icons
+// - Transaction history with icon circles, primary color credits / outline debits
+// - Security footer note with lock icon
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -17,6 +21,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import Animated, {
   FadeIn,
   FadeInUp,
@@ -25,7 +30,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, GRADIENTS, PAYMENT_METHODS } from '@/src/constants';
 import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
 import { GlowHeader } from '@/src/components/GlowHeader';
@@ -137,142 +142,134 @@ export default function WalletScreen() {
           onPress: () => {},
         }}
       >
-        {/* Balance Card inside header */}
+        {/* Balance Card with gradient inside header */}
         <Animated.View
           entering={ZoomIn.delay(200).duration(400)}
           style={styles.balanceCardWrapper}
         >
-          <GlassCard variant="accent" padding={20} borderRadius={20}>
-            <Text style={styles.balanceLabel}>Available Balance</Text>
-            <Text style={styles.balanceAmount}>
-              {formatCurrency(walletData?.balance || 0)}
-            </Text>
-            {walletData?.pendingBalance ? (
-              <View style={styles.pendingRow}>
-                <Ionicons name="time-outline" size={14} color={COLORS.warning} />
-                <Text style={styles.pendingText}>
-                  Pending: {formatCurrency(walletData.pendingBalance)}
-                </Text>
-              </View>
-            ) : null}
+          <View style={styles.balanceCardOuter}>
+            <LinearGradient
+              colors={[COLORS.primaryContainer, COLORS.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.balanceGradient}
+            >
+              {/* Decorative circle */}
+              <View style={styles.decorativeCircle} />
+              <View style={styles.decorativeCircle2} />
 
-            {/* Stats row */}
-            <View style={styles.statsRow}>
-              {walletData?.totalDeposited !== undefined && (
-                <View style={styles.statItem}>
-                  <Ionicons name="arrow-down-circle" size={16} color={COLORS.success} />
-                  <Text style={styles.statLabel}>Deposited</Text>
-                  <Text style={styles.statValue}>
-                    {formatCurrency(walletData.totalDeposited)}
+              <Text style={styles.balanceLabel}>Available Balance</Text>
+              <Text style={styles.balanceAmount}>
+                {formatCurrency(walletData?.balance || 0)}
+              </Text>
+              {walletData?.pendingBalance ? (
+                <View style={styles.pendingRow}>
+                  <Ionicons name="time-outline" size={14} color={COLORS.warning} />
+                  <Text style={styles.pendingText}>
+                    Pending: {formatCurrency(walletData.pendingBalance)}
                   </Text>
                 </View>
-              )}
-              {walletData?.totalWithdrawn !== undefined && (
-                <View style={styles.statItem}>
-                  <Ionicons name="arrow-up-circle" size={16} color={COLORS.error} />
-                  <Text style={styles.statLabel}>Withdrawn</Text>
-                  <Text style={styles.statValue}>
-                    {formatCurrency(walletData.totalWithdrawn)}
-                  </Text>
-                </View>
-              )}
+              ) : null}
+
+              {/* Stats row */}
+              <View style={styles.statsRow}>
+                {walletData?.totalDeposited !== undefined && (
+                  <View style={styles.statItem}>
+                    <View style={styles.statIconCircle}>
+                      <Ionicons name="arrow-down" size={14} color={COLORS.onPrimary} />
+                    </View>
+                    <View>
+                      <Text style={styles.statLabel}>Deposited</Text>
+                      <Text style={styles.statValue}>
+                        {formatCurrency(walletData.totalDeposited)}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+                {walletData?.totalWithdrawn !== undefined && (
+                  <View style={styles.statItem}>
+                    <View style={styles.statIconCircle}>
+                      <Ionicons name="arrow-up" size={14} color={COLORS.onPrimary} />
+                    </View>
+                    <View>
+                      <Text style={styles.statLabel}>Withdrawn</Text>
+                      <Text style={styles.statValue}>
+                        {formatCurrency(walletData.totalWithdrawn)}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            </LinearGradient>
+          </View>
+
+          {/* Top Up + Withdraw buttons */}
+          <Animated.View
+            entering={FadeInUp.duration(400).delay(200)}
+            style={styles.ctaRow}
+          >
+            <View style={styles.ctaButtonWrapper}>
+              <GradientButton
+                title="Top Up"
+                onPress={() => {}}
+                variant="primary"
+                size="lg"
+                icon={<Ionicons name="add" size={20} color={COLORS.onPrimary} />}
+              />
             </View>
-          </GlassCard>
+            <View style={styles.ctaButtonWrapper}>
+              <GradientButton
+                title="Withdraw"
+                onPress={() => {}}
+                variant="outline"
+                size="lg"
+                icon={<Ionicons name="arrow-up" size={20} color={COLORS.primary} />}
+              />
+            </View>
+          </Animated.View>
         </Animated.View>
       </GlowHeader>
 
-      {/* Quick Actions */}
+      {/* Payment Methods Section */}
       <Animated.View
-        entering={FadeInUp.duration(400).delay(100)}
-        style={styles.quickActionsContainer}
+        entering={FadeInUp.duration(400).delay(250)}
+        style={styles.paymentMethodsSection}
       >
-        <GlassCard variant="elevated" padding={16} borderRadius={16}>
-          <View style={styles.quickActionsRow}>
-            <QuickAction
-              icon="add-circle"
-              label="Top Up"
-              onPress={() => {}}
-            />
-            <QuickAction
-              icon="arrow-up-circle"
-              label="Withdraw"
-              onPress={() => {}}
-            />
-            <QuickAction
-              icon="send"
-              label="Transfer"
-              onPress={() => router.push('/wallet/transfer')}
-            />
-            <QuickAction
-              icon="time"
-              label="History"
-              onPress={() => {}}
-            />
-          </View>
-        </GlassCard>
-      </Animated.View>
+        <Text style={styles.sectionTitle}>Payment Methods</Text>
+        <View style={styles.paymentMethodsRow}>
+          {/* MTN MoMo */}
+          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
+            <View style={styles.paymentMethodContent}>
+              <View style={[styles.paymentIconCircle, { backgroundColor: `${COLORS.mtnYellow}20` }]}>
+                <Ionicons name="phone-portrait" size={20} color={COLORS.mtnYellow} />
+              </View>
+              <Text style={styles.paymentMethodName}>MTN MoMo</Text>
+            </View>
+          </GlassCard>
 
-      {/* CTA Buttons */}
-      <Animated.View
-        entering={FadeInUp.duration(400).delay(200)}
-        style={styles.ctaRow}
-      >
-        <View style={styles.ctaButtonWrapper}>
-          <GradientButton
-            title="Top Up"
-            onPress={() => {}}
-            variant="primary"
-            size="md"
-            icon={<Ionicons name="add" size={18} color={COLORS.background} />}
-          />
-        </View>
-        <View style={styles.ctaButtonWrapper}>
-          <GradientButton
-            title="Withdraw"
-            onPress={() => {}}
-            variant="outline"
-            size="md"
-            icon={<Ionicons name="arrow-up" size={18} color={COLORS.primary} />}
-          />
+          {/* Airtel Money */}
+          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
+            <View style={styles.paymentMethodContent}>
+              <View style={[styles.paymentIconCircle, { backgroundColor: `${COLORS.airtelRed}20` }]}>
+                <Ionicons name="phone-portrait" size={20} color={COLORS.airtelRed} />
+              </View>
+              <Text style={styles.paymentMethodName}>Airtel Money</Text>
+            </View>
+          </GlassCard>
+
+          {/* Cash */}
+          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
+            <View style={styles.paymentMethodContent}>
+              <View style={[styles.paymentIconCircle, { backgroundColor: `${COLORS.primary}15` }]}>
+                <Ionicons name="cash" size={20} color={COLORS.primary} />
+              </View>
+              <Text style={styles.paymentMethodName}>Cash</Text>
+            </View>
+          </GlassCard>
         </View>
       </Animated.View>
 
-      {/* Payment Methods */}
-      {walletData?.paymentMethods && walletData.paymentMethods.length > 0 && (
-        <Animated.View
-          entering={FadeInUp.duration(400).delay(250)}
-          style={styles.paymentMethodsContainer}
-        >
-          <Text style={styles.sectionTitle}>Payment Methods</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.paymentMethodsScroll}>
-            {walletData.paymentMethods.map((pm: any, index: number) => (
-              <Animated.View
-                key={pm.id || index}
-                entering={SlideInRight.duration(300).delay(index * 60)}
-                style={styles.paymentMethodItem}
-              >
-                <GlassCard variant="default" padding={12} borderRadius={12}>
-                  <View style={styles.paymentMethodRow}>
-                    <Ionicons
-                      name={pm.icon === 'phone' ? 'phone-portrait' : 'card'}
-                      size={20}
-                      color={COLORS.primary}
-                    />
-                    <Text style={styles.paymentMethodName}>{pm.name}</Text>
-                    <StatusBadge
-                      label={pm.id || 'Active'}
-                      color={COLORS.success}
-                      size="sm"
-                    />
-                  </View>
-                </GlassCard>
-              </Animated.View>
-            ))}
-          </ScrollView>
-        </Animated.View>
-      )}
-
-      {/* Transactions */}
+      {/* Transaction History */}
       <ScrollView
         style={styles.transactionsScroll}
         contentContainerStyle={styles.transactionsContent}
@@ -288,60 +285,52 @@ export default function WalletScreen() {
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
 
         {walletData?.transactions?.length ? (
-          walletData.transactions.map((tx, index) => (
-            <Animated.View
-              key={tx.id}
-              entering={SlideInRight.duration(300).delay(index * 50)}
-              style={styles.transactionItemWrapper}
-            >
-              <TransactionItem
-                transaction={tx}
-                formatCurrency={formatCurrency}
-                formatDate={formatDate}
-              />
-            </Animated.View>
-          ))
+          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} noBorder>
+            {walletData.transactions.map((tx, index) => (
+              <React.Fragment key={tx.id}>
+                <Animated.View entering={SlideInRight.duration(300).delay(index * 50)}>
+                  <TransactionItem
+                    transaction={tx}
+                    formatCurrency={formatCurrency}
+                    formatDate={formatDate}
+                    isLast={index === walletData.transactions!.length - 1}
+                  />
+                </Animated.View>
+                {!tx && index < walletData.transactions!.length - 1 && (
+                  <View style={styles.transactionDivider} />
+                )}
+              </React.Fragment>
+            ))}
+          </GlassCard>
         ) : (
           <Animated.View
             entering={FadeIn.duration(400)}
             style={styles.emptyState}
           >
-            <Ionicons name="wallet-outline" size={48} color={COLORS.textDim} />
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="wallet-outline" size={36} color={COLORS.outline} />
+            </View>
             <Text style={styles.emptyStateTitle}>No transactions yet</Text>
             <Text style={styles.emptyStateSubtitle}>
               Your transaction history will appear here
             </Text>
           </Animated.View>
         )}
+
+        {/* Security Footer Note */}
+        <Animated.View
+          entering={FadeInUp.duration(400).delay(300)}
+          style={styles.securityNote}
+        >
+          <View style={styles.securityIconCircle}>
+            <Ionicons name="lock-closed" size={14} color={COLORS.onSecondaryContainer} />
+          </View>
+          <Text style={styles.securityText}>
+            Your payments are secured with 256-bit encryption
+          </Text>
+        </Animated.View>
       </ScrollView>
     </View>
-  );
-}
-
-// ============================================
-// QUICK ACTION COMPONENT
-// ============================================
-
-function QuickAction({
-  icon,
-  label,
-  onPress,
-}: {
-  icon: string;
-  label: string;
-  onPress: () => void;
-}) {
-  return (
-    <TouchableOpacity style={styles.quickAction} onPress={onPress} activeOpacity={0.7}>
-      <View style={styles.quickActionIcon}>
-        <Ionicons
-          name={icon as any}
-          size={22}
-          color={COLORS.primary}
-        />
-      </View>
-      <Text style={styles.quickActionLabel}>{label}</Text>
-    </TouchableOpacity>
   );
 }
 
@@ -353,10 +342,12 @@ function TransactionItem({
   transaction,
   formatCurrency,
   formatDate,
+  isLast,
 }: {
   transaction: Transaction;
   formatCurrency: (a: number) => string;
   formatDate: (d: string) => string;
+  isLast: boolean;
 }) {
   const isCredit = transaction.type === 'CREDIT';
 
@@ -369,60 +360,58 @@ function TransactionItem({
       case 'FAILED':
         return COLORS.error;
       default:
-        return COLORS.textMuted;
+        return COLORS.outline;
     }
   })();
 
   return (
-    <GlassCard variant="default" padding={14} borderRadius={14}>
-      <View style={styles.transactionRow}>
-        {/* Icon */}
-        <View
+    <View style={[styles.transactionRow, !isLast && styles.transactionBorderBottom]}>
+      {/* Icon Circle */}
+      <View
+        style={[
+          styles.transactionIconCircle,
+          {
+            backgroundColor: isCredit
+              ? COLORS.primaryFixed
+              : COLORS.tertiaryFixed,
+          },
+        ]}
+      >
+        <Ionicons
+          name={isCredit ? 'arrow-down' : 'arrow-up'}
+          size={18}
+          color={isCredit ? COLORS.onPrimaryFixedVariant : COLORS.onTertiaryFixedVariant}
+        />
+      </View>
+
+      {/* Description & Date */}
+      <View style={styles.transactionInfo}>
+        <Text style={styles.transactionDescription} numberOfLines={1}>
+          {transaction.description}
+        </Text>
+        <Text style={styles.transactionDate}>
+          {formatDate(transaction.createdAt)}
+        </Text>
+      </View>
+
+      {/* Amount & Status */}
+      <View style={styles.transactionRight}>
+        <Text
           style={[
-            styles.transactionIcon,
-            {
-              backgroundColor: isCredit
-                ? 'rgba(0, 255, 136, 0.1)'
-                : 'rgba(239, 68, 68, 0.1)',
-            },
+            styles.transactionAmount,
+            { color: isCredit ? COLORS.primary : COLORS.outline },
           ]}
         >
-          <Ionicons
-            name={isCredit ? 'arrow-down' : 'arrow-up'}
-            size={18}
-            color={isCredit ? COLORS.success : COLORS.error}
-          />
-        </View>
-
-        {/* Description & Date */}
-        <View style={styles.transactionInfo}>
-          <Text style={styles.transactionDescription} numberOfLines={1}>
-            {transaction.description}
-          </Text>
-          <Text style={styles.transactionDate}>
-            {formatDate(transaction.createdAt)}
-          </Text>
-        </View>
-
-        {/* Amount & Status */}
-        <View style={styles.transactionRight}>
-          <Text
-            style={[
-              styles.transactionAmount,
-              { color: isCredit ? COLORS.success : COLORS.error },
-            ]}
-          >
-            {isCredit ? '+' : '-'}
-            {formatCurrency(transaction.amount)}
-          </Text>
-          <StatusBadge
-            label={transaction.status}
-            color={statusColor}
-            size="sm"
-          />
-        </View>
+          {isCredit ? '+' : '-'}
+          {formatCurrency(transaction.amount)}
+        </Text>
+        <StatusBadge
+          label={transaction.status}
+          color={statusColor}
+          size="sm"
+        />
       </View>
-    </GlassCard>
+    </View>
   );
 }
 
@@ -445,19 +434,49 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  // Balance Card
+  // Balance Card — gradient with decorative circles
   balanceCardWrapper: {
     marginTop: SPACING.sm,
   },
+  balanceCardOuter: {
+    borderRadius: RADIUS.xl,
+    overflow: 'hidden',
+    ...SHADOWS.active,
+  },
+  balanceGradient: {
+    padding: SPACING.lg,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  decorativeCircle: {
+    position: 'absolute',
+    top: -30,
+    right: -30,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: COLORS.primaryFixed,
+    opacity: 0.2,
+  },
+  decorativeCircle2: {
+    position: 'absolute',
+    bottom: -40,
+    left: -20,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: COLORS.primaryFixed,
+    opacity: 0.15,
+  },
   balanceLabel: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onPrimaryContainer,
+    opacity: 0.85,
   },
   balanceAmount: {
     fontSize: TYPOGRAPHY.displayLg.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onPrimary,
     marginTop: SPACING.xs,
     letterSpacing: -1,
   },
@@ -468,7 +487,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
   },
   pendingText: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.warning,
     fontWeight: '500',
   },
@@ -476,62 +495,41 @@ const styles = StyleSheet.create({
   // Stats Row
   statsRow: {
     flexDirection: 'row',
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-    paddingTop: 14,
+    gap: SPACING.md,
+    marginTop: SPACING.md + SPACING.xs,
+    paddingTop: SPACING.md,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: 'rgba(255,255,255,0.15)',
   },
   statItem: {
     flex: 1,
-    gap: SPACING.xs,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  statIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statLabel: {
     fontSize: 11,
-    color: COLORS.textMuted,
-    marginTop: SPACING.xs,
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '400',
   },
   statValue: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
-    marginTop: SPACING.xs,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
+    color: COLORS.onPrimary,
+    marginTop: 1,
   },
 
-  // Quick Actions
-  quickActionsContainer: {
-    paddingHorizontal: SPACING.md,
-    marginTop: -12,
-  },
-  quickActionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  quickAction: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  quickActionIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.full,
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.sm,
-  },
-  quickActionLabel: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontWeight: '500',
-  },
-
-  // CTA Buttons
+  // CTA Buttons — Top Up + Withdraw
   ctaRow: {
     flexDirection: 'row',
-    paddingHorizontal: SPACING.md,
     marginTop: SPACING.md,
     gap: SPACING.md,
   },
@@ -539,80 +537,84 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Payment Methods
-  paymentMethodsContainer: {
-    marginTop: 20,
-    paddingLeft: SPACING.md,
+  // Payment Methods Section
+  paymentMethodsSection: {
+    paddingHorizontal: SPACING.containerMargin,
+    marginTop: SPACING.lg,
   },
-  paymentMethodsScroll: {
-    paddingRight: SPACING.md,
-    gap: SPACING.sm,
-    paddingVertical: SPACING.xs,
-  },
-  paymentMethodItem: {
-    marginRight: 8,
-  },
-  paymentMethodRow: {
+  paymentMethodsRow: {
     flexDirection: 'row',
+    gap: SPACING.gutter,
+  },
+  paymentMethodContent: {
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.xs,
+  },
+  paymentIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   paymentMethodName: {
-    fontSize: 13,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurface,
     fontWeight: '600',
-    color: COLORS.text,
-    flex: 1,
   },
 
   // Section Titles
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 12,
-    paddingHorizontal: 16,
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    marginBottom: SPACING.md,
+    paddingHorizontal: SPACING.containerMargin,
   },
 
   // Transactions
   transactionsScroll: {
     flex: 1,
-    marginTop: 4,
+    marginTop: SPACING.md,
   },
   transactionsContent: {
-    paddingTop: 8,
-    paddingBottom: 32,
-    paddingHorizontal: 16,
-    gap: 8,
-  },
-  transactionItemWrapper: {
-    marginBottom: 4,
+    paddingTop: SPACING.xs,
+    paddingBottom: 128,
+    paddingHorizontal: SPACING.containerMargin,
+    gap: SPACING.sm,
   },
 
-  // Transaction Row
+  // Transaction Row inside GlassCard
   transactionRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
   },
-  transactionIcon: {
+  transactionBorderBottom: {
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
+  },
+  transactionIconCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.gutter,
   },
   transactionInfo: {
     flex: 1,
-    marginRight: 8,
+    marginRight: SPACING.sm,
   },
   transactionDescription: {
-    fontSize: 14,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: '500',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   transactionDate: {
-    fontSize: 12,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
     marginTop: 2,
   },
   transactionRight: {
@@ -620,24 +622,59 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   transactionAmount: {
-    fontSize: 14,
+    ...TYPOGRAPHY.bodyMd,
     fontWeight: 'bold',
+  },
+  transactionDivider: {
+    height: 1,
+    backgroundColor: COLORS.outlineVariant,
   },
 
   // Empty State
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 48,
+    paddingVertical: SPACING.xl + SPACING.md,
+  },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
   },
   emptyStateTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-    marginTop: 12,
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurfaceVariant,
   },
   emptyStateSubtitle: {
-    fontSize: 13,
-    color: COLORS.textMuted,
-    marginTop: 4,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.outline,
+    marginTop: SPACING.xs,
+  },
+
+  // Security Footer Note
+  securityNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: SPACING.md,
+  },
+  securityIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.secondaryFixed,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  securityText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSecondaryFixedVariant,
+    flex: 1,
   },
 });

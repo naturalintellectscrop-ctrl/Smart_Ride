@@ -88,6 +88,14 @@ export const COLORS = {
   mtnYellow: '#FFCC00',
   airtelRed: '#FF0000',
 
+  // Service-specific colors
+  serviceBoda: '#005f3a',
+  serviceCar: '#0e7a4d',
+  serviceFood: '#006e2f',
+  serviceShop: '#4b5264',
+  serviceDelivery: '#4b5264',
+  serviceHealth: '#ba1a1a',
+
   // Google Sign-In brand colors
   googleBlue: '#4285F4',
   googleGreen: '#34A853',

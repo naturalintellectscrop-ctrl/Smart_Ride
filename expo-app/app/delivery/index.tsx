@@ -1,8 +1,9 @@
 // ============================================
 // SMART RIDE MOBILE - DELIVERY SCREEN
 // ============================================
-// Rewritten to use REAL APIs for parcel delivery
-// Step-based flow: Delivery Type → Locations → Confirm & Pay
+// Stitch Design System — Parcel Price Estimate layout
+// GlowHeader, Route summary, Service type selection,
+// Package size selector, Price estimate card, CTA button
 // ============================================
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -18,10 +19,17 @@ import {
   Keyboard,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  ZoomIn,
+} from 'react-native-reanimated';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useLocationStore, useTaskStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, GRADIENTS } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
+import { GlowHeader, GlassCard, GradientButton, IconInput } from '@/src/components';
 
 // ============================================
 // TYPES
@@ -37,6 +45,8 @@ interface DeliveryOption {
   label: string;
   vehicleLabel: string;
   estimatedTime: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor: string;
 }
 
 interface PlaceResult {
@@ -46,6 +56,14 @@ interface PlaceResult {
   text?: string;
 }
 
+interface PackageSize {
+  id: string;
+  label: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  maxSize: string;
+}
+
 // ============================================
 // CONSTANTS
 // ============================================
@@ -53,28 +71,40 @@ interface PlaceResult {
 const DELIVERY_OPTIONS: DeliveryOption[] = [
   {
     id: 'BODA',
-    name: 'Boda Delivery',
-    description: 'Small packages, documents, envelopes',
+    name: 'Motorcycle',
+    description: 'Small packages, documents',
     label: 'BODA',
     vehicleLabel: 'Motorcycle',
     estimatedTime: '15-30 min',
+    icon: 'bicycle',
+    iconColor: COLORS.primary,
   },
   {
     id: 'CAR',
-    name: 'Car Delivery',
+    name: 'Car',
     description: 'Larger packages, multiple items',
     label: 'CAR',
     vehicleLabel: 'Car',
     estimatedTime: '30-45 min',
+    icon: 'car',
+    iconColor: COLORS.primaryContainer,
   },
   {
     id: 'STANDARD',
-    name: 'Standard Delivery',
+    name: 'Van / Truck',
     description: 'Scheduled delivery, bulk items',
     label: 'STANDARD',
     vehicleLabel: 'Van/Truck',
     estimatedTime: '1-3 hours',
+    icon: 'bus',
+    iconColor: COLORS.tertiary,
   },
+];
+
+const PACKAGE_SIZES: PackageSize[] = [
+  { id: 'small', label: 'Small', description: 'Envelope, documents', icon: 'mail', maxSize: '< 5 kg' },
+  { id: 'medium', label: 'Medium', description: 'Box, groceries', icon: 'cube', maxSize: '< 20 kg' },
+  { id: 'large', label: 'Large', description: 'Furniture, appliances', icon: 'cube-outline', maxSize: '< 50 kg' },
 ];
 
 const DELIVERY_FARE = {
@@ -89,7 +119,7 @@ const DEBOUNCE_MS = 400;
 // ============================================
 
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371; // Earth radius in km
+  const R = 6371;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a =
@@ -121,6 +151,9 @@ export default function DeliveryScreen() {
 
   // Delivery type
   const [deliveryType, setDeliveryType] = useState<DeliveryType>('BODA');
+
+  // Package size
+  const [packageSize, setPackageSize] = useState('small');
 
   // Locations
   const [pickupAddress, setPickupAddress] = useState('');
@@ -194,7 +227,6 @@ export default function DeliveryScreen() {
         setDropoffSearchQuery(text);
       }
 
-      // Debounce the search
       if (debounceRef.current) {
         clearTimeout(debounceRef.current);
       }
@@ -206,7 +238,7 @@ export default function DeliveryScreen() {
   );
 
   // ============================================
-  // CLEAR LOCATIONS (for Change button)
+  // CLEAR LOCATIONS
   // ============================================
 
   const clearPickup = useCallback(() => {
@@ -255,7 +287,6 @@ export default function DeliveryScreen() {
       setActiveSearchField(null);
       Keyboard.dismiss();
 
-      // Calculate fare immediately if pickup is set
       if (pickupLatitude !== null && pickupLongitude !== null) {
         const dist = haversineDistance(
           pickupLatitude,
@@ -298,7 +329,6 @@ export default function DeliveryScreen() {
       return;
     }
 
-    // Calculate fare if not already done
     if (distanceKm === null) {
       const dist = haversineDistance(pickupLatitude, pickupLongitude, dropoffLatitude, dropoffLongitude);
       setDistanceKm(dist);
@@ -390,51 +420,56 @@ export default function DeliveryScreen() {
   // RENDER
   // ============================================
 
+  const stepSubtitle = step === 'type'
+    ? 'Choose delivery type'
+    : step === 'locations'
+    ? 'Set pickup & drop-off'
+    : 'Confirm & pay';
+
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={goBack}>
-          <Text style={styles.backButtonText}>{'<'}</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Parcel Delivery</Text>
-          <Text style={styles.headerSubtitle}>
-            {step === 'type'
-              ? 'Step 1: Choose delivery type'
-              : step === 'locations'
-              ? 'Step 2: Set locations'
-              : 'Step 3: Confirm & pay'}
-          </Text>
+      <GlowHeader
+        title="Delivery"
+        subtitle={stepSubtitle}
+        rightAction={{
+          icon: 'arrow-back' as const,
+          onPress: goBack,
+        }}
+      >
+        {/* Step Indicators inside header */}
+        <View style={styles.stepIndicatorRow}>
+          {(['type', 'locations', 'confirm'] as Step[]).map((s, i) => {
+            const isActive = step === s;
+            const isCompleted =
+              (step === 'locations' && s === 'type') ||
+              (step === 'confirm' && (s === 'type' || s === 'locations'));
+            return (
+              <View key={s} style={styles.stepItem}>
+                <View
+                  style={[
+                    styles.stepDot,
+                    isActive && styles.stepDotActive,
+                    isCompleted && styles.stepDotCompleted,
+                  ]}
+                >
+                  {isCompleted && (
+                    <Ionicons name="checkmark" size={10} color={COLORS.onPrimary} />
+                  )}
+                </View>
+                {i < 2 && (
+                  <View
+                    style={[
+                      styles.stepLine,
+                      isCompleted && styles.stepLineCompleted,
+                    ]}
+                  />
+                )}
+              </View>
+            );
+          })}
         </View>
-        <View style={styles.headerRight} />
-      </View>
-
-      {/* Step Indicators */}
-      <View style={styles.stepIndicatorContainer}>
-        {(['type', 'locations', 'confirm'] as Step[]).map((s, i) => (
-          <View key={s} style={styles.stepRow}>
-            <View
-              style={[
-                styles.stepDot,
-                step === s && styles.stepDotActive,
-                step === 'confirm' && s !== 'type' && s !== 'locations' && styles.stepDotActive,
-                (step === 'locations' && (s === 'type')) && styles.stepDotCompleted,
-                (step === 'confirm' && (s === 'type' || s === 'locations')) && styles.stepDotCompleted,
-              ]}
-            />
-            {i < 2 && (
-              <View
-                style={[
-                  styles.stepLine,
-                  (step === 'locations' && i === 0) && styles.stepLineCompleted,
-                  (step === 'confirm' && i < 2) && styles.stepLineCompleted,
-                ]}
-              />
-            )}
-          </View>
-        ))}
-      </View>
+      </GlowHeader>
 
       {/* Content */}
       <ScrollView
@@ -445,7 +480,9 @@ export default function DeliveryScreen() {
         {step === 'type' && (
           <StepType
             deliveryType={deliveryType}
+            packageSize={packageSize}
             onSelectType={setDeliveryType}
+            onSelectPackageSize={setPackageSize}
             onContinue={goToLocations}
           />
         )}
@@ -494,86 +531,155 @@ export default function DeliveryScreen() {
 }
 
 // ============================================
-// STEP 1: DELIVERY TYPE
+// STEP 1: DELIVERY TYPE + PACKAGE SIZE
 // ============================================
 
 function StepType({
   deliveryType,
+  packageSize,
   onSelectType,
+  onSelectPackageSize,
   onContinue,
 }: {
   deliveryType: DeliveryType;
+  packageSize: string;
   onSelectType: (type: DeliveryType) => void;
+  onSelectPackageSize: (size: string) => void;
   onContinue: () => void;
 }) {
   return (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Select Delivery Type</Text>
-      <Text style={styles.stepDescription}>
-        Choose the vehicle type based on your package size
+      {/* Service Type Selection */}
+      <Text style={styles.sectionTitle}>Service Type</Text>
+      <Text style={styles.sectionDescription}>
+        Choose vehicle based on your package
       </Text>
 
-      {DELIVERY_OPTIONS.map((option) => {
-        const isSelected = deliveryType === option.id;
-        return (
-          <TouchableOpacity
-            key={option.id}
-            style={[styles.typeCard, isSelected && styles.typeCardSelected]}
-            onPress={() => onSelectType(option.id)}
-            activeOpacity={0.7}
-          >
-            {/* Vehicle icon area */}
-            <View
-              style={[
-                styles.typeIconContainer,
-                isSelected && styles.typeIconContainerSelected,
-              ]}
+      <View style={styles.serviceTypeRow}>
+        {DELIVERY_OPTIONS.map((option) => {
+          const isSelected = deliveryType === option.id;
+          return (
+            <Animated.View
+              key={option.id}
+              entering={ZoomIn.delay(100).duration(300)}
+              style={styles.serviceTypeWrapper}
             >
-              <Text style={styles.typeIconLabel}>{option.label}</Text>
-            </View>
-
-            {/* Info */}
-            <View style={styles.typeInfo}>
-              <Text style={[styles.typeName, isSelected && styles.typeNameSelected]}>
-                {option.name}
-              </Text>
-              <Text style={styles.typeDescription}>{option.description}</Text>
-              <Text style={styles.typeVehicle}>{option.vehicleLabel}</Text>
-            </View>
-
-            {/* Time & indicator */}
-            <View style={styles.typeRight}>
-              <Text style={styles.typeTime}>{option.estimatedTime}</Text>
-              <View
+              <TouchableOpacity
+                onPress={() => onSelectType(option.id)}
+                activeOpacity={0.7}
                 style={[
-                  styles.typeRadio,
-                  isSelected && styles.typeRadioSelected,
+                  styles.serviceTypeCard,
+                  isSelected && styles.serviceTypeCardSelected,
+                  isSelected && { borderColor: option.iconColor },
                 ]}
               >
-                {isSelected && <View style={styles.typeRadioInner} />}
-              </View>
-            </View>
-          </TouchableOpacity>
-        );
-      })}
-
-      {/* Fare info */}
-      <View style={styles.fareInfoCard}>
-        <Text style={styles.fareInfoTitle}>Delivery Fare Structure</Text>
-        <View style={styles.fareInfoRow}>
-          <Text style={styles.fareInfoLabel}>Base fare</Text>
-          <Text style={styles.fareInfoValue}>UGX {DELIVERY_FARE.BASE_FARE.toLocaleString()}</Text>
-        </View>
-        <View style={styles.fareInfoRow}>
-          <Text style={styles.fareInfoLabel}>Per km</Text>
-          <Text style={styles.fareInfoValue}>UGX {DELIVERY_FARE.PER_KM.toLocaleString()}</Text>
-        </View>
+                {/* Icon Circle */}
+                <View
+                  style={[
+                    styles.serviceTypeIconCircle,
+                    { backgroundColor: `${option.iconColor}${isSelected ? '20' : '10'}` },
+                  ]}
+                >
+                  <Ionicons
+                    name={option.icon}
+                    size={24}
+                    color={isSelected ? option.iconColor : COLORS.onSurfaceVariant}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.serviceTypeName,
+                    isSelected && { color: option.iconColor },
+                  ]}
+                >
+                  {option.name}
+                </Text>
+                <Text style={styles.serviceTypeTime}>{option.estimatedTime}</Text>
+                {/* Selection indicator */}
+                {isSelected && (
+                  <View style={[styles.selectedDot, { backgroundColor: option.iconColor }]} />
+                )}
+              </TouchableOpacity>
+            </Animated.View>
+          );
+        })}
       </View>
 
-      {/* Continue */}
-      <TouchableOpacity style={styles.primaryButton} onPress={onContinue} activeOpacity={0.8}>
-        <Text style={styles.primaryButtonText}>Continue</Text>
-      </TouchableOpacity>
+      {/* Package Size Selector */}
+      <Text style={styles.sectionTitle}>Package Size</Text>
+
+      <View style={styles.packageSizeRow}>
+        {PACKAGE_SIZES.map((pkg) => {
+          const isSelected = packageSize === pkg.id;
+          return (
+            <TouchableOpacity
+              key={pkg.id}
+              onPress={() => onSelectPackageSize(pkg.id)}
+              activeOpacity={0.7}
+              style={[
+                styles.packageSizeCard,
+                isSelected && styles.packageSizeCardSelected,
+              ]}
+            >
+              <View
+                style={[
+                  styles.packageSizeIconCircle,
+                  isSelected && styles.packageSizeIconCircleSelected,
+                ]}
+              >
+                <Ionicons
+                  name={pkg.icon}
+                  size={18}
+                  color={isSelected ? COLORS.primary : COLORS.onSurfaceVariant}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.packageSizeLabel,
+                  isSelected && styles.packageSizeLabelSelected,
+                ]}
+              >
+                {pkg.label}
+              </Text>
+              <Text style={styles.packageSizeMax}>{pkg.maxSize}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Price Estimate Card */}
+      <GlassCard variant="elevated" borderRadius={RADIUS.xl} style={styles.priceEstimateCard}>
+        <View style={styles.priceEstimateHeader}>
+          <Ionicons name="calculator" size={20} color={COLORS.primary} />
+          <Text style={styles.priceEstimateTitle}>Price Estimate</Text>
+        </View>
+        <View style={styles.priceEstimateRow}>
+          <Text style={styles.priceEstimateLabel}>Base fare</Text>
+          <Text style={styles.priceEstimateValue}>UGX {DELIVERY_FARE.BASE_FARE.toLocaleString()}</Text>
+        </View>
+        <View style={styles.priceEstimateRow}>
+          <Text style={styles.priceEstimateLabel}>Per km</Text>
+          <Text style={styles.priceEstimateValue}>UGX {DELIVERY_FARE.PER_KM.toLocaleString()}</Text>
+        </View>
+        <View style={styles.priceEstimateDivider} />
+        <Text style={styles.priceEstimateNote}>
+          Final price calculated after setting locations
+        </Text>
+      </GlassCard>
+
+      {/* Continue CTA */}
+      <Animated.View entering={FadeInUp.delay(300).duration(400)}>
+        <GradientButton
+          title="Continue"
+          onPress={onContinue}
+          variant="primary"
+          size="lg"
+          fullWidth
+          icon={<Ionicons name="arrow-forward" size={18} color={COLORS.onPrimary} />}
+        />
+      </Animated.View>
+
+      <View style={{ height: SPACING.xl }} />
     </View>
   );
 }
@@ -625,137 +731,118 @@ function StepLocations({
 
   return (
     <View style={styles.stepContainer}>
-      {/* Pickup Section */}
-      <Text style={styles.sectionLabel}>PICKUP LOCATION</Text>
-      <View style={styles.locationCard}>
-        <View style={styles.locationDotGreen} />
-        {pickupAddress ? (
-          <TouchableOpacity
-            style={styles.locationSetRow}
-            onPress={onClearPickup}
-          >
-            <Text style={styles.locationSetText} numberOfLines={2}>
-              {pickupAddress}
-            </Text>
-            <Text style={styles.locationChangeText}>Change</Text>
-          </TouchableOpacity>
-        ) : (
-          <View>
-            {/* Use current location */}
-            <TouchableOpacity style={styles.currentLocationButton} onPress={onUseCurrentLocation}>
-              <Text style={styles.currentLocationLabel}>Use Current Location</Text>
-            </TouchableOpacity>
-
-            {/* Or search */}
-            <Text style={styles.orText}>or search for a pickup point</Text>
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search pickup location..."
-              placeholderTextColor={COLORS.onSurfaceVariant}
-              value={pickupSearchQuery}
-              onChangeText={onPickupSearchChange}
-              onFocus={() => setActiveSearchField('pickup')}
-            />
+      {/* Route Summary Card */}
+      <GlassCard variant="elevated" borderRadius={RADIUS.xl} style={styles.routeCard}>
+        {/* Pickup */}
+        <View style={styles.routeRow}>
+          <View style={styles.routeDotGreen} />
+          <View style={styles.routeLineDashed} />
+          <View style={styles.routeInputArea}>
+            <Text style={styles.routeLabel}>PICKUP</Text>
+            {pickupAddress ? (
+              <TouchableOpacity onPress={onClearPickup} style={styles.routeSetRow}>
+                <Text style={styles.routeSetText} numberOfLines={2}>{pickupAddress}</Text>
+                <Text style={styles.routeChangeText}>Change</Text>
+              </TouchableOpacity>
+            ) : (
+              <View>
+                <TouchableOpacity style={styles.currentLocationButton} onPress={onUseCurrentLocation}>
+                  <Ionicons name="locate" size={14} color={COLORS.primary} />
+                  <Text style={styles.currentLocationLabel}>Use Current Location</Text>
+                </TouchableOpacity>
+                <Text style={styles.orText}>or search for a pickup point</Text>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search pickup location..."
+                  placeholderTextColor={COLORS.outlineVariant}
+                  value={pickupSearchQuery}
+                  onChangeText={onPickupSearchChange}
+                  onFocus={() => setActiveSearchField('pickup')}
+                />
+              </View>
+            )}
           </View>
-        )}
-      </View>
+        </View>
 
-      {/* Pickup search results */}
-      {activeSearchField === 'pickup' && !pickupAddress && (
+        {/* Dropoff */}
+        <View style={styles.routeRow}>
+          <View style={styles.routeDotPrimary} />
+          <View style={{ width: 0 }} />
+          <View style={styles.routeInputArea}>
+            <Text style={styles.routeLabel}>DROP-OFF</Text>
+            {dropoffAddress ? (
+              <TouchableOpacity onPress={onClearDropoff} style={styles.routeSetRow}>
+                <Text style={styles.routeSetText} numberOfLines={2}>{dropoffAddress}</Text>
+                <Text style={styles.routeChangeText}>Change</Text>
+              </TouchableOpacity>
+            ) : (
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search drop-off location..."
+                placeholderTextColor={COLORS.outlineVariant}
+                value={dropoffSearchQuery}
+                onChangeText={onDropoffSearchChange}
+                onFocus={() => setActiveSearchField('dropoff')}
+              />
+            )}
+          </View>
+        </View>
+      </GlassCard>
+
+      {/* Search Results */}
+      {(activeSearchField === 'pickup' && !pickupAddress) || (activeSearchField === 'dropoff' && !dropoffAddress) ? (
         <View style={styles.searchResultsContainer}>
           {isSearching && <ActivityIndicator size="small" color={COLORS.primary} style={styles.searchLoader} />}
           {searchResults.map((place, index) => (
             <TouchableOpacity
               key={place.id || index}
               style={styles.searchResultItem}
-              onPress={() => onSelectPickup(place)}
+              onPress={() => {
+                if (activeSearchField === 'pickup') onSelectPickup(place);
+                else onSelectDropoff(place);
+              }}
             >
-              <View style={styles.searchResultDot} />
+              <View style={[styles.searchResultDot, { backgroundColor: activeSearchField === 'pickup' ? COLORS.secondaryFixedDim : COLORS.primary }]} />
               <Text style={styles.searchResultText} numberOfLines={2}>
                 {place.place_name}
               </Text>
             </TouchableOpacity>
           ))}
-          {!isSearching && pickupSearchQuery.length >= 3 && searchResults.length === 0 && (
+          {!isSearching && ((activeSearchField === 'pickup' ? pickupSearchQuery : dropoffSearchQuery).length >= 3) && searchResults.length === 0 && (
             <Text style={styles.noResultsText}>No results found</Text>
           )}
         </View>
-      )}
-
-      {/* Dropoff Section */}
-      <Text style={[styles.sectionLabel, { marginTop: 16 }]}>DROP-OFF LOCATION</Text>
-      <View style={styles.locationCard}>
-        <View style={styles.locationDotPrimary} />
-        {dropoffAddress ? (
-          <TouchableOpacity
-            style={styles.locationSetRow}
-            onPress={onClearDropoff}
-          >
-            <Text style={styles.locationSetText} numberOfLines={2}>
-              {dropoffAddress}
-            </Text>
-            <Text style={styles.locationChangeText}>Change</Text>
-          </TouchableOpacity>
-        ) : (
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search drop-off location..."
-            placeholderTextColor={COLORS.onSurfaceVariant}
-            value={dropoffSearchQuery}
-            onChangeText={onDropoffSearchChange}
-            onFocus={() => setActiveSearchField('dropoff')}
-          />
-        )}
-      </View>
-
-      {/* Dropoff search results */}
-      {activeSearchField === 'dropoff' && !dropoffAddress && (
-        <View style={styles.searchResultsContainer}>
-          {isSearching && <ActivityIndicator size="small" color={COLORS.primary} style={styles.searchLoader} />}
-          {searchResults.map((place, index) => (
-            <TouchableOpacity
-              key={place.id || index}
-              style={styles.searchResultItem}
-              onPress={() => onSelectDropoff(place)}
-            >
-              <View style={[styles.searchResultDot, { backgroundColor: COLORS.primary }]} />
-              <Text style={styles.searchResultText} numberOfLines={2}>
-                {place.place_name}
-              </Text>
-            </TouchableOpacity>
-          ))}
-          {!isSearching && dropoffSearchQuery.length >= 3 && searchResults.length === 0 && (
-            <Text style={styles.noResultsText}>No results found</Text>
-          )}
-        </View>
-      )}
+      ) : null}
 
       {/* Package Description */}
-      <Text style={[styles.sectionLabel, { marginTop: 16 }]}>PACKAGE DESCRIPTION</Text>
-      <View style={styles.descriptionCard}>
+      <Text style={styles.sectionTitle}>Package Description</Text>
+      <GlassCard variant="default" borderRadius={RADIUS.xl} style={styles.descriptionCard}>
         <TextInput
           style={styles.descriptionInput}
           placeholder="Describe what you are sending (e.g. documents, small box, electronics)"
-          placeholderTextColor={COLORS.onSurfaceVariant}
+          placeholderTextColor={COLORS.outlineVariant}
           value={packageDescription}
           onChangeText={setPackageDescription}
           multiline
           numberOfLines={3}
           textAlignVertical="top"
         />
-      </View>
+      </GlassCard>
 
-      {/* Continue */}
-      <TouchableOpacity
-        style={[styles.primaryButton, !canContinue && styles.primaryButtonDisabled]}
-        onPress={onContinue}
-        disabled={!canContinue}
-        activeOpacity={0.8}
-      >
-        <Text style={[styles.primaryButtonText, !canContinue && styles.primaryButtonTextDisabled]}>
-          Continue
-        </Text>
-      </TouchableOpacity>
+      {/* Continue CTA */}
+      <Animated.View entering={FadeInUp.delay(200).duration(400)} style={{ marginTop: SPACING.lg }}>
+        <GradientButton
+          title="Continue"
+          onPress={onContinue}
+          variant="primary"
+          size="lg"
+          fullWidth
+          disabled={!canContinue}
+          icon={<Ionicons name="arrow-forward" size={18} color={canContinue ? COLORS.onPrimary : COLORS.outline} />}
+        />
+      </Animated.View>
+
+      <View style={{ height: SPACING.xl }} />
     </View>
   );
 }
@@ -791,111 +878,113 @@ function StepConfirm({
 }) {
   return (
     <View style={styles.stepContainer}>
-      {/* Delivery Summary */}
-      <Text style={styles.stepTitle}>Delivery Summary</Text>
-
-      <View style={styles.summaryCard}>
-        {/* Delivery type */}
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Delivery Type</Text>
-          <View style={styles.summaryValueRow}>
-            <View style={[styles.summaryBadge, { backgroundColor: `${COLORS.primary}20` }]}>
-              <Text style={styles.summaryBadgeText}>{deliveryOption.label}</Text>
-            </View>
-            <Text style={styles.summaryValue}>{deliveryOption.name}</Text>
+      {/* Route Summary (compact) */}
+      <GlassCard variant="elevated" borderRadius={RADIUS.xl} style={styles.summaryRouteCard}>
+        <View style={styles.summaryRouteRow}>
+          <View style={styles.summaryRouteDots}>
+            <View style={styles.summaryDotGreen} />
+            <View style={styles.summaryDashedLine} />
+            <View style={styles.summaryDotPrimary} />
           </View>
-        </View>
-
-        {/* Vehicle */}
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Vehicle</Text>
-          <Text style={styles.summaryValue}>{deliveryOption.vehicleLabel}</Text>
-        </View>
-
-        {/* Estimated Time */}
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Est. Time</Text>
-          <Text style={styles.summaryValue}>{deliveryOption.estimatedTime}</Text>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.summaryDivider} />
-
-        {/* Route */}
-        <View style={styles.routeSection}>
-          <View style={styles.routeRow}>
-            <View style={styles.routeDotGreen} />
-            <View style={styles.routeLineVertical} />
-          </View>
-          <View style={styles.routeTexts}>
-            <View style={styles.routeTextRow}>
-              <Text style={styles.routeTextLabel}>Pickup</Text>
-              <Text style={styles.routeTextValue} numberOfLines={2}>
-                {pickupAddress}
-              </Text>
+          <View style={styles.summaryRouteTexts}>
+            <View style={styles.summaryRouteTextBlock}>
+              <Text style={styles.summaryRouteLabel}>Pickup</Text>
+              <Text style={styles.summaryRouteValue} numberOfLines={1}>{pickupAddress}</Text>
             </View>
-            <View style={styles.routeTextRow}>
-              <Text style={styles.routeTextLabel}>Drop-off</Text>
-              <Text style={styles.routeTextValue} numberOfLines={2}>
-                {dropoffAddress}
-              </Text>
+            <View style={styles.summaryRouteTextBlock}>
+              <Text style={styles.summaryRouteLabel}>Drop-off</Text>
+              <Text style={styles.summaryRouteValue} numberOfLines={1}>{dropoffAddress}</Text>
             </View>
           </View>
         </View>
+      </GlassCard>
 
-        {/* Divider */}
-        <View style={styles.summaryDivider} />
+      {/* Delivery Details Card */}
+      <GlassCard variant="default" borderRadius={RADIUS.xl} style={styles.detailsCard}>
+        {/* Service type row */}
+        <View style={styles.detailRow}>
+          <View style={styles.detailIconCircle}>
+            <Ionicons name={deliveryOption.icon} size={18} color={deliveryOption.iconColor} />
+          </View>
+          <View style={styles.detailInfo}>
+            <Text style={styles.detailLabel}>Delivery Type</Text>
+            <Text style={styles.detailValue}>{deliveryOption.name}</Text>
+          </View>
+          <View style={[styles.detailBadge, { backgroundColor: `${deliveryOption.iconColor}15` }]}>
+            <Text style={[styles.detailBadgeText, { color: deliveryOption.iconColor }]}>{deliveryOption.label}</Text>
+          </View>
+        </View>
 
-        {/* Package */}
         {packageDescription ? (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Package</Text>
-            <Text style={[styles.summaryValue, { flex: 1, textAlign: 'right' }]} numberOfLines={2}>
-              {packageDescription}
-            </Text>
+          <View style={styles.detailRow}>
+            <View style={styles.detailIconCircle}>
+              <Ionicons name="cube" size={18} color={COLORS.tertiary} />
+            </View>
+            <View style={styles.detailInfo}>
+              <Text style={styles.detailLabel}>Package</Text>
+              <Text style={styles.detailValue} numberOfLines={1}>{packageDescription}</Text>
+            </View>
           </View>
         ) : null}
 
-        {/* Distance */}
         {distanceKm !== null && (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Distance</Text>
-            <Text style={styles.summaryValue}>{distanceKm.toFixed(1)} km</Text>
+          <View style={styles.detailRow}>
+            <View style={styles.detailIconCircle}>
+              <Ionicons name="map" size={18} color={COLORS.secondary} />
+            </View>
+            <View style={styles.detailInfo}>
+              <Text style={styles.detailLabel}>Distance</Text>
+              <Text style={styles.detailValue}>{distanceKm.toFixed(1)} km</Text>
+            </View>
           </View>
         )}
 
-        {/* Fare Breakdown */}
-        <View style={styles.summaryDivider} />
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Base fare</Text>
-          <Text style={styles.summaryValue}>UGX {DELIVERY_FARE.BASE_FARE.toLocaleString()}</Text>
+        <View style={styles.detailRow}>
+          <View style={styles.detailIconCircle}>
+            <Ionicons name="time" size={18} color={COLORS.warning} />
+          </View>
+          <View style={styles.detailInfo}>
+            <Text style={styles.detailLabel}>Est. Time</Text>
+            <Text style={styles.detailValue}>{deliveryOption.estimatedTime}</Text>
+          </View>
+        </View>
+      </GlassCard>
+
+      {/* Price Estimate Card */}
+      <GlassCard variant="elevated" borderRadius={RADIUS.xl} style={styles.priceCard}>
+        <View style={styles.priceHeader}>
+          <Ionicons name="wallet" size={20} color={COLORS.primary} />
+          <Text style={styles.priceTitle}>Price Estimate</Text>
+        </View>
+        <View style={styles.priceRow}>
+          <Text style={styles.priceLabel}>Base fare</Text>
+          <Text style={styles.priceValue}>UGX {DELIVERY_FARE.BASE_FARE.toLocaleString()}</Text>
         </View>
         {distanceKm !== null && (
-          <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Distance fare</Text>
-            <Text style={styles.summaryValue}>
-              UGX {Math.round(distanceKm * DELIVERY_FARE.PER_KM).toLocaleString()}
-            </Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Distance fare ({distanceKm.toFixed(1)} km)</Text>
+            <Text style={styles.priceValue}>UGX {Math.round(distanceKm * DELIVERY_FARE.PER_KM).toLocaleString()}</Text>
           </View>
         )}
-        <View style={styles.summaryDivider} />
-        <View style={styles.summaryRow}>
+        <View style={styles.priceDivider} />
+        <View style={styles.priceRow}>
           <Text style={styles.totalLabel}>Total Estimate</Text>
-          <Text style={styles.totalValue}>
-            UGX {(estimatedFare ?? 0).toLocaleString()}
-          </Text>
+          <Text style={styles.totalValue}>UGX {(estimatedFare ?? 0).toLocaleString()}</Text>
         </View>
-      </View>
+      </GlassCard>
 
       {/* Payment Method */}
-      <Text style={[styles.sectionLabel, { marginTop: 16 }]}>PAYMENT METHOD</Text>
+      <Text style={styles.sectionTitle}>Payment Method</Text>
       <View style={styles.paymentContainer}>
         {PAYMENT_METHODS.map((method) => {
           const isSelected = paymentMethod === method.id;
           return (
             <TouchableOpacity
               key={method.id}
-              style={[styles.paymentCard, isSelected && styles.paymentCardSelected]}
+              style={[
+                styles.paymentCard,
+                isSelected && styles.paymentCardSelected,
+              ]}
               onPress={() => setPaymentMethod(method.id as PaymentMethod)}
               activeOpacity={0.7}
             >
@@ -918,26 +1007,26 @@ function StepConfirm({
       {/* Error */}
       {error ? (
         <View style={styles.errorCard}>
+          <Ionicons name="alert-circle" size={16} color={COLORS.error} />
           <Text style={styles.errorText}>{error}</Text>
         </View>
       ) : null}
 
-      {/* Submit */}
-      <TouchableOpacity
-        style={[styles.primaryButton, isSubmitting && styles.primaryButtonDisabled]}
-        onPress={onSubmit}
-        disabled={isSubmitting}
-        activeOpacity={0.8}
-      >
-        {isSubmitting ? (
-          <ActivityIndicator size="small" color={COLORS.surface} />
-        ) : (
-          <Text style={styles.primaryButtonText}>Request Delivery</Text>
-        )}
-      </TouchableOpacity>
+      {/* Request Delivery CTA */}
+      <Animated.View entering={FadeInUp.delay(200).duration(400)} style={{ marginTop: SPACING.lg }}>
+        <GradientButton
+          title="Request Delivery"
+          onPress={onSubmit}
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isSubmitting}
+          disabled={isSubmitting}
+          icon={!isSubmitting ? <Ionicons name="send" size={18} color={COLORS.onPrimary} /> : undefined}
+        />
+      </Animated.View>
 
-      {/* Bottom spacing */}
-      <View style={{ height: 40 }} />
+      <View style={{ height: SPACING.xl }} />
     </View>
   );
 }
@@ -952,69 +1041,26 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surface,
   },
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 50,
-    paddingBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonText: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: '600',
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.bodyLg,
-    fontWeight: 'bold',
-  },
-  headerSubtitle: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.labelMd,
-    marginTop: 2,
-  },
-  headerRight: {
-    width: 40,
-  },
-
   // Step indicators
-  stepIndicatorContainer: {
+  stepIndicatorRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: SPACING.md,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
+    marginTop: SPACING.md,
   },
-  stepRow: {
+  stepItem: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   stepDot: {
-    width: 10,
-    height: 10,
+    width: 24,
+    height: 24,
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: COLORS.outlineVariant,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   stepDotActive: {
     backgroundColor: COLORS.primary,
@@ -1027,7 +1073,7 @@ const styles = StyleSheet.create({
   stepLine: {
     width: 40,
     height: 2,
-    backgroundColor: COLORS.surfaceContainerLow,
+    backgroundColor: COLORS.outlineVariant,
     marginHorizontal: SPACING.xs,
   },
   stepLineCompleted: {
@@ -1039,223 +1085,255 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stepContainer: {
-    padding: SPACING.lg,
-  },
-  stepTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: 'bold',
-    marginBottom: SPACING.xs,
-  },
-  stepDescription: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
-    marginBottom: SPACING.lg,
+    padding: SPACING.containerMargin,
   },
 
-  // Type cards
-  typeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
+  // Section title
+  sectionTitle: {
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xs,
+  },
+  sectionDescription: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     marginBottom: SPACING.md,
-    borderWidth: 1.5,
+  },
+
+  // ==========================================
+  // STEP 1: Service Type
+  // ==========================================
+  serviceTypeRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  serviceTypeWrapper: {
+    flex: 1,
+  },
+  serviceTypeCard: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.md,
+    alignItems: 'center',
+    borderWidth: 2,
     borderColor: COLORS.outlineVariant,
     ...SHADOWS.card,
   },
-  typeCardSelected: {
+  serviceTypeCardSelected: {
+    backgroundColor: `${COLORS.primary}08`,
+  },
+  serviceTypeIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.sm,
+  },
+  serviceTypeName: {
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    textAlign: 'center',
+  },
+  serviceTypeTime: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: 2,
+  },
+  selectedDot: {
+    width: 8,
+    height: 8,
+    borderRadius: RADIUS.full,
+    marginTop: SPACING.sm,
+  },
+
+  // Package Size
+  packageSizeRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  packageSizeCard: {
+    flex: 1,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.sm,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: COLORS.outlineVariant,
+  },
+  packageSizeCardSelected: {
     borderColor: COLORS.primary,
     backgroundColor: `${COLORS.primary}08`,
   },
-  typeIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.md,
+  packageSizeIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 14,
+    marginBottom: SPACING.xs,
   },
-  typeIconContainerSelected: {
+  packageSizeIconCircleSelected: {
     backgroundColor: `${COLORS.primary}20`,
   },
-  typeIconLabel: {
-    color: COLORS.primary,
-    ...TYPOGRAPHY.labelMd,
-    fontWeight: 'bold',
-  },
-  typeInfo: {
-    flex: 1,
-  },
-  typeName: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  typeNameSelected: {
-    color: COLORS.primary,
-  },
-  typeDescription: {
+  packageSizeLabel: {
+    ...TYPOGRAPHY.labelLg,
     color: COLORS.onSurfaceVariant,
+  },
+  packageSizeLabelSelected: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+  packageSizeMax: {
     ...TYPOGRAPHY.labelMd,
-    marginBottom: 2,
-  },
-  typeVehicle: {
-    color: COLORS.outlineVariant,
-    ...TYPOGRAPHY.labelMd,
-  },
-  typeRight: {
-    alignItems: 'flex-end',
-  },
-  typeTime: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.labelMd,
-    marginBottom: SPACING.sm,
-  },
-  typeRadio: {
-    width: 22,
-    height: 22,
-    borderRadius: RADIUS.full,
-    borderWidth: 2,
-    borderColor: COLORS.outlineVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  typeRadioSelected: {
-    borderColor: COLORS.primary,
-  },
-  typeRadioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
+    color: COLORS.outline,
+    marginTop: 1,
   },
 
-  // Fare info card
-  fareInfoCard: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
+  // Price Estimate Card
+  priceEstimateCard: {
     marginBottom: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
   },
-  fareInfoTitle: {
+  priceEstimateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  priceEstimateTitle: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '700',
     color: COLORS.onSurface,
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '600',
-    marginBottom: 10,
   },
-  fareInfoRow: {
+  priceEstimateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: SPACING.xs,
   },
-  fareInfoLabel: {
+  priceEstimateLabel: {
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
   },
-  fareInfoValue: {
-    color: COLORS.primary,
+  priceEstimateValue: {
     ...TYPOGRAPHY.bodySm,
+    color: COLORS.primary,
     fontWeight: '600',
   },
-
-  // Section label
-  sectionLabel: {
-    color: COLORS.onSurfaceVariant,
+  priceEstimateDivider: {
+    height: 1,
+    backgroundColor: COLORS.outlineVariant,
+    marginVertical: SPACING.sm,
+  },
+  priceEstimateNote: {
     ...TYPOGRAPHY.labelMd,
-    fontWeight: '700',
-    letterSpacing: 1.2,
+    color: COLORS.outline,
+    fontStyle: 'italic',
+  },
+
+  // ==========================================
+  // STEP 2: Route Card
+  // ==========================================
+  routeCard: {
     marginBottom: SPACING.sm,
   },
-
-  // Location card
-  locationCard: {
+  routeRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.md,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
   },
-  locationDotGreen: {
-    width: 12,
-    height: 12,
+  routeDotGreen: {
+    width: 14,
+    height: 14,
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.secondaryFixedDim,
     marginRight: SPACING.md,
     marginTop: 4,
   },
-  locationDotPrimary: {
-    width: 12,
-    height: 12,
+  routeDotPrimary: {
+    width: 14,
+    height: 14,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
     marginRight: SPACING.md,
     marginTop: 14,
   },
-
-  // Location set (already chosen)
-  locationSetRow: {
+  routeLineDashed: {
+    position: 'absolute',
+    left: 6,
+    top: 20,
+    width: 2,
+    height: 28,
+    borderLeftWidth: 2,
+    borderLeftColor: COLORS.outlineVariant,
+    borderStyle: 'dashed',
+  },
+  routeInputArea: {
     flex: 1,
+  },
+  routeLabel: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: SPACING.xs,
+  },
+  routeSetRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  locationSetText: {
+  routeSetText: {
     flex: 1,
-    color: COLORS.onSurface,
     ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurface,
     marginRight: SPACING.sm,
   },
-  locationChangeText: {
-    color: COLORS.primary,
+  routeChangeText: {
     ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
     fontWeight: '600',
   },
-
-  // Current location button
   currentLocationButton: {
-    backgroundColor: `${COLORS.primary}15`,
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${COLORS.primary}12`,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
+    marginBottom: SPACING.sm,
     alignSelf: 'flex-start',
+    gap: SPACING.xs,
   },
   currentLocationLabel: {
-    color: COLORS.primary,
     ...TYPOGRAPHY.bodySm,
+    color: COLORS.primary,
     fontWeight: '600',
   },
   orText: {
-    color: COLORS.outlineVariant,
     ...TYPOGRAPHY.labelMd,
-    marginBottom: SPACING.sm,
+    color: COLORS.outlineVariant,
+    marginBottom: SPACING.xs,
   },
-
-  // Search input
   searchInput: {
-    flex: 1,
     backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.sm,
+    borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
+    paddingVertical: SPACING.sm + 2,
     color: COLORS.onSurface,
     ...TYPOGRAPHY.bodySm,
   },
 
-  // Search results
+  // Search Results
   searchResultsContainer: {
     backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.md,
-    marginTop: SPACING.xs,
+    borderRadius: RADIUS.lg,
+    marginHorizontal: SPACING.containerMargin,
     marginBottom: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
@@ -1268,8 +1346,8 @@ const styles = StyleSheet.create({
   searchResultItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm + 2,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.outlineVariant,
   },
@@ -1277,164 +1355,178 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.secondary,
-    marginRight: 10,
+    marginRight: SPACING.md,
   },
   searchResultText: {
     flex: 1,
-    color: COLORS.onSurface,
     ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurface,
   },
   noResultsText: {
-    color: COLORS.onSurfaceVariant,
     ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     textAlign: 'center',
     paddingVertical: SPACING.md,
   },
 
-  // Description
+  // Description Card
   descriptionCard: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.md,
-    padding: 2,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
+    marginBottom: SPACING.sm,
   },
   descriptionInput: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 14,
-    paddingVertical: SPACING.md,
-    color: COLORS.onSurface,
     ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurface,
     minHeight: 80,
+    paddingVertical: SPACING.sm,
   },
 
-  // Primary button
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
-    marginTop: SPACING.lg,
-  },
-  primaryButtonDisabled: {
-    backgroundColor: COLORS.outlineVariant,
-  },
-  primaryButtonText: {
-    color: COLORS.surface,
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '700',
-  },
-  primaryButtonTextDisabled: {
-    color: COLORS.surfaceContainerLow,
-  },
+  // ==========================================
+  // STEP 3: Confirm
+  // ==========================================
 
-  // Summary card
-  summaryCard: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
+  // Summary Route Card
+  summaryRouteCard: {
+    marginBottom: SPACING.md,
   },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  summaryLabel: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
-  },
-  summaryValue: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '500',
-  },
-  summaryValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  summaryBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
-    borderRadius: RADIUS.sm,
-  },
-  summaryBadgeText: {
-    color: COLORS.primary,
-    ...TYPOGRAPHY.labelMd,
-    fontWeight: '700',
-  },
-  summaryDivider: {
-    height: 1,
-    backgroundColor: COLORS.outlineVariant,
-    marginVertical: SPACING.sm,
-  },
-
-  // Route section
-  routeSection: {
+  summaryRouteRow: {
     flexDirection: 'row',
   },
-  routeRow: {
+  summaryRouteDots: {
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: SPACING.md,
   },
-  routeDotGreen: {
-    width: 10,
-    height: 10,
+  summaryDotGreen: {
+    width: 12,
+    height: 12,
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.secondaryFixedDim,
   },
-  routeLineVertical: {
+  summaryDashedLine: {
     width: 2,
-    height: 30,
-    backgroundColor: COLORS.outlineVariant,
+    height: 28,
+    borderLeftWidth: 2,
+    borderLeftColor: COLORS.outlineVariant,
+    marginVertical: SPACING.xs,
   },
-  routeTexts: {
+  summaryDotPrimary: {
+    width: 12,
+    height: 12,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
+  },
+  summaryRouteTexts: {
     flex: 1,
-    justifyContent: 'space-between',
   },
-  routeTextRow: {
-    marginBottom: 6,
+  summaryRouteTextBlock: {
+    marginBottom: SPACING.sm,
   },
-  routeTextLabel: {
-    color: COLORS.outlineVariant,
+  summaryRouteLabel: {
     ...TYPOGRAPHY.labelMd,
+    color: COLORS.outlineVariant,
     fontWeight: '600',
     letterSpacing: 0.8,
     marginBottom: 1,
   },
-  routeTextValue: {
-    color: COLORS.onSurface,
+  summaryRouteValue: {
     ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurface,
   },
 
-  // Total
-  totalLabel: {
+  // Details Card
+  detailsCard: {
+    marginBottom: SPACING.md,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  detailIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.md,
+  },
+  detailInfo: {
+    flex: 1,
+  },
+  detailLabel: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+  },
+  detailValue: {
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurface,
-    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '500',
+  },
+  detailBadge: {
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
+    borderRadius: RADIUS.sm,
+  },
+  detailBadgeText: {
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '700',
   },
+
+  // Price Card
+  priceCard: {
+    marginBottom: SPACING.sm,
+  },
+  priceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  priceTitle: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.xs + 2,
+  },
+  priceLabel: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  priceValue: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurface,
+    fontWeight: '500',
+  },
+  priceDivider: {
+    height: 1,
+    backgroundColor: COLORS.outlineVariant,
+    marginVertical: SPACING.sm,
+  },
+  totalLabel: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+  },
   totalValue: {
-    color: COLORS.primary,
     ...TYPOGRAPHY.bodyLg,
     fontWeight: 'bold',
+    color: COLORS.primary,
   },
 
   // Payment
   paymentContainer: {
-    gap: 10,
+    gap: SPACING.sm,
   },
   paymentCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.md,
-    paddingVertical: 14,
+    borderRadius: RADIUS.lg,
+    paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.md,
     borderWidth: 1.5,
     borderColor: COLORS.outlineVariant,
@@ -1444,8 +1536,8 @@ const styles = StyleSheet.create({
     backgroundColor: `${COLORS.primary}08`,
   },
   paymentRadio: {
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     borderRadius: RADIUS.full,
     borderWidth: 2,
     borderColor: COLORS.outlineVariant,
@@ -1457,14 +1549,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primary,
   },
   paymentRadioInner: {
-    width: 8,
-    height: 8,
+    width: 10,
+    height: 10,
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.primary,
   },
   paymentName: {
-    color: COLORS.onSurface,
     ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurface,
     fontWeight: '500',
   },
   paymentNameSelected: {
@@ -1474,16 +1566,19 @@ const styles = StyleSheet.create({
 
   // Error
   errorCard: {
-    backgroundColor: `${COLORS.error}15`,
-    borderRadius: RADIUS.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${COLORS.error}12`,
+    borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginTop: SPACING.md,
     borderWidth: 1,
-    borderColor: `${COLORS.error}30`,
+    borderColor: `${COLORS.error}25`,
+    gap: SPACING.sm,
   },
   errorText: {
-    color: COLORS.error,
+    flex: 1,
     ...TYPOGRAPHY.bodySm,
-    textAlign: 'center',
+    color: COLORS.error,
   },
 });

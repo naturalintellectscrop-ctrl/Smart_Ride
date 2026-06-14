@@ -2,8 +2,9 @@
 // ============================================
 // SMART RIDE MOBILE - DRIVER HOME SCREEN
 // ============================================
-// Dark theme with StyleSheet, GlassCard, GlowHeader,
-// GradientButton, StatusBadge, Reanimated animations
+// Stitch Design System — Rider Dashboard
+// Online/Offline toggle, Earnings card with
+// glass/gradient, Ride request cards, Accept/Decline
 // ============================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -33,9 +34,22 @@ import Animated, {
   ZoomIn,
   SlideInRight,
 } from 'react-native-reanimated';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS, DEFAULT_LOCATION, API_CONFIG } from '@/src/constants';
+import {
+  COLORS,
+  GRADIENTS,
+  TASK_STATUS_COLORS,
+  TASK_STATUS_LABELS,
+  DEFAULT_LOCATION,
+  API_CONFIG,
+  TYPOGRAPHY,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+} from '@/src/constants';
 import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
 import { GlowHeader } from '@/src/components/GlowHeader';
@@ -138,7 +152,6 @@ export default function DriverHomeScreen() {
         setIsOnline(value);
         if (value) {
           getCurrentLocation().catch(() => {});
-          // Join driver room so server can route dispatch events to this rider
           const driverId = rider?.id || user?.id;
           if (driverId) {
             try {
@@ -149,7 +162,6 @@ export default function DriverHomeScreen() {
             }
           }
         } else {
-          // Leave driver room when going offline
           const driverId = rider?.id || user?.id;
           if (driverId) {
             socketService.leaveDriverRoom(driverId);
@@ -349,7 +361,9 @@ export default function DriverHomeScreen() {
   if (profileError && !rider) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorEmoji}>⚠️</Text>
+        <View style={styles.errorIconCircle}>
+          <Ionicons name="alert-circle-outline" size={40} color={COLORS.error} />
+        </View>
         <Text style={styles.errorTitle}>Profile Load Error</Text>
         <Text style={styles.errorSubtitle}>{profileError}</Text>
         <GradientButton
@@ -382,7 +396,7 @@ export default function DriverHomeScreen() {
       >
         <GlowHeader
           title={rider?.fullName || 'Driver'}
-          subtitle={isOnline ? '● Online — Receiving requests' : '● Offline'}
+          subtitle={isOnline ? 'Online — Receiving requests' : 'Offline'}
           rightAction={
             isOnline
               ? {
@@ -392,17 +406,17 @@ export default function DriverHomeScreen() {
               : undefined
           }
         >
-          {/* Online status card inside the header */}
-          <View style={styles.onlineCardRow}>
+          {/* Online/Offline toggle pill — Stitch Design */}
+          <View style={styles.toggleCardRow}>
             <View style={styles.profileRow}>
               <Animated.View entering={ZoomIn.delay(200).duration(300)}>
                 <View style={styles.avatarCircle}>
-                  <Text style={styles.avatarEmoji}>👤</Text>
+                  <Ionicons name="person" size={22} color={COLORS.primary} />
                 </View>
               </Animated.View>
               <Animated.View entering={SlideInRight.delay(300).duration(300)}>
                 <View style={styles.ratingRow}>
-                  <Text style={styles.ratingStar}>⭐</Text>
+                  <Ionicons name="star" size={14} color={COLORS.warning} />
                   <Text style={styles.ratingText}>{rider?.rating?.toFixed(1) || '5.0'}</Text>
                 </View>
                 {taskStatus && (
@@ -414,15 +428,34 @@ export default function DriverHomeScreen() {
                 )}
               </Animated.View>
             </View>
-            <View style={styles.switchRow}>
-              <Text style={[styles.switchLabel, { color: isOnline ? COLORS.primary : COLORS.textMuted }]}>
-                {isOnline ? 'Online' : 'Offline'}
-              </Text>
+
+            {/* Stitch Online/Offline Toggle */}
+            <View style={styles.togglePillContainer}>
+              <Animated.View
+                style={[
+                  styles.togglePillSlider,
+                  {
+                    alignSelf: isOnline ? 'flex-end' : 'flex-start',
+                  },
+                ]}
+              >
+                <LinearGradient
+                  colors={isOnline ? (GRADIENTS.primary as unknown as [string, string]) : [COLORS.outlineVariant, COLORS.outlineVariant]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.togglePillGradient}
+                >
+                  <Text style={[styles.togglePillText, { color: isOnline ? COLORS.onPrimary : COLORS.onSurfaceVariant }]}>
+                    {isOnline ? 'Online' : 'Offline'}
+                  </Text>
+                </LinearGradient>
+              </Animated.View>
               <Switch
                 value={isOnline}
                 onValueChange={toggleOnlineStatus}
-                trackColor={{ false: COLORS.backgroundSurface, true: 'rgba(0, 255, 136, 0.3)' }}
-                thumbColor={isOnline ? COLORS.primary : COLORS.textDim}
+                trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.surfaceContainerHigh }}
+                thumbColor={COLORS.surfaceContainerLowest}
+                style={styles.hiddenSwitch}
               />
             </View>
           </View>
@@ -433,6 +466,7 @@ export default function DriverHomeScreen() {
           <Animated.View entering={SlideInRight.duration(300)}>
             <GlassCard variant="accent" style={styles.errorBanner}>
               <View style={styles.errorBannerRow}>
+                <Ionicons name="alert-circle-outline" size={16} color={COLORS.warning} />
                 <Text style={styles.errorBannerText}>{profileError}</Text>
                 <TouchableOpacity onPress={loadRiderProfile}>
                   <Text style={styles.errorBannerAction}>Retry</Text>
@@ -443,16 +477,21 @@ export default function DriverHomeScreen() {
         )}
       </Animated.View>
 
-      {/* Incoming Request Modal */}
+      {/* Incoming Ride Request Card */}
       {incomingRequest && (
         <Animated.View
           entering={SlideInUp.duration(400).springify()}
           style={styles.requestModal}
         >
-          <GlassCard variant="elevated" padding={20} borderRadius={24}>
+          <GlassCard variant="elevated" padding={20} borderRadius={RADIUS.xl}>
             {/* Timer & Title */}
             <View style={styles.requestHeaderRow}>
-              <Text style={styles.requestTitle}>New Ride Request</Text>
+              <View style={styles.requestTitleRow}>
+                <View style={styles.requestIconCircle}>
+                  <Ionicons name="navigate" size={18} color={COLORS.onPrimary} />
+                </View>
+                <Text style={styles.requestTitle}>New Ride Request</Text>
+              </View>
               <Animated.View entering={ZoomIn.duration(300)}>
                 <View
                   style={[
@@ -460,8 +499,8 @@ export default function DriverHomeScreen() {
                     {
                       backgroundColor:
                         (requestTimer || 0) < 10
-                          ? 'rgba(239, 68, 68, 0.15)'
-                          : 'rgba(0, 255, 136, 0.1)',
+                          ? COLORS.errorContainer
+                          : COLORS.primaryFixed,
                     },
                   ]}
                 >
@@ -470,7 +509,7 @@ export default function DriverHomeScreen() {
                       styles.timerText,
                       {
                         color:
-                          (requestTimer || 0) < 10 ? COLORS.error : COLORS.primary,
+                          (requestTimer || 0) < 10 ? COLORS.onErrorContainer : COLORS.onPrimaryFixedVariant,
                       },
                     ]}
                   >
@@ -520,7 +559,7 @@ export default function DriverHomeScreen() {
               </Text>
             </Animated.View>
 
-            {/* Actions */}
+            {/* Accept/Decline Actions */}
             <View style={styles.actionRow}>
               <AnimatedPressable onPress={handleDeclineRequest}>
                 <View style={styles.declineButtonWrapper}>
@@ -530,19 +569,21 @@ export default function DriverHomeScreen() {
                     variant="secondary"
                     size="lg"
                     fullWidth
+                    icon={<Ionicons name="close" size={18} color={COLORS.onSurface} />}
                   />
                 </View>
               </AnimatedPressable>
               <AnimatedPressable onPress={handleAcceptRequest} disabled={isAccepting}>
                 <View style={styles.acceptButtonWrapper}>
                   <GradientButton
-                    title={isAccepting ? 'Accepting...' : 'Accept'}
+                    title={isAccepting ? 'Accepting...' : 'Accept Ride'}
                     onPress={handleAcceptRequest}
                     variant={isAccepting ? 'secondary' : 'primary'}
                     loading={isAccepting}
                     disabled={isAccepting}
                     size="lg"
                     fullWidth
+                    icon={!isAccepting ? <Ionicons name="checkmark" size={18} color={COLORS.onPrimary} /> : undefined}
                   />
                 </View>
               </AnimatedPressable>
@@ -551,34 +592,48 @@ export default function DriverHomeScreen() {
         </Animated.View>
       )}
 
-      {/* Bottom Stats */}
+      {/* Bottom Earnings Card — Stitch glass design */}
       {!incomingRequest && (
         <Animated.View
           entering={SlideInUp.duration(500).delay(300).springify()}
           style={styles.bottomStats}
         >
-          <GlassCard variant="elevated" padding={20} borderRadius={24}>
-            <View style={styles.statsRow}>
-              <StatItem
-                label="Today's Earnings"
-                value={`UGX ${(rider?.walletBalance || 0).toLocaleString()}`}
-                delay={400}
-              />
-              <View style={styles.statsDivider} />
-              <StatItem
-                label="Trips"
-                value={String(rider?.completedTrips || 0)}
-                delay={500}
-              />
-            </View>
+          <GlassCard variant="elevated" padding={0} borderRadius={RADIUS.xl}>
+            {/* Earnings gradient header */}
+            <LinearGradient
+              colors={GRADIENTS.primary as unknown as [string, string]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.earningsGradient}
+            >
+              <View style={styles.earningsRow}>
+                <View style={styles.earningsIconCircle}>
+                  <Ionicons name="wallet" size={22} color={COLORS.onPrimary} />
+                </View>
+                <View>
+                  <Text style={styles.earningsLabel}>Today's Earnings</Text>
+                  <Text style={styles.earningsValue}>
+                    UGX {(rider?.walletBalance || 0).toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.tripsBadge}>
+                <Ionicons name="car" size={14} color={COLORS.onPrimary} />
+                <Text style={styles.tripsBadgeText}>
+                  {rider?.completedTrips || 0} trips
+                </Text>
+              </View>
+            </LinearGradient>
 
+            {/* Offline hint */}
             {!isOnline && (
               <Animated.View entering={FadeIn.delay(600).duration(400)}>
-                <GlassCard variant="accent" style={styles.offlineHint}>
+                <View style={styles.offlineHint}>
+                  <Ionicons name="information-circle-outline" size={16} color={COLORS.primary} />
                   <Text style={styles.offlineHintText}>
                     Go online to start receiving ride requests
                   </Text>
-                </GlassCard>
+                </View>
               </Animated.View>
             )}
 
@@ -590,6 +645,11 @@ export default function DriverHomeScreen() {
                 variant={isOnline ? 'danger' : 'primary'}
                 size="lg"
                 fullWidth
+                icon={
+                  isOnline
+                    ? <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+                    : <Ionicons name="flash" size={20} color={COLORS.onPrimary} />
+                }
               />
             </View>
           </GlassCard>
@@ -625,16 +685,6 @@ function PulsingLoader() {
   return (
     <Animated.View style={animatedStyle}>
       <ActivityIndicator size="large" color={COLORS.primary} />
-    </Animated.View>
-  );
-}
-
-// Animated Stat Item
-function StatItem({ label, value, delay }: { label: string; value: string; delay: number }) {
-  return (
-    <Animated.View entering={FadeInUp.delay(delay).duration(400).springify()} style={styles.statItem}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
     </Animated.View>
   );
 }
@@ -689,12 +739,12 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingText: {
-    marginTop: 16,
-    color: COLORS.textMuted,
-    fontSize: 14,
+    marginTop: SPACING.md,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
   },
 
   // Error state
@@ -702,23 +752,29 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 24,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.xl,
   },
-  errorEmoji: {
-    fontSize: 40,
-    marginBottom: 16,
+  errorIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: COLORS.errorContainer,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.md,
   },
   errorTitle: {
-    fontSize: 18,
+    ...TYPOGRAPHY.headlineMd,
     fontWeight: 'bold',
-    color: COLORS.text,
-    marginBottom: 8,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.sm,
   },
   errorSubtitle: {
-    color: COLORS.textMuted,
+    color: COLORS.onSurfaceVariant,
     textAlign: 'center',
-    marginBottom: 8,
+    ...TYPOGRAPHY.bodySm,
+    marginBottom: SPACING.sm,
   },
 
   // Header overlay
@@ -730,12 +786,12 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
 
-  // Online card row (inside GlowHeader children)
-  onlineCardRow: {
+  // Toggle card row (inside GlowHeader children)
+  toggleCardRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   profileRow: {
     flexDirection: 'row',
@@ -746,55 +802,71 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.primaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
-  },
-  avatarEmoji: {
-    fontSize: 24,
+    marginRight: SPACING.md,
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  ratingStar: {
-    fontSize: 12,
-    marginRight: 4,
+    gap: SPACING.xs,
   },
   ratingText: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '600',
   },
-  switchRow: {
-    flexDirection: 'row',
+
+  // Stitch Online/Offline Toggle Pill
+  togglePillContainer: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: RADIUS.full,
+    padding: 3,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  togglePillSlider: {
+    borderRadius: RADIUS.full,
+    overflow: 'hidden',
+  },
+  togglePillGradient: {
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md + 4,
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  switchLabel: {
-    fontWeight: '500',
-    marginRight: 8,
-    fontSize: 14,
+  togglePillText: {
+    ...TYPOGRAPHY.labelLg,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  hiddenSwitch: {
+    position: 'absolute',
+    opacity: 0,
+    width: 0,
+    height: 0,
   },
 
   // Error banner
   errorBanner: {
-    marginTop: 8,
+    marginTop: SPACING.sm,
   },
   errorBannerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: SPACING.sm,
   },
   errorBannerText: {
     color: COLORS.warning,
-    fontSize: 13,
+    ...TYPOGRAPHY.bodySm,
     flex: 1,
   },
   errorBannerAction: {
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.warning,
-    fontWeight: '600',
-    fontSize: 13,
-    marginLeft: 12,
+    fontWeight: '600' as const,
+    marginLeft: SPACING.md,
   },
 
   // Incoming Request Modal
@@ -809,28 +881,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
+  },
+  requestTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  requestIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   requestTitle: {
-    fontSize: 20,
+    ...TYPOGRAPHY.headlineMd,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   timerCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   timerText: {
+    ...TYPOGRAPHY.labelLg,
     fontWeight: 'bold',
-    fontSize: 14,
   },
 
   // Route card
   routeCard: {
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   routePointRow: {
     flexDirection: 'row',
@@ -840,9 +925,9 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.secondaryFixed,
     marginTop: 4,
-    marginRight: 12,
+    marginRight: SPACING.md,
   },
   dropoffDot: {
     width: 12,
@@ -850,28 +935,28 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: COLORS.primary,
     marginTop: 4,
-    marginRight: 12,
+    marginRight: SPACING.md,
   },
   routePointContent: {
     flex: 1,
   },
   routePointLabel: {
-    color: COLORS.textMuted,
-    fontSize: 11,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   routePointAddress: {
-    color: COLORS.text,
-    fontSize: 15,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
     marginTop: 2,
   },
   routeDivider: {
     width: 1.5,
     height: 16,
-    backgroundColor: COLORS.textDim,
+    backgroundColor: COLORS.outlineVariant,
     marginLeft: 5,
-    marginVertical: 4,
+    marginVertical: SPACING.xs,
   },
 
   // Fare
@@ -879,14 +964,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   fareLabel: {
-    color: COLORS.textMuted,
-    fontSize: 14,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
   },
   fareValue: {
-    fontSize: 22,
+    ...TYPOGRAPHY.headlineLgMobile,
     fontWeight: 'bold',
     color: COLORS.primary,
   },
@@ -894,7 +979,7 @@ const styles = StyleSheet.create({
   // Action buttons
   actionRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: SPACING.md,
   },
   declineButtonWrapper: {
     flex: 1,
@@ -903,7 +988,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Bottom Stats
+  // Bottom Earnings Card
   bottomStats: {
     position: 'absolute',
     bottom: 0,
@@ -911,43 +996,70 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 20,
   },
-  statsRow: {
+  earningsGradient: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    paddingHorizontal: SPACING.md + 4,
+    paddingVertical: SPACING.md + 4,
+  },
+  earningsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    gap: SPACING.md,
   },
-  statsDivider: {
-    width: 1,
-    height: 32,
-    backgroundColor: COLORS.border,
-  },
-  statItem: {
+  earningsIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
-    flex: 1,
+    justifyContent: 'center',
   },
-  statValue: {
-    fontSize: 22,
+  earningsLabel: {
+    ...TYPOGRAPHY.labelMd,
+    color: 'rgba(255, 255, 255, 0.8)',
+  },
+  earningsValue: {
+    ...TYPOGRAPHY.headlineLgMobile,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onPrimary,
   },
-  statLabel: {
-    color: COLORS.textMuted,
-    fontSize: 13,
-    marginTop: 2,
+  tripsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm - 2,
+  },
+  tripsBadgeText: {
+    ...TYPOGRAPHY.labelMd,
+    fontWeight: '600',
+    color: COLORS.onPrimary,
   },
 
   // Offline hint
   offlineHint: {
-    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
   },
   offlineHintText: {
     color: COLORS.primary,
+    ...TYPOGRAPHY.bodySm,
     textAlign: 'center',
-    fontSize: 14,
   },
 
   // Toggle button
   toggleButtonContainer: {
-    marginTop: 16,
+    paddingHorizontal: SPACING.md + 4,
+    paddingBottom: SPACING.md + 4,
   },
 });

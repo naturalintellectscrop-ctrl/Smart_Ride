@@ -1,9 +1,10 @@
 // ============================================
 // SMART RIDE MOBILE - SOS EMERGENCY SCREEN
 // ============================================
-// Urgent, serious SOS emergency screen with
-// pulsing red button, hold-to-activate, and
-// emergency contacts
+// Stitch Design System — Safety SOS
+// Emergency SOS button (w-128 h-128 bg-error
+// rounded-full with pulse animation), Emergency
+// contacts list, Trip details card, Call Support
 // ============================================
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -86,7 +87,7 @@ const MOCK_CONTACTS: EmergencyContact[] = [
 const SMART_RIDE_EMERGENCY = '+256800100100';
 
 // ============================================
-// PULSING BUTTON COMPONENT
+// PULSING SOS BUTTON — Stitch Design: w-128 h-128 bg-error rounded-full with pulse
 // ============================================
 
 function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded }: {
@@ -101,16 +102,16 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded }: {
     // Continuous pulsing animation
     scale.value = withRepeat(
       withSequence(
-        withTiming(1.06, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+        withTiming(1.04, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(1, { duration: 1200, easing: Easing.inOut(Easing.ease) })
       ),
-      -1, // infinite
+      -1,
       false
     );
     glowOpacity.value = withRepeat(
       withSequence(
-        withTiming(0.6, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
-        withTiming(0.2, { duration: 1000, easing: Easing.inOut(Easing.ease) })
+        withTiming(0.6, { duration: 1200, easing: Easing.inOut(Easing.ease) }),
+        withTiming(0.15, { duration: 1200, easing: Easing.inOut(Easing.ease) })
       ),
       -1,
       false
@@ -146,11 +147,11 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded }: {
 
   return (
     <View style={styles.sosButtonContainer}>
-      {/* Outer glow rings */}
+      {/* Outer pulse glow rings — Stitch w-128 (128px) radius */}
       <Animated.View style={[styles.glowRing3, glowStyle]} />
       <Animated.View style={[styles.glowRing2, glowStyle]} />
 
-      {/* Main button */}
+      {/* Main button — w-128 h-128 (128px = w-32 in Tailwind 4) */}
       <Animated.View style={animatedStyle}>
         <TouchableOpacity
           onPressIn={handlePressIn}
@@ -159,11 +160,12 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded }: {
           style={styles.sosButtonTouchable}
         >
           <LinearGradient
-            colors={['#EF4444', '#DC2626']}
+            colors={GRADIENTS.danger as unknown as [string, string]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.sosButtonGradient}
           >
+            <Ionicons name="alert" size={40} color={COLORS.onError} />
             <Text style={styles.sosButtonText}>SOS</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -183,8 +185,6 @@ export default function SosScreen() {
   const [isHolding, setIsHolding] = useState(false);
   const [shareLiveLocation, setShareLiveLocation] = useState(true);
   const [flashVisible, setFlashVisible] = useState(false);
-  const [holdProgress, setHoldProgress] = useState(0);
-  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const handleActivate = () => {
     // Flash screen red
@@ -231,15 +231,15 @@ export default function SosScreen() {
       {/* Red flash overlay */}
       {flashVisible && <View style={styles.flashOverlay} />}
 
-      {/* Red ambient gradient at top */}
+      {/* Subtle red ambient at top */}
       <View style={styles.redAmbient} />
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 12 || 56 }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + SPACING.md || 56 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
+        {/* Header — Stitch: simple with back arrow */}
         <Animated.View entering={FadeInDown.duration(400).springify()}>
           <View style={styles.headerRow}>
             <TouchableOpacity
@@ -247,20 +247,20 @@ export default function SosScreen() {
               onPress={() => router.back()}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+              <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
             </TouchableOpacity>
             <View style={styles.titleContainer}>
               <Text style={styles.headerTitle}>Emergency SOS</Text>
               <Text style={styles.headerSubtitle}>Safety & Emergency</Text>
             </View>
-            <View style={{ width: 40 }} />
+            <View style={{ width: 44 }} />
           </View>
         </Animated.View>
 
         {/* Main content based on state */}
         {sosState === 'idle' ? (
           <Animated.View entering={FadeInUp.duration(400).delay(200).springify()}>
-            {/* SOS Button */}
+            {/* SOS Button — w-128 h-128 bg-error rounded-full with pulse */}
             <View style={styles.sosSection}>
               <PulsingSosButton
                 onPress={handleActivate}
@@ -284,10 +284,25 @@ export default function SosScreen() {
               )}
             </View>
 
+            {/* Trip Details Card (if ride active) */}
+            <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.tripCard}>
+              <View style={styles.tripHeaderRow}>
+                <View style={styles.tripIconCircle}>
+                  <Ionicons name="car" size={18} color={COLORS.primary} />
+                </View>
+                <View style={styles.tripContent}>
+                  <Text style={styles.tripTitle}>No Active Ride</Text>
+                  <Text style={styles.tripSubtitle}>Emergency info will show ride details if a trip is active</Text>
+                </View>
+              </View>
+            </GlassCard>
+
             {/* Info Card */}
-            <GlassCard variant="accent" padding={16} borderRadius={14} style={styles.infoCard}>
+            <GlassCard variant="accent" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.infoCard}>
               <View style={styles.infoRow}>
-                <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
+                <View style={styles.infoIconCircle}>
+                  <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
+                </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoTitle}>When to use SOS</Text>
                   <Text style={styles.infoDescription}>
@@ -314,8 +329,8 @@ export default function SosScreen() {
                 Emergency team has been notified
               </Text>
 
-              {/* Location info */}
-              <GlassCard variant="default" padding={14} borderRadius={14} style={styles.locationCard}>
+              {/* Trip details card */}
+              <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.locationCard}>
                 <View style={styles.locationRow}>
                   <View style={styles.locationIconContainer}>
                     <Ionicons name="location" size={18} color={COLORS.error} />
@@ -332,9 +347,9 @@ export default function SosScreen() {
               </GlassCard>
 
               {/* Share Live Location Toggle */}
-              <GlassCard variant="default" padding={14} borderRadius={14} style={styles.toggleCard}>
+              <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.toggleCard}>
                 <View style={styles.toggleRow}>
-                  <View style={styles.toggleIconContainer}>
+                  <View style={styles.toggleIconCircle}>
                     <Ionicons name="locate-outline" size={20} color={COLORS.primary} />
                   </View>
                   <View style={styles.toggleContent}>
@@ -346,8 +361,8 @@ export default function SosScreen() {
                   <Switch
                     value={shareLiveLocation}
                     onValueChange={setShareLiveLocation}
-                    trackColor={{ false: 'rgba(255, 255, 255, 0.1)', true: COLORS.primary }}
-                    thumbColor={shareLiveLocation ? COLORS.background : '#6B7280'}
+                    trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.primary }}
+                    thumbColor={shareLiveLocation ? COLORS.surfaceContainerLowest : COLORS.outlineVariant}
                   />
                 </View>
               </GlassCard>
@@ -370,7 +385,7 @@ export default function SosScreen() {
                 onPress={handleCancelSos}
                 activeOpacity={0.7}
               >
-                <Ionicons name="close-circle-outline" size={18} color={COLORS.textMuted} />
+                <Ionicons name="close-circle-outline" size={18} color={COLORS.onSurfaceVariant} />
                 <Text style={styles.cancelText}>Cancel SOS Alert</Text>
               </TouchableOpacity>
             </View>
@@ -393,14 +408,14 @@ export default function SosScreen() {
                   variant="primary"
                   fullWidth
                   size="lg"
-                  icon={<Ionicons name="home-outline" size={20} color={COLORS.background} />}
+                  icon={<Ionicons name="home-outline" size={20} color={COLORS.onPrimary} />}
                 />
               </View>
             </View>
           </Animated.View>
         )}
 
-        {/* Emergency Contacts - Always visible except resolved */}
+        {/* Emergency Contacts — Always visible except resolved */}
         {sosState !== 'resolved' && (
           <Animated.View entering={FadeInUp.duration(400).delay(400).springify()}>
             <View style={styles.contactsSection}>
@@ -411,10 +426,14 @@ export default function SosScreen() {
                   key={contact.id}
                   entering={FadeInUp.duration(350).delay(500 + index * 60).springify()}
                 >
-                  <GlassCard variant="default" padding={12} borderRadius={14} style={styles.contactCard}>
+                  <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.contactCard}>
                     <View style={styles.contactRow}>
-                      <View style={styles.contactIconContainer}>
-                        <Ionicons name="call-outline" size={18} color={COLORS.error} />
+                      <View style={styles.contactIconCircle}>
+                        <Ionicons
+                          name={contact.phone.length <= 3 ? 'call-outline' : 'person-outline'}
+                          size={18}
+                          color={COLORS.error}
+                        />
                       </View>
                       <View style={styles.contactContent}>
                         <Text style={styles.contactName}>{contact.name}</Text>
@@ -427,7 +446,7 @@ export default function SosScreen() {
                         onPress={() => handleCall(contact.phone)}
                         activeOpacity={0.7}
                       >
-                        <Ionicons name="call" size={16} color={COLORS.primary} />
+                        <Ionicons name="call" size={16} color={COLORS.onPrimary} />
                       </TouchableOpacity>
                     </View>
                   </GlassCard>
@@ -437,10 +456,26 @@ export default function SosScreen() {
           </Animated.View>
         )}
 
+        {/* Call Support secondary button */}
+        {sosState === 'idle' && (
+          <Animated.View entering={FadeIn.duration(400).delay(600)}>
+            <View style={styles.callSupportContainer}>
+              <GradientButton
+                title="Call SmartRide Support"
+                onPress={() => handleCall(SMART_RIDE_EMERGENCY)}
+                variant="outline"
+                fullWidth
+                size="lg"
+                icon={<Ionicons name="headset-outline" size={20} color={COLORS.primary} />}
+              />
+            </View>
+          </Animated.View>
+        )}
+
         {/* Bottom Info */}
         <Animated.View entering={FadeIn.duration(400).delay(700)}>
           <View style={styles.bottomInfo}>
-            <Ionicons name="shield-outline" size={14} color={COLORS.textDim} />
+            <Ionicons name="shield-outline" size={14} color={COLORS.outline} />
             <Text style={styles.bottomInfoText}>
               Your live location will be shared with our emergency response team
             </Text>
@@ -457,109 +492,108 @@ export default function SosScreen() {
 // STYLES
 // ============================================
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
-  // ---- Flash Overlay ----
+  // Flash Overlay
   flashOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(239, 68, 68, 0.3)',
+    backgroundColor: 'rgba(186, 26, 26, 0.2)',
     zIndex: 999,
   },
 
-  // ---- Red Ambient ----
+  // Red Ambient
   redAmbient: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     height: 200,
-    backgroundColor: 'rgba(239, 68, 68, 0.06)',
+    backgroundColor: 'rgba(186, 26, 26, 0.04)',
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
   },
 
-  // ---- ScrollView ----
+  // ScrollView
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingHorizontal: SPACING.md + 4,
   },
 
-  // ---- Header ----
+  // Header
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: SPACING.lg,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.md,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    width: 44,
+    height: 44,
+    borderRadius: RADIUS.xl,
+    backgroundColor: COLORS.surfaceContainerLowest,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: SPACING.gutter,
+    marginRight: SPACING.md,
+    ...SHADOWS.card,
   },
   titleContainer: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
+    ...TYPOGRAPHY.headlineLgMobile,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     letterSpacing: -0.5,
   },
   headerSubtitle: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     marginTop: SPACING.xs,
   },
 
-  // ---- SOS Button ----
+  // SOS Button — Stitch: w-128 h-128 bg-error rounded-full with pulse
   sosSection: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: SPACING.lg,
   },
   sosButtonContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 180,
-    height: 180,
+    width: 192,
+    height: 192,
     position: 'relative',
   },
   glowRing3: {
     position: 'absolute',
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    backgroundColor: 'rgba(186, 26, 26, 0.06)',
   },
   glowRing2: {
     position: 'absolute',
-    width: 150,
-    height: 150,
-    borderRadius: 75,
-    backgroundColor: 'rgba(239, 68, 68, 0.12)',
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(186, 26, 26, 0.1)',
   },
   sosButtonTouchable: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 128,
+    height: 128,
+    borderRadius: 64,
     overflow: 'hidden',
-    shadowColor: '#EF4444',
+    shadowColor: COLORS.error,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.4,
     shadowRadius: 20,
@@ -571,17 +605,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   sosButtonText: {
-    fontSize: 36,
+    fontSize: 28,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: COLORS.onError,
     letterSpacing: 4,
+    marginTop: 2,
   },
   holdingText: {
-    fontSize: TYPOGRAPHY.bodyMd.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '600',
     color: COLORS.error,
     marginTop: SPACING.md,
   },
@@ -590,65 +625,104 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
   },
   sosInstructionText: {
-    fontSize: 15,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
   },
   sosInstructionSubtext: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     marginTop: SPACING.xs,
   },
 
-  // ---- Info Card ----
+  // Trip details card
+  tripCard: {
+    marginBottom: SPACING.md,
+  },
+  tripHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  tripIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primaryFixed,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tripContent: {
+    flex: 1,
+  },
+  tripTitle: {
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '600',
+    color: COLORS.onSurface,
+  },
+  tripSubtitle: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: 2,
+  },
+
+  // Info card
   infoCard: {
-    marginTop: SPACING.md,
+    marginBottom: SPACING.md,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 10,
+    gap: SPACING.md,
+  },
+  infoIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.primaryFixed,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   infoContent: {
     flex: 1,
   },
   infoTitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '600',
+    color: COLORS.onSurface,
     marginBottom: SPACING.xs,
   },
   infoDescription: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     lineHeight: 18,
   },
 
-  // ---- Activated State ----
+  // Activated State
   activatedSection: {
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: SPACING.md,
   },
   activatedCheckCircle: {
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   activatedTitle: {
-    fontSize: TYPOGRAPHY.headlineLg.fontSize,
+    ...TYPOGRAPHY.headlineLg,
     fontWeight: '900',
     color: COLORS.primary,
     letterSpacing: 2,
     marginBottom: SPACING.xs,
   },
   activatedSubtitle: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurfaceVariant,
     marginBottom: SPACING.lg,
   },
 
-  // ---- Location Card ----
+  // Location Card
   locationCard: {
     width: '100%',
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   locationRow: {
     flexDirection: 'row',
@@ -657,34 +731,32 @@ const styles = StyleSheet.create({
   locationIconContainer: {
     width: 36,
     height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.2)',
+    borderRadius: 18,
+    backgroundColor: COLORS.errorContainer,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.md,
   },
   locationContent: {
     flex: 1,
   },
   locationLabel: {
-    fontSize: 11,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   locationAddress: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '500',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginTop: SPACING.xs,
   },
   locationLiveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.errorContainer,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
@@ -696,47 +768,45 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.error,
   },
   liveText: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    ...TYPOGRAPHY.labelMd,
     fontWeight: '700',
-    color: COLORS.error,
+    color: COLORS.onErrorContainer,
     letterSpacing: 0.5,
   },
 
-  // ---- Toggle Card ----
+  // Toggle Card
   toggleCard: {
     width: '100%',
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
   },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  toggleIconContainer: {
+  toggleIconCircle: {
     width: 36,
     height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.15)',
+    borderRadius: 18,
+    backgroundColor: COLORS.primaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.md,
   },
   toggleContent: {
     flex: 1,
   },
   toggleTitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '600',
+    color: COLORS.onSurface,
   },
   toggleDescription: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
     marginTop: SPACING.xs,
   },
 
-  // ---- Activated Actions ----
+  // Activated Actions
   activatedActions: {
     width: '100%',
     marginBottom: SPACING.md,
@@ -745,32 +815,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: SPACING.sm,
     paddingVertical: SPACING.md,
   },
   cancelText: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
     fontWeight: '500',
   },
 
-  // ---- Resolved State ----
+  // Resolved State
   resolvedSection: {
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: SPACING.xl,
   },
   resolvedCheckCircle: {
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   resolvedTitle: {
-    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
+    ...TYPOGRAPHY.headlineLgMobile,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.xs,
   },
   resolvedSubtitle: {
-    fontSize: 15,
-    color: COLORS.textSecondary,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurfaceVariant,
     textAlign: 'center',
     marginBottom: SPACING.xl,
     lineHeight: 22,
@@ -779,14 +849,14 @@ const styles = StyleSheet.create({
     width: '100%',
   },
 
-  // ---- Contacts Section ----
+  // Contacts Section
   contactsSection: {
-    marginTop: 28,
+    marginTop: SPACING.lg,
   },
   contactsSectionTitle: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.textMuted,
+    ...TYPOGRAPHY.labelLg,
+    fontWeight: '600',
+    color: COLORS.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: SPACING.md,
@@ -798,53 +868,54 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  contactIconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: 'rgba(239, 68, 68, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.15)',
+  contactIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.errorContainer,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.md,
   },
   contactContent: {
     flex: 1,
   },
   contactName: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '600',
+    color: COLORS.onSurface,
   },
   contactRelationship: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
-    marginTop: SPACING.xs,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: 2,
   },
   contactCallButton: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.xl,
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.15)',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
 
-  // ---- Bottom Info ----
+  // Call Support
+  callSupportContainer: {
+    marginTop: SPACING.lg,
+  },
+
+  // Bottom Info
   bottomInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: SPACING.sm,
     marginTop: SPACING.lg,
-    paddingHorizontal: 20,
+    paddingHorizontal: SPACING.lg,
   },
   bottomInfoText: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textDim,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
     textAlign: 'center',
     flex: 1,
   },
