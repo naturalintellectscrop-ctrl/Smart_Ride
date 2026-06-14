@@ -25,8 +25,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { statusCodes } from '@react-native-google-signin/google-signin';
-import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
+import { statusCodes, GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
 import { loginWithEmail, isAuthenticated, getAccessToken, getUserData, loginWithGoogle } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
@@ -73,6 +72,12 @@ export default function LoginScreen() {
 
   // ─── Google Sign-In ────────────────────────────
   const handleGoogleSignIn = async () => {
+    // Guard: if native module not available, show error
+    if (!GoogleSignin) {
+      setError('Google Sign-In is not available on this build. Please use phone or email login.');
+      return;
+    }
+
     try {
       setGoogleLoading(true);
       setError(null);
@@ -266,6 +271,7 @@ export default function LoginScreen() {
               keyboardType="phone-pad"
               autoCapitalize="none"
               autoCorrect={false}
+              maxFontSizeMultiplier={1}
               onFocus={() => setPhoneFocused(true)}
               onBlur={() => setPhoneFocused(false)}
               returnKeyType="go"

@@ -93,6 +93,7 @@ export function IconInput({
           returnKeyType={returnKeyType}
           onSubmitEditing={onSubmitEditing}
           autoFocus={autoFocus}
+          maxFontSizeMultiplier={1}
         />
         {rightIcon && (
           <TouchableOpacity onPress={onRightIconPress} style={styles.rightIcon}>
@@ -127,6 +128,7 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: COLORS.primary,
+    // borderWidth stays 1.5 — changing it causes layout shift → cursor jump
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,

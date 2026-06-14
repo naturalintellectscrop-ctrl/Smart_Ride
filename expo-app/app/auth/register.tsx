@@ -25,8 +25,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { statusCodes } from '@react-native-google-signin/google-signin';
-import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
+import { statusCodes, GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
 import { registerUser, isAuthenticated, loginWithGoogle, saveTokens, saveUserData, getAccessToken, getUserData } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
 import { COLORS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../../src/constants';
@@ -94,6 +93,12 @@ export default function RegisterScreen() {
 
   // TERTIARY: Google Sign-In
   const handleGoogleSignIn = async () => {
+    // Guard: if native module not available, show error
+    if (!GoogleSignin) {
+      setError('Google Sign-In is not available on this build. Please use phone or email registration.');
+      return;
+    }
+
     setGoogleLoading(true);
     setError(null);
 
@@ -229,7 +234,7 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
       {/* Subtle mesh gradient background */}

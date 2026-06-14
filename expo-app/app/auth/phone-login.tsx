@@ -156,7 +156,7 @@ export default function PhoneLoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
       <ScrollView
@@ -229,6 +229,7 @@ export default function PhoneLoginScreen() {
               autoComplete="tel"
               textContentType="telephoneNumber"
               maxLength={13}
+              maxFontSizeMultiplier={1}
               editable={!isLoading}
             />
           </View>
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
 
   phoneInputContainerFocused: {
     borderColor: COLORS.primary,
-    borderWidth: 2,
+    // borderWidth stays 1.5 — changing it causes layout shift → cursor jump
   },
 
   phoneInputContainerError: {

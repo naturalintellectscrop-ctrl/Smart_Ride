@@ -200,10 +200,12 @@ export function resetGoogleSignInConfig(): void {
 
 No additional environment variables required. All client IDs are hardcoded in `src/config/google.ts`.
 
-**Client IDs (from Firebase Console):**
-- Web: `531949209415-ja4espd5h0m6p74esft4iv541os5ertj.apps.googleusercontent.com`
-- Android: `531949209415-3fnqdkfo69dognl93ffp0keg0jusvq6t.apps.googleusercontent.com`
-- iOS: `531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar.apps.googleusercontent.com`
+**Client IDs (from Firebase Console — updated March 2025):**
+- Web (type 3): `531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com`
+- Android (type 1): `531949209415-oc8o4mfd2hd3l1mbqecdui2jfhrupe56.apps.googleusercontent.com`
+- iOS (type 2): `531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar.apps.googleusercontent.com`
+
+**Android SHA-1 Fingerprint (debug):** `F2:8C:61:CC:4F:2A:57:00:A0:18:25:57:CF:CB:75:A4:2A:96:0A:E1`
 
 ---
 
