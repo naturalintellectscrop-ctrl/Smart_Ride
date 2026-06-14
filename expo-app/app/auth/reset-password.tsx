@@ -271,6 +271,8 @@ export default function ResetPasswordScreen() {
               }}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
+              autoCorrect={false}
+              maxFontSizeMultiplier={1}
               editable={!isLoading}
             />
             <TouchableOpacity 
@@ -315,6 +317,8 @@ export default function ResetPasswordScreen() {
               }}
               secureTextEntry={!showConfirm}
               autoCapitalize="none"
+              autoCorrect={false}
+              maxFontSizeMultiplier={1}
               editable={!isLoading}
             />
             <TouchableOpacity 
@@ -361,7 +365,7 @@ export default function ResetPasswordScreen() {
 
   return (
     <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
       {/* Animated Background */}

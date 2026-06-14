@@ -44,3 +44,31 @@ Stage Summary:
 - The YouTube tutorial is directly applicable - covers the exact setup needed
 - Still need: run `npx expo prebuild` to generate android/ directory, then build with Android Studio
 - Certificate hash in google-services.json must match the signing key used for the APK build
+
+---
+Task ID: 3
+Agent: Main
+Task: Fix jumpy cursor in text input fields + Google Sign-In configuration
+
+Work Log:
+- Analyzed all TextInput components: login.tsx, phone-login.tsx, register.tsx, verify-otp.tsx, forgot-password.tsx, reset-password.tsx, IconInput.tsx
+- Identified ROOT CAUSE #1: KeyboardAvoidingView with behavior="height" on Android causes entire view to resize on every keystroke, making cursor jump
+- Identified ROOT CAUSE #2: import './global.css' (NativeWind) in _layout.tsx causes style recalculation on every render
+- Identified ROOT CAUSE #3: Changing borderWidth on focus (1.5 → 2) causes layout shift → cursor jump
+- Identified ROOT CAUSE #4: Missing maxFontSizeMultiplier={1} allows font scaling to shift cursor position
+- Fixed _layout.tsx: Removed `import './global.css'` (NativeWind causing style recalculations)
+- Fixed phone-login.tsx: Changed KAV behavior from 'height' to undefined on Android
+- Fixed register.tsx: Changed KAV behavior from 'height' to undefined on Android
+- Fixed verify-otp.tsx: Changed KAV behavior from 'height' to undefined on Android
+- Fixed forgot-password.tsx: Changed KAV behavior from 'height' to undefined on Android
+- Fixed reset-password.tsx: Changed KAV behavior from 'height' to undefined on Android
+- Fixed phone-login.tsx: Removed borderWidth change on focus (1.5 → 2 → stays 1.5)
+- Fixed IconInput.tsx: Added maxFontSizeMultiplier={1}, documented borderWidth stability
+- Added maxFontSizeMultiplier={1} to all raw TextInput components
+- Fixed Google Sign-In: Copied correct google-services.json (with Android type-1 cert hash) from root to expo-app
+- Fixed Google Sign-In: Updated webClientId in src/config/google.ts to match correct google-services.json (531949209415-h0ri57i233r1l767tnc4i26brdt3asb3)
+
+Stage Summary:
+- Jumpy cursor fix: 4 root causes identified and fixed across 7 files
+- Google Sign-In fix: Correct google-services.json now in expo-app, webClientId matches
+- NOTE: For Google Sign-In to fully work, the user's debug SHA-1 fingerprint (F2:8C:61:CC:4F:2A:57:00:A0:18:25:57:CF:CB:75:A4:2A:96:0A:E1) must be added to Firebase project, then google-services.json re-downloaded

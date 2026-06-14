@@ -266,6 +266,7 @@ export default function LoginScreen() {
               keyboardType="phone-pad"
               autoCapitalize="none"
               autoCorrect={false}
+              maxFontSizeMultiplier={1}
               onFocus={() => setPhoneFocused(true)}
               onBlur={() => setPhoneFocused(false)}
               returnKeyType="go"

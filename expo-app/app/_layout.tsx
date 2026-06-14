@@ -9,8 +9,9 @@
 // CRITICAL: Reanimated must be first import
 import 'react-native-reanimated';
 
-// NativeWind global styles
-import './global.css';
+// NOTE: global.css (NativeWind) removed - was causing style recalculation
+// on every render, contributing to jumpy cursor in TextInput fields.
+// All styles use StyleSheet.create() directly instead.
 
 import React, { Component, ReactNode, useEffect } from 'react';
 import { View, Text, StyleSheet, LogBox } from 'react-native';
