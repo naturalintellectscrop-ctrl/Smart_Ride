@@ -1,106 +1,60 @@
 // ============================================
 // SMART RIDE MOBILE - LOGIN SCREEN
 // ============================================
-// Premium futuristic design matching admin page
-// Glassmorphism + animated background + neon accents
+// Stitch Design System — Material Design 3 Green Theme
+// Light mode surface (#f8f9fa) background
 // PRIMARY: Phone OTP (most popular in Uganda)
-// SECONDARY: Email/Password
-// Google Sign-In removed (requires Google Play Services
-// which is unreliable on user devices in Uganda)
+// SECONDARY: Google Sign-In, Apple Sign-In
+// FALLBACK: Email/Password
 // ============================================
 
-import React, { useState, useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  TouchableOpacity, 
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
-  Animated,
-  Dimensions,
-  Easing,
+  TextInput,
+  StatusBar,
+  Alert,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { loginWithEmail, isAuthenticated, saveTokens, saveUserData, getAccessToken, getUserData } from '../../src/services/auth';
+import { statusCodes } from '@react-native-google-signin/google-signin';
+import { GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
+import { loginWithEmail, isAuthenticated, getAccessToken, getUserData, loginWithGoogle } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
-import { COLORS } from '../../src/constants';
-import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
-
-const { height } = Dimensions.get('window');
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
+import { IconInput } from '../../src/components/IconInput';
+import { GradientButton } from '../../src/components/GradientButton';
+import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
 
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  
+
+  // Phone input state
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneFocused, setPhoneFocused] = useState(false);
+
+  // Email/password state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailLoading, setEmailLoading] = useState(false);
+
+  // Google Sign-In state
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  // Error state
   const [error, setError] = useState<string | null>(null);
 
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const logoFloat = useRef(new Animated.Value(0)).current;
-  const glowPulse = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
-    // Start entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Logo floating animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(logoFloat, {
-          toValue: -8,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoFloat, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Glow pulse animation
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowPulse, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowPulse, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-
-    // Check if already authenticated
     checkAuth();
   }, []);
 
@@ -112,12 +66,94 @@ export default function LoginScreen() {
     }
   };
 
-  // PRIMARY: Phone OTP Login
-  const handlePhoneLogin = () => {
+  // ─── Phone Continue ────────────────────────────
+  const handlePhoneContinue = () => {
     router.push('/auth/phone-login');
   };
 
-  // SECONDARY: Email/Password Login
+  // ─── Google Sign-In ────────────────────────────
+  const handleGoogleSignIn = async () => {
+    try {
+      setGoogleLoading(true);
+      setError(null);
+
+      // Configure Google Sign-In (safe to call multiple times)
+      configureGoogleSignIn();
+
+      // Check if Play Services are available
+      const hasPlay = await GoogleSignin.hasPlayServices();
+      if (!hasPlay) {
+        setError('Google Play Services is required. Please update your device.');
+        return;
+      }
+
+      // Sign in
+      const userInfo = await GoogleSignin.signIn();
+
+      // Check for ID token
+      if (userInfo.data?.idToken) {
+        const result = await loginWithGoogle(userInfo.data.idToken);
+
+        if (result.success) {
+          // Sync with auth store
+          const token = await getAccessToken();
+          const userData = await getUserData();
+          if (token && userData) {
+            useAuthStore.getState().login({
+              id: userData.id,
+              email: userData.email,
+              name: userData.name,
+              phone: userData.phone,
+              role: userData.role,
+            }, token);
+          }
+          router.replace('/(tabs)');
+        } else {
+          setError(result.error || 'Google Sign-In failed. Please try again.');
+        }
+      } else {
+        setError('Google Sign-In did not return a valid token. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('[LOGIN] Google Sign-In error:', err);
+
+      // Handle specific error codes
+      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
+        // User cancelled — silently ignore
+        return;
+      }
+
+      if (err.code === statusCodes.DEVELOPER_ERROR) {
+        setError(
+          'Google Sign-In is not configured for this device. ' +
+          'Please ensure Google Play Services is up to date, or try another login method.'
+        );
+        return;
+      }
+
+      if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+        setError('Google Play Services is not available on this device. Please use phone or email login.');
+        return;
+      }
+
+      if (err.code === statusCodes.IN_PROGRESS) {
+        // Sign-in already in progress — just wait
+        return;
+      }
+
+      // Generic error
+      setError(err.message || 'Google Sign-In failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  // ─── Apple Sign-In (placeholder) ───────────────
+  const handleAppleSignIn = () => {
+    Alert.alert('Coming Soon', 'Apple Sign-In will be available in a future update.');
+  };
+
+  // ─── Email/Password Login ──────────────────────
   const handleEmailLogin = async () => {
     if (!email.trim()) {
       setError('Please enter your email');
@@ -128,7 +164,7 @@ export default function LoginScreen() {
       return;
     }
 
-    setIsLoading(true);
+    setEmailLoading(true);
     setError(null);
 
     try {
@@ -139,7 +175,6 @@ export default function LoginScreen() {
       });
 
       if (result.success) {
-        // Sync with auth store for screens that use useAuthStore
         const token = await getAccessToken();
         const userData = await getUserData();
         if (token && userData) {
@@ -158,184 +193,230 @@ export default function LoginScreen() {
     } catch (err: any) {
       setError(err.message || 'Failed to login. Please try again.');
     } finally {
-      setIsLoading(false);
+      setEmailLoading(false);
     }
   };
 
-  const glowOpacity = glowPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.8],
-  });
-
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.container}
     >
-      {/* Animated Background */}
-      <View style={styles.backgroundGradient}>
-        <View style={styles.ambientGreen} />
-        <View style={styles.ambientCyan} />
-        <View style={styles.ambientPurple} />
-      </View>
+      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
 
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + 24, 40) }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header with GlowHeader */}
-        <Animated.View 
-          style={[
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          <GlowHeader 
-            title="Welcome Back"
-            subtitle="Sign in to continue to Smart Ride"
+        {/* ─── Top App Bar ───────────────────────── */}
+        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) }]}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            style={styles.backButton}
+            activeOpacity={0.7}
           >
-            {/* Floating Logo as children */}
-            <Animated.View style={{ alignItems: 'center', marginTop: 16, transform: [{ translateY: logoFloat }] }}>
-              <View style={styles.logoContainer}>
-                <Animated.View style={[styles.logoGlow, { opacity: glowOpacity }]} />
-                <Text style={styles.logoText}>SR</Text>
-              </View>
-            </Animated.View>
-          </GlowHeader>
-        </Animated.View>
+            <Ionicons name="arrow-back" size={24} color={COLORS.onSurface} />
+          </TouchableOpacity>
+          <View style={styles.stepIndicator}>
+            <View style={styles.stepDotActive} />
+            <View style={styles.stepLine} />
+            <View style={styles.stepDotInactive} />
+          </View>
+          <Text style={styles.stepText}>Step 1 of 2</Text>
+        </View>
 
-        {/* PRIMARY: Phone OTP Button */}
-        <Animated.View 
-          style={[
-            styles.phoneSection,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
+        {/* ─── Logo Section ──────────────────────── */}
+        <View style={styles.logoSection}>
+          <View style={styles.logoContainer}>
+            <Image
+              source={SmartRideLogoImage}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={styles.welcomeTitle}>Welcome to Smart Ride</Text>
+          <Text style={styles.welcomeSubtitle}>
+            Your reliable ride, delivery & more — across Uganda
+          </Text>
+        </View>
+
+        {/* ─── Phone Input Section ───────────────── */}
+        <View style={styles.phoneSection}>
+          <Text style={styles.phoneLabel}>Mobile Number</Text>
+          <View style={[
+            styles.phoneInputContainer,
+            phoneFocused && styles.phoneInputFocused,
+          ]}>
+            {/* Uganda Flag + Country Code */}
+            <View style={styles.countryCodeSection}>
+              <Text style={styles.flagEmoji}>🇺🇬</Text>
+              <Text style={styles.countryCodeText}>+256</Text>
+              <Ionicons name="chevron-down" size={14} color={COLORS.outline} />
+            </View>
+            {/* Divider */}
+            <View style={styles.countryDivider} />
+            {/* Phone Input */}
+            <TextInput
+              style={styles.phoneInput}
+              placeholder="7XX XXX XXX"
+              placeholderTextColor={COLORS.outlineVariant}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+              autoCorrect={false}
+              onFocus={() => setPhoneFocused(true)}
+              onBlur={() => setPhoneFocused(false)}
+              returnKeyType="go"
+              onSubmitEditing={handlePhoneContinue}
+            />
+          </View>
+          <Text style={styles.phoneHelper}>
+            We'll send you a verification code via SMS
+          </Text>
+        </View>
+
+        {/* ─── Primary Continue Button ───────────── */}
+        <View style={styles.continueButtonContainer}>
           <GradientButton
-            title="Continue with Phone Number"
-            onPress={handlePhoneLogin}
+            title="Continue"
+            onPress={handlePhoneContinue}
             variant="primary"
             size="lg"
             icon={
-              <Ionicons name="call" size={20} color={COLORS.background} />
+              <Ionicons name="arrow-forward" size={20} color={COLORS.onPrimary} />
             }
           />
-          <Text style={styles.phoneHint}>
-            Quick sign in with OTP — no password needed
-          </Text>
-        </Animated.View>
+        </View>
 
-        {/* Divider */}
-        <Animated.View 
-          style={[
-            styles.dividerContainer,
-            { opacity: fadeAnim }
-          ]}
-        >
+        {/* ─── Divider ───────────────────────────── */}
+        <View style={styles.dividerContainer}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or sign in with email</Text>
+          <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
           <View style={styles.dividerLine} />
-        </Animated.View>
+        </View>
 
-        {/* Form Card */}
-        <Animated.View 
-          style={[
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          <GlassCard variant="elevated" padding={24} borderRadius={24} style={styles.formCard}>
-            {error && (
-              <View style={styles.errorContainer}>
-                <Ionicons name="alert-circle" size={18} color={COLORS.error} />
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
+        {/* ─── Social Login Buttons ──────────────── */}
+        <View style={styles.socialGrid}>
+          {/* Google */}
+          <TouchableOpacity
+            style={[styles.socialButton, googleLoading && styles.socialButtonDisabled]}
+            onPress={handleGoogleSignIn}
+            disabled={googleLoading}
+            activeOpacity={0.7}
+          >
+            {googleLoading ? (
+              <Text style={styles.socialButtonLoadingText}>…</Text>
+            ) : (
+              <>
+                <Text style={styles.googleIconText}>G</Text>
+                <Text style={styles.socialButtonText}>Google</Text>
+              </>
             )}
+          </TouchableOpacity>
 
-            {/* Email Input */}
-            <IconInput
-              label="Email"
-              placeholder="Enter your email"
-              value={email}
-              onChangeText={setEmail}
-              icon="mail-outline"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-              returnKeyType="next"
-            />
+          {/* Apple */}
+          <TouchableOpacity
+            style={styles.socialButton}
+            onPress={handleAppleSignIn}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="logo-apple" size={20} color={COLORS.onSurface} />
+            <Text style={styles.socialButtonText}>Apple</Text>
+          </TouchableOpacity>
+        </View>
 
-            {/* Password Input */}
-            <IconInput
-              label="Password"
-              placeholder="Enter your password"
-              value={password}
-              onChangeText={setPassword}
-              icon="lock-closed-outline"
-              secureTextEntry={!showPassword}
-              rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              onRightIconPress={() => setShowPassword(!showPassword)}
-              autoCapitalize="none"
-              editable={!isLoading}
-              returnKeyType="go"
-              onSubmitEditing={handleEmailLogin}
-            />
+        {/* ─── Email / Password Fallback ─────────── */}
+        <View style={styles.emailSection}>
+          <View style={styles.emailDividerContainer}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.emailDividerText}>EMAIL LOGIN</Text>
+            <View style={styles.dividerLine} />
+          </View>
 
-            {/* Forgot Password */}
-            <TouchableOpacity 
-              style={styles.forgotButton}
-              onPress={() => router.push('/auth/forgot-password')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.forgotText}>Forgot Password?</Text>
-            </TouchableOpacity>
+          {/* Error Banner */}
+          {error && (
+            <View style={styles.errorContainer}>
+              <Ionicons name="alert-circle" size={18} color={COLORS.error} />
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          )}
 
-            {/* Email Sign In Button */}
-            <GradientButton
-              title="Sign In with Email"
-              onPress={handleEmailLogin}
-              variant="secondary"
-              loading={isLoading}
-              size="lg"
-              icon={
-                !isLoading ? (
-                  <Ionicons name="mail" size={20} color={COLORS.text} />
-                ) : undefined
-              }
-            />
-          </GlassCard>
-        </Animated.View>
+          {/* Email Input */}
+          <IconInput
+            label="Email"
+            placeholder="Enter your email"
+            value={email}
+            onChangeText={setEmail}
+            icon="mail-outline"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            editable={!emailLoading}
+            returnKeyType="next"
+          />
 
-        {/* Sign Up Link */}
-        <Animated.View 
-          style={[
-            styles.signUpContainer,
-            { opacity: fadeAnim }
-          ]}
-        >
+          {/* Password Input */}
+          <IconInput
+            label="Password"
+            placeholder="Enter your password"
+            value={password}
+            onChangeText={setPassword}
+            icon="lock-closed-outline"
+            secureTextEntry={!showPassword}
+            rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
+            onRightIconPress={() => setShowPassword(!showPassword)}
+            autoCapitalize="none"
+            editable={!emailLoading}
+            returnKeyType="go"
+            onSubmitEditing={handleEmailLogin}
+          />
+
+          {/* Forgot Password */}
+          <TouchableOpacity
+            style={styles.forgotButton}
+            onPress={() => router.push('/auth/forgot-password')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.forgotText}>Forgot Password?</Text>
+          </TouchableOpacity>
+
+          {/* Email Sign In Button */}
+          <GradientButton
+            title="Sign In with Email"
+            onPress={handleEmailLogin}
+            variant="secondary"
+            loading={emailLoading}
+            size="lg"
+            icon={
+              !emailLoading ? (
+                <Ionicons name="mail" size={20} color={COLORS.onSurface} />
+              ) : undefined
+            }
+          />
+        </View>
+
+        {/* ─── Sign Up Link ──────────────────────── */}
+        <View style={styles.signUpContainer}>
           <Text style={styles.signUpText}>Don't have an account? </Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             onPress={() => router.push('/auth/register')}
-            disabled={isLoading}
+            disabled={emailLoading}
             activeOpacity={0.7}
           >
             <Text style={styles.signUpLink}>Sign Up</Text>
           </TouchableOpacity>
-        </Animated.View>
+        </View>
 
-        {/* Security Notice */}
-        <Animated.View style={[styles.securityNotice, { opacity: fadeAnim }]}>
-          <Ionicons name="shield-checkmark-outline" size={12} color={COLORS.textDim} />
-          <Text style={styles.securityText}>Secure login  •  All data encrypted</Text>
-        </Animated.View>
+        {/* ─── Footer Policy ─────────────────────── */}
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>
+            By continuing, you agree to our{' '}
+            <Text style={styles.footerLink}>Terms of Service</Text>
+            {' '}and{' '}
+            <Text style={styles.footerLink}>Privacy Policy</Text>
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -344,152 +425,291 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface, // #f8f9fa — Stitch light mode
   },
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  ambientGreen: {
-    position: 'absolute',
-    top: -60,
-    left: -40,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: 'rgba(0, 255, 136, 0.06)',
-  },
-  ambientCyan: {
-    position: 'absolute',
-    bottom: height * 0.15,
-    right: -60,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(0, 255, 243, 0.04)',
-  },
-  ambientPurple: {
-    position: 'absolute',
-    top: height * 0.38,
-    right: -80,
-    width: 180,
-    height: 180,
-    borderRadius: 90,
-    backgroundColor: 'rgba(139, 92, 246, 0.04)',
-  },
+
   scrollContent: {
     flexGrow: 1,
   },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    backgroundColor: COLORS.backgroundElevated,
-    borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.2)',
+
+  // ─── Top App Bar ────────────────────────────────
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
+    borderRadius: RADIUS.full,
   },
-  logoGlow: {
-    position: 'absolute',
-    top: -20,
-    left: -20,
-    right: -20,
-    bottom: -20,
-    borderRadius: 40,
-    backgroundColor: 'rgba(0, 255, 136, 0.15)',
+  stepIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: SPACING.md,
+    gap: 0,
   },
-  logoText: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: COLORS.primary,
-    letterSpacing: -1,
+  stepDotActive: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.primary,
   },
-  phoneSection: {
-    marginHorizontal: 20,
-    marginTop: 8,
+  stepLine: {
+    width: 24,
+    height: 2,
+    backgroundColor: COLORS.outlineVariant,
   },
-  phoneHint: {
-    color: COLORS.textMuted,
-    fontSize: 12,
+  stepDotInactive: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.outlineVariant,
+  },
+  stepText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginLeft: SPACING.sm,
+  },
+
+  // ─── Logo Section ───────────────────────────────
+  logoSection: {
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+    paddingBottom: SPACING.lg,
+  },
+  logoContainer: {
+    width: 96,
+    height: 96,
+    borderRadius: RADIUS.lg, // rounded-xl = 16
+    backgroundColor: COLORS.surfaceContainerLowest,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
+  },
+  logoImage: {
+    width: 72,
+    height: 72,
+    borderRadius: RADIUS.lg,
+  },
+  welcomeTitle: {
+    ...TYPOGRAPHY.headlineLgMobile, // 22px bold
+    color: COLORS.onSurface,
+    marginTop: SPACING.lg,
     textAlign: 'center',
-    marginTop: 8,
   },
+  welcomeSubtitle: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.xs,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
+  // ─── Phone Input Section ────────────────────────
+  phoneSection: {
+    paddingHorizontal: SPACING.lg,
+    marginTop: SPACING.sm,
+  },
+  phoneLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.sm,
+  },
+  phoneInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainerLow, // #f3f4f5
+    borderRadius: RADIUS.lg, // rounded-xl
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    height: 56,
+  },
+  phoneInputFocused: {
+    borderColor: COLORS.primary,
+    // ring-1 ring-primary in RN = borderWidth approach
+    shadowColor: COLORS.primary,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  countryCodeSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: SPACING.md,
+    paddingRight: SPACING.sm,
+    gap: 4,
+  },
+  flagEmoji: {
+    fontSize: 20,
+  },
+  countryCodeText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    fontWeight: '600',
+  },
+  countryDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: COLORS.outlineVariant,
+    marginRight: SPACING.sm,
+  },
+  phoneInput: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.bodyLg.fontSize, // bodyLg font
+    color: COLORS.onSurface,
+    paddingRight: SPACING.md,
+    paddingVertical: 0,
+    height: 56,
+  },
+  phoneHelper: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.outlineVariant,
+    marginTop: SPACING.xs,
+  },
+
+  // ─── Continue Button ────────────────────────────
+  continueButtonContainer: {
+    paddingHorizontal: SPACING.lg,
+    marginTop: SPACING.md,
+  },
+
+  // ─── Divider ────────────────────────────────────
   dividerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 20,
-    marginVertical: 20,
+    marginHorizontal: SPACING.lg,
+    marginVertical: SPACING.lg,
   },
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.outlineVariant,
   },
   dividerText: {
-    color: COLORS.textDim,
-    marginHorizontal: 14,
-    fontSize: 13,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+    marginHorizontal: SPACING.md,
+    letterSpacing: 0.5,
   },
-  formCard: {
-    marginHorizontal: 20,
-    marginTop: 0,
+
+  // ─── Social Login Buttons ───────────────────────
+  socialGrid: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+    paddingHorizontal: SPACING.lg,
   },
-  errorContainer: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.2)',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+  socialButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    height: 56, // h-14
+    backgroundColor: COLORS.surface,
+    borderRadius: RADIUS.lg, // rounded-xl
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  socialButtonDisabled: {
+    opacity: 0.5,
+  },
+  googleIconText: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+  },
+  socialButtonText: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '600',
+    color: COLORS.onSurface,
+  },
+  socialButtonLoadingText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurfaceVariant,
+  },
+
+  // ─── Email Section ──────────────────────────────
+  emailSection: {
+    paddingHorizontal: SPACING.lg,
+    marginTop: SPACING.lg,
+  },
+  emailDividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  emailDividerText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+    marginHorizontal: SPACING.md,
+    letterSpacing: 0.5,
+  },
+  errorContainer: {
+    backgroundColor: COLORS.errorContainer,
+    borderWidth: 1,
+    borderColor: COLORS.error,
+    borderRadius: RADIUS.md,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
   },
   errorText: {
-    color: COLORS.error,
-    fontSize: 13,
+    color: COLORS.onErrorContainer,
+    ...TYPOGRAPHY.bodySm,
     flex: 1,
-    lineHeight: 18,
+    lineHeight: 20,
   },
   forgotButton: {
     alignItems: 'flex-end',
-    marginBottom: 20,
-    marginTop: 4,
+    marginBottom: SPACING.md,
+    marginTop: SPACING.xs,
   },
   forgotText: {
     color: COLORS.primary,
-    fontWeight: '500',
-    fontSize: 13,
+    fontWeight: '600',
+    ...TYPOGRAPHY.bodySm,
   },
+
+  // ─── Sign Up ────────────────────────────────────
   signUpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 24,
+    marginTop: SPACING.xl,
   },
   signUpText: {
-    color: COLORS.textMuted,
-    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
   },
   signUpLink: {
     color: COLORS.primary,
     fontWeight: '600',
-    fontSize: 14,
+    ...TYPOGRAPHY.bodySm,
   },
-  securityNotice: {
-    flexDirection: 'row',
+
+  // ─── Footer Policy ──────────────────────────────
+  footer: {
+    marginTop: SPACING.lg,
+    paddingHorizontal: SPACING.lg,
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: 16,
-    marginBottom: 8,
   },
-  securityText: {
-    color: COLORS.textDim,
-    fontSize: 11,
+  footerText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.outline,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  footerLink: {
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 });

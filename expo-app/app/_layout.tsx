@@ -19,10 +19,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-// Google Sign-In removed - Phone OTP is primary auth method for Uganda
-// configureGoogleSignIn is kept in source but not called on startup
 import { ThemeProvider, useTheme } from '../src/context/theme-context';
-import { notificationService } from '../src/services';
 
 // Suppress known benign warnings in production
 LogBox.ignoreLogs([
@@ -87,46 +84,52 @@ const queryClient = createQueryClient();
 function ThemedRootLayout() {
   const { isDark, colors } = useTheme();
 
-  // Google Sign-In config removed from startup
-  // Phone OTP is the primary auth method for Ugandan market
+  // Initialize native services AFTER first render
+  // Each is wrapped safely so nothing blocks the app
   useEffect(() => {
-    // No Google Sign-In configuration needed
-  }, []);
+    // Google Sign-In config — non-blocking, non-fatal
+    try {
+      const { configureGoogleSignIn } = require('../src/config/google');
+      configureGoogleSignIn();
+      console.log('[App] Google Sign-In configured');
+    } catch (e) {
+      console.warn('[App] Google Sign-In config failed (non-fatal):', e);
+    }
 
-  // Initialize push notifications and set up listeners
-  useEffect(() => {
-    const initNotifications = async () => {
+    // Push notifications — non-blocking, non-fatal
+    (async () => {
       try {
+        const { notificationService } = require('../src/services');
         const token = await notificationService.initialize();
         if (token) {
-          console.log('[App] Push notifications initialized, token:', token.substring(0, 20) + '...');
+          console.log('[App] Push notifications initialized');
         }
       } catch (error) {
-        console.log('[App] Push notification init failed:', error);
+        console.log('[App] Push notification init skipped (non-fatal)');
       }
-    };
+    })();
 
-    initNotifications();
-
-    // Set up listeners
-    const cleanup = notificationService.setupListeners(
-      (notification) => {
-        console.log('[App] Foreground notification:', notification.title);
-        // Could show an in-app banner/toast here
-      },
-      (response) => {
-        const data = response.notification.request.content.data as any;
-        if (data?.entityType === 'task' || data?.type?.includes('RIDE')) {
-          router.push('/(tabs)/rides');
-        } else if (data?.entityType === 'order' || data?.type?.includes('ORDER')) {
-          router.push('/(tabs)/orders');
-        } else if (data?.entityType === 'chat' || data?.type?.includes('CHAT')) {
-          router.push('/chat');
+    // Notification listeners — non-blocking
+    try {
+      const { notificationService } = require('../src/services');
+      notificationService.setupListeners(
+        (notification: any) => {
+          console.log('[App] Foreground notification:', notification.title);
+        },
+        (response: any) => {
+          try {
+            const data = response.notification.request.content.data as any;
+            if (data?.entityType === 'task' || data?.type?.includes('RIDE')) {
+              router.push('/(tabs)/rides');
+            } else if (data?.entityType === 'order' || data?.type?.includes('ORDER')) {
+              router.push('/(tabs)/orders');
+            }
+          } catch {}
         }
-      }
-    );
-
-    return cleanup;
+      );
+    } catch (error) {
+      console.log('[App] Notification listeners skipped (non-fatal)');
+    }
   }, []);
 
   return (

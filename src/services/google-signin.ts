@@ -37,6 +37,7 @@ export interface GoogleSignInResult {
 const IOS_CLIENT_ID = '531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar.apps.googleusercontent.com';
 
 // Web Client ID (used for Android and server verification)
+// IMPORTANT: Must match the type-3 client in google-services.json
 const WEB_CLIENT_ID = '531949209415-ja4espd5h0m6p74esft4iv541os5ertj.apps.googleusercontent.com';
 
 // ============================================

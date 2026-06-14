@@ -1,90 +1,203 @@
 // ============================================
 // SMART RIDE MOBILE - CONSTANTS
 // ============================================
-// Minimal constants for boot - no external dependencies
+// Stitch Design System — Material Design 3 Green Theme
+// Applied from stitch_smart_ride_super_app_ui_ux design files
 // ============================================
 
 // ============================================
-// NOTE: COLORS is the DARK palette kept for backward compatibility.
-// New code should use `useTheme().colors` from @/src/context/theme-context
-// which automatically switches between LightColors and DarkColors.
+// STITCH DESIGN SYSTEM COLORS (MD3 Green Theme)
+// This is the OFFICIAL design system from the Stitch files.
+// All screens should use these colors.
 // ============================================
 
-// Brand Colors (Dark palette — legacy, still the default export)
 export const COLORS = {
-  // Primary - Neon Green (Main brand color)
-  primary: '#00FF88',
-  primaryLight: '#10B981',
-  primaryDark: '#059669',
+  // Primary
+  primary: '#005f3a',
+  onPrimary: '#ffffff',
+  primaryContainer: '#0e7a4d',
+  onPrimaryContainer: '#a6ffc9',
+  inversePrimary: '#7cd9a4',
 
-  // Secondary - Electric Blue
-  secondary: '#3B82F6',
-  secondaryLight: '#60A5FA',
-  secondaryDark: '#1D4ED8',
+  // Secondary
+  secondary: '#006e2f',
+  onSecondary: '#ffffff',
+  secondaryContainer: '#6bff8f',
+  onSecondaryContainer: '#007432',
 
-  // Background - Dark Theme
-  background: '#0D0D12',
-  backgroundElevated: '#1A1A24',
-  backgroundSurface: '#252530',
-  backgroundSecondary: '#1A1A24',
+  // Secondary Fixed
+  secondaryFixed: '#6bff8f',
+  secondaryFixedDim: '#4ae176',
+  onSecondaryFixed: '#002109',
+  onSecondaryFixedVariant: '#005321',
 
-  // Text
-  text: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textMuted: 'rgba(255, 255, 255, 0.5)',
-  textDisabled: 'rgba(255, 255, 255, 0.3)',
+  // Primary Fixed
+  primaryFixed: '#98f6be',
+  primaryFixedDim: '#7cd9a4',
+  onPrimaryFixed: '#002111',
+  onPrimaryFixedVariant: '#005231',
 
-  // Borders
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderLight: 'rgba(255, 255, 255, 0.05)',
-  borderStrong: 'rgba(255, 255, 255, 0.15)',
+  // Tertiary
+  tertiary: '#4b5264',
+  onTertiary: '#ffffff',
+  tertiaryContainer: '#636a7c',
+  onTertiaryContainer: '#e6ebff',
+  tertiaryFixed: '#dce2f7',
+  tertiaryFixedDim: '#c0c6db',
+  onTertiaryFixed: '#141b2b',
+  onTertiaryFixedVariant: '#404758',
 
-  // Status Colors
-  success: '#00FF88',
-  error: '#EF4444',
-  warning: '#F59E0B',
-  info: '#3B82F6',
+  // Surface & Background
+  background: '#f8f9fa',
+  onBackground: '#191c1d',
+  surface: '#f8f9fa',
+  onSurface: '#191c1d',
+  onSurfaceVariant: '#3f4941',
+  surfaceDim: '#d9dadb',
+  surfaceBright: '#f8f9fa',
+  surfaceVariant: '#e1e3e4',
+  surfaceTint: '#006d43',
+
+  // Surface Containers
+  surfaceContainerLowest: '#ffffff',
+  surfaceContainerLow: '#f3f4f5',
+  surfaceContainer: '#edeeef',
+  surfaceContainerHigh: '#e7e8e9',
+  surfaceContainerHighest: '#e1e3e4',
+
+  // Inverse
+  inverseSurface: '#2e3132',
+  inverseOnSurface: '#f0f1f2',
+
+  // Outline
+  outline: '#6f7a71',
+  outlineVariant: '#bec9bf',
+
+  // Error
+  error: '#ba1a1a',
+  onError: '#ffffff',
+  errorContainer: '#ffdad6',
+  onErrorContainer: '#93000a',
 
   // Utility
-  white: '#FFFFFF',
+  white: '#ffffff',
   black: '#000000',
   transparent: 'transparent',
 
-  // Text dim (for icons, placeholders)
-  textDim: 'rgba(255, 255, 255, 0.3)',
+  // Brand-specific (Uganda)
+  mtnYellow: '#FFCC00',
+  airtelRed: '#FF0000',
 
-  // Service brand colors (matches SERVICES config)
-  serviceBoda: '#00FF88',
-  serviceCar: '#00D4FF',
-  serviceFood: '#F59E0B',
-  serviceDelivery: '#14B8A6',
-  serviceShop: '#8B5CF6',
-  serviceHealth: '#F43F5E',
+  // Google Sign-In brand colors
+  googleBlue: '#4285F4',
+  googleGreen: '#34A853',
+  googleYellow: '#FBBC05',
+  googleRed: '#EA4335',
 
-  // Legacy compatibility
-  accent: '#F59E0B',
+  // Legacy compatibility (map old keys to new values)
+  get primaryDark() { return this.primaryContainer; },
+  get primaryLight() { return this.primaryFixed; },
+  get secondaryDark() { return this.secondary; },
+  get secondaryLight() { return this.onSecondaryContainer; },
+  get text() { return this.onSurface; },
+  get textSecondary() { return this.onSurfaceVariant; },
+  get textMuted() { return this.outline; },
+  get textDim() { return this.outlineVariant; },
+  get textDisabled() { return this.outlineVariant; },
+  get border() { return this.outlineVariant; },
+  get borderLight() { return 'rgba(190, 201, 191, 0.5)'; },
+  get borderStrong() { return this.outline; },
+  get backgroundElevated() { return this.surfaceContainerLowest; },
+  get backgroundSurface() { return this.surfaceContainerLow; },
+  get backgroundSecondary() { return this.surfaceContainer; },
+  get success() { return this.secondary; },
+  get warning() { return '#F59E0B'; },
+  get info() { return this.tertiary; },
+  get accent() { return this.secondaryFixed; },
 };
 
-// Gradients
-export const GRADIENTS = {
-  primary: ['#00FF88', '#00D4FF'],
-  danger: ['#EF4444', '#DC2626'],
-  accent: ['#00D4FF', '#00FF88'],
-  // Light mode variants
-  light: {
-    primary: ['#005f3a', '#0e7a4d'],
-    danger: ['#EF4444', '#DC2626'],
-    accent: ['#0e7a4d', '#005f3a'],
+// ============================================
+// TYPOGRAPHY (Stitch Design System)
+// ============================================
+export const TYPOGRAPHY = {
+  displayLg: { fontSize: 32, fontWeight: '700' as const, lineHeight: 40, letterSpacing: -0.02 * 16 },
+  headlineLg: { fontSize: 24, fontWeight: '700' as const, lineHeight: 32 },
+  headlineLgMobile: { fontSize: 22, fontWeight: '700' as const, lineHeight: 28 },
+  headlineMd: { fontSize: 20, fontWeight: '600' as const, lineHeight: 28 },
+  bodyLg: { fontSize: 18, fontWeight: '400' as const, lineHeight: 28 },
+  bodyMd: { fontSize: 16, fontWeight: '400' as const, lineHeight: 24 },
+  bodySm: { fontSize: 14, fontWeight: '400' as const, lineHeight: 20 },
+  labelLg: { fontSize: 14, fontWeight: '600' as const, lineHeight: 20, letterSpacing: 0.02 * 14 },
+  labelMd: { fontSize: 12, fontWeight: '500' as const, lineHeight: 16 },
+};
+
+// ============================================
+// SPACING (Stitch Design System)
+// ============================================
+export const SPACING = {
+  xs: 4,
+  sm: 8,
+  gutter: 12,
+  md: 16,
+  containerMargin: 16,
+  lg: 24,
+  xl: 32,
+};
+
+// ============================================
+// BORDER RADIUS (Stitch Design System)
+// ============================================
+export const RADIUS = {
+  sm: 4,
+  DEFAULT: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  full: 9999,
+};
+
+// ============================================
+// SHADOWS (Stitch Design System)
+// ============================================
+export const SHADOWS = {
+  card: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  active: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  button: {
+    shadowColor: '#005f3a',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
 };
 
-// Glass styles
+// ============================================
+// Gradients (Stitch Design System)
+// ============================================
+export const GRADIENTS = {
+  primary: ['#005f3a', '#0e7a4d'],
+  danger: ['#ba1a1a', '#93000a'],
+  accent: ['#0e7a4d', '#005f3a'],
+};
+
+// Glass styles (for potential future dark mode)
 export const GLASS = {
-  background: 'rgba(19, 19, 26, 0.7)',
-  border: 'rgba(255, 255, 255, 0.05)',
-  shadow: 'rgba(0, 0, 0, 0.3)',
-  elevated: 'rgba(30, 30, 40, 0.8)',
-  // Light mode variants
+  background: 'rgba(255, 255, 255, 0.7)',
+  border: 'rgba(190, 201, 191, 0.3)',
+  shadow: 'rgba(0, 0, 0, 0.08)',
+  elevated: 'rgba(255, 255, 255, 0.9)',
   light: {
     background: 'rgba(255, 255, 255, 0.8)',
     border: 'rgba(0, 95, 58, 0.08)',
@@ -93,18 +206,17 @@ export const GLASS = {
   },
 };
 
-// Services config for ServiceIcon component
+// Services config
 export const SERVICES: Record<string, { icon: string; color: string; colorDim: string; colorBorder: string }> = {
-  BODA: { icon: 'bicycle', color: '#00FF88', colorDim: 'rgba(0, 255, 136, 0.08)', colorBorder: 'rgba(0, 255, 136, 0.15)' },
-  CAR: { icon: 'car', color: '#00D4FF', colorDim: 'rgba(0, 212, 255, 0.08)', colorBorder: 'rgba(0, 212, 255, 0.15)' },
-  FOOD: { icon: 'restaurant', color: '#F59E0B', colorDim: 'rgba(245, 158, 11, 0.08)', colorBorder: 'rgba(245, 158, 11, 0.15)' },
-  DELIVERY: { icon: 'cube', color: '#14B8A6', colorDim: 'rgba(20, 184, 166, 0.08)', colorBorder: 'rgba(20, 184, 166, 0.15)' },
-  SHOPPING: { icon: 'bag', color: '#8B5CF6', colorDim: 'rgba(139, 92, 246, 0.08)', colorBorder: 'rgba(139, 92, 246, 0.15)' },
-  HEALTH: { icon: 'medkit', color: '#F43F5E', colorDim: 'rgba(244, 63, 94, 0.08)', colorBorder: 'rgba(244, 63, 94, 0.15)' },
+  BODA: { icon: 'bicycle', color: '#005f3a', colorDim: '#98f6be', colorBorder: 'rgba(0, 95, 58, 0.15)' },
+  CAR: { icon: 'car', color: '#0e7a4d', colorDim: '#0e7a4d', colorBorder: 'rgba(14, 122, 77, 0.15)' },
+  FOOD: { icon: 'restaurant', color: '#006e2f', colorDim: '#6bff8f', colorBorder: 'rgba(107, 255, 143, 0.15)' },
+  DELIVERY: { icon: 'cube', color: '#4b5264', colorDim: '#dce2f7', colorBorder: 'rgba(220, 226, 247, 0.15)' },
+  SHOPPING: { icon: 'bag', color: '#4b5264', colorDim: '#dce2f7', colorBorder: 'rgba(220, 226, 247, 0.15)' },
+  HEALTH: { icon: 'medkit', color: '#ba1a1a', colorDim: '#ffdad6', colorBorder: 'rgba(186, 26, 26, 0.15)' },
 };
 
-// Mapbox Configuration (reserved for future Mapbox GL upgrade)
-// To enable: install @rnmapbox/maps, set EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN
+// Mapbox Configuration
 export const MAPBOX_CONFIG = {
   accessToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '',
   style: {
@@ -121,7 +233,7 @@ export const DEFAULT_LOCATION = {
   address: 'Kampala, Uganda',
 };
 
-// Popular Kampala Places (matches backend /api/mapbox/kampala-places data)
+// Popular Kampala Places
 export const KAMPALA_POPULAR_PLACES = [
   { id: 'kla-acacia-mall', name: 'Acacia Mall', icon: 'shopping-bag', latitude: 0.3328, longitude: 32.5883, address: 'Kololo, Kampala' },
   { id: 'kla-garden-city', name: 'Garden City', icon: 'storefront', latitude: 0.3175, longitude: 32.5900, address: 'Yusuf Lule Road, Kampala' },
@@ -141,25 +253,20 @@ export const KAMPALA_POPULAR_PLACES = [
   { id: 'kla-kampala-road', name: 'Kampala Road', icon: 'navigate', latitude: 0.3175, longitude: 32.5810, address: 'Kampala CBD' },
 ];
 
-// NOTE: RNMAPBOX_MAPS_DOWNLOAD_TOKEN must be set as an EAS environment variable
-// for EAS builds to download the Mapbox SDK. Set it via:
-//   eas secret:push --scope project --type environment --key RNMAPBOX_MAPS_DOWNLOAD_TOKEN --value <your-token>
-// Do NOT put the secret token directly in app.json or source code.
-
 // Task Status Colors
 export const TASK_STATUS_COLORS: Record<string, string> = {
-  CREATED: '#3B82F6',
-  MATCHING: '#8B5CF6',
-  SEARCHING: '#A78BFA',
+  CREATED: '#4b5264',
+  MATCHING: '#636a7c',
+  SEARCHING: '#636a7c',
   ASSIGNED: '#F59E0B',
-  ACCEPTED: '#22C55E',
-  ARRIVED: '#10B981',
-  PICKED_UP: '#14B8A6',
-  IN_TRANSIT: '#06B6D4',
-  DELIVERED: '#22C55E',
-  COMPLETED: '#16A34A',
-  CANCELLED: '#EF4444',
-  FAILED: '#DC2626',
+  ACCEPTED: '#006e2f',
+  ARRIVED: '#005f3a',
+  PICKED_UP: '#0e7a4d',
+  IN_TRANSIT: '#0e7a4d',
+  DELIVERED: '#006e2f',
+  COMPLETED: '#005f3a',
+  CANCELLED: '#ba1a1a',
+  FAILED: '#93000a',
 };
 
 // Task Status Labels
@@ -181,8 +288,8 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
 // Payment Methods
 export const PAYMENT_METHODS = [
   { id: 'MTN_MOMO', name: 'MTN MoMo', icon: 'phone', color: '#FFCC00' },
-  { id: 'AIRTEL_MONEY', name: 'Airtel Money', icon: 'phone', color: '#ED1C24' },
-  { id: 'CASH', name: 'Cash', icon: 'banknote', color: '#22C55E' },
+  { id: 'AIRTEL_MONEY', name: 'Airtel Money', icon: 'phone', color: '#FF0000' },
+  { id: 'CASH', name: 'Cash', icon: 'banknote', color: '#005f3a' },
 ];
 
 // Ride Types
@@ -209,16 +316,13 @@ export const RIDE_TYPES = {
 export const API_CONFIG = {
   baseUrl: process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api',
   timeout: 30000,
-  // Supabase Realtime (replaces Socket.io)
   supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || '',
   supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
-  // Legacy socket config (kept for reference, no longer used)
   socketUrl: '',
   realtimePort: 3001,
 };
 
-// Payment method mapping: client display values → server enum values
-// Now aligned with Prisma schema (MTN_MOMO, AIRTEL_MONEY).
+// Payment method mapping
 export const PAYMENT_METHOD_MAP: Record<string, string> = {
   'CASH': 'CASH',
   'MTN_MOMO': 'MTN_MOMO',
@@ -228,7 +332,6 @@ export const PAYMENT_METHOD_MAP: Record<string, string> = {
   'WALLET': 'WALLET',
 };
 
-// Reverse map for displaying server values in the UI
 export const PAYMENT_METHOD_DISPLAY: Record<string, string> = {
   'CASH': 'CASH',
   'MTN_MOMO': 'MTN_MOMO',
@@ -237,11 +340,6 @@ export const PAYMENT_METHOD_DISPLAY: Record<string, string> = {
   'MASTERCARD': 'MASTERCARD',
   'WALLET': 'WALLET',
 };
-
-// Named color palette exports for direct import if needed
-// Prefer useTheme().colors for dynamic switching
-export { DarkColors as DARK_COLORS } from '@/src/context/theme-context';
-export { LightColors as LIGHT_COLORS } from '@/src/context/theme-context';
 
 // Notification Types
 export const NOTIFICATION_TYPES = {

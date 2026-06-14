@@ -83,7 +83,7 @@ export const metadata: Metadata = {
     description: "Uganda's premier mobility platform for rides, food delivery, shopping, and more.",
     images: [
       {
-        url: "/smartride-logo.jpeg",
+        url: "/smartride-logo-transparent.png",
         width: 1024,
         height: 1024,
         alt: "Smart Ride Uganda",
@@ -96,7 +96,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Smart Ride - Multi-Service Mobility Platform",
     description: "Uganda's premier mobility platform for rides, food delivery, shopping, and more.",
-    images: ["/smartride-logo.jpeg"],
+    images: ["/smartride-logo-transparent.png"],
   },
   
   // Additional PWA
@@ -132,11 +132,11 @@ export default function RootLayout({
         <meta name="application-name" content="Smart Ride" />
         <meta name="msapplication-TileColor" content="#00FF88" />
         <meta name="msapplication-tap-highlight" content="no" />
-        <meta name="msapplication-TileImage" content="/smartride-logo.jpeg" />
+        <meta name="msapplication-TileImage" content="/smartride-logo-transparent.png" />
         
         {/* iOS Splash Screens */}
-        <link rel="apple-touch-startup-image" href="/smartride-logo.jpeg" />
-        <link rel="apple-touch-icon" href="/smartride-logo.jpeg" />
+        <link rel="apple-touch-startup-image" href="/smartride-logo-transparent.png" />
+        <link rel="apple-touch-icon" href="/smartride-logo-transparent.png" />
         
         {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://api.mapbox.com" />

@@ -11,12 +11,14 @@ import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { Platform } from 'react-native';
 
 // OAuth Client IDs from Firebase/Google Cloud Console
+// IMPORTANT: webClientId MUST match the type-3 client in google-services.json
 const GOOGLE_CLIENT_IDS = {
-  // Web client ID (type 3) - Required for all platforms (offline access + server verification)
+  // Web client ID (type 3) - from updated google-services.json after adding SHA-1 fingerprint
+  // This is the client ID that Google Play Services validates against
   webClientId: '531949209415-ja4espd5h0m6p74esft4iv541os5ertj.apps.googleusercontent.com',
-  // Android client ID (type 1) - Used on Android (configured via google-services.json)
+  // Android client ID (type 1) - from google-services.json (matches our signing certificate)
   androidClientId: '531949209415-3fnqdkfo69dognl93ffp0keg0jusvq6t.apps.googleusercontent.com',
-  // iOS client ID (type 2) - Required for iOS
+  // iOS client ID (type 2) - from GoogleService-Info.plist
   iosClientId: '531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar.apps.googleusercontent.com',
 };
 
@@ -26,23 +28,49 @@ let isConfigured = false;
  * Configure Google Sign-In once on app startup.
  * This MUST be called before any GoogleSignin.signIn() calls.
  * Safe to call multiple times - will only configure once.
+ * 
+ * IMPORTANT: On Android, the googleServicesFile must be present for Google Play Services to work.
+ * On iOS, the GoogleService-Info.plist must be configured in app.json.
  */
 export function configureGoogleSignIn(): void {
   if (isConfigured) return;
 
   try {
-    GoogleSignin.configure({
+    const config: any = {
       webClientId: GOOGLE_CLIENT_IDS.webClientId,
-      iosClientId: Platform.OS === 'ios' ? GOOGLE_CLIENT_IDS.iosClientId : undefined,
       offlineAccess: true,
       forceCodeForRefreshToken: true,
-    });
+    };
+
+    // Platform-specific configuration
+    if (Platform.OS === 'ios') {
+      config.iosClientId = GOOGLE_CLIENT_IDS.iosClientId;
+    } else if (Platform.OS === 'android') {
+      // Android client ID helps with Play Services sign-in
+      config.androidClientId = GOOGLE_CLIENT_IDS.androidClientId;
+    }
+
+    GoogleSignin.configure(config);
     isConfigured = true;
-    console.log('[GoogleSignIn] Configured successfully');
+    console.log('[GoogleSignIn] Configured successfully for', Platform.OS);
   } catch (error) {
     console.error('[GoogleSignIn] Configuration failed:', error);
     // Don't throw - app should still work without Google Sign-In
   }
+}
+
+/**
+ * Check if Google Sign-In is properly configured
+ */
+export function isGoogleSignInConfigured(): boolean {
+  return isConfigured;
+}
+
+/**
+ * Reset Google Sign-In configuration (useful for testing/debugging)
+ */
+export function resetGoogleSignInConfig(): void {
+  isConfigured = false;
 }
 
 export { GoogleSignin, GOOGLE_CLIENT_IDS };

@@ -625,7 +625,7 @@ export function HealthScreen({ onBack }: HealthScreenProps) {
                       alt={facility.name}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/64?text=Rx';
+                        (e.target as HTMLImageElement).src = '/smartride-logo-transparent.png';
                       }}
                     />
                   </div>

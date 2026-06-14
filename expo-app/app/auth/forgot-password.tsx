@@ -19,12 +19,14 @@ import {
   Animated,
   Dimensions,
   Easing,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { forgotPassword } from '@/src/services/auth';
 import { COLORS } from '../../src/constants';
 import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
+import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
 
 const { height } = Dimensions.get('window');
 
@@ -167,7 +169,11 @@ export default function ForgotPasswordScreen() {
             <Animated.View style={{ alignItems: 'center', marginTop: 16, transform: [{ translateY: logoFloat }] }}>
               <View style={styles.logoContainer}>
                 <Animated.View style={[styles.logoGlow, { opacity: glowOpacity }]} />
-                <Text style={styles.logoText}>SR</Text>
+                <Image
+                  source={SmartRideLogoImage}
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
               </View>
             </Animated.View>
           </GlowHeader>
@@ -343,11 +349,10 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     backgroundColor: 'rgba(0, 255, 136, 0.15)',
   },
-  logoText: {
-    fontSize: 28,
-    fontWeight: '900',
-    color: COLORS.primary,
-    letterSpacing: -1,
+  logoImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
   },
   formCard: {
     marginHorizontal: 20,

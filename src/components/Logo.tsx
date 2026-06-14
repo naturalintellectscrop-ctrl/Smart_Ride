@@ -41,7 +41,7 @@ export default function Logo({
         }}
       >
         <Image
-          src="/smartride-logo.jpeg"
+          src="/smartride-logo-transparent.png"
           alt="Smart Ride Logo"
           width={width}
           height={height}

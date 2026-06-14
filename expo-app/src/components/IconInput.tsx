@@ -1,17 +1,16 @@
 // ============================================
 // SMART RIDE MOBILE - ICON INPUT COMPONENT
 // ============================================
-// Glass input with icon matching admin dashboard
-// Pattern: glass-input with icon prefix + glow on focus
+// Stitch Design System — Material Design 3
+// Light mode, surface-container-low bg, primary focus ring
 // FIX: Dynamic padding based on icon presence
 // FIX: blurOnSubmit to prevent cursor jumping
-// FIX: minHeight instead of fixed height
 // ============================================
 
 import React, { useState, useRef } from 'react';
 import { View, Text, TextInput, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS } from '../constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../constants';
 
 interface IconInputProps {
   label?: string;
@@ -58,12 +57,16 @@ export function IconInput({
   return (
     <View style={[styles.container, style]}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[styles.inputWrapper, focused && styles.inputFocused, error && styles.inputError]}>
+      <View style={[
+        styles.inputWrapper,
+        focused && styles.inputFocused,
+        error && styles.inputError,
+      ]}>
         {icon && (
           <Ionicons
             name={icon}
             size={20}
-            color={focused ? COLORS.primary : COLORS.textDim}
+            color={focused ? COLORS.primary : COLORS.outline}
             style={styles.leftIcon}
           />
         )}
@@ -75,7 +78,7 @@ export function IconInput({
             multiline && styles.multilineInput,
           ]}
           placeholder={placeholder}
-          placeholderTextColor={COLORS.textDim}
+          placeholderTextColor={COLORS.outlineVariant}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}
@@ -93,7 +96,7 @@ export function IconInput({
         />
         {rightIcon && (
           <TouchableOpacity onPress={onRightIconPress} style={styles.rightIcon}>
-            <Ionicons name={rightIcon} size={20} color={COLORS.textDim} />
+            <Ionicons name={rightIcon} size={20} color={COLORS.outline} />
           </TouchableOpacity>
         )}
       </View>
@@ -104,62 +107,63 @@ export function IconInput({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 12,
+    marginBottom: SPACING.md,
   },
   label: {
-    color: COLORS.textSecondary,
-    marginBottom: 6,
-    fontSize: 13,
-    fontWeight: '600',
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.xs,
+    marginLeft: SPACING.xs,
   },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    minHeight: 48,
-    backgroundColor: 'rgba(37, 37, 48, 0.8)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    minHeight: 56,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.xl,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    paddingHorizontal: SPACING.md,
   },
   inputFocused: {
-    borderColor: 'rgba(0, 255, 136, 0.5)',
+    borderColor: COLORS.primary,
     shadowColor: COLORS.primary,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: 4,
+    elevation: 1,
   },
   inputError: {
-    borderColor: 'rgba(239, 68, 68, 0.5)',
+    borderColor: COLORS.error,
   },
   leftIcon: {
-    paddingLeft: 14,
-    paddingRight: 10,
+    marginRight: SPACING.sm,
   },
   input: {
     flex: 1,
-    paddingRight: 14,
-    paddingLeft: 4,
-    fontSize: 15,
-    color: COLORS.text,
-    minHeight: 48,
-    paddingVertical: 12,
+    paddingRight: SPACING.sm,
+    paddingLeft: 0,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    minHeight: 56,
+    paddingVertical: SPACING.md,
   },
   inputNoIcon: {
-    paddingLeft: 14,
+    paddingLeft: 0,
   },
   multilineInput: {
     minHeight: 100,
     textAlignVertical: 'top',
-    paddingTop: 12,
+    paddingTop: SPACING.md,
   },
   rightIcon: {
-    paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: SPACING.md,
   },
   errorText: {
-    color: COLORS.error,
-    fontSize: 12,
-    marginTop: 4,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onErrorContainer,
+    marginTop: SPACING.xs,
+    marginLeft: SPACING.xs,
   },
 });

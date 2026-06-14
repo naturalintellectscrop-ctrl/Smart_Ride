@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -210,7 +211,7 @@ export function ClientHome({ onBellClick }: ClientHomeProps) {
       {/* Logo + Greeting Section */}
       <div className="bg-white px-4 pb-5">
         <div className="flex items-center gap-2 mb-1">
-          <Zap className="h-5 w-5 text-[#005f3a]" />
+          <Image src="/smartride-logo-transparent.png" alt="Smart Ride" width={20} height={20} className="rounded" />
           <span className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#005f3a]">Smart Ride</span>
         </div>
         <p className="text-[#6f7a71] text-sm">{greeting} {emoji}</p>

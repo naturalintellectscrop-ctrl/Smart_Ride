@@ -14,15 +14,7 @@
       },
       "oauth_client": [
         {
-          "client_id": "531949209415-3fnqdkfo69dognl93ffp0keg0jusvq6t.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "ug.smartride.app",
-            "certificate_hash": "1aec66618cc98e58af951d55366d33be5c45ccf6"
-          }
-        },
-        {
-          "client_id": "531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com",
+          "client_id": "531949209415-ja4espd5h0m6p74esft4iv541os5ertj.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
@@ -35,7 +27,7 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com",
+              "client_id": "531949209415-ja4espd5h0m6p74esft4iv541os5ertj.apps.googleusercontent.com",
               "client_type": 3
             },
             {

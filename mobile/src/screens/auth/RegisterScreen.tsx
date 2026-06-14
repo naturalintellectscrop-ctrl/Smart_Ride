@@ -17,8 +17,10 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import SmartRideLogoImage from '../../../assets/smartride-logo.png';
 
 export function RegisterScreen() {
   const navigation = useNavigation();
@@ -67,7 +69,7 @@ export function RegisterScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.logoIcon}>
-            <Text style={styles.logoIconText}>SR</Text>
+          <Image source={SmartRideLogoImage} style={styles.logoImage} resizeMode="contain" />
           </View>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Join Smart Ride today</Text>
@@ -177,10 +179,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  logoIconText: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: '#0D0D12',
+  logoImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
   },
   title: {
     fontSize: 28,
