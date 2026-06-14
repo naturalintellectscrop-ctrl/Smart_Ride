@@ -28,13 +28,14 @@ export { statusCodes };
 
 // OAuth Client IDs from Firebase/Google Cloud Console
 // IMPORTANT: These MUST match the google-services.json / GoogleService-Info.plist
-// Updated 2025-03: All IDs now match the Firebase project with correct SHA-1
+// Updated 2025-03: Both debug + upload keystore SHA-1s registered in Firebase
 const GOOGLE_CLIENT_IDS = {
   // Web client ID (type 3) - MUST match google-services.json oauth_client client_type=3
   webClientId: '531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com',
-  // Android client ID (type 1) - from google-services.json (matches debug signing certificate)
-  // This is the client_type=1 entry with certificate_hash f28c61cc4f2a5700a0182557cfcb75a42a960ae1
-  androidClientId: '531949209415-oc8o4mfd2hd3l1mbqecdui2jfhrupe56.apps.googleusercontent.com',
+  // Android client IDs (type 1) - from google-services.json
+  // Debug keystore: certificate_hash f28c61cc...0ae1 → client oc8o4mfd...
+  // Upload keystore: certificate_hash 98ea9b4b...78f4 → client qpv85egp...
+  androidClientId: '531949209415-qpv85egps3qrq3ko6ecr7uckoko66qm2.apps.googleusercontent.com',
   // iOS client ID (type 2) - from GoogleService-Info.plist
   iosClientId: '531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar.apps.googleusercontent.com',
 };
