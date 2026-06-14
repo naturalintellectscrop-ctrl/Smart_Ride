@@ -7,6 +7,10 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
       "env": {
         "EAS_BUILD_NO_EXPO_GO_WARNING": "true",
         "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
@@ -24,7 +28,7 @@
     },
     "production": {
       "autoIncrement": true,
-      "distribution": "store",
+      "distribution": "internal",
       "android": {
         "buildType": "apk"
       },
