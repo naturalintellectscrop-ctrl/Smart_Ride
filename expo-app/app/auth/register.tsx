@@ -51,7 +51,9 @@ export default function RegisterScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  // Single fade animation for the whole form (no per-input animations)
+  // Animation for initial entrance — switches to plain View after completion
+  // to prevent Animated transforms from interfering with TextInput cursor on Android
+  const [animationDone, setAnimationDone] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
 
@@ -72,7 +74,11 @@ export default function RegisterScreen() {
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-    ]).start();
+    ]).start(() => {
+      // After animation completes, switch to plain Views
+      // Animated.View with transforms can cause cursor jumping on Android
+      setAnimationDone(true);
+    });
   }, []);
 
   const checkAuth = async () => {
@@ -309,38 +315,64 @@ export default function RegisterScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Hero section */}
-        <Animated.View style={[styles.heroSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <Text style={styles.heroTitle}>Join the ride</Text>
-          <Text style={styles.heroSubtitle}>
-            Create your account and start moving with Smart Ride
-          </Text>
-        </Animated.View>
+        {animationDone ? (
+          <View style={styles.heroSection}>
+            <Text style={styles.heroTitle}>Join the ride</Text>
+            <Text style={styles.heroSubtitle}>
+              Create your account and start moving with Smart Ride
+            </Text>
+          </View>
+        ) : (
+          <Animated.View style={[styles.heroSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <Text style={styles.heroTitle}>Join the ride</Text>
+            <Text style={styles.heroSubtitle}>
+              Create your account and start moving with Smart Ride
+            </Text>
+          </Animated.View>
+        )}
 
         {/* PRIMARY: Phone OTP Registration */}
-        <Animated.View style={[styles.phoneSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <GradientButton
-            title="Sign Up with Phone Number"
-            onPress={handlePhoneRegister}
-            variant="primary"
-            size="lg"
-            icon={
-              <Ionicons name="call" size={20} color={COLORS.onPrimary} />
-            }
-          />
-          <Text style={styles.phoneHint}>
-            Quick sign up with OTP — no password needed
-          </Text>
-        </Animated.View>
+        {animationDone ? (
+          <View style={styles.phoneSection}>
+            <GradientButton
+              title="Sign Up with Phone Number"
+              onPress={handlePhoneRegister}
+              variant="primary"
+              size="lg"
+              icon={
+                <Ionicons name="call" size={20} color={COLORS.onPrimary} />
+              }
+            />
+            <Text style={styles.phoneHint}>
+              Quick sign up with OTP — no password needed
+            </Text>
+          </View>
+        ) : (
+          <Animated.View style={[styles.phoneSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+            <GradientButton
+              title="Sign Up with Phone Number"
+              onPress={handlePhoneRegister}
+              variant="primary"
+              size="lg"
+              icon={
+                <Ionicons name="call" size={20} color={COLORS.onPrimary} />
+              }
+            />
+            <Text style={styles.phoneHint}>
+              Quick sign up with OTP — no password needed
+            </Text>
+          </Animated.View>
+        )}
 
         {/* Divider */}
-        <Animated.View style={[styles.dividerContainer, { opacity: fadeAnim }]}>
+        <View style={styles.dividerContainer}>
           <View style={styles.dividerLine} />
           <Text style={styles.dividerText}>or register with email</Text>
           <View style={styles.dividerLine} />
-        </Animated.View>
+        </View>
 
-        {/* Email Registration Form - NO per-input FadeInDown animations */}
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+        {/* Email Registration Form — plain View after animation to prevent cursor jump */}
+        <View>
           <View style={styles.formCard}>
             {/* Error Display — always rendered to prevent layout shift (cursor jump) */}
             <View style={[styles.errorContainer, !error && styles.errorHidden]}>
@@ -465,10 +497,10 @@ export default function RegisterScreen() {
               )}
             </TouchableOpacity>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Decorative image card at bottom */}
-        <Animated.View style={[styles.decorativeCard, { opacity: fadeAnim }]}>
+        <View style={styles.decorativeCard}>
           <View style={styles.decorativeImageContainer}>
             <View style={styles.decorativeGradientOverlay}>
               <View style={styles.decorativeContent}>
@@ -480,10 +512,10 @@ export default function RegisterScreen() {
               </View>
             </View>
           </View>
-        </Animated.View>
+        </View>
 
         {/* Footer text */}
-        <Animated.View style={[styles.footerContainer, { opacity: fadeAnim }]}>
+        <View style={styles.footerContainer}>
           <Text style={styles.signInText}>Already have an account? </Text>
           <TouchableOpacity
             onPress={() => router.push('/auth/login')}
@@ -492,13 +524,13 @@ export default function RegisterScreen() {
           >
             <Text style={styles.signInLink}>Sign In</Text>
           </TouchableOpacity>
-        </Animated.View>
+        </View>
 
         {/* Security notice */}
-        <Animated.View style={[styles.securityNotice, { opacity: fadeAnim }]}>
+        <View style={styles.securityNotice}>
           <Ionicons name="shield-checkmark-outline" size={12} color={COLORS.outline} />
           <Text style={styles.securityText}>Secure registration  •  All data encrypted</Text>
-        </Animated.View>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

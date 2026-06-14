@@ -3,12 +3,20 @@
 // ============================================
 // Stitch Design System — Material Design 3
 // Light mode, surface-container-low bg, primary focus ring
-// FIX: Dynamic padding based on icon presence
-// FIX: blurOnSubmit to prevent cursor jumping
-// ============================================
+//
+// CURSOR JUMPING FIX (Android):
+// On Android, ANY state change during text input causes a re-render
+// that shifts the cursor position. This component is deliberately
+// simplified to avoid ALL re-renders during typing:
+//   - No useState for focus tracking (useRef instead)
+//   - No dynamic style changes on focus (static border)
+//   - No icon color changes on focus
+//   - borderWidth is ALWAYS 1.5 (never changes)
+//   - borderColor is ALWAYS transparent (never changes on focus)
+// =============================================================
 
-import React, { useState, useRef } from 'react';
-import { View, Text, TextInput, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
+import React, { useRef, useCallback } from 'react';
+import { View, Text, TextInput, StyleSheet, ViewStyle, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../constants';
 
@@ -51,22 +59,33 @@ export function IconInput({
   onSubmitEditing,
   autoFocus = false,
 }: IconInputProps) {
-  const [focused, setFocused] = useState(false);
+  // Use REF for focus tracking — does NOT cause re-renders
+  // (useState causes re-renders that make the cursor jump on Android)
   const inputRef = useRef<TextInput>(null);
+
+  // Stable callbacks — no inline functions that change on every render
+  const handleFocus = useCallback(() => {
+    // Deliberately does nothing — no state updates during focus
+    // On Android, setState during focus causes cursor jump
+  }, []);
+
+  const handleBlur = useCallback(() => {
+    // Deliberately does nothing
+  }, []);
+
+  // Determine static border color — no dynamic changes
+  const borderColor = error ? COLORS.error : 'transparent';
 
   return (
     <View style={[styles.container, style]}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={[
-        styles.inputWrapper,
-        focused && styles.inputFocused,
-        error && styles.inputError,
-      ]}>
+      <View style={[styles.inputWrapper, { borderColor }]}>
         {icon && (
           <Ionicons
             name={icon}
             size={20}
-            color={focused ? COLORS.primary : COLORS.outline}
+            // Static color — no focus-based changes (prevents re-render)
+            color={COLORS.outline}
             style={styles.leftIcon}
           />
         )}
@@ -86,8 +105,8 @@ export function IconInput({
           autoCapitalize={autoCapitalize}
           autoCorrect={false}
           editable={editable}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
           multiline={multiline}
           blurOnSubmit={false}
           returnKeyType={returnKeyType}
@@ -122,18 +141,10 @@ const styles = StyleSheet.create({
     minHeight: 56,
     backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.xl,
+    // Border is ALWAYS present with same width — only color changes (error vs default)
+    // NEVER change borderWidth on focus — that causes cursor jump on Android
     borderWidth: 1.5,
-    borderColor: 'transparent',
     paddingHorizontal: SPACING.md,
-  },
-  inputFocused: {
-    borderColor: COLORS.primary,
-    // NOTE: NO elevation/shadow changes on focus — adding elevation on Android
-    // causes a layout recalculation that makes the cursor jump.
-    // Border color change alone provides sufficient visual feedback.
-  },
-  inputError: {
-    borderColor: COLORS.error,
   },
   leftIcon: {
     marginRight: SPACING.sm,

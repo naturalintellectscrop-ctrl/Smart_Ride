@@ -39,7 +39,8 @@ export default function LoginScreen() {
 
   // Phone input state
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [phoneFocused, setPhoneFocused] = useState(false);
+  // NOTE: phoneFocused removed — useState for focus tracking causes cursor
+  // jumping on Android because every setPhoneFocused triggers a re-render
 
   // Email/password state
   const [email, setEmail] = useState('');
@@ -279,10 +280,7 @@ export default function LoginScreen() {
         {/* ─── Phone Input Section ───────────────── */}
         <View style={styles.phoneSection}>
           <Text style={styles.phoneLabel}>Mobile Number</Text>
-          <View style={[
-            styles.phoneInputContainer,
-            phoneFocused && styles.phoneInputFocused,
-          ]}>
+          <View style={styles.phoneInputContainer}>
             {/* Uganda Flag + Country Code */}
             <View style={styles.countryCodeSection}>
               <Text style={styles.flagEmoji}>🇺🇬</Text>
@@ -302,8 +300,6 @@ export default function LoginScreen() {
               autoCapitalize="none"
               autoCorrect={false}
               maxFontSizeMultiplier={1}
-              onFocus={() => setPhoneFocused(true)}
-              onBlur={() => setPhoneFocused(false)}
               returnKeyType="go"
               onSubmitEditing={handlePhoneContinue}
             />
@@ -564,15 +560,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
     height: 56,
-  },
-  phoneInputFocused: {
-    borderColor: COLORS.primary,
-    // ring-1 ring-primary in RN = borderWidth approach
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 2,
   },
   countryCodeSection: {
     flexDirection: 'row',
