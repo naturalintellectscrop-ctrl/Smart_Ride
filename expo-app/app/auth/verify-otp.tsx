@@ -75,7 +75,19 @@ export default function VerifyOTPScreen() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/(tabs)');
+      const { user } = useAuthStore.getState();
+      const role = user?.role;
+      if (role === 'RIDER') {
+        router.replace('/rider/onboarding');
+      } else if (role === 'MERCHANT') {
+        router.replace('/merchant/register');
+      } else if (role === 'DRIVER') {
+        router.replace('/driver/index');
+      } else if (role === 'CLIENT') {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/auth/role-selection');
+      }
     }
   }, [isAuthenticated, router]);
 
@@ -267,7 +279,20 @@ export default function VerifyOTPScreen() {
         }
 
         setTimeout(() => {
-          router.replace('/(tabs)');
+          // Navigate based on user role — if no role, show role selection
+          const userRole = user?.role;
+          if (userRole === 'RIDER') {
+            router.replace('/rider/onboarding');
+          } else if (userRole === 'MERCHANT') {
+            router.replace('/merchant/register');
+          } else if (userRole === 'DRIVER') {
+            router.replace('/driver/index');
+          } else if (userRole === 'CLIENT') {
+            router.replace('/(tabs)');
+          } else {
+            // No role set — show role selection
+            router.replace('/auth/role-selection');
+          }
         }, 500);
       } else {
         const errorMsg = response.error || 'Verification failed';

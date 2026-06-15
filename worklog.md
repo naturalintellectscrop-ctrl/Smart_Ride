@@ -295,3 +295,22 @@ Stage Summary:
 - Help center now links to landing page
 - Stitch design system applied to ALL app screens
 - TypeScript errors reduced by ~33% (89→60), all remaining are pre-existing stub issues
+---
+Task ID: 11
+Agent: Main
+Task: Fix multi-role login + Mapbox tokens + SHA-1 instructions
+
+Work Log:
+- Created expo-app/.env with Mapbox tokens (public + secret), API base URL, and Google Web Client ID
+- Updated login.tsx navigateByRole: now routes users without a role to /auth/role-selection instead of /(tabs)
+- Updated verify-otp.tsx: post-OTP navigation now checks role and routes accordingly (CLIENT→tabs, RIDER→onboarding, DRIVER→driver/index, MERCHANT→merchant/register, no role→role-selection)
+- Updated phone-login.tsx: redirect-if-authenticated now uses role-based routing instead of always going to /(tabs)
+- Updated register.tsx: added DRIVER to ROLES array, added navigateByRole function, updated Google sign-in to use navigateByRole, updated handleRegister to handle DRIVER role
+- Updated role-selection.tsx: added DRIVER as 4th role option with tags (Car/Delivery/Earnings), updated handleContinue switch to include DRIVER→/driver/index
+- Help Center was already correctly configured pointing to https://smartrideug.vercel.app
+
+Stage Summary:
+- Multi-role login now works: users logging in via any method (email, Google, phone OTP) without a role will be directed to role-selection screen
+- DRIVER role added alongside CLIENT, RIDER, and MERCHANT
+- Mapbox tokens configured in .env
+- All auth screens now use consistent role-based navigation

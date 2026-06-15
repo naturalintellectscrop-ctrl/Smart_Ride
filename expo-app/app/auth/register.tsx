@@ -56,7 +56,8 @@ export default function RegisterScreen() {
 
   const ROLES = [
     { id: 'CLIENT', label: 'Client', icon: '🚗', desc: 'Book rides & order' },
-    { id: 'RIDER', label: 'Rider', icon: '🏍️', desc: 'Earn on the road' },
+    { id: 'RIDER', label: 'Rider / Boda', icon: '🏍️', desc: 'Earn on the road' },
+    { id: 'DRIVER', label: 'Driver', icon: '🚐', desc: 'Professional driver' },
     { id: 'MERCHANT', label: 'Merchant', icon: '🏪', desc: 'Sell & deliver' },
   ];
 
@@ -92,16 +93,36 @@ export default function RegisterScreen() {
 
   const checkAuth = async () => {
     const authenticated = await isAuthenticated();
-    const { isAuthenticated: storeAuth } = useAuthStore.getState();
+    const { isAuthenticated: storeAuth, user } = useAuthStore.getState();
     if (authenticated || storeAuth) {
-      // If user has a role, go to appropriate screen; otherwise go to role selection
-      const { user } = useAuthStore.getState();
-      if (user?.role && user.role !== 'CLIENT') {
-        // Already has a specific role
-      } else if (authenticated || storeAuth) {
-        // Will check role after navigation
+      const role = user?.role;
+      if (role === 'RIDER') {
+        router.replace('/rider/onboarding');
+      } else if (role === 'MERCHANT') {
+        router.replace('/merchant/register');
+      } else if (role === 'DRIVER') {
+        router.replace('/driver/index');
+      } else if (role === 'CLIENT') {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/auth/role-selection');
       }
+    }
+  };
+
+  // Navigate based on user role
+  const navigateByRole = (role?: string) => {
+    if (role === 'RIDER') {
+      router.replace('/rider/onboarding');
+    } else if (role === 'MERCHANT') {
+      router.replace('/merchant/register');
+    } else if (role === 'DRIVER') {
+      router.replace('/driver/index');
+    } else if (role === 'CLIENT') {
       router.replace('/(tabs)');
+    } else {
+      // No role set — show role selection
+      router.replace('/auth/role-selection');
     }
   };
 
@@ -168,7 +189,7 @@ export default function RegisterScreen() {
               role: userData.role,
             }, token);
           }
-          router.replace('/(tabs)');
+          navigateByRole(userData?.role);
         } else {
           setError(result.error || 'Google sign-in failed');
         }
@@ -291,6 +312,8 @@ export default function RegisterScreen() {
           router.replace('/rider/onboarding');
         } else if (selectedRole === 'MERCHANT') {
           router.replace('/merchant/register');
+        } else if (selectedRole === 'DRIVER') {
+          router.replace('/driver/index');
         } else {
           router.replace('/(tabs)');
         }

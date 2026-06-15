@@ -87,7 +87,19 @@ export default function PhoneLoginScreen() {
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      router.replace('/(tabs)');
+      const { user } = useAuthStore.getState();
+      const role = user?.role;
+      if (role === 'RIDER') {
+        router.replace('/rider/onboarding');
+      } else if (role === 'MERCHANT') {
+        router.replace('/merchant/register');
+      } else if (role === 'DRIVER') {
+        router.replace('/driver/index');
+      } else if (role === 'CLIENT') {
+        router.replace('/(tabs)');
+      } else {
+        router.replace('/auth/role-selection');
+      }
     }
   }, [isAuthenticated, router]);
 

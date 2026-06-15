@@ -73,8 +73,14 @@ export default function LoginScreen() {
       router.replace('/rider/onboarding');
     } else if (role === 'MERCHANT') {
       router.replace('/merchant/register');
-    } else {
+    } else if (role === 'DRIVER') {
+      router.replace('/driver/index');
+    } else if (role === 'CLIENT') {
+      // Existing client with role set — go to tabs
       router.replace('/(tabs)');
+    } else {
+      // No role set — show role selection so user can choose
+      router.replace('/auth/role-selection');
     }
   };
 

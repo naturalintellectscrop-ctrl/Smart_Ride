@@ -41,13 +41,23 @@ const ROLES = [
   },
   {
     id: 'RIDER',
-    title: 'Rider / Driver',
+    title: 'Rider / Boda',
     subtitle: 'Earn on the road',
     description: 'Accept ride requests and earn money as a boda or car driver',
     icon: '🏍️',
     gradient: ['#0e7a4d', '#006e2f'] as const,
     bgAccent: 'rgba(14, 122, 77, 0.08)',
     borderColor: 'rgba(14, 122, 77, 0.15)',
+  },
+  {
+    id: 'DRIVER',
+    title: 'Driver',
+    subtitle: 'Professional driver',
+    description: 'Drive cars, delivery vehicles, or provide specialized transport services',
+    icon: '🚐',
+    gradient: ['#1a6b3c', '#0e7a4d'] as const,
+    bgAccent: 'rgba(26, 107, 60, 0.08)',
+    borderColor: 'rgba(26, 107, 60, 0.15)',
   },
   {
     id: 'MERCHANT',
@@ -81,6 +91,9 @@ export default function RoleSelectionScreen() {
       case 'RIDER':
         // Check if rider has completed onboarding — for now go to rider onboarding
         router.replace('/rider/onboarding');
+        break;
+      case 'DRIVER':
+        router.replace('/driver/index');
         break;
       case 'MERCHANT':
         // Check if merchant has completed registration — for now go to merchant register
@@ -192,6 +205,13 @@ export default function RoleSelectionScreen() {
                     <>
                       <View style={styles.tag}><Text style={styles.tagText}>Boda</Text></View>
                       <View style={styles.tag}><Text style={styles.tagText}>Car</Text></View>
+                      <View style={styles.tag}><Text style={styles.tagText}>Earnings</Text></View>
+                    </>
+                  )}
+                  {role.id === 'DRIVER' && (
+                    <>
+                      <View style={styles.tag}><Text style={styles.tagText}>Car</Text></View>
+                      <View style={styles.tag}><Text style={styles.tagText}>Delivery</Text></View>
                       <View style={styles.tag}><Text style={styles.tagText}>Earnings</Text></View>
                     </>
                   )}
