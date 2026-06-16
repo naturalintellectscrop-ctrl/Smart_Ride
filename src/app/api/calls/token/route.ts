@@ -4,8 +4,7 @@
  * POST /api/calls/token
  *
  * Generates an Agora RTC token for joining a call channel.
- * For production, use the `agora-token` npm package.
- * For MVP, we generate a simple token or use Agora's temporary token mechanism.
+ * Uses the agora-token npm package for secure token generation.
  *
  * Request body:
  * - channelName: The Agora channel name to join
@@ -22,6 +21,7 @@ import {
   unauthorizedResponse,
 } from '@/lib/api/response';
 import { z } from 'zod';
+import { RtcTokenBuilder, RtcRole } from 'agora-token';
 
 const tokenSchema = z.object({
   channelName: z.string().min(1, 'Channel name is required'),
@@ -65,82 +65,46 @@ export async function POST(request: NextRequest) {
     const agoraAppId = process.env.AGORA_APP_ID || '';
     const agoraAppCertificate = process.env.AGORA_APP_CERTIFICATE || '';
 
-    // Check if Agora is configured
-    if (!agoraAppId) {
-      // Agora not configured - return a mock token for development
-      // In production, this should fail with a proper error
+    // Check if Agora is fully configured (App ID + Certificate)
+    if (!agoraAppId || !agoraAppCertificate) {
+      console.warn('[CALLS] Agora not fully configured. Need AGORA_APP_ID and AGORA_APP_CERTIFICATE env vars.');
       return successResponse({
         token: `dev-token-${validatedData.channelName}-${userId}`,
         channelId: validatedData.channelName,
-        appId: '',
+        appId: agoraAppId || '',
         userId,
-        uid: Math.floor(Math.random() * 1000000),
-        // Indicate that Agora is not configured
+        uid: 0,
         isAgoraConfigured: false,
-        // Fallback: use phone dialer
         fallbackMode: true,
-      }, 'Agora not configured - using fallback mode');
+      }, 'Agora not fully configured - using fallback mode');
     }
 
-    // For production: Generate real Agora token
-    // When agora-token package is installed, use:
-    //
-    // import { RtcTokenBuilder, RtcRole } from 'agora-token';
-    // const agoraToken = RtcTokenBuilder.buildTokenWithUid(
-    //   agoraAppId,
-    //   agoraAppCertificate,
-    //   validatedData.channelName,
-    //   0, // uid = 0 means Agora assigns a uid
-    //   RtcRole.PUBLISHER,
-    //   Math.floor(Date.now() / 1000) + 3600, // 1 hour expiry
-    // );
+    // Generate real Agora RTC token
+    const uid = Math.floor(Math.random() * 1000000);
+    const expirationTimeInSeconds = 3600; // 1 hour
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-    // For now, try to dynamically import agora-token if available
-    let agoraToken: string | null = null;
-    let uid = 0;
+    const agoraToken = RtcTokenBuilder.buildTokenWithUid(
+      agoraAppId,
+      agoraAppCertificate,
+      validatedData.channelName,
+      uid,
+      RtcRole.PUBLISHER,
+      privilegeExpiredTs,
+    );
 
-    try {
-      const agoraTokenLib = await import('agora-token');
-      const { RtcTokenBuilder, RtcRole } = agoraTokenLib;
+    console.log('[CALLS] Generated Agora token for channel:', validatedData.channelName, 'uid:', uid);
 
-      if (agoraAppCertificate) {
-        uid = Math.floor(Math.random() * 1000000);
-        agoraToken = RtcTokenBuilder.buildTokenWithUid(
-          agoraAppId,
-          agoraAppCertificate,
-          validatedData.channelName,
-          uid,
-          RtcRole.PUBLISHER,
-          Math.floor(Date.now() / 1000) + 3600, // 1 hour expiry
-        );
-      }
-    } catch {
-      // agora-token package not installed, use dev token
-      console.log('[CALLS] agora-token package not available, using development token');
-    }
-
-    if (agoraToken) {
-      return successResponse({
-        token: agoraToken,
-        channelId: validatedData.channelName,
-        appId: agoraAppId,
-        userId,
-        uid,
-        isAgoraConfigured: true,
-        fallbackMode: false,
-      }, 'Agora token generated successfully');
-    }
-
-    // Fallback: Agora token generation not available
     return successResponse({
-      token: `dev-token-${validatedData.channelName}-${userId}`,
+      token: agoraToken,
       channelId: validatedData.channelName,
       appId: agoraAppId,
       userId,
-      uid: 0,
-      isAgoraConfigured: !!agoraAppCertificate,
-      fallbackMode: !agoraAppCertificate,
-    }, 'Development token generated - configure Agora for production');
+      uid,
+      isAgoraConfigured: true,
+      fallbackMode: false,
+    }, 'Agora token generated successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
       const zodError = error as z.ZodError;

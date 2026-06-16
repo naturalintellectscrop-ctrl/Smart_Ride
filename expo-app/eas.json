@@ -13,9 +13,7 @@
       },
       "env": {
         "EAS_BUILD_NO_EXPO_WARNING": "true",
-        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api",
-        "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoic21hcnRyaWRldWciLCJhIjoiY202eXR2Z2g2MDBxazJycHU5dGx1cHc0dyJ9.placeholder",
-        "EXPO_PUBLIC_AGORA_APP_ID": ""
+        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
       }
     },
     "preview": {
@@ -25,9 +23,7 @@
       },
       "env": {
         "EAS_BUILD_NO_EXPO_WARNING": "true",
-        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api",
-        "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoic21hcnRyaWRldWciLCJhIjoiY202eXR2Z2g2MDBxazJycHU5dGx1cHc0dyJ9.placeholder",
-        "EXPO_PUBLIC_AGORA_APP_ID": ""
+        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
       }
     },
     "production": {
@@ -38,9 +34,7 @@
       },
       "env": {
         "EAS_BUILD_NO_EXPO_WARNING": "true",
-        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api",
-        "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoic21hcnRyaWRldWciLCJhIjoiY202eXR2Z2g2MDBxazJycHU5dGx1cHc0dyJ9.placeholder",
-        "EXPO_PUBLIC_AGORA_APP_ID": ""
+        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
       }
     },
     "apk": {
@@ -50,9 +44,7 @@
       },
       "env": {
         "EAS_BUILD_NO_EXPO_WARNING": "true",
-        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api",
-        "EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN": "pk.eyJ1Ijoic21hcnRyaWRldWciLCJhIjoiY202eXR2Z2g2MDBxazJycHU5dGx1cHc0dyJ9.placeholder",
-        "EXPO_PUBLIC_AGORA_APP_ID": ""
+        "EXPO_PUBLIC_API_BASE_URL": "https://smartrideug.vercel.app/api"
       }
     }
   },
