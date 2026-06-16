@@ -39,7 +39,7 @@ const STATUS_COLORS: Record<string, string> = {
   PENDING: COLORS.warning,
   VERIFIED: COLORS.success,
   REJECTED: COLORS.error,
-  EXPIRED: COLORS.textMuted,
+  EXPIRED: COLORS.outline,
 };
 
 export default function PrescriptionsScreen() {
@@ -154,7 +154,7 @@ export default function PrescriptionsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={[COLORS.background, COLORS.backgroundElevated]}
+        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
         style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
       >
         <View style={styles.headerRow}>
@@ -165,7 +165,7 @@ export default function PrescriptionsScreen() {
           <View style={{ width: 40 }} />
         </View>
         <LinearGradient
-          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
+          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.glowBorder}
@@ -206,7 +206,7 @@ export default function PrescriptionsScreen() {
                   <Text style={styles.prescriptionId}>#{prescription.id?.slice(-6)}</Text>
                   <StatusBadge
                     label={prescription.status || 'UNKNOWN'}
-                    color={STATUS_COLORS[prescription.status] || COLORS.textMuted}
+                    color={STATUS_COLORS[prescription.status] || COLORS.outline}
                     size="sm"
                   />
                 </View>
@@ -319,7 +319,7 @@ export default function PrescriptionsScreen() {
             <TextInput
               style={styles.modalInput}
               placeholder="Verification notes..."
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.outline}
               value={verificationNotes}
               onChangeText={setVerificationNotes}
               multiline
@@ -359,7 +359,7 @@ export default function PrescriptionsScreen() {
             <TextInput
               style={[styles.modalInput, styles.rejectionInput]}
               placeholder="Reason for rejection..."
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.outline}
               value={rejectionReason}
               onChangeText={setRejectionReason}
               multiline
@@ -417,7 +417,7 @@ export default function PrescriptionsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingContainer: {
     flex: 1,
@@ -425,7 +425,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.sm,
   },
   header: {
@@ -444,12 +444,12 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   headerTitle: {
     fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   glowBorder: {
     height: 1,
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     maxHeight: 52,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
   },
   tabsContent: {
     paddingHorizontal: SPACING.md,
@@ -468,7 +468,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     marginRight: 8,
   },
   activeTab: {
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontWeight: '500',
   },
   activeTabText: {
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   prescriptionId: {
     fontSize: 15,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   prescriptionInfo: {
     flexDirection: 'row',
@@ -515,28 +515,28 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textTransform: 'uppercase',
   },
   infoValue: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
   },
   medicinesSection: {
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.DEFAULT,
     padding: 10,
     marginTop: SPACING.sm,
   },
   medicinesLabel: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textTransform: 'uppercase',
     marginBottom: SPACING.xs,
   },
   medicineText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
     paddingVertical: SPACING.xs,
   },
   imageButton: {
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   },
   notesText: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
     fontStyle: 'italic',
     marginTop: SPACING.xs,
   },
@@ -578,11 +578,11 @@ const styles = StyleSheet.create({
   },
   rejectionText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
   },
   prescriptionDate: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.sm,
   },
   actionButtons: {
@@ -605,12 +605,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: TYPOGRAPHY.bodyLg.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.xs,
   },
   emptySubtitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textAlign: 'center',
   },
   // Modal styles
@@ -621,28 +621,28 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: RADIUS.lg,
     padding: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   modalTitle: {
     fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.xs,
   },
   modalSubtitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginBottom: SPACING.md,
   },
   modalInput: {
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.md,
     padding: SPACING.md,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: TYPOGRAPHY.bodySm.fontSize,
     minHeight: 80,
     marginBottom: 16,
@@ -677,7 +677,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   imageModalCloseText: {
-    color: '#FFFFFF',
+    color: COLORS.white,
     fontSize: 20,
     fontWeight: 'bold',
   },

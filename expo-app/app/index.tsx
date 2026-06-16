@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     width: LOGO_SIZE,
     height: LOGO_SIZE,
     borderRadius: RADIUS.xl, // 24 — rounded-xl
-    backgroundColor: 'rgba(255, 255, 255, 0.05)', // white/5% overlay bg
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     // shadow-2xl equivalent

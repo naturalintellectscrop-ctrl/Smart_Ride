@@ -85,7 +85,7 @@ export default function MerchantEarningsScreen() {
       case 'PAYOUT': return '#F59E0B';
       case 'REFUND': return COLORS.error;
       case 'ADJUSTMENT': return COLORS.info;
-      default: return COLORS.textMuted;
+      default: return COLORS.outline;
     }
   };
 
@@ -94,7 +94,7 @@ export default function MerchantEarningsScreen() {
       case 'COMPLETED': return COLORS.primary;
       case 'PENDING': return '#F59E0B';
       case 'FAILED': return COLORS.error;
-      default: return COLORS.textMuted;
+      default: return COLORS.outline;
     }
   };
 

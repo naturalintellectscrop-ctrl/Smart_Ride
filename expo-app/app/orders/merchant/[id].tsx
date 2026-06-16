@@ -143,7 +143,7 @@ export default function MerchantDetailScreen() {
         <Ionicons
           name="storefront-outline"
           size={48}
-          color={COLORS.textMuted}
+          color={COLORS.outline}
         />
         <Text style={styles.emptyText}>Merchant not found</Text>
       </View>
@@ -269,7 +269,7 @@ export default function MerchantDetailScreen() {
                 <Ionicons
                   name="car-outline"
                   size={14}
-                  color={COLORS.textSecondary}
+                  color={COLORS.onSurfaceVariant}
                   style={styles.pillIcon}
                 />
                 <Text style={styles.pillText}>
@@ -282,7 +282,7 @@ export default function MerchantDetailScreen() {
                 <Ionicons
                   name="wallet-outline"
                   size={14}
-                  color={COLORS.textSecondary}
+                  color={COLORS.onSurfaceVariant}
                   style={styles.pillIcon}
                 />
                 <Text style={styles.pillText}>
@@ -353,7 +353,7 @@ export default function MerchantDetailScreen() {
               <Ionicons
                 name="restaurant-outline"
                 size={40}
-                color={COLORS.textMuted}
+                color={COLORS.outline}
               />
               <Text style={styles.emptyProductsText}>
                 No products available
@@ -418,7 +418,7 @@ function ProductCard({
           <Ionicons
             name="restaurant-outline"
             size={28}
-            color={COLORS.textMuted}
+            color={COLORS.outline}
           />
         )}
       </View>
@@ -452,18 +452,18 @@ function ProductCard({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     gap: SPACING.sm,
   },
   emptyText: {
     ...TYPOGRAPHY.bodyMd,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.sm,
   },
   scrollView: {
@@ -530,7 +530,7 @@ const styles = StyleSheet.create({
   },
   merchantAddress: {
     ...TYPOGRAPHY.bodySm,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: 2,
   },
   ratingRow: {
@@ -552,12 +552,12 @@ const styles = StyleSheet.create({
   },
   reviewCount: {
     ...TYPOGRAPHY.bodySm,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginLeft: 4,
   },
   deliveryTime: {
     ...TYPOGRAPHY.bodySm,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
   statusBadge: {
     paddingHorizontal: SPACING.gutter,
@@ -588,13 +588,13 @@ const styles = StyleSheet.create({
   },
   pillText: {
     ...TYPOGRAPHY.bodySm,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
   },
 
   // Description
   description: {
     ...TYPOGRAPHY.bodyMd,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.md,
     lineHeight: 22,
   },
@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
   },
   emptyProductsText: {
     ...TYPOGRAPHY.bodyMd,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
 
   // Product Card
@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
   },
   productDescription: {
     ...TYPOGRAPHY.bodySm,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: 4,
   },
   productPrice: {
@@ -729,7 +729,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.gutter,

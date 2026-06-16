@@ -291,7 +291,7 @@ export default function MerchantOrderDetailScreen() {
               disabled={isUpdatingOrder || !!updatingAction}
             >
               {(updatingAction === action.status) ? (
-                <ActivityIndicator size="small" color={action.variant === 'primary' ? COLORS.onPrimary : '#FFFFFF'} />
+                <ActivityIndicator size="small" color={action.variant === 'primary' ? COLORS.onPrimary : COLORS.onSurface} />
               ) : (
                 <Text style={[
                   styles.bottomButtonText,
@@ -553,11 +553,11 @@ const styles = StyleSheet.create({
     marginVertical: 4,
   },
   kotCard: {
-    backgroundColor: 'rgba(0, 255, 136, 0.05)',
+    backgroundColor: 'rgba(0, 95, 58, 0.05)',
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.15)',
+    borderColor: 'rgba(0, 95, 58, 0.15)',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,

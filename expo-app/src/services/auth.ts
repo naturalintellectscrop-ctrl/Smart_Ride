@@ -307,6 +307,54 @@ export async function loginWithGoogle(idToken: string): Promise<AuthResponse> {
 }
 
 /**
+ * Login with Apple identity token
+ * This endpoint accepts the identityToken from Apple Sign-In and returns auth tokens
+ */
+export async function loginWithApple(identityToken: string, fullName?: { givenName?: string; familyName?: string } | null): Promise<AuthResponse> {
+  try {
+    if (!identityToken) {
+      throw new Error('Invalid Apple identity token');
+    }
+
+    const body: any = { identityToken };
+
+    // Apple only provides the user's name on the FIRST sign-in
+    // We pass it to the backend so it can set the user's name on creation
+    if (fullName?.givenName || fullName?.familyName) {
+      body.name = [fullName.givenName, fullName.familyName].filter(Boolean).join(' ');
+    }
+
+    const response = await apiRequest<AuthResponse>('/auth/apple', 'POST', body);
+
+    // Handle both response formats for maximum compatibility
+    if (response.success) {
+      // Format 1: response.data (standard)
+      if (response.data?.user && response.data?.accessToken) {
+        await saveTokens(response.data.accessToken, response.data.refreshToken);
+        await saveUserData(response.data.user);
+        syncAuthStore(response.data.user, response.data.accessToken);
+      }
+      // Format 2: response.user + response.tokens (alternative)
+      else if (response.user && response.tokens?.accessToken) {
+        await saveTokens(response.tokens.accessToken, response.tokens.refreshToken);
+        await saveUserData(response.user);
+        syncAuthStore(response.user, response.tokens.accessToken);
+      }
+      // Format mismatch - fail loud
+      else {
+        console.error('[AUTH] Apple login response missing tokens or user:', response);
+        throw new Error('Invalid Apple login response from server');
+      }
+    }
+
+    return response;
+  } catch (error) {
+    console.error('Apple login error:', error);
+    throw error;
+  }
+}
+
+/**
  * Logout user
  */
 export async function logout(): Promise<void> {

@@ -760,6 +760,79 @@ class ApiService {
     params.set('limit', String(limit));
     return this.request<{ data: any[]; pagination: any }>(`/tasks?${params.toString()}`);
   }
+
+  // ==========================================
+  // IN-APP CALLS (VoIP)
+  // ==========================================
+
+  /**
+   * Initiate an in-app internet call
+   * Creates a call session and returns channel info for Agora/RTC
+   */
+  async initiateCall(params: {
+    recipientId: string;
+    recipientType: string;
+    taskId?: string;
+  }): Promise<ApiResponse<{
+    sessionId: string;
+    channelId: string;
+    status: string;
+    caller: any;
+    recipient: any;
+    agoraAppId: string;
+  }>> {
+    return this.request('/calls/initiate', 'POST', params);
+  }
+
+  /**
+   * End an active call session
+   * Updates call record with end time and duration
+   */
+  async endCall(sessionId: string): Promise<ApiResponse<{
+    sessionId: string;
+    channelId: string;
+    status: string;
+    duration: number | null;
+    endedAt: string;
+    otherPartyId: string;
+  }>> {
+    return this.request(`/calls/${sessionId}/end`, 'POST');
+  }
+
+  /**
+   * Get Agora RTC token for joining a call channel
+   */
+  async getCallToken(channelName: string, userId?: string): Promise<ApiResponse<{
+    token: string;
+    channelId: string;
+    appId: string;
+    userId: string;
+    uid: number;
+    isAgoraConfigured: boolean;
+    fallbackMode: boolean;
+  }>> {
+    return this.request('/calls/token', 'POST', { channelName, userId });
+  }
+
+  /**
+   * Get call session details
+   */
+  async getCallSession(sessionId: string): Promise<ApiResponse<{
+    id: string;
+    channelId: string;
+    status: string;
+    caller: any;
+    recipient: any;
+    task: any;
+    startedAt: string | null;
+    endedAt: string | null;
+    duration: number | null;
+    formattedDuration: string | null;
+    createdAt: string;
+    agoraAppId: string;
+  }>> {
+    return this.request(`/calls/${sessionId}`);
+  }
 }
 
 export const api = new ApiService();

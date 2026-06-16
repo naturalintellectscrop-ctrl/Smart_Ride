@@ -33,7 +33,7 @@ export default function PrescriptionsScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+            <Ionicons name="arrow-back" size={20} color={COLORS.onSurface} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Prescriptions</Text>
           <View style={{ width: 40 }} />
@@ -97,16 +97,16 @@ export default function PrescriptionsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
   // Header
   header: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderLight,
+    borderBottomColor: COLORS.outlineVariant,
   },
   headerRow: {
     flexDirection: 'row',
@@ -116,9 +116,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: COLORS.outlineVariant,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 22,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     letterSpacing: -0.5,
   },
 
@@ -149,20 +149,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     textAlign: 'center',
     marginBottom: 12,
   },
   description: {
     fontSize: 15,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: 8,
   },
   subtext: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,

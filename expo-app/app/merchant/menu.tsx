@@ -236,7 +236,7 @@ export default function MerchantMenuScreen() {
                         value={item.isAvailable}
                         onValueChange={() => handleToggleAvailability(item)}
                         trackColor={{ false: '#374151', true: COLORS.primary }}
-                        thumbColor={item.isAvailable ? '#FFFFFF' : '#6B7280'}
+                        thumbColor={item.isAvailable ? COLORS.surfaceContainerLowest : COLORS.outline}
                         style={styles.availabilitySwitch}
                       />
                     </View>
@@ -294,7 +294,7 @@ export default function MerchantMenuScreen() {
                 value={formName}
                 onChangeText={setFormName}
                 placeholder="Item name"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
               />
 
               <Text style={styles.formLabel}>Description</Text>
@@ -303,7 +303,7 @@ export default function MerchantMenuScreen() {
                 value={formDescription}
                 onChangeText={setFormDescription}
                 placeholder="Item description"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
                 multiline
                 numberOfLines={3}
               />
@@ -314,7 +314,7 @@ export default function MerchantMenuScreen() {
                 value={formPrice}
                 onChangeText={setFormPrice}
                 placeholder="0"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
                 keyboardType="numeric"
               />
 
@@ -324,7 +324,7 @@ export default function MerchantMenuScreen() {
                 value={formCategory}
                 onChangeText={setFormCategory}
                 placeholder="e.g., Main Dish, Drinks"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
               />
 
               <View style={styles.formToggleRow}>
@@ -333,7 +333,7 @@ export default function MerchantMenuScreen() {
                   value={formAvailable}
                   onValueChange={setFormAvailable}
                   trackColor={{ false: '#374151', true: COLORS.primary }}
-                  thumbColor={formAvailable ? '#FFFFFF' : '#6B7280'}
+                  thumbColor={formAvailable ? COLORS.surfaceContainerLowest : COLORS.outline}
                 />
               </View>
 
@@ -343,7 +343,7 @@ export default function MerchantMenuScreen() {
                 disabled={isSaving}
               >
                 {isSaving ? (
-                  <ActivityIndicator color={COLORS.background} />
+                  <ActivityIndicator color={COLORS.surface} />
                 ) : (
                   <Text style={styles.saveButtonText}>
                     {editingItem ? 'Update Item' : 'Add Item'}

@@ -26,7 +26,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes, GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
-import { loginWithEmail, isAuthenticated, getAccessToken, getUserData, loginWithGoogle } from '../../src/services/auth';
+import { isAppleSignInAvailable, signInWithApple } from '../../src/config/apple';
+import { loginWithEmail, isAuthenticated, getAccessToken, getUserData, loginWithGoogle, loginWithApple } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
 import { IconInput } from '../../src/components/IconInput';
@@ -51,13 +52,23 @@ export default function LoginScreen() {
   // Google Sign-In state
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  // Apple Sign-In state
+  const [appleLoading, setAppleLoading] = useState(false);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
   // Error state
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     configureGoogleSignIn();
+    checkAppleAvailability();
     checkAuth();
   }, []);
+
+  const checkAppleAvailability = async () => {
+    const available = await isAppleSignInAvailable();
+    setAppleAvailable(available);
+  };
 
   const checkAuth = async () => {
     const authenticated = await isAuthenticated();
@@ -204,9 +215,57 @@ export default function LoginScreen() {
     }
   };
 
-  // ─── Apple Sign-In (placeholder) ───────────────
-  const handleAppleSignIn = () => {
-    Alert.alert('Coming Soon', 'Apple Sign-In will be available in a future update.');
+  // ─── Apple Sign-In ──────────────────────────────
+  const handleAppleSignIn = async () => {
+    if (!appleAvailable) {
+      setError('Apple Sign-In is only available on iOS devices. Please use Google or email login.');
+      return;
+    }
+
+    try {
+      setAppleLoading(true);
+      setError(null);
+
+      const appleCredential = await signInWithApple();
+
+      if (!appleCredential) {
+        // User cancelled
+        return;
+      }
+
+      if (!appleCredential.identityToken) {
+        setError('Apple Sign-In did not return a valid token. Please try again.');
+        return;
+      }
+
+      console.log('[LOGIN] Apple: Got identityToken, sending to backend...');
+      const result = await loginWithApple(
+        appleCredential.identityToken,
+        appleCredential.fullName
+      );
+
+      if (result.success) {
+        const token = await getAccessToken();
+        const userData = await getUserData();
+        if (token && userData) {
+          useAuthStore.getState().login({
+            id: userData.id,
+            email: userData.email,
+            name: userData.name,
+            phone: userData.phone,
+            role: userData.role,
+          }, token);
+        }
+        navigateByRole(userData?.role);
+      } else {
+        setError(result.error || 'Apple Sign-In failed. Please try again.');
+      }
+    } catch (err: any) {
+      console.error('[LOGIN] Apple Sign-In error:', err);
+      setError(err.message || 'Apple Sign-In failed. Please try again.');
+    } finally {
+      setAppleLoading(false);
+    }
   };
 
   // ─── Email/Password Login ──────────────────────
@@ -368,15 +427,24 @@ export default function LoginScreen() {
             )}
           </TouchableOpacity>
 
-          {/* Apple */}
-          <TouchableOpacity
-            style={styles.socialButton}
-            onPress={handleAppleSignIn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="logo-apple" size={20} color={COLORS.onSurface} />
-            <Text style={styles.socialButtonText}>Apple</Text>
-          </TouchableOpacity>
+          {/* Apple — only shown on iOS */}
+          {appleAvailable && (
+            <TouchableOpacity
+              style={[styles.socialButton, appleLoading && styles.socialButtonDisabled]}
+              onPress={handleAppleSignIn}
+              disabled={appleLoading}
+              activeOpacity={0.7}
+            >
+              {appleLoading ? (
+                <Text style={styles.socialButtonLoadingText}>…</Text>
+              ) : (
+                <>
+                  <Ionicons name="logo-apple" size={20} color={COLORS.onSurface} />
+                  <Text style={styles.socialButtonText}>Apple</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* ─── Email / Password Fallback ─────────── */}

@@ -117,7 +117,7 @@ export default function MerchantRegisterScreen() {
           value={businessName}
           onChangeText={setBusinessName}
           placeholder="Enter your business name"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={COLORS.outline}
         />
 
         {/* Business Type */}
@@ -148,7 +148,7 @@ export default function MerchantRegisterScreen() {
           value={description}
           onChangeText={setDescription}
           placeholder="Brief description of your business"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={COLORS.outline}
           multiline
           numberOfLines={3}
         />
@@ -160,7 +160,7 @@ export default function MerchantRegisterScreen() {
           value={phone}
           onChangeText={setPhone}
           placeholder="+256 700 000 000"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={COLORS.outline}
           keyboardType="phone-pad"
         />
 
@@ -171,7 +171,7 @@ export default function MerchantRegisterScreen() {
           value={address}
           onChangeText={setAddress}
           placeholder="Enter your business address"
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={COLORS.outline}
         />
 
         {/* Error Message */}
@@ -188,7 +188,7 @@ export default function MerchantRegisterScreen() {
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <ActivityIndicator color={COLORS.background} />
+            <ActivityIndicator color={COLORS.surface} />
           ) : (
             <Text style={styles.submitButtonText}>Register Business</Text>
           )}

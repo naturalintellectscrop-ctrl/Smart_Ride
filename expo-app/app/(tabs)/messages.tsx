@@ -146,7 +146,7 @@ export default function MessagesTabScreen() {
             </View>
           </View>
 
-          <Ionicons name="chevron-forward" size={18} color={COLORS.textDim} />
+          <Ionicons name="chevron-forward" size={18} color={COLORS.outlineVariant} />
         </TouchableOpacity>
       </Animated.View>
     );
@@ -198,7 +198,7 @@ export default function MessagesTabScreen() {
         </View>
 
         <LinearGradient
-          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
+          colors={['#4ae176', '#98f6be', 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.glowBorder}
@@ -238,10 +238,10 @@ export default function MessagesTabScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   header: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     paddingBottom: 16,
     paddingHorizontal: 16,
   },
@@ -258,7 +258,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     letterSpacing: -0.5,
   },
   headerBadge: {
@@ -290,9 +290,9 @@ const styles = StyleSheet.create({
   conversationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(19, 19, 26, 0.7)',
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: COLORS.outlineVariant,
     borderRadius: 16,
     padding: 14,
     marginBottom: 10,
@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -319,13 +319,13 @@ const styles = StyleSheet.create({
   conversationName: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     flex: 1,
     marginRight: 8,
   },
   conversationTime: {
     fontSize: 12,
-    color: COLORS.textDim,
+    color: COLORS.outlineVariant,
   },
   conversationFooter: {
     flexDirection: 'row',
@@ -343,12 +343,12 @@ const styles = StyleSheet.create({
   },
   messagePreview: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     flex: 1,
   },
   systemMessagePreview: {
     fontStyle: 'italic',
-    color: COLORS.textDim,
+    color: COLORS.outlineVariant,
   },
   unreadBadge: {
     borderRadius: 10,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   unreadBadgeText: {
-    color: COLORS.background,
+    color: COLORS.surface,
     fontSize: 10,
     fontWeight: 'bold',
   },
@@ -373,9 +373,9 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
+    backgroundColor: '#98f6be',
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.15)',
+    borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 24,
@@ -383,12 +383,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 32,
@@ -403,7 +403,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   emptyButtonText: {
-    color: COLORS.background,
+    color: COLORS.surface,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: 12,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 14,
   },
 });

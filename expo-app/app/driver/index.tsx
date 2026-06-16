@@ -609,7 +609,7 @@ export default function DriverHomeScreen() {
                 fullWidth
                 icon={
                   isOnline
-                    ? <Ionicons name="log-out-outline" size={20} color="#FFFFFF" />
+                    ? <Ionicons name="log-out-outline" size={20} color={COLORS.onPrimary} />
                     : <Ionicons name="flash" size={20} color={COLORS.onPrimary} />
                 }
               />
@@ -693,7 +693,7 @@ const styles = StyleSheet.create({
   // Root
   root: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
   // Loading

@@ -129,7 +129,7 @@ export default function OrderDetailScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={[COLORS.background, COLORS.backgroundElevated]}
+        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
         style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
       >
         <View style={styles.headerRow}>
@@ -141,12 +141,12 @@ export default function OrderDetailScreen() {
           </View>
           <StatusBadge
             label={order.status || 'UNKNOWN'}
-            color={STATUS_COLORS[order.status] || COLORS.textMuted}
+            color={STATUS_COLORS[order.status] || COLORS.outline}
             size="sm"
           />
         </View>
         <LinearGradient
-          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
+          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.glowBorder}
@@ -290,16 +290,16 @@ export default function OrderDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   emptyText: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 16,
     marginBottom: 12,
   },
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 24,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   headerCenter: {
     flex: 1,
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   glowBorder: {
     height: 1,
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: 12,
   },
   infoRow: {
@@ -363,12 +363,12 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     flex: 1,
   },
   infoValue: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
     flex: 2,
     textAlign: 'right',
   },
@@ -378,19 +378,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   medicineInfo: {
     flex: 1,
   },
   medicineName: {
     fontSize: 14,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontWeight: '500',
   },
   medicineQty: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: 2,
   },
   medicinePrice: {
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
   },
   noItemsText: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontStyle: 'italic',
   },
   totalRow: {
@@ -410,12 +410,12 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     marginTop: 4,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
   },
   totalLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   totalValue: {
     fontSize: 18,
@@ -436,9 +436,9 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   timelineDotActive: {
     backgroundColor: COLORS.primary,
@@ -447,18 +447,18 @@ const styles = StyleSheet.create({
   timelineLine: {
     width: 2,
     flex: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.outlineVariant,
   },
   timelineLineActive: {
     backgroundColor: COLORS.primary,
   },
   timelineLabel: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: 0,
   },
   timelineLabelActive: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontWeight: '500',
   },
   actionsContainer: {

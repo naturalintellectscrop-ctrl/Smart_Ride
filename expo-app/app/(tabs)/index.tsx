@@ -30,7 +30,7 @@ const HOME_SERVICES: {
   customEmoji?: string;
   customColor?: string;
 }[] = [
-  { id: 'ride', name: 'Rides', serviceKey: 'custom', customEmoji: undefined, customColor: '#00FF88' },
+  { id: 'ride', name: 'Rides', serviceKey: 'custom', customEmoji: undefined, customColor: COLORS.primary },
   { id: 'food', name: 'Food', serviceKey: 'FOOD' },
   { id: 'shopping', name: 'Shop', serviceKey: 'SHOPPING' },
   { id: 'delivery', name: 'Delivery', serviceKey: 'DELIVERY' },

@@ -170,7 +170,7 @@ export default function RiderWalletScreen() {
           </TouchableOpacity>
         </View>
         <LinearGradient
-          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
+          colors={['#4ae176', '#98f6be', 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.glowBorder}

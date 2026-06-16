@@ -79,7 +79,7 @@ export default function ProfileEditScreen() {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: COLORS.background }]}>
+    <View style={[styles.screen, { backgroundColor: COLORS.surface }]}>
       {/* Header */}
       <Animated.View
         entering={FadeInDown.duration(400).springify()}
@@ -128,7 +128,7 @@ export default function ProfileEditScreen() {
               value={profile.name}
               onChangeText={(text) => setProfile(prev => ({ ...prev, name: text }))}
               placeholder="Enter your name"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.outline}
               style={styles.formInput}
             />
           </View>
@@ -140,7 +140,7 @@ export default function ProfileEditScreen() {
               value={profile.email}
               onChangeText={(text) => setProfile(prev => ({ ...prev, email: text }))}
               placeholder="Enter your email"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.outline}
               keyboardType="email-address"
               autoCapitalize="none"
               style={styles.formInput}
@@ -154,7 +154,7 @@ export default function ProfileEditScreen() {
               value={profile.phone}
               onChangeText={(text) => setProfile(prev => ({ ...prev, phone: text }))}
               placeholder="Enter your phone number"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.outline}
               keyboardType="phone-pad"
               style={styles.formInput}
             />
@@ -167,7 +167,7 @@ export default function ProfileEditScreen() {
               value={profile.address}
               onChangeText={(text) => setProfile(prev => ({ ...prev, address: text }))}
               placeholder="Enter your address"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.outline}
               multiline
               numberOfLines={2}
               style={styles.formInput}
@@ -197,14 +197,14 @@ export default function ProfileEditScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   header: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     paddingBottom: SPACING.md,
     paddingHorizontal: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   headerRow: {
     flexDirection: 'row',
@@ -247,7 +247,7 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -272,19 +272,19 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   avatarHint: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: TYPOGRAPHY.bodySm.fontSize,
     marginTop: SPACING.sm,
   },
   formCard: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.md,
     ...SHADOWS.card,
   },
   formLabel: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: TYPOGRAPHY.bodySm.fontSize,
     marginBottom: SPACING.sm,
   },

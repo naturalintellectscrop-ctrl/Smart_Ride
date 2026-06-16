@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -17,6 +17,8 @@ model User {
   status                   UserStatus                @default(ACTIVE)
   authProvider             String?
   avatarUrl                String?
+  appleUserId              String?                   @unique
+  emailVerified            DateTime?
   refreshToken             String?
   refreshTokenExpiresAt    DateTime?
   lastLoginAt              DateTime?
@@ -38,6 +40,8 @@ model User {
   sessions                 Session[]
   sosAlerts                SOSAlert[]                @relation("UserSOSAlerts")
   tasks                    Task[]
+  callerCalls              CallSession[]          @relation("CallerCalls")
+  recipientCalls           CallSession[]          @relation("RecipientCalls")
 
   @@index([email])
   @@index([phone])
@@ -403,6 +407,7 @@ model Task {
   healthOrder         HealthOrder?          @relation(fields: [healthOrderId], references: [id])
   order               Order?                @relation(fields: [orderId], references: [id], onDelete: Cascade)
   rider               Rider?                @relation(fields: [riderId], references: [id])
+  calls               CallSession[]
 
   @@index([taskType])
   @@index([status])
@@ -2262,4 +2267,30 @@ enum InventoryReservationStatus {
   CONFIRMED
   RELEASED
   EXPIRED
+}
+
+// ============================================
+// CALL SESSION MODEL
+// In-App Internet Call (VoIP) infrastructure
+// ============================================
+model CallSession {
+  id            String   @id @default(cuid())
+  channelId     String   @unique
+  callerId      String
+  recipientId   String
+  taskId        String?
+  status        String   @default("ringing")  // ringing, connected, ended, missed
+  startedAt     DateTime?
+  endedAt       DateTime?
+  duration      Int?     // seconds
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  caller    User  @relation("CallerCalls", fields: [callerId], references: [id])
+  recipient User  @relation("RecipientCalls", fields: [recipientId], references: [id])
+  task      Task? @relation(fields: [taskId], references: [id])
+
+  @@index([callerId])
+  @@index([recipientId])
+  @@index([status])
 }

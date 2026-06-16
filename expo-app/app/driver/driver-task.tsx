@@ -400,7 +400,7 @@ export default function DriverTaskScreen() {
 
               {/* Connecting line */}
               <View style={styles.routeConnector}>
-                <View style={[styles.routeConnectorLine, { borderLeftColor: COLORS.border }]} />
+                <View style={[styles.routeConnectorLine, { borderLeftColor: COLORS.outlineVariant }]} />
               </View>
 
               <View style={styles.routeRow}>
@@ -502,7 +502,7 @@ export default function DriverTaskScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
   // Loading & empty states
@@ -510,16 +510,16 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
   emptyText: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
 
   // Map
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
   },
   taskNumber: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: 2,
   },
 
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   clientCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: 16,
     padding: 14,
     marginBottom: 16,
@@ -582,7 +582,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -596,18 +596,18 @@ const styles = StyleSheet.create({
   clientName: {
     fontSize: 15,
     fontWeight: '700',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   clientPhone: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: 2,
   },
   callButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderWidth: 1,
     borderColor: `${COLORS.secondary}30`,
     alignItems: 'center',
@@ -637,13 +637,13 @@ const styles = StyleSheet.create({
   },
   routeLabel: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   routeAddress: {
     fontSize: 14,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontWeight: '500',
     marginTop: 1,
   },
@@ -665,12 +665,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
     marginBottom: 16,
   },
   paymentMethod: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
   paymentAmount: {
     fontSize: 20,
@@ -715,9 +715,9 @@ const styles = StyleSheet.create({
   // Completed
   completedCard: {
     marginTop: 16,
-    backgroundColor: 'rgba(0, 255, 136, 0.06)',
+    backgroundColor: '#98f6be',
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.15)',
+    borderColor: '#4ae176',
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',

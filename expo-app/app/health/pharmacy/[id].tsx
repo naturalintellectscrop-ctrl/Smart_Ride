@@ -744,7 +744,7 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     backgroundColor: COLORS.surface,
     borderTopWidth: 1,
-    borderTopColor: COLORS.borderLight,
+    borderTopColor: COLORS.outlineVariant,
   },
   cartButton: {
     flexDirection: 'row',
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },

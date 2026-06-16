@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: RADIUS.full,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.md,
@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
   },
   sosSubtitle: {
     ...TYPOGRAPHY.labelMd,
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: COLORS.onError,
     marginTop: 1,
   },
 

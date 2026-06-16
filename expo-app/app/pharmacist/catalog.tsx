@@ -185,7 +185,7 @@ export default function CatalogScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={[COLORS.background, COLORS.backgroundElevated]}
+        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
         style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
       >
         <View style={styles.headerRow}>
@@ -198,7 +198,7 @@ export default function CatalogScreen() {
           </TouchableOpacity>
         </View>
         <LinearGradient
-          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
+          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.glowBorder}
@@ -230,7 +230,7 @@ export default function CatalogScreen() {
         <TextInput
           style={styles.searchInput}
           placeholder="Search medicines..."
-          placeholderTextColor={COLORS.textMuted}
+          placeholderTextColor={COLORS.outline}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
@@ -263,8 +263,8 @@ export default function CatalogScreen() {
                   <Switch
                     value={medicine.isAvailable}
                     onValueChange={() => toggleAvailability(medicine)}
-                    trackColor={{ false: COLORS.backgroundSurface, true: `${COLORS.primary}40` }}
-                    thumbColor={medicine.isAvailable ? COLORS.primary : COLORS.textMuted}
+                    trackColor={{ false: COLORS.surfaceContainerLow, true: `${COLORS.primary}40` }}
+                    thumbColor={medicine.isAvailable ? COLORS.primary : COLORS.outline}
                     style={styles.availabilitySwitch}
                   />
                 </View>
@@ -346,7 +346,7 @@ export default function CatalogScreen() {
               <TextInput
                 style={styles.fieldInput}
                 placeholder="Medicine name"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
                 value={newMedicine.name}
                 onChangeText={t => setNewMedicine(p => ({ ...p, name: t }))}
               />
@@ -355,7 +355,7 @@ export default function CatalogScreen() {
               <TextInput
                 style={styles.fieldInput}
                 placeholder="Generic name"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
                 value={newMedicine.genericName}
                 onChangeText={t => setNewMedicine(p => ({ ...p, genericName: t }))}
               />
@@ -364,7 +364,7 @@ export default function CatalogScreen() {
               <TextInput
                 style={styles.fieldInput}
                 placeholder="e.g., Pain Relief, Antibiotics"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
                 value={newMedicine.category}
                 onChangeText={t => setNewMedicine(p => ({ ...p, category: t }))}
               />
@@ -373,7 +373,7 @@ export default function CatalogScreen() {
               <TextInput
                 style={styles.fieldInput}
                 placeholder="0"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
                 value={newMedicine.price}
                 onChangeText={t => setNewMedicine(p => ({ ...p, price: t }))}
                 keyboardType="numeric"
@@ -383,7 +383,7 @@ export default function CatalogScreen() {
               <TextInput
                 style={styles.fieldInput}
                 placeholder="0"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
                 value={newMedicine.stockQuantity}
                 onChangeText={t => setNewMedicine(p => ({ ...p, stockQuantity: t }))}
                 keyboardType="numeric"
@@ -393,7 +393,7 @@ export default function CatalogScreen() {
               <TextInput
                 style={styles.fieldInput}
                 placeholder="e.g., tablets, bottles, strips"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
                 value={newMedicine.unit}
                 onChangeText={t => setNewMedicine(p => ({ ...p, unit: t }))}
               />
@@ -402,7 +402,7 @@ export default function CatalogScreen() {
               <TextInput
                 style={[styles.fieldInput, { minHeight: 60 }]}
                 placeholder="Medicine description"
-                placeholderTextColor={COLORS.textMuted}
+                placeholderTextColor={COLORS.outline}
                 value={newMedicine.description}
                 onChangeText={t => setNewMedicine(p => ({ ...p, description: t }))}
                 multiline
@@ -414,8 +414,8 @@ export default function CatalogScreen() {
                 <Switch
                   value={newMedicine.requiresPrescription}
                   onValueChange={v => setNewMedicine(p => ({ ...p, requiresPrescription: v }))}
-                  trackColor={{ false: COLORS.backgroundSurface, true: `${COLORS.primary}40` }}
-                  thumbColor={newMedicine.requiresPrescription ? COLORS.primary : COLORS.textMuted}
+                  trackColor={{ false: COLORS.surfaceContainerLow, true: `${COLORS.primary}40` }}
+                  thumbColor={newMedicine.requiresPrescription ? COLORS.primary : COLORS.outline}
                 />
               </View>
 
@@ -464,7 +464,7 @@ export default function CatalogScreen() {
             <TextInput
               style={styles.fieldInput}
               placeholder="0"
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.outline}
               value={editStock}
               onChangeText={setEditStock}
               keyboardType="numeric"
@@ -500,7 +500,7 @@ export default function CatalogScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingContainer: {
     flex: 1,
@@ -508,7 +508,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.sm,
   },
   header: {
@@ -527,12 +527,12 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   headerTitle: {
     fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   addBtn: {
     backgroundColor: `${COLORS.primary}20`,
@@ -557,7 +557,7 @@ const styles = StyleSheet.create({
   },
   summaryItem: {
     flex: 1,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: RADIUS.md,
     padding: 10,
     alignItems: 'center',
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.xs,
   },
   searchContainer: {
@@ -577,14 +577,14 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.sm,
   },
   searchInput: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: TYPOGRAPHY.bodySm.fontSize,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   scrollView: {
     flex: 1,
@@ -611,7 +611,7 @@ const styles = StyleSheet.create({
   medicineName: {
     fontSize: 15,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   rxBadge: {
     backgroundColor: `${COLORS.warning}20`,
@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
   },
   medicineGeneric: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontStyle: 'italic',
     marginTop: SPACING.xs,
   },
@@ -643,19 +643,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
   },
   detailItem: {
     flex: 1,
   },
   detailLabel: {
     fontSize: 10,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textTransform: 'uppercase',
   },
   detailValue: {
     fontSize: 13,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontWeight: '500',
     marginTop: SPACING.xs,
   },
@@ -683,12 +683,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: TYPOGRAPHY.bodyLg.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.xs,
   },
   emptySubtitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textAlign: 'center',
   },
   // Modal styles
@@ -699,38 +699,38 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   modalContent: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: RADIUS.lg,
     padding: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     maxHeight: '80%',
   },
   modalTitle: {
     fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.xs,
   },
   modalSubtitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginBottom: SPACING.md,
   },
   fieldLabel: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontWeight: TYPOGRAPHY.labelMd.fontWeight,
     textTransform: 'uppercase',
     marginBottom: SPACING.xs,
     marginTop: 10,
   },
   fieldInput: {
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.gutter,
     paddingVertical: 10,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   prescriptionToggle: {

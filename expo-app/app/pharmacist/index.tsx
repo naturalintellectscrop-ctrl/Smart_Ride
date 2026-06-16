@@ -120,7 +120,7 @@ export default function PharmacistDashboard() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={[COLORS.background, COLORS.backgroundElevated]}
+        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
         style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
       >
         <View style={styles.headerRow}>
@@ -131,20 +131,20 @@ export default function PharmacistDashboard() {
             </Text>
           </View>
           <View style={styles.toggleContainer}>
-            <Text style={[styles.toggleLabel, { color: providerStatus.isOpen ? COLORS.primary : COLORS.textMuted }]}>
+            <Text style={[styles.toggleLabel, { color: providerStatus.isOpen ? COLORS.primary : COLORS.outline }]}>
               {providerStatus.isOpen ? 'Open' : 'Closed'}
             </Text>
             <Switch
               value={providerStatus.isOpen}
               onValueChange={toggleStatus}
               disabled={isToggling}
-              trackColor={{ false: COLORS.backgroundSurface, true: `${COLORS.primary}40` }}
-              thumbColor={providerStatus.isOpen ? COLORS.primary : COLORS.textMuted}
+              trackColor={{ false: COLORS.surfaceContainerLow, true: `${COLORS.primary}40` }}
+              thumbColor={providerStatus.isOpen ? COLORS.primary : COLORS.outline}
             />
           </View>
         </View>
         <LinearGradient
-          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
+          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.glowBorder}
@@ -259,16 +259,16 @@ function QuickActionCard({ icon, title, subtitle, onPress }: { icon: string; tit
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingText: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.sm,
     fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
@@ -287,11 +287,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: TYPOGRAPHY.headlineLg.fontSize,
     fontWeight: TYPOGRAPHY.headlineLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   headerSubtitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.xs,
   },
   toggleContainer: {
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.xs,
   },
   alertCard: {
@@ -351,11 +351,11 @@ const styles = StyleSheet.create({
   alertTitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   alertText: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.xs,
   },
   alertAction: {
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: TYPOGRAPHY.bodyMd.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.gutter,
   },
   actionsGrid: {
@@ -386,11 +386,11 @@ const styles = StyleSheet.create({
   actionTitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   actionSubtitle: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.xs,
   },
   statusRow: {
@@ -401,15 +401,15 @@ const styles = StyleSheet.create({
   },
   statusLabel: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
   },
   statusValue: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   statusDivider: {
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.outlineVariant,
   },
 });

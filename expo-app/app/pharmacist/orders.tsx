@@ -91,7 +91,7 @@ export default function PharmacistOrdersScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={[COLORS.background, COLORS.backgroundElevated]}
+        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
         style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
       >
         <View style={styles.headerRow}>
@@ -102,7 +102,7 @@ export default function PharmacistOrdersScreen() {
           <View style={{ width: 40 }} />
         </View>
         <LinearGradient
-          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
+          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.glowBorder}
@@ -148,7 +148,7 @@ export default function PharmacistOrdersScreen() {
                     <Text style={styles.orderNumber}>#{order.orderNumber || order.id?.slice(-6)}</Text>
                     <StatusBadge
                       label={order.status || 'UNKNOWN'}
-                      color={STATUS_COLORS[order.status] || COLORS.textMuted}
+                      color={STATUS_COLORS[order.status] || COLORS.outline}
                       size="sm"
                     />
                   </View>
@@ -189,7 +189,7 @@ export default function PharmacistOrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingContainer: {
     flex: 1,
@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.sm,
   },
   header: {
@@ -216,12 +216,12 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   headerTitle: {
     fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   glowBorder: {
     height: 1,
@@ -229,7 +229,7 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     maxHeight: 52,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
   },
   tabsContent: {
     paddingHorizontal: SPACING.md,
@@ -240,7 +240,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     marginRight: 8,
   },
   activeTab: {
@@ -250,7 +250,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontWeight: '500',
   },
   activeTabText: {
@@ -277,19 +277,19 @@ const styles = StyleSheet.create({
   orderNumber: {
     fontSize: 15,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   orderInfo: {
     marginBottom: 6,
   },
   orderLabel: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textTransform: 'uppercase',
   },
   orderValue: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
     marginTop: SPACING.xs,
   },
   orderFooter: {
@@ -299,11 +299,11 @@ const styles = StyleSheet.create({
     marginTop: SPACING.sm,
     paddingTop: SPACING.sm,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
   },
   orderDate: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
   orderAmount: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
@@ -322,12 +322,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: TYPOGRAPHY.bodyLg.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.xs,
   },
   emptySubtitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textAlign: 'center',
   },
 });

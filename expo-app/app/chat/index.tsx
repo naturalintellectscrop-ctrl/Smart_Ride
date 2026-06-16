@@ -215,7 +215,7 @@ export default function ConversationsScreen() {
 
         {/* Gradient glow border */}
         <LinearGradient
-          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
+          colors={['#4ae176', '#98f6be', 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.glowBorder}
@@ -415,9 +415,9 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(0, 255, 136, 0.08)',
+    backgroundColor: '#98f6be',
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.15)',
+    borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.lg,

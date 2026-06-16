@@ -73,6 +73,7 @@
           "RNMapboxMapsImpl": "mapbox"
         }
       ],
+      "expo-apple-authentication",
       [
         "expo-notifications",
         {

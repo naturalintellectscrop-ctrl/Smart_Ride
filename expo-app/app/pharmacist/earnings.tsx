@@ -78,7 +78,7 @@ export default function PharmacistEarningsScreen() {
     <View style={styles.container}>
       {/* Header */}
       <LinearGradient
-        colors={[COLORS.background, COLORS.backgroundElevated]}
+        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
         style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
       >
         <View style={styles.headerRow}>
@@ -89,7 +89,7 @@ export default function PharmacistEarningsScreen() {
           <View style={{ width: 40 }} />
         </View>
         <LinearGradient
-          colors={['rgba(0, 255, 136, 0.3)', 'rgba(0, 212, 255, 0.1)', 'transparent']}
+          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={styles.glowBorder}
@@ -212,7 +212,7 @@ export default function PharmacistEarningsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   loadingContainer: {
     flex: 1,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   loadingText: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.sm,
   },
   header: {
@@ -239,12 +239,12 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   headerTitle: {
     fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   glowBorder: {
     height: 1,
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
   totalAmount: {
     fontSize: TYPOGRAPHY.displayLg.fontSize,
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: SPACING.sm,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
   },
   balanceItem: {
     flex: 1,
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   },
   balanceLabel: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
   balanceValue: {
     fontSize: TYPOGRAPHY.bodyMd.fontSize,
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
   balanceDivider: {
     width: 1,
     height: 30,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.outlineVariant,
   },
   periodRow: {
     flexDirection: 'row',
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 10,
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'transparent',
@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   },
   periodText: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontWeight: '500',
   },
   periodTextActive: {
@@ -341,17 +341,17 @@ const styles = StyleSheet.create({
   earningsAmount: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   earningsPeriod: {
     fontSize: 11,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.xs,
   },
   sectionTitle: {
     fontSize: TYPOGRAPHY.bodyMd.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.gutter,
   },
   transactionCard: {
@@ -378,12 +378,12 @@ const styles = StyleSheet.create({
   },
   transactionDesc: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontWeight: '500',
   },
   transactionDate: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: SPACING.xs,
   },
   transactionAmount: {
@@ -404,11 +404,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: TYPOGRAPHY.bodyMd.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.xs,
   },
   emptySubtitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
 });

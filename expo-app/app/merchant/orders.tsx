@@ -89,7 +89,7 @@ export default function MerchantOrdersScreen() {
   };
 
   const getStatusColor = (status: string) => {
-    return ORDER_STATUS_COLORS[status] || COLORS.textMuted;
+    return ORDER_STATUS_COLORS[status] || COLORS.outline;
   };
 
   const getAvailableActions = (status: string): { label: string; status: string; variant: 'primary' | 'secondary' | 'danger' }[] => {
@@ -234,7 +234,7 @@ export default function MerchantOrdersScreen() {
                         disabled={isUpdating}
                       >
                         {isUpdating ? (
-                          <ActivityIndicator size="small" color={action.variant === 'primary' ? COLORS.background : '#FFFFFF'} />
+                          <ActivityIndicator size="small" color={action.variant === 'primary' ? COLORS.surface : COLORS.onSurface} />
                         ) : (
                           <Text style={[
                             styles.actionButtonText,
