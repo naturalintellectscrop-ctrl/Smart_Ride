@@ -13,6 +13,8 @@ export interface User {
   role: UserRole;
   avatarUrl?: string;
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  address?: string;
+  notificationPreferences?: { notificationsEnabled?: boolean } | null;
   createdAt: string;
 }
 

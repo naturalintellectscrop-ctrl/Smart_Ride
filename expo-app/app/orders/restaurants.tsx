@@ -65,10 +65,16 @@ export default function RestaurantsScreen() {
   const filterMerchants = () => {
     let filtered = merchants;
 
+    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(m => 
         m.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
+    }
+
+    // Filter by category (merchant.type is the field used for type)
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(m => m.type === selectedCategory);
     }
 
     setFilteredMerchants(filtered);

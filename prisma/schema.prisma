@@ -22,6 +22,14 @@ model User {
   refreshToken             String?
   refreshTokenExpiresAt    DateTime?
   lastLoginAt              DateTime?
+  // Default delivery address shown in profile editor.
+  // Detailed saved addresses live in SavedAddress.
+  address                  String?
+  // Global notification preferences (JSON). Stores a single
+  // `notificationsEnabled` boolean for the master toggle in
+  // the profile screen. Granular per-category preferences are
+  // stored in the related NotificationPreference model.
+  notificationPreferences  Json?
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   auditLogs                AuditLog[]                @relation("UserAuditLogs")
@@ -37,6 +45,7 @@ model User {
   ratingsGiven             Rating[]                  @relation("RatingFromUser")
   ratingsReceived          Rating[]                  @relation("RatingToUser")
   rider                    Rider?
+  savedAddresses           SavedAddress[]
   sessions                 Session[]
   sosAlerts                SOSAlert[]                @relation("UserSOSAlerts")
   tasks                    Task[]
@@ -47,6 +56,26 @@ model User {
   @@index([phone])
   @@index([role])
   @@index([status])
+}
+
+// ============================================
+// SAVED ADDRESS MODEL
+// Stores user's frequently-used locations (Home, Work, etc.)
+// ============================================
+model SavedAddress {
+  id          String   @id @default(cuid())
+  userId      String
+  label       String   // "Home", "Work", "Other", or custom
+  address     String
+  latitude    Float?
+  longitude   Float?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // ============================================
@@ -123,6 +152,7 @@ model Rider {
   nationalIdFrontUrl String?
   nationalIdBackUrl  String?
   driverLicenseUrl   String?
+  vehiclePhotoUrl    String?
   riderRole          RiderRole
   vehicleType        VehicleType?
   status             RiderStatus      @default(PENDING_APPROVAL)
@@ -1803,6 +1833,7 @@ enum UserStatus {
   INACTIVE
   SUSPENDED
   BANNED
+  DELETED
 }
 
 enum RiderRole {

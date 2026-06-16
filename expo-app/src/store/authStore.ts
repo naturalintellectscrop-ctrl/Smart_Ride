@@ -19,6 +19,9 @@ interface User {
   name?: string;
   phone?: string;
   role?: string;
+  avatarUrl?: string;
+  address?: string;
+  notificationPreferences?: { notificationsEnabled?: boolean } | null;
 }
 
 interface AuthState {

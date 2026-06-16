@@ -44,7 +44,7 @@ class ApiService {
 
   private async request<T>(
     endpoint: string,
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE' = 'GET',
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'GET',
     body?: any,
     isRetry: boolean = false
   ): Promise<ApiResponse<T>> {
@@ -276,8 +276,24 @@ class ApiService {
   // USER PROFILE
   // ==========================================
 
-  async updateProfile(data: { name?: string; phone?: string; avatarUrl?: string; role?: string }): Promise<ApiResponse<User>> {
+  async updateProfile(data: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    address?: string;
+    avatarUrl?: string;
+    role?: string;
+  }): Promise<ApiResponse<User>> {
     return this.request<User>('/user/profile', 'PUT', data);
+  }
+
+  /**
+   * Fetch the current user's full profile (includes address &
+   * notificationPreferences). Uses /user/profile which is more
+   * complete than /auth/me for editing purposes.
+   */
+  async getProfile(): Promise<ApiResponse<User>> {
+    return this.request<User>('/user/profile');
   }
 
   async updateUserRole(role: string): Promise<ApiResponse<User>> {
@@ -319,7 +335,7 @@ class ApiService {
     return this.request<any>('/riders/onboarding');
   }
 
-  async updateRiderOnboarding(step: number, data: Record<string, unknown>): Promise<ApiResponse<any>> {
+  async updateRiderOnboarding(step: string | number, data: Record<string, unknown>): Promise<ApiResponse<any>> {
     return this.request<any>('/riders/onboarding', 'PUT', { step, ...data });
   }
 
@@ -327,14 +343,150 @@ class ApiService {
     fullName?: string;
     phone?: string;
     email?: string;
+    password?: string;
+    physicalAddress?: string;
+    address?: string;
     riderRole?: string;
+    riderRoleType?: string;
     vehicleType?: string;
     vehiclePlate?: string;
+    plateNumber?: string;
     vehicleModel?: string;
+    model?: string;
+    make?: string;
     vehicleColor?: string;
+    color?: string;
+    year?: number | string;
+    // Document URLs (uploaded separately via /uploads/documents)
+    photoUrl?: string;
+    nationalIdFrontUrl?: string;
+    nationalIdBackUrl?: string;
+    driverLicenseUrl?: string;
+    vehiclePhotoUrl?: string;
+    // Legacy document fields (base64 data URLs)
+    facePhoto?: string;
+    nationalIdFront?: string;
+    nationalIdBack?: string;
+    driversLicense?: string;
     [key: string]: unknown;
   }): Promise<ApiResponse<Rider>> {
     return this.request<Rider>('/riders/register', 'POST', data);
+  }
+
+  // ==========================================
+  // PRESCRIPTIONS (Client + Pharmacist)
+  // ==========================================
+
+  /**
+   * List prescriptions. For clients this returns their own prescriptions.
+   * Pharmacists/admins can pass an optional status filter.
+   */
+  async getPrescriptions(status?: string): Promise<ApiResponse<any>> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request<any>(`/prescriptions${query}`);
+  }
+
+  /**
+   * Upload a new prescription. The image should be uploaded to /uploads/documents
+   * first and the resulting URL passed here.
+   */
+  async uploadPrescription(data: {
+    imageUrl?: string;
+    imageData?: string;
+    doctorName?: string;
+    doctorLicense?: string;
+    clinicName?: string;
+    notes?: string;
+    prescriptionDate?: string;
+    expiryDate?: string;
+    medicines?: string[];
+  }): Promise<ApiResponse<any>> {
+    return this.request<any>('/prescriptions', 'POST', data);
+  }
+
+  /**
+   * Get a single prescription by id
+   */
+  async getPrescription(id: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/prescriptions/${id}`);
+  }
+
+  /**
+   * Verify a prescription (pharmacist/admin)
+   */
+  async verifyPrescription(id: string, data: { notes?: string; healthOrderId?: string }): Promise<ApiResponse<any>> {
+    return this.request<any>(`/prescriptions/${id}`, 'PATCH', {
+      action: 'VERIFY',
+      verificationNotes: data.notes,
+      healthOrderId: data.healthOrderId,
+    });
+  }
+
+  /**
+   * Reject a prescription (pharmacist/admin)
+   */
+  async rejectPrescription(id: string, reason: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/prescriptions/${id}`, 'PATCH', {
+      action: 'REJECT',
+      rejectionReason: reason,
+    });
+  }
+
+  /**
+   * Delete a prescription (soft delete — sets status to EXPIRED)
+   */
+  async deletePrescription(id: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/prescriptions/${id}`, 'DELETE');
+  }
+
+  // ==========================================
+  // FILE UPLOADS
+  // ==========================================
+
+  /**
+   * Upload a document (image/pdf) using multipart/form-data.
+   * Returns the public URL of the uploaded file.
+   */
+  async uploadDocument(file: { uri: string; type: string; name: string }, documentType?: string): Promise<ApiResponse<{ url: string; key: string; filename: string }>> {
+    const token = await secureStorage.getAccessToken();
+    const formData = new FormData();
+    formData.append('file', {
+      uri: file.uri,
+      type: file.type,
+      name: file.name,
+    } as any);
+    if (documentType) {
+      formData.append('documentType', documentType);
+    }
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), ApiService.WRITE_TIMEOUT);
+
+      const response = await fetch(`${this.baseUrl}/uploads/documents`, {
+        method: 'POST',
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+          'Content-Type': 'multipart/form-data',
+        },
+        body: formData as any,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      const data = await response.json();
+      if (!response.ok) {
+        return { success: false, error: data.error || `HTTP error: ${response.status}` };
+      }
+      // The uploads endpoint returns { success, url, key, filename, ... } (no nested data field)
+      return { success: true, data: { url: data.url, key: data.key, filename: data.filename } };
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        return { success: false, error: 'Upload timed out. Please try again.' };
+      }
+      console.error('[API] Document upload error:', error);
+      return { success: false, error: 'Failed to upload document. Please check your connection.' };
+    }
   }
 
   // ==========================================
@@ -419,6 +571,18 @@ class ApiService {
   async confirmOrderPayment(orderId: string, paymentReference?: string): Promise<ApiResponse<any>> {
     return this.request<any>(`/orders/${orderId}?action=confirm-payment`, 'PATCH', {
       paymentReference: paymentReference || `PAY-${Date.now()}`,
+    });
+  }
+
+  /**
+   * Cancel an order. Uses the existing PATCH ?action=cancel endpoint which
+   * drives the full backend cancellation flow (state machine, refund,
+   * notifications, audit log). A reason of at least 3 chars is required.
+   */
+  async cancelOrder(orderId: string, reason: string = 'Customer cancelled the order'): Promise<ApiResponse<any>> {
+    return this.request<any>(`/orders/${orderId}?action=cancel`, 'PATCH', {
+      reason,
+      cancelledBy: 'CUSTOMER',
     });
   }
 
@@ -533,6 +697,41 @@ class ApiService {
 
   async requestWithdrawal(amount: number, phone: string, provider: string): Promise<ApiResponse<any>> {
     return this.request<any>('/wallet/withdraw', 'POST', { amount, phone, provider });
+  }
+
+  /**
+   * Request a wallet top-up via MTN MoMo / Airtel Money.
+   * In demo mode the top-up is auto-completed by the backend.
+   */
+  async requestTopUp(data: {
+    amount: number;
+    paymentMethod: string;
+    phoneNumber: string;
+  }): Promise<ApiResponse<any>> {
+    return this.request<any>('/wallet/topup', 'POST', data);
+  }
+
+  /**
+   * Request a pharmacy provider payout.
+   */
+  async requestPharmacyPayout(amount: number): Promise<ApiResponse<any>> {
+    return this.request<any>('/pharmacy/payout', 'POST', { amount });
+  }
+
+  /**
+   * Get pharmacy provider earnings summary.
+   */
+  async getPharmacyEarnings(period: string = 'daily'): Promise<ApiResponse<any>> {
+    return this.request<any>(`/pharmacy/earnings?action=summary&period=${period}`);
+  }
+
+  /**
+   * Update the user's notification preferences (global notifications toggle).
+   */
+  async updateNotificationPreferences(enabled: boolean): Promise<ApiResponse<any>> {
+    return this.request<any>('/user/notification-preferences', 'PATCH', {
+      notificationsEnabled: enabled,
+    });
   }
 
   // ==========================================
@@ -886,6 +1085,46 @@ class ApiService {
    */
   async markMessagesRead(conversationId: string): Promise<ApiResponse<any>> {
     return this.request(`/chat/${conversationId}/read`, 'POST');
+  }
+
+  // ==========================================
+  // SAVED ADDRESSES
+  // ==========================================
+
+  async getSavedAddresses(): Promise<ApiResponse<any>> {
+    return this.request('/user/addresses');
+  }
+
+  async addSavedAddress(data: {
+    label: string;
+    address: string;
+    latitude?: number;
+    longitude?: number;
+    isDefault?: boolean;
+  }): Promise<ApiResponse<any>> {
+    return this.request('/user/addresses', 'POST', data);
+  }
+
+  async updateSavedAddress(addressId: string, data: {
+    label?: string;
+    address?: string;
+    latitude?: number;
+    longitude?: number;
+    isDefault?: boolean;
+  }): Promise<ApiResponse<any>> {
+    return this.request(`/user/addresses/${addressId}`, 'PATCH', data);
+  }
+
+  async deleteSavedAddress(addressId: string): Promise<ApiResponse<any>> {
+    return this.request(`/user/addresses/${addressId}`, 'DELETE');
+  }
+
+  // ==========================================
+  // ACCOUNT MANAGEMENT
+  // ==========================================
+
+  async deleteAccount(password: string): Promise<ApiResponse<any>> {
+    return this.request('/auth/delete-account', 'POST', { password });
   }
 }
 

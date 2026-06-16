@@ -221,6 +221,8 @@ function ThemedRootLayout() {
           <Stack.Screen name="health/index" />
           <Stack.Screen name="shopping/index" />
           <Stack.Screen name="profile/edit" />
+          <Stack.Screen name="profile/saved-addresses" options={{ headerShown: false }} />
+          <Stack.Screen name="profile/delete-account" options={{ headerShown: false }} />
           <Stack.Screen name="orders/restaurants" />
           <Stack.Screen name="orders/order-tracking" />
           <Stack.Screen name="health/pharmacy/[id]" />

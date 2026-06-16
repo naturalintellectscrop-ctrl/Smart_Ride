@@ -24,7 +24,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 export default function CartScreen() {
   const router = useRouter();
-  const { address, latitude, longitude } = useLocationStore();
+  const { address, latitude, longitude, setAddress } = useLocationStore();
   const { items, removeItem, updateQuantity, clearCart, totalPrice, merchantId, merchantName } = useCartStore();
   const { user } = useAuthStore();
 
@@ -32,6 +32,8 @@ export default function CartScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [deliveryInstructions, setDeliveryInstructions] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [tempAddress, setTempAddress] = useState(address || '');
 
   const deliveryFee = 3000;
   const serviceFee = 500;
@@ -175,13 +177,56 @@ export default function CartScreen() {
         {/* Delivery Address */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Delivery Address</Text>
-          <TouchableOpacity style={styles.addressRow}>
+          <TouchableOpacity
+            style={styles.addressRow}
+            onPress={() => {
+              setTempAddress(address || '');
+              setIsEditingAddress(true);
+            }}
+          >
             <Ionicons name="location-outline" size={16} color={COLORS.primary} style={{ marginRight: SPACING.md - 4 }} />
             <Text style={styles.addressText} numberOfLines={2}>
               {address || 'Set delivery address'}
             </Text>
-            <Text style={styles.addressChange}>Change</Text>
+            <Text style={styles.addressChange}>{isEditingAddress ? 'Cancel' : 'Change'}</Text>
           </TouchableOpacity>
+
+          {isEditingAddress && (
+            <View style={styles.addressEditContainer}>
+              <TextInput
+                style={styles.addressEditInput}
+                placeholder="Enter your delivery address"
+                placeholderTextColor={COLORS.onSurfaceVariant}
+                value={tempAddress}
+                onChangeText={setTempAddress}
+                multiline
+                numberOfLines={3}
+                autoFocus
+              />
+              <View style={styles.addressEditActions}>
+                <TouchableOpacity
+                  style={[styles.addressEditBtn, styles.addressEditBtnSecondary]}
+                  onPress={() => setIsEditingAddress(false)}
+                >
+                  <Text style={styles.addressEditBtnSecondaryText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.addressEditBtn, styles.addressEditBtnPrimary]}
+                  onPress={() => {
+                    const trimmed = tempAddress.trim();
+                    if (!trimmed) {
+                      Alert.alert('Error', 'Please enter a valid address');
+                      return;
+                    }
+                    setAddress(trimmed);
+                    setIsEditingAddress(false);
+                  }}
+                >
+                  <Text style={styles.addressEditBtnPrimaryText}>Save Address</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           <TextInput
             style={styles.instructionsInput}
@@ -424,6 +469,52 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     ...TYPOGRAPHY.bodySm,
     fontWeight: '500',
+  },
+  addressEditContainer: {
+    marginTop: SPACING.sm,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.sm,
+  },
+  addressEditInput: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    color: COLORS.onSurface,
+    ...TYPOGRAPHY.bodySm,
+    minHeight: 64,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  addressEditActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+  },
+  addressEditBtn: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.md,
+  },
+  addressEditBtnSecondary: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  addressEditBtnSecondaryText: {
+    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '500',
+  },
+  addressEditBtnPrimary: {
+    backgroundColor: COLORS.primary,
+  },
+  addressEditBtnPrimaryText: {
+    color: COLORS.onPrimary,
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '600',
   },
   instructionsInput: {
     backgroundColor: COLORS.surfaceContainerLow,

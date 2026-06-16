@@ -935,3 +935,451 @@ Agent: Main Agent
   - `network_type`, `task_id`: optional strings
 - Replaced manual `latitude === undefined || longitude === undefined` check with Zod validation
 - Added `z.ZodError` catch block returning 400 with validation message
+
+---
+
+## Task ID: D1 — Fix dead buttons and non-functional features in Smart Ride Expo mobile app
+
+**Agent**: code-agent
+**Date:** 2026-06-16
+**Scope:** Mobile-only fixes — no web/backend changes
+
+### Summary of Changes
+
+#### 1. Merchant Profile button (`app/merchant/index.tsx`)
+- Changed `onPress={() => {}}` on the "Profile" action card to `onPress={() => router.push('/profile/edit')}`.
+- `router` was already imported via `useRouter` from `expo-router` (line 21 / line 109).
+
+#### 2. Chat search icon (`app/chat/index.tsx`)
+- Added `TextInput` to `react-native` imports and `useMemo` to React imports.
+- Added `searchQuery` and `showSearch` state.
+- Added a `filteredConversations` memo that filters conversations by `otherUser.name` or `lastMessage.content` (case-insensitive).
+- Wired the search icon `onPress` to `setShowSearch(!showSearch)`; the icon swaps to a close icon when active.
+- Added a search bar (TextInput + clear button) rendered below the header when `showSearch` is true.
+- Switched `FlatList.data` to use `filteredConversations` and added a "no matches" empty state when a search query yields no results.
+- Added styles: `searchContainer`, `searchIcon`, `searchInput`.
+
+#### 3. Chat empty state "Book a Ride" button (`app/chat/index.tsx`)
+- Changed `onPress={() => router.back()}` to `onPress={() => router.push('/rider/ride-request?type=BODA' as any)}`.
+
+#### 4. Cart "Change" address button (`app/orders/cart.tsx`)
+- Imported `setAddress` from `useLocationStore`.
+- Added `isEditingAddress` and `tempAddress` state.
+- Wired the address row `onPress` to open the inline editor (`setTempAddress(address || ''); setIsEditingAddress(true)`).
+- Added a conditional inline address editor with TextInput + Cancel/Save buttons. Save validates non-empty input, calls `setAddress(trimmed)`, and closes the editor. Cancel just closes.
+- The "Change" label toggles to "Cancel" while editing.
+- Added styles: `addressEditContainer`, `addressEditInput`, `addressEditActions`, `addressEditBtn`, `addressEditBtnSecondary`, `addressEditBtnSecondaryText`, `addressEditBtnPrimary`, `addressEditBtnPrimaryText`.
+
+#### 5. Terms / Privacy Policy links (3 auth files)
+- `app/auth/login.tsx`: imported `Linking` from `react-native`. Wrapped both "Terms of Service" and "Privacy Policy" `<Text>` elements with `onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}` / `.../privacy`.
+- `app/auth/phone-login.tsx`: same import + onPress wiring for the two `<Text>` link spans.
+- `app/auth/register.tsx`: imported `Linking`. Restructured the terms row so the checkbox toggle is a separate `TouchableOpacity` (with `accessibilityRole="checkbox"`), and the surrounding container is now a plain `View`. The "Terms of Service" and "Privacy Policy" `<Text>` spans each have their own `onPress` that opens the corresponding URL and **does not** toggle the checkbox. Added `checkboxWrap` style for spacing.
+
+#### 6. Chat Share Location real coordinates (`app/chat/[id].tsx`)
+- Imported `useLocationStore` from `@/src/store` and `Linking` from `react-native`.
+- Rewrote `handleShareLocation` to fetch the current `latitude`/`longitude` from `useLocationStore.getState()` and send a `LOCATION`-type message with `metadata: { latitude, longitude }`. Falls back to an "Location Unavailable" alert if coordinates are missing.
+- Updated `Message` type in `src/store/chatStore.ts` to support `type: 'LOCATION'` and an optional `metadata: { latitude?: number; longitude?: number; [key: string]: any }` field. Updated `Conversation.lastMessage.type` to include `'LOCATION'`. Updated `sendMessage` signature to accept `type?: 'TEXT' | 'IMAGE' | 'LOCATION'` and `metadata?`. All three optimistic/local message branches now persist `metadata`, and the socket `chatSend` call forwards `metadata` too.
+
+#### 7. Chat LOCATION message rendering (`app/chat/[id].tsx`)
+- Extended `StitchChatBubble` to accept `type: 'text' | 'image' | 'system' | 'location'` and an optional `metadata` prop.
+- When `type === 'location'` and metadata has lat/lng, renders a tappable card with a location-pin icon, the title "Location", the formatted coordinates, and a "Tap to view on map" hint.
+- Tapping the card opens the device's native maps app via `Linking.openURL`: `maps:?q=lat,lng&ll=lat,lng` on iOS, `geo:lat,lng?q=lat,lng` on Android.
+- Updated `renderMessage` to map `item.type === 'LOCATION'` to the new `'location'` bubble type and pass `metadata={item.metadata}` through.
+- Added styles: `locationCard`, `locationIconWrap`, `locationTextWrap`, `locationTitle`, `locationCoords`, `locationHint`.
+
+### Lint
+- `bun run lint` — passes with no errors.
+
+### Files Modified
+- `expo-app/app/merchant/index.tsx`
+- `expo-app/app/chat/index.tsx`
+- `expo-app/app/orders/cart.tsx`
+- `expo-app/app/auth/login.tsx`
+- `expo-app/app/auth/phone-login.tsx`
+- `expo-app/app/auth/register.tsx`
+- `expo-app/app/chat/[id].tsx`
+- `expo-app/src/store/chatStore.ts`
+
+---
+
+## Tasks D2 & D3 — Fix Non-Functional Features (Filter Logic & Order Tracking)
+
+### Task D2 — Filter Logic Fixes
+
+#### 1. Restaurants category filter (`app/orders/restaurants.tsx`)
+- `filterMerchants()` previously filtered by `searchQuery` only and ignored the `selectedCategory` state, so tapping the Restaurants / Fast Food / Cafes tabs did nothing.
+- Inspected `Merchant` type in `src/types/index.ts`: the discriminator field is `type: MerchantType` (not `merchantType` or `category`).
+- Added a category filter step to `filterMerchants()`: when `selectedCategory !== 'all'`, it filters merchants whose `type === selectedCategory`.
+- `useEffect` dependency array (`[searchQuery, selectedCategory, merchants]`) was already correct — no change needed.
+
+#### 2. Shopping search bar (`app/shopping/index.tsx`)
+- The `searchQuery` state was stored but never applied — typing in the search box did nothing.
+- Added a client-side `filteredMerchants` derived value that filters `merchants` by `name` and `type` (case-insensitive).
+- Replaced `merchants` with `filteredMerchants` in:
+  - The Featured Stores horizontal carousel (with a contextual "No matching stores" empty card).
+  - The "All Stores" list (with a contextual "No stores match your search" empty state and a refresh CTA).
+
+#### 3. Shopping Trending Deals cards (`app/shopping/index.tsx`)
+- The static mock deal cards were not tappable.
+- Wrapped each deal card in a `TouchableOpacity` (`activeOpacity={0.8}`) with an `onPress` that shows an `Alert` with deal info (`title`, `discount`, `price`) and offers a "Browse" action that switches the screen to the relevant category via `handleCategoryPress(deal.categoryIndex)`.
+- Added `categoryIndex` to each entry in `TRENDING_DEALS` to map deals to the matching shopping category (Groceries, Electronics, Fashion, Home).
+- Added `Alert` to the React Native imports.
+
+#### 4. Delivery `packageSize` not sent to API (`app/delivery/index.tsx`)
+- The `packageSize` state (small/medium/large) was selected by the user but not included in the `api.requestRide()` payload.
+- Added `packageSize` to the request body and to the `useCallback` dependency array of `handleSubmit`.
+- Verified `api.requestRide(data: any)` accepts any payload — no type change required in `src/services/api.ts`.
+
+#### 5. Health filter icon — "Coming Soon" alert (`app/health/index.tsx`)
+- The filter icon in the search bar previously showed `Alert.alert('Filter', 'Filter options will be available soon')`.
+- Implemented a real filter system:
+  - Added a `HealthFilter` type (`'all' | 'open' | 'top_rated'`) and a `HEALTH_FILTERS` config with three options (All Pharmacies, Open Now, Top Rated 4.0+).
+  - Added `selectedFilter` and `filterModalVisible` state.
+  - Refactored filtering into two stages: search filter (`searchFiltered`) → category filter (`filteredPharmacies`) using `selectedFilter`.
+  - Filter icon now opens a bottom-sheet `Modal` with a `FlatList` of filter options. Each option has an icon, label, and a checkmark when active. Tapping an option applies it and dismisses the modal.
+  - Added an "active filter" chip above the pharmacy list that shows the current filter and has an `X` button to clear it.
+  - Updated the empty state copy to mention the active filter when no results match.
+  - Added all required styles for the filter chip, modal overlay/content, header, and option rows.
+- Removed the now-unused `Alert` import from the React Native import list.
+
+### Task D3 — Order Tracking Fixes (`app/orders/order-tracking.tsx`)
+
+#### 1. `handleCallDriver` — "Coming Soon" alert
+- Confirmed via the backend route `src/app/api/orders/[id]/route.ts` GET handler that the order response includes `task.rider` (`{ id, fullName, phone, riderRole }`) when a rider is assigned.
+- Rewrote `handleCallDriver` to:
+  1. Read `order.task.rider` (and `task.riderId` as fallback).
+  2. If a rider ID is available, navigate to the in-app Agora VoIP call screen at `/call/${riderId}?name=...&phone=...` (same pattern used by `handleCallMerchant`).
+  3. Else if a rider phone is available, fall back to the device dialer via `Linking.openURL('tel:...')`.
+  4. Otherwise show a clear `Alert.alert('Driver Unavailable', ...)`.
+- **Button label confusion fix**: The bottom-bar button was labelled "Contact Support" but called `handleCallDriver`. Added a separate `handleContactSupport` that opens `https://smartrideug.vercel.app/contact` in the system browser and updated the "Contact Support" button to use it.
+- Added a new "Driver" info card (next to the existing "Restaurant" card) that renders only when `order.task.rider` is present, showing the rider's name and phone with a call button that invokes `handleCallDriver`. This gives `handleCallDriver` a real UI surface.
+
+#### 2. Cancel Order button — "Coming Soon" alert
+- Backend: Confirmed the existing `PATCH /api/orders/[id]?action=cancel` handler (`handleCancel` in `src/app/api/orders/[id]/route.ts`) already implements the complete cancellation flow — order status update, `cancellationReason`, `cancelledAt`, task state-machine transition to `CANCELLED`, payment refund, client/merchant notifications, realtime emit, and audit log. **No new route was needed**; creating a separate `/orders/[orderId]/cancel/route.ts` would have duplicated this logic.
+- Frontend API service (`src/services/api.ts`): Added a `cancelOrder(orderId, reason?)` method that calls the existing PATCH endpoint with `{ reason, cancelledBy: 'CUSTOMER' }`. A default reason of `"Customer cancelled the order"` is provided since the backend requires `reason.min(3)`.
+- Frontend handler: Added `handleCancelOrder` that shows a destructive confirmation `Alert` ("Are you sure? This action cannot be undone."). On confirm:
+  - Sets `isCancelling` state (loading indicator on the button).
+  - Calls `api.cancelOrder(order.id)`.
+  - On success: optimistically updates local state to `CANCELLED`, stops polling, alerts success, and `router.replace('/(tabs)/orders')`.
+  - On failure: shows the error message from the API or a generic fallback.
+- Added an `isCancelling` state, replaced the static "Coming Soon" `Alert` on the Cancel button with `handleCancelOrder`, disabled the button while cancelling, and swapped its text for an `ActivityIndicator` while in flight.
+- Added a `cancelButtonDisabled` style (opacity 0.6) for the disabled visual state.
+
+### Lint
+- `bun run lint` — passes with no errors.
+
+### Files Modified
+- `expo-app/app/orders/restaurants.tsx`
+- `expo-app/app/shopping/index.tsx`
+- `expo-app/app/delivery/index.tsx`
+- `expo-app/app/health/index.tsx`
+- `expo-app/app/orders/order-tracking.tsx`
+- `expo-app/src/services/api.ts`
+
+---
+
+## Task ID: D6, D7 — Saved Addresses CRUD + Delete Account
+
+### Task D6 — Saved Addresses CRUD
+
+#### 1. Prisma schema (`prisma/schema.prisma`)
+- Added new `SavedAddress` model:
+  - `id` (cuid), `userId`, `label`, `address`, `latitude?` (Float), `longitude?` (Float), `isDefault` (Boolean default false), `createdAt`, `updatedAt`.
+  - Relation: `user User @relation(fields: [userId], references: [id], onDelete: Cascade)`.
+  - `@@index([userId])` for fast per-user lookups.
+- Added the inverse relation `savedAddresses SavedAddress[]` to the `User` model.
+- Ran `bun run db:push` — Prisma Client regenerated and DB schema synced (SQLite).
+
+#### 2. Backend API routes
+- Created `src/app/api/user/addresses/route.ts`:
+  - `GET` — lists all saved addresses for the authenticated user, ordered by `isDefault desc, createdAt desc`. Uses `setServiceRoleContext()` + `resetRLSContext()` pattern and `verifyAccessToken()` for auth.
+  - `POST` — creates a new address. Validates body with Zod (`label`, `address` required; `latitude`, `longitude`, `isDefault` optional). When `isDefault` is true, atomically clears any existing default for the user before insert. Returns 201 on success.
+- Created `src/app/api/user/addresses/[addressId]/route.ts`:
+  - `PATCH` — updates an existing address. Verifies ownership (`existing.userId === decoded.userId`); returns 404 if not found or not owned. Re-clears other defaults when promoting to default.
+  - `DELETE` — deletes an address after ownership verification.
+- All routes use the existing helpers from `@/lib/api/response` (`successResponse`, `errorResponse`, `serverErrorResponse`, `unauthorizedResponse`).
+
+#### 3. API client methods (`expo-app/src/services/api.ts`)
+- Extended the `request<T>()` method's `method` union to include `'PATCH'` (was previously `'GET' | 'POST' | 'PUT' | 'DELETE'`). This was required because the update endpoint uses PATCH.
+- Added four new methods:
+  - `getSavedAddresses()` — `GET /user/addresses`
+  - `addSavedAddress(data)` — `POST /user/addresses`
+  - `updateSavedAddress(addressId, data)` — `PATCH /user/addresses/{id}`
+  - `deleteSavedAddress(addressId)` — `DELETE /user/addresses/{id}`
+- Methods are typed with the proper payload shape (`label`, `address`, optional `latitude`/`longitude`/`isDefault`).
+
+#### 4. Saved Addresses screen (`expo-app/app/profile/saved-addresses.tsx`)
+- Full CRUD screen following the Stitch MD3 light theme (primary `#005f3a`):
+  - **Header** — back button, title, and a primary-colored "+" add button. Uses `useSafeAreaInsets` for safe-area aware padding.
+  - **Loading state** — centered `ActivityIndicator` with helper text.
+  - **Empty state** — large location icon in a tinted circle, "No Saved Addresses Yet" title, descriptive subtitle, and a primary "Add Address" CTA button.
+  - **Address list** — `ScrollView` of `AddressCard` components, each card showing:
+    - Label-specific icon (Home → `home`, Work → `briefcase`, Gym → `barbell-outline`, School → `school-outline`, default → `location`).
+    - Label text + green "Default" badge when `isDefault` is true.
+    - Address text (2-line clamp) and optional monospaced coordinates hint.
+    - Action row with `Set Default` / `Edit` / `Delete` buttons (the Set Default button is hidden when the address is already default).
+  - **Add/Edit modal** (slide-up `Modal`):
+    - Label `TextInput` plus three quick-pick chips (Home, Work, Other) that toggle the label.
+    - Address multi-line `TextInput`.
+    - "Use Current Location" button that calls `useLocationStore.getState().getCurrentLocation()` (with `isLocating` spinner state). Pre-fills the address from reverse-geocoded store value if address is empty, and always captures lat/lng. Shows captured coordinates in a monospaced hint.
+    - "Set as default" `Switch` row with helper subtext.
+    - Validation errors rendered inline in a danger-tinted banner.
+    - Cancel + Save/Update action buttons with loading spinner on Save.
+  - Delete confirmation uses a destructive `Alert.alert` with Cancel/Delete buttons. After successful delete, the list reloads.
+  - Set-as-default is a one-tap action on each card that calls `PATCH { isDefault: true }` and reloads the list.
+- Used `Animated` (Reanimated) entrance animations (`ZoomIn`, `FadeInUp`, `SlideInRight`) for cards and empty-state elements, matching the patterns in `profile.tsx`.
+
+#### 5. Route registration (`expo-app/app/_layout.tsx`)
+- Added `<Stack.Screen name="profile/saved-addresses" options={{ headerShown: false }} />` to the root Stack.
+
+#### 6. Profile menu item (`expo-app/app/(tabs)/profile.tsx`)
+- Replaced the "Saved Addresses" `Alert.alert('Coming Soon', ...)` with `router.push('/profile/saved-addresses')`.
+
+---
+
+### Task D7 — Delete Account
+
+#### 1. Backend endpoint (`src/app/api/auth/delete-account/route.ts`)
+- `POST /api/auth/delete-account` — accepts `{ password }`.
+- Auth flow: extracts Bearer token, `verifyAccessToken()`, returns 401 if invalid.
+- Verifies the user's password against the **`passwordHash`** field (the existing `change-password` route uses `password`, which is a latent bug — the Prisma schema only has `passwordHash`. This route uses the correct field name as instructed by the task: "Check the Prisma schema to confirm field names … Adjust as needed.").
+- On correct password, performs a **soft delete**:
+  - Anonymizes PII: `email` → `deleted-{userId}@deleted.local`, `name` → `'Deleted User'`, `phone` → `null`, `avatarUrl` → `null`, `appleUserId` → `null`, `passwordHash` → `null` (so the account can no longer be logged into), `refreshToken` → `null`, `refreshTokenExpiresAt` → `null`.
+  - Sets `status: 'DELETED'` (added `DELETED` to the `UserStatus` Prisma enum — see schema change below).
+- Hard-deletes related auth data:
+  - `db.session.deleteMany({ where: { userId } })` — revokes all active sessions across devices.
+  - `db.expoPushToken.deleteMany({ where: { userId } })` — unregisters all push tokens (task description called this model `pushToken`, but the actual model is `expoPushToken` / `ExpoPushToken`).
+- Returns `successResponse(null, 'Account deleted successfully')`.
+
+#### 2. Prisma schema change (`prisma/schema.prisma`)
+- Added `DELETED` to the `UserStatus` enum (was: `ACTIVE`, `INACTIVE`, `SUSPENDED`, `BANNED`). This allows the soft-delete flow to mark users as `DELETED` rather than reusing `SUSPENDED`/`BANNED`.
+- Ran `bun run db:push` — schema applied.
+
+#### 3. API client method (`expo-app/src/services/api.ts`)
+- Added `deleteAccount(password: string)` — calls `POST /auth/delete-account` with `{ password }`.
+
+#### 4. Delete Account screen (`expo-app/app/profile/delete-account.tsx`)
+- Danger-themed confirmation screen (uses `COLORS.error` `#ba1a1a` and `COLORS.errorContainer` for the destructive accent):
+  - **Header** — back button + "Delete Account" title.
+  - **Warning hero** — red error-container card with a warning icon, "Permanent Action" title, and a subtitle.
+  - **Consequences card** — bulleted list of 5 consequences (profile erasure, ride/order history loss, saved addresses/payment methods removed, session revocation, permanence). Each bullet uses a small red `X` icon.
+  - **Password input** — secure entry with show/hide eye toggle.
+  - **Type-to-confirm input** — requires the user to type `DELETE` (case-sensitive via `autoCapitalize="characters"`) before the submit button is enabled. Shows a red "Text does not match" hint when the input is non-empty but wrong.
+  - **Inline error banner** — danger-tinted, used for API errors (e.g., "Incorrect password").
+  - **Submit button** — "I understand, delete my account" — disabled until both password is non-empty AND the typed confirmation matches `DELETE`. Shows a spinner during the API call. Uses `shadowColor: COLORS.error` for the danger shadow.
+  - **Cancel button** — "Keep My Account" — secondary outline button that pops back to profile.
+  - **Success state** — after a successful API call, shows a green check icon, "Account Deleted" title, and "Redirecting to login..." subtitle with a spinner. After 2 seconds, calls `logout()` (clears SecureStore tokens + auth store) and `router.replace('/auth/login')`.
+
+#### 5. Route registration (`expo-app/app/_layout.tsx`)
+- Added `<Stack.Screen name="profile/delete-account" options={{ headerShown: false }} />` to the root Stack.
+
+#### 6. Profile menu item (`expo-app/app/(tabs)/profile.tsx`)
+- Added a new "Delete Account" menu item to the Account section with `danger: true`:
+  ```tsx
+  { icon: 'trash-outline', label: 'Delete Account', onPress: () => router.push('/profile/delete-account'), danger: true },
+  ```
+- Updated the `MenuItem` component to honor `item.danger`:
+  - Renders the icon in `colors.error` (with `#ba1a1a` fallback) instead of `colors.text`.
+  - Renders the label text in `colors.error` when `danger` is true.
+  - All other behavior (divider, arrow, toggle) is unchanged.
+
+---
+
+### Verification
+- `cd /home/z/my-project && bun run lint` — passes with no errors.
+- `npx tsc --noEmit` — no errors in any of the new files (`saved-addresses.tsx`, `delete-account.tsx`, `route.ts` files). The pre-existing TS errors in unrelated service files (`notification.service.ts`, `recovery-service.ts`, etc.) were not touched.
+- Dev server log shows no compilation errors for the new routes.
+
+### Files Modified
+- `prisma/schema.prisma` — added `SavedAddress` model + relation on `User`; added `DELETED` to `UserStatus` enum.
+- `src/app/api/user/addresses/route.ts` — **new** (GET, POST).
+- `src/app/api/user/addresses/[addressId]/route.ts` — **new** (PATCH, DELETE).
+- `src/app/api/auth/delete-account/route.ts` — **new** (POST).
+- `expo-app/src/services/api.ts` — added `PATCH` to `request()` method union; added `getSavedAddresses`, `addSavedAddress`, `updateSavedAddress`, `deleteSavedAddress`, `deleteAccount` methods.
+- `expo-app/app/profile/saved-addresses.tsx` — **new**.
+- `expo-app/app/profile/delete-account.tsx` — **new**.
+- `expo-app/app/_layout.tsx` — registered `profile/saved-addresses` and `profile/delete-account` Stack screens.
+- `expo-app/app/(tabs)/profile.tsx` — wired Saved Addresses menu item to the new route; added Delete Account menu item; extended `MenuItem` to render `danger` items in error red.
+
+
+---
+
+## Task D4 — Wallet Top-Up + Client Withdraw + Rider Top-Up
+
+### Backend
+- **Created `/src/app/api/wallet/topup/route.ts`** — new POST endpoint that:
+  - Authenticates via `verifyAccessToken` (Bearer header) and runs under `setServiceRoleContext` so wallet mutations aren't blocked by per-user RLS.
+  - Validates body with zod (`amount > 0`, `paymentMethod ∈ {MTN_MOMO, AIRTEL_MONEY}`, `phoneNumber.length >= 10`).
+  - Looks up the caller's `USER`-owned wallet, creating one with sensible defaults if missing (matches the shape used by the existing `/api/wallet` POST).
+  - In demo mode (no payment gateway configured) the top-up is **auto-completed atomically** inside a `db.$transaction`: increments `balance`, `totalDeposited`, sets `lastDepositAt`/`lastTransactionAt`, and writes a `WalletTransaction` row (`transactionType: 'DEPOSIT'`, `status: 'COMPLETED'`) with `balanceBefore`/`balanceAfter` and a JSON `metadata` blob capturing `paymentMethod`, `phoneNumber`, `reference`, `mode: 'DEMO_AUTO_COMPLETE'`.
+  - Returns `transactionId`, `amount`, `status: 'COMPLETED'`, `paymentMethod`, and the new balance so the client can refresh.
+  - Marked with a `TODO` to swap in real MTN/Airtel MoR integration when available.
+- Existing `/api/wallet/withdraw/route.ts` already handles client/rider withdrawals — left unchanged.
+
+### Mobile API service (`expo-app/src/services/api.ts`)
+- Added `api.requestTopUp({ amount, paymentMethod, phoneNumber })` → `POST /wallet/topup`.
+- Added `api.requestPharmacyPayout(amount)` → `POST /pharmacy/payout`.
+- Added `api.getPharmacyEarnings(period)` → `GET /pharmacy/earnings?action=summary&period=...` (was referenced by `app/pharmacist/earnings.tsx` but missing).
+- Added `api.updateNotificationPreferences(enabled)` → `PATCH /user/notification-preferences` (used by D5).
+- Added `api.getProfile()` → `GET /user/profile` (used by the profile editor to fetch the full record incl. `address`).
+- Extended `api.updateProfile()` signature to accept `email` and `address` (D5).
+
+### Reusable modals (`expo-app/src/components/`)
+- **`TopUpModal.tsx`** — Modal with:
+  - Gradient title row + close button.
+  - Payment method selector (MTN MoMo yellow / Airtel Money red) with active border state.
+  - Amount input + 4 quick-select chips (`5,000 / 10,000 / 20,000 / 50,000`).
+  - Phone-number input prefilled from `defaultPhoneNumber` prop.
+  - Inline error banner with `alert-circle` icon.
+  - Validation: amount > 0, min UGX 1,000, phone ≥ 10 chars.
+  - Submits via `api.requestTopUp`, shows a success `Alert` with the funded amount, calls `onSuccess(newBalance)` and closes.
+  - Loading overlay + `Processing...` button label while in flight.
+  - `KeyboardAvoidingView` + `ScrollView` so the keyboard never covers the inputs.
+- **`WithdrawModal.tsx`** — Same pattern but for withdrawals:
+  - Displays the current `balance` (passed as a prop).
+  - Validates `amount <= balance` and rejects empty/short phone numbers.
+  - Quick-amount chips are disabled (greyed) when they exceed the available balance.
+  - Submits via `api.requestWithdrawal(amount, phone, provider)`.
+- Both components exported from `expo-app/src/components/index.ts`.
+
+### Client wallet (`expo-app/app/wallet/index.tsx`)
+- Replaced the "Coming Soon" `Alert` handlers on the **Top Up** and **Withdraw** `GradientButton`s with `setShowTopUp(true)` / `setShowWithdraw(true)`.
+- Added `showTopUp` / `showWithdraw` state, pulled `user` from `useAuthStore` to prefill the phone number.
+- Rendered `<TopUpModal>` and `<WithdrawModal>` at the end of the screen tree, both passing `onSuccess={() => loadWallet()}` so the balance/transaction list refreshes after a successful operation.
+- Removed the now-unused `Alert` import.
+
+### Rider wallet (`expo-app/app/rider/wallet.tsx`)
+- Imported `useAuthStore` and `TopUpModal`.
+- Added `showTopUp` state.
+- Replaced the "Coming Soon" `Alert` on the **Top Up** quick action with `setShowTopUp(true)`.
+- Rendered `<TopUpModal>` below the existing withdraw modal, prefilled with `user?.phone || withdrawPhone` and `onSuccess={() => loadWallet()}`.
+- The rider's working inline withdraw modal was left untouched per the task spec.
+
+---
+
+## Task D5 — Fix Edit Profile + Pharmacist Withdraw + Notification Sync
+
+### Step 1: Edit Profile (email + address)
+- **Prisma schema**: Added two nullable fields to `User` in `prisma/schema.prisma`:
+  - `address String?` — default delivery address shown in the profile editor (detailed saved locations still live in `SavedAddress`).
+  - `notificationPreferences Json?` — global prefs JSON used by the notifications toggle (granular per-category prefs remain in `NotificationPreference`).
+  - Ran `bun run db:push` — schema synced to SQLite, Prisma Client regenerated.
+- **Backend `/api/user/profile/route.ts`**:
+  - `GET` now selects `address` and `notificationPreferences` alongside the existing fields.
+  - `PUT` now accepts `name, phone, email, address, avatarUrl, role` and builds a typed `Prisma.UserUpdateInput` payload, only including fields that are explicitly provided (so a missing field doesn't null out the column).
+  - Email updates are gated by a uniqueness pre-check (`db.user.findUnique({ where: { email } })`) and surface a friendly `"That email is already in use"` 400 response. Falls back to `P2002` unique-constraint error handling as a safety net.
+  - Returns the updated record including `address` and `notificationPreferences`.
+- **Mobile `api.ts`**: `updateProfile` signature widened to `{ name?, phone?, email?, address?, avatarUrl?, role? }`. Added `getProfile()` helper that hits `GET /user/profile` (more complete than `/auth/me`).
+- **`expo-app/src/types/index.ts`** and **`expo-app/src/store/authStore.ts`**: Extended the `User` interfaces with `address?` and `notificationPreferences?` so the rest of the app can read the new fields without `as any` casts.
+- **`expo-app/app/profile/edit.tsx`**:
+  - The first `useEffect` now seeds `address` from `user.address` (was hard-coded to `''`).
+  - Added a second `useEffect` that calls `api.getProfile()` on mount to fetch the authoritative record (incl. `address`) from the backend, falling back to the auth-store values if the request fails. Sets `isLoading` so the form is hidden behind a spinner until ready.
+  - `handleSave` now validates name (required) and email format (regex), trims all text fields, sends `email`, `phone`, `address`, `name`, `avatarUrl` together, surfaces backend errors verbatim, and merges the saved fields back into the auth store so the profile tab updates immediately.
+  - Added `loadingContainer` / `loadingText` styles and gated both the header "Save" button and the inline "Save Changes" button on `isSaving || isLoading`.
+
+### Step 2: Pharmacist Payout
+- **Backend `/api/pharmacy/payout/route.ts`** (new):
+  - Auth via `verifyAccessToken`, runs under `setServiceRoleContext`.
+  - Validates `amount > 0` and `<= 10,000,000` with zod.
+  - Looks up the `HealthProvider` owned by the calling user (`userId = decoded.userId`). Returns 404 if none, 403 if not yet `APPROVED`.
+  - Uses `pendingPayout` as the source of truth for the available balance, returning a 400 if the amount exceeds it.
+  - Executes the payout atomically in `db.$transaction`: decrements `HealthProvider.pendingPayout`, writes a `FinanceLog` row (`transactionType: 'MERCHANT_PAYOUT'` reused for providers, `status: 'PENDING'`) with a JSON metadata blob capturing provider id/name/type, requesting user, payout method + destination, and `kind: 'PHARMACY_PAYOUT'` so finance reports can distinguish them.
+  - Returns `payoutId`, `providerId`, `amount`, `status: 'PENDING'`, `remainingBalance`, and a success message.
+- **Mobile `api.ts`**: Added `api.requestPharmacyPayout(amount)` → `POST /pharmacy/payout`. Also added the missing `api.getPharmacyEarnings(period)` (was referenced but undefined).
+- **`expo-app/app/pharmacist/earnings.tsx`**:
+  - Imported `Alert` and `Ionicons` (already present) plus `GradientButton` (already in the components barrel).
+  - Added `isRequestingPayout` state.
+  - Computed `availableBalance` from `earningsData?.availableBalance || pendingPayout` so the button reflects what the backend will actually pay.
+  - `handleRequestPayout` shows a confirmation `Alert` summarising the available amount and the destination, then on confirm calls `api.requestPharmacyPayout(availableBalance)`. On success it shows the server message and calls `loadEarnings()` to refresh the pending/available balances; on failure it surfaces the backend error.
+  - Rendered a new "Request Payout" `GradientButton` (disabled while submitting or when `availableBalance <= 0`) below the period-earnings grid, with a hint line `Available: ... · Pending: ...` underneath.
+  - Added `payoutSection` and `payoutHint` styles.
+
+### Step 3: Notification Preferences Sync
+- **Backend `/api/user/notification-preferences/route.ts`** (new):
+  - `PATCH` — auth via `verifyAccessToken`, `setServiceRoleContext`, zod-validated `notificationsEnabled: boolean`. Reads the existing `notificationPreferences` JSON, merges the new flag (preserving any other keys), stamps an `updatedAt` ISO timestamp, and persists via `db.user.update`. Returns `{ notificationsEnabled }`.
+  - `GET` (bonus) — returns `{ notificationsEnabled }`, defaulting to `true` when no prefs are stored yet.
+- **Mobile `api.ts`**: Added `api.updateNotificationPreferences(enabled)` → `PATCH /user/notification-preferences`.
+- **`expo-app/app/(tabs)/profile.tsx`**:
+  - Added `updatingPrefs` state.
+  - Added a `useEffect` that hydrates `notificationsEnabled` from `user.notificationPreferences.notificationsEnabled` once the user object loads.
+  - Replaced the `setNotificationsEnabled` direct setter on the toggle with a new `handleNotificationToggle(value)` that:
+    1. Optimistically flips the local state.
+    2. Calls `api.updateNotificationPreferences(value)`.
+    3. On failure reverts the local state and shows an `Alert`.
+    4. On success writes the new value back into the auth store so it survives re-mounts.
+  - Updated the menu-item definition for "Notifications" to use `onToggle: handleNotificationToggle` and pass `disabled: updatingPrefs` while the request is in flight.
+  - Updated the `MenuItem` `Switch` to honour the new `disabled` prop.
+
+### Lint
+- `cd /home/z/my-project && bun run lint` — passes with exit code 0 (no warnings).
+
+### Files Modified
+- `prisma/schema.prisma` (added `address String?` + `notificationPreferences Json?` on `User`; `bun run db:push` applied)
+- `src/app/api/wallet/topup/route.ts` (new)
+- `src/app/api/pharmacy/payout/route.ts` (new)
+- `src/app/api/user/notification-preferences/route.ts` (new)
+- `src/app/api/user/profile/route.ts` (accepts + persists email/address, returns them, friendly unique errors)
+- `expo-app/src/services/api.ts` (requestTopUp, requestPharmacyPayout, getPharmacyEarnings, updateNotificationPreferences, getProfile, extended updateProfile)
+- `expo-app/src/components/TopUpModal.tsx` (new)
+- `expo-app/src/components/WithdrawModal.tsx` (new)
+- `expo-app/src/components/index.ts` (export the new modals)
+- `expo-app/src/types/index.ts` (extended `User`)
+- `expo-app/src/store/authStore.ts` (extended local `User`)
+- `expo-app/app/wallet/index.tsx` (wire up TopUpModal + WithdrawModal)
+- `expo-app/app/rider/wallet.tsx` (wire up TopUpModal)
+- `expo-app/app/pharmacist/earnings.tsx` (Request Payout button + handler)
+- `expo-app/app/profile/edit.tsx` (fetch+save email/address, validation, loading state, sync auth store)
+- `expo-app/app/(tabs)/profile.tsx` (notifications toggle now syncs to backend with revert-on-failure)
+
+---
+Task ID: D8
+Agent: fullstack-developer (D8)
+Task: Build Health Prescriptions Client Screen + KYC Document Upload for Rider Onboarding
+
+Work Log:
+
+### Task 1 — Health Prescriptions Client Screen
+- Replaced the "Coming Soon" placeholder at `expo-app/app/health/prescriptions.tsx` with a full client-side screen.
+- Added `requireAuth`-based authentication + role-scoping to the prescription backend routes:
+  - `GET /api/prescriptions` — clients only see their own prescriptions (clientId = authenticated userId); pharmacists/admins can filter by clientId/status/search.
+  - `POST /api/prescriptions` — uses the authenticated user's id as clientId (admins may override). Accepts `imageUrl` (uploaded separately via /uploads/documents) instead of requiring base64.
+  - `GET/PATCH/DELETE /api/prescriptions/[id]` — clients can only access their own; PATCH now defaults `verifiedBy` to the authenticated user.
+- Added prescription API methods to `expo-app/src/services/api.ts`: `getPrescriptions`, `uploadPrescription`, `getPrescription`, `verifyPrescription`, `rejectPrescription`, `deletePrescription`.
+- Added a generic `uploadDocument(file, documentType?)` helper that POSTs `multipart/form-data` to `/uploads/documents` and returns `{ url, key, filename }`.
+- New screen features: header with back button + title, prominent primary "Upload Prescription" button, list of prescription cards (thumbnail, prescription #, status badge, doctor/clinic, notes, rejection/verification reason, view image action), pull-to-refresh, loading/error/empty states, bottom-sheet upload modal with image picker + doctor name + notes + two-step upload (upload image → create prescription), fullscreen image viewer. Stitch MD3 design (primary #005f3a).
+
+### Task 2 — KYC Document Upload for Rider Onboarding
+- Added `vehiclePhotoUrl String?` to the `Rider` model in `prisma/schema.prisma`; ran `bun run db:push` (SQLite synced, Prisma client regenerated).
+- Added new `GET` and `PUT` handlers to `/api/riders/onboarding`:
+  - `GET` returns the rider's current onboarding state, reconstructing `personal`/`documents`/`vehicle` step data from the Rider + Vehicle records.
+  - `PUT` persists a single step's draft (updates Rider document URLs for the documents step, creates/updates Vehicle for the vehicle step, etc.).
+- Reworked `/api/riders/register` to accept both legacy base64 data URLs and plain URL strings (from `/uploads/documents`). Added field aliases (`address`, `plateNumber`, `model`, `color`, `riderRole`) and top-level URL fields (`photoUrl`, `nationalIdFrontUrl`, `nationalIdBackUrl`, `driverLicenseUrl`, `vehiclePhotoUrl`). `fileSize` is computed safely (returns `null` for URL strings instead of crashing on `Buffer.from(undefined, 'base64')`).
+- Changed `updateRiderOnboarding(step, ...)` API method signature to accept `string | number` (matches the onboarding screen's call sites).
+- Replaced the text-only documents step in `expo-app/app/rider/onboarding.tsx` with real KYC uploads:
+  - New `DocumentUploadCard` reusable component (placeholder + Retake/Remove + uploading spinner).
+  - New documents state with URL fields: `nationalIdFront`, `nationalIdBack`, `licenseNumber`, `licenseExpiry`, `licensePhoto`, `vehiclePhoto`, `photoUrl`.
+  - `handleUploadDocument(field)` uses `pickImage({ aspect: [4, 3], quality: 0.7 })` then `api.uploadDocument(...)` and stores the returned URL.
+  - Required uploads: rider selfie, National ID front, National ID back; license photo required only for MOTORCYCLE/CAR; vehicle photo optional.
+  - Submit handler maps UI vehicle type → riderRoleType and passes document URLs + personal + vehicle data to `api.registerRider(...)`.
+  - Continue button disabled while any document upload is in-flight.
+
+### Verification
+- `cd /home/z/my-project && bun run lint` — passes with exit code 0 (no warnings/errors).
+- `bun run db:push` — Prisma schema synced; client regenerated.
+- Dev server log shows no compile errors after changes.
+
+### Files Modified
+- `prisma/schema.prisma` (added `vehiclePhotoUrl String?` to `Rider`)
+- `src/app/api/prescriptions/route.ts` (auth + role-scoped GET/POST)
+- `src/app/api/prescriptions/[id]/route.ts` (auth on GET/PATCH/DELETE)
+- `src/app/api/riders/onboarding/route.ts` (new GET + PUT handlers, kept existing POST)
+- `src/app/api/riders/register/route.ts` (accepts URL strings or base64; new field aliases)
+- `expo-app/src/services/api.ts` (prescriptions + uploadDocument methods; updated updateRiderOnboarding + registerRider signatures)
+- `expo-app/app/health/prescriptions.tsx` (full rewrite — client prescriptions screen)
+- `expo-app/app/rider/onboarding.tsx` (KYC document uploads in step 2)
+
+Stage Summary:
+- Clients can now upload, view, and track their prescriptions end-to-end (mobile upload → secure image storage → pharmacist review).
+- Riders can upload real KYC documents (selfie, ID front/back, license, vehicle photo) during onboarding instead of just typing document numbers.
+- All routes now require authentication; clients are scoped to their own data.
+- Work record saved to `/home/z/my-project/agent-ctx/D8-fullstack-developer.md`.

@@ -21,6 +21,7 @@ import {
   Easing,
   Dimensions,
   Image,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -533,20 +534,39 @@ export default function RegisterScreen() {
             </View>
 
             {/* Terms Checkbox */}
-            <TouchableOpacity
-              style={styles.termsRow}
-              onPress={() => setAgreedToTerms(!agreedToTerms)}
-              activeOpacity={0.7}
-            >
-              <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
-                {agreedToTerms && (
-                  <Ionicons name="checkmark" size={14} color={COLORS.onPrimary} />
-                )}
-              </View>
+            <View style={styles.termsRow}>
+              <TouchableOpacity
+                style={styles.checkboxWrap}
+                onPress={() => setAgreedToTerms(!agreedToTerms)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Agree to terms"
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: agreedToTerms }}
+              >
+                <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
+                  {agreedToTerms && (
+                    <Ionicons name="checkmark" size={14} color={COLORS.onPrimary} />
+                  )}
+                </View>
+              </TouchableOpacity>
               <Text style={styles.termsText}>
-                I agree to the <Text style={styles.termsLink}>Terms of Service</Text> and <Text style={styles.termsLink}>Privacy Policy</Text>
+                I agree to the{' '}
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}
+                >
+                  Terms of Service
+                </Text>{' '}
+                and{' '}
+                <Text
+                  style={styles.termsLink}
+                  onPress={() => Linking.openURL('https://smartrideug.vercel.app/privacy')}
+                >
+                  Privacy Policy
+                </Text>
               </Text>
-            </TouchableOpacity>
+            </View>
 
             {/* Create Account CTA Button */}
             <View style={styles.ctaButtonContainer}>
@@ -827,6 +847,9 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginTop: SPACING.md,
     gap: SPACING.sm,
+  },
+  checkboxWrap: {
+    marginTop: 1,
   },
   checkbox: {
     width: 20,

@@ -18,6 +18,7 @@ import {
   ScrollView,
   StyleSheet,
   Alert,
+  Linking,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -306,8 +307,19 @@ export default function PhoneLoginScreen() {
         <View style={styles.termsSection}>
           <Text style={styles.termsText}>
             By continuing, you agree to our{' '}
-            <Text style={styles.termsLink}>Terms of Service</Text> and{' '}
-            <Text style={styles.termsLink}>Privacy Policy</Text>
+            <Text
+              style={styles.termsLink}
+              onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}
+            >
+              Terms of Service
+            </Text>{' '}
+            and{' '}
+            <Text
+              style={styles.termsLink}
+              onPress={() => Linking.openURL('https://smartrideug.vercel.app/privacy')}
+            >
+              Privacy Policy
+            </Text>
           </Text>
         </View>
       </ScrollView>

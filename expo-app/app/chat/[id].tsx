@@ -22,6 +22,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -29,7 +30,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInUp, withRepeat, withTiming, useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { useChatStore, Conversation, Message } from '@/src/store/chatStore';
-import { useAuthStore } from '@/src/store';
+import { useAuthStore, useLocationStore } from '@/src/store';
 import { socketService } from '@/src/services/socket.service';
 import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard } from '@/src/components/GlassCard';
@@ -124,15 +125,29 @@ function StitchChatBubble({
   senderName,
   type,
   imageUrl,
+  metadata,
 }: {
   message: string;
   time: string;
   isOwn: boolean;
   isRead?: boolean;
   senderName?: string;
-  type?: 'text' | 'image' | 'system';
+  type?: 'text' | 'image' | 'system' | 'location';
   imageUrl?: string;
+  metadata?: { latitude?: number; longitude?: number; [key: string]: any };
 }) {
+  const handleOpenMap = useCallback(() => {
+    if (!metadata?.latitude || !metadata?.longitude) return;
+    const { latitude, longitude } = metadata;
+    const url = Platform.OS === 'ios'
+      ? `maps:?q=${latitude},${longitude}&ll=${latitude},${longitude}`
+      : `geo:${latitude},${longitude}?q=${latitude},${longitude}`;
+    Linking.openURL(url).catch((err) => {
+      console.warn('[CHAT] Failed to open map:', err);
+      Alert.alert('Error', 'Could not open maps app');
+    });
+  }, [metadata]);
+
   if (type === 'system') {
     return (
       <View style={bubbleStyles.systemContainer}>
@@ -150,9 +165,29 @@ function StitchChatBubble({
         {type === 'image' && imageUrl ? (
           <Image source={{ uri: imageUrl }} style={bubbleStyles.image} resizeMode="cover" />
         ) : null}
-        <Text style={[bubbleStyles.message, isOwn ? bubbleStyles.ownMessage : bubbleStyles.otherMessage]}>
-          {message}
-        </Text>
+        {type === 'location' && metadata?.latitude && metadata?.longitude ? (
+          <TouchableOpacity
+            style={bubbleStyles.locationCard}
+            onPress={handleOpenMap}
+            activeOpacity={0.7}
+          >
+            <View style={bubbleStyles.locationIconWrap}>
+              <Ionicons name="location" size={22} color={COLORS.primary} />
+            </View>
+            <View style={bubbleStyles.locationTextWrap}>
+              <Text style={bubbleStyles.locationTitle}>Location</Text>
+              <Text style={bubbleStyles.locationCoords} numberOfLines={1}>
+                {metadata.latitude.toFixed(6)}, {metadata.longitude.toFixed(6)}
+              </Text>
+              <Text style={bubbleStyles.locationHint}>Tap to view on map</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={COLORS.outline} />
+          </TouchableOpacity>
+        ) : (
+          <Text style={[bubbleStyles.message, isOwn ? bubbleStyles.ownMessage : bubbleStyles.otherMessage]}>
+            {message}
+          </Text>
+        )}
       </View>
       <View style={[bubbleStyles.meta, isOwn ? bubbleStyles.ownMeta : bubbleStyles.otherMeta]}>
         <Text style={bubbleStyles.time}>{time}</Text>
@@ -237,6 +272,41 @@ const bubbleStyles = StyleSheet.create({
     height: 150,
     borderRadius: RADIUS.md,
     marginBottom: SPACING.xs,
+  },
+  locationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.xs,
+    minWidth: 220,
+  },
+  locationIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.md,
+    backgroundColor: `${COLORS.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationTextWrap: {
+    flex: 1,
+  },
+  locationTitle: {
+    ...TYPOGRAPHY.labelLg,
+    fontWeight: '600',
+    color: COLORS.primary,
+  },
+  locationCoords: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: 2,
+  },
+  locationHint: {
+    fontSize: 11,
+    color: COLORS.outline,
+    marginTop: 2,
+    fontStyle: 'italic',
   },
   systemContainer: {
     alignItems: 'center',
@@ -369,7 +439,7 @@ export default function ChatDetailScreen() {
     }
   }, [conversation, conversationId]);
 
-  const handleShareLocation = useCallback(() => {
+  const handleShareLocation = useCallback(async () => {
     Alert.alert(
       'Share Location',
       'Send your current location to this conversation?',
@@ -377,12 +447,27 @@ export default function ChatDetailScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Share',
-          onPress: () => {
-            if (conversationId) {
-              sendMessage(conversationId, {
-                content: 'Shared current location',
-                type: 'TEXT',
-              });
+          onPress: async () => {
+            try {
+              // Get current location from location store
+              const { latitude, longitude } = useLocationStore.getState();
+              if (!latitude || !longitude) {
+                Alert.alert(
+                  'Location Unavailable',
+                  'Could not get your current location. Please enable location services.',
+                );
+                return;
+              }
+              if (conversationId) {
+                await sendMessage(conversationId, {
+                  content: `Location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+                  type: 'LOCATION',
+                  metadata: { latitude, longitude },
+                });
+              }
+            } catch (error) {
+              console.error('[CHAT] Share location error:', error);
+              Alert.alert('Error', 'Failed to share location');
             }
           },
         },
@@ -421,12 +506,21 @@ export default function ChatDetailScreen() {
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
     const isOwn = item.senderId === user?.id;
     const isSystem = item.type === 'SYSTEM';
+    const isLocation = item.type === 'LOCATION';
 
     const showDateSeparator = index === 0 || (() => {
       const prevDate = new Date(messages[index - 1].createdAt).toDateString();
       const currDate = new Date(item.createdAt).toDateString();
       return prevDate !== currDate;
     })();
+
+    const bubbleType: 'text' | 'image' | 'system' | 'location' = isSystem
+      ? 'system'
+      : isLocation
+        ? 'location'
+        : item.type === 'IMAGE'
+          ? 'image'
+          : 'text';
 
     return (
       <View>
@@ -447,8 +541,9 @@ export default function ChatDetailScreen() {
           isOwn={isOwn}
           isRead={item.isRead}
           senderName={item.senderName}
-          type={isSystem ? 'system' : (item.type === 'IMAGE' ? 'image' : 'text')}
+          type={bubbleType}
           imageUrl={item.imageUrl || item.mediaUrl}
+          metadata={item.metadata}
         />
       </View>
     );

@@ -1,7 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - RIDER ONBOARDING
 // ============================================
-// Step-by-step rider registration flow
+// Step-by-step rider registration flow.
+// Step 2 (Documents) now supports real image uploads via /uploads/documents.
 // ============================================
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -15,6 +16,7 @@ import {
   Alert,
   StyleSheet,
   Dimensions,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -23,6 +25,7 @@ import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { pickImage } from '@/src/utils/imagePicker';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -34,6 +37,76 @@ const VEHICLE_TYPES = [
   { id: 'BICYCLE', label: 'Bicycle', icon: 'bicycle-outline', description: 'Bicycle courier' },
   { id: 'SCOOTER', label: 'Scooter', icon: 'speedometer-outline', description: 'Scooter delivery' },
 ];
+
+// Map UI vehicle type id to rider role (used during registration)
+const VEHICLE_TYPE_TO_RIDER_ROLE: Record<string, string> = {
+  MOTORCYCLE: 'SMART_BODA',
+  CAR: 'SMART_CAR',
+  BICYCLE: 'DELIVERY_PERSONNEL',
+  SCOOTER: 'DELIVERY_PERSONNEL',
+};
+
+// ============================================
+// DOCUMENT UPLOAD CARD
+// ============================================
+
+interface DocumentUploadCardProps {
+  label: string;
+  imageUrl: string;
+  onUpload: () => void;
+  onRemove: () => void;
+  required?: boolean;
+  uploading?: boolean;
+  hint?: string;
+}
+
+function DocumentUploadCard({
+  label,
+  imageUrl,
+  onUpload,
+  onRemove,
+  required,
+  uploading,
+  hint,
+}: DocumentUploadCardProps) {
+  return (
+    <View style={styles.docCard}>
+      <Text style={styles.docLabel}>
+        {label} {required ? <Text style={styles.required}>*</Text> : null}
+      </Text>
+      {uploading ? (
+        <View style={styles.docUploading}>
+          <ActivityIndicator size="small" color={COLORS.primary} />
+          <Text style={styles.docUploadingText}>Uploading...</Text>
+        </View>
+      ) : imageUrl ? (
+        <View style={styles.docPreview}>
+          <Image source={{ uri: imageUrl }} style={styles.docImage} resizeMode="cover" />
+          <View style={styles.docActions}>
+              <TouchableOpacity onPress={onUpload} style={styles.docRetakeBtn}>
+              <Ionicons name="camera-outline" size={16} color={COLORS.primary} />
+                <Text style={styles.docRetakeText}>Retake</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onRemove} style={styles.docRemoveBtn}>
+              <Ionicons name="trash-outline" size={16} color={COLORS.error} />
+                <Text style={styles.docRemoveText}>Remove</Text>
+              </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <TouchableOpacity onPress={onUpload} style={styles.docUploadBtn} activeOpacity={0.7}>
+          <Ionicons name="cloud-upload-outline" size={32} color={COLORS.outline} />
+          <Text style={styles.docUploadText}>Tap to upload</Text>
+          <Text style={styles.docUploadHint}>{hint || 'JPG, PNG up to 5MB'}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 
 export default function RiderOnboardingScreen() {
   const router = useRouter();
@@ -51,13 +124,19 @@ export default function RiderOnboardingScreen() {
     email: '',
   });
 
-  // Step 2: Documents
+  // Step 2: Documents — now with image URLs
   const [documents, setDocuments] = useState({
-    photoUrl: '',
-    nationalId: '',
-    licenseNumber: '',
-    licenseExpiry: '',
+    nationalIdFront: '',      // URL
+    nationalIdBack: '',       // URL
+    licenseNumber: '',        // text
+    licenseExpiry: '',        // text
+    licensePhoto: '',         // URL
+    vehiclePhoto: '',         // URL
+    photoUrl: '',             // URL (rider selfie)
   });
+
+  // Track which document field is currently uploading
+  const [uploadingField, setUploadingField] = useState<string | null>(null);
 
   // Step 3: Vehicle Info
   const [vehicleInfo, setVehicleInfo] = useState({
@@ -87,7 +166,7 @@ export default function RiderOnboardingScreen() {
           return;
         }
 
-        if (data?.status === 'SUBMITTED') {
+        if (data?.status === 'SUBMITTED' || data?.status === 'PENDING_APPROVAL') {
           Alert.alert('Application Submitted', 'Your application is being reviewed. We\'ll notify you when it\'s approved.', [
             { text: 'OK', onPress: () => router.back() },
           ]);
@@ -127,6 +206,38 @@ export default function RiderOnboardingScreen() {
     }
   };
 
+  // ----------------------------------------
+  // Document upload handler
+  // ----------------------------------------
+
+  const handleUploadDocument = useCallback(async (field: keyof typeof documents | string) => {
+    const image = await pickImage({ allowsEditing: true, aspect: [4, 3], quality: 0.7 });
+    if (!image) return;
+
+    setUploadingField(field as string);
+    try {
+      const uploadResponse = await api.uploadDocument(image, 'rider_document');
+      if (uploadResponse.success && uploadResponse.data?.url) {
+        setDocuments(prev => ({ ...prev, [field]: uploadResponse.data!.url }));
+      } else {
+        Alert.alert('Upload Failed', uploadResponse.error || 'Failed to upload document.');
+      }
+    } catch (error) {
+      console.error('Document upload error:', error);
+      Alert.alert('Error', 'Failed to upload document. Please try again.');
+    } finally {
+      setUploadingField(null);
+    }
+  }, []);
+
+  const handleRemoveDocument = (field: keyof typeof documents) => {
+    setDocuments(prev => ({ ...prev, [field]: '' }));
+  };
+
+  // ----------------------------------------
+  // Validation
+  // ----------------------------------------
+
   const validateStep1 = () => {
     if (!personalInfo.fullName.trim()) {
       Alert.alert('Error', 'Full name is required');
@@ -144,9 +255,24 @@ export default function RiderOnboardingScreen() {
   };
 
   const validateStep2 = () => {
-    if (!documents.nationalId.trim()) {
-      Alert.alert('Error', 'National ID number is required');
+    if (!documents.nationalIdFront) {
+      Alert.alert('Error', 'Please upload the front of your National ID');
       return false;
+    }
+    if (!documents.nationalIdBack) {
+      Alert.alert('Error', 'Please upload the back of your National ID');
+      return false;
+    }
+    if (!documents.photoUrl) {
+      Alert.alert('Error', 'Please upload a rider selfie photo');
+      return false;
+    }
+    // License photo required only for motorcycle/car drivers
+    if (vehicleInfo.vehicleType === 'MOTORCYCLE' || vehicleInfo.vehicleType === 'CAR') {
+      if (!documents.licensePhoto) {
+        Alert.alert('Error', 'Please upload your driving license photo');
+        return false;
+      }
     }
     return true;
   };
@@ -162,6 +288,10 @@ export default function RiderOnboardingScreen() {
     }
     return true;
   };
+
+  // ----------------------------------------
+  // Navigation
+  // ----------------------------------------
 
   const handleNext = async () => {
     if (currentStep === 1) {
@@ -193,10 +323,28 @@ export default function RiderOnboardingScreen() {
           onPress: async () => {
             setIsSubmitting(true);
             try {
+              const riderRoleType = VEHICLE_TYPE_TO_RIDER_ROLE[vehicleInfo.vehicleType] || 'DELIVERY_PERSONNEL';
               const response = await api.registerRider({
-                ...personalInfo,
-                ...documents,
-                ...vehicleInfo,
+                fullName: personalInfo.fullName,
+                phone: personalInfo.phone,
+                email: personalInfo.email || undefined,
+                address: personalInfo.address,
+                physicalAddress: personalInfo.address,
+                riderRoleType,
+                riderRole: riderRoleType,
+                vehicleType: vehicleInfo.vehicleType,
+                plateNumber: vehicleInfo.plateNumber,
+                vehiclePlate: vehicleInfo.plateNumber,
+                make: vehicleInfo.make,
+                model: vehicleInfo.model,
+                year: vehicleInfo.year,
+                color: vehicleInfo.color,
+                // Document URLs
+                photoUrl: documents.photoUrl,
+                nationalIdFrontUrl: documents.nationalIdFront,
+                nationalIdBackUrl: documents.nationalIdBack,
+                driverLicenseUrl: documents.licensePhoto,
+                vehiclePhotoUrl: documents.vehiclePhoto,
               });
               if (response.success) {
                 Alert.alert(
@@ -226,6 +374,9 @@ export default function RiderOnboardingScreen() {
       </View>
     );
   }
+
+  // Determine whether license & vehicle photo fields apply based on selected vehicle type
+  const isDriver = vehicleInfo.vehicleType === 'MOTORCYCLE' || vehicleInfo.vehicleType === 'CAR';
 
   return (
     <View style={styles.container}>
@@ -316,18 +467,41 @@ export default function RiderOnboardingScreen() {
         {currentStep === 2 && (
           <View>
             <Text style={styles.stepTitle}>Documents</Text>
-            <Text style={styles.stepSubtitle}>Provide your identification documents</Text>
+            <Text style={styles.stepSubtitle}>Upload clear photos of your documents</Text>
 
-            <Text style={styles.fieldLabel}>National ID Number *</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder="Enter your National ID number"
-              placeholderTextColor={COLORS.onSurfaceVariant}
-              value={documents.nationalId}
-              onChangeText={t => setDocuments(p => ({ ...p, nationalId: t }))}
+            {/* Rider Selfie */}
+            <DocumentUploadCard
+              label="Rider Selfie Photo"
+              imageUrl={documents.photoUrl}
+              onUpload={() => handleUploadDocument('photoUrl')}
+              onRemove={() => handleRemoveDocument('photoUrl')}
+              required
+              uploading={uploadingField === 'photoUrl'}
+              hint="A clear photo of your face"
             />
 
-            <Text style={styles.fieldLabel}>License Number</Text>
+            {/* National ID Front */}
+            <DocumentUploadCard
+              label="National ID (Front)"
+              imageUrl={documents.nationalIdFront}
+              onUpload={() => handleUploadDocument('nationalIdFront')}
+              onRemove={() => handleRemoveDocument('nationalIdFront')}
+              required
+              uploading={uploadingField === 'nationalIdFront'}
+            />
+
+            {/* National ID Back */}
+            <DocumentUploadCard
+              label="National ID (Back)"
+              imageUrl={documents.nationalIdBack}
+              onUpload={() => handleUploadDocument('nationalIdBack')}
+              onRemove={() => handleRemoveDocument('nationalIdBack')}
+              required
+              uploading={uploadingField === 'nationalIdBack'}
+            />
+
+            {/* License Number (text) */}
+            <Text style={styles.fieldLabel}>Driving License Number</Text>
             <TextInput
               style={styles.fieldInput}
               placeholder="Driving license number (if applicable)"
@@ -345,10 +519,32 @@ export default function RiderOnboardingScreen() {
               onChangeText={t => setDocuments(p => ({ ...p, licenseExpiry: t }))}
             />
 
+            {/* Driving License Photo — required for drivers */}
+            <DocumentUploadCard
+              label="Driving License Photo"
+              imageUrl={documents.licensePhoto}
+              onUpload={() => handleUploadDocument('licensePhoto')}
+              onRemove={() => handleRemoveDocument('licensePhoto')}
+              required={isDriver}
+              uploading={uploadingField === 'licensePhoto'}
+              hint="Required for motorcycle/car drivers"
+            />
+
+            {/* Vehicle Photo — optional but recommended for drivers */}
+            <DocumentUploadCard
+              label="Vehicle Photo"
+              imageUrl={documents.vehiclePhoto}
+              onUpload={() => handleUploadDocument('vehiclePhoto')}
+              onRemove={() => handleRemoveDocument('vehiclePhoto')}
+              uploading={uploadingField === 'vehiclePhoto'}
+              hint="A clear photo of your vehicle"
+            />
+
             <GlassCard variant="accent" style={styles.infoCard}>
               <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
               <Text style={styles.infoText}>
-                Document uploads (photo, ID scan) can be completed after registration. For now, please provide the document numbers.
+                Make sure all photos are clear, well-lit, and show all four corners of the document.
+                Your application will be reviewed within 24-48 hours.
               </Text>
             </GlassCard>
           </View>
@@ -471,9 +667,13 @@ export default function RiderOnboardingScreen() {
                   <Text style={styles.reviewEdit}>Edit</Text>
                 </TouchableOpacity>
               </View>
-              <ReviewRow label="National ID" value={documents.nationalId} />
+              <ReviewRow label="Selfie" value={documents.photoUrl ? 'Uploaded' : 'Not uploaded'} />
+              <ReviewRow label="ID Front" value={documents.nationalIdFront ? 'Uploaded' : 'Not uploaded'} />
+              <ReviewRow label="ID Back" value={documents.nationalIdBack ? 'Uploaded' : 'Not uploaded'} />
               <ReviewRow label="License No." value={documents.licenseNumber || 'Not provided'} />
               <ReviewRow label="License Expiry" value={documents.licenseExpiry || 'Not provided'} />
+              <ReviewRow label="License Photo" value={documents.licensePhoto ? 'Uploaded' : 'Not uploaded'} />
+              <ReviewRow label="Vehicle Photo" value={documents.vehiclePhoto ? 'Uploaded' : 'Not uploaded'} />
             </GlassCard>
 
             {/* Vehicle Review */}
@@ -500,18 +700,25 @@ export default function RiderOnboardingScreen() {
           <GradientButton
             title="Continue"
             onPress={handleNext}
+            loading={uploadingField !== null}
+            disabled={uploadingField !== null}
           />
         ) : (
           <GradientButton
             title="Submit Application"
             onPress={handleSubmit}
             loading={isSubmitting}
+            disabled={isSubmitting}
           />
         )}
       </View>
     </View>
   );
 }
+
+// ============================================
+// REVIEW ROW SUBCOMPONENT
+// ============================================
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
@@ -542,6 +749,10 @@ const reviewStyles = StyleSheet.create({
     textAlign: 'right',
   },
 });
+
+// ============================================
+// STYLES
+// ============================================
 
 const styles = StyleSheet.create({
   container: {
@@ -648,14 +859,111 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: SPACING.sm,
   },
-  infoIcon: {
-    fontSize: 18,
-  },
   infoText: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
     flex: 1,
     lineHeight: 18,
+  },
+  // Document upload card
+  docCard: {
+    marginTop: SPACING.md,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    padding: SPACING.md,
+    ...SHADOWS.card,
+  },
+  docLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+    fontWeight: '600',
+    marginBottom: SPACING.sm,
+  },
+  required: {
+    color: COLORS.error,
+  },
+  docUploadBtn: {
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    borderColor: COLORS.outlineVariant,
+    borderRadius: RADIUS.md,
+    paddingVertical: SPACING.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceContainerLow,
+  },
+  docUploadText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    fontWeight: '600',
+    marginTop: SPACING.sm,
+  },
+  docUploadHint: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+    marginTop: 2,
+  },
+  docPreview: {
+    borderRadius: RADIUS.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  docImage: {
+    width: '100%',
+    height: 140,
+    backgroundColor: COLORS.surfaceContainerLow,
+  },
+  docActions: {
+    flexDirection: 'row',
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.outlineVariant,
+  },
+  docRetakeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.md,
+  },
+  docRetakeText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  docRemoveBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    paddingVertical: SPACING.md,
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.outlineVariant,
+  },
+  docRemoveText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.error,
+    fontWeight: '600',
+  },
+  docUploading: {
+    paddingVertical: SPACING.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    gap: SPACING.sm,
+  },
+  docUploadingText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   // Vehicle type grid
   vehicleTypeGrid: {
@@ -677,10 +985,6 @@ const styles = StyleSheet.create({
   vehicleTypeCardActive: {
     backgroundColor: `${COLORS.primary}10`,
     borderColor: `${COLORS.primary}30`,
-  },
-  vehicleTypeEmoji: {
-    fontSize: 28,
-    marginBottom: SPACING.xs,
   },
   vehicleTypeLabel: {
     ...TYPOGRAPHY.bodySm,

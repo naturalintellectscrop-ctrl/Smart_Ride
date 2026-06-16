@@ -6,6 +6,8 @@ import {
   notFoundResponse,
   serverErrorResponse 
 } from '@/lib/api/response';
+import { requireAuth } from '@/lib/auth-utils';
+import { isAdmin, JWTPayload } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
 interface RouteParams {
@@ -14,9 +16,13 @@ interface RouteParams {
 
 /**
  * GET /api/prescriptions/[id]
- * Get a specific prescription
+ * Get a specific prescription (clients can only view their own; pharmacists/admins can view any)
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) return authResult;
+  const user = authResult as JWTPayload;
+
   await setServiceRoleContext();
   try {
     const { id } = await params;
@@ -50,6 +56,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return notFoundResponse('Prescription');
     }
 
+    // Clients can only view their own prescriptions
+    const userIsAdmin = isAdmin(user.role);
+    if (!userIsAdmin && user.role !== 'PHARMACIST' && prescription.clientId !== user.userId) {
+      return notFoundResponse('Prescription');
+    }
+
     return successResponse(prescription);
   } catch (error) {
     console.error('Error fetching prescription:', error);
@@ -61,7 +73,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // Verification schema
 const verifySchema = z.object({
-  verifiedBy: z.string(),
+  verifiedBy: z.string().optional(),
   action: z.enum(['VERIFY', 'REJECT']),
   verificationNotes: z.string().optional(),
   rejectionReason: z.string().optional(),
@@ -72,14 +84,21 @@ const verifySchema = z.object({
 
 /**
  * PATCH /api/prescriptions/[id]
- * Verify or reject a prescription
+ * Verify or reject a prescription (pharmacist/admin only)
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) return authResult;
+  const user = authResult as JWTPayload;
+
   await setServiceRoleContext();
   try {
     const { id } = await params;
     const body = await request.json();
     const validatedData = verifySchema.parse(body);
+
+    // Use authenticated user's id as verifiedBy when not provided
+    const verifiedBy = validatedData.verifiedBy || user.userId;
 
     const prescription = await db.prescription.findUnique({
       where: { id },
@@ -98,7 +117,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: {
         status: validatedData.action === 'VERIFY' ? 'VERIFIED' : 'REJECTED',
-        verifiedBy: validatedData.verifiedBy,
+        verifiedBy,
         verifiedAt: new Date(),
         verificationNotes: validatedData.verificationNotes || null,
         rejectionReason: validatedData.action === 'REJECT' ? validatedData.rejectionReason : null,
@@ -109,7 +128,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     await db.prescriptionAccessLog.create({
       data: {
         prescriptionId: id,
-        accessedBy: validatedData.verifiedBy,
+        accessedBy: verifiedBy,
         accessedByType: 'PHARMACY_STAFF',
         healthOrderId: validatedData.healthOrderId || null,
         action: validatedData.action === 'VERIFY' ? 'VERIFY' : 'REJECT',
@@ -146,9 +165,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
 /**
  * DELETE /api/prescriptions/[id]
- * Delete a prescription (soft delete by setting status to expired)
+ * Delete a prescription (soft delete by setting status to expired).
+ * Clients can only delete their own prescriptions.
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) return authResult;
+  const user = authResult as JWTPayload;
+
   await setServiceRoleContext();
   try {
     const { id } = await params;
@@ -158,6 +182,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!prescription) {
+      return notFoundResponse('Prescription');
+    }
+
+    // Clients can only delete their own prescriptions
+    const userIsAdmin = isAdmin(user.role);
+    if (!userIsAdmin && user.role !== 'PHARMACIST' && prescription.clientId !== user.userId) {
       return notFoundResponse('Prescription');
     }
 

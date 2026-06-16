@@ -484,7 +484,7 @@ export default function MerchantDashboardScreen() {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => {}}
+            onPress={() => router.push('/profile/edit')}
             activeOpacity={0.7}
           >
             <View style={[styles.actionIconCircle, { backgroundColor: COLORS.surfaceContainerHighest }]}>

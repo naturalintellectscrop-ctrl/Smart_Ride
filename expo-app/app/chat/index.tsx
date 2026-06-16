@@ -5,7 +5,7 @@
 // Dark theme with Smart Ride branding
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,7 @@ import {
   RefreshControl,
   StyleSheet,
   ActivityIndicator,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -36,6 +37,19 @@ export default function ConversationsScreen() {
   } = useChatStore();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+
+  // Filter conversations by search query (name or last message content)
+  const filteredConversations = useMemo(() => {
+    if (!searchQuery.trim()) return conversations;
+    const q = searchQuery.trim().toLowerCase();
+    return conversations.filter(
+      (c) =>
+        c.otherUser?.name?.toLowerCase().includes(q) ||
+        c.lastMessage?.content?.toLowerCase().includes(q),
+    );
+  }, [conversations, searchQuery]);
 
   useEffect(() => {
     loadConversations();
@@ -169,7 +183,7 @@ export default function ConversationsScreen() {
       </Text>
       <TouchableOpacity
         style={styles.emptyButton}
-        onPress={() => router.back()}
+        onPress={() => router.push('/rider/ride-request?type=BODA' as any)}
         activeOpacity={0.7}
       >
         <LinearGradient
@@ -208,10 +222,39 @@ export default function ConversationsScreen() {
               </View>
             )}
           </View>
-          <TouchableOpacity style={styles.headerAction} activeOpacity={0.7}>
-            <Ionicons name="search-outline" size={22} color={COLORS.onSurfaceSecondary} />
+          <TouchableOpacity
+            style={styles.headerAction}
+            onPress={() => setShowSearch(!showSearch)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name={showSearch ? 'close-outline' : 'search-outline'} size={22} color={COLORS.onSurfaceSecondary} />
           </TouchableOpacity>
         </View>
+
+        {/* Search Bar */}
+        {showSearch && (
+          <View style={styles.searchContainer}>
+            <Ionicons name="search-outline" size={18} color={COLORS.outline} style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search conversations..."
+              placeholderTextColor={COLORS.outline}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close-circle" size={18} color={COLORS.outline} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         {/* Gradient glow border */}
         <LinearGradient
@@ -230,13 +273,22 @@ export default function ConversationsScreen() {
         </View>
       ) : (
         <FlatList
-          data={conversations}
+          data={filteredConversations}
           keyExtractor={(item) => item.id}
           renderItem={renderConversation}
           contentContainerStyle={
-            conversations.length === 0 ? styles.emptyList : styles.listContent
+            filteredConversations.length === 0 ? styles.emptyList : styles.listContent
           }
-          ListEmptyComponent={renderEmptyState}
+          ListEmptyComponent={
+            searchQuery.trim()
+              ? () => (
+                  <View style={styles.loadingContainer}>
+                    <Ionicons name="search-outline" size={48} color={COLORS.outlineVariant} />
+                    <Text style={styles.loadingText}>No conversations match "{searchQuery}"</Text>
+                  </View>
+                )
+              : renderEmptyState
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -316,6 +368,27 @@ const styles = StyleSheet.create({
   glowBorder: {
     height: 1,
     marginTop: SPACING.md,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    borderRadius: RADIUS.xl,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 8,
+    fontSize: 15,
+    color: COLORS.onSurface,
   },
   listContent: {
     paddingHorizontal: SPACING.md,

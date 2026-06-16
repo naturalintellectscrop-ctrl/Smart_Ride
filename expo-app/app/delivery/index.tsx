@@ -378,6 +378,7 @@ export default function DeliveryScreen() {
         paymentMethod: PAYMENT_METHOD_MAP[paymentMethod] || paymentMethod,
         packageDescription,
         deliveryType,
+        packageSize,
       });
 
       if (response.success && response.data) {
@@ -406,6 +407,7 @@ export default function DeliveryScreen() {
     paymentMethod,
     packageDescription,
     deliveryType,
+    packageSize,
     setPendingTask,
     router,
   ]);

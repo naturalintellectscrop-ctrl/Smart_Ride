@@ -45,6 +45,7 @@ export default function OrderTrackingScreen() {
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isCancelling, setIsCancelling] = useState(false);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastUpdateTimestamp = useRef(0); // Track last state update time to prevent stale poll overwrites
 
@@ -210,8 +211,71 @@ export default function OrderTrackingScreen() {
   };
 
   const handleCallDriver = () => {
-    // Would get driver phone from task
-    Alert.alert('Coming Soon', 'Driver calling will be available soon');
+    // The order may have a related task with a rider assigned.
+    // Backend includes `task.rider` with id/fullName/phone in the order response.
+    const task = (order as any)?.task;
+    const rider = task?.rider;
+    const riderId = rider?.id || task?.riderId;
+    const riderName = rider?.fullName || 'Driver';
+    const riderPhone = rider?.phone;
+
+    if (riderId) {
+      // Navigate to in-app VoIP call screen (Agora)
+      router.push(
+        `/call/${riderId}?name=${encodeURIComponent(riderName)}&phone=${encodeURIComponent(riderPhone || '')}`
+      );
+    } else if (riderPhone) {
+      // Fallback to phone dialer if no user/rider ID
+      Linking.openURL(`tel:${riderPhone}`);
+    } else {
+      Alert.alert(
+        'Driver Unavailable',
+        'Driver contact information is not available for this order yet.'
+      );
+    }
+  };
+
+  const handleContactSupport = () => {
+    // Opens the Smart Ride support / contact page in the system browser
+    Linking.openURL('https://smartrideug.vercel.app/contact').catch(() => {
+      Alert.alert('Error', 'Unable to open support page right now.');
+    });
+  };
+
+  const handleCancelOrder = () => {
+    if (!order) return;
+
+    Alert.alert(
+      'Cancel Order',
+      'Are you sure you want to cancel this order? This action cannot be undone.',
+      [
+        { text: 'No, Keep Order', style: 'cancel' },
+        {
+          text: 'Yes, Cancel',
+          style: 'destructive',
+          onPress: async () => {
+            setIsCancelling(true);
+            try {
+              const response = await api.cancelOrder(order.id);
+              if (response.success) {
+                // Optimistically update local state so the UI reflects the change
+                setOrder(prev => prev ? { ...prev, status: 'CANCELLED' as any } : prev);
+                stopPolling();
+                Alert.alert('Order Cancelled', 'Your order has been cancelled.');
+                router.replace('/(tabs)/orders');
+              } else {
+                Alert.alert('Error', response.error || 'Failed to cancel order');
+              }
+            } catch (error: any) {
+              const message = error?.message || 'An unexpected error occurred';
+              Alert.alert('Error', message);
+            } finally {
+              setIsCancelling(false);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const getCurrentStep = () => {
@@ -333,6 +397,32 @@ export default function OrderTrackingScreen() {
             </View>
           )}
 
+          {/* Driver/Rider Info (only show when a rider has been assigned) */}
+          {(order as any)?.task?.rider && (
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>Driver</Text>
+              <View style={styles.merchantRow}>
+                <View style={styles.merchantImagePlaceholder}>
+                  <Ionicons name="bicycle-outline" size={24} color={COLORS.primary} />
+                </View>
+                <View style={styles.merchantInfo}>
+                  <Text style={styles.merchantName}>
+                    {(order as any).task.rider.fullName || 'Driver'}
+                  </Text>
+                  <Text style={styles.merchantAddress}>
+                    {(order as any).task.rider.phone || 'Contact via in-app call'}
+                  </Text>
+                </View>
+                <TouchableOpacity 
+                  style={styles.callButton}
+                  onPress={handleCallDriver}
+                >
+                  <Ionicons name="call-outline" size={16} color={COLORS.primary} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {/* Order Items */}
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Order Items</Text>
@@ -392,14 +482,21 @@ export default function OrderTrackingScreen() {
         ) : (
           <View style={styles.actionRow}>
             <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => Alert.alert('Coming Soon', 'Order cancellation will be available soon')}
+              style={[styles.cancelButton, isCancelling && styles.cancelButtonDisabled]}
+              onPress={handleCancelOrder}
+              disabled={isCancelling}
+              activeOpacity={0.7}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              {isCancelling ? (
+                <ActivityIndicator size="small" color={COLORS.error} />
+              ) : (
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.supportButton}
-              onPress={handleCallDriver}
+              onPress={handleContactSupport}
+              activeOpacity={0.7}
             >
               <Text style={styles.supportButtonText}>Contact Support</Text>
             </TouchableOpacity>
@@ -631,6 +728,9 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.lg,
     paddingVertical: SPACING.md,
     alignItems: 'center',
+  },
+  cancelButtonDisabled: {
+    opacity: 0.6,
   },
   cancelButtonText: {
     color: COLORS.error,

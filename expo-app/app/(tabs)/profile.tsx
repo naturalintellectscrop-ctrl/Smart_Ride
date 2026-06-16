@@ -41,6 +41,7 @@ export default function ProfileScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [updatingPrefs, setUpdatingPrefs] = useState(false);
   const [stats, setStats] = useState({ totalRides: 0, orders: 0, rating: '-' });
 
   // Dynamic styles based on theme colors
@@ -49,6 +50,45 @@ export default function ProfileScreen() {
   useEffect(() => {
     loadStats();
   }, []);
+
+  // Hydrate the notifications toggle from the persisted user prefs
+  useEffect(() => {
+    const prefs = (user as any)?.notificationPreferences;
+    if (prefs && typeof prefs.notificationsEnabled === 'boolean') {
+      setNotificationsEnabled(prefs.notificationsEnabled);
+    }
+  }, [user]);
+
+  const handleNotificationToggle = async (value: boolean) => {
+    const previous = notificationsEnabled;
+    setNotificationsEnabled(value);
+    setUpdatingPrefs(true);
+    try {
+      const response = await api.updateNotificationPreferences(value);
+      if (!response.success) {
+        // Revert on failure
+        setNotificationsEnabled(previous);
+        Alert.alert(
+          'Error',
+          response.error || 'Failed to update notification preferences'
+        );
+        return;
+      }
+      // Persist locally so the toggle stays in sync across re-mounts.
+      if (user) {
+        setUser({
+          ...user,
+          notificationPreferences: { notificationsEnabled: value },
+        } as any);
+      }
+    } catch (error) {
+      // Revert on failure
+      setNotificationsEnabled(previous);
+      Alert.alert('Error', 'Failed to update notification preferences');
+    } finally {
+      setUpdatingPrefs(false);
+    }
+  };
 
   const loadStats = async () => {
     try {
@@ -138,10 +178,11 @@ export default function ProfileScreen() {
       items: [
         { icon: 'person-outline', label: 'Edit Profile', onPress: () => router.push('/profile/edit') },
         { icon: 'refresh-outline', label: `Switch Role (${user?.role || 'Client'})`, onPress: () => router.push('/auth/role-selection') },
-        { icon: 'location-outline', label: 'Saved Addresses', onPress: () => Alert.alert('Coming Soon', 'Saved addresses will be available soon') },
+        { icon: 'location-outline', label: 'Saved Addresses', onPress: () => router.push('/profile/saved-addresses') },
         { icon: 'card-outline', label: 'Payment Methods', onPress: () => router.push('/wallet') },
         { icon: 'people-outline', label: 'Emergency Contacts', onPress: () => router.push('/sos') },
         { icon: 'key-outline', label: 'Change Password', onPress: () => router.push('/auth/change-password') },
+        { icon: 'trash-outline', label: 'Delete Account', onPress: () => router.push('/profile/delete-account'), danger: true },
       ],
     },
     {
@@ -154,12 +195,13 @@ export default function ProfileScreen() {
           value: isDark,
           onToggle: () => toggleTheme(),
         },
-        { 
-          icon: 'notifications-outline', 
-          label: 'Notifications', 
+        {
+          icon: 'notifications-outline',
+          label: 'Notifications',
           type: 'toggle',
           value: notificationsEnabled,
-          onToggle: setNotificationsEnabled,
+          onToggle: handleNotificationToggle,
+          disabled: updatingPrefs,
         },
         { icon: 'globe-outline', label: 'Language', value: 'English', onPress: () => Alert.alert('Coming Soon', 'Language settings will be available soon') },
       ],
@@ -356,12 +398,25 @@ function MenuItem({ item, isLast, colors }: { item: any; isLast: boolean; colors
       onPress={item.type === 'toggle' ? undefined : item.onPress}
       activeOpacity={0.7}
     >
-      <Ionicons name={item.icon} size={20} color={colors.text} style={{ marginRight: 12 }} />
-      <Text style={itemStyles.menuLabel}>{item.label}</Text>
+      <Ionicons
+        name={item.icon}
+        size={20}
+        color={item.danger ? colors.error || '#ba1a1a' : colors.text}
+        style={{ marginRight: 12 }}
+      />
+      <Text
+        style={[
+          itemStyles.menuLabel,
+          item.danger && { color: colors.error || '#ba1a1a' },
+        ]}
+      >
+        {item.label}
+      </Text>
       {item.type === 'toggle' ? (
         <Switch
           value={item.value}
           onValueChange={item.onToggle}
+          disabled={item.disabled}
           trackColor={{ false: '#374151', true: colors.primary }}
           thumbColor={item.value ? colors.primary : '#6B7280'}
         />

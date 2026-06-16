@@ -18,7 +18,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -31,11 +30,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
+import { useAuthStore } from '@/src/store';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, GRADIENTS, PAYMENT_METHODS } from '@/src/constants';
 import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
 import { GlowHeader } from '@/src/components/GlowHeader';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { TopUpModal } from '@/src/components/TopUpModal';
+import { WithdrawModal } from '@/src/components/WithdrawModal';
 
 // ============================================
 // TYPES
@@ -65,10 +67,13 @@ interface Transaction {
 
 export default function WalletScreen() {
   const router = useRouter();
+  const { user } = useAuthStore();
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTopUp, setShowTopUp] = useState(false);
+  const [showWithdraw, setShowWithdraw] = useState(false);
 
   useEffect(() => {
     loadWallet();
@@ -233,7 +238,7 @@ export default function WalletScreen() {
             <View style={styles.ctaButtonWrapper}>
               <GradientButton
                 title="Top Up"
-                onPress={() => Alert.alert('Coming Soon', 'Top up feature will be available soon')}
+                onPress={() => setShowTopUp(true)}
                 variant="primary"
                 size="lg"
                 icon={<Ionicons name="add" size={20} color={COLORS.onPrimary} />}
@@ -242,7 +247,7 @@ export default function WalletScreen() {
             <View style={styles.ctaButtonWrapper}>
               <GradientButton
                 title="Withdraw"
-                onPress={() => Alert.alert('Coming Soon', 'Withdrawal feature will be available soon')}
+                onPress={() => setShowWithdraw(true)}
                 variant="outline"
                 size="lg"
                 icon={<Ionicons name="arrow-up" size={20} color={COLORS.primary} />}
@@ -352,6 +357,23 @@ export default function WalletScreen() {
           </Text>
         </Animated.View>
       </ScrollView>
+
+      {/* Top Up Modal */}
+      <TopUpModal
+        visible={showTopUp}
+        onClose={() => setShowTopUp(false)}
+        defaultPhoneNumber={user?.phone}
+        onSuccess={() => loadWallet()}
+      />
+
+      {/* Withdraw Modal */}
+      <WithdrawModal
+        visible={showWithdraw}
+        onClose={() => setShowWithdraw(false)}
+        balance={walletData?.balance || 0}
+        defaultPhoneNumber={user?.phone}
+        onSuccess={() => loadWallet()}
+      />
     </View>
   );
 }

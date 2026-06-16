@@ -15,7 +15,8 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Alert,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -60,6 +61,18 @@ const HEALTH_CATEGORIES = [
 ];
 
 // ============================================
+// FILTER OPTIONS
+// ============================================
+
+type HealthFilter = 'all' | 'open' | 'top_rated';
+
+const HEALTH_FILTERS: { key: HealthFilter; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'all', label: 'All Pharmacies', icon: 'list' },
+  { key: 'open', label: 'Open Now', icon: 'time' },
+  { key: 'top_rated', label: 'Top Rated (4.0+)', icon: 'star' },
+];
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 
@@ -71,6 +84,8 @@ export default function HealthScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState('pharmacy');
   const [error, setError] = useState<string | null>(null);
+  const [selectedFilter, setSelectedFilter] = useState<HealthFilter>('all');
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -101,12 +116,30 @@ export default function HealthScreen() {
   };
 
   // Filter pharmacies by search query
-  const filteredPharmacies = searchQuery.trim().length > 0
+  const searchFiltered = searchQuery.trim().length > 0
     ? pharmacies.filter(p =>
         p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (p.address && p.address.toLowerCase().includes(searchQuery.toLowerCase()))
       )
     : pharmacies;
+
+  // Apply selected filter (open now / top rated) on top of search filter
+  const filteredPharmacies = searchFiltered.filter(p => {
+    if (selectedFilter === 'open') return p.isOpen;
+    if (selectedFilter === 'top_rated') return (p.rating ?? 0) >= 4.0;
+    return true;
+  });
+
+  const handleFilterPress = () => {
+    setFilterModalVisible(true);
+  };
+
+  const applyFilter = (filter: HealthFilter) => {
+    setSelectedFilter(filter);
+    setFilterModalVisible(false);
+  };
+
+  const activeFilterLabel = HEALTH_FILTERS.find(f => f.key === selectedFilter)?.label ?? 'All Pharmacies';
 
   if (isLoading) {
     return (
@@ -147,7 +180,7 @@ export default function HealthScreen() {
             onChangeText={setSearchQuery}
             icon="search"
             rightIcon="filter"
-            onRightIconPress={() => Alert.alert('Filter', 'Filter options will be available soon')}
+            onRightIconPress={handleFilterPress}
           />
         </Animated.View>
       </GlowHeader>
@@ -237,6 +270,22 @@ export default function HealthScreen() {
           Featured Pharmacies
         </Animated.Text>
 
+        {/* Active filter indicator chip */}
+        {selectedFilter !== 'all' && (
+          <View style={styles.filterChipRow}>
+            <View style={styles.filterChip}>
+              <Ionicons name="filter" size={12} color={COLORS.primary} />
+              <Text style={styles.filterChipText}>{activeFilterLabel}</Text>
+              <TouchableOpacity
+                onPress={() => setSelectedFilter('all')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close-circle" size={14} color={COLORS.outline} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Pharmacies List */}
         {filteredPharmacies.length > 0 ? (
           filteredPharmacies.map((pharmacy, index) => (
@@ -261,12 +310,16 @@ export default function HealthScreen() {
             <Text style={styles.emptyTitle}>
               {searchQuery.trim().length > 0
                 ? `No pharmacies matching "${searchQuery}"`
-                : 'No pharmacies available'}
+                : selectedFilter !== 'all'
+                  ? 'No pharmacies match this filter'
+                  : 'No pharmacies available'}
             </Text>
             <Text style={styles.emptySubtitle}>
               {searchQuery.trim().length > 0
                 ? 'Try a different search term'
-                : 'Check back soon for updates'}
+                : selectedFilter !== 'all'
+                  ? 'Try a different filter or clear it'
+                  : 'Check back soon for updates'}
             </Text>
           </Animated.View>
         )}
@@ -274,6 +327,59 @@ export default function HealthScreen() {
         {/* Bottom spacing */}
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
+
+      {/* Filter Modal */}
+      <Modal
+        visible={filterModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setFilterModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.filterModalOverlay}
+          activeOpacity={1}
+          onPress={() => setFilterModalVisible(false)}
+        >
+          <TouchableOpacity
+            style={styles.filterModalContent}
+            activeOpacity={1}
+            onPress={() => {}}
+          >
+            <View style={styles.filterModalHeader}>
+              <Text style={styles.filterModalTitle}>Filter Pharmacies</Text>
+              <TouchableOpacity
+                onPress={() => setFilterModalVisible(false)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={22} color={COLORS.onSurface} />
+              </TouchableOpacity>
+            </View>
+            <FlatList
+              data={HEALTH_FILTERS}
+              keyExtractor={item => item.key}
+              renderItem={({ item }) => {
+                const isActive = selectedFilter === item.key;
+                return (
+                  <TouchableOpacity
+                    style={[styles.filterOptionRow, isActive && styles.filterOptionRowActive]}
+                    onPress={() => applyFilter(item.key)}
+                  >
+                    <View style={[styles.filterOptionIconCircle, isActive && { backgroundColor: `${COLORS.primary}15` }]}>
+                      <Ionicons name={item.icon} size={18} color={isActive ? COLORS.primary : COLORS.onSurfaceVariant} />
+                    </View>
+                    <Text style={[styles.filterOptionLabel, isActive && styles.filterOptionLabelActive]}>
+                      {item.label}
+                    </Text>
+                    {isActive && (
+                      <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
@@ -610,5 +716,84 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodySm,
     color: COLORS.outline,
     textAlign: 'center',
+  },
+
+  // Filter chip
+  filterChipRow: {
+    paddingHorizontal: SPACING.containerMargin,
+    marginBottom: SPACING.sm,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    backgroundColor: `${COLORS.primary}12`,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.xs,
+    gap: SPACING.xs,
+  },
+  filterChipText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+
+  // Filter modal
+  filterModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  filterModalContent: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+    padding: SPACING.lg,
+    paddingBottom: SPACING.xl,
+    maxHeight: '70%',
+  },
+  filterModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.md,
+  },
+  filterModalTitle: {
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+  },
+  filterOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.md,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
+    gap: SPACING.md,
+  },
+  filterOptionRowActive: {
+    backgroundColor: `${COLORS.primary}08`,
+    marginHorizontal: -SPACING.sm,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: RADIUS.md,
+    borderBottomColor: 'transparent',
+  },
+  filterOptionIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterOptionLabel: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    flex: 1,
+  },
+  filterOptionLabelActive: {
+    color: COLORS.primary,
+    fontWeight: '600',
   },
 });

@@ -1,35 +1,49 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
-  notFoundResponse,
   serverErrorResponse,
   paginatedResponse,
   getPaginationParams 
 } from '@/lib/api/response';
+import { requireAuth } from '@/lib/auth-utils';
+import { isAdmin, JWTPayload } from '@/lib/auth/jwt';
 import { generatePrescriptionNumber } from '@/lib/api/health-state-machine';
 import { PrescriptionStatus } from '@prisma/client';
 import { z } from 'zod';
 
 /**
  * GET /api/prescriptions
- * List all prescriptions with pagination
+ * - CLIENT users: list only their own prescriptions
+ * - PHARMACIST/ADMIN users: list all prescriptions with optional filters
  */
 export async function GET(request: NextRequest) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) return authResult;
+  const user = authResult as JWTPayload;
+
   await setServiceRoleContext();
   try {
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
     
     const status = searchParams.get('status');
-    const clientId = searchParams.get('clientId');
     const search = searchParams.get('search');
 
     const where: Record<string, unknown> = {};
     
+    // Scope by role: clients only see their own prescriptions
+    const userIsAdmin = isAdmin(user.role);
+    if (!userIsAdmin && user.role !== 'PHARMACIST') {
+      where.clientId = user.userId;
+    } else {
+      // Admins/pharmacists may pass an explicit clientId filter
+      const clientId = searchParams.get('clientId');
+      if (clientId) where.clientId = clientId;
+    }
+
     if (status) where.status = status;
-    if (clientId) where.clientId = clientId;
     if (search) {
       where.OR = [
         { prescriptionNumber: { contains: search, mode: 'insensitive' } },
@@ -66,13 +80,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Prescription upload schema
+// Prescription upload schema — imageUrl is the primary field; doctorName and notes optional
 const uploadPrescriptionSchema = z.object({
-  clientId: z.string(),
+  clientId: z.string().optional(),
   
-  // Image data (base64 or URL)
-  imageData: z.string().optional(),
+  // Image URL (uploaded separately via /uploads/documents)
   imageUrl: z.string().optional(),
+  // Legacy: base64 data URL
+  imageData: z.string().optional(),
   
   // Doctor info
   doctorName: z.string().optional(),
@@ -88,28 +103,40 @@ const uploadPrescriptionSchema = z.object({
 
 /**
  * POST /api/prescriptions
- * Upload a new prescription
+ * Authenticated clients can upload a new prescription.
+ * The authenticated user's id is used as the clientId.
  */
 export async function POST(request: NextRequest) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) return authResult;
+  const user = authResult as JWTPayload;
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
     const validatedData = uploadPrescriptionSchema.parse(body);
 
-    // In production, we would:
-    // 1. Validate and process the image
-    // 2. Encrypt the image for secure storage
-    // 3. Store in secure cloud storage (S3, etc.)
-    // For now, we'll use the provided URL or a placeholder
+    // Use authenticated user's id as the client id, but allow admins to specify a different one
+    const userIsAdmin = isAdmin(user.role);
+    const clientId = userIsAdmin && validatedData.clientId
+      ? validatedData.clientId
+      : user.userId;
+
+    if (!clientId) {
+      return errorResponse('Unable to determine client for prescription');
+    }
     
-    const imageUrl = validatedData.imageUrl || validatedData.imageData || '/prescriptions/placeholder.jpg';
+    const imageUrl = validatedData.imageUrl || validatedData.imageData;
+    if (!imageUrl) {
+      return errorResponse('Prescription image is required');
+    }
     
     // Create prescription
     const prescription = await db.prescription.create({
       data: {
         prescriptionNumber: generatePrescriptionNumber(),
-        clientId: validatedData.clientId,
-        imageUrl: imageUrl,
+        clientId,
+        imageUrl,
         imageHash: Date.now().toString(36), // Simple hash for demo
         doctorName: validatedData.doctorName || null,
         doctorLicense: validatedData.doctorLicense || null,
@@ -117,7 +144,7 @@ export async function POST(request: NextRequest) {
         prescriptionDate: validatedData.prescriptionDate ? new Date(validatedData.prescriptionDate) : null,
         expiryDate: validatedData.expiryDate ? new Date(validatedData.expiryDate) : null,
         medicines: validatedData.medicines ? JSON.stringify(validatedData.medicines) : null,
-        status: 'PENDING',
+        status: PrescriptionStatus.PENDING,
       },
     });
 
@@ -134,8 +161,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Prescription verification schema
-const verifyPrescriptionSchema = z.object({
+// Prescription verification schema (kept for backwards compatibility with pharmacist flow)
+export const verifyPrescriptionSchema = z.object({
   prescriptionId: z.string(),
   verifiedBy: z.string(),
   action: z.enum(['VERIFY', 'REJECT']),

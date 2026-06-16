@@ -21,6 +21,7 @@ import {
   StatusBar,
   Alert,
   Image,
+  Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -530,9 +531,19 @@ export default function LoginScreen() {
         <View style={styles.footer}>
           <Text style={styles.footerText}>
             By continuing, you agree to our{' '}
-            <Text style={styles.footerLink}>Terms of Service</Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}
+            >
+              Terms of Service
+            </Text>
             {' '}and{' '}
-            <Text style={styles.footerLink}>Privacy Policy</Text>
+            <Text
+              style={styles.footerLink}
+              onPress={() => Linking.openURL('https://smartrideug.vercel.app/privacy')}
+            >
+              Privacy Policy
+            </Text>
           </Text>
         </View>
       </ScrollView>

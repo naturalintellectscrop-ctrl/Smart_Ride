@@ -28,7 +28,7 @@ export interface Conversation {
   lastMessage?: {
     id: string;
     content: string;
-    type: 'TEXT' | 'IMAGE' | 'SYSTEM';
+    type: 'TEXT' | 'IMAGE' | 'SYSTEM' | 'LOCATION';
     createdAt: string;
     senderId: string;
   };
@@ -42,9 +42,14 @@ export interface Message {
   senderId: string;
   senderName?: string;
   content: string;
-  type: 'TEXT' | 'IMAGE' | 'SYSTEM';
+  type: 'TEXT' | 'IMAGE' | 'SYSTEM' | 'LOCATION';
   imageUrl?: string;
   mediaUrl?: string;
+  metadata?: {
+    latitude?: number;
+    longitude?: number;
+    [key: string]: any;
+  };
   isRead: boolean;
   readAt?: string;
   createdAt: string;
@@ -74,7 +79,7 @@ interface ChatState {
   loadConversations: (append?: boolean) => Promise<void>;
   loadMessages: (conversationId: string) => Promise<void>;
   loadMoreMessages: () => Promise<void>;
-  sendMessage: (conversationId: string, data: { content: string; type?: 'TEXT' | 'IMAGE'; imageUrl?: string }) => Promise<void>;
+  sendMessage: (conversationId: string, data: { content: string; type?: 'TEXT' | 'IMAGE' | 'LOCATION'; imageUrl?: string; metadata?: { latitude?: number; longitude?: number; [key: string]: any } }) => Promise<void>;
   markAsRead: (conversationId: string) => Promise<void>;
   setActiveConversation: (conversationId: string | null) => void;
   joinConversation: (conversationId: string) => void;
@@ -181,7 +186,7 @@ export const useChatStore = create<ChatState>()(
     }
   },
 
-  sendMessage: async (conversationId: string, data: { content: string; type?: 'TEXT' | 'IMAGE'; imageUrl?: string }) => {
+  sendMessage: async (conversationId: string, data: { content: string; type?: 'TEXT' | 'IMAGE' | 'LOCATION'; imageUrl?: string; metadata?: { latitude?: number; longitude?: number; [key: string]: any } }) => {
     set({ isSendingMessage: true, error: null });
     try {
       const response = await api.sendMessage(conversationId, data);
@@ -198,6 +203,7 @@ export const useChatStore = create<ChatState>()(
               content: serverMessage.content || data.content,
               type: serverMessage.type || data.type || 'TEXT',
               mediaUrl: serverMessage.mediaUrl,
+              metadata: serverMessage.metadata || data.metadata,
               isRead: serverMessage.isRead || false,
               readAt: serverMessage.readAt,
               createdAt: serverMessage.createdAt || new Date().toISOString(),
@@ -209,6 +215,7 @@ export const useChatStore = create<ChatState>()(
               content: data.content,
               type: data.type || 'TEXT',
               imageUrl: data.imageUrl,
+              metadata: data.metadata,
               isRead: false,
               createdAt: new Date().toISOString(),
             };
@@ -237,6 +244,7 @@ export const useChatStore = create<ChatState>()(
           content: data.content,
           type: data.type || 'TEXT',
           imageUrl: data.imageUrl,
+          metadata: data.metadata,
         });
       } else {
         // Even if API fails, add the message locally (optimistic)
@@ -247,6 +255,7 @@ export const useChatStore = create<ChatState>()(
           content: data.content,
           type: data.type || 'TEXT',
           imageUrl: data.imageUrl,
+          metadata: data.metadata,
           isRead: false,
           createdAt: new Date().toISOString(),
         };
@@ -278,6 +287,7 @@ export const useChatStore = create<ChatState>()(
         senderId: 'client-1',
         content: data.content,
         type: data.type || 'TEXT',
+        metadata: data.metadata,
         isRead: false,
         createdAt: new Date().toISOString(),
       };

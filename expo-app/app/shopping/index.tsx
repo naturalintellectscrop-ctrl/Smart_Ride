@@ -15,6 +15,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -69,10 +70,10 @@ const CATEGORIES: CategoryItem[] = [
 // ============================================
 
 const TRENDING_DEALS = [
-  { id: 'd1', title: 'Fresh Produce Bundle', price: 'UGX 25,000', discount: '20% off', color: COLORS.primary },
-  { id: 'd2', title: 'Electronics Sale', price: 'From UGX 50,000', discount: 'Up to 30% off', color: '#3B82F6' },
-  { id: 'd3', title: 'Household Essentials', price: 'UGX 15,000', discount: '15% off', color: '#F59E0B' },
-  { id: 'd4', title: 'Fashion Picks', price: 'From UGX 30,000', discount: '25% off', color: '#EC4899' },
+  { id: 'd1', title: 'Fresh Produce Bundle', price: 'UGX 25,000', discount: '20% off', color: COLORS.primary, categoryIndex: 0 },
+  { id: 'd2', title: 'Electronics Sale', price: 'From UGX 50,000', discount: 'Up to 30% off', color: '#3B82F6', categoryIndex: 1 },
+  { id: 'd3', title: 'Household Essentials', price: 'UGX 15,000', discount: '15% off', color: '#F59E0B', categoryIndex: 3 },
+  { id: 'd4', title: 'Fashion Picks', price: 'From UGX 30,000', discount: '25% off', color: '#EC4899', categoryIndex: 2 },
 ];
 
 // ============================================
@@ -134,6 +135,15 @@ export default function ShoppingScreen() {
       setSelectedCategory(index);
     }
   };
+
+  // Client-side search filter applied to the loaded merchants list.
+  // Searches across merchant name and type.
+  const filteredMerchants = searchQuery.trim().length > 0
+    ? merchants.filter(m =>
+        m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (m.type && m.type.toLowerCase().includes(searchQuery.toLowerCase()))
+      )
+    : merchants;
 
   if (isLoading) {
     return (
@@ -273,8 +283,8 @@ export default function ShoppingScreen() {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.featuredScrollContent}
           >
-            {merchants.length > 0 ? (
-              merchants.slice(0, 6).map((merchant, index) => (
+            {filteredMerchants.length > 0 ? (
+              filteredMerchants.slice(0, 6).map((merchant, index) => (
                 <Animated.View
                   key={merchant.id}
                   entering={SlideInRight.delay(index * 80).duration(300)}
@@ -294,7 +304,9 @@ export default function ShoppingScreen() {
             ) : (
               <GlassCard variant="default" style={styles.emptyFeaturedCard}>
                 <Ionicons name="storefront" size={28} color={COLORS.outlineVariant} />
-                <Text style={styles.emptyFeaturedText}>No stores yet</Text>
+                <Text style={styles.emptyFeaturedText}>
+                  {searchQuery.trim().length > 0 ? 'No matching stores' : 'No stores yet'}
+                </Text>
               </GlassCard>
             )}
           </ScrollView>
@@ -313,22 +325,42 @@ export default function ShoppingScreen() {
           style={styles.dealsGrid}
         >
           {TRENDING_DEALS.map((deal, index) => (
-            <GlassCard
+            <TouchableOpacity
               key={deal.id}
-              variant="default"
-              padding={SPACING.md}
-              borderRadius={RADIUS.xl}
-              style={styles.dealCard}
+              activeOpacity={0.8}
+              onPress={() => {
+                // Show deal info and offer to jump to the relevant category
+                const targetIndex = deal.categoryIndex ?? 0;
+                const targetLabel = CATEGORIES[targetIndex]?.label ?? 'stores';
+                Alert.alert(
+                  deal.title,
+                  `${deal.discount}\n${deal.price}\n\nBrowse ${targetLabel} stores?`,
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Browse',
+                      onPress: () => handleCategoryPress(targetIndex),
+                    },
+                  ]
+                );
+              }}
             >
-              <View style={[styles.dealIconCircle, { backgroundColor: `${deal.color}15` }]}>
-                <Ionicons name="pricetag" size={20} color={deal.color} />
-              </View>
-              <Text style={styles.dealTitle} numberOfLines={1}>{deal.title}</Text>
-              <Text style={styles.dealPrice}>{deal.price}</Text>
-              <View style={[styles.dealBadge, { backgroundColor: `${deal.color}15` }]}>
-                <Text style={[styles.dealBadgeText, { color: deal.color }]}>{deal.discount}</Text>
-              </View>
-            </GlassCard>
+              <GlassCard
+                variant="default"
+                padding={SPACING.md}
+                borderRadius={RADIUS.xl}
+                style={styles.dealCard}
+              >
+                <View style={[styles.dealIconCircle, { backgroundColor: `${deal.color}15` }]}>
+                  <Ionicons name="pricetag" size={20} color={deal.color} />
+                </View>
+                <Text style={styles.dealTitle} numberOfLines={1}>{deal.title}</Text>
+                <Text style={styles.dealPrice}>{deal.price}</Text>
+                <View style={[styles.dealBadge, { backgroundColor: `${deal.color}15` }]}>
+                  <Text style={[styles.dealBadgeText, { color: deal.color }]}>{deal.discount}</Text>
+                </View>
+              </GlassCard>
+            </TouchableOpacity>
           ))}
         </Animated.View>
 
@@ -340,8 +372,8 @@ export default function ShoppingScreen() {
           {CATEGORIES[selectedCategory].label === 'More' ? 'All Stores' : `${CATEGORIES[selectedCategory].label} Stores`}
         </Animated.Text>
 
-        {merchants.length > 0 ? (
-          merchants.map((merchant, index) => {
+        {filteredMerchants.length > 0 ? (
+          filteredMerchants.map((merchant, index) => {
             const isPharmacy = merchant.type === 'PHARMACY';
             const detailRoute = isPharmacy
               ? `/health/pharmacy/${merchant.id}`
@@ -367,8 +399,16 @@ export default function ShoppingScreen() {
             <View style={styles.emptyIconCircle}>
               <Ionicons name="storefront" size={32} color={COLORS.outlineVariant} />
             </View>
-            <Text style={styles.emptyTitle}>No stores available yet</Text>
-            <Text style={styles.emptySubtitle}>Check back soon!</Text>
+            <Text style={styles.emptyTitle}>
+              {searchQuery.trim().length > 0
+                ? 'No stores match your search'
+                : 'No stores available yet'}
+            </Text>
+            <Text style={styles.emptySubtitle}>
+              {searchQuery.trim().length > 0
+                ? 'Try a different search term'
+                : 'Check back soon!'}
+            </Text>
             <GradientButton
               title="Refresh"
               onPress={onRefresh}

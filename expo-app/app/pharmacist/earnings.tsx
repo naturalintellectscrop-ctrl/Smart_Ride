@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -31,6 +32,7 @@ export default function PharmacistEarningsScreen() {
   const [earningsData, setEarningsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [isRequestingPayout, setIsRequestingPayout] = useState(false);
 
   const loadEarnings = useCallback(async () => {
     try {
@@ -67,12 +69,60 @@ export default function PharmacistEarningsScreen() {
   };
 
   const totalEarnings = earningsData?.totalEarnings || 0;
-  const pendingPayout = earningsData?.pendingPayout || 0;
-  const availableBalance = earningsData?.availableBalance || 0;
+  const pendingPayout = earningsData?.pendingPayout || earningsData?.pendingPayouts || 0;
+  const availableBalance = earningsData?.availableBalance || pendingPayout;
   const todayEarnings = earningsData?.todayEarnings || earningsData?.dailyEarnings || 0;
   const weekEarnings = earningsData?.weekEarnings || earningsData?.weeklyEarnings || 0;
   const monthEarnings = earningsData?.monthEarnings || earningsData?.monthlyEarnings || 0;
   const transactions = earningsData?.transactions || [];
+
+  const handleRequestPayout = () => {
+    if (availableBalance <= 0) {
+      Alert.alert(
+        'No Available Balance',
+        'You do not have any earnings available for payout yet.'
+      );
+      return;
+    }
+    Alert.alert(
+      'Request Payout',
+      `Payout available: UGX ${availableBalance.toLocaleString()}\n\nThe funds will be sent to your registered mobile money / bank account.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Request',
+          onPress: async () => {
+            setIsRequestingPayout(true);
+            try {
+              const response = await api.requestPharmacyPayout(availableBalance);
+              if (response.success) {
+                Alert.alert(
+                  'Payout Requested',
+                  response.data?.message ||
+                    'Your payout request has been submitted successfully.'
+                );
+                // Refresh earnings to reflect reduced pending balance
+                loadEarnings();
+              } else {
+                Alert.alert(
+                  'Error',
+                  response.error || 'Failed to request payout. Please try again.'
+                );
+              }
+            } catch (err: any) {
+              console.error('Pharmacy payout error:', err);
+              Alert.alert(
+                'Error',
+                err?.message || 'Failed to request payout. Please try again.'
+              );
+            } finally {
+              setIsRequestingPayout(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -160,6 +210,25 @@ export default function PharmacistEarningsScreen() {
               <Text style={styles.earningsAmount}>{formatCurrency(monthEarnings)}</Text>
               <Text style={styles.earningsPeriod}>This Month</Text>
             </GlassCard>
+          </View>
+
+          {/* Request Payout */}
+          <View style={styles.payoutSection}>
+            <GradientButton
+              title={isRequestingPayout ? 'Processing...' : 'Request Payout'}
+              onPress={handleRequestPayout}
+              loading={isRequestingPayout}
+              disabled={isRequestingPayout || availableBalance <= 0}
+              icon={
+                !isRequestingPayout ? (
+                  <Ionicons name="share-outline" size={20} color={COLORS.onPrimary} />
+                ) : undefined
+              }
+            />
+            <Text style={styles.payoutHint}>
+              Available: {formatCurrency(availableBalance)} ·
+              Pending: {formatCurrency(pendingPayout)}
+            </Text>
           </View>
 
           {/* Transactions */}
@@ -347,6 +416,15 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.outline,
     marginTop: SPACING.xs,
+  },
+  payoutSection: {
+    marginBottom: SPACING.lg,
+    gap: SPACING.xs,
+  },
+  payoutHint: {
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    color: COLORS.outline,
+    textAlign: 'center',
   },
   sectionTitle: {
     fontSize: TYPOGRAPHY.bodyMd.fontSize,

@@ -11,5 +11,7 @@ export { StatusBadge } from './StatusBadge';
 export { IconInput } from './IconInput';
 export { GlowHeader } from './GlowHeader';
 export { ChatBubble } from './ChatBubble';
+export { TopUpModal } from './TopUpModal';
+export { WithdrawModal } from './WithdrawModal';
 export { default as SmartRideMap } from './SmartRideMap';
 export type { SmartRideMapProps } from './SmartRideMap';

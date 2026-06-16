@@ -20,8 +20,10 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
+import { useAuthStore } from '@/src/store';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
+import { TopUpModal } from '@/src/components/TopUpModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -33,6 +35,7 @@ const WITHDRAWAL_PROVIDERS = [
 export default function RiderWalletScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
   const [walletData, setWalletData] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -44,6 +47,9 @@ export default function RiderWalletScreen() {
   const [withdrawPhone, setWithdrawPhone] = useState('');
   const [withdrawProvider, setWithdrawProvider] = useState('MTN_MOMO');
   const [isWithdrawing, setIsWithdrawing] = useState(false);
+
+  // Top-up modal
+  const [showTopUp, setShowTopUp] = useState(false);
 
   // Transaction page
   const [txPage, setTxPage] = useState(1);
@@ -213,7 +219,7 @@ export default function RiderWalletScreen() {
             <Text style={styles.quickActionLabel}>Withdraw</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.quickAction} activeOpacity={0.7} onPress={() => Alert.alert('Coming Soon', 'Top up feature will be available soon')}>
+          <TouchableOpacity style={styles.quickAction} activeOpacity={0.7} onPress={() => setShowTopUp(true)}>
             <View style={[styles.quickActionIcon, { backgroundColor: `${COLORS.info}15` }]}>
               <Ionicons name="card-outline" size={20} color={COLORS.info} />
             </View>
@@ -400,6 +406,14 @@ export default function RiderWalletScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Top Up Modal (shared component) */}
+      <TopUpModal
+        visible={showTopUp}
+        onClose={() => setShowTopUp(false)}
+        defaultPhoneNumber={user?.phone || withdrawPhone}
+        onSuccess={() => loadWallet()}
+      />
     </View>
   );
 }

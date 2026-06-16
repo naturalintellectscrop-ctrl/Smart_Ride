@@ -57,11 +57,45 @@ export default function ProfileEditScreen() {
         name: user.name || '',
         email: user.email || '',
         phone: user.phone || '',
-        address: '',
+        address: (user as any).address || '',
         avatar: (user as any).avatarUrl,
       });
     }
   }, [user]);
+
+  // Fetch the latest profile (incl. address) from the backend so the
+  // editor doesn't show stale data when the auth store hasn't been
+  // refreshed yet. This also backfills fields like `address` that the
+  // auth store's `User` interface may not include.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        setIsLoading(true);
+        const res = await api.getProfile();
+        if (cancelled) return;
+        if (res.success && res.data) {
+          const p = res.data as any;
+          setProfile({
+            name: p.name || user?.name || '',
+            email: p.email || user?.email || '',
+            phone: p.phone || user?.phone || '',
+            address: p.address || '',
+            avatar: p.avatarUrl || (user as any)?.avatarUrl,
+          });
+        }
+      } catch (e) {
+        // Non-fatal — fall back to auth store values already set above.
+        console.warn('Failed to load profile for editor:', e);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleAvatarPress = async () => {
     try {
@@ -101,18 +135,49 @@ export default function ProfileEditScreen() {
   };
 
   const handleSave = async () => {
+    // Basic client-side validation
+    if (!profile.name.trim()) {
+      Alert.alert('Validation Error', 'Name is required');
+      return;
+    }
+    if (profile.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profile.email)) {
+      Alert.alert('Validation Error', 'Please enter a valid email address');
+      return;
+    }
+
     setIsSaving(true);
     try {
-      const response = await api.updateProfile(profile);
+      const response = await api.updateProfile({
+        name: profile.name.trim(),
+        email: profile.email.trim(),
+        phone: profile.phone.trim(),
+        address: profile.address?.trim() || '',
+        avatarUrl: profile.avatar,
+      });
       if (response.success) {
+        // Merge updated fields into the auth store so other screens
+        // (e.g. profile tab) immediately reflect the change.
+        if (user) {
+          setUser({
+            ...user,
+            name: profile.name.trim(),
+            email: profile.email.trim(),
+            phone: profile.phone.trim(),
+            avatarUrl: profile.avatar,
+            address: profile.address?.trim() || '',
+          } as any);
+        }
         Alert.alert('Success', 'Profile updated successfully');
         router.back();
       } else {
-        Alert.alert('Error', 'Failed to update profile');
+        Alert.alert('Error', response.error || 'Failed to update profile');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to save profile:', error);
-      Alert.alert('Error', 'Failed to update profile');
+      Alert.alert(
+        'Error',
+        error?.message || 'Failed to update profile. Please try again.'
+      );
     } finally {
       setIsSaving(false);
     }
@@ -130,7 +195,7 @@ export default function ProfileEditScreen() {
             <Text style={styles.backText}>← Back</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
-          <TouchableOpacity onPress={handleSave} disabled={isSaving} style={styles.saveBtn}>
+          <TouchableOpacity onPress={handleSave} disabled={isSaving || isLoading} style={styles.saveBtn}>
             <Text style={styles.saveText}>
               {isSaving ? 'Saving...' : 'Save'}
             </Text>
@@ -138,6 +203,12 @@ export default function ProfileEditScreen() {
         </View>
       </Animated.View>
 
+      {isLoading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={styles.loadingText}>Loading profile...</Text>
+        </View>
+      ) : (
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Avatar */}
         <Animated.View
@@ -232,6 +303,7 @@ export default function ProfileEditScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+      )}
     </View>
   );
 }
@@ -240,6 +312,17 @@ const styles = StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: COLORS.surface,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xl,
+  },
+  loadingText: {
+    color: COLORS.outline,
+    marginTop: SPACING.sm,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   header: {
     backgroundColor: COLORS.surfaceContainerLowest,
