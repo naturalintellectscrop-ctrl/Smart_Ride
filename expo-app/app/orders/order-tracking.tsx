@@ -198,7 +198,13 @@ export default function OrderTrackingScreen() {
   };
 
   const handleCallMerchant = () => {
-    if (order?.merchant?.phone) {
+    if (order?.merchantId) {
+      // Navigate to in-app VoIP call screen (Agora)
+      router.push(
+        `/call/${order.merchantId}?name=${encodeURIComponent(order.merchant?.name || 'Merchant')}&phone=${encodeURIComponent(order.merchant?.phone || '')}`
+      );
+    } else if (order?.merchant?.phone) {
+      // Fallback to phone dialer if no user ID
       Linking.openURL(`tel:${order.merchant.phone}`);
     }
   };

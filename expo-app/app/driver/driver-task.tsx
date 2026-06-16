@@ -217,7 +217,13 @@ export default function DriverTaskScreen() {
   };
 
   const handleCallClient = () => {
-    if (task?.client?.phone) {
+    if (task?.clientId) {
+      // Navigate to in-app VoIP call screen (Agora)
+      router.push(
+        `/call/${task.clientId}?name=${encodeURIComponent(task.client?.name || 'Customer')}&phone=${encodeURIComponent(task.client?.phone || '')}`
+      );
+    } else if (task?.client?.phone) {
+      // Fallback to phone dialer if no user ID
       Linking.openURL(`tel:${task.client.phone}`);
     }
   };

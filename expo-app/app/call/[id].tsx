@@ -2,8 +2,9 @@
 // SMART RIDE MOBILE - IN-APP CALL SCREEN
 // ============================================
 // Premium full-screen call interface with
-// real API integration for call signaling
-// and Agora.io VoIP infrastructure
+// real Agora.io VoIP integration for in-app
+// voice calls. Falls back to phone dialer
+// when Agora native SDK is unavailable.
 // ============================================
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
@@ -34,6 +35,7 @@ import Animated, {
 import { api } from '@/src/services/api';
 import { COLORS, GRADIENTS } from '@/src/constants';
 import { isAgoraConfigured, AGORA_CONFIG } from '@/src/config/agora';
+import { useAgoraCall } from '@/src/hooks/useAgoraCall';
 
 // ============================================
 // CALL STATE TYPES
@@ -196,6 +198,9 @@ export default function CallScreen() {
   }>();
   const insets = useSafeAreaInsets();
 
+  // Agora hook for real VoIP calls
+  const agoraCall = useAgoraCall();
+
   const recipientId = params.id;
   const recipientName = params.name || 'Unknown';
   const recipientPhone = params.phone;
@@ -216,6 +221,51 @@ export default function CallScreen() {
   // Refs for cleanup
   const ringingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasJoinedChannel = useRef(false);
+
+  // ============================================
+  // SYNC AGORA STATE WITH CALL STATE
+  // ============================================
+
+  // When Agora call state changes, update our call state
+  useEffect(() => {
+    if (agoraCall.callState === 'connected' && callState === 'connecting') {
+      // Agora successfully connected!
+      setCallState('active');
+      setCallStartTime(Date.now());
+      hasJoinedChannel.current = true;
+    } else if (agoraCall.callState === 'reconnecting' && callState === 'active') {
+      // Connection interrupted, but we keep the UI in active state with a reconnect indicator
+      console.log('[CALL] Agora reconnecting...');
+    } else if (agoraCall.callState === 'ended' && hasJoinedChannel.current) {
+      // Agora channel ended (remote user left or we left)
+      if (callState === 'active') {
+        const duration = callStartTime > 0 ? Math.floor((Date.now() - callStartTime) / 1000) : 0;
+        setCallDuration(duration);
+        setCallState('ended');
+        hasJoinedChannel.current = false;
+      }
+    }
+  }, [agoraCall.callState, callState, callStartTime]);
+
+  // Sync mute/speaker state from Agora hook
+  useEffect(() => {
+    if (hasJoinedChannel.current) {
+      setIsMuted(agoraCall.isMuted);
+      setIsSpeaker(agoraCall.isSpeakerOn);
+    }
+  }, [agoraCall.isMuted, agoraCall.isSpeakerOn]);
+
+  // Show Agora errors
+  useEffect(() => {
+    if (agoraCall.error && callState !== 'ended') {
+      console.warn('[CALL] Agora error:', agoraCall.error);
+      // Don't show error to user if we can fall back to phone
+      if (!recipientPhone) {
+        setInitiateError(agoraCall.error);
+      }
+    }
+  }, [agoraCall.error, callState, recipientPhone]);
 
   // ============================================
   // CALL LIFECYCLE
@@ -240,10 +290,10 @@ export default function CallScreen() {
   // State transition: outgoing → connecting (after call is initiated)
   useEffect(() => {
     if (callState === 'outgoing' && callInfo) {
-      // Call session created, transition to connecting
+      // Call session created, transition to connecting and join Agora channel
       const timer = setTimeout(() => {
         setCallState('connecting');
-        requestCallToken();
+        joinAgoraChannel();
       }, 1500);
       return () => clearTimeout(timer);
     }
@@ -292,11 +342,10 @@ export default function CallScreen() {
           recipientPhone,
           conversationId,
           agoraAppId: response.data.agoraAppId || '',
-          isAgoraAvailable: !!(response.data.agoraAppId),
+          isAgoraAvailable: !!(response.data.agoraAppId) && agoraCall.isSdkAvailable,
         });
       } else {
         setInitiateError(response.error || 'Failed to initiate call');
-        // Still set call info with a fallback so the UI can show the cancel button
         setCallInfo({
           sessionId: '',
           channelId: '',
@@ -326,43 +375,29 @@ export default function CallScreen() {
     }
   };
 
-  const requestCallToken = async () => {
+  // ============================================
+  // AGORA CHANNEL JOIN
+  // ============================================
+
+  const joinAgoraChannel = async () => {
     if (!callInfo?.channelId) return;
 
-    try {
-      const response = await api.getCallToken(callInfo.channelId);
-      if (response.success && response.data) {
-        if (response.data.isAgoraConfigured && !response.data.fallbackMode) {
-          // Agora is configured — would initialize Agora engine here
-          // For Expo managed workflow, this requires native modules
-          // For now, simulate connection after getting the token
-          console.log('[CALL] Agora token received, connecting...');
-          simulateConnection();
-        } else {
-          // Agora not configured — use phone dialer fallback
-          console.log('[CALL] Agora not configured, using fallback mode');
-          simulateConnection();
-        }
-      } else {
-        // Token request failed — still try to simulate
-        simulateConnection();
-      }
-    } catch (error) {
-      console.log('[CALL] Token error:', error);
+    if (agoraCall.isSdkAvailable && callInfo.isAgoraAvailable) {
+      // Real Agora SDK available — join the channel
+      console.log('[CALL] Joining Agora channel:', callInfo.channelId);
+      await agoraCall.joinChannel(callInfo.channelId);
+    } else {
+      // Agora SDK not available (Expo Go, or no native module)
+      // Simulate connection for UI demo; offer phone dialer fallback
+      console.log('[CALL] Agora SDK not available, simulating connection');
       simulateConnection();
     }
   };
 
   /**
-   * Simulate call connection for MVP.
-   * In production with Agora SDK, this would be replaced by:
-   * 1. Initialize RtcEngine
-   * 2. Join channel with token
-   * 3. Listen for onJoinChannelSuccess callback
-   * 4. Set call state to 'active'
-   *
-   * For Expo managed workflow without native modules,
-   * we simulate the connection and offer phone dialer as fallback.
+   * Fallback: simulate call connection when Agora native SDK is unavailable.
+   * This happens in Expo Go or when native modules aren't linked.
+   * The user can still use the phone dialer as a real fallback.
    */
   const simulateConnection = () => {
     connectingTimeoutRef.current = setTimeout(() => {
@@ -372,7 +407,6 @@ export default function CallScreen() {
   };
 
   const handleCallMissed = async () => {
-    // End the call session as missed
     if (callInfo?.sessionId) {
       try {
         await api.endCall(callInfo.sessionId);
@@ -390,12 +424,22 @@ export default function CallScreen() {
 
   const handleAnswer = useCallback(() => {
     Vibration.cancel();
-    setCallState('active');
-    setCallStartTime(Date.now());
-  }, []);
+    if (callInfo?.channelId && agoraCall.isSdkAvailable) {
+      // Join the Agora channel for incoming call
+      setCallState('connecting');
+      agoraCall.joinChannel(callInfo.channelId);
+    } else {
+      // No Agora — simulate
+      setCallState('active');
+      setCallStartTime(Date.now());
+    }
+  }, [callInfo, agoraCall]);
 
   const handleDecline = useCallback(async () => {
     Vibration.cancel();
+    if (hasJoinedChannel.current) {
+      await agoraCall.leaveChannel();
+    }
     if (callInfo?.sessionId) {
       try {
         await api.endCall(callInfo.sessionId);
@@ -405,12 +449,18 @@ export default function CallScreen() {
     }
     setCallState('ended');
     setCallDuration(0);
-  }, [callInfo]);
+  }, [callInfo, agoraCall]);
 
   const handleEndCall = useCallback(async () => {
     const endTime = Date.now();
     const duration = callStartTime > 0 ? Math.floor((endTime - callStartTime) / 1000) : 0;
     setCallDuration(duration);
+
+    // Leave Agora channel if we're in one
+    if (hasJoinedChannel.current) {
+      await agoraCall.leaveChannel();
+      hasJoinedChannel.current = false;
+    }
 
     if (callInfo?.sessionId) {
       try {
@@ -421,10 +471,13 @@ export default function CallScreen() {
     }
 
     setCallState('ended');
-  }, [callInfo, callStartTime]);
+  }, [callInfo, callStartTime, agoraCall]);
 
   const handleCancel = useCallback(async () => {
-    // Cancel an outgoing call before it connects
+    if (hasJoinedChannel.current) {
+      await agoraCall.leaveChannel();
+      hasJoinedChannel.current = false;
+    }
     if (callInfo?.sessionId) {
       try {
         await api.endCall(callInfo.sessionId);
@@ -434,7 +487,7 @@ export default function CallScreen() {
     }
     setCallState('ended');
     setCallDuration(0);
-  }, [callInfo]);
+  }, [callInfo, agoraCall]);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
@@ -451,10 +504,6 @@ export default function CallScreen() {
     }
   }, [conversationId, handleEndCall]);
 
-  /**
-   * Open the phone dialer as a fallback when Agora is not available.
-   * This uses the recipient's phone number if available.
-   */
   const handleCallViaPhone = useCallback(() => {
     if (recipientPhone) {
       const phoneUrl = `tel:${recipientPhone}`;
@@ -470,13 +519,33 @@ export default function CallScreen() {
     }
   }, [recipientPhone]);
 
+  // Toggle mute via Agora
+  const handleToggleMute = useCallback(async () => {
+    if (hasJoinedChannel.current) {
+      await agoraCall.toggleMute();
+    } else {
+      setIsMuted(!isMuted);
+    }
+  }, [isMuted, agoraCall]);
+
+  // Toggle speaker via Agora
+  const handleToggleSpeaker = useCallback(async () => {
+    if (hasJoinedChannel.current) {
+      await agoraCall.toggleSpeaker();
+    } else {
+      setIsSpeaker(!isSpeaker);
+    }
+  }, [isSpeaker, agoraCall]);
+
   // ============================================
   // COMPUTED VALUES
   // ============================================
 
   const isRinging = callState === 'incoming' || callState === 'outgoing';
   const isConnected = callState === 'active';
-  const showPhoneFallback = callInfo && !callInfo.isAgoraAvailable && !!recipientPhone;
+  const isAgoraCall = hasJoinedChannel.current && agoraCall.isSdkAvailable;
+  const showPhoneFallback = !agoraCall.isSdkAvailable && !!recipientPhone;
+  const isReconnecting = agoraCall.callState === 'reconnecting';
 
   const getCallStateLabel = () => {
     switch (callState) {
@@ -486,7 +555,10 @@ export default function CallScreen() {
         if (initiateError) return 'Call failed';
         return 'Calling...';
       case 'connecting': return 'Connecting...';
-      case 'active': return 'Connected';
+      case 'active':
+        if (isReconnecting) return 'Reconnecting...';
+        if (isAgoraCall) return 'Connected • VoIP';
+        return 'Connected';
       case 'ended': return 'Call Ended';
       default: return '';
     }
@@ -501,6 +573,14 @@ export default function CallScreen() {
       <CallAvatar isRinging={true} isConnected={false} />
       <Text style={styles.nameText}>{recipientName}</Text>
       <Text style={styles.stateLabel}>{getCallStateLabel()}</Text>
+
+      {/* Agora availability indicator */}
+      {agoraCall.isSdkAvailable && (
+        <View style={styles.voipAvailableBadge}>
+          <Ionicons name="wifi-outline" size={12} color={COLORS.primary} />
+          <Text style={styles.voipAvailableText}>In-app call available</Text>
+        </View>
+      )}
 
       <View style={styles.incomingActions}>
         <TouchableOpacity
@@ -538,6 +618,17 @@ export default function CallScreen() {
         <Text style={styles.buttonLabelDecline}>Decline</Text>
         <Text style={styles.buttonLabelAnswer}>Answer</Text>
       </View>
+
+      {!agoraCall.isSdkAvailable && recipientPhone && (
+        <TouchableOpacity
+          style={styles.phoneFallbackButton}
+          onPress={handleCallViaPhone}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="call-outline" size={18} color={COLORS.primary} />
+          <Text style={styles.phoneFallbackText}>Answer via phone instead</Text>
+        </TouchableOpacity>
+      )}
     </Animated.View>
   );
 
@@ -558,6 +649,20 @@ export default function CallScreen() {
 
       {initiateError && (
         <Text style={styles.errorText}>{initiateError}</Text>
+      )}
+
+      {/* Call mode indicator */}
+      {callState === 'connecting' && (
+        <View style={styles.callModeIndicator}>
+          <Ionicons
+            name={agoraCall.isSdkAvailable ? 'wifi' : 'phone-portrait-outline'}
+            size={14}
+            color={agoraCall.isSdkAvailable ? COLORS.primary : COLORS.outline}
+          />
+          <Text style={styles.callModeText}>
+            {agoraCall.isSdkAvailable ? 'In-app VoIP call' : 'Phone dialer mode'}
+          </Text>
+        </View>
       )}
 
       <TouchableOpacity
@@ -598,22 +703,49 @@ export default function CallScreen() {
     <Animated.View entering={FadeIn.duration(300)} style={styles.stateContainer}>
       <CallAvatar isRinging={false} isConnected={true} />
       <Text style={styles.nameText}>{recipientName}</Text>
-      <Text style={styles.stateLabelConnected}>Connected</Text>
+      <Text style={[
+        styles.stateLabelConnected,
+        isReconnecting && styles.stateLabelReconnecting,
+      ]}>
+        {getCallStateLabel()}
+      </Text>
       <CallTimer startTime={callStartTime} />
 
-      {/* VoIP status indicator */}
-      {callInfo && !callInfo.isAgoraAvailable && (
+      {/* VoIP call quality indicator */}
+      {isAgoraCall && (
+        <View style={styles.voipStatusBadge}>
+          <Ionicons
+            name={isReconnecting ? 'warning-outline' : 'wifi-outline'}
+            size={12}
+            color={isReconnecting ? COLORS.error : COLORS.primary}
+          />
+          <Text style={[
+            styles.voipStatusText,
+            isReconnecting && styles.voipStatusReconnecting,
+          ]}>
+            {isReconnecting ? 'Reconnecting...' : 'Internet call'}
+          </Text>
+        </View>
+      )}
+
+      {/* Non-VoIP indicator */}
+      {!isAgoraCall && (
         <View style={styles.voipStatusBadge}>
           <Ionicons name="phone-portrait-outline" size={12} color={COLORS.outline} />
           <Text style={styles.voipStatusText}>Phone call mode</Text>
         </View>
       )}
 
+      {/* Remote user indicator */}
+      {isAgoraCall && !agoraCall.hasRemoteUser && !isReconnecting && (
+        <Text style={styles.waitingText}>Waiting for other person to join...</Text>
+      )}
+
       {/* Action Row */}
       <View style={styles.actionRow}>
         <TouchableOpacity
           style={[styles.actionCircle, isMuted && styles.actionCircleActive]}
-          onPress={() => setIsMuted(!isMuted)}
+          onPress={handleToggleMute}
           activeOpacity={0.7}
         >
           <Ionicons
@@ -628,7 +760,7 @@ export default function CallScreen() {
 
         <TouchableOpacity
           style={[styles.actionCircle, isSpeaker && styles.actionCircleActive]}
-          onPress={() => setIsSpeaker(!isSpeaker)}
+          onPress={handleToggleSpeaker}
           activeOpacity={0.7}
         >
           <Ionicons
@@ -705,17 +837,37 @@ export default function CallScreen() {
         </LinearGradient>
       </TouchableOpacity>
 
-      {/* Call again via phone */}
-      {recipientPhone && (
-        <TouchableOpacity
-          style={styles.callAgainButton}
-          onPress={handleCallViaPhone}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="call-outline" size={18} color={COLORS.primary} />
-          <Text style={styles.callAgainText}>Call again via phone</Text>
-        </TouchableOpacity>
-      )}
+      {/* Call again options */}
+      <View style={styles.callAgainOptions}>
+        {agoraCall.isSdkAvailable && (
+          <TouchableOpacity
+            style={styles.callAgainButton}
+            onPress={() => {
+              // Re-initiate an in-app call
+              setCallState('outgoing');
+              setCallInfo(null);
+              setCallDuration(0);
+              setCallStartTime(0);
+              hasJoinedChannel.current = false;
+            }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="call-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.callAgainText}>In-app call again</Text>
+          </TouchableOpacity>
+        )}
+
+        {recipientPhone && (
+          <TouchableOpacity
+            style={styles.callAgainButton}
+            onPress={handleCallViaPhone}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="phone-portrait-outline" size={18} color={COLORS.outline} />
+            <Text style={[styles.callAgainText, { color: COLORS.outline }]}>Call via phone</Text>
+          </TouchableOpacity>
+        )}
+      </View>
     </Animated.View>
   );
 
@@ -800,6 +952,9 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     marginBottom: 4,
   },
+  stateLabelReconnecting: {
+    color: COLORS.error,
+  },
 
   // Timer
   timer: {
@@ -828,6 +983,40 @@ const styles = StyleSheet.create({
     color: COLORS.error,
     marginBottom: 16,
     textAlign: 'center',
+  },
+
+  // VoIP Available Badge (incoming)
+  voipAvailableBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 95, 58, 0.08)',
+    marginBottom: 16,
+  },
+  voipAvailableText: {
+    fontSize: 11,
+    color: COLORS.primary,
+    fontWeight: '500',
+  },
+
+  // Call Mode Indicator (connecting)
+  callModeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: COLORS.surfaceContainerLow,
+    marginBottom: 16,
+  },
+  callModeText: {
+    fontSize: 12,
+    color: COLORS.onSurface,
+    fontWeight: '500',
   },
 
   // Incoming Call Actions
@@ -943,6 +1132,17 @@ const styles = StyleSheet.create({
     color: COLORS.outline,
     fontWeight: '500',
   },
+  voipStatusReconnecting: {
+    color: COLORS.error,
+  },
+
+  // Waiting text
+  waitingText: {
+    fontSize: 12,
+    color: COLORS.outline,
+    fontStyle: 'italic',
+    marginBottom: 16,
+  },
 
   // Active Call Action Row
   actionRow: {
@@ -1054,12 +1254,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  // Call Again Button
+  // Call Again Options
+  callAgainOptions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
   callAgainButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 16,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 20,
