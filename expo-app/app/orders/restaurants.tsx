@@ -18,6 +18,7 @@ import {
 import { useRouter } from 'expo-router';
 import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { Ionicons } from '@expo/vector-icons';
 import { Merchant } from '@/src/types';
 
 export default function RestaurantsScreen() {
@@ -28,6 +29,7 @@ export default function RestaurantsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [error, setError] = useState<string | null>(null);
 
   const categories = [
     { id: 'all', label: 'All' },
@@ -46,6 +48,7 @@ export default function RestaurantsScreen() {
 
   const loadMerchants = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await api.getMerchants('RESTAURANT');
       if (response.success && response.data) {
@@ -53,6 +56,7 @@ export default function RestaurantsScreen() {
       }
     } catch (error) {
       console.error('Failed to load merchants:', error);
+      setError('Failed to load data. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -72,6 +76,7 @@ export default function RestaurantsScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setError(null);
     await loadMerchants();
     setRefreshing(false);
   };
@@ -84,7 +89,7 @@ export default function RestaurantsScreen() {
     >
       {/* Image */}
       <View style={styles.merchantImageContainer}>
-        <Text style={styles.merchantEmoji}>🍽️</Text>
+        <Ionicons name="restaurant-outline" size={24} color={COLORS.primary} />
       </View>
 
       {/* Details */}
@@ -93,8 +98,8 @@ export default function RestaurantsScreen() {
         <Text style={styles.merchantDescription} numberOfLines={1}>{item.description}</Text>
         
         <View style={styles.merchantMetaRow}>
-          <Text style={styles.ratingStar}>⭐</Text>
-          <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>
+          <Ionicons name="star" size={14} color="#F59E0B" />
+          <Text style={styles.ratingText}>{(item.rating ?? 0).toFixed(1)}</Text>
           <Text style={styles.metaSeparator}>•</Text>
           <Text style={styles.merchantAddress}>{item.address}</Text>
         </View>
@@ -150,7 +155,16 @@ export default function RestaurantsScreen() {
       </View>
 
       {/* List */}
-      {isLoading ? (
+      {error && filteredMerchants.length === 0 ? (
+        <View style={styles.errorContainer}>
+          <Ionicons name="cloud-offline-outline" size={48} color={COLORS.outline} />
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadMerchants} activeOpacity={0.7}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.primary} />
         </View>
@@ -166,7 +180,7 @@ export default function RestaurantsScreen() {
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>🍽️</Text>
+              <Ionicons name="restaurant-outline" size={32} color={COLORS.outlineVariant} />
               <Text style={styles.emptyText}>No restaurants found</Text>
             </View>
           }
@@ -355,5 +369,35 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     ...TYPOGRAPHY.bodyMd,
     textAlign: 'center',
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.xl,
+  },
+  errorTitle: {
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    marginTop: SPACING.md,
+  },
+  errorMessage: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.lg,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+  },
+  retryButtonText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onPrimary,
+    fontWeight: '600',
   },
 });

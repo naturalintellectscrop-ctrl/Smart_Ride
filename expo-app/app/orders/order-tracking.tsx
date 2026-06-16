@@ -21,6 +21,7 @@ import { useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { Order } from '@/src/types';
+import { Ionicons } from '@expo/vector-icons';
 
 // Terminal states where polling should stop
 const TERMINAL_STATES = ['DELIVERED', 'CANCELLED', 'COMPLETED'];
@@ -29,12 +30,12 @@ const TERMINAL_STATES = ['DELIVERED', 'CANCELLED', 'COMPLETED'];
 const POLL_INTERVAL = 5000;
 
 const ORDER_STATUS_FLOW = [
-  { status: 'ORDER_CREATED', label: 'Order Placed', icon: '📝' },
-  { status: 'MERCHANT_ACCEPTED', label: 'Confirmed', icon: '✅' },
-  { status: 'PREPARING', label: 'Preparing', icon: '👨‍🍳' },
-  { status: 'READY_FOR_PICKUP', label: 'Ready', icon: '📦' },
-  { status: 'OUT_FOR_DELIVERY', label: 'On the Way', icon: '🚗' },
-  { status: 'DELIVERED', label: 'Delivered', icon: '🎉' },
+  { status: 'ORDER_CREATED', label: 'Order Placed', icon: 'create-outline' },
+  { status: 'MERCHANT_ACCEPTED', label: 'Confirmed', icon: 'checkmark-circle-outline' },
+  { status: 'PREPARING', label: 'Preparing', icon: 'person-outline' },
+  { status: 'READY_FOR_PICKUP', label: 'Ready', icon: 'cube-outline' },
+  { status: 'OUT_FOR_DELIVERY', label: 'On the Way', icon: 'car-sport-outline' },
+  { status: 'DELIVERED', label: 'Delivered', icon: 'checkmark-done-outline' },
 ];
 
 export default function OrderTrackingScreen() {
@@ -45,6 +46,7 @@ export default function OrderTrackingScreen() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastUpdateTimestamp = useRef(0); // Track last state update time to prevent stale poll overwrites
 
   // ==========================================
   // POLLING FALLBACK
@@ -55,6 +57,12 @@ export default function OrderTrackingScreen() {
 
   const pollOrderStatus = async () => {
     if (!params.orderId) return;
+
+    // Skip poll if a socket update happened recently (within 5 seconds)
+    // This prevents stale poll data from overwriting fresh socket data
+    if (Date.now() - lastUpdateTimestamp.current < 5000) {
+      return;
+    }
 
     try {
       const response = await api.getOrder(params.orderId);
@@ -147,6 +155,7 @@ export default function OrderTrackingScreen() {
     const unsubscribe = socketService.on('task:status:update', (data: { taskId: string; status: string }) => {
       const taskId = taskIdRef.current;
       if (data.taskId === taskId) {
+        lastUpdateTimestamp.current = Date.now(); // Mark socket update as most recent
         setOrder(prev => prev ? { ...prev, status: data.status as any } : prev);
 
         // Stop polling if terminal state
@@ -277,7 +286,7 @@ export default function OrderTrackingScreen() {
                         isActive ? styles.stepIconActive : styles.stepIconInactive,
                       ]}
                     >
-                      <Text style={styles.stepIcon}>{step.icon}</Text>
+                      <Ionicons name={step.icon as any} size={14} color={isActive ? COLORS.onPrimary : COLORS.onSurfaceVariant} />
                     </View>
                     <Text 
                       style={[
@@ -302,17 +311,17 @@ export default function OrderTrackingScreen() {
               <Text style={styles.cardLabel}>Restaurant</Text>
               <View style={styles.merchantRow}>
                 <View style={styles.merchantImagePlaceholder}>
-                  <Text style={styles.merchantEmoji}>🍽️</Text>
+                  <Ionicons name="restaurant-outline" size={24} color={COLORS.primary} />
                 </View>
                 <View style={styles.merchantInfo}>
-                  <Text style={styles.merchantName}>{order.merchant.name}</Text>
-                  <Text style={styles.merchantAddress}>{order.merchant.address}</Text>
+                  <Text style={styles.merchantName}>{order.merchant?.name ?? 'Merchant'}</Text>
+                  <Text style={styles.merchantAddress}>{order.merchant?.address ?? ''}</Text>
                 </View>
                 <TouchableOpacity 
                   style={styles.callButton}
                   onPress={handleCallMerchant}
                 >
-                  <Text style={styles.callIcon}>📞</Text>
+                  <Ionicons name="call-outline" size={16} color={COLORS.primary} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -337,7 +346,7 @@ export default function OrderTrackingScreen() {
           <View style={styles.card}>
             <Text style={styles.cardLabel}>Delivery Address</Text>
             <View style={styles.addressRow}>
-              <Text style={styles.addressIcon}>📍</Text>
+              <Ionicons name="location-outline" size={14} color={COLORS.primary} style={{ marginRight: SPACING.sm }} />
               <Text style={styles.addressText}>{order.deliveryAddress}</Text>
             </View>
           </View>

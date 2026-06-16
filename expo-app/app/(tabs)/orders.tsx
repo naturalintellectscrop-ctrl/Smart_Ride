@@ -69,7 +69,7 @@ export default function OrdersScreen() {
     try {
       const response = await api.getOrders();
       if (response.success && response.data) {
-        setOrders(response.data.data || []);
+        setOrders(response.data?.data ?? []);
       }
     } catch (error) {
       console.error('Failed to load orders:', error);
@@ -398,7 +398,7 @@ function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order;
                 <Ionicons name="time-outline" size={14} color={COLORS.outline} />
                 <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
               </View>
-              <Text style={styles.orderAmount}>UGX {item.totalAmount.toLocaleString()}</Text>
+              <Text style={styles.orderAmount}>UGX {(item.totalAmount ?? 0).toLocaleString()}</Text>
             </View>
           </View>
         </GlassCard>

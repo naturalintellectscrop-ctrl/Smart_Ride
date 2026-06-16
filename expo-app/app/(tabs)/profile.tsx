@@ -27,6 +27,7 @@ import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { useTheme, ThemeColors } from '@/src/context/theme-context';
 import { GlowHeader, GlassCard, GradientButton } from '@/src/components';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function ProfileScreen() {
   const router = useRouter();
@@ -94,40 +95,40 @@ export default function ProfileScreen() {
     {
       section: 'Account',
       items: [
-        { icon: '👤', label: 'Edit Profile', onPress: () => router.push('/profile/edit') },
-        { icon: '🔄', label: `Switch Role (${user?.role || 'Client'})`, onPress: () => router.push('/auth/role-selection') },
-        { icon: '📍', label: 'Saved Addresses', onPress: () => {} },
-        { icon: '💳', label: 'Payment Methods', onPress: () => router.push('/wallet') },
-        { icon: '👥', label: 'Emergency Contacts', onPress: () => {} },
+        { icon: 'person-outline', label: 'Edit Profile', onPress: () => router.push('/profile/edit') },
+        { icon: 'refresh-outline', label: `Switch Role (${user?.role || 'Client'})`, onPress: () => router.push('/auth/role-selection') },
+        { icon: 'location-outline', label: 'Saved Addresses', onPress: () => Alert.alert('Coming Soon', 'Saved addresses will be available soon') },
+        { icon: 'card-outline', label: 'Payment Methods', onPress: () => router.push('/wallet') },
+        { icon: 'people-outline', label: 'Emergency Contacts', onPress: () => router.push('/sos') },
       ],
     },
     {
       section: 'Preferences',
       items: [
         {
-          icon: '🌙',
+          icon: 'moon-outline',
           label: 'Dark Mode',
           type: 'toggle',
           value: isDark,
           onToggle: () => toggleTheme(),
         },
         { 
-          icon: '🔔', 
+          icon: 'notifications-outline', 
           label: 'Notifications', 
           type: 'toggle',
           value: notificationsEnabled,
           onToggle: setNotificationsEnabled,
         },
-        { icon: '🌍', label: 'Language', value: 'English', onPress: () => {} },
+        { icon: 'globe-outline', label: 'Language', value: 'English', onPress: () => Alert.alert('Coming Soon', 'Language settings will be available soon') },
       ],
     },
     {
       section: 'Support',
       items: [
-        { icon: '❓', label: 'Help Center', onPress: () => Linking.openURL('https://smartrideug.vercel.app') },
-        { icon: '💬', label: 'Contact Support', onPress: () => Linking.openURL('https://smartrideug.vercel.app/contact') },
-        { icon: '📜', label: 'Terms of Service', onPress: () => Linking.openURL('https://smartrideug.vercel.app/terms') },
-        { icon: '🔒', label: 'Privacy Policy', onPress: () => Linking.openURL('https://smartrideug.vercel.app/privacy') },
+        { icon: 'help-circle-outline', label: 'Help Center', onPress: () => Linking.openURL('https://smartrideug.vercel.app') },
+        { icon: 'chatbubble-outline', label: 'Contact Support', onPress: () => Linking.openURL('https://smartrideug.vercel.app/contact') },
+        { icon: 'document-text-outline', label: 'Terms of Service', onPress: () => Linking.openURL('https://smartrideug.vercel.app/terms') },
+        { icon: 'lock-closed-outline', label: 'Privacy Policy', onPress: () => Linking.openURL('https://smartrideug.vercel.app/privacy') },
       ],
     },
   ];
@@ -139,7 +140,7 @@ export default function ProfileScreen() {
         <Animated.View entering={FadeInDown.duration(400).springify()}>
           <GlowHeader
             title="Profile"
-            rightAction={{ icon: 'settings-outline', onPress: () => {} }}
+            rightAction={{ icon: 'settings-outline', onPress: () => Alert.alert('Coming Soon', 'Settings will be available soon') }}
           >
             {/* User Info as children of GlowHeader */}
             <View style={styles.userInfo}>
@@ -147,7 +148,7 @@ export default function ProfileScreen() {
                 entering={ZoomIn.delay(200).duration(300)}
                 style={styles.avatar}
               >
-                <Text style={styles.avatarText}>👤</Text>
+                <Ionicons name="person" size={32} color={colors.primary} />
               </Animated.View>
               <View style={styles.userDetails}>
                 <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
@@ -298,7 +299,7 @@ function MenuItem({ item, isLast, colors }: { item: any; isLast: boolean; colors
       onPress={item.type === 'toggle' ? undefined : item.onPress}
       activeOpacity={0.7}
     >
-      <Text style={itemStyles.menuIcon}>{item.icon}</Text>
+      <Ionicons name={item.icon} size={20} color={colors.text} style={{ marginRight: 12 }} />
       <Text style={itemStyles.menuLabel}>{item.label}</Text>
       {item.type === 'toggle' ? (
         <Switch

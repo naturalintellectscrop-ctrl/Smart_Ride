@@ -61,7 +61,7 @@ export default function ForgotPasswordScreen() {
     ]).start();
 
     // Logo floating animation
-    Animated.loop(
+    const logoLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(logoFloat, {
           toValue: -8,
@@ -76,10 +76,11 @@ export default function ForgotPasswordScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    logoLoop.start();
 
     // Glow pulse animation
-    Animated.loop(
+    const glowLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(glowPulse, {
           toValue: 1,
@@ -94,7 +95,13 @@ export default function ForgotPasswordScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    glowLoop.start();
+
+    return () => {
+      logoLoop.stop();
+      glowLoop.stop();
+    };
   }, []);
 
   const glowOpacity = glowPulse.interpolate({
@@ -276,7 +283,7 @@ export default function ForgotPasswordScreen() {
 
         {/* Security Notice */}
         <Animated.View style={[styles.securityNotice, { opacity: fadeAnim }]}>
-          <Ionicons name="lock-closed-outline" size={12} color={COLORS.textDim} />
+          <Ionicons name="lock-closed-outline" size={12} color={COLORS.outlineVariant} />
           <Text style={styles.securityText}>
             Secure reset • Link expires in 1 hour
           </Text>
@@ -289,7 +296,7 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   backgroundGradient: {
     position: 'absolute',
@@ -333,7 +340,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 24,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderWidth: 1,
     borderColor: 'rgba(0, 255, 136, 0.2)',
     alignItems: 'center',
@@ -370,7 +377,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   infoText: {
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
     fontSize: 13,
     flex: 1,
     lineHeight: 18,
@@ -405,13 +412,13 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   successTitle: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 12,
   },
   successMessage: {
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -419,7 +426,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   successHint: {
-    color: COLORS.textDim,
+    color: COLORS.outlineVariant,
     fontSize: 12,
     textAlign: 'center',
     marginBottom: 24,
@@ -442,7 +449,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   securityText: {
-    color: COLORS.textDim,
+    color: COLORS.outlineVariant,
     fontSize: 11,
   },
 });

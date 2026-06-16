@@ -38,9 +38,9 @@ export async function POST(request: NextRequest) {
     const fee = Math.ceil(amount * 0.015);
     const totalAmount = amount + fee;
 
-    // Find sender's wallet
+    // Find sender's wallet — Wallet model uses ownerId/ownerType composite key
     const senderWallet = await db.wallet.findFirst({
-      where: { userId: senderId },
+      where: { ownerId: senderId, ownerType: 'USER' },
     });
 
     if (!senderWallet) {
@@ -73,20 +73,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find or create recipient's wallet
+    // Find or create recipient's wallet — Wallet model uses ownerId/ownerType composite key
     let recipientWallet = await db.wallet.findFirst({
-      where: { userId: recipientUser.id },
+      where: { ownerId: recipientUser.id, ownerType: 'USER' },
     });
 
     if (!recipientWallet) {
       recipientWallet = await db.wallet.create({
         data: {
-          userId: recipientUser.id,
+          ownerId: recipientUser.id,
+          ownerType: 'USER',
           balance: 0,
           pendingBalance: 0,
           totalDeposited: 0,
           totalWithdrawn: 0,
           totalSpent: 0,
+          totalReceived: 0,
           status: 'ACTIVE',
         },
       });
@@ -94,6 +96,9 @@ export async function POST(request: NextRequest) {
 
     // Perform the transfer in a transaction
     const result = await db.$transaction(async (tx) => {
+      const senderBalanceBefore = senderWallet.balance;
+      const recipientBalanceBefore = recipientWallet!.balance;
+
       // Deduct from sender
       await tx.wallet.update({
         where: { id: senderWallet.id },
@@ -112,14 +117,15 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create sender transaction
+      // Create sender transaction — balanceBefore and balanceAfter are both required
       const senderTransaction = await tx.walletTransaction.create({
         data: {
           walletId: senderWallet.id,
           transactionType: 'TRANSFER_OUT',
           description: note || `Transfer to ${recipientUser.name || recipientPhone}`,
           amount: -amount,
-          balanceAfter: senderWallet.balance - totalAmount,
+          balanceBefore: senderBalanceBefore,
+          balanceAfter: senderBalanceBefore - totalAmount,
           status: 'COMPLETED',
         },
       });
@@ -131,7 +137,8 @@ export async function POST(request: NextRequest) {
           transactionType: 'FEE',
           description: 'Transfer fee',
           amount: -fee,
-          balanceAfter: senderWallet.balance - totalAmount,
+          balanceBefore: senderBalanceBefore - totalAmount + amount,
+          balanceAfter: senderBalanceBefore - totalAmount,
           status: 'COMPLETED',
         },
       });
@@ -143,7 +150,8 @@ export async function POST(request: NextRequest) {
           transactionType: 'TRANSFER_IN',
           description: note || `Received from ${user.name || 'Smart Ride user'}`,
           amount: amount,
-          balanceAfter: recipientWallet!.balance + amount,
+          balanceBefore: recipientBalanceBefore,
+          balanceAfter: recipientBalanceBefore + amount,
           status: 'COMPLETED',
         },
       });

@@ -21,6 +21,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
+import { api } from '../../src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
 import { GradientButton } from '../../src/components/GradientButton';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -34,7 +35,7 @@ const ROLES = [
     title: 'Client',
     subtitle: 'Book rides & order',
     description: 'Request rides, order food, shop, and more',
-    icon: '🚗',
+    icon: 'car-outline',
     gradient: ['#005f3a', '#0e7a4d'] as const,
     bgAccent: 'rgba(0, 95, 58, 0.08)',
     borderColor: 'rgba(0, 95, 58, 0.15)',
@@ -44,7 +45,7 @@ const ROLES = [
     title: 'Rider / Boda',
     subtitle: 'Earn on the road',
     description: 'Accept ride requests and earn money as a boda or car driver',
-    icon: '🏍️',
+    icon: 'bicycle-outline',
     gradient: ['#0e7a4d', '#006e2f'] as const,
     bgAccent: 'rgba(14, 122, 77, 0.08)',
     borderColor: 'rgba(14, 122, 77, 0.15)',
@@ -54,7 +55,7 @@ const ROLES = [
     title: 'Driver',
     subtitle: 'Professional driver',
     description: 'Drive cars, delivery vehicles, or provide specialized transport services',
-    icon: '🚐',
+    icon: 'bus-outline',
     gradient: ['#1a6b3c', '#0e7a4d'] as const,
     bgAccent: 'rgba(26, 107, 60, 0.08)',
     borderColor: 'rgba(26, 107, 60, 0.15)',
@@ -64,10 +65,20 @@ const ROLES = [
     title: 'Merchant',
     subtitle: 'Sell & deliver',
     description: 'List your restaurant, shop or pharmacy on Smart Ride',
-    icon: '🏪',
+    icon: 'storefront-outline',
     gradient: ['#4b5264', '#636a7c'] as const,
     bgAccent: 'rgba(75, 82, 100, 0.08)',
     borderColor: 'rgba(75, 82, 100, 0.15)',
+  },
+  {
+    id: 'PHARMACIST',
+    title: 'Pharmacist',
+    subtitle: 'Medicine & healthcare',
+    description: 'Manage medicine catalog, prescriptions, and healthcare services',
+    icon: 'medkit-outline',
+    gradient: ['#2e7d32', '#388e3c'] as const,
+    bgAccent: 'rgba(46, 125, 50, 0.08)',
+    borderColor: 'rgba(46, 125, 50, 0.15)',
   },
 ];
 
@@ -78,13 +89,25 @@ export default function RoleSelectionScreen() {
   const [selectedRole, setSelectedRole] = useState<string | null>(user?.role || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!selectedRole) return;
+
+    setIsSubmitting(true);
 
     // Update the user's role in the auth store
     if (user) {
       setUser({ ...user, role: selectedRole });
     }
+
+    // Persist role to the API
+    try {
+      await api.updateUserRole(selectedRole);
+    } catch (error) {
+      // Non-blocking: role is already saved locally; API sync can retry later
+      console.warn('Failed to persist role to API:', error);
+    }
+
+    setIsSubmitting(false);
 
     // Navigate based on role
     switch (selectedRole) {
@@ -98,6 +121,9 @@ export default function RoleSelectionScreen() {
       case 'MERCHANT':
         // Check if merchant has completed registration — for now go to merchant register
         router.replace('/merchant/register');
+        break;
+      case 'PHARMACIST':
+        router.replace('/pharmacist/index');
         break;
       case 'CLIENT':
       default:
@@ -150,7 +176,7 @@ export default function RoleSelectionScreen() {
         {/* Hero Section */}
         <View style={styles.heroSection}>
           <View style={styles.heroIconContainer}>
-            <Text style={styles.heroIcon}>👋</Text>
+            <Ionicons name="hand-left-outline" size={32} color={COLORS.primary} />
           </View>
           <Text style={styles.heroTitle}>Welcome, {user?.name?.split(' ')[0] || 'there'}!</Text>
           <Text style={styles.heroSubtitle}>
@@ -176,7 +202,7 @@ export default function RoleSelectionScreen() {
                 {/* Selection indicator */}
                 <View style={styles.roleCardHeader}>
                   <View style={[styles.roleIconContainer, { backgroundColor: role.bgAccent }]}>
-                    <Text style={styles.roleIcon}>{role.icon}</Text>
+                    <Ionicons name={role.icon as any} size={28} color={COLORS.primary} />
                   </View>
                   <View style={styles.roleInfo}>
                     <Text style={styles.roleTitle}>{role.title}</Text>
@@ -220,6 +246,13 @@ export default function RoleSelectionScreen() {
                       <View style={styles.tag}><Text style={styles.tagText}>Restaurant</Text></View>
                       <View style={styles.tag}><Text style={styles.tagText}>Shop</Text></View>
                       <View style={styles.tag}><Text style={styles.tagText}>Pharmacy</Text></View>
+                    </>
+                  )}
+                  {role.id === 'PHARMACIST' && (
+                    <>
+                      <View style={styles.tag}><Text style={styles.tagText}>Medicine</Text></View>
+                      <View style={styles.tag}><Text style={styles.tagText}>Prescriptions</Text></View>
+                      <View style={styles.tag}><Text style={styles.tagText}>Healthcare</Text></View>
                     </>
                   )}
                 </View>

@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import {
   successResponse,
   errorResponse,
@@ -9,20 +9,24 @@ import {
   addItemToCart,
   type AddToCartParams,
 } from '@/lib/cart/cart-service';
+import { requireAuth } from '@/lib/auth/guards';
 
 // ============================================
 // GET /api/cart — Get user's cart with items
+// SECURITY: Requires authentication - userId derived from token
 // ============================================
 export async function GET(request: NextRequest) {
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const user = authResult.user!;
+
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return errorResponse('userId is required', 400);
-    }
-
-    const cart = await getCartWithItems(userId);
+    const cart = await getCartWithItems(user.userId);
 
     if (!cart) {
       return successResponse({ cart: null, items: [] }, 'No cart found');
@@ -39,17 +43,23 @@ export async function GET(request: NextRequest) {
 
 // ============================================
 // POST /api/cart — Add item to cart
+// SECURITY: Requires authentication - userId derived from token
 // ============================================
 export async function POST(request: NextRequest) {
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const user = authResult.user!;
+
   try {
     const body = await request.json();
-    const { userId, menuItemId, quantity, specialNotes } = body;
+    const { menuItemId, quantity, specialNotes } = body;
 
     // Validate required fields
-    if (!userId) {
-      return errorResponse('userId is required', 400);
-    }
-
     if (!menuItemId) {
       return errorResponse('menuItemId is required', 400);
     }
@@ -64,7 +74,7 @@ export async function POST(request: NextRequest) {
       specialNotes,
     };
 
-    const cart = await addItemToCart(userId, params);
+    const cart = await addItemToCart(user.userId, params);
 
     return successResponse(cart, 'Item added to cart');
   } catch (err) {

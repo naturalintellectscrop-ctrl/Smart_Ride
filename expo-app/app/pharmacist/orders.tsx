@@ -20,6 +20,7 @@ import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 type OrderTab = 'ALL' | 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
 
@@ -172,7 +173,7 @@ export default function PharmacistOrdersScreen() {
             ))
           ) : (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📦</Text>
+              <Ionicons name="cube-outline" size={32} color={COLORS.outlineVariant} />
               <Text style={styles.emptyTitle}>No orders found</Text>
               <Text style={styles.emptySubtitle}>
                 {activeTab === 'ALL' ? 'Orders will appear here when patients place them' : `No ${activeTab.toLowerCase()} orders`}

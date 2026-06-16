@@ -23,11 +23,12 @@ export async function GET(req: NextRequest) {
 
     await setRLSContext({ userId: payload.userId, role: payload.role });
 
-    // Use Task model for rides (RIDE type tasks)
+    // Use Task model for rides (ride-type tasks)
+    // Prisma field is `taskType`, not `type`; enum values are SMART_BODA_RIDE / SMART_CAR_RIDE
     const rides = await db.task.findMany({
       where: {
         clientId: payload.userId,
-        type: { in: ['RIDE_BODA', 'RIDE_CAR', 'RIDE'] },
+        taskType: { in: ['SMART_BODA_RIDE', 'SMART_CAR_RIDE'] },
       },
       orderBy: { createdAt: 'desc' },
       take: 20,
@@ -68,16 +69,17 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const {
-      type = 'RIDE_BODA',
+      taskType = 'SMART_BODA_RIDE',
       pickupAddress,
-      pickupLat,
-      pickupLng,
+      pickupLatitude,
+      pickupLongitude,
       dropoffAddress,
-      dropoffLat,
-      dropoffLng,
-      fare,
-      distance,
-      duration,
+      dropoffLatitude,
+      dropoffLongitude,
+      totalAmount,
+      baseFare,
+      distanceKm,
+      estimatedDuration,
       paymentMethod = 'CASH',
     } = body;
 
@@ -88,22 +90,46 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Create a ride task using the Task model
+    // Validate taskType against the TaskType enum
+    const validTaskTypes = ['SMART_BODA_RIDE', 'SMART_CAR_RIDE', 'FOOD_DELIVERY', 'SHOPPING', 'ITEM_DELIVERY', 'SMART_HEALTH_DELIVERY'];
+    if (!validTaskTypes.includes(taskType)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid taskType. Must be one of: ${validTaskTypes.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate paymentMethod against the PaymentMethod enum
+    const validPaymentMethods = ['CASH', 'MTN_MOMO', 'AIRTEL_MONEY', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD', 'WALLET'];
+    if (!validPaymentMethods.includes(paymentMethod)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid paymentMethod. Must be one of: ${validPaymentMethods.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Generate a unique task number
+    const taskNumber = `SR${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+    // Create a ride task using the Task model with correct Prisma field names
     const ride = await db.task.create({
       data: {
+        taskNumber,
         clientId: payload.userId,
-        type,
-        status: 'PENDING',
+        taskType,
+        status: 'CREATED',       // CREATED is the valid initial status in TaskStatus enum (not 'PENDING')
         pickupAddress,
-        pickupLat: pickupLat || 0.3476,
-        pickupLng: pickupLng || 32.5825,
+        pickupLatitude: pickupLatitude || 0.3476,
+        pickupLongitude: pickupLongitude || 32.5825,
         dropoffAddress,
-        dropoffLat: dropoffLat || 0.3576,
-        dropoffLng: dropoffLng || 32.5925,
-        fare: fare || 0,
-        distance: distance || 0,
-        duration: duration || 0,
+        dropoffLatitude: dropoffLatitude || 0.3576,
+        dropoffLongitude: dropoffLongitude || 32.5925,
+        baseFare: baseFare || 0,            // Required Float field
+        totalAmount: totalAmount || 0,       // Required Float field (was `fare`)
+        distanceKm: distanceKm || null,      // Optional Float (was `distance`)
+        estimatedDuration: estimatedDuration || null, // Optional Int (was `duration`)
         paymentMethod,
+        paymentStatus: 'PENDING',
       },
     });
 

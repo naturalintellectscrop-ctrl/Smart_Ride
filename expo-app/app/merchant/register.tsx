@@ -19,13 +19,14 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { Ionicons } from '@expo/vector-icons';
 
 const MERCHANT_TYPES = [
-  { key: 'RESTAURANT', label: '🍽️ Restaurant', description: 'Food & beverage' },
-  { key: 'SUPERMARKET', label: '🛒 Supermarket', description: 'Groceries & essentials' },
-  { key: 'RETAIL_STORE', label: '🏪 Retail Store', description: 'General merchandise' },
-  { key: 'PHARMACY', label: '💊 Pharmacy', description: 'Health & medicine' },
-  { key: 'GROCERY', label: '🥬 Grocery', description: 'Fresh produce' },
+  { key: 'RESTAURANT', label: 'Restaurant', icon: 'restaurant-outline', description: 'Food & beverage' },
+  { key: 'SUPERMARKET', label: 'Supermarket', icon: 'cart-outline', description: 'Groceries & essentials' },
+  { key: 'RETAIL_STORE', label: 'Retail Store', icon: 'storefront-outline', description: 'General merchandise' },
+  { key: 'PHARMACY', label: 'Pharmacy', icon: 'medkit-outline', description: 'Health & medicine' },
+  { key: 'GROCERY', label: 'Grocery', icon: 'leaf-outline', description: 'Fresh produce' },
 ];
 
 export default function MerchantRegisterScreen() {
@@ -131,6 +132,7 @@ export default function MerchantRegisterScreen() {
               ]}
               onPress={() => setBusinessType(type.key)}
             >
+              <Ionicons name={type.icon as any} size={24} color={businessType === type.key ? COLORS.primary : COLORS.onSurfaceVariant} />
               <Text style={styles.typeLabel}>{type.label}</Text>
               <Text style={[styles.typeDesc, businessType === type.key && styles.typeDescSelected]}>
                 {type.description}
@@ -175,7 +177,7 @@ export default function MerchantRegisterScreen() {
         {/* Error Message */}
         {error && (
           <View style={styles.errorCard}>
-            <Text style={styles.errorText}>⚠️ {error}</Text>
+            <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
           </View>
         )}
 
@@ -194,7 +196,7 @@ export default function MerchantRegisterScreen() {
 
         {/* Info Note */}
         <View style={styles.infoCard}>
-          <Text style={styles.infoIcon}>ℹ️</Text>
+          <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
           <Text style={styles.infoText}>
             By registering, you agree to Smart Ride's merchant terms and conditions.
             Your account will be reviewed and activated within 24 hours.

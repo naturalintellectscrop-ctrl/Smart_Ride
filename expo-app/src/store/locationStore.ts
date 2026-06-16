@@ -8,6 +8,12 @@ import { create } from 'zustand';
 import * as Location from 'expo-location';
 import { DEFAULT_LOCATION } from '../constants';
 
+export interface SelectedLocation {
+  latitude: number;
+  longitude: number;
+  address: string;
+}
+
 interface LocationState {
   latitude: number;
   longitude: number;
@@ -15,12 +21,22 @@ interface LocationState {
   isLocating: boolean;
   error: string | null;
   hasPermission: boolean;
-  
+
+  // Pickup / Dropoff selection (used by location-picker to return data to caller)
+  pickupLocation: SelectedLocation | null;
+  dropoffLocation: SelectedLocation | null;
+
   setLocation: (lat: number, lng: number, address?: string) => void;
   getCurrentLocation: () => Promise<void>;
   setAddress: (address: string) => void;
   setError: (error: string | null) => void;
   requestPermission: () => Promise<boolean>;
+
+  // Pickup / Dropoff setters
+  setPickupLocation: (location: SelectedLocation | null) => void;
+  setDropoffLocation: (location: SelectedLocation | null) => void;
+  clearPickupLocation: () => void;
+  clearDropoffLocation: () => void;
 }
 
 // Location store with expo-location
@@ -32,6 +48,10 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   isLocating: false,
   error: null,
   hasPermission: false,
+
+  // Pickup / Dropoff selection
+  pickupLocation: null,
+  dropoffLocation: null,
 
   setLocation: (latitude, longitude, address) => {
     set({ latitude, longitude, address: address || get().address });
@@ -116,8 +136,14 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   },
 
   setAddress: (address) => set({ address }),
-  
+
   setError: (error) => set({ error }),
+
+  // Pickup / Dropoff setters
+  setPickupLocation: (location) => set({ pickupLocation: location }),
+  setDropoffLocation: (location) => set({ dropoffLocation: location }),
+  clearPickupLocation: () => set({ pickupLocation: null }),
+  clearDropoffLocation: () => set({ dropoffLocation: null }),
 }));
 
 console.log('[LOCATION-STORE] Store initialized with expo-location');

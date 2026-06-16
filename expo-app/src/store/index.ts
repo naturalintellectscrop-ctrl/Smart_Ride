@@ -4,6 +4,7 @@
 
 export { useAuthStore } from './authStore';
 export { useLocationStore } from './locationStore';
+export type { SelectedLocation } from './locationStore';
 export { useTaskStore } from './taskStore';
 export { useCartStore } from './cartStore';
 export { useMerchantStore } from './merchantStore';

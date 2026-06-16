@@ -1,19 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { jwtVerify } from 'jose';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { verifyToken } from '@/lib/auth/jwt';
 import { hash, compare } from 'bcryptjs';
 import { z } from 'zod';
-
-const getSecretKey = () => {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) {
-    if (process.env.NODE_ENV === 'production') {
-      throw new Error('JWT_SECRET environment variable is required in production');
-    }
-    return new TextEncoder().encode('dev-secret-key-not-for-production');
-  }
-  return new TextEncoder().encode(secret);
-};
 
 const changePasswordSchema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
@@ -29,9 +18,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
     }
 
-    // Verify token
-    const { payload } = await jwtVerify(token, getSecretKey());
-    const userId = payload.userId as string;
+    // Verify token using jsonwebtoken (consistent with rest of codebase)
+    const payload = verifyToken(token);
+    if (!payload || !payload.userId) {
+      return NextResponse.json({ success: false, error: 'Invalid or expired token' }, { status: 401 });
+    }
+    const userId = payload.userId;
 
     // Validate request body
     const body = await request.json();

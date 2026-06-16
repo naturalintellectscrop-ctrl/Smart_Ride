@@ -12,13 +12,16 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
   StyleSheet,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMerchantStore } from '@/src/store';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { api } from '@/src/services';
 import { MerchantTransaction } from '@/src/types';
+import { Ionicons } from '@expo/vector-icons';
 
 const PERIOD_TABS = [
   { key: 'day', label: 'Today' },
@@ -68,11 +71,11 @@ export default function MerchantEarningsScreen() {
 
   const getTransactionIcon = (type: string) => {
     switch (type) {
-      case 'ORDER_PAYMENT': return '💰';
-      case 'PAYOUT': return '🏦';
-      case 'REFUND': return '↩️';
-      case 'ADJUSTMENT': return '🔄';
-      default: return '📋';
+      case 'ORDER_PAYMENT': return 'wallet-outline';
+      case 'PAYOUT': return 'business-outline';
+      case 'REFUND': return 'arrow-back-outline';
+      case 'ADJUSTMENT': return 'sync-outline';
+      default: return 'clipboard-outline';
     }
   };
 
@@ -134,7 +137,7 @@ export default function MerchantEarningsScreen() {
           </View>
         ) : earningsError ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorEmoji}>⚠️</Text>
+            <Ionicons name="alert-circle-outline" size={20} color={COLORS.error} />
             <Text style={styles.errorText}>{earningsError}</Text>
             <TouchableOpacity
               style={styles.retryButton}
@@ -158,7 +161,7 @@ export default function MerchantEarningsScreen() {
               <View style={styles.balanceRow}>
                 {/* Available Balance */}
                 <View style={[styles.balanceCard, { borderColor: `${COLORS.primary}20` }]}>
-                  <Text style={styles.balanceIcon}>✅</Text>
+                  <Ionicons name="checkmark-circle-outline" size={20} color={COLORS.success} />
                   <Text style={styles.balanceLabel}>Available</Text>
                   <Text style={[styles.balanceAmount, { color: COLORS.primary }]}>
                     {formatCurrency(earnings?.availableBalance || 0)}
@@ -178,7 +181,7 @@ export default function MerchantEarningsScreen() {
               {/* Last Payout */}
               {earnings?.lastPayoutAmount && earnings.lastPayoutAmount > 0 && (
                 <View style={styles.lastPayoutCard}>
-                  <Text style={styles.lastPayoutIcon}>🏦</Text>
+                  <Ionicons name="business-outline" size={20} color={COLORS.primary} />
                   <View style={styles.lastPayoutInfo}>
                     <Text style={styles.lastPayoutLabel}>Last Payout</Text>
                     <Text style={styles.lastPayoutDate}>
@@ -194,7 +197,38 @@ export default function MerchantEarningsScreen() {
 
             {/* Payout Request Button */}
             <View style={styles.section}>
-              <TouchableOpacity style={styles.payoutButton}>
+              <TouchableOpacity
+                style={styles.payoutButton}
+                onPress={() => {
+                  if (!merchantId) {
+                    Alert.alert('Error', 'Merchant ID not found');
+                    return;
+                  }
+                  Alert.alert(
+                    'Request Payout',
+                    `Payout available: UGX ${(earnings?.availableBalance || 0).toLocaleString()}`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Request',
+                        onPress: async () => {
+                          try {
+                            const response = await api.requestMerchantPayout(merchantId, earnings?.availableBalance);
+                            if (response.success) {
+                              Alert.alert('Success', 'Payout request submitted successfully');
+                              fetchEarnings(merchantId, activePeriod);
+                            } else {
+                              Alert.alert('Error', response.error || 'Failed to request payout');
+                            }
+                          } catch (error) {
+                            Alert.alert('Error', 'Failed to request payout');
+                          }
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
                 <Text style={styles.payoutButtonText}>Request Payout</Text>
               </TouchableOpacity>
             </View>
@@ -204,7 +238,7 @@ export default function MerchantEarningsScreen() {
               <Text style={styles.sectionTitle}>Earnings Trend</Text>
               <View style={styles.chartCard}>
                 <View style={styles.chartPlaceholder}>
-                  <Text style={styles.chartIcon}>📈</Text>
+                  <Ionicons name="trending-up-outline" size={20} color={COLORS.primary} />
                   <Text style={styles.chartText}>Earnings chart will be available with more data</Text>
                 </View>
               </View>
@@ -218,9 +252,7 @@ export default function MerchantEarningsScreen() {
                   {earnings.transactions.map((tx, index) => (
                     <View key={tx.id || index} style={styles.transactionCard}>
                       <View style={styles.transactionLeft}>
-                        <Text style={styles.transactionIcon}>
-                          {getTransactionIcon(tx.type)}
-                        </Text>
+                        <Ionicons name={getTransactionIcon(tx.type) as any} size={18} color={COLORS.onSurfaceVariant} />
                         <View style={styles.transactionInfo}>
                           <Text style={styles.transactionDesc}>{tx.description}</Text>
                           <Text style={styles.transactionDate}>{formatDate(tx.createdAt)}</Text>
@@ -242,7 +274,7 @@ export default function MerchantEarningsScreen() {
                 </View>
               ) : (
                 <View style={styles.emptyTransactions}>
-                  <Text style={styles.emptyIcon}>📋</Text>
+                  <Ionicons name="clipboard-outline" size={32} color={COLORS.outlineVariant} />
                   <Text style={styles.emptyTitle}>No Transactions</Text>
                   <Text style={styles.emptySubtitle}>Transaction history will appear here</Text>
                 </View>

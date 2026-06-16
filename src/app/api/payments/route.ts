@@ -1,5 +1,5 @@
-import { NextRequest } from 'next/server';
-import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
   errorResponse, 
@@ -10,14 +10,25 @@ import {
 } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { generateCSV, csvResponse } from '@/lib/export';
+import { requireAdmin } from '@/lib/auth/guards';
 
 /**
  * GET /api/payments
  * List all payments with pagination and filtering
  * ?action=export — Download as CSV
+ * SECURITY: Admin-only access required
  */
 export async function GET(request: NextRequest) {
-  await setServiceRoleContext();
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
+
+  await setRLSContext(admin);
   try {
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);

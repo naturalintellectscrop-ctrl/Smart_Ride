@@ -5,6 +5,7 @@
 // Emergency SOS button (w-128 h-128 bg-error
 // rounded-full with pulse animation), Emergency
 // contacts list, Trip details card, Call Support
+// CONNECTED TO BACKEND API — No mock data
 // ============================================
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -19,6 +20,7 @@ import {
   Alert,
   Vibration,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -39,6 +41,9 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, GradientButton } from '@/src/components';
+import { api } from '@/src/services/api';
+import { useAuthStore } from '@/src/store/authStore';
+import { useLocationStore } from '@/src/store/locationStore';
 
 // ============================================
 // TYPES
@@ -51,54 +56,53 @@ interface EmergencyContact {
   name: string;
   relationship: string;
   phone: string;
+  isPrimary?: boolean;
 }
 
 // ============================================
-// MOCK DATA
+// CONSTANTS
 // ============================================
 
-const MOCK_CONTACTS: EmergencyContact[] = [
+const SMART_RIDE_EMERGENCY = '+256800100100';
+const LOCATION_STREAM_INTERVAL = 5000; // 5 seconds between location updates
+
+// Fallback contacts shown when API fails or user has no saved contacts
+const FALLBACK_CONTACTS: EmergencyContact[] = [
   {
-    id: '1',
+    id: 'fallback-police',
     name: 'Police Emergency',
     relationship: 'Emergency Services',
     phone: '999',
   },
   {
-    id: '2',
+    id: 'fallback-ambulance',
     name: 'Ambulance',
     relationship: 'Medical Emergency',
     phone: '911',
   },
-  {
-    id: '3',
-    name: 'Sarah Nakamya',
-    relationship: 'Spouse',
-    phone: '+256700123456',
-  },
-  {
-    id: '4',
-    name: 'James Okello',
-    relationship: 'Brother',
-    phone: '+256700654321',
-  },
 ];
-
-const SMART_RIDE_EMERGENCY = '+256800100100';
 
 // ============================================
 // PULSING SOS BUTTON — Stitch Design: w-128 h-128 bg-error rounded-full with pulse
 // ============================================
 
-function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded }: {
+function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded, disabled }: {
   onPress: () => void;
   onLongPressStarted: () => void;
   onLongPressEnded: () => void;
+  disabled?: boolean;
 }) {
   const scale = useSharedValue(1);
   const glowOpacity = useSharedValue(0.3);
 
   useEffect(() => {
+    if (disabled) {
+      cancelAnimation(scale);
+      cancelAnimation(glowOpacity);
+      scale.value = withTiming(1);
+      glowOpacity.value = withTiming(0.15);
+      return;
+    }
     // Continuous pulsing animation
     scale.value = withRepeat(
       withSequence(
@@ -116,7 +120,7 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded }: {
       -1,
       false
     );
-  }, []);
+  }, [disabled]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -129,6 +133,7 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded }: {
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handlePressIn = () => {
+    if (disabled) return;
     onLongPressStarted();
     Vibration.vibrate([0, 50, 50, 50, 50, 50], false);
     holdTimerRef.current = setTimeout(() => {
@@ -158,6 +163,7 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded }: {
           onPressOut={handlePressOut}
           activeOpacity={0.8}
           style={styles.sosButtonTouchable}
+          disabled={disabled}
         >
           <LinearGradient
             colors={GRADIENTS.danger as unknown as [string, string]}
@@ -181,12 +187,84 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded }: {
 export default function SosScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
+  const locationStore = useLocationStore();
+
   const [sosState, setSosState] = useState<SosState>('idle');
   const [isHolding, setIsHolding] = useState(false);
   const [shareLiveLocation, setShareLiveLocation] = useState(true);
   const [flashVisible, setFlashVisible] = useState(false);
 
-  const handleActivate = () => {
+  // API-driven state
+  const [contacts, setContacts] = useState<EmergencyContact[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(true);
+  const [sosActivating, setSosActivating] = useState(false);
+  const [sosAlertId, setSosAlertId] = useState<string | null>(null);
+  const [sosError, setSosError] = useState<string | null>(null);
+
+  // Location streaming ref
+  const locationStreamRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Current location from store
+  const currentLatitude = locationStore.latitude;
+  const currentLongitude = locationStore.longitude;
+  const currentAddress = locationStore.address;
+
+  // ==========================================
+  // FETCH EMERGENCY CONTACTS FROM API
+  // ==========================================
+  const fetchContacts = useCallback(async () => {
+    if (!user?.id) {
+      // No user — use fallback contacts
+      setContacts(FALLBACK_CONTACTS);
+      setContactsLoading(false);
+      return;
+    }
+
+    try {
+      setContactsLoading(true);
+      const userType = user.role === 'RIDER' || user.role === 'DRIVER' ? 'RIDER' : 'CLIENT';
+      const response = await api.getEmergencyContacts(user.id, userType);
+
+      if (response.success && response.data?.contacts && response.data.contacts.length > 0) {
+        const mapped: EmergencyContact[] = response.data.contacts.map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          relationship: c.relationship || 'Contact',
+          phone: c.phone,
+          isPrimary: c.isPrimary,
+        }));
+        // Sort: primary first, then by name
+        mapped.sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0));
+        setContacts(mapped);
+      } else {
+        // No saved contacts — use fallback
+        setContacts(FALLBACK_CONTACTS);
+      }
+    } catch (error) {
+      console.error('[SOS] Failed to fetch contacts:', error);
+      setContacts(FALLBACK_CONTACTS);
+    } finally {
+      setContactsLoading(false);
+    }
+  }, [user?.id, user?.role]);
+
+  useEffect(() => {
+    fetchContacts();
+  }, [fetchContacts]);
+
+  // ==========================================
+  // GET CURRENT GPS LOCATION
+  // ==========================================
+  useEffect(() => {
+    // Request fresh location when screen opens
+    locationStore.getCurrentLocation();
+  }, []);
+
+  // ==========================================
+  // SOS ACTIVATION — CALLS BACKEND API
+  // ==========================================
+  const handleActivate = useCallback(async () => {
     // Flash screen red
     setFlashVisible(true);
     Vibration.vibrate([0, 300, 100, 300, 100, 500], false);
@@ -194,13 +272,90 @@ export default function SosScreen() {
     setTimeout(() => setFlashVisible(true), 400);
     setTimeout(() => setFlashVisible(false), 700);
     setTimeout(() => setFlashVisible(true), 800);
-    setTimeout(() => {
-      setFlashVisible(false);
-      setSosState('activated');
-    }, 1100);
-  };
 
-  const handleCancelSos = () => {
+    setSosActivating(true);
+    setSosError(null);
+
+    try {
+      // Build SOS payload with real GPS coordinates
+      const sosPayload: {
+        riderId?: string;
+        taskId?: string;
+        latitude: number;
+        longitude: number;
+        locationAddress?: string;
+      } = {
+        latitude: currentLatitude,
+        longitude: currentLongitude,
+        locationAddress: currentAddress,
+      };
+
+      // If user is a rider, include riderId
+      if (user?.role === 'RIDER' || user?.role === 'DRIVER') {
+        sosPayload.riderId = user.id;
+      }
+
+      const response = await api.createSOSAlert(sosPayload);
+
+      if (response.success && response.data?.alert) {
+        setSosAlertId(response.data.alert.id || null);
+        console.log('[SOS] Alert created:', response.data.alert.alertNumber || response.data.alert.id);
+      } else {
+        // API call succeeded but returned error — still activate locally for safety
+        console.warn('[SOS] API returned error, activating locally:', response.error);
+        setSosError(response.error || 'Alert sent but confirmation pending');
+      }
+    } catch (error) {
+      // Network error — still activate locally for safety-critical behavior
+      console.error('[SOS] Failed to reach backend, activating locally:', error);
+      setSosError('Could not reach server. Alert activated locally.');
+    } finally {
+      setSosActivating(false);
+      setTimeout(() => {
+        setFlashVisible(false);
+        setSosState('activated');
+      }, 1100);
+    }
+  }, [currentLatitude, currentLongitude, currentAddress, user?.id, user?.role]);
+
+  // ==========================================
+  // LIVE LOCATION STREAMING
+  // ==========================================
+  useEffect(() => {
+    // Start streaming when SOS is activated and live sharing is on
+    if (sosState === 'activated' && shareLiveLocation) {
+      // Stream location to backend every 5 seconds
+      locationStreamRef.current = setInterval(async () => {
+        try {
+          // Get fresh position
+          await locationStore.getCurrentLocation();
+
+          // Send heartbeat with location to backend
+          await api.sendHeartbeat({
+            latitude: locationStore.latitude,
+            longitude: locationStore.longitude,
+            task_id: sosAlertId || undefined,
+          });
+
+          console.log('[SOS] Location streamed:', locationStore.latitude, locationStore.longitude);
+        } catch (error) {
+          console.warn('[SOS] Location stream error:', error);
+        }
+      }, LOCATION_STREAM_INTERVAL);
+    }
+
+    return () => {
+      if (locationStreamRef.current) {
+        clearInterval(locationStreamRef.current);
+        locationStreamRef.current = null;
+      }
+    };
+  }, [sosState, shareLiveLocation, sosAlertId]);
+
+  // ==========================================
+  // CANCEL SOS — RESOLVE ON BACKEND
+  // ==========================================
+  const handleCancelSos = useCallback(() => {
     Alert.alert(
       'Cancel SOS',
       'Are you sure you want to cancel the emergency alert? Our response team has been notified.',
@@ -209,12 +364,35 @@ export default function SosScreen() {
         {
           text: 'Cancel SOS',
           style: 'destructive',
-          onPress: () => setSosState('resolved'),
+          onPress: async () => {
+            // Stop location streaming
+            if (locationStreamRef.current) {
+              clearInterval(locationStreamRef.current);
+              locationStreamRef.current = null;
+            }
+
+            // Resolve alert on backend if we have an alert ID
+            if (sosAlertId) {
+              try {
+                await api.resolveSOSAlert(sosAlertId);
+                console.log('[SOS] Alert resolved on backend');
+              } catch (error) {
+                console.warn('[SOS] Failed to resolve alert on backend:', error);
+              }
+            }
+
+            setSosState('resolved');
+            setSosAlertId(null);
+            setSosError(null);
+          },
         },
       ]
     );
-  };
+  }, [sosAlertId]);
 
+  // ==========================================
+  // PHONE CALL HANDLER
+  // ==========================================
   const handleCall = (phone: string) => {
     const url = `tel:${phone}`;
     Linking.canOpenURL(url).then((supported) => {
@@ -224,6 +402,14 @@ export default function SosScreen() {
         Alert.alert('Unable to Call', 'This device does not support phone calls.');
       }
     });
+  };
+
+  // ==========================================
+  // DETERMINE CONTACT ICON
+  // ==========================================
+  const getContactIcon = (phone: string): keyof typeof Ionicons.glyphMap => {
+    if (phone.length <= 3) return 'call-outline';
+    return 'person-outline';
   };
 
   return (
@@ -266,13 +452,20 @@ export default function SosScreen() {
                 onPress={handleActivate}
                 onLongPressStarted={() => setIsHolding(true)}
                 onLongPressEnded={() => setIsHolding(false)}
+                disabled={sosActivating}
               />
-              {isHolding && (
+              {sosActivating && (
+                <View style={styles.activatingRow}>
+                  <ActivityIndicator size="small" color={COLORS.error} />
+                  <Text style={styles.activatingText}>Sending alert...</Text>
+                </View>
+              )}
+              {isHolding && !sosActivating && (
                 <Animated.View entering={ZoomIn.duration(200)}>
                   <Text style={styles.holdingText}>Hold for 3 seconds...</Text>
                 </Animated.View>
               )}
-              {!isHolding && (
+              {!isHolding && !sosActivating && (
                 <View style={styles.sosInstructions}>
                   <Text style={styles.sosInstructionText}>
                     Tap and hold for 3 seconds to activate
@@ -283,6 +476,28 @@ export default function SosScreen() {
                 </View>
               )}
             </View>
+
+            {/* Location Info */}
+            <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.tripCard}>
+              <View style={styles.tripHeaderRow}>
+                <View style={styles.locationIconCircle}>
+                  <Ionicons name="locate" size={18} color={COLORS.primary} />
+                </View>
+                <View style={styles.tripContent}>
+                  <Text style={styles.tripTitle}>Your Location</Text>
+                  <Text style={styles.tripSubtitle} numberOfLines={1}>
+                    {locationStore.isLocating ? 'Getting GPS location...' : currentAddress}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.refreshLocationBtn}
+                  onPress={() => locationStore.getCurrentLocation()}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="refresh" size={18} color={COLORS.primary} />
+                </TouchableOpacity>
+              </View>
+            </GlassCard>
 
             {/* Trip Details Card (if ride active) */}
             <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.tripCard}>
@@ -329,7 +544,15 @@ export default function SosScreen() {
                 Emergency team has been notified
               </Text>
 
-              {/* Trip details card */}
+              {/* Error/warning message if API had issues */}
+              {sosError && (
+                <View style={styles.errorBanner}>
+                  <Ionicons name="warning-outline" size={16} color={COLORS.onErrorContainer} />
+                  <Text style={styles.errorText}>{sosError}</Text>
+                </View>
+              )}
+
+              {/* Location card with REAL GPS data */}
               <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.locationCard}>
                 <View style={styles.locationRow}>
                   <View style={styles.locationIconContainer}>
@@ -337,12 +560,19 @@ export default function SosScreen() {
                   </View>
                   <View style={styles.locationContent}>
                     <Text style={styles.locationLabel}>Current Location</Text>
-                    <Text style={styles.locationAddress}>Kampala Road, Kampala, Uganda</Text>
+                    <Text style={styles.locationAddress} numberOfLines={2}>
+                      {currentAddress}
+                    </Text>
+                    <Text style={styles.locationCoords}>
+                      {currentLatitude.toFixed(6)}, {currentLongitude.toFixed(6)}
+                    </Text>
                   </View>
-                  <View style={styles.locationLiveBadge}>
-                    <View style={styles.liveDot} />
-                    <Text style={styles.liveText}>LIVE</Text>
-                  </View>
+                  {shareLiveLocation && (
+                    <View style={styles.locationLiveBadge}>
+                      <View style={styles.liveDot} />
+                      <Text style={styles.liveText}>LIVE</Text>
+                    </View>
+                  )}
                 </View>
               </GlassCard>
 
@@ -355,7 +585,9 @@ export default function SosScreen() {
                   <View style={styles.toggleContent}>
                     <Text style={styles.toggleTitle}>Share Live Location</Text>
                     <Text style={styles.toggleDescription}>
-                      Continuously share your GPS position
+                      {shareLiveLocation
+                        ? 'Streaming GPS every 5 seconds'
+                        : 'Continuously share your GPS position'}
                     </Text>
                   </View>
                   <Switch
@@ -419,9 +651,25 @@ export default function SosScreen() {
         {sosState !== 'resolved' && (
           <Animated.View entering={FadeInUp.duration(400).delay(400).springify()}>
             <View style={styles.contactsSection}>
-              <Text style={styles.contactsSectionTitle}>Emergency Contacts</Text>
+              <View style={styles.contactsHeaderRow}>
+                <Text style={styles.contactsSectionTitle}>Emergency Contacts</Text>
+                {contactsLoading && (
+                  <ActivityIndicator size="small" color={COLORS.primary} />
+                )}
+              </View>
 
-              {MOCK_CONTACTS.map((contact, index) => (
+              {contacts.length === 0 && !contactsLoading && (
+                <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
+                  <View style={styles.emptyContactsRow}>
+                    <Ionicons name="people-outline" size={20} color={COLORS.onSurfaceVariant} />
+                    <Text style={styles.emptyContactsText}>
+                      No emergency contacts saved. Add contacts in your profile settings.
+                    </Text>
+                  </View>
+                </GlassCard>
+              )}
+
+              {contacts.map((contact, index) => (
                 <Animated.View
                   key={contact.id}
                   entering={FadeInUp.duration(350).delay(500 + index * 60).springify()}
@@ -430,13 +678,21 @@ export default function SosScreen() {
                     <View style={styles.contactRow}>
                       <View style={styles.contactIconCircle}>
                         <Ionicons
-                          name={contact.phone.length <= 3 ? 'call-outline' : 'person-outline'}
+                          name={getContactIcon(contact.phone)}
                           size={18}
                           color={COLORS.error}
                         />
                       </View>
                       <View style={styles.contactContent}>
-                        <Text style={styles.contactName}>{contact.name}</Text>
+                        <View style={styles.contactNameRow}>
+                          <Text style={styles.contactName}>{contact.name}</Text>
+                          {contact.isPrimary && (
+                            <View style={styles.primaryBadge}>
+                              <Ionicons name="star" size={10} color={COLORS.onPrimary} />
+                              <Text style={styles.primaryBadgeText}>Primary</Text>
+                            </View>
+                          )}
+                        </View>
                         <Text style={styles.contactRelationship}>
                           {contact.relationship} • {contact.phone}
                         </Text>
@@ -477,7 +733,9 @@ export default function SosScreen() {
           <View style={styles.bottomInfo}>
             <Ionicons name="shield-outline" size={14} color={COLORS.outline} />
             <Text style={styles.bottomInfoText}>
-              Your live location will be shared with our emergency response team
+              {shareLiveLocation && sosState === 'activated'
+                ? 'Your live location is being shared with our emergency response team'
+                : 'Your live location will be shared with our emergency response team'}
             </Text>
           </View>
         </Animated.View>
@@ -614,6 +872,17 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     marginTop: 2,
   },
+  activatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  activatingText: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '600',
+    color: COLORS.error,
+  },
   holdingText: {
     ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
@@ -633,6 +902,24 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurfaceVariant,
     marginTop: SPACING.xs,
+  },
+
+  // Location circle (idle state)
+  locationIconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primaryFixed,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  refreshLocationBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   // Trip details card
@@ -719,6 +1006,24 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
 
+  // Error banner (when API had issues but alert is still active)
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.errorContainer,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.md,
+    width: '100%',
+  },
+  errorText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onErrorContainer,
+    flex: 1,
+  },
+
   // Location Card
   locationCard: {
     width: '100%',
@@ -751,6 +1056,11 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.onSurface,
     marginTop: SPACING.xs,
+  },
+  locationCoords: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.outline,
+    marginTop: 2,
   },
   locationLiveBadge: {
     flexDirection: 'row',
@@ -853,13 +1163,18 @@ const styles = StyleSheet.create({
   contactsSection: {
     marginTop: SPACING.lg,
   },
+  contactsHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
   contactsSectionTitle: {
     ...TYPOGRAPHY.labelLg,
     fontWeight: '600',
     color: COLORS.onSurfaceVariant,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: SPACING.md,
   },
   contactCard: {
     marginBottom: SPACING.sm,
@@ -880,10 +1195,30 @@ const styles = StyleSheet.create({
   contactContent: {
     flex: 1,
   },
+  contactNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
   contactName: {
     ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
     color: COLORS.onSurface,
+  },
+  primaryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  primaryBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: COLORS.onPrimary,
+    letterSpacing: 0.3,
   },
   contactRelationship: {
     ...TYPOGRAPHY.labelMd,
@@ -897,6 +1232,19 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // Empty contacts
+  emptyContactsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
+  emptyContactsText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    flex: 1,
+    lineHeight: 18,
   },
 
   // Call Support

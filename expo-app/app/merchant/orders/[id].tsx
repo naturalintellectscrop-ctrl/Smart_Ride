@@ -20,6 +20,7 @@ import { useMerchantStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/src/constants';
 import { MerchantOrder, OrderItem } from '@/src/types';
+import { Ionicons } from '@expo/vector-icons';
 
 const STATUS_FLOW = [
   'ORDER_CREATED',
@@ -142,7 +143,7 @@ export default function MerchantOrderDetailScreen() {
   if (error || !order) {
     return (
       <View style={styles.errorContainer}>
-        <Text style={styles.errorEmoji}>⚠️</Text>
+        <Ionicons name="alert-circle-outline" size={20} color={COLORS.error} />
         <Text style={styles.errorTitle}>Order Not Found</Text>
         <Text style={styles.errorText}>{error || 'Could not load order details'}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadOrder}>
@@ -156,7 +157,7 @@ export default function MerchantOrderDetailScreen() {
   }
 
   const actions = getAvailableActions(order.status);
-  const statusColor = ORDER_STATUS_COLORS[order.status] || COLORS.textMuted;
+  const statusColor = ORDER_STATUS_COLORS[order.status] || COLORS.outline;
   const currentStatusIndex = getStatusIndex(order.status);
 
   return (
@@ -184,14 +185,14 @@ export default function MerchantOrderDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Information</Text>
           <View style={styles.infoCard}>
-            <InfoRow icon="📅" label="Date" value={formatDate(order.createdAt)} />
-            <InfoRow icon="👤" label="Customer" value={(order as any).customerName || 'Customer'} />
+            <InfoRow icon="calendar-outline" label="Date" value={formatDate(order.createdAt)} />
+            <InfoRow icon="person-outline" label="Customer" value={(order as any).customerName ?? 'Customer'} />
             {(order as any).customerPhone && (
-              <InfoRow icon="📞" label="Phone" value={(order as any).customerPhone} />
+              <InfoRow icon="call-outline" label="Phone" value={(order as any).customerPhone ?? 'N/A'} />
             )}
-            <InfoRow icon="📍" label="Delivery" value={order.deliveryAddress || 'N/A'} />
-            <InfoRow icon="💳" label="Payment" value={order.paymentMethod || 'N/A'} />
-            <InfoRow icon="💰" label="Payment Status" value={order.paymentStatus || 'N/A'} />
+            <InfoRow icon="location-outline" label="Delivery" value={order.deliveryAddress || 'N/A'} />
+            <InfoRow icon="card-outline" label="Payment" value={order.paymentMethod || 'N/A'} />
+            <InfoRow icon="wallet-outline" label="Payment Status" value={order.paymentStatus || 'N/A'} />
           </View>
         </View>
 
@@ -202,7 +203,7 @@ export default function MerchantOrderDetailScreen() {
             {STATUS_FLOW.map((status, index) => {
               const isCompleted = index <= currentStatusIndex;
               const isCurrent = status === order.status;
-              const color = isCompleted ? ORDER_STATUS_COLORS[status] || COLORS.textMuted : COLORS.textDisabled;
+              const color = isCompleted ? ORDER_STATUS_COLORS[status] || COLORS.outline : COLORS.outlineVariant;
 
               return (
                 <View key={status} style={styles.timelineItem}>
@@ -211,10 +212,10 @@ export default function MerchantOrderDetailScreen() {
                       {isCurrent && <View style={styles.timelineDotInner} />}
                     </View>
                     {index < STATUS_FLOW.length - 1 && (
-                      <View style={[styles.timelineLine, { backgroundColor: index < currentStatusIndex ? COLORS.primary : COLORS.border }]} />
+                      <View style={[styles.timelineLine, { backgroundColor: index < currentStatusIndex ? COLORS.primary : COLORS.outlineVariant }]} />
                     )}
                   </View>
-                  <Text style={[styles.timelineLabel, { color: isCompleted ? COLORS.text : COLORS.textDisabled }]}>
+                  <Text style={[styles.timelineLabel, { color: isCompleted ? COLORS.onSurface : COLORS.outlineVariant }]}>
                     {ORDER_STATUS_LABELS[status] || status}
                   </Text>
                 </View>
@@ -255,8 +256,8 @@ export default function MerchantOrderDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Kitchen Reference</Text>
             <View style={styles.kotCard}>
-              <Text style={styles.kotIcon}>🖨️</Text>
-              <Text style={styles.kotText}>KOT: {(order as any).kotReference}</Text>
+              <Ionicons name="print-outline" size={18} color={COLORS.primary} />
+              <Text style={styles.kotText}>KOT: {(order as any).kotReference ?? 'N/A'}</Text>
             </View>
           </View>
         )}
@@ -266,7 +267,7 @@ export default function MerchantOrderDetailScreen() {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Notes</Text>
             <View style={styles.notesCard}>
-              <Text style={styles.notesText}>{(order as any).notes}</Text>
+              <Text style={styles.notesText}>{(order as any).notes ?? ''}</Text>
             </View>
           </View>
         )}
@@ -290,7 +291,7 @@ export default function MerchantOrderDetailScreen() {
               disabled={isUpdatingOrder || !!updatingAction}
             >
               {(updatingAction === action.status) ? (
-                <ActivityIndicator size="small" color={action.variant === 'primary' ? COLORS.background : '#FFFFFF'} />
+                <ActivityIndicator size="small" color={action.variant === 'primary' ? COLORS.onPrimary : '#FFFFFF'} />
               ) : (
                 <Text style={[
                   styles.bottomButtonText,
@@ -315,7 +316,7 @@ export default function MerchantOrderDetailScreen() {
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
     <View style={infoStyles.row}>
-      <Text style={infoStyles.icon}>{icon}</Text>
+      <Ionicons name={icon as any} size={16} color={COLORS.onSurfaceVariant} />
       <Text style={infoStyles.label}>{label}</Text>
       <Text style={infoStyles.value} numberOfLines={2}>{value}</Text>
     </View>
@@ -338,25 +339,25 @@ function SummaryRow({ label, value, isBold }: { label: string; value: string; is
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   scrollView: {
     flex: 1,
   },
   loadingContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   loadingText: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: 12,
     fontSize: 14,
   },
   errorContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 24,
@@ -372,7 +373,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   errorText: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 24,
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   retryButtonText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -399,11 +400,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   headerRow: {
     flexDirection: 'row',
@@ -414,12 +415,12 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
   },
   backIcon: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -427,7 +428,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 4,
@@ -450,25 +451,25 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   sectionTitle: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 10,
   },
   infoCard: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     gap: 12,
   },
   timelineCard: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
   },
   timelineItem: {
     flexDirection: 'row',
@@ -492,7 +493,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   timelineLine: {
     width: 2,
@@ -505,11 +506,11 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   itemsCard: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     gap: 10,
   },
   itemRow: {
@@ -524,31 +525,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   itemName: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 14,
     fontWeight: '500',
     flex: 1,
   },
   itemQty: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 14,
   },
   itemPrice: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 14,
     fontWeight: '600',
   },
   summaryCard: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     gap: 8,
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: COLORS.border,
+    backgroundColor: COLORS.outlineVariant,
     marginVertical: 4,
   },
   kotCard: {
@@ -577,16 +578,16 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(245, 158, 11, 0.15)',
   },
   notesText: {
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceSecondary,
     fontSize: 14,
     lineHeight: 20,
   },
   bottomBar: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     paddingHorizontal: 20,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: COLORS.outlineVariant,
     flexDirection: 'row',
     gap: 10,
   },
@@ -613,7 +614,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   bottomPrimaryText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
   },
   bottomDangerText: {
     color: '#EF4444',
@@ -630,12 +631,12 @@ const infoStyles = StyleSheet.create({
     width: 24,
   },
   label: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 13,
     width: 80,
   },
   value: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 14,
     flex: 1,
     fontWeight: '500',
@@ -649,16 +650,16 @@ const summaryStyles = StyleSheet.create({
     alignItems: 'center',
   },
   label: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 14,
   },
   value: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 14,
     fontWeight: '500',
   },
   boldLabel: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontWeight: 'bold',
     fontSize: 16,
   },

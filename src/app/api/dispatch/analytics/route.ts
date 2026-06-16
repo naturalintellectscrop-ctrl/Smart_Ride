@@ -1,13 +1,25 @@
 // Smart Ride Dispatch Analytics API
 // Provides analytics, metrics, and insights for the dispatch engine
 // Queries the DispatchMatch model directly from the database
+// SECURITY: Admin-only access required
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth/guards';
 
 // GET /api/dispatch/analytics
+// SECURITY: Admin-only access required
 export async function GET(request: NextRequest) {
-  await setServiceRoleContext();
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
+
+  await setRLSContext(admin);
   try {
     const searchParams = request.nextUrl.searchParams;
     const action = searchParams.get('action');

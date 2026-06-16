@@ -28,6 +28,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInUp, withRepeat, withTiming, useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { useChatStore, Conversation, Message } from '@/src/store/chatStore';
+import { useAuthStore } from '@/src/store';
 import { socketService } from '@/src/services/socket.service';
 import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard } from '@/src/components/GlassCard';
@@ -247,24 +248,23 @@ export default function ChatDetailScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const conversationId = params.id;
+  const { user } = useAuthStore();
 
-  const {
-    conversations,
-    messages,
-    typingStatus,
-    isLoadingMessages,
-    isSendingMessage,
-    loadMessages,
-    sendMessage,
-    markAsRead,
-    setActiveConversation,
-    joinConversation,
-    leaveConversation,
-    sendTyping,
-    onNewMessage,
-    onTypingIndicator,
-    onReadReceipt,
-  } = useChatStore();
+  const conversations = useChatStore(s => s.conversations);
+  const messages = useChatStore(s => s.messages);
+  const typingStatus = useChatStore(s => s.typingStatus);
+  const isLoadingMessages = useChatStore(s => s.isLoadingMessages);
+  const isSendingMessage = useChatStore(s => s.isSendingMessage);
+  const loadMessages = useChatStore(s => s.loadMessages);
+  const sendMessage = useChatStore(s => s.sendMessage);
+  const markAsRead = useChatStore(s => s.markAsRead);
+  const setActiveConversation = useChatStore(s => s.setActiveConversation);
+  const joinConversation = useChatStore(s => s.joinConversation);
+  const leaveConversation = useChatStore(s => s.leaveConversation);
+  const sendTyping = useChatStore(s => s.sendTyping);
+  const onNewMessage = useChatStore(s => s.onNewMessage);
+  const onTypingIndicator = useChatStore(s => s.onTypingIndicator);
+  const onReadReceipt = useChatStore(s => s.onReadReceipt);
 
   const [inputText, setInputText] = useState('');
   const flatListRef = useRef<FlatList>(null);
@@ -367,7 +367,7 @@ export default function ChatDetailScreen() {
           onPress: () => {
             if (conversationId) {
               sendMessage(conversationId, {
-                content: '📍 Shared current location',
+                content: 'Shared current location',
                 type: 'TEXT',
               });
             }
@@ -385,7 +385,7 @@ export default function ChatDetailScreen() {
         onPress: () => {
           if (conversationId) {
             sendMessage(conversationId, {
-              content: '📷 Sent a photo',
+              content: 'Sent a photo',
               type: 'TEXT',
             });
           }
@@ -404,7 +404,7 @@ export default function ChatDetailScreen() {
   };
 
   const renderMessage = ({ item, index }: { item: Message; index: number }) => {
-    const isOwn = item.senderId === 'client-1';
+    const isOwn = item.senderId === user?.id;
     const isSystem = item.type === 'SYSTEM';
 
     const showDateSeparator = index === 0 || (() => {

@@ -55,10 +55,11 @@ export default function RegisterScreen() {
   const [selectedRole, setSelectedRole] = useState<string>('CLIENT');
 
   const ROLES = [
-    { id: 'CLIENT', label: 'Client', icon: '🚗', desc: 'Book rides & order' },
-    { id: 'RIDER', label: 'Rider / Boda', icon: '🏍️', desc: 'Earn on the road' },
-    { id: 'DRIVER', label: 'Driver', icon: '🚐', desc: 'Professional driver' },
-    { id: 'MERCHANT', label: 'Merchant', icon: '🏪', desc: 'Sell & deliver' },
+    { id: 'CLIENT', label: 'Client', icon: 'car-outline', desc: 'Book rides & order' },
+    { id: 'RIDER', label: 'Rider / Boda', icon: 'bicycle-outline', desc: 'Earn on the road' },
+    { id: 'DRIVER', label: 'Driver', icon: 'bus-outline', desc: 'Professional driver' },
+    { id: 'MERCHANT', label: 'Merchant', icon: 'storefront-outline', desc: 'Sell & deliver' },
+    { id: 'PHARMACIST', label: 'Pharmacist', icon: 'medkit-outline', desc: 'Medicine & healthcare' },
   ];
 
   // Animation for initial entrance — switches to plain View after completion
@@ -511,7 +512,7 @@ export default function RegisterScreen() {
                       onPress={() => setSelectedRole(role.id)}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.roleChipIcon}>{role.icon}</Text>
+                      <Ionicons name={role.icon as any} size={16} color={isSelected ? COLORS.onPrimary : COLORS.onSurfaceVariant} />
                       <Text style={[
                         styles.roleChipLabel,
                         isSelected && styles.roleChipLabelSelected,

@@ -2,23 +2,28 @@
 // SMART RIDE - ADMIN RECOVERY API
 // ============================================
 // Triggers recovery checks and returns status
-// Admin-only access
+// Admin-only access (proper JWT verification)
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { RecoveryService } from '@/lib/services/recovery-service';
-import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth/guards';
 
 // GET /api/admin/recovery — Get recovery status
+// SECURITY: Admin-only access with proper JWT verification
 export async function GET(request: NextRequest) {
-  await setServiceRoleContext();
-  try {
-    // Verify admin access
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
 
+  await setRLSContext(admin);
+  try {
     const status = await RecoveryService.getRecoveryStatus();
 
     // Also get unacknowledged alerts count
@@ -43,15 +48,19 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/admin/recovery — Trigger recovery checks
+// SECURITY: Admin-only access with proper JWT verification
 export async function POST(request: NextRequest) {
-  await setServiceRoleContext();
-  try {
-    // Verify admin access
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
 
+  await setRLSContext(admin);
+  try {
     const summary = await RecoveryService.runRecoveryChecks();
 
     return NextResponse.json({

@@ -3,6 +3,7 @@
 // ============================================
 // Stitch Design System — Merchant Orders
 // Order tabs with badges, order cards, Accept/Reject
+// Wired to real API via useMerchantStore
 // ============================================
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -15,11 +16,13 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useMerchantStore } from '@/src/store';
+import { MerchantOrder } from '@/src/types';
 import {
   COLORS,
   TYPOGRAPHY,
@@ -32,16 +35,16 @@ import { GradientButton } from '@/src/components/GradientButton';
 import { GlowHeader } from '@/src/components/GlowHeader';
 
 // ============================================
-// LOCAL CONSTANTS (not yet in shared constants)
+// LOCAL CONSTANTS
 // ============================================
 
 type OrderTab = 'NEW' | 'PREPARING' | 'READY' | 'COMPLETED';
 
-const ORDER_TABS: { key: OrderTab; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
-  { key: 'NEW', label: 'New', icon: 'alert-circle-outline' },
-  { key: 'PREPARING', label: 'Preparing', icon: 'restaurant-outline' },
-  { key: 'READY', label: 'Ready', icon: 'checkmark-circle-outline' },
-  { key: 'COMPLETED', label: 'Completed', icon: 'checkmark-done-circle-outline' },
+const ORDER_TABS: { key: OrderTab; label: string; icon: keyof typeof Ionicons.glyphMap; statuses: string[] }[] = [
+  { key: 'NEW', label: 'New', icon: 'alert-circle-outline', statuses: ['NEW', 'PENDING'] },
+  { key: 'PREPARING', label: 'Preparing', icon: 'restaurant-outline', statuses: ['CONFIRMED', 'PREPARING'] },
+  { key: 'READY', label: 'Ready', icon: 'checkmark-circle-outline', statuses: ['READY'] },
+  { key: 'COMPLETED', label: 'Completed', icon: 'checkmark-done-circle-outline', statuses: ['COMPLETED', 'DELIVERED'] },
 ];
 
 const ORDER_STATUS_COLORS: Record<string, string> = {
@@ -51,7 +54,9 @@ const ORDER_STATUS_COLORS: Record<string, string> = {
   PREPARING: COLORS.primaryContainer,
   READY: COLORS.secondary,
   COMPLETED: COLORS.primary,
+  DELIVERED: COLORS.primary,
   CANCELLED: COLORS.error,
+  REJECTED: COLORS.error,
 };
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -61,27 +66,44 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
   PREPARING: 'Preparing',
   READY: 'Ready for Pickup',
   COMPLETED: 'Delivered',
+  DELIVERED: 'Delivered',
   CANCELLED: 'Cancelled',
+  REJECTED: 'Rejected',
 };
 
-// Mock orders for Stitch design demonstration
-interface MockOrder {
-  id: string;
-  orderNumber: string;
-  customerName: string;
-  itemCount: number;
-  total: number;
-  status: OrderTab;
-  time: string;
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
+/** Map a MerchantOrder status to a tab key for filtering */
+function statusToTab(status: string): OrderTab {
+  for (const tab of ORDER_TABS) {
+    if (tab.statuses.includes(status)) return tab.key;
+  }
+  return 'NEW';
 }
 
-const MOCK_ORDERS: MockOrder[] = [
-  { id: '1', orderNumber: '#SR-1024', customerName: 'Alice Namuli', itemCount: 3, total: 25000, status: 'NEW', time: '2 min ago' },
-  { id: '2', orderNumber: '#SR-1023', customerName: 'Bob Mukasa', itemCount: 1, total: 8500, status: 'NEW', time: '5 min ago' },
-  { id: '3', orderNumber: '#SR-1022', customerName: 'Carol Achieng', itemCount: 2, total: 18000, status: 'PREPARING', time: '12 min ago' },
-  { id: '4', orderNumber: '#SR-1021', customerName: 'David Ochieng', itemCount: 4, total: 42000, status: 'READY', time: '20 min ago' },
-  { id: '5', orderNumber: '#SR-1020', customerName: 'Esther Nalubega', itemCount: 2, total: 15000, status: 'COMPLETED', time: '1 hr ago' },
-];
+/** Format an ISO date string into a relative time string */
+function formatRelativeTime(dateStr: string): string {
+  try {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return 'Just now';
+    if (diffMin < 60) return `${diffMin} min ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr} hr${diffHr > 1 ? 's' : ''} ago`;
+    const diffDay = Math.floor(diffHr / 24);
+    return `${diffDay} day${diffDay > 1 ? 's' : ''} ago`;
+  } catch {
+    return '';
+  }
+}
+
+// ============================================
+// MAIN SCREEN
+// ============================================
 
 export default function MerchantDashboardScreen() {
   const router = useRouter();
@@ -89,28 +111,46 @@ export default function MerchantDashboardScreen() {
   const { user } = useAuthStore();
   const {
     merchant,
+    orders,
     analytics,
     fetchProfile,
+    fetchOrders,
     fetchAnalytics,
     toggleAvailability,
+    updateOrderStatus,
     isTogglingAvailability,
     isLoadingProfile,
+    isLoadingOrders,
     isLoadingAnalytics,
+    isUpdatingOrder,
     profileError,
-    analyticsError,
+    ordersError,
   } = useMerchantStore();
 
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<OrderTab>('NEW');
 
+  // Load initial data
   useEffect(() => {
     loadData();
   }, []);
+
+  // Fetch orders when merchant is loaded or tab changes
+  useEffect(() => {
+    if (merchant?.id) {
+      const tab = ORDER_TABS.find(t => t.key === activeTab);
+      // Fetch orders filtered by the statuses for the active tab
+      // Use the first status as the API filter; we'll also include all tab statuses in client-side filter
+      fetchOrders(merchant.id, tab?.statuses[0], 1);
+    }
+  }, [merchant?.id, activeTab]);
 
   const loadData = async () => {
     await fetchProfile();
     const state = useMerchantStore.getState();
     if (state.merchant?.id) {
+      const tab = ORDER_TABS.find(t => t.key === activeTab);
+      fetchOrders(state.merchant.id, tab?.statuses[0], 1);
       fetchAnalytics(state.merchant.id);
     }
   };
@@ -125,26 +165,69 @@ export default function MerchantDashboardScreen() {
     setRefreshing(true);
     await loadData();
     setRefreshing(false);
-  }, []);
+  }, [activeTab]);
 
   const handleToggleAvailability = async () => {
     if (!merchant?.id) return;
     await toggleAvailability(merchant.id);
   };
 
+  const handleAcceptOrder = async (orderId: string) => {
+    try {
+      await updateOrderStatus(orderId, 'CONFIRMED');
+      // Refresh orders after status change
+      if (merchant?.id) {
+        const tab = ORDER_TABS.find(t => t.key === activeTab);
+        fetchOrders(merchant.id, tab?.statuses[0], 1);
+      }
+    } catch {
+      Alert.alert('Error', 'Failed to accept order. Please try again.');
+    }
+  };
+
+  const handleRejectOrder = async (orderId: string) => {
+    Alert.alert(
+      'Reject Order',
+      'Are you sure you want to reject this order?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reject',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await updateOrderStatus(orderId, 'REJECTED');
+              // Refresh orders after status change
+              if (merchant?.id) {
+                const tab = ORDER_TABS.find(t => t.key === activeTab);
+                fetchOrders(merchant.id, tab?.statuses[0], 1);
+              }
+            } catch {
+              Alert.alert('Error', 'Failed to reject order. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const formatCurrency = (amount: number) => {
     return `UGX ${(amount || 0).toLocaleString()}`;
   };
 
-  // Count orders per tab
+  // Filter orders by active tab (client-side filtering across all statuses for the tab)
+  const filteredOrders = orders.filter(o => {
+    const tab = ORDER_TABS.find(t => t.key === activeTab);
+    return tab ? tab.statuses.includes(o.status) : false;
+  });
+
+  // Count orders per tab from the full orders list
   const getTabCount = (tab: OrderTab): number => {
-    return MOCK_ORDERS.filter(o => o.status === tab).length;
+    const tabConfig = ORDER_TABS.find(t => t.key === tab);
+    return tabConfig ? orders.filter(o => tabConfig.statuses.includes(o.status)).length : 0;
   };
 
-  // Filter orders by active tab
-  const filteredOrders = MOCK_ORDERS.filter(o => o.status === activeTab);
-
-  // Loading state
+  // Loading state (profile loading with no merchant)
   if (isLoadingProfile && !merchant) {
     return (
       <View style={styles.loadingContainer}>
@@ -154,7 +237,7 @@ export default function MerchantDashboardScreen() {
     );
   }
 
-  // Error state
+  // Error state (profile error with no merchant)
   if (profileError && !merchant) {
     return (
       <View style={styles.errorContainer}>
@@ -245,7 +328,7 @@ export default function MerchantDashboardScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Order Tabs with Badges — Stitch Design */}
+        {/* Order Tabs with Badges */}
         <View style={styles.tabsContainer}>
           {ORDER_TABS.map((tab) => {
             const isActive = activeTab === tab.key;
@@ -289,8 +372,40 @@ export default function MerchantDashboardScreen() {
           })}
         </View>
 
+        {/* Orders Loading State */}
+        {isLoadingOrders && orders.length === 0 && (
+          <View style={styles.ordersLoadingContainer}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={styles.ordersLoadingText}>Loading orders...</Text>
+          </View>
+        )}
+
+        {/* Orders Error State */}
+        {ordersError && orders.length === 0 && !isLoadingOrders && (
+          <GlassCard variant="default" padding={SPACING.xl} borderRadius={RADIUS.xl} style={styles.emptyCard}>
+            <View style={styles.emptyIconCircle}>
+              <Ionicons name="cloud-offline-outline" size={32} color={COLORS.error} />
+            </View>
+            <Text style={styles.emptyTitle}>Failed to load orders</Text>
+            <Text style={styles.emptySubtitle}>{ordersError}</Text>
+            <TouchableOpacity
+              style={styles.retryButton}
+              onPress={() => {
+                if (merchant?.id) {
+                  const tab = ORDER_TABS.find(t => t.key === activeTab);
+                  fetchOrders(merchant.id, tab?.statuses[0], 1);
+                }
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="refresh-outline" size={16} color={COLORS.onPrimary} />
+              <Text style={styles.retryButtonText}>Retry</Text>
+            </TouchableOpacity>
+          </GlassCard>
+        )}
+
         {/* Order Cards */}
-        {filteredOrders.length === 0 ? (
+        {!isLoadingOrders && !ordersError && filteredOrders.length === 0 ? (
           <GlassCard variant="default" padding={SPACING.xl} borderRadius={RADIUS.xl} style={styles.emptyCard}>
             <View style={styles.emptyIconCircle}>
               <Ionicons name="receipt-outline" size={32} color={COLORS.onSurfaceVariant} />
@@ -307,8 +422,9 @@ export default function MerchantDashboardScreen() {
             <OrderCard
               key={order.id}
               order={order}
-              onAccept={() => {}}
-              onReject={() => {}}
+              isUpdating={isUpdatingOrder}
+              onAccept={() => handleAcceptOrder(order.id)}
+              onReject={() => handleRejectOrder(order.id)}
               onTap={() => {
                 if (merchant?.id) {
                   router.push(`/merchant/orders/${order.id}?merchantId=${merchant.id}`);
@@ -390,29 +506,35 @@ export default function MerchantDashboardScreen() {
 
 function OrderCard({
   order,
+  isUpdating,
   onAccept,
   onReject,
   onTap,
 }: {
-  order: MockOrder;
+  order: MerchantOrder;
+  isUpdating: boolean;
   onAccept: () => void;
   onReject: () => void;
   onTap: () => void;
 }) {
   const statusColor = ORDER_STATUS_COLORS[order.status] || COLORS.onSurfaceVariant;
-  const isNew = order.status === 'NEW';
+  const statusLabel = ORDER_STATUS_LABELS[order.status] || order.status;
+  const isNew = ['NEW', 'PENDING'].includes(order.status);
+  const itemCount = order.items?.length || 0;
 
   return (
     <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.orderCard}>
-      <TouchableOpacity onPress={onTap} activeOpacity={0.7}>
+      <TouchableOpacity onPress={onTap} activeOpacity={0.7} disabled={isUpdating}>
         <View style={styles.orderCardInner}>
           {/* Order header row */}
           <View style={styles.orderHeaderRow}>
             <View style={styles.orderHeaderLeft}>
               <View style={[styles.orderStatusDot, { backgroundColor: statusColor }]} />
-              <Text style={styles.orderNumber}>{order.orderNumber}</Text>
+              <Text style={styles.orderNumber}>{order.orderNumber || `#${order.id.slice(-6)}`}</Text>
             </View>
-            <Text style={styles.orderTime}>{order.time}</Text>
+            <View style={styles.orderStatusBadge}>
+              <Text style={[styles.orderStatusText, { color: statusColor }]}>{statusLabel}</Text>
+            </View>
           </View>
 
           {/* Customer & Items */}
@@ -421,35 +543,57 @@ function OrderCard({
               <View style={styles.customerIconCircle}>
                 <Ionicons name="person-outline" size={14} color={COLORS.primary} />
               </View>
-              <Text style={styles.customerName}>{order.customerName}</Text>
+              <Text style={styles.customerName}>{order.customerName || 'Customer'}</Text>
             </View>
             <View style={styles.orderMeta}>
               <View style={styles.itemCountBadge}>
                 <Ionicons name="bag-outline" size={12} color={COLORS.onSurfaceVariant} />
-                <Text style={styles.itemCountText}>{order.itemCount} items</Text>
+                <Text style={styles.itemCountText}>{itemCount} item{itemCount !== 1 ? 's' : ''}</Text>
               </View>
-              <Text style={styles.orderTotal}>UGX {order.total.toLocaleString()}</Text>
+              <Text style={styles.orderTotal}>UGX {(order.totalAmount || 0).toLocaleString()}</Text>
             </View>
           </View>
+
+          {/* Time */}
+          {order.createdAt ? (
+            <View style={styles.orderTimeRow}>
+              <Ionicons name="time-outline" size={12} color={COLORS.onSurfaceVariant} />
+              <Text style={styles.orderTime}>{formatRelativeTime(order.createdAt)}</Text>
+            </View>
+          ) : null}
 
           {/* Action buttons for NEW orders */}
           {isNew && (
             <View style={styles.orderActions}>
               <TouchableOpacity
-                style={styles.rejectButton}
+                style={[styles.rejectButton, isUpdating && styles.actionDisabled]}
                 onPress={onReject}
                 activeOpacity={0.7}
+                disabled={isUpdating}
               >
-                <Ionicons name="close" size={16} color={COLORS.error} />
-                <Text style={styles.rejectButtonText}>Reject</Text>
+                {isUpdating ? (
+                  <ActivityIndicator size="small" color={COLORS.error} />
+                ) : (
+                  <>
+                    <Ionicons name="close" size={16} color={COLORS.error} />
+                    <Text style={styles.rejectButtonText}>Reject</Text>
+                  </>
+                )}
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.acceptButton}
+                style={[styles.acceptButton, isUpdating && styles.actionDisabled]}
                 onPress={onAccept}
                 activeOpacity={0.7}
+                disabled={isUpdating}
               >
-                <Ionicons name="checkmark" size={16} color={COLORS.onPrimary} />
-                <Text style={styles.acceptButtonText}>Accept</Text>
+                {isUpdating ? (
+                  <ActivityIndicator size="small" color={COLORS.onPrimary} />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={16} color={COLORS.onPrimary} />
+                    <Text style={styles.acceptButtonText}>Accept</Text>
+                  </>
+                )}
               </TouchableOpacity>
             </View>
           )}
@@ -646,6 +790,18 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
   },
 
+  // Orders loading
+  ordersLoadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: SPACING.xl * 2,
+  },
+  ordersLoadingText: {
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.md,
+    ...TYPOGRAPHY.bodySm,
+  },
+
   // Empty state
   emptyCard: {
     alignItems: 'center',
@@ -669,6 +825,24 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurfaceVariant,
     textAlign: 'center',
+  },
+
+  // Retry button
+  retryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  retryButtonText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onPrimary,
+    fontWeight: '600',
   },
 
   // Order card
@@ -699,6 +873,22 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.labelLg,
     fontWeight: '600',
     color: COLORS.onSurface,
+  },
+  orderStatusBadge: {
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  orderStatusText: {
+    ...TYPOGRAPHY.labelMd,
+    fontWeight: '600',
+  },
+  orderTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginTop: SPACING.xs,
   },
   orderTime: {
     ...TYPOGRAPHY.labelMd,
@@ -789,6 +979,9 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.labelLg,
     color: COLORS.onPrimary,
     fontWeight: '600',
+  },
+  actionDisabled: {
+    opacity: 0.6,
   },
 
   // Section label

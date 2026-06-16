@@ -18,6 +18,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Alert,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -67,6 +68,7 @@ export default function WalletScreen() {
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadWallet();
@@ -74,20 +76,24 @@ export default function WalletScreen() {
 
   const loadWallet = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await api.getWallet();
       if (response.success && response.data) {
-        const { wallet, transactions, paymentMethods } = response.data;
+        const data = response.data ?? {};
+        const wallet = data.wallet ?? { balance: 0, pendingBalance: 0 };
+        const transactions = data.transactions ?? [];
+        const paymentMethods = data.paymentMethods;
         setWalletData({
-          balance: wallet.balance,
-          pendingBalance: wallet.pendingBalance,
+          balance: wallet.balance ?? 0,
+          pendingBalance: wallet.pendingBalance ?? 0,
           totalDeposited: wallet.totalDeposited,
           totalWithdrawn: wallet.totalWithdrawn,
-          transactions: transactions?.map((t: any) => ({
+          transactions: transactions.map((t: any) => ({
             id: t.id,
             type: t.type || t.transactionType,
-            amount: t.amount,
-            description: t.description,
+            amount: t.amount ?? 0,
+            description: t.description ?? '',
             createdAt: t.createdAt,
             status: t.status,
           })),
@@ -96,6 +102,7 @@ export default function WalletScreen() {
       }
     } catch (error) {
       console.error('Failed to load wallet:', error);
+      setError('Failed to load data. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -103,6 +110,7 @@ export default function WalletScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setError(null);
     await loadWallet();
     setRefreshing(false);
   };
@@ -120,6 +128,20 @@ export default function WalletScreen() {
       minute: '2-digit',
     });
   };
+
+  // ---------- Error State ----------
+  if (error && !walletData) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="cloud-offline-outline" size={48} color={COLORS.outline} />
+        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadWallet} activeOpacity={0.7}>
+          <Text style={styles.retryButtonText}>Try Again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   // ---------- Loading State ----------
   if (isLoading) {
@@ -139,7 +161,7 @@ export default function WalletScreen() {
         subtitle="Manage your balance & payments"
         rightAction={{
           icon: 'notifications-outline',
-          onPress: () => {},
+          onPress: () => router.push('/notifications'),
         }}
       >
         {/* Balance Card with gradient inside header */}
@@ -211,7 +233,7 @@ export default function WalletScreen() {
             <View style={styles.ctaButtonWrapper}>
               <GradientButton
                 title="Top Up"
-                onPress={() => {}}
+                onPress={() => Alert.alert('Coming Soon', 'Top up feature will be available soon')}
                 variant="primary"
                 size="lg"
                 icon={<Ionicons name="add" size={20} color={COLORS.onPrimary} />}
@@ -220,7 +242,7 @@ export default function WalletScreen() {
             <View style={styles.ctaButtonWrapper}>
               <GradientButton
                 title="Withdraw"
-                onPress={() => {}}
+                onPress={() => Alert.alert('Coming Soon', 'Withdrawal feature will be available soon')}
                 variant="outline"
                 size="lg"
                 icon={<Ionicons name="arrow-up" size={20} color={COLORS.primary} />}
@@ -423,7 +445,7 @@ const styles = StyleSheet.create({
   // Screen
   screen: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
   // Loading
@@ -431,7 +453,34 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
+  },
+
+  // Error State
+  errorTitle: {
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    marginTop: SPACING.md,
+  },
+  errorMessage: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+  },
+  retryButtonText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onPrimary,
+    fontWeight: '600',
   },
 
   // Balance Card — gradient with decorative circles

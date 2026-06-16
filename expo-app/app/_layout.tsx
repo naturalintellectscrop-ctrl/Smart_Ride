@@ -166,6 +166,31 @@ function ThemedRootLayout() {
           <Stack.Screen name="health/pharmacy/[id]" />
           <Stack.Screen name="health/prescriptions" />
           <Stack.Screen name="notifications/index" />
+          <Stack.Screen name="chat/index" options={{ headerShown: false }} />
+          <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="call/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="location-picker" options={{ headerShown: false }} />
+          <Stack.Screen name="sos/index" options={{ headerShown: false }} />
+          <Stack.Screen name="orders/cart" options={{ headerShown: false }} />
+          <Stack.Screen name="orders/merchant/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="merchant/index" options={{ headerShown: false }} />
+          <Stack.Screen name="merchant/register" options={{ headerShown: false }} />
+          <Stack.Screen name="merchant/orders" options={{ headerShown: false }} />
+          <Stack.Screen name="merchant/orders/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="merchant/menu" options={{ headerShown: false }} />
+          <Stack.Screen name="merchant/earnings" options={{ headerShown: false }} />
+          <Stack.Screen name="rider/onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="rider/ride-request" />
+          <Stack.Screen name="rider/ride-tracking" />
+          <Stack.Screen name="rider/earnings" options={{ headerShown: false }} />
+          <Stack.Screen name="rider/wallet" options={{ headerShown: false }} />
+          <Stack.Screen name="driver/driver-task" options={{ headerShown: false }} />
+          <Stack.Screen name="pharmacist/index" options={{ headerShown: false }} />
+          <Stack.Screen name="pharmacist/orders" options={{ headerShown: false }} />
+          <Stack.Screen name="pharmacist/orders/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="pharmacist/catalog" options={{ headerShown: false }} />
+          <Stack.Screen name="pharmacist/prescriptions" options={{ headerShown: false }} />
+          <Stack.Screen name="pharmacist/earnings" options={{ headerShown: false }} />
         </Stack>
       </ProviderErrorBoundary>
     </>

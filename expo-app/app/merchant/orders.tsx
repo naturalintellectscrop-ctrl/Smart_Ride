@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMerchantStore } from '@/src/store';
 import { COLORS, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { MerchantOrder } from '@/src/types';
+import { Ionicons } from '@expo/vector-icons';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -39,14 +40,12 @@ export default function MerchantOrdersScreen() {
   const insets = useSafeAreaInsets();
   const merchantId = params.merchantId as string;
 
-  const {
-    orders,
-    isLoadingOrders,
-    ordersError,
-    fetchOrders,
-    updateOrderStatus,
-    isUpdatingOrder,
-  } = useMerchantStore();
+  const orders = useMerchantStore(s => s.orders);
+  const isLoadingOrders = useMerchantStore(s => s.isLoadingOrders);
+  const ordersError = useMerchantStore(s => s.ordersError);
+  const fetchOrders = useMerchantStore(s => s.fetchOrders);
+  const updateOrderStatus = useMerchantStore(s => s.updateOrderStatus);
+  const isUpdatingOrder = useMerchantStore(s => s.isUpdatingOrder);
 
   const [activeTab, setActiveTab] = useState('ALL');
   const [refreshing, setRefreshing] = useState(false);
@@ -162,7 +161,7 @@ export default function MerchantOrdersScreen() {
           </View>
         ) : ordersError ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorEmoji}>⚠️</Text>
+            <Ionicons name="alert-circle-outline" size={20} color={COLORS.error} />
             <Text style={styles.errorText}>{ordersError}</Text>
             <TouchableOpacity
               style={styles.retryButton}
@@ -173,7 +172,7 @@ export default function MerchantOrdersScreen() {
           </View>
         ) : orders.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>📋</Text>
+            <Ionicons name="clipboard-outline" size={32} color={COLORS.outlineVariant} />
             <Text style={styles.emptyTitle}>No Orders</Text>
             <Text style={styles.emptySubtitle}>
               {activeTab === 'ALL' ? 'Orders will appear here when customers place them' : `No ${ORDER_STATUS_LABELS[activeTab]?.toLowerCase() || activeTab.toLowerCase()} orders`}
@@ -208,11 +207,11 @@ export default function MerchantOrdersScreen() {
                 {/* Order Details */}
                 <View style={styles.orderDetails}>
                   <View style={styles.orderMeta}>
-                    <Text style={styles.metaIcon}>👤</Text>
+                    <Ionicons name="person-outline" size={14} color={COLORS.onSurfaceVariant} />
                     <Text style={styles.metaText}>{(order as any).customerName || 'Customer'}</Text>
                   </View>
                   <View style={styles.orderMeta}>
-                    <Text style={styles.metaIcon}>📦</Text>
+                    <Ionicons name="cube-outline" size={14} color={COLORS.onSurfaceVariant} />
                     <Text style={styles.metaText}>{order.items?.length || 0} item(s)</Text>
                   </View>
                   <Text style={styles.orderTotal}>{formatCurrency(order.totalAmount)}</Text>

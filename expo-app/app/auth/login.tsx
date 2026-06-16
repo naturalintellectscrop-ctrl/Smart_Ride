@@ -63,8 +63,11 @@ export default function LoginScreen() {
     const authenticated = await isAuthenticated();
     const { isAuthenticated: storeAuth, user } = useAuthStore.getState();
     if (authenticated || storeAuth) {
-      // Route based on user role
-      navigateByRole(user?.role);
+      // Route based on user role — guard against null user
+      if (!user) {
+        return;
+      }
+      navigateByRole(user.role);
     }
   };
 
@@ -300,7 +303,7 @@ export default function LoginScreen() {
           <View style={styles.phoneInputContainer}>
             {/* Uganda Flag + Country Code */}
             <View style={styles.countryCodeSection}>
-              <Text style={styles.flagEmoji}>🇺🇬</Text>
+              <Text style={styles.flagEmoji}>UG</Text>
               <Text style={styles.countryCodeText}>+256</Text>
               <Ionicons name="chevron-down" size={14} color={COLORS.outline} />
             </View>

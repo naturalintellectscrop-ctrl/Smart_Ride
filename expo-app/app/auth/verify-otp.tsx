@@ -271,7 +271,7 @@ export default function VerifyOTPScreen() {
           return;
         }
 
-        // Login using authStore
+        // Login using authStore — user is guaranteed non-null here
         await login(user, accessToken);
 
         if (refreshToken) {

@@ -20,6 +20,7 @@ import { useLocationStore, useCartStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { PaymentMethod } from '@/src/types';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function CartScreen() {
   const router = useRouter();
@@ -51,6 +52,11 @@ export default function CartScreen() {
   const handlePlaceOrder = async () => {
     if (items.length === 0) {
       Alert.alert('Error', 'Your cart is empty');
+      return;
+    }
+
+    if (!user?.id) {
+      Alert.alert('Error', 'Please log in to place an order');
       return;
     }
 
@@ -170,7 +176,7 @@ export default function CartScreen() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Delivery Address</Text>
           <TouchableOpacity style={styles.addressRow}>
-            <Text style={styles.addressIcon}>📍</Text>
+            <Ionicons name="location-outline" size={16} color={COLORS.primary} style={{ marginRight: SPACING.md - 4 }} />
             <Text style={styles.addressText} numberOfLines={2}>
               {address || 'Set delivery address'}
             </Text>
@@ -203,7 +209,7 @@ export default function CartScreen() {
                 onPress={() => setPaymentMethod(method.id as PaymentMethod)}
               >
                 <Text style={styles.paymentMethodIcon}>
-                  {method.icon === 'phone' ? '📱' : method.icon === 'banknote' ? '💵' : '💳'}
+                  <Ionicons name={method.icon === 'phone' ? 'phone-portrait-outline' : method.icon === 'banknote' ? 'cash-outline' : 'card-outline'} size={16} color={paymentMethod === method.id ? COLORS.primary : COLORS.onSurfaceVariant} style={{ marginRight: SPACING.sm }} />
                 </Text>
                 <Text style={[
                   styles.paymentMethodLabel,

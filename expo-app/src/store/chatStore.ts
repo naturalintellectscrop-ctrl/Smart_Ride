@@ -288,6 +288,27 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   // Socket event handlers
   onNewMessage: (message: Message) => {
     set((state) => {
+      // Deduplication: skip if a message with the same id already exists
+      const existsById = state.messages.some((m) => m.id === message.id);
+      if (existsById) {
+        return state; // no change needed
+      }
+
+      // Secondary dedup: check by tempId / clientTimestamp if id isn't reliable yet
+      // When sendMessage adds an optimistic local message, it uses `msg-local-*` ids.
+      // If the socket delivers the same message from the server, match by
+      // conversationId + senderId + content + close timestamp (within 5s).
+      const isDuplicateByContent = state.messages.some(
+        (m) =>
+          m.conversationId === message.conversationId &&
+          m.senderId === message.senderId &&
+          m.content === message.content &&
+          Math.abs(new Date(m.createdAt).getTime() - new Date(message.createdAt).getTime()) < 5000
+      );
+      if (isDuplicateByContent) {
+        return state; // duplicate — skip
+      }
+
       // Add message if it belongs to active conversation
       const updatedMessages =
         state.activeConversationId === message.conversationId

@@ -11,7 +11,7 @@ import { View, Text, StyleSheet } from 'react-native';
 export const MapView = ({ children, style, ...props }: any) => {
   return (
     <View style={[styles.mapPlaceholder, style]}>
-      <Text style={styles.mapText}>🗺️ Map View</Text>
+      <Text style={styles.mapText}>Map View</Text>
       <Text style={styles.mapSubtext}>Maps are only available on mobile devices</Text>
       {children}
     </View>
@@ -22,7 +22,7 @@ export const MapView = ({ children, style, ...props }: any) => {
 export const Marker = ({ coordinate, title, description, pinColor, ...props }: any) => {
   return (
     <View style={[styles.marker, { backgroundColor: pinColor || '#FF5722' }]}>
-      <Text style={styles.markerText}>📍</Text>
+      <Text style={styles.markerText}>P</Text>
     </View>
   );
 };

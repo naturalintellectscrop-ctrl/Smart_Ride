@@ -44,7 +44,6 @@ import {
   TASK_STATUS_COLORS,
   TASK_STATUS_LABELS,
   DEFAULT_LOCATION,
-  API_CONFIG,
   TYPOGRAPHY,
   SPACING,
   RADIUS,
@@ -245,15 +244,7 @@ export default function DriverHomeScreen() {
     try {
       const matchId = (incomingRequest as any).matchId;
       if (matchId) {
-        const { accessToken } = useAuthStore.getState();
-        const dispatchResponse = await fetch(`${API_CONFIG.baseUrl}/dispatch/${matchId}/accept`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        });
-        const dispatchResult = await dispatchResponse.json();
+        const dispatchResult = await api.dispatchAccept(matchId);
         if (dispatchResult.success) {
           clearIncomingRequest();
           setRequestTimer(null);
@@ -262,25 +253,15 @@ export default function DriverHomeScreen() {
         }
       }
 
-      const { accessToken } = useAuthStore.getState();
-      const response = await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          toStatus: 'ACCEPTED',
-          riderId: rider?.id,
-        }),
+      const result = await api.transitionTask(incomingRequest.task.id, 'ACCEPTED', {
+        riderId: rider?.id,
       });
-      const result = await response.json();
       if (result.success) {
         clearIncomingRequest();
         setRequestTimer(null);
         router.push(`/driver/driver-task?taskId=${incomingRequest.task.id}`);
       } else {
-        Alert.alert('Error', result.error || 'Failed to accept request');
+        Alert.alert('Error', (result as any).error || 'Failed to accept request');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to accept request');
@@ -295,30 +276,11 @@ export default function DriverHomeScreen() {
     try {
       const matchId = (incomingRequest as any).matchId;
       if (matchId) {
-        const { accessToken } = useAuthStore.getState();
-        await fetch(`${API_CONFIG.baseUrl}/dispatch/${matchId}/reject`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            reason: 'Declined by rider',
-          }),
-        });
+        await api.dispatchReject(matchId, 'Declined by rider');
       } else {
-        const { accessToken } = useAuthStore.getState();
-        await fetch(`${API_CONFIG.baseUrl}/tasks/${incomingRequest.task.id}/transition`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify({
-            toStatus: 'CANCELLED',
-            riderId: rider?.id,
-            reason: 'Declined by rider',
-          }),
+        await api.transitionTask(incomingRequest.task.id, 'CANCELLED', {
+          riderId: rider?.id,
+          reason: 'Declined by rider',
         });
       }
       clearIncomingRequest();
@@ -401,7 +363,7 @@ export default function DriverHomeScreen() {
             isOnline
               ? {
                   icon: 'notifications-outline' as const,
-                  onPress: () => {},
+                  onPress: () => { router.push('/notifications'); },
                 }
               : undefined
           }

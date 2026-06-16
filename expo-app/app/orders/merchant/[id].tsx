@@ -1,8 +1,8 @@
 // ============================================
 // SMART RIDE MOBILE - MERCHANT DETAIL SCREEN
 // ============================================
-// VERSION: DEBUG-TRACE-001
 // PURPOSE: View merchant details and menu/products
+// Uses StyleSheet.create() + Ionicons (no NativeWind)
 // ============================================
 
 import React, { useState, useEffect } from 'react';
@@ -14,17 +14,19 @@ import {
   Image,
   ActivityIndicator,
   RefreshControl,
+  StyleSheet,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   FadeIn,
   FadeInUp,
-  FadeInDown,
   SlideInRight,
   ZoomIn,
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import { COLORS, RADIUS, SHADOWS, SPACING, TYPOGRAPHY } from '@/src/constants';
 import { useCartStore, CartItem } from '@/src/store';
 
 interface Merchant {
@@ -56,7 +58,7 @@ export default function MerchantDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const cart = useCartStore();
-  
+
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
@@ -70,21 +72,29 @@ export default function MerchantDetailScreen() {
 
   const loadMerchant = async () => {
     if (!id) return;
-    
+
     setIsLoading(true);
     try {
       const [merchantRes, productsRes] = await Promise.all([
         api.getMerchant(id),
-        api.getMerchantMenu(id),  // Fixed: use /menu endpoint (not /products which 404s)
+        api.getMerchantMenu(id),
       ]);
-      
+
       if (merchantRes.success && merchantRes.data) {
         setMerchant(merchantRes.data);
       }
-      
+
       if (productsRes.success && productsRes.data) {
-        setProducts(productsRes.data);
-        const cats = ['All', ...new Set(productsRes.data.map((p: Product) => p.category).filter(Boolean))];
+        const productsData = productsRes.data ?? [];
+        setProducts(productsData);
+        const cats = [
+          'All',
+          ...new Set(
+            productsData
+              .map((p: Product) => p.category)
+              .filter(Boolean)
+          ),
+        ];
         setCategories(cats as string[]);
       }
     } catch (error) {
@@ -114,13 +124,14 @@ export default function MerchantDetailScreen() {
     cart.addItem(cartItem);
   };
 
-  const filteredProducts = selectedCategory === 'All' 
-    ? products 
-    : products.filter(p => p.category === selectedCategory);
+  const filteredProducts =
+    selectedCategory === 'All'
+      ? products
+      : products.filter((p) => p.category === selectedCategory);
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
       </View>
     );
@@ -128,16 +139,21 @@ export default function MerchantDetailScreen() {
 
   if (!merchant) {
     return (
-      <View className="flex-1 items-center justify-center bg-gray-50">
-        <Text className="text-gray-500">Merchant not found</Text>
+      <View style={styles.loadingContainer}>
+        <Ionicons
+          name="storefront-outline"
+          size={48}
+          color={COLORS.textMuted}
+        />
+        <Text style={styles.emptyText}>Merchant not found</Text>
       </View>
     );
   }
 
   return (
-    <View className="flex-1 bg-gray-50">
-      <ScrollView 
-        className="flex-1"
+    <View style={styles.root}>
+      <ScrollView
+        style={styles.scrollView}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
@@ -145,76 +161,131 @@ export default function MerchantDetailScreen() {
         {/* Cover Image */}
         <Animated.View entering={FadeIn.duration(400)}>
           {merchant.coverImage ? (
-            <Image 
-              source={{ uri: merchant.coverImage }} 
-              className="w-full h-48"
+            <Image
+              source={{ uri: merchant.coverImage }}
+              style={styles.coverImage}
               resizeMode="cover"
             />
           ) : (
-            <View className="w-full h-48 bg-primary-500 items-center justify-center">
-              <Text className="text-5xl text-white">🏪</Text>
+            <View style={styles.coverPlaceholder}>
+              <Ionicons
+                name="storefront"
+                size={56}
+                color={COLORS.onPrimary}
+              />
             </View>
           )}
-          
+
           {/* Back Button */}
-          <TouchableOpacity 
+          <TouchableOpacity
+            style={styles.backButton}
             onPress={() => router.back()}
-            className="absolute top-12 left-4 bg-white/90 rounded-full p-2"
+            activeOpacity={0.7}
           >
-            <Text className="text-xl">←</Text>
+            <Ionicons
+              name="arrow-back"
+              size={22}
+              color={COLORS.onSurface}
+            />
           </TouchableOpacity>
         </Animated.View>
 
         {/* Merchant Info */}
-        <Animated.View 
+        <Animated.View
           entering={FadeInUp.duration(400).delay(100)}
-          className="bg-white p-4 -mt-6 rounded-t-3xl"
+          style={styles.merchantInfoCard}
         >
-          <View className="flex-row items-start">
-            <View className="w-16 h-16 bg-gray-100 rounded-xl items-center justify-center mr-3">
+          <View style={styles.merchantInfoRow}>
+            <View style={styles.merchantLogoContainer}>
               {merchant.image ? (
-                <Image source={{ uri: merchant.image }} className="w-16 h-16 rounded-xl" />
+                <Image
+                  source={{ uri: merchant.image }}
+                  style={styles.merchantLogoImage}
+                />
               ) : (
-                <Text className="text-2xl">🏪</Text>
+                <Ionicons
+                  name="storefront"
+                  size={28}
+                  color={COLORS.primary}
+                />
               )}
             </View>
-            <View className="flex-1">
-              <Text className="text-xl font-bold text-gray-900">{merchant.name}</Text>
-              <Text className="text-gray-500 text-sm">{merchant.address}</Text>
-              <View className="flex-row items-center mt-2">
+            <View style={styles.merchantInfoText}>
+              <Text style={styles.merchantName}>{merchant.name}</Text>
+              <Text style={styles.merchantAddress}>{merchant.address}</Text>
+              <View style={styles.ratingRow}>
                 {merchant.rating && (
-                  <View className="flex-row items-center mr-4">
-                    <Text className="text-yellow-500 mr-1">⭐</Text>
-                    <Text className="font-medium">{merchant.rating.toFixed(1)}</Text>
-                    <Text className="text-gray-400 text-sm ml-1">
+                  <View style={styles.ratingBadge}>
+                    <Ionicons
+                      name="star"
+                      size={14}
+                      color="#F59E0B"
+                      style={styles.starIcon}
+                    />
+                    <Text style={styles.ratingValue}>
+                      {merchant.rating.toFixed(1)}
+                    </Text>
+                    <Text style={styles.reviewCount}>
                       ({merchant.reviewCount || 0})
                     </Text>
                   </View>
                 )}
                 {merchant.deliveryTime && (
-                  <Text className="text-gray-500 text-sm">{merchant.deliveryTime} min</Text>
+                  <Text style={styles.deliveryTime}>
+                    {merchant.deliveryTime} min
+                  </Text>
                 )}
               </View>
             </View>
-            <View className={`px-3 py-1 rounded-full ${merchant.isOpen ? 'bg-green-100' : 'bg-red-100'}`}>
-              <Text className={`text-xs font-medium ${merchant.isOpen ? 'text-green-600' : 'text-red-600'}`}>
+            <View
+              style={[
+                styles.statusBadge,
+                {
+                  backgroundColor: merchant.isOpen
+                    ? COLORS.primaryFixed
+                    : COLORS.errorContainer,
+                },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.statusText,
+                  {
+                    color: merchant.isOpen
+                      ? COLORS.onPrimaryFixedVariant
+                      : COLORS.onErrorContainer,
+                  },
+                ]}
+              >
                 {merchant.isOpen ? 'Open' : 'Closed'}
               </Text>
             </View>
           </View>
 
           {/* Info Pills */}
-          <View className="flex-row mt-4 gap-3">
+          <View style={styles.infoPillsRow}>
             {merchant.deliveryFee !== undefined && (
-              <View className="bg-gray-100 rounded-full px-3 py-1">
-                <Text className="text-gray-600 text-sm">
-                  🚗 UGX {merchant.deliveryFee.toLocaleString()} delivery
+              <View style={styles.infoPill}>
+                <Ionicons
+                  name="car-outline"
+                  size={14}
+                  color={COLORS.textSecondary}
+                  style={styles.pillIcon}
+                />
+                <Text style={styles.pillText}>
+                  UGX {merchant.deliveryFee.toLocaleString()} delivery
                 </Text>
               </View>
             )}
             {merchant.minOrder && (
-              <View className="bg-gray-100 rounded-full px-3 py-1">
-                <Text className="text-gray-600 text-sm">
+              <View style={styles.infoPill}>
+                <Ionicons
+                  name="wallet-outline"
+                  size={14}
+                  color={COLORS.textSecondary}
+                  style={styles.pillIcon}
+                />
+                <Text style={styles.pillText}>
                   Min. UGX {merchant.minOrder.toLocaleString()}
                 </Text>
               </View>
@@ -223,26 +294,37 @@ export default function MerchantDetailScreen() {
 
           {/* Description */}
           {merchant.description && (
-            <Text className="text-gray-500 mt-4">{merchant.description}</Text>
+            <Text style={styles.description}>{merchant.description}</Text>
           )}
         </Animated.View>
 
         {/* Categories */}
         {categories.length > 1 && (
-          <Animated.View 
+          <Animated.View
             entering={FadeInUp.duration(400).delay(200)}
-            className="bg-white px-4 py-3 mt-2"
+            style={styles.categoriesSection}
           >
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {categories.map((cat, index) => (
+              {categories.map((cat) => (
                 <TouchableOpacity
                   key={cat}
                   onPress={() => setSelectedCategory(cat)}
-                  className={`mr-3 px-4 py-2 rounded-full ${
-                    selectedCategory === cat ? 'bg-primary-500' : 'bg-gray-100'
-                  }`}
+                  activeOpacity={0.7}
+                  style={[
+                    styles.categoryChip,
+                    selectedCategory === cat
+                      ? styles.categoryChipActive
+                      : styles.categoryChipInactive,
+                  ]}
                 >
-                  <Text className={selectedCategory === cat ? 'text-white font-medium' : 'text-gray-700'}>
+                  <Text
+                    style={[
+                      styles.categoryChipText,
+                      selectedCategory === cat
+                        ? styles.categoryChipTextActive
+                        : styles.categoryChipTextInactive,
+                    ]}
+                  >
                     {cat}
                   </Text>
                 </TouchableOpacity>
@@ -252,23 +334,30 @@ export default function MerchantDetailScreen() {
         )}
 
         {/* Products */}
-        <View className="px-4 pt-4 pb-32">
-          <Text className="text-gray-900 font-semibold mb-3">Menu</Text>
+        <View style={styles.productsSection}>
+          <Text style={styles.sectionTitle}>Menu</Text>
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product, index) => (
               <Animated.View
                 key={product.id}
                 entering={SlideInRight.duration(300).delay(index * 50)}
               >
-                <ProductCard 
-                  product={product} 
+                <ProductCard
+                  product={product}
                   onAddToCart={() => addToCart(product)}
                 />
               </Animated.View>
             ))
           ) : (
-            <View className="items-center py-12">
-              <Text className="text-gray-500">No products available</Text>
+            <View style={styles.emptyProducts}>
+              <Ionicons
+                name="restaurant-outline"
+                size={40}
+                color={COLORS.textMuted}
+              />
+              <Text style={styles.emptyProductsText}>
+                No products available
+              </Text>
             </View>
           )}
         </View>
@@ -276,21 +365,19 @@ export default function MerchantDetailScreen() {
 
       {/* Cart Button */}
       {cart.totalItems > 0 && (
-        <Animated.View 
-          entering={ZoomIn.duration(300)}
-          className="absolute bottom-6 left-4 right-4"
-        >
+        <Animated.View entering={ZoomIn.duration(300)} style={styles.cartButtonContainer}>
           <TouchableOpacity
             onPress={() => router.push('/orders/cart')}
-            className="bg-primary-500 rounded-2xl p-4 flex-row items-center justify-between"
+            style={styles.cartButton}
+            activeOpacity={0.8}
           >
-            <View className="flex-row items-center">
-              <View className="bg-white/20 rounded-full w-8 h-8 items-center justify-center mr-3">
-                <Text className="text-white font-bold">{cart.totalItems}</Text>
+            <View style={styles.cartButtonLeft}>
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cart.totalItems}</Text>
               </View>
-              <Text className="text-white font-bold">View Cart</Text>
+              <Text style={styles.cartButtonText}>View Cart</Text>
             </View>
-            <Text className="text-white font-bold">
+            <Text style={styles.cartButtonPrice}>
               UGX {cart.totalPrice.toLocaleString()}
             </Text>
           </TouchableOpacity>
@@ -300,36 +387,364 @@ export default function MerchantDetailScreen() {
   );
 }
 
-function ProductCard({ product, onAddToCart }: { product: Product; onAddToCart: () => void }) {
+// ============================================
+// PRODUCT CARD COMPONENT
+// ============================================
+
+function ProductCard({
+  product,
+  onAddToCart,
+}: {
+  product: Product;
+  onAddToCart: () => void;
+}) {
   return (
-    <View className="bg-white rounded-2xl p-4 mb-3 shadow-sm flex-row">
-      <View className="flex-1 mr-3">
-        <Text className="font-bold text-gray-900">{product.name}</Text>
+    <View style={styles.productCard}>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName}>{product.name}</Text>
         {product.description && (
-          <Text className="text-gray-500 text-sm mt-1" numberOfLines={2}>
+          <Text style={styles.productDescription} numberOfLines={2}>
             {product.description}
           </Text>
         )}
-        <Text className="text-primary-500 font-bold mt-2">
+        <Text style={styles.productPrice}>
           UGX {product.price.toLocaleString()}
         </Text>
       </View>
-      <View className="w-20 h-20 bg-gray-100 rounded-xl items-center justify-center">
+      <View style={styles.productImageContainer}>
         {product.image ? (
-          <Image source={{ uri: product.image }} className="w-20 h-20 rounded-xl" />
+          <Image source={{ uri: product.image }} style={styles.productImage} />
         ) : (
-          <Text className="text-2xl">🍽️</Text>
+          <Ionicons
+            name="restaurant-outline"
+            size={28}
+            color={COLORS.textMuted}
+          />
         )}
       </View>
       <TouchableOpacity
         onPress={onAddToCart}
         disabled={!product.inStock}
-        className={`absolute bottom-2 right-2 rounded-full w-8 h-8 items-center justify-center ${
-          product.inStock ? 'bg-primary-500' : 'bg-gray-300'
-        }`}
+        activeOpacity={0.7}
+        style={[
+          styles.addToCartButton,
+          {
+            backgroundColor: product.inStock
+              ? COLORS.primary
+              : COLORS.outlineVariant,
+          },
+        ]}
       >
-        <Text className="text-white text-xl">+</Text>
+        <Ionicons
+          name="add"
+          size={20}
+          color={COLORS.onPrimary}
+        />
       </TouchableOpacity>
     </View>
   );
 }
+
+// ============================================
+// STYLES
+// ============================================
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.background,
+    gap: SPACING.sm,
+  },
+  emptyText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.textMuted,
+    marginTop: SPACING.sm,
+  },
+  scrollView: {
+    flex: 1,
+  },
+
+  // Cover
+  coverImage: {
+    width: '100%',
+    height: 192,
+  },
+  coverPlaceholder: {
+    width: '100%',
+    height: 192,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButton: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 48 : 16,
+    left: SPACING.md,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.card,
+  },
+
+  // Merchant Info
+  merchantInfoCard: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    padding: SPACING.md,
+    marginTop: -SPACING.lg,
+    borderTopLeftRadius: RADIUS.xl,
+    borderTopRightRadius: RADIUS.xl,
+  },
+  merchantInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  merchantLogoContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.gutter,
+  },
+  merchantLogoImage: {
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.lg,
+  },
+  merchantInfoText: {
+    flex: 1,
+  },
+  merchantName: {
+    ...TYPOGRAPHY.headlineMd,
+    color: COLORS.onSurface,
+  },
+  merchantAddress: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.textMuted,
+    marginTop: 2,
+  },
+  ratingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: SPACING.sm,
+  },
+  ratingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  starIcon: {
+    marginRight: 4,
+  },
+  ratingValue: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+  },
+  reviewCount: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.textMuted,
+    marginLeft: 4,
+  },
+  deliveryTime: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.textMuted,
+  },
+  statusBadge: {
+    paddingHorizontal: SPACING.gutter,
+    paddingVertical: 4,
+    borderRadius: RADIUS.full,
+  },
+  statusText: {
+    ...TYPOGRAPHY.labelMd,
+    fontWeight: '600',
+  },
+
+  // Info Pills
+  infoPillsRow: {
+    flexDirection: 'row',
+    marginTop: SPACING.md,
+    gap: SPACING.gutter,
+  },
+  infoPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.gutter,
+    paddingVertical: 4,
+  },
+  pillIcon: {
+    marginRight: 4,
+  },
+  pillText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.textSecondary,
+  },
+
+  // Description
+  description: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.textMuted,
+    marginTop: SPACING.md,
+    lineHeight: 22,
+  },
+
+  // Categories
+  categoriesSection: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.gutter,
+    marginTop: SPACING.xs,
+  },
+  categoryChip: {
+    marginRight: SPACING.gutter,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
+  },
+  categoryChipActive: {
+    backgroundColor: COLORS.primary,
+  },
+  categoryChipInactive: {
+    backgroundColor: COLORS.surfaceContainerLow,
+  },
+  categoryChipText: {
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '500',
+  },
+  categoryChipTextActive: {
+    color: COLORS.onPrimary,
+  },
+  categoryChipTextInactive: {
+    color: COLORS.onSurfaceVariant,
+  },
+
+  // Products
+  productsSection: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.md,
+    paddingBottom: 128,
+  },
+  sectionTitle: {
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    marginBottom: SPACING.gutter,
+  },
+  emptyProducts: {
+    alignItems: 'center',
+    paddingVertical: 48,
+    gap: SPACING.sm,
+  },
+  emptyProductsText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.textMuted,
+  },
+
+  // Product Card
+  productCard: {
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.gutter,
+    flexDirection: 'row',
+    ...SHADOWS.card,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  productInfo: {
+    flex: 1,
+    marginRight: SPACING.gutter,
+  },
+  productName: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+  },
+  productDescription: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.textMuted,
+    marginTop: 4,
+  },
+  productPrice: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.primary,
+    fontWeight: '700',
+    marginTop: SPACING.sm,
+  },
+  productImageContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+    borderRadius: RADIUS.lg,
+  },
+  addToCartButton: {
+    position: 'absolute',
+    bottom: SPACING.sm,
+    right: SPACING.sm,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Cart Button
+  cartButtonContainer: {
+    position: 'absolute',
+    bottom: SPACING.lg,
+    left: SPACING.md,
+    right: SPACING.md,
+  },
+  cartButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.xl,
+    padding: SPACING.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    ...SHADOWS.active,
+  },
+  cartButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  cartBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.gutter,
+  },
+  cartBadgeText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onPrimary,
+  },
+  cartButtonText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onPrimary,
+  },
+  cartButtonPrice: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onPrimary,
+    fontWeight: '700',
+  },
+});

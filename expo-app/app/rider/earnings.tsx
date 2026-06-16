@@ -27,6 +27,7 @@ import { useAuthStore } from '@/src/store';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 // Period type
 type EarningsPeriod = 'today' | 'week' | 'month' | 'lifetime';
@@ -250,7 +251,7 @@ export default function RiderEarningsScreen() {
         {/* Balance & Pending */}
         <View style={styles.statsRow}>
           <GlassCard style={styles.statCard}>
-            <Text style={styles.statIcon}>💵</Text>
+            <Ionicons name="cash-outline" size={20} color={COLORS.success} />
             <Text style={styles.statAmount}>{formatCurrency(walletData?.balance || 0)}</Text>
             <Text style={styles.statLabel}>Available Balance</Text>
             <TouchableOpacity onPress={() => setShowWithdrawModal(true)}>
@@ -347,13 +348,13 @@ export default function RiderEarningsScreen() {
         <Text style={styles.sectionTitle}>Earnings Breakdown</Text>
         <View style={styles.breakdownGrid}>
           {earningsData && ([
-            { key: 'today' as EarningsPeriod, emoji: '📊', label: 'Today', data: earningsData.today },
-            { key: 'week' as EarningsPeriod, emoji: '📈', label: 'This Week', data: earningsData.week },
-            { key: 'month' as EarningsPeriod, emoji: '💰', label: 'This Month', data: earningsData.month },
-            { key: 'lifetime' as EarningsPeriod, emoji: '🏆', label: 'All Time', data: earningsData.lifetime },
+            { key: 'today' as EarningsPeriod, icon: 'stats-chart-outline', label: 'Today', data: earningsData.today },
+            { key: 'week' as EarningsPeriod, icon: 'trending-up-outline', label: 'This Week', data: earningsData.week },
+            { key: 'month' as EarningsPeriod, icon: 'wallet-outline', label: 'This Month', data: earningsData.month },
+            { key: 'lifetime' as EarningsPeriod, icon: 'trophy-outline', label: 'All Time', data: earningsData.lifetime },
           ]).map(item => (
             <GlassCard key={item.key} style={styles.breakdownCard}>
-              <Text style={styles.breakdownEmoji}>{item.emoji}</Text>
+              <Ionicons name={item.icon as any} size={20} color={COLORS.primary} />
               <Text style={styles.breakdownAmount}>{formatCurrency(item.data.totalEarnings)}</Text>
               <Text style={styles.breakdownLabel}>{item.label}</Text>
               <Text style={styles.breakdownTrips}>{item.data.tripCount} trips</Text>

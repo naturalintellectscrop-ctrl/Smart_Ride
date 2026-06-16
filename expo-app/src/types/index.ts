@@ -228,6 +228,7 @@ export interface MerchantOrder {
 export interface MerchantAnalytics {
   totalOrders: number;
   totalRevenue: number;
+  todayRevenue: number;
   averageOrderValue: number;
   pendingOrders: number;
   completedOrders: number;

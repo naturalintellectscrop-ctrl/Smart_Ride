@@ -137,7 +137,7 @@ export default function ConversationsScreen() {
                   style={[styles.messagePreview, isSystem && styles.systemMessagePreview]}
                   numberOfLines={1}
                 >
-                  {isSystem ? `📋 ${lastMsgPreview}` : lastMsgPreview}
+                  {isSystem ? lastMsgPreview : lastMsgPreview}
                 </Text>
               </View>
 
@@ -152,7 +152,7 @@ export default function ConversationsScreen() {
           </View>
 
           {/* Chevron */}
-          <Ionicons name="chevron-forward" size={18} color={COLORS.textDim} />
+          <Ionicons name="chevron-forward" size={18} color={COLORS.outlineVariant} />
         </TouchableOpacity>
       </Animated.View>
     );
@@ -196,7 +196,7 @@ export default function ConversationsScreen() {
             onPress={() => router.back()}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+            <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
           </TouchableOpacity>
           <View style={styles.headerTitleContainer}>
             <Text style={styles.headerTitle}>Messages</Text>
@@ -209,7 +209,7 @@ export default function ConversationsScreen() {
             )}
           </View>
           <TouchableOpacity style={styles.headerAction} activeOpacity={0.7}>
-            <Ionicons name="search-outline" size={22} color={COLORS.textSecondary} />
+            <Ionicons name="search-outline" size={22} color={COLORS.onSurfaceSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -255,10 +255,10 @@ export default function ConversationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   header: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     paddingBottom: 16,
   },
   headerRow: {
@@ -270,9 +270,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.gutter,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     letterSpacing: -0.5,
   },
   headerBadge: {
@@ -307,9 +307,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -330,9 +330,9 @@ const styles = StyleSheet.create({
   conversationCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(19, 19, 26, 0.7)',
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: COLORS.outlineVariant,
     borderRadius: RADIUS.lg,
     padding: 14,
     marginBottom: 10,
@@ -341,7 +341,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -359,13 +359,13 @@ const styles = StyleSheet.create({
   conversationName: {
     fontSize: 15,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     flex: 1,
     marginRight: SPACING.sm,
   },
   conversationTime: {
     fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.textDim,
+    color: COLORS.outlineVariant,
   },
   conversationFooter: {
     flexDirection: 'row',
@@ -383,12 +383,12 @@ const styles = StyleSheet.create({
   },
   messagePreview: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     flex: 1,
   },
   systemMessagePreview: {
     fontStyle: 'italic',
-    color: COLORS.textDim,
+    color: COLORS.outlineVariant,
   },
   unreadBadge: {
     borderRadius: RADIUS.md,
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   unreadBadgeText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
     fontSize: TYPOGRAPHY.labelMd.fontSize,
     fontWeight: 'bold',
   },
@@ -425,12 +425,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.sm,
   },
   emptySubtitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: SPACING.xl,
@@ -445,7 +445,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.md,
   },
   emptyButtonText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
     fontSize: TYPOGRAPHY.bodyMd.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     marginTop: SPACING.sm,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
 });

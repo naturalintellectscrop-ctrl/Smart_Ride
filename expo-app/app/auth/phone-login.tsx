@@ -220,7 +220,7 @@ export default function PhoneLoginScreen() {
           >
             {/* Country Code */}
             <View style={styles.countryCode}>
-              <Text style={styles.flagEmoji}>🇺🇬</Text>
+              <Text style={styles.flagEmoji}>UG</Text>
               <Text style={styles.countryCodeText}>+256</Text>
             </View>
 

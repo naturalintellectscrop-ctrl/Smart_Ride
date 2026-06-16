@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMerchantStore } from '@/src/store';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { MenuItem } from '@/src/types';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function MerchantMenuScreen() {
   const router = useRouter();
@@ -202,7 +203,7 @@ export default function MerchantMenuScreen() {
           </View>
         ) : menuError ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorEmoji}>⚠️</Text>
+            <Ionicons name="alert-circle-outline" size={20} color={COLORS.error} />
             <Text style={styles.errorText}>{menuError}</Text>
             <TouchableOpacity
               style={styles.retryButton}
@@ -213,7 +214,7 @@ export default function MerchantMenuScreen() {
           </View>
         ) : menuItems.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🍽️</Text>
+            <Ionicons name="restaurant-outline" size={32} color={COLORS.outlineVariant} />
             <Text style={styles.emptyTitle}>No Menu Items</Text>
             <Text style={styles.emptySubtitle}>Add your first menu item to get started</Text>
             <TouchableOpacity style={styles.emptyButton} onPress={openAddModal}>

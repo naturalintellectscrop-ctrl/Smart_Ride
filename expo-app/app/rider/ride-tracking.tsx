@@ -19,6 +19,7 @@ import { useTaskStore, useAuthStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS, TASK_STATUS_LABELS, TASK_STATUS_COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { Task, TaskStatus } from '@/src/types';
+import { Ionicons } from '@expo/vector-icons';
 
 // Polling intervals (in ms)
 const POLL_INTERVAL_FAST = 3000;  // 3 seconds for active rides
@@ -42,10 +43,17 @@ export default function RideTrackingScreen() {
   // Polling refs
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const socketConnectedRef = useRef(false);
+  const lastUpdateTimestamp = useRef(0); // Track last state update time to prevent stale poll overwrites
 
   // POLLING FALLBACK: Fetch task status periodically
   const pollTaskStatus = async () => {
     if (!params.taskId) return;
+    
+    // Skip poll if a socket update happened recently (within 5 seconds)
+    // This prevents stale poll data from overwriting fresh socket data
+    if (Date.now() - lastUpdateTimestamp.current < 5000) {
+      return;
+    }
     
     try {
       const response = await api.getTask(params.taskId);
@@ -97,15 +105,15 @@ export default function RideTrackingScreen() {
     
     // Format payment method for display
     const paymentMethodLabel: Record<string, string> = {
-      'CASH': '💵 Cash',
-      'MTN_MOMO': '📱 MTN MoMo',
-      'AIRTEL_MONEY': '📱 Airtel Money',
-      'VISA': '💳 Visa',
-      'MASTERCARD': '💳 Mastercard',
+      'CASH': 'Cash',
+      'MTN_MOMO': 'MTN MoMo',
+      'AIRTEL_MONEY': 'Airtel Money',
+      'VISA': 'Visa',
+      'MASTERCARD': 'Mastercard',
     };
 
-    const displayMethod = paymentMethodLabel[paymentDetails.paymentMethod] || paymentDetails.paymentMethod;
-    const fareDisplay = paymentDetails.fare?.toLocaleString() || completedTask.totalAmount?.toLocaleString() || 'N/A';
+    const displayMethod = paymentMethodLabel[paymentDetails.paymentMethod ?? 'CASH'] ?? paymentDetails.paymentMethod ?? 'Cash';
+    const fareDisplay = paymentDetails.fare?.toLocaleString() ?? completedTask.totalAmount?.toLocaleString() ?? 'N/A';
     
     const submitRating = async (stars: number) => {
       if (completedTask.id) {
@@ -120,12 +128,12 @@ export default function RideTrackingScreen() {
 
     // Show completion alert with star-rating buttons
     Alert.alert(
-      '✅ Ride Completed!',
+      'Ride Completed!',
       `Total Fare: UGX ${fareDisplay}\nPayment: ${displayMethod}\n\n${paymentDetails.paymentMethod === 'CASH' ? 'Please pay the driver in cash.' : 'Payment will be processed automatically.'}`,
       [
-        { text: '⭐⭐⭐⭐⭐', onPress: () => submitRating(5) },
-        { text: '⭐⭐⭐⭐', onPress: () => submitRating(4) },
-        { text: '⭐⭐⭐', onPress: () => submitRating(3) },
+        { text: '★★★★★ (5 stars)', onPress: () => submitRating(5) },
+        { text: '★★★★ (4 stars)', onPress: () => submitRating(4) },
+        { text: '★★★ (3 stars)', onPress: () => submitRating(3) },
         { text: 'Skip', style: 'cancel', onPress: () => router.replace('/(tabs)') },
       ],
       { cancelable: false }
@@ -184,6 +192,7 @@ export default function RideTrackingScreen() {
     // Fixed: match server event name 'task:status:update'
     const unsubscribeStatus = socketService.on('task:status:update', (data: { taskId: string; status: string }) => {
       if (data.taskId === params.taskId) {
+        lastUpdateTimestamp.current = Date.now(); // Mark socket update as most recent
         updateTaskStatus(data.taskId, data.status);
         setTask(prev => prev ? { ...prev, status: data.status as TaskStatus } : null);
         
@@ -198,6 +207,7 @@ export default function RideTrackingScreen() {
     // Fixed: match server event name 'rider:location:update'
     const unsubscribeLocation = socketService.on('rider:location:update', (data: { latitude: number; longitude: number; heading?: number; driverId?: string }) => {
       // Accept location updates for this task's driver
+      lastUpdateTimestamp.current = Date.now(); // Mark socket update as most recent
       setDriverLocation({
         latitude: data.latitude,
         longitude: data.longitude,
@@ -379,13 +389,13 @@ export default function RideTrackingScreen() {
         {task.rider && (
           <View style={styles.driverCard}>
             <View style={styles.driverAvatar}>
-              <Text style={styles.driverAvatarEmoji}>👤</Text>
+              <Ionicons name="person" size={24} color={COLORS.onSurfaceVariant} />
             </View>
             <View style={styles.driverInfo}>
               <Text style={styles.driverName}>{task.rider.fullName}</Text>
               <View style={styles.driverRatingRow}>
-                <Text style={styles.driverRatingStar}>⭐</Text>
-                <Text style={styles.driverRating}>{task.rider.rating.toFixed(1)}</Text>
+                <Ionicons name="star" size={14} color="#F59E0B" />
+                <Text style={styles.driverRating}>{(task.rider?.rating ?? 0).toFixed(1)}</Text>
                 <Text style={styles.driverTripsSeparator}>•</Text>
                 <Text style={styles.driverTrips}>{task.rider.totalTrips} trips</Text>
               </View>
@@ -394,7 +404,7 @@ export default function RideTrackingScreen() {
               style={styles.callButton}
               onPress={handleCallDriver}
             >
-              <Text>📞</Text>
+              <Ionicons name="call-outline" size={20} color={COLORS.onPrimary} />
             </TouchableOpacity>
           </View>
         )}
@@ -419,7 +429,7 @@ export default function RideTrackingScreen() {
         <View style={styles.fareRow}>
           <Text style={styles.fareLabel}>Estimated Fare</Text>
           <Text style={styles.fareAmount}>
-            UGX {task.totalAmount.toLocaleString()}
+            UGX {(task.totalAmount ?? 0).toLocaleString()}
           </Text>
         </View>
 

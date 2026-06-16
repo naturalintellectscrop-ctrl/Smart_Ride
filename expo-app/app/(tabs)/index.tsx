@@ -20,6 +20,7 @@ import Animated, { FadeIn, FadeInUp, SlideInRight, ZoomIn } from 'react-native-r
 import { useAuthStore, useLocationStore } from '@/src/store';
 import { COLORS, SERVICES, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlowHeader, GlassCard, GradientButton, ServiceIcon } from '@/src/components';
+import { Ionicons } from '@expo/vector-icons';
 
 // Local service data for the home grid (maps to SERVICES keys + custom entries)
 const HOME_SERVICES: {
@@ -29,7 +30,7 @@ const HOME_SERVICES: {
   customEmoji?: string;
   customColor?: string;
 }[] = [
-  { id: 'ride', name: 'Rides', serviceKey: 'custom', customEmoji: '🚗', customColor: '#00FF88' },
+  { id: 'ride', name: 'Rides', serviceKey: 'custom', customEmoji: undefined, customColor: '#00FF88' },
   { id: 'food', name: 'Food', serviceKey: 'FOOD' },
   { id: 'shopping', name: 'Shop', serviceKey: 'SHOPPING' },
   { id: 'delivery', name: 'Delivery', serviceKey: 'DELIVERY' },
@@ -38,8 +39,10 @@ const HOME_SERVICES: {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
-  const { address, getCurrentLocation, isLocating } = useLocationStore();
+  const user = useAuthStore(s => s.user);
+  const address = useLocationStore(s => s.address);
+  const getCurrentLocation = useLocationStore(s => s.getCurrentLocation);
+  const isLocating = useLocationStore(s => s.isLocating);
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
@@ -91,14 +94,14 @@ export default function HomeScreen() {
         {/* GlowHeader replaces solid green header */}
         <GlowHeader
           title="Smart Ride"
-          rightAction={{ icon: 'notifications-outline', onPress: () => {} }}
+          rightAction={{ icon: 'notifications-outline', onPress: () => router.push('/notifications') }}
         >
           {/* Greeting + Location moved into GlowHeader children */}
           <View style={styles.headerChildren}>
             <Animated.View entering={FadeIn.duration(400)}>
               <Text style={styles.greeting}>{getGreeting()},</Text>
               <Text style={styles.userName}>
-                {user?.name?.split(' ')[0] || 'Guest'} 👋
+                {user?.name?.split(' ')[0] || 'Guest'}
               </Text>
             </Animated.View>
 
@@ -108,7 +111,7 @@ export default function HomeScreen() {
                 onPress={() => getCurrentLocation().catch(() => {})}
                 activeOpacity={0.7}
               >
-                <Text style={styles.locationIcon}>📍</Text>
+                <Ionicons name="location-outline" size={TYPOGRAPHY.bodySm.fontSize} color={COLORS.primary} style={{ marginRight: SPACING.sm }} />
                 {isLocating ? (
                   <ActivityIndicator color={COLORS.primary} size="small" />
                 ) : (
@@ -126,7 +129,7 @@ export default function HomeScreen() {
         <Animated.View entering={FadeInUp.duration(400).delay(200)} style={styles.searchContainer}>
           <GlassCard variant="elevated" padding={SPACING.md} borderRadius={RADIUS.lg}>
             <TouchableOpacity style={styles.searchBar} onPress={() => router.push('/rider/ride-request?type=BODA')}>
-              <Text style={styles.searchIcon}>🔍</Text>
+              <Ionicons name="search-outline" size={TYPOGRAPHY.bodyMd.fontSize} color={COLORS.outline} style={{ marginRight: SPACING.gutter }} />
               <Text style={styles.searchPlaceholder}>Where do you want to go?</Text>
             </TouchableOpacity>
           </GlassCard>
@@ -168,7 +171,7 @@ export default function HomeScreen() {
               <GlassCard variant="accent" padding={SPACING.md} borderRadius={RADIUS.lg}>
                 <View style={styles.rideCardInner}>
                   <ServiceIcon service="BODA" size="lg" />
-                  <Text style={styles.rideIconEmoji}>🏍️</Text>
+                  <Ionicons name="bicycle-outline" size={28} color={COLORS.primary} />
                   <Text style={styles.rideName}>Smart Boda</Text>
                   <Text style={styles.rideDesc}>Motorcycle ride</Text>
                   <Text style={styles.ridePrice}>From UGX 2,000</Text>
@@ -189,7 +192,7 @@ export default function HomeScreen() {
               <GlassCard variant="cyan" padding={SPACING.md} borderRadius={RADIUS.lg}>
                 <View style={styles.rideCardInner}>
                   <ServiceIcon service="CAR" size="lg" />
-                  <Text style={styles.rideIconEmoji}>🚗</Text>
+                  <Ionicons name="car-sport-outline" size={28} color={COLORS.serviceCar} />
                   <Text style={styles.rideName}>Smart Car</Text>
                   <Text style={styles.rideDesc}>Car ride</Text>
                   <Text style={styles.ridePrice}>From UGX 5,000</Text>

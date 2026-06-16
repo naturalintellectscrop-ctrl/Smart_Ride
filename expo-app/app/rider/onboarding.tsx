@@ -22,16 +22,17 @@ import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const TOTAL_STEPS = 4;
 
 const VEHICLE_TYPES = [
-  { id: 'MOTORCYCLE', label: '🏍️ Motorcycle', description: 'Boda boda rider' },
-  { id: 'CAR', label: '🚗 Car', description: 'Smart car driver' },
-  { id: 'BICYCLE', label: '🚲 Bicycle', description: 'Bicycle courier' },
-  { id: 'SCOOTER', label: '🛵 Scooter', description: 'Scooter delivery' },
+  { id: 'MOTORCYCLE', label: 'Motorcycle', icon: 'bicycle-outline', description: 'Boda boda rider' },
+  { id: 'CAR', label: 'Car', icon: 'car-outline', description: 'Smart car driver' },
+  { id: 'BICYCLE', label: 'Bicycle', icon: 'bicycle-outline', description: 'Bicycle courier' },
+  { id: 'SCOOTER', label: 'Scooter', icon: 'speedometer-outline', description: 'Scooter delivery' },
 ];
 
 export default function RiderOnboardingScreen() {
@@ -345,7 +346,7 @@ export default function RiderOnboardingScreen() {
             />
 
             <GlassCard variant="accent" style={styles.infoCard}>
-              <Text style={styles.infoIcon}>ℹ️</Text>
+              <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
               <Text style={styles.infoText}>
                 Document uploads (photo, ID scan) can be completed after registration. For now, please provide the document numbers.
               </Text>
@@ -371,7 +372,7 @@ export default function RiderOnboardingScreen() {
                   onPress={() => setVehicleInfo(p => ({ ...p, vehicleType: vt.id }))}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.vehicleTypeEmoji}>{vt.label.split(' ')[0]}</Text>
+                  <Ionicons name={vt.icon} size={28} color={vehicleInfo.vehicleType === vt.id ? COLORS.primary : COLORS.onSurface} />
                   <Text style={[
                     styles.vehicleTypeLabel,
                     vehicleInfo.vehicleType === vt.id && styles.vehicleTypeLabelActive,

@@ -126,6 +126,9 @@ export interface Provider {
   // Location
   location: ProviderLocation;
 
+  // Last seen timestamp — used for stale provider eviction
+  lastSeenAt: Date;
+
   // Performance
   metrics: ProviderMetrics;
 

@@ -25,26 +25,12 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { resetPassword } from '@/src/services/auth';
+import { COLORS } from '../../src/constants';
+import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
+import { Ionicons } from '@expo/vector-icons';
 
 const { height } = Dimensions.get('window');
-
-const COLORS = {
-  primary: '#00FF88',          // Neon Green - Smart Ride brand
-  primaryDark: '#00CC6D',
-  accent: '#00FFF3',           // Cyan - Secondary accent
-  background: '#0D0D12',       // Dark background
-  backgroundElevated: '#1A1A24',
-  backgroundSurface: '#252530',
-  text: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textMuted: 'rgba(255, 255, 255, 0.5)',
-  textDim: 'rgba(255, 255, 255, 0.3)',
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderGlow: 'rgba(0, 255, 136, 0.3)',
-  error: '#F43F5E',
-  success: '#00FF88',
-};
 
 // Password strength requirements (matching web admin)
 const PASSWORD_REQUIREMENTS = [
@@ -99,7 +85,7 @@ export default function ResetPasswordScreen() {
     ]).start();
 
     // Logo floating animation
-    Animated.loop(
+    const logoLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(logoFloat, {
           toValue: -8,
@@ -114,10 +100,11 @@ export default function ResetPasswordScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    logoLoop.start();
 
     // Glow pulse animation
-    Animated.loop(
+    const glowLoop = Animated.loop(
       Animated.sequence([
         Animated.timing(glowPulse, {
           toValue: 1,
@@ -132,7 +119,13 @@ export default function ResetPasswordScreen() {
           useNativeDriver: true,
         }),
       ])
-    ).start();
+    );
+    glowLoop.start();
+
+    return () => {
+      logoLoop.stop();
+      glowLoop.stop();
+    };
   }, [token]);
 
   const glowOpacity = glowPulse.interpolate({
@@ -188,9 +181,9 @@ export default function ResetPasswordScreen() {
   const getPasswordStrength = () => {
     const metCount = PASSWORD_REQUIREMENTS.filter(r => r.test(newPassword, confirmPassword)).length;
     if (metCount <= 1) return { label: 'Weak', color: COLORS.error, percent: 20 };
-    if (metCount === 2) return { label: 'Fair', color: '#F59E0B', percent: 40 };
-    if (metCount === 3) return { label: 'Good', color: '#3B82F6', percent: 60 };
-    if (metCount === 4) return { label: 'Strong', color: COLORS.accent, percent: 80 };
+    if (metCount === 2) return { label: 'Fair', color: COLORS.warning, percent: 40 };
+    if (metCount === 3) return { label: 'Good', color: COLORS.tertiary, percent: 60 };
+    if (metCount === 4) return { label: 'Strong', color: COLORS.secondary, percent: 80 };
     return { label: 'Very Strong', color: COLORS.success, percent: 100 };
   };
 
@@ -241,7 +234,7 @@ export default function ResetPasswordScreen() {
     return (
       <>
         <View style={styles.shieldContainer}>
-          <Text style={styles.shieldIcon}>🛡</Text>
+          <Ionicons name="shield-check-outline" size={24} color={COLORS.primary} />
         </View>
         <Text style={styles.formTitle}>New Password</Text>
         <Text style={styles.formSubtitle}>
@@ -250,7 +243,7 @@ export default function ResetPasswordScreen() {
 
         {error && (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorIcon}>⚠</Text>
+            <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         )}
@@ -259,11 +252,11 @@ export default function ResetPasswordScreen() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>New Password</Text>
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>🔒</Text>
+            <Ionicons name="lock-closed-outline" size={14} color={COLORS.outlineVariant} style={{ paddingLeft: 14 }} />
             <TextInput
               style={styles.input}
               placeholder="Min 8 chars, 1 uppercase, 1 number"
-              placeholderTextColor={COLORS.textDim}
+              placeholderTextColor={COLORS.outlineVariant}
               value={newPassword}
               onChangeText={(text) => {
                 setNewPassword(text);
@@ -279,7 +272,7 @@ export default function ResetPasswordScreen() {
               onPress={() => setShowPassword(!showPassword)}
               style={styles.eyeButton}
             >
-              <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={16} color={COLORS.outlineVariant} style={{ paddingHorizontal: 14, paddingVertical: 12 }} />
             </TouchableOpacity>
           </View>
         </View>
@@ -305,11 +298,11 @@ export default function ResetPasswordScreen() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Confirm Password</Text>
           <View style={styles.inputWrapper}>
-            <Text style={styles.inputIcon}>🔒</Text>
+            <Ionicons name="lock-closed-outline" size={14} color={COLORS.outlineVariant} style={{ paddingLeft: 14 }} />
             <TextInput
               style={styles.input}
               placeholder="Re-enter your new password"
-              placeholderTextColor={COLORS.textDim}
+              placeholderTextColor={COLORS.outlineVariant}
               value={confirmPassword}
               onChangeText={(text) => {
                 setConfirmPassword(text);
@@ -325,7 +318,7 @@ export default function ResetPasswordScreen() {
               onPress={() => setShowConfirm(!showConfirm)}
               style={styles.eyeButton}
             >
-              <Text style={styles.eyeText}>{showConfirm ? '🙈' : '👁️'}</Text>
+              <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={16} color={COLORS.outlineVariant} style={{ paddingHorizontal: 14, paddingVertical: 12 }} />
             </TouchableOpacity>
           </View>
         </View>
@@ -337,8 +330,8 @@ export default function ResetPasswordScreen() {
             const met = req.test(newPassword, confirmPassword);
             return (
               <View key={req.key} style={styles.requirementRow}>
-                <View style={[styles.requirementDot, { backgroundColor: met ? COLORS.success : 'rgba(255,255,255,0.2)' }]} />
-                <Text style={[styles.requirementText, { color: met ? 'rgba(0, 255, 136, 0.7)' : 'rgba(255, 255, 255, 0.3)' }]}>
+                <View style={[styles.requirementDot, { backgroundColor: met ? COLORS.success : COLORS.outlineVariant }]} />
+                <Text style={[styles.requirementText, { color: met ? COLORS.secondary : COLORS.outline }]}>
                   {req.label}
                 </Text>
               </View>
@@ -354,7 +347,7 @@ export default function ResetPasswordScreen() {
           activeOpacity={0.8}
         >
           {isLoading ? (
-            <ActivityIndicator color={COLORS.background} size="small" />
+            <ActivityIndicator color={COLORS.onPrimary} size="small" />
           ) : (
             <Text style={styles.submitButtonText}>Reset Password</Text>
           )}
@@ -441,7 +434,7 @@ export default function ResetPasswordScreen() {
         {/* Security Notice */}
         <Animated.View style={[styles.securityNotice, { opacity: fadeAnim }]}>
           <Text style={styles.securityText}>
-            🔒 Secure reset • Smart Ride
+            Secure reset • Smart Ride
           </Text>
         </Animated.View>
       </ScrollView>
@@ -452,7 +445,7 @@ export default function ResetPasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   backgroundGradient: {
     position: 'absolute',
@@ -502,9 +495,9 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 24,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderWidth: 1,
-    borderColor: 'rgba(0, 255, 136, 0.2)',
+    borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -525,29 +518,29 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   headerTitle: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 28,
     fontWeight: 'bold',
     letterSpacing: -0.5,
   },
   headerSubtitle: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 15,
     marginTop: 8,
   },
   formCard: {
     marginHorizontal: 20,
     marginTop: -8,
-    backgroundColor: 'rgba(26, 26, 36, 0.8)',
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: 24,
     padding: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderColor: COLORS.outlineVariant,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
   },
   shieldContainer: {
     width: 56,
@@ -563,14 +556,14 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   formTitle: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 22,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 4,
   },
   formSubtitle: {
-    color: COLORS.textDim,
+    color: COLORS.outlineVariant,
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 20,
@@ -598,7 +591,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
     marginBottom: 8,
     fontSize: 13,
     fontWeight: '600',
@@ -606,10 +599,10 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     overflow: 'hidden',
   },
   inputIcon: {
@@ -622,7 +615,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 15,
     fontSize: 15,
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   eyeButton: {
     paddingHorizontal: 14,
@@ -640,7 +633,7 @@ const styles = StyleSheet.create({
   strengthBarBackground: {
     flex: 1,
     height: 4,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: COLORS.surfaceContainerHigh,
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -655,15 +648,15 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   requirementsContainer: {
-    backgroundColor: 'rgba(37, 37, 48, 0.5)',
+    backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: 12,
     padding: 14,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
+    borderColor: COLORS.outlineVariant,
     marginBottom: 20,
   },
   requirementsTitle: {
-    color: 'rgba(255, 255, 255, 0.4)',
+    color: COLORS.outline,
     fontSize: 11,
     fontWeight: '600',
     marginBottom: 8,
@@ -694,11 +687,11 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   submitButtonDisabled: {
-    backgroundColor: COLORS.primaryDark,
+    backgroundColor: COLORS.primaryContainer,
     opacity: 0.7,
   },
   submitButtonText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -721,13 +714,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   successTitle: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 12,
   },
   successMessage: {
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceVariant,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -747,7 +740,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   backToLoginButtonText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '700',
   },
@@ -770,13 +763,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   invalidTitle: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 12,
   },
   invalidMessage: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 20,
@@ -812,7 +805,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   securityText: {
-    color: COLORS.textDim,
+    color: COLORS.outlineVariant,
     fontSize: 11,
   },
 });

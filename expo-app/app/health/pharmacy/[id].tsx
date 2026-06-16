@@ -29,7 +29,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS, GRADIENTS } from '@/src/constants';
+import { COLORS, GRADIENTS, SPACING, RADIUS } from '@/src/constants';
 import { useCartStore, CartItem } from '@/src/store';
 import { GlassCard, GradientButton, ServiceIcon, StatusBadge } from '@/src/components';
 
@@ -71,6 +71,7 @@ export default function PharmacyDetailScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPharmacy();
@@ -80,6 +81,7 @@ export default function PharmacyDetailScreen() {
     if (!id) return;
 
     setIsLoading(true);
+    setError(null);
     try {
       const [merchantRes, productsRes] = await Promise.all([
         api.getMerchant(id),
@@ -91,12 +93,14 @@ export default function PharmacyDetailScreen() {
       }
 
       if (productsRes.success && productsRes.data) {
-        setProducts(productsRes.data);
-        const cats = ['All', ...new Set(productsRes.data.map((p: Product) => p.category).filter(Boolean))];
+        const productsData = productsRes.data ?? [];
+        setProducts(productsData);
+        const cats = ['All', ...new Set(productsData.map((p: Product) => p.category).filter(Boolean))];
         setCategories(cats as string[]);
       }
     } catch (error) {
       console.error('Failed to load pharmacy:', error);
+      setError('Failed to load data. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -104,6 +108,7 @@ export default function PharmacyDetailScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setError(null);
     await loadPharmacy();
     setRefreshing(false);
   };
@@ -130,6 +135,19 @@ export default function PharmacyDetailScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (error && !pharmacy) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="cloud-offline-outline" size={48} color={COLORS.outline} />
+        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadPharmacy} activeOpacity={0.7}>
+          <Text style={styles.retryButtonText}>Try Again</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -172,7 +190,7 @@ export default function PharmacyDetailScreen() {
             />
           ) : (
             <View style={styles.coverPlaceholder}>
-              <Text style={styles.coverEmoji}>💊</Text>
+              <Ionicons name="medkit-outline" size={56} color={COLORS.primary} />
             </View>
           )}
 
@@ -182,7 +200,7 @@ export default function PharmacyDetailScreen() {
             style={styles.backButton}
             activeOpacity={0.7}
           >
-            <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+            <Ionicons name="arrow-back" size={20} color={COLORS.onSurface} />
           </TouchableOpacity>
         </Animated.View>
 
@@ -196,7 +214,7 @@ export default function PharmacyDetailScreen() {
               {pharmacy.image ? (
                 <Image source={{ uri: pharmacy.image }} style={styles.pharmacyIcon} />
               ) : (
-                <ServiceIcon service="HEALTH" size="lg" customEmoji="💊" />
+                <ServiceIcon service="HEALTH" size="lg" customEmoji="medkit-outline" />
               )}
             </View>
             <View style={styles.infoTextContainer}>
@@ -211,7 +229,7 @@ export default function PharmacyDetailScreen() {
               <View style={styles.metaRow}>
                 {pharmacy.rating !== undefined && pharmacy.rating !== null && (
                   <View style={styles.ratingRow}>
-                    <Text style={styles.ratingStar}>⭐</Text>
+                    <Ionicons name="star" size={13} color="#F59E0B" />
                     <Text style={styles.ratingText}>
                       {pharmacy.rating.toFixed(1)}
                     </Text>
@@ -239,7 +257,7 @@ export default function PharmacyDetailScreen() {
             {pharmacy.deliveryFee !== undefined && (
               <View style={styles.infoPill}>
                 <Text style={styles.infoPillText}>
-                  🚗 UGX {pharmacy.deliveryFee.toLocaleString()} delivery
+                  UGX {pharmacy.deliveryFee.toLocaleString()} delivery
                 </Text>
               </View>
             )}
@@ -317,7 +335,7 @@ export default function PharmacyDetailScreen() {
               <ServiceIcon
                 service="HEALTH"
                 size="lg"
-                customEmoji="💊"
+                customEmoji="medkit-outline"
                 style={styles.emptyIcon}
               />
               <Text style={styles.emptyText}>No products available</Text>
@@ -381,7 +399,7 @@ function ProductCard({
           {product.image ? (
             <Image source={{ uri: product.image }} style={styles.productImage} />
           ) : (
-            <ServiceIcon service="HEALTH" size="md" customEmoji="💊" />
+            <ServiceIcon service="HEALTH" size="md" customEmoji="medkit-outline" />
           )}
         </View>
 
@@ -413,7 +431,7 @@ function ProductCard({
           <Ionicons
             name="add"
             size={20}
-            color={product.inStock ? COLORS.background : COLORS.textMuted}
+            color={product.inStock ? COLORS.onPrimary : COLORS.outline}
           />
         </TouchableOpacity>
       </View>
@@ -432,7 +450,7 @@ function ProductCard({
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
   // Loading
@@ -440,15 +458,42 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   notFoundText: {
     fontSize: 16,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginBottom: 16,
   },
   notFoundButton: {
     marginTop: 8,
+  },
+
+  // Error State
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    marginTop: SPACING.md,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+  },
+  retryButtonText: {
+    color: COLORS.onPrimary,
+    fontSize: 16,
+    fontWeight: '600',
   },
 
   // Scroll
@@ -481,9 +526,9 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(13, 13, 18, 0.7)',
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -493,13 +538,13 @@ const styles = StyleSheet.create({
     marginHorizontal: 16,
     marginTop: -24,
     borderRadius: 20,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: COLORS.outlineVariant,
     padding: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.08,
     shadowRadius: 12,
     elevation: 8,
   },
@@ -522,12 +567,12 @@ const styles = StyleSheet.create({
   pharmacyName: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     letterSpacing: -0.3,
   },
   pharmacyAddress: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     marginTop: 2,
   },
   metaRow: {
@@ -546,17 +591,17 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceSecondary,
     fontWeight: '600',
   },
   reviewCount: {
     fontSize: 12,
-    color: COLORS.textDim,
+    color: COLORS.onSurfaceDim,
     marginLeft: 2,
   },
   deliveryTimeText: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
 
   // Info Pills
@@ -566,22 +611,22 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   infoPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
+    backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: COLORS.borderLight,
+    borderColor: COLORS.outlineVariant,
   },
   infoPillText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceSecondary,
   },
 
   // Description
   description: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     lineHeight: 20,
     marginTop: 12,
   },
@@ -597,7 +642,7 @@ const styles = StyleSheet.create({
   categoryPillText: {
     fontSize: 13,
     fontWeight: '500',
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceSecondary,
   },
   categoryPillTextActive: {
     color: COLORS.primary,
@@ -612,7 +657,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: 12,
   },
 
@@ -639,11 +684,11 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 15,
     fontWeight: '600',
-    color: COLORS.text,
+    color: COLORS.onSurface,
   },
   productDescription: {
     fontSize: 12,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     lineHeight: 16,
   },
   productPrice: {
@@ -662,7 +707,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   addButtonDisabled: {
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
   },
   outOfStockText: {
     fontSize: 11,
@@ -681,7 +726,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
 
   // Bottom spacer
@@ -697,7 +742,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 16,
     paddingTop: 12,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.borderLight,
   },
@@ -723,17 +768,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   cartBadgeText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
     fontSize: 13,
     fontWeight: 'bold',
   },
   cartButtonText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },
   cartTotalText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: 'bold',
   },

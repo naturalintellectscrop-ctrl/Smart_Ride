@@ -15,6 +15,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -53,9 +54,9 @@ interface Pharmacy {
 // ============================================
 
 const HEALTH_CATEGORIES = [
-  { key: 'prescriptions', label: 'Prescriptions', emoji: '📋', icon: 'document-text' as const, color: COLORS.primary },
-  { key: 'pharmacy', label: 'Pharmacy', emoji: '💊', icon: 'medkit' as const, color: COLORS.secondary },
-  { key: 'delivery', label: 'Health Delivery', emoji: '🚑', icon: 'car' as const, color: COLORS.tertiary },
+  { key: 'prescriptions', label: 'Prescriptions', emoji: 'document-text-outline', icon: 'document-text' as const, color: COLORS.primary },
+  { key: 'pharmacy', label: 'Pharmacy', emoji: 'medkit-outline', icon: 'medkit' as const, color: COLORS.secondary },
+  { key: 'delivery', label: 'Health Delivery', emoji: 'car-outline', icon: 'car' as const, color: COLORS.tertiary },
 ];
 
 // ============================================
@@ -69,6 +70,7 @@ export default function HealthScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeCategory, setActiveCategory] = useState('pharmacy');
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -76,6 +78,7 @@ export default function HealthScreen() {
 
   const loadData = async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await api.getPharmacies();
       if (response.success && response.data) {
@@ -83,6 +86,7 @@ export default function HealthScreen() {
       }
     } catch (error) {
       console.error('Failed to load pharmacies:', error);
+      setError('Failed to load data. Please try again.');
       setPharmacies([]);
     } finally {
       setIsLoading(false);
@@ -91,6 +95,7 @@ export default function HealthScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setError(null);
     await loadData();
     setRefreshing(false);
   };
@@ -107,6 +112,19 @@ export default function HealthScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (error && pharmacies.length === 0) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="cloud-offline-outline" size={48} color={COLORS.outline} />
+        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadData} activeOpacity={0.7}>
+          <Text style={styles.retryButtonText}>Try Again</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -129,7 +147,7 @@ export default function HealthScreen() {
             onChangeText={setSearchQuery}
             icon="search"
             rightIcon="filter"
-            onRightIconPress={() => {}}
+            onRightIconPress={() => Alert.alert('Filter', 'Filter options will be available soon')}
           />
         </Animated.View>
       </GlowHeader>
@@ -361,6 +379,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.surface,
+  },
+
+  // Error State
+  errorTitle: {
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    marginTop: SPACING.md,
+  },
+  errorMessage: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+  },
+  retryButtonText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onPrimary,
+    fontWeight: '600',
   },
 
   // Search

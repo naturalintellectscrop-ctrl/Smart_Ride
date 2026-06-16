@@ -3,7 +3,8 @@
 // ============================================
 // Full-screen map for picking a location
 // Search bar with places autocomplete (Mapbox geocoding API)
-// Confirm button returns selected location via router params
+// Confirm button stores selected location in useLocationStore (pickupLocation/dropoffLocation)
+// then calls router.back() — the calling screen reads from the store
 // ============================================
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -41,7 +42,13 @@ export default function LocationPickerScreen() {
     currentLocation?: string;
   }>();
 
-  const { latitude: userLat, longitude: userLng, getCurrentLocation } = useLocationStore();
+  const {
+    latitude: userLat,
+    longitude: userLng,
+    getCurrentLocation,
+    setPickupLocation,
+    setDropoffLocation,
+  } = useLocationStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<PlaceResult[]>([]);
@@ -151,10 +158,22 @@ export default function LocationPickerScreen() {
   const handleConfirm = useCallback(() => {
     if (!selectedLocation) return;
 
-    // Pass the selected location back via router params
-    // The calling screen will read these params
+    // Store the selected location in the location store so the calling
+    // screen can read it after we navigate back
+    const locationData = {
+      latitude: selectedLocation.latitude,
+      longitude: selectedLocation.longitude,
+      address: selectedAddress,
+    };
+
+    if (params.type === 'pickup') {
+      setPickupLocation(locationData);
+    } else {
+      setDropoffLocation(locationData);
+    }
+
     router.back();
-  }, [selectedLocation, selectedAddress, router, params.type]);
+  }, [selectedLocation, selectedAddress, router, params.type, setPickupLocation, setDropoffLocation]);
 
   const isPickup = params.type === 'pickup';
   const headerTitle = isPickup ? 'Select Pickup' : 'Select Dropoff';
@@ -188,19 +207,19 @@ export default function LocationPickerScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={22} color={COLORS.text} />
+            <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
           </TouchableOpacity>
           <View style={styles.searchInputContainer}>
             <Ionicons
               name="search"
               size={18}
-              color={COLORS.textMuted}
+              color={COLORS.onSurfaceMuted}
               style={styles.searchIcon}
             />
             <TextInput
               style={styles.searchInput}
               placeholder={`Search ${isPickup ? 'pickup' : 'dropoff'} location...`}
-              placeholderTextColor={COLORS.textMuted}
+              placeholderTextColor={COLORS.onSurfaceMuted}
               value={searchQuery}
               onChangeText={handleSearch}
               returnKeyType="search"
@@ -213,7 +232,7 @@ export default function LocationPickerScreen() {
                   setSearchResults([]);
                 }}
               >
-                <Ionicons name="close-circle" size={18} color={COLORS.textMuted} />
+                <Ionicons name="close-circle" size={18} color={COLORS.onSurfaceMuted} />
               </TouchableOpacity>
             )}
           </View>
@@ -349,7 +368,7 @@ export default function LocationPickerScreen() {
             colors={
               selectedLocation
                 ? [COLORS.primary, '#00CC6A']
-                : [COLORS.textDim, COLORS.textDim]
+                : [COLORS.onSurfaceDim, COLORS.onSurfaceDim]
             }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -373,7 +392,7 @@ export default function LocationPickerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
   searchContainer: {
     position: 'absolute',
@@ -387,10 +406,10 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     paddingLeft: 8,
     paddingRight: 12,
     elevation: 8,
@@ -417,17 +436,17 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 15,
     paddingVertical: 0,
   },
   searchResultsContainer: {
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: 16,
     marginTop: 8,
     maxHeight: 300,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -448,7 +467,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.outlineVariant,
   },
   searchResultIcon: {
     width: 36,
@@ -463,12 +482,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   searchResultName: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontWeight: '600',
     fontSize: 14,
   },
   searchResultAddress: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 12,
     marginTop: 2,
   },
@@ -484,11 +503,11 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     elevation: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -507,7 +526,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: COLORS.backgroundElevated,
+    backgroundColor: COLORS.surfaceContainerLowest,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingHorizontal: 20,
@@ -515,7 +534,7 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
     borderWidth: 1,
     borderBottomWidth: 0,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -4 },
@@ -537,24 +556,24 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   selectedLabel: {
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceSecondary,
     fontSize: 12,
     fontWeight: '500',
   },
   selectedAddress: {
-    color: COLORS.text,
+    color: COLORS.onSurface,
     fontSize: 16,
     fontWeight: '600',
     lineHeight: 22,
   },
   selectedCoords: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 12,
     marginTop: 4,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   tapHint: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     fontSize: 15,
     textAlign: 'center',
     paddingVertical: 8,
@@ -572,12 +591,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   confirmText: {
-    color: COLORS.background,
+    color: COLORS.onPrimary,
     fontSize: 17,
     fontWeight: '700',
   },
   confirmTextDisabled: {
-    color: COLORS.textMuted,
+    color: COLORS.outline,
   },
   // Popular Places
   popularContainer: {
@@ -590,7 +609,7 @@ const styles = StyleSheet.create({
   },
   popularTitle: {
     fontSize: 12,
-    color: COLORS.textDim,
+    color: COLORS.onSurfaceDim,
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -602,9 +621,9 @@ const styles = StyleSheet.create({
   popularChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(26, 26, 36, 0.9)',
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.outlineVariant,
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -612,7 +631,7 @@ const styles = StyleSheet.create({
   },
   popularChipText: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceSecondary,
     fontWeight: '500',
   },
 });

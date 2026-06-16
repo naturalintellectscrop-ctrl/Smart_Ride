@@ -20,6 +20,7 @@ import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 type PeriodFilter = 'daily' | 'weekly' | 'monthly';
 
@@ -145,17 +146,17 @@ export default function PharmacistEarningsScreen() {
           {/* Period Earnings */}
           <View style={styles.earningsGrid}>
             <GlassCard style={styles.earningsCard}>
-              <Text style={styles.earningsIcon}>📊</Text>
+              <Ionicons name="stats-chart-outline" size={20} color={COLORS.primary} />
               <Text style={styles.earningsAmount}>{formatCurrency(todayEarnings)}</Text>
               <Text style={styles.earningsPeriod}>Today</Text>
             </GlassCard>
             <GlassCard variant="cyan" style={styles.earningsCard}>
-              <Text style={styles.earningsIcon}>📈</Text>
+              <Ionicons name="trending-up-outline" size={20} color={COLORS.primary} />
               <Text style={styles.earningsAmount}>{formatCurrency(weekEarnings)}</Text>
               <Text style={styles.earningsPeriod}>This Week</Text>
             </GlassCard>
             <GlassCard style={styles.earningsCard}>
-              <Text style={styles.earningsIcon}>💰</Text>
+              <Ionicons name="wallet-outline" size={20} color={COLORS.primary} />
               <Text style={styles.earningsAmount}>{formatCurrency(monthEarnings)}</Text>
               <Text style={styles.earningsPeriod}>This Month</Text>
             </GlassCard>
@@ -171,9 +172,7 @@ export default function PharmacistEarningsScreen() {
                     styles.transactionIcon,
                     tx.type === 'PAYOUT' ? { backgroundColor: `${COLORS.error}15` } : { backgroundColor: `${COLORS.success}15` },
                   ]}>
-                    <Text style={styles.transactionEmoji}>
-                      {tx.type === 'PAYOUT' ? '📤' : tx.type === 'REFUND' ? '↩️' : '💰'}
-                    </Text>
+                    <Ionicons name={tx.type === 'PAYOUT' ? 'share-outline' : tx.type === 'REFUND' ? 'arrow-back-outline' : 'wallet-outline'} size={16} color={COLORS.onSurface} />
                   </View>
                   <View style={styles.transactionInfo}>
                     <Text style={styles.transactionDesc}>{tx.description || tx.type}</Text>
@@ -199,7 +198,7 @@ export default function PharmacistEarningsScreen() {
             ))
           ) : (
             <GlassCard style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>💳</Text>
+              <Ionicons name="card-outline" size={40} color={COLORS.outlineVariant} />
               <Text style={styles.emptyTitle}>No transactions yet</Text>
               <Text style={styles.emptySubtitle}>Transaction history will appear here</Text>
             </GlassCard>

@@ -23,10 +23,11 @@ import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 const WITHDRAWAL_PROVIDERS = [
-  { id: 'MTN_MOMO', name: 'MTN MoMo', color: '#FFCC00', icon: '📱' },
-  { id: 'AIRTEL_MONEY', name: 'Airtel Money', color: '#ED1C24', icon: '📱' },
+  { id: 'MTN_MOMO', name: 'MTN MoMo', color: '#FFCC00', icon: 'phone-portrait-outline' },
+  { id: 'AIRTEL_MONEY', name: 'Airtel Money', color: '#ED1C24', icon: 'phone-portrait-outline' },
 ];
 
 export default function RiderWalletScreen() {
@@ -207,14 +208,14 @@ export default function RiderWalletScreen() {
             activeOpacity={0.7}
           >
             <View style={[styles.quickActionIcon, { backgroundColor: `${COLORS.primary}15` }]}>
-              <Text style={styles.quickActionEmoji}>📤</Text>
+              <Ionicons name="share-outline" size={20} color={COLORS.primary} />
             </View>
             <Text style={styles.quickActionLabel}>Withdraw</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.quickAction} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.quickAction} activeOpacity={0.7} onPress={() => Alert.alert('Coming Soon', 'Top up feature will be available soon')}>
             <View style={[styles.quickActionIcon, { backgroundColor: `${COLORS.info}15` }]}>
-              <Text style={styles.quickActionEmoji}>💳</Text>
+              <Ionicons name="card-outline" size={20} color={COLORS.info} />
             </View>
             <Text style={styles.quickActionLabel}>Top Up</Text>
           </TouchableOpacity>
@@ -225,14 +226,21 @@ export default function RiderWalletScreen() {
             activeOpacity={0.7}
           >
             <View style={[styles.quickActionIcon, { backgroundColor: `${COLORS.warning}15` }]}>
-              <Text style={styles.quickActionEmoji}>📊</Text>
+              <Ionicons name="stats-chart-outline" size={20} color={COLORS.warning} />
             </View>
             <Text style={styles.quickActionLabel}>Earnings</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.quickAction} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.quickAction} activeOpacity={0.7} onPress={() => {
+            // Scroll to transaction history section by loading all transactions
+            if (transactions.length > 0) {
+              Alert.alert('Transaction History', 'Showing all transactions below');
+            } else {
+              Alert.alert('No History', 'You have no transactions yet');
+            }
+          }}>
             <View style={[styles.quickActionIcon, { backgroundColor: `${COLORS.success}15` }]}>
-              <Text style={styles.quickActionEmoji}>📋</Text>
+              <Ionicons name="clipboard-outline" size={20} color={COLORS.success} />
             </View>
             <Text style={styles.quickActionLabel}>History</Text>
           </TouchableOpacity>
@@ -241,12 +249,12 @@ export default function RiderWalletScreen() {
         {/* Wallet Summary */}
         <View style={styles.summaryRow}>
           <GlassCard style={styles.summaryCard}>
-            <Text style={styles.summaryIcon}>💰</Text>
+            <Ionicons name="wallet-outline" size={18} color={COLORS.primary} />
             <Text style={styles.summaryAmount}>{formatCurrency(walletData?.totalDeposited || 0)}</Text>
             <Text style={styles.summaryLabel}>Total Deposited</Text>
           </GlassCard>
           <GlassCard style={styles.summaryCard}>
-            <Text style={styles.summaryIcon}>📤</Text>
+            <Ionicons name="share-outline" size={18} color={COLORS.primary} />
             <Text style={styles.summaryAmount}>{formatCurrency(walletData?.totalWithdrawn || 0)}</Text>
             <Text style={styles.summaryLabel}>Total Withdrawn</Text>
           </GlassCard>
@@ -288,7 +296,7 @@ export default function RiderWalletScreen() {
           })
         ) : (
           <GlassCard style={styles.emptyCard}>
-            <Text style={styles.emptyIcon}>💳</Text>
+            <Ionicons name="card-outline" size={40} color={COLORS.outlineVariant} />
             <Text style={styles.emptyTitle}>No transactions yet</Text>
             <Text style={styles.emptySubtitle}>Your transaction history will appear here</Text>
           </GlassCard>
@@ -324,7 +332,7 @@ export default function RiderWalletScreen() {
                   onPress={() => setWithdrawProvider(provider.id)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.providerIcon}>{provider.icon}</Text>
+                  <Ionicons name={provider.icon as any} size={18} color={withdrawProvider === provider.id ? COLORS.primary : COLORS.onSurfaceVariant} />
                   <Text style={[
                     styles.providerName,
                     withdrawProvider === provider.id && styles.providerNameActive,

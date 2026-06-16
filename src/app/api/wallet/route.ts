@@ -4,6 +4,7 @@ import { requireAuth, requireOwnershipOrAdmin } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { checkRateLimit, paymentRateLimit } from '@/lib/security/rate-limit';
+import { PaymentService } from '@/lib/payments/payment-service';
 
 // GET /api/wallet - Get wallet balance and info
 export async function GET(request: NextRequest) {
@@ -112,7 +113,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/wallet - Top up wallet
+// POST /api/wallet - Top up wallet via payment gateway
+// Wallet top-up must go through a real payment provider (MTN MoMo or Airtel Money).
+// Money is NOT added directly — a PENDING transaction is created and the payment
+// gateway is invoked. The balance is only incremented after the payment callback
+// confirms success.
 export async function POST(request: NextRequest) {
   // Rate limiting check
   const rateLimitResult = checkRateLimit(request, paymentRateLimit);
@@ -134,6 +139,43 @@ export async function POST(request: NextRequest) {
 
     if (!amount || amount <= 0) {
       return NextResponse.json({ success: false, error: 'Valid amount is required' }, { status: 400 });
+    }
+
+    // Payment method is required — we must go through a real payment gateway
+    if (!paymentMethod) {
+      return NextResponse.json(
+        { success: false, error: 'Wallet top-up requires a payment method. Please add a payment method first.' },
+        { status: 400 }
+      );
+    }
+
+    // Only mobile money providers are supported for wallet top-up
+    const supportedMethods = ['MTN_MOMO', 'AIRTEL_MONEY'];
+    if (!supportedMethods.includes(paymentMethod)) {
+      return NextResponse.json(
+        { success: false, error: 'Wallet top-up requires a payment method. Please add a payment method first.' },
+        { status: 400 }
+      );
+    }
+
+    // Phone number is required for mobile money
+    if (!phoneNumber) {
+      return NextResponse.json(
+        { success: false, error: 'Phone number is required for mobile money top-up' },
+        { status: 400 }
+      );
+    }
+
+    // Check if the payment provider is configured
+    const isProviderConfigured = paymentMethod === 'MTN_MOMO'
+      ? PaymentService.isMTNConfigured()
+      : PaymentService.isAirtelConfigured();
+
+    if (!isProviderConfigured) {
+      return NextResponse.json(
+        { success: false, error: 'Wallet top-up requires a payment method. Please add a payment method first.' },
+        { status: 400 }
+      );
     }
 
     // Users can only top up their own wallet
@@ -158,45 +200,52 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Create transaction
-    const newBalance = wallet.balance + amount;
-    
-    await db.$transaction(async (tx) => {
-      // Update wallet balance
-      await tx.wallet.update({
-        where: { id: wallet!.id },
-        data: {
-          balance: newBalance,
-          totalDeposited: wallet!.totalDeposited + amount,
-        },
-      });
-
-      // Create transaction record
-      await tx.walletTransaction.create({
-        data: {
-          walletId: wallet!.id,
-          transactionType: 'DEPOSIT',
-          amount,
-          balanceAfter: newBalance,
-          paymentMethod,
-          description: `Wallet top-up via ${paymentMethod}`,
-          status: 'COMPLETED',
-        },
-      });
-    });
-
-    // Refetch updated wallet
-    const updatedWallet = await db.wallet.findFirst({
-      where: { ownerId: userId, ownerType: 'USER' },
-      include: {
-        transactions: {
-          orderBy: { createdAt: 'desc' },
-          take: 10,
-        },
+    // Create a PENDING wallet transaction — balance is NOT updated yet
+    // The transaction will be marked COMPLETED only after the payment gateway confirms success
+    const pendingTransaction = await db.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        transactionType: 'DEPOSIT',
+        amount,
+        balanceBefore: wallet.balance,
+        balanceAfter: wallet.balance, // unchanged until payment confirmed
+        description: `Wallet top-up via ${paymentMethod} (pending)`,
+        status: 'PENDING',
       },
     });
 
-    // Create audit log for wallet top-up
+    // Initiate the payment through the payment gateway
+    const paymentResult = await PaymentService.initiatePayment({
+      userId,
+      amount,
+      currency: 'UGX',
+      paymentMethod,
+      phoneNumber,
+      description: `Wallet top-up UGX ${amount.toLocaleString()}`,
+      metadata: {
+        walletTransactionId: pendingTransaction.id,
+        walletId: wallet.id,
+        topUp: true,
+      },
+    });
+
+    if (!paymentResult.success) {
+      // Mark the transaction as FAILED since the payment initiation failed
+      await db.walletTransaction.update({
+        where: { id: pendingTransaction.id },
+        data: {
+          status: 'FAILED',
+          description: `Wallet top-up via ${paymentMethod} (failed: ${paymentResult.message})`,
+        },
+      });
+
+      return NextResponse.json(
+        { success: false, error: paymentResult.message || 'Payment initiation failed' },
+        { status: 400 }
+      );
+    }
+
+    // Create audit log for wallet top-up initiation
     try {
       await createAuditLog({
         action: AuditActions.WALLET_TOPUP,
@@ -205,16 +254,30 @@ export async function POST(request: NextRequest) {
         actorType: 'USER',
         actorId: user.userId,
         userId: user.userId,
-        description: `Wallet top-up of ${amount} via ${paymentMethod || 'unknown method'}`,
+        description: `Wallet top-up of ${amount} initiated via ${paymentMethod} (payment pending)`,
         source: 'MOBILE_APP',
       });
     } catch (auditError) {
       console.error('Audit log failed for wallet top-up:', auditError);
     }
 
+    // Return payment pending status — the client should poll or wait for callback
     return NextResponse.json({
       success: true,
-      data: { wallet: updatedWallet },
+      data: {
+        transaction: {
+          id: pendingTransaction.id,
+          status: 'PENDING',
+          amount,
+          paymentMethod,
+        },
+        payment: {
+          id: paymentResult.paymentId,
+          reference: paymentResult.reference,
+          status: paymentResult.status,
+          message: paymentResult.message,
+        },
+      },
     });
   } catch (error) {
     return NextResponse.json({ success: false, error: 'Failed to top up wallet' }, { status: 500 });

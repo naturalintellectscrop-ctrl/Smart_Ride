@@ -24,6 +24,7 @@ import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 type PrescriptionTab = 'ALL' | 'PENDING' | 'VERIFIED' | 'REJECTED';
 
@@ -297,7 +298,7 @@ export default function PrescriptionsScreen() {
             ))
           ) : (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📋</Text>
+              <Ionicons name="clipboard-outline" size={32} color={COLORS.outlineVariant} />
               <Text style={styles.emptyTitle}>No prescriptions found</Text>
               <Text style={styles.emptySubtitle}>
                 {activeTab === 'ALL'

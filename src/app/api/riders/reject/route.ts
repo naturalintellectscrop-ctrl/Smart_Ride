@@ -1,20 +1,31 @@
-import { NextRequest } from 'next/server';
-import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { NextRequest, NextResponse } from 'next/server';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { requireAdmin } from '@/lib/auth/guards';
 import { z } from 'zod';
 
 const rejectSchema = z.object({
-  adminId: z.string(), // ID of admin performing rejection
   reason: z.string().min(5, 'Rejection reason is required'),
 });
 
 /**
  * POST /api/riders/reject
  * Reject a pending rider application
+ * SECURITY: Admin-only access required
  */
 export async function POST(request: NextRequest) {
-  await setServiceRoleContext();
+  // SECURITY: Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
+
+  await setRLSContext(admin);
   try {
     const body = await request.json();
     const validatedData = rejectSchema.parse(body);
@@ -44,7 +55,7 @@ export async function POST(request: NextRequest) {
       data: {
         status: 'REJECTED',
         verifiedAt: new Date(),
-        verifiedBy: validatedData.adminId,
+        verifiedBy: admin.userId, // Use authenticated admin's ID
         verificationNotes: validatedData.reason,
       },
     });
@@ -55,7 +66,7 @@ export async function POST(request: NextRequest) {
       entityType: EntityTypes.RIDER,
       entityId: riderId,
       actorType: 'ADMIN',
-      actorId: validatedData.adminId,
+      actorId: admin.userId,
       riderId: riderId,
       description: `Rider rejected: ${rider.fullName}. Reason: ${validatedData.reason}`,
       newValues: {

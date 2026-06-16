@@ -1,20 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { requireAuth } from '@/lib/auth/guards';
 import { z } from 'zod';
 
 // GET /api/wallet/payment-methods - Get user payment methods
+// SECURITY: Requires authentication - users can only access their own payment methods
 export async function GET(request: NextRequest) {
-  await setServiceRoleContext();
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const user = authResult.user!;
+
+  await setRLSContext(user);
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return NextResponse.json({ success: false, error: 'userId is required' }, { status: 400 });
-    }
-
     const paymentMethods = await db.userPaymentMethod.findMany({
-      where: { userId, isActive: true },
+      where: { userId: user.userId, isActive: true },
       orderBy: { isDefault: 'desc' },
     });
 
@@ -28,24 +32,34 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/wallet/payment-methods - Add new payment method
+// SECURITY: Requires authentication - userId derived from token, not request body
 export async function POST(request: NextRequest) {
-  await setServiceRoleContext();
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const user = authResult.user!;
+
+  await setRLSContext(user);
   try {
     const body = await request.json();
-    const { userId, type, name, accountNumber, cardLastFour, cardBrand, phoneNumber } = body;
+    const { type, name, accountNumber, cardLastFour, cardBrand, phoneNumber } = body;
 
-    if (!userId || !type || !name) {
-      return NextResponse.json({ success: false, error: 'userId, type, and name are required' }, { status: 400 });
+    if (!type || !name) {
+      return NextResponse.json({ success: false, error: 'type and name are required' }, { status: 400 });
     }
 
     // Check if this is the first payment method (make it default)
     const existingCount = await db.userPaymentMethod.count({
-      where: { userId, isActive: true },
+      where: { userId: user.userId, isActive: true },
     });
 
     const paymentMethod = await db.userPaymentMethod.create({
       data: {
-        userId,
+        userId: user.userId, // Use authenticated user's ID
         type,
         name,
         accountNumber,
@@ -68,17 +82,21 @@ export async function POST(request: NextRequest) {
 
 const putPaymentMethodSchema = z.object({
   paymentMethodId: z.string().min(1),
-  userId: z.string().min(1).optional(),
-});
-
-const deletePaymentMethodSchema = z.object({
-  userId: z.string().min(1),
-  paymentMethodId: z.string().min(1),
 });
 
 // PUT /api/wallet/payment-methods - Set default payment method
+// SECURITY: Requires authentication - userId derived from token
 export async function PUT(request: NextRequest) {
-  await setServiceRoleContext();
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const user = authResult.user!;
+
+  await setRLSContext(user);
   try {
     const body = await request.json();
     const parsed = putPaymentMethodSchema.safeParse(body);
@@ -88,11 +106,11 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { userId, paymentMethodId } = parsed.data;
+    const { paymentMethodId } = parsed.data;
 
-    // Verify the payment method belongs to the user
+    // Verify the payment method belongs to the authenticated user
     const paymentMethod = await db.userPaymentMethod.findFirst({
-      where: { id: paymentMethodId, userId, isActive: true },
+      where: { id: paymentMethodId, userId: user.userId, isActive: true },
     });
 
     if (!paymentMethod) {
@@ -103,7 +121,7 @@ export async function PUT(request: NextRequest) {
     await db.$transaction([
       // Remove default from all
       db.userPaymentMethod.updateMany({
-        where: { userId },
+        where: { userId: user.userId },
         data: { isDefault: false },
       }),
       // Set the selected one as default
@@ -122,13 +140,26 @@ export async function PUT(request: NextRequest) {
   }
 }
 
+const deletePaymentMethodSchema = z.object({
+  paymentMethodId: z.string().min(1),
+});
+
 // DELETE /api/wallet/payment-methods - Remove payment method
+// SECURITY: Requires authentication - userId derived from token
 export async function DELETE(request: NextRequest) {
-  await setServiceRoleContext();
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const user = authResult.user!;
+
+  await setRLSContext(user);
   try {
     const { searchParams } = new URL(request.url);
     const queryParams = {
-      userId: searchParams.get('userId') || '',
       paymentMethodId: searchParams.get('paymentMethodId') || '',
     };
     const parsed = deletePaymentMethodSchema.safeParse(queryParams);
@@ -138,11 +169,11 @@ export async function DELETE(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { userId, paymentMethodId } = parsed.data;
+    const { paymentMethodId } = parsed.data;
 
-    // Verify the payment method belongs to the user
+    // Verify the payment method belongs to the authenticated user
     const paymentMethod = await db.userPaymentMethod.findFirst({
-      where: { id: paymentMethodId, userId, isActive: true },
+      where: { id: paymentMethodId, userId: user.userId, isActive: true },
     });
 
     if (!paymentMethod) {
@@ -158,7 +189,7 @@ export async function DELETE(request: NextRequest) {
     // If the removed one was default, set another as default
     if (paymentMethod.isDefault) {
       const nextDefault = await db.userPaymentMethod.findFirst({
-        where: { userId, isActive: true },
+        where: { userId: user.userId, isActive: true },
       });
 
       if (nextDefault) {

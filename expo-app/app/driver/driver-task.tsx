@@ -32,13 +32,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import * as Location from 'expo-location';
-import { useTaskStore, useLocationStore, useAuthStore } from '@/src/store';
+import { useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS, API_CONFIG } from '@/src/constants';
+import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
 import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Task, TaskStatus } from '@/src/types';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -150,21 +151,11 @@ export default function DriverTaskScreen() {
   };
 
   const transitionTask = async (taskId: string, toStatus: string) => {
-    const { accessToken } = useAuthStore.getState();
-    const response = await fetch(`${API_CONFIG.baseUrl}/tasks/${taskId}/transition`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        toStatus,
-        latitude,
-        longitude,
-      }),
+    const result = await api.transitionTask(taskId, toStatus, {
+      latitude,
+      longitude,
     });
-    const data = await response.json();
-    return data;
+    return result;
   };
 
   const updateStatus = async (newStatus: TaskStatus) => {
@@ -365,7 +356,7 @@ export default function DriverTaskScreen() {
                 <Text style={styles.taskNumber}>{task.taskNumber}</Text>
               </View>
               <StatusBadge
-                label={task.taskType.includes('BODA') ? '🏍️ Boda' : '🚗 Car'}
+                label={task.taskType.includes('BODA') ? 'Boda' : 'Car'}
                 color={statusColor}
                 size="md"
               />
@@ -378,18 +369,18 @@ export default function DriverTaskScreen() {
                 style={styles.clientCard}
               >
                 <View style={styles.clientAvatar}>
-                  <Text style={styles.clientAvatarEmoji}>👤</Text>
+                  <Ionicons name="person" size={22} color={COLORS.onSurfaceVariant} />
                 </View>
                 <View style={styles.clientInfo}>
-                  <Text style={styles.clientName}>{task.client.name}</Text>
-                  <Text style={styles.clientPhone}>{task.client.phone}</Text>
+                  <Text style={styles.clientName}>{task.client?.name ?? 'Customer'}</Text>
+                  <Text style={styles.clientPhone}>{task.client?.phone ?? ''}</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.callButton}
                   onPress={handleCallClient}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.callButtonEmoji}>📞</Text>
+                  <Ionicons name="call-outline" size={18} color={COLORS.secondary} />
                 </TouchableOpacity>
               </Animated.View>
             )}
@@ -428,7 +419,7 @@ export default function DriverTaskScreen() {
             >
               <Text style={styles.paymentMethod}>Payment: {task.paymentMethod}</Text>
               <Text style={styles.paymentAmount}>
-                UGX {task.totalAmount.toLocaleString()}
+                UGX {(task.totalAmount ?? 0).toLocaleString()}
               </Text>
             </Animated.View>
 
@@ -448,7 +439,7 @@ export default function DriverTaskScreen() {
                   }}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.navigateButtonIcon}>🧭</Text>
+                  <Ionicons name="compass-outline" size={18} color={COLORS.secondary} />
                   <Text style={styles.navigateButtonText}>Navigate</Text>
                 </TouchableOpacity>
               </Animated.View>
@@ -490,7 +481,7 @@ export default function DriverTaskScreen() {
                 style={styles.completedCard}
               >
                 <Text style={styles.completedText}>
-                  ✅ Trip Completed Successfully!
+                  Trip Completed Successfully!
                 </Text>
                 <GradientButton
                   title="Go to Home"

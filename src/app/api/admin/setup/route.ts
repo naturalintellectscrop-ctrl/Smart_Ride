@@ -2,6 +2,10 @@
  * GET /api/admin/setup
  * Seeds the default admin user if it doesn't exist
  * This endpoint helps set up admin on Vercel/Production
+ * 
+ * SECURITY: All credentials come from environment variables only.
+ * No hardcoded defaults. If env vars are missing, returns 500.
+ * Setup key is never exposed in error messages.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -10,37 +14,53 @@ import bcrypt from 'bcryptjs';
 
 const SALT_ROUNDS = 12;
 
-// Default admin credentials
-const DEFAULT_ADMIN = {
-  email: 'naturalintellectscrop@gmail.com',
-  password: 'Admin@123',
-  name: 'System Administrator',
-  role: 'SUPER_ADMIN' as const,
-  phone: '+256700000000',
-};
-
 export async function GET(request: NextRequest) {
   await setServiceRoleContext();
   try {
-    // Only allow in development or with secret key
+    // SECURITY: Require setup key from environment variable
     const setupKey = request.nextUrl.searchParams.get('key');
+    const requiredSetupKey = process.env.ADMIN_SETUP_KEY;
     
-    // Simple security check - use a setup key or allow in dev
-    const isDev = process.env.NODE_ENV === 'development';
-    const validKey = setupKey === 'smartride-setup-2024';
-    
-    if (!isDev && !validKey) {
+    if (!requiredSetupKey) {
+      console.error('[Admin Setup] ADMIN_SETUP_KEY environment variable is not configured');
       return NextResponse.json(
-        { success: false, error: 'Unauthorized. Use ?key=smartride-setup-2024' },
+        { success: false, error: 'Setup is not configured on this server' },
+        { status: 500 }
+      );
+    }
+
+    if (!setupKey || setupKey !== requiredSetupKey) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
-    console.log('Checking admin user:', DEFAULT_ADMIN.email);
+    // SECURITY: All admin credentials must come from environment variables
+    const adminEmail = process.env.ADMIN_SETUP_EMAIL;
+    const adminPassword = process.env.ADMIN_SETUP_PASSWORD;
+
+    if (!adminEmail || !adminPassword) {
+      console.error('[Admin Setup] ADMIN_SETUP_EMAIL and/or ADMIN_SETUP_PASSWORD environment variables are not configured');
+      return NextResponse.json(
+        { success: false, error: 'Setup is not configured on this server' },
+        { status: 500 }
+      );
+    }
+
+    const adminConfig = {
+      email: adminEmail,
+      password: adminPassword,
+      name: 'System Administrator',
+      role: 'SUPER_ADMIN' as const,
+      phone: '+256700000000',
+    };
+
+    console.log('Checking admin user:', adminConfig.email);
     
     // Check if admin exists
     const existing = await db.user.findUnique({
-      where: { email: DEFAULT_ADMIN.email },
+      where: { email: adminConfig.email },
       select: { id: true, email: true, name: true, role: true, status: true, passwordHash: true }
     });
     
@@ -48,12 +68,12 @@ export async function GET(request: NextRequest) {
       console.log('Admin exists, updating password...');
       
       // Update password and ensure correct role/status
-      const passwordHash = await bcrypt.hash(DEFAULT_ADMIN.password, SALT_ROUNDS);
+      const passwordHash = await bcrypt.hash(adminConfig.password, SALT_ROUNDS);
       const updated = await db.user.update({
         where: { id: existing.id },
         data: {
           passwordHash,
-          role: DEFAULT_ADMIN.role,
+          role: adminConfig.role,
           status: 'ACTIVE',
         },
         select: { id: true, email: true, name: true, role: true, status: true }
@@ -63,26 +83,22 @@ export async function GET(request: NextRequest) {
         success: true,
         message: 'Admin user updated',
         user: updated,
-        credentials: {
-          email: DEFAULT_ADMIN.email,
-          password: DEFAULT_ADMIN.password,
-        }
       });
     }
     
     // Create new admin
     console.log('Creating admin user...');
-    const passwordHash = await bcrypt.hash(DEFAULT_ADMIN.password, SALT_ROUNDS);
+    const passwordHash = await bcrypt.hash(adminConfig.password, SALT_ROUNDS);
     
     const admin = await db.user.create({
       data: {
-        email: DEFAULT_ADMIN.email,
+        email: adminConfig.email,
         passwordHash: passwordHash,
-        name: DEFAULT_ADMIN.name,
-        role: DEFAULT_ADMIN.role,
+        name: adminConfig.name,
+        role: adminConfig.role,
         status: 'ACTIVE',
         authProvider: 'email',
-        phone: DEFAULT_ADMIN.phone,
+        phone: adminConfig.phone,
       },
       select: { id: true, email: true, name: true, role: true, status: true }
     });
@@ -91,10 +107,6 @@ export async function GET(request: NextRequest) {
       success: true,
       message: 'Admin user created',
       user: admin,
-      credentials: {
-        email: DEFAULT_ADMIN.email,
-        password: DEFAULT_ADMIN.password,
-      }
     });
     
   } catch (error) {

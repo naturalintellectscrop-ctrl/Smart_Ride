@@ -57,10 +57,10 @@ interface CategoryItem {
 // ============================================
 
 const CATEGORIES: CategoryItem[] = [
-  { label: 'Groceries', emoji: '🥬', serviceKey: 'SHOPPING', customColor: COLORS.primary, apiType: 'GROCERY', icon: 'nutrition' },
-  { label: 'Electronics', emoji: '📱', serviceKey: 'custom', customColor: '#3B82F6', apiType: 'RETAIL_STORE', icon: 'phone-portrait' },
-  { label: 'Fashion', emoji: '👗', serviceKey: 'custom', customColor: '#EC4899', apiType: undefined, icon: 'shirt' },
-  { label: 'Home', emoji: '🏠', serviceKey: 'custom', customColor: '#F59E0B', apiType: 'GROCERY', icon: 'home' },
+  { label: 'Groceries', emoji: 'nutrition', serviceKey: 'SHOPPING', customColor: COLORS.primary, apiType: 'GROCERY', icon: 'nutrition' },
+  { label: 'Electronics', emoji: 'phone-portrait', serviceKey: 'custom', customColor: '#3B82F6', apiType: 'RETAIL_STORE', icon: 'phone-portrait' },
+  { label: 'Fashion', emoji: 'shirt', serviceKey: 'custom', customColor: '#EC4899', apiType: undefined, icon: 'shirt' },
+  { label: 'Home', emoji: 'home', serviceKey: 'custom', customColor: '#F59E0B', apiType: 'GROCERY', icon: 'home' },
   { label: 'More', emoji: '⋯', serviceKey: 'custom', customColor: COLORS.tertiary, apiType: undefined, icon: 'ellipsis-horizontal' },
 ];
 
@@ -86,10 +86,12 @@ export default function ShoppingScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const cart = useCartStore();
+  const [error, setError] = useState<string | null>(null);
+  const totalItems = useCartStore(s => s.totalItems);
 
   const loadMerchants = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
     try {
       const category = CATEGORIES[selectedCategory];
       let response;
@@ -107,6 +109,7 @@ export default function ShoppingScreen() {
       }
     } catch (error) {
       console.error('Failed to load merchants:', error);
+      setError('Failed to load data. Please try again.');
       setMerchants([]);
     } finally {
       setIsLoading(false);
@@ -119,11 +122,12 @@ export default function ShoppingScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setError(null);
     await loadMerchants();
     setRefreshing(false);
   };
 
-  const totalCartItems = cart.totalItems;
+  const totalCartItems = totalItems;
 
   const handleCategoryPress = (index: number) => {
     if (index !== selectedCategory) {
@@ -135,6 +139,19 @@ export default function ShoppingScreen() {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    );
+  }
+
+  if (error && merchants.length === 0) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="cloud-offline-outline" size={48} color={COLORS.outline} />
+        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Text style={styles.errorMessage}>{error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={loadMerchants} activeOpacity={0.7}>
+          <Text style={styles.retryButtonText}>Try Again</Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -474,7 +491,7 @@ function MerchantCard({ merchant, onPress }: { merchant: Merchant; onPress: () =
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
   // Loading
@@ -482,7 +499,34 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
+  },
+
+  // Error State
+  errorTitle: {
+    ...TYPOGRAPHY.bodyLg,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    marginTop: SPACING.md,
+  },
+  errorMessage: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    marginTop: SPACING.xs,
+    marginBottom: SPACING.lg,
+    paddingHorizontal: SPACING.xl,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+  },
+  retryButtonText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onPrimary,
+    fontWeight: '600',
   },
 
   // Search

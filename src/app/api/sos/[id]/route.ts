@@ -1,12 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { requireAdmin } from '@/lib/auth/guards';
 
 // GET /api/sos/[id] - Get single SOS alert
+// SECURITY: Admin-only access required
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await setServiceRoleContext();
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
+
+  await setRLSContext(admin);
   try {
     const { id } = await params;
 
@@ -90,18 +101,26 @@ export async function GET(
 }
 
 // PATCH /api/sos/[id] - Update SOS alert (acknowledge, resolve, etc.)
+// SECURITY: Admin-only access required
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  await setServiceRoleContext();
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+  const admin = authResult.user!;
+
+  await setRLSContext(admin);
   try {
     const { id } = await params;
     const body = await request.json();
     const {
       status,
-      acknowledgedBy,
-      resolvedBy,
       resolutionNotes,
       escalationLevel,
       locationShared,
@@ -119,12 +138,9 @@ export async function PATCH(
         updateData.resolvedAt = new Date();
       }
     }
-    if (acknowledgedBy) {
-      updateData.acknowledgedAt = new Date();
-    }
-    if (resolvedBy) {
-      updateData.resolvedBy = resolvedBy;
-    }
+    // Use authenticated admin ID for acknowledgment/resolution
+    updateData.acknowledgedAt = new Date();
+    updateData.resolvedBy = admin.userId;
     if (resolutionNotes !== undefined) {
       updateData.resolutionNotes = resolutionNotes;
     }

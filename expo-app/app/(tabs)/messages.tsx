@@ -132,7 +132,7 @@ export default function MessagesTabScreen() {
                   style={[styles.messagePreview, isSystem && styles.systemMessagePreview]}
                   numberOfLines={1}
                 >
-                  {isSystem ? `📋 ${lastMsgPreview}` : lastMsgPreview}
+                  {isSystem ? lastMsgPreview : lastMsgPreview}
                 </Text>
               </View>
 

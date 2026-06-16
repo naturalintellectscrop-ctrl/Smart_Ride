@@ -36,10 +36,20 @@ const dispatchTimers = new Map<string, NodeJS.Timeout>();
 const offerTimers = new Map<string, Map<string, NodeJS.Timeout>>();
 
 // ============================================
+// BOUNDS / EVICTION CONSTANTS
+// ============================================
+
+const MAX_DISPATCH_LOGS = 1000;
+const MAX_ACTIVE_DISPATCHES = 500;
+const MAX_DISPATCH_ATTEMPTS = 2000;
+const STALE_PROVIDER_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
+
+// ============================================
 // PROVIDER REGISTRY MANAGEMENT
 // ============================================
 
 export function registerProvider(provider: Provider): void {
+  provider.lastSeenAt = new Date();
   providerRegistry.set(provider.id, provider);
   logDispatch('PROVIDER_REGISTERED', 'PROVIDER', provider.id, `Provider ${provider.name} registered`);
 }
@@ -61,6 +71,7 @@ export function updateProviderLocation(
       longitude,
       lastUpdated: new Date(),
     };
+    provider.lastSeenAt = new Date();
   }
 }
 
@@ -75,6 +86,7 @@ export function updateProviderStatus(
     provider.isOnline = isOnline;
     provider.isAvailable = isAvailable;
     provider.currentTaskId = currentTaskId;
+    provider.lastSeenAt = new Date();
   }
 }
 
@@ -90,7 +102,27 @@ export function getOnlineProviders(): Provider[] {
   return Array.from(providerRegistry.values()).filter((p) => p.isOnline);
 }
 
+// ============================================
+// STALE PROVIDER CLEANUP
+// ============================================
+
+/**
+ * Remove providers that haven't been seen (lastSeenAt) in the last 30 minutes.
+ * Prevents the providerRegistry from growing unbounded with dead entries.
+ */
+export function cleanStaleProviders(): void {
+  const now = Date.now();
+  for (const [id, provider] of providerRegistry) {
+    const lastSeen = provider.lastSeenAt ? provider.lastSeenAt.getTime() : 0;
+    if (now - lastSeen > STALE_PROVIDER_THRESHOLD_MS) {
+      providerRegistry.delete(id);
+      logDispatch('PROVIDER_EVICTED', 'PROVIDER', id, `Provider ${provider.name} evicted: not seen in 30 minutes`);
+    }
+  }
+}
+
 export function getAvailableProviders(): Provider[] {
+  cleanStaleProviders();
   return Array.from(providerRegistry.values()).filter(
     (p) => p.isOnline && p.isAvailable
   );
@@ -119,6 +151,11 @@ function logDispatch(
     createdAt: new Date(),
   };
   dispatchLogs.push(log);
+
+  // Evict oldest logs when bound is exceeded
+  if (dispatchLogs.length > MAX_DISPATCH_LOGS) {
+    dispatchLogs.splice(0, dispatchLogs.length - MAX_DISPATCH_LOGS);
+  }
 }
 
 export function getDispatchLogs(requestId?: string): DispatchLog[] {
@@ -151,6 +188,24 @@ export function createDispatchRequest(
 
   activeDispatches.set(request.id, result);
   dispatchAttempts.set(request.id, []);
+
+  // Evict oldest activeDispatches when bound is exceeded
+  if (activeDispatches.size > MAX_ACTIVE_DISPATCHES) {
+    const keys = Array.from(activeDispatches.keys());
+    const toRemove = keys.slice(0, activeDispatches.size - MAX_ACTIVE_DISPATCHES);
+    for (const key of toRemove) {
+      activeDispatches.delete(key);
+    }
+  }
+
+  // Evict oldest dispatchAttempts when bound is exceeded
+  if (dispatchAttempts.size > MAX_DISPATCH_ATTEMPTS) {
+    const keys = Array.from(dispatchAttempts.keys());
+    const toRemove = keys.slice(0, dispatchAttempts.size - MAX_DISPATCH_ATTEMPTS);
+    for (const key of toRemove) {
+      dispatchAttempts.delete(key);
+    }
+  }
 
   logDispatch(
     'REQUEST_CREATED',

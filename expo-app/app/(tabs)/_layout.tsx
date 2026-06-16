@@ -6,7 +6,8 @@
 
 import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -55,8 +56,10 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: 'Smart Ride',
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="🏠" focused={focused} />
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Ionicons name="home" size={size} color={color} />
+            </AnimatedTabIcon>
           ),
           tabBarLabel: 'Home',
         }}
@@ -65,8 +68,10 @@ export default function TabsLayout() {
         name="rides"
         options={{
           title: 'My Rides',
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="🚗" focused={focused} />
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Ionicons name="car" size={size} color={color} />
+            </AnimatedTabIcon>
           ),
           tabBarLabel: 'Rides',
         }}
@@ -75,18 +80,34 @@ export default function TabsLayout() {
         name="orders"
         options={{
           title: 'Orders',
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="📦" focused={focused} />
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Ionicons name="bag-handle" size={size} color={color} />
+            </AnimatedTabIcon>
           ),
           tabBarLabel: 'Orders',
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: 'Messages',
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Ionicons name="chatbubble" size={size} color={color} />
+            </AnimatedTabIcon>
+          ),
+          tabBarLabel: 'Messages',
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ focused }) => (
-            <AnimatedTabIcon icon="👤" focused={focused} />
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Ionicons name="person" size={size} color={color} />
+            </AnimatedTabIcon>
           ),
           tabBarLabel: 'Profile',
         }}
@@ -95,8 +116,8 @@ export default function TabsLayout() {
   );
 }
 
-// Animated Tab Icon with scale and bounce effect
-function AnimatedTabIcon({ icon, focused }: { icon: string; focused: boolean }) {
+// Animated Tab Icon wrapper with scale and bounce effect
+function AnimatedTabIcon({ focused, children }: { focused: boolean; children: React.ReactNode }) {
   const scale = useSharedValue(1);
   const translateY = useSharedValue(0);
 
@@ -119,7 +140,7 @@ function AnimatedTabIcon({ icon, focused }: { icon: string; focused: boolean }) 
 
   return (
     <Animated.View style={animatedStyle}>
-      <Text style={{ fontSize: 22 }}>{icon}</Text>
+      {children}
     </Animated.View>
   );
 }

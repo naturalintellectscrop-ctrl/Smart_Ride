@@ -48,7 +48,11 @@ export function ServiceIcon({
       ]}
     >
       {customEmoji ? (
-        <Text style={{ fontSize: iconSize * 0.8 }}>{customEmoji}</Text>
+        <Ionicons
+          name={customEmoji as any}
+          size={iconSize * 0.8}
+          color={color}
+        />
       ) : (
         <Ionicons
           name={(customIcon || serviceConfig?.icon || 'ellipse-outline') as any}

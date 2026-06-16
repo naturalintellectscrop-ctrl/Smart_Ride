@@ -27,6 +27,7 @@ import Animated, {
 import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { Ionicons } from '@expo/vector-icons';
 
 interface UserProfile {
   name: string;
@@ -108,11 +109,11 @@ export default function ProfileEditScreen() {
               {profile.avatar ? (
                 <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
               ) : (
-                <Text style={styles.avatarEmoji}>👤</Text>
+                <Ionicons name="person" size={40} color={COLORS.primary} />
               )}
             </View>
             <View style={styles.avatarBadge}>
-              <Text style={styles.avatarBadgeIcon}>📷</Text>
+              <Ionicons name="camera-outline" size={14} color={COLORS.onPrimary} />
             </View>
           </TouchableOpacity>
           <Text style={styles.avatarHint}>Tap to change photo</Text>

@@ -4,7 +4,7 @@
 // Medicine catalog management with stock/availability
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,6 +24,7 @@ import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function CatalogScreen() {
   const router = useRouter();
@@ -168,13 +169,13 @@ export default function CatalogScreen() {
 
   const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
 
-  const filteredMedicines = searchQuery.trim()
+  const filteredMedicines = useMemo(() => searchQuery.trim()
     ? medicines.filter(m =>
         (m.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (m.genericName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         (m.category || '').toLowerCase().includes(searchQuery.toLowerCase())
       )
-    : medicines;
+    : medicines, [medicines, searchQuery]);
 
   const availableCount = medicines.filter(m => m.isAvailable).length;
   const lowStockCount = medicines.filter(m => m.stockQuantity <= 5 && m.stockQuantity > 0).length;
@@ -316,7 +317,7 @@ export default function CatalogScreen() {
             ))
           ) : (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>💊</Text>
+              <Ionicons name="medkit-outline" size={32} color={COLORS.outlineVariant} />
               <Text style={styles.emptyTitle}>No medicines found</Text>
               <Text style={styles.emptySubtitle}>
                 {searchQuery ? 'Try a different search term' : 'Add medicines to your catalog'}

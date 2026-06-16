@@ -21,6 +21,7 @@ import { api } from '@/src/services';
 import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 
 interface OrderSummary {
   pending: number;
@@ -124,7 +125,7 @@ export default function PharmacistDashboard() {
       >
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>💊 Pharmacist</Text>
+            <Text style={styles.headerTitle}>Pharmacist</Text>
             <Text style={styles.headerSubtitle}>
               {providerStatus.name || 'Dashboard'}
             </Text>
@@ -175,7 +176,7 @@ export default function PharmacistDashboard() {
         {pendingPrescriptions > 0 && (
           <GlassCard variant="accent" style={styles.alertCard}>
             <View style={styles.alertRow}>
-              <Text style={styles.alertIcon}>📋</Text>
+              <Ionicons name="clipboard-outline" size={20} color={COLORS.primary} />
               <View style={styles.alertContent}>
                 <Text style={styles.alertTitle}>Prescriptions Awaiting Review</Text>
                 <Text style={styles.alertText}>{pendingPrescriptions} prescription(s) need verification</Text>
@@ -191,25 +192,25 @@ export default function PharmacistDashboard() {
         <Text style={styles.sectionTitle}>Quick Actions</Text>
         <View style={styles.actionsGrid}>
           <QuickActionCard
-            icon="📦"
+            icon="cube-outline"
             title="Orders"
             subtitle={`${orderSummary.total} total`}
             onPress={() => router.push('/pharmacist/orders')}
           />
           <QuickActionCard
-            icon="📋"
+            icon="clipboard-outline"
             title="Prescriptions"
             subtitle={`${pendingPrescriptions} pending`}
             onPress={() => router.push('/pharmacist/prescriptions')}
           />
           <QuickActionCard
-            icon="💊"
+            icon="medkit-outline"
             title="Medicine Catalog"
             subtitle="Manage stock"
             onPress={() => router.push('/pharmacist/catalog')}
           />
           <QuickActionCard
-            icon="💰"
+            icon="wallet-outline"
             title="Earnings"
             subtitle="View revenue"
             onPress={() => router.push('/pharmacist/earnings')}
@@ -247,7 +248,7 @@ function QuickActionCard({ icon, title, subtitle, onPress }: { icon: string; tit
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
       <GlassCard padding={14} style={styles.actionCard}>
-        <Text style={styles.actionIcon}>{icon}</Text>
+        <Ionicons name={icon as any} size={24} color={COLORS.primary} />
         <Text style={styles.actionTitle}>{title}</Text>
         <Text style={styles.actionSubtitle}>{subtitle}</Text>
       </GlassCard>

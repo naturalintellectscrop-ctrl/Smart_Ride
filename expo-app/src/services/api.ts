@@ -16,6 +16,10 @@ import { useAuthStore } from '../store/authStore';
 class ApiService {
   private baseUrl: string;
 
+  // Timeout defaults: 15s for reads, 30s for writes
+  private static READ_TIMEOUT = 15000;
+  private static WRITE_TIMEOUT = 30000;
+
   constructor() {
     this.baseUrl = API_CONFIG.baseUrl;
   }
@@ -42,12 +46,23 @@ class ApiService {
     body?: any,
     isRetry: boolean = false
   ): Promise<ApiResponse<T>> {
+    // Determine timeout: reads (GET) get 15s, writes get 30s
+    const isWrite = method !== 'GET';
+    const timeoutMs = isWrite ? ApiService.WRITE_TIMEOUT : ApiService.READ_TIMEOUT;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
     try {
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
         method,
         headers: await this.getHeaders(),
         body: body ? JSON.stringify(body) : undefined,
+        signal: controller.signal,
       });
+
+      // Request succeeded — clear the timeout
+      clearTimeout(timeoutId);
 
       // Handle 401 - attempt token refresh and retry once
       if (response.status === 401 && !isRetry) {
@@ -72,7 +87,18 @@ class ApiService {
       }
 
       return { success: true, data };
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+
+      // Detect abort/timeout error
+      if (error?.name === 'AbortError') {
+        console.error('[API] Request timed out:', `${method} ${endpoint}`);
+        return {
+          success: false,
+          error: 'Request timed out. Please check your connection.',
+        };
+      }
+
       console.error('[API] Request error:', error);
       return { 
         success: false, 
@@ -92,6 +118,9 @@ class ApiService {
 
     this.isRefreshing = true;
     this.refreshPromise = (async () => {
+      const refreshController = new AbortController();
+      const refreshTimeoutId = setTimeout(() => refreshController.abort(), ApiService.WRITE_TIMEOUT);
+
       try {
         const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.refreshToken);
         if (!refreshToken) {
@@ -103,8 +132,10 @@ class ApiService {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ refreshToken }),
+          signal: refreshController.signal,
         });
 
+        clearTimeout(refreshTimeoutId);
         const data = await response.json();
 
         if (data.success && data.data?.accessToken) {
@@ -118,8 +149,13 @@ class ApiService {
 
         console.log('[API] Token refresh failed:', data.error);
         return null;
-      } catch (error) {
-        console.error('[API] Token refresh error:', error);
+      } catch (error: any) {
+        clearTimeout(refreshTimeoutId);
+        if (error?.name === 'AbortError') {
+          console.error('[API] Token refresh timed out');
+        } else {
+          console.error('[API] Token refresh error:', error);
+        }
         return null;
       } finally {
         this.isRefreshing = false;
@@ -228,8 +264,12 @@ class ApiService {
   // USER PROFILE
   // ==========================================
 
-  async updateProfile(data: { name?: string; phone?: string; avatarUrl?: string }): Promise<ApiResponse<User>> {
+  async updateProfile(data: { name?: string; phone?: string; avatarUrl?: string; role?: string }): Promise<ApiResponse<User>> {
     return this.request<User>('/user/profile', 'PUT', data);
+  }
+
+  async updateUserRole(role: string): Promise<ApiResponse<User>> {
+    return this.request<User>('/user/profile', 'PUT', { role });
   }
 
   // ==========================================
@@ -391,6 +431,40 @@ class ApiService {
     return this.request<any[]>(`/merchants/${merchantId}/products`);
   }
 
+  async getMerchantProfile(merchantId?: string): Promise<ApiResponse<any>> {
+    const endpoint = merchantId ? `/merchants/${merchantId}/profile` : '/merchants/profile';
+    return this.request<any>(endpoint);
+  }
+
+  async getMerchantOrders(merchantId: string, status?: string, page: number = 1): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    params.set('page', String(page));
+    const query = params.toString();
+    return this.request<any>(`/merchants/${merchantId}/orders${query ? `?${query}` : ''}`);
+  }
+
+  async getMerchantAnalytics(merchantId: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/merchants/${merchantId}/analytics`);
+  }
+
+  async getMerchantEarnings(merchantId: string, period?: string): Promise<ApiResponse<any>> {
+    const query = period ? `?period=${period}` : '';
+    return this.request<any>(`/merchants/${merchantId}/earnings${query}`);
+  }
+
+  async updateMerchantAvailability(merchantId: string, isOpen: boolean): Promise<ApiResponse<any>> {
+    return this.request<any>(`/merchants/${merchantId}/availability`, 'PATCH', { isOpen });
+  }
+
+  async requestMerchantPayout(merchantId: string, amount?: number): Promise<ApiResponse<any>> {
+    return this.request<any>(`/merchants/${merchantId}/payout`, 'POST', { amount });
+  }
+
+  async updateOrderStatus(orderId: string, status: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/orders/${orderId}/status`, 'PATCH', { status });
+  }
+
   // ==========================================
   // HEALTH / PHARMACIES
   // ==========================================
@@ -453,8 +527,53 @@ class ApiService {
   // SOS
   // ==========================================
 
-  async triggerSOS(data: any): Promise<ApiResponse<{ sosId: string }>> {
-    return this.request<{ sosId: string }>('/sos', 'POST', data);
+  async triggerSOS(data: {
+    riderId?: string;
+    taskId?: string;
+    latitude: number;
+    longitude: number;
+    locationAddress?: string;
+  }): Promise<ApiResponse<{ success: boolean; alert: any }>> {
+    return this.request<{ success: boolean; alert: any }>('/sos', 'POST', data);
+  }
+
+  async createSOSAlert(data: {
+    riderId?: string;
+    taskId?: string;
+    latitude: number;
+    longitude: number;
+    locationAddress?: string;
+  }): Promise<ApiResponse<{ success: boolean; alert: any }>> {
+    return this.triggerSOS(data);
+  }
+
+  async resolveSOSAlert(alertId: string): Promise<ApiResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/sos/${alertId}`, 'PATCH', { status: 'RESOLVED' });
+  }
+
+  // ==========================================
+  // EMERGENCY CONTACTS
+  // ==========================================
+
+  async getEmergencyContacts(userId: string, userType: string = 'CLIENT'): Promise<ApiResponse<{ contacts: any[] }>> {
+    return this.request<{ contacts: any[] }>(`/emergency-contacts?userId=${userId}&userType=${userType}`);
+  }
+
+  async addEmergencyContact(data: {
+    userId?: string;
+    riderId?: string;
+    userType?: string;
+    name: string;
+    phone: string;
+    email?: string;
+    relationship?: string;
+    isPrimary?: boolean;
+  }): Promise<ApiResponse<{ success: boolean; contact: any }>> {
+    return this.request<{ success: boolean; contact: any }>('/emergency-contacts', 'POST', data);
+  }
+
+  async deleteEmergencyContact(id: string): Promise<ApiResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/emergency-contacts?id=${id}`, 'DELETE');
   }
 
   // ==========================================
@@ -475,13 +594,19 @@ class ApiService {
     oldValues?: Record<string, unknown>;
     newValues?: Record<string, unknown>;
   }): Promise<ApiResponse<{ success: boolean }>> {
+    const auditController = new AbortController();
+    const auditTimeoutId = setTimeout(() => auditController.abort(), ApiService.WRITE_TIMEOUT);
+
     try {
       const headers = await this.getHeaders();
       const response = await fetch(`${this.baseUrl}/audit`, {
         method: 'POST',
         headers,
         body: JSON.stringify(data),
+        signal: auditController.signal,
       });
+
+      clearTimeout(auditTimeoutId);
 
       if (!response.ok) {
         console.warn('[AUDIT] Failed to log activity:', response.status);
@@ -490,9 +615,14 @@ class ApiService {
 
       const result = await response.json();
       return { success: true, data: result };
-    } catch (error) {
+    } catch (error: any) {
+      clearTimeout(auditTimeoutId);
       // Audit logging should never block the main flow
-      console.warn('[AUDIT] Failed to log activity:', error);
+      if (error?.name === 'AbortError') {
+        console.warn('[AUDIT] Request timed out');
+      } else {
+        console.warn('[AUDIT] Failed to log activity:', error);
+      }
       return { success: false, error: 'Network error' };
     }
   }

@@ -167,6 +167,7 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -180,6 +181,7 @@ export default function NotificationsScreen() {
   }, []);
 
   const loadNotifications = async () => {
+    setError(null);
     try {
       const response = await api.getNotifications();
       if (response.success && response.data) {
@@ -191,11 +193,13 @@ export default function NotificationsScreen() {
       }
     } catch (error) {
       console.error('Failed to load notifications:', error);
+      setError('Failed to load data. Please try again.');
     }
   };
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setError(null);
     await loadNotifications();
     setRefreshing(false);
   }, []);
@@ -232,7 +236,7 @@ export default function NotificationsScreen() {
     } else if (notification.entityType === 'order' && notification.entityId) {
       router.push('/(tabs)/orders');
     } else if (notification.entityType === 'chat' && notification.entityId) {
-      router.push('/chat');
+      router.push(`/chat/${notification.entityId}` as any);
     }
   };
 
@@ -252,7 +256,7 @@ export default function NotificationsScreen() {
               onPress={() => router.back()}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={20} color={COLORS.text} />
+              <Ionicons name="arrow-back" size={20} color={COLORS.onSurface} />
             </TouchableOpacity>
             <View style={styles.titleContainer}>
               <Text style={styles.headerTitle}>Notifications</Text>
@@ -299,7 +303,7 @@ export default function NotificationsScreen() {
                     </LinearGradient>
                   ) : (
                     <View style={styles.inactiveTab}>
-                      <Ionicons name={tab.icon} size={14} color={COLORS.textMuted} />
+                      <Ionicons name={tab.icon} size={14} color={COLORS.onSurfaceMuted} />
                       <Text style={styles.inactiveTabText}>{tab.label}</Text>
                     </View>
                   )}
@@ -319,7 +323,19 @@ export default function NotificationsScreen() {
       </Animated.View>
 
       {/* Notifications List */}
-      {filteredNotifications.length === 0 ? (
+      {error && filteredNotifications.length === 0 ? (
+        <Animated.View
+          entering={ZoomIn.duration(400).delay(200)}
+          style={styles.errorContainer}
+        >
+          <Ionicons name="cloud-offline-outline" size={48} color={COLORS.outline} />
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={loadNotifications} activeOpacity={0.7}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      ) : filteredNotifications.length === 0 ? (
         <Animated.View
           entering={ZoomIn.duration(400).delay(200)}
           style={styles.emptyContainer}
@@ -451,7 +467,7 @@ function NotificationCard({
             <Ionicons
               name="chevron-forward"
               size={16}
-              color={COLORS.textDim}
+              color={COLORS.onSurfaceDim}
               style={styles.chevron}
             />
           </View>
@@ -470,12 +486,12 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
   },
 
   // ---- Header ----
   header: {
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     paddingHorizontal: 20,
     paddingBottom: 12,
     position: 'relative',
@@ -508,7 +524,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
     alignItems: 'center',
@@ -524,7 +540,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     letterSpacing: -0.5,
   },
   unreadBadge: {
@@ -587,13 +603,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 20,
-    backgroundColor: COLORS.backgroundSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
     borderColor: COLORS.borderLight,
     gap: 5,
   },
   inactiveTabText: {
-    color: COLORS.textMuted,
+    color: COLORS.onSurfaceMuted,
     fontSize: TYPOGRAPHY.labelMd.fontSize,
     fontWeight: '500',
   },
@@ -641,7 +657,7 @@ const styles = StyleSheet.create({
   notificationTitle: {
     fontSize: 15,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.text,
+    color: COLORS.onSurface,
     flex: 1,
   },
   unreadDot: {
@@ -652,7 +668,7 @@ const styles = StyleSheet.create({
   },
   notificationDescription: {
     fontSize: 13,
-    color: COLORS.textMuted,
+    color: COLORS.onSurfaceMuted,
     lineHeight: 18,
   },
   notificationMeta: {
@@ -663,7 +679,7 @@ const styles = StyleSheet.create({
   },
   notificationTime: {
     fontSize: 11,
-    color: COLORS.textDim,
+    color: COLORS.onSurfaceDim,
   },
   chevron: {
     marginTop: SPACING.sm,
@@ -685,20 +701,52 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
     fontWeight: 'bold',
-    color: COLORS.text,
+    color: COLORS.onSurface,
     marginBottom: SPACING.sm,
   },
   emptyDescription: {
     fontSize: 15,
-    color: COLORS.textSecondary,
+    color: COLORS.onSurfaceSecondary,
     textAlign: 'center',
     lineHeight: 22,
     marginBottom: SPACING.xs,
   },
   emptySubtext: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.textMuted,
+    color: COLORS.outline,
     textAlign: 'center',
+  },
+
+  // Error State
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+  },
+  errorTitle: {
+    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
+    fontWeight: 'bold',
+    color: COLORS.onSurface,
+    marginTop: SPACING.md,
+  },
+  errorMessage: {
+    fontSize: 15,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: SPACING.lg,
+  },
+  retryButton: {
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+  },
+  retryButtonText: {
+    color: COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.bodyMd.fontSize,
+    fontWeight: '600',
   },
 
   // ---- Bottom Bar ----
@@ -709,7 +757,7 @@ const styles = StyleSheet.create({
     right: 0,
     paddingHorizontal: 20,
     paddingTop: SPACING.sm,
-    backgroundColor: COLORS.background,
+    backgroundColor: COLORS.surface,
     borderTopWidth: 1,
     borderTopColor: COLORS.borderLight,
   },
