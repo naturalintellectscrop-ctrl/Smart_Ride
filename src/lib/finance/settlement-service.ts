@@ -8,6 +8,7 @@
 
 import { db } from '@/lib/db';
 import { PayoutStatus, TaskType, PaymentMethod } from '@prisma/client';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -161,15 +162,15 @@ export async function calculateRiderEarnings(
   const taskBreakdown: Record<string, { count: number; earnings: number }> = {};
 
   for (const task of tasks) {
-    totalEarnings += task.riderEarnings || 0;
-    platformCommission += task.platformCommission || 0;
+    totalEarnings += toNumber(task.riderEarnings);
+    platformCommission += toNumber(task.platformCommission);
 
     const type = task.taskType;
     if (!taskBreakdown[type]) {
       taskBreakdown[type] = { count: 0, earnings: 0 };
     }
     taskBreakdown[type].count++;
-    taskBreakdown[type].earnings += task.riderEarnings || 0;
+    taskBreakdown[type].earnings += toNumber(task.riderEarnings);
   }
 
   // Calculate cash totals
@@ -177,9 +178,9 @@ export async function calculateRiderEarnings(
   let cashDeposited = 0;
 
   for (const collection of cashCollections) {
-    cashCollected += collection.amount;
+    cashCollected += toNumber(collection.amount);
     if (collection.status === 'DEPOSITED' || collection.status === 'VERIFIED') {
-      cashDeposited += collection.amount;
+      cashDeposited += toNumber(collection.amount);
     }
   }
 
@@ -248,7 +249,7 @@ export async function createSettlement(
         periodEnd: period.endDate,
         taskCount: earnings.completedTasks,
         grossAmount: earnings.totalEarnings,
-        platformCommission: earnings.platformCommission,
+        platformCommission: toNumber(earnings.platformCommission),
         adjustments: 0,
         netAmount: earnings.netEarnings - processingFee,
         status: 'PENDING',
@@ -282,7 +283,7 @@ export async function createSettlement(
     periodEnd: period.endDate,
     taskCount: earnings.completedTasks,
     grossAmount: earnings.totalEarnings,
-    platformCommission: earnings.platformCommission,
+    platformCommission: toNumber(earnings.platformCommission),
     adjustments: 0,
     netAmount: earnings.netEarnings - processingFee,
     status: 'PENDING',
@@ -363,10 +364,10 @@ export async function processSettlement(settlementId: string): Promise<Settlemen
       periodStart: updated.periodStart,
       periodEnd: updated.periodEnd,
       taskCount: updated.taskCount,
-      grossAmount: updated.grossAmount,
-      platformCommission: updated.platformCommission,
-      adjustments: updated.adjustments,
-      netAmount: updated.netAmount,
+      grossAmount: toNumber(updated.grossAmount),
+      platformCommission: toNumber(updated.platformCommission),
+      adjustments: toNumber(updated.adjustments),
+      netAmount: toNumber(updated.netAmount),
       status: updated.status as PayoutStatus,
       paymentMethod: updated.paymentMethod || '',
       phoneNumber: updated.paymentReference || '',
@@ -412,7 +413,7 @@ export async function processBatchSettlements(
       
       if (processed.status === 'COMPLETED') {
         successful++;
-        totalAmount += processed.netAmount;
+        totalAmount += toNumber(processed.netAmount);
       } else if (processed.status === 'FAILED') {
         failed++;
       } else {
@@ -480,10 +481,10 @@ export async function getSettlements(filter: SettlementFilter = {}): Promise<{
       periodStart: s.periodStart,
       periodEnd: s.periodEnd,
       taskCount: s.taskCount,
-      grossAmount: s.grossAmount,
-      platformCommission: s.platformCommission,
-      adjustments: s.adjustments,
-      netAmount: s.netAmount,
+      grossAmount: toNumber(s.grossAmount),
+      platformCommission: toNumber(s.platformCommission),
+      adjustments: toNumber(s.adjustments),
+      netAmount: toNumber(s.netAmount),
       status: s.status as PayoutStatus,
       paymentMethod: s.paymentMethod || '',
       phoneNumber: s.paymentReference || '',
@@ -516,7 +517,7 @@ export async function getPendingSettlementsSummary(): Promise<{
 
   return {
     count: pendingSettlements.length,
-    totalAmount: pendingSettlements.reduce((sum, s) => sum + s.netAmount, 0),
+    totalAmount: pendingSettlements.reduce((sum, s) => sum + toNumber(s.netAmount), 0),
     riders: [...new Set(pendingSettlements.map((s) => s.recipientId))],
   };
 }
@@ -575,8 +576,8 @@ export async function generateSettlementReport(
   });
 
   const uniqueRiders = new Set(settlements.map((s) => s.recipientId));
-  const totalAmount = settlements.reduce((sum, s) => sum + s.netAmount, 0);
-  const totalCommission = settlements.reduce((sum, s) => sum + s.platformCommission, 0);
+  const totalAmount = settlements.reduce((sum, s) => sum + toNumber(s.netAmount), 0);
+  const totalCommission = settlements.reduce((sum, s) => sum + toNumber(s.platformCommission), 0);
   const byPaymentMethod: Record<string, { count: number; amount: number }> = {};
 
   for (const settlement of settlements) {
@@ -585,7 +586,7 @@ export async function generateSettlementReport(
       byPaymentMethod[method] = { count: 0, amount: 0 };
     }
     byPaymentMethod[method].count++;
-    byPaymentMethod[method].amount += settlement.netAmount;
+    byPaymentMethod[method].amount += toNumber(settlement.netAmount);
   }
 
   return {

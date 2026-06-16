@@ -16,7 +16,6 @@ import {
   Text, 
   FlatList, 
   TouchableOpacity, 
-  ActivityIndicator,
   RefreshControl,
   StyleSheet
 } from 'react-native';
@@ -39,6 +38,7 @@ import { Task } from '@/src/types';
 import { GlowHeader } from '@/src/components/GlowHeader';
 import { GlassCard } from '@/src/components/GlassCard';
 import { StatusBadge } from '@/src/components/StatusBadge';
+import { TaskSkeleton } from '@/src/components/Skeleton';
 
 // ============================================
 // FILTER TABS CONFIG
@@ -137,9 +137,10 @@ export default function RidesScreen() {
   const renderContent = () => {
     if (isLoading && taskHistory.length === 0 && !error) {
       return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading rides...</Text>
+        <View style={styles.skeletonContainer}>
+          <TaskSkeleton />
+          <TaskSkeleton />
+          <TaskSkeleton />
         </View>
       );
     }
@@ -401,6 +402,11 @@ const styles = StyleSheet.create({
   },
 
   // Loading
+  skeletonContainer: {
+    flex: 1,
+    padding: SPACING.containerMargin,
+    paddingTop: SPACING.md,
+  },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',

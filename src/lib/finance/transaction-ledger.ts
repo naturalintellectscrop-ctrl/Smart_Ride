@@ -8,6 +8,7 @@
 
 import { db } from '@/lib/db';
 import { TransactionType, TransactionStatus } from '@prisma/client';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -184,7 +185,7 @@ export async function createLedgerEntry(input: {
     data: {
       transactionRef,
       type: input.type,
-      amount: input.amount,
+      amount: toNumber(input.amount),
       currency: input.currency || 'UGX',
       userId: input.clientId,
       riderId: input.riderId,
@@ -206,7 +207,7 @@ export async function createLedgerEntry(input: {
     id: transaction.id,
     transactionRef: transaction.transactionRef,
     type: transaction.type,
-    amount: transaction.amount,
+    amount: toNumber(transaction.amount),
     currency: transaction.currency,
     clientId: transaction.userId || undefined,
     riderId: transaction.riderId || undefined,
@@ -251,7 +252,7 @@ export async function createDoubleEntryTransaction(input: {
     data: {
       transactionRef: `${transactionRef}-DR`,
       type: input.type,
-      amount: input.amount,
+      amount: toNumber(input.amount),
       currency: 'UGX',
       userId: input.clientId,
       riderId: input.riderId,
@@ -275,7 +276,7 @@ export async function createDoubleEntryTransaction(input: {
     data: {
       transactionRef: `${transactionRef}-CR`,
       type: input.type,
-      amount: input.amount,
+      amount: toNumber(input.amount),
       currency: 'UGX',
       userId: input.clientId,
       riderId: input.riderId,
@@ -299,14 +300,14 @@ export async function createDoubleEntryTransaction(input: {
     data: {
       transactionType: input.type,
       referenceId: transactionRef,
-      amount: input.amount,
+      amount: toNumber(input.amount),
       currency: 'UGX',
       clientId: input.clientId,
       riderId: input.riderId,
       merchantId: input.merchantId,
-      platformCommission: input.platformCommission,
-      riderEarnings: input.riderEarnings,
-      merchantEarnings: input.merchantEarnings,
+      platformCommission: toNumber(input.platformCommission),
+      riderEarnings: toNumber(input.riderEarnings),
+      merchantEarnings: toNumber(input.merchantEarnings),
       status: 'COMPLETED',
       description: input.description,
       metadata: JSON.stringify({
@@ -320,7 +321,7 @@ export async function createDoubleEntryTransaction(input: {
     id: tx.id,
     transactionRef: tx.transactionRef,
     type: tx.type,
-    amount: tx.amount,
+    amount: toNumber(tx.amount),
     currency: tx.currency,
     clientId: tx.userId || undefined,
     riderId: tx.riderId || undefined,
@@ -376,7 +377,7 @@ export async function recordPaymentTransaction(input: {
 
   return createDoubleEntryTransaction({
     type: transactionType,
-    amount: input.amount,
+    amount: toNumber(input.amount),
     description: `Payment for task ${input.taskId}`,
     debitAccount: ACCOUNTS.CASH_ON_HAND,
     creditAccount: ACCOUNTS.RIDE_REVENUE,
@@ -384,9 +385,9 @@ export async function recordPaymentTransaction(input: {
     riderId: input.riderId,
     merchantId: input.merchantId,
     taskId: input.taskId,
-    platformCommission: input.platformCommission,
-    riderEarnings: input.riderEarnings,
-    merchantEarnings: input.merchantEarnings,
+    platformCommission: toNumber(input.platformCommission),
+    riderEarnings: toNumber(input.riderEarnings),
+    merchantEarnings: toNumber(input.merchantEarnings),
     metadata: {
       paymentMethod: input.paymentMethod,
       paymentReference: input.paymentReference,
@@ -406,7 +407,7 @@ export async function recordRiderPayoutTransaction(input: {
 }): Promise<DoubleEntry> {
   return createDoubleEntryTransaction({
     type: 'RIDER_PAYOUT',
-    amount: input.amount,
+    amount: toNumber(input.amount),
     description: `Rider payout - Settlement ${input.settlementId}`,
     debitAccount: ACCOUNTS.RIDER_PAYABLE,
     creditAccount: ACCOUNTS.CASH_ON_HAND,
@@ -475,7 +476,7 @@ export async function reverseTransaction(
     id: reversal.id,
     transactionRef: reversal.transactionRef,
     type: reversal.type,
-    amount: reversal.amount,
+    amount: toNumber(reversal.amount),
     currency: reversal.currency,
     clientId: reversal.userId || undefined,
     riderId: reversal.riderId || undefined,
@@ -554,7 +555,7 @@ export async function getLedgerEntries(filter: LedgerFilter = {}): Promise<{
       id: t.id,
       transactionRef: t.transactionRef,
       type: t.type,
-      amount: t.amount,
+      amount: toNumber(t.amount),
       currency: t.currency,
       clientId: t.userId || undefined,
       riderId: t.riderId || undefined,
@@ -598,12 +599,12 @@ export async function getLedgerBalance(options: {
   });
 
   const totalCredits = transactions
-    .filter((t) => t.amount > 0)
-    .reduce((sum, t) => sum + t.amount, 0);
+    .filter((t) => toNumber(t.amount) > 0)
+    .reduce((sum, t) => sum + toNumber(t.amount), 0);
 
   const totalDebits = transactions
-    .filter((t) => t.amount < 0)
-    .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    .filter((t) => toNumber(t.amount) < 0)
+    .reduce((sum, t) => sum + Math.abs(toNumber(t.amount)), 0);
 
   return {
     clientId: options.clientId,
@@ -645,10 +646,10 @@ export async function generateReconciliationReport(
   });
 
   // Calculate totals
-  const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
-  const totalPlatformCommission = financeLogs.reduce((sum, l) => sum + (l.platformCommission || 0), 0);
-  const totalRiderEarnings = financeLogs.reduce((sum, l) => sum + (l.riderEarnings || 0), 0);
-  const totalMerchantEarnings = financeLogs.reduce((sum, l) => sum + (l.merchantEarnings || 0), 0);
+  const totalAmount = transactions.reduce((sum, t) => sum + toNumber(t.amount), 0);
+  const totalPlatformCommission = financeLogs.reduce((sum, l) => sum + toNumber(l.platformCommission), 0);
+  const totalRiderEarnings = financeLogs.reduce((sum, l) => sum + toNumber(l.riderEarnings), 0);
+  const totalMerchantEarnings = financeLogs.reduce((sum, l) => sum + toNumber(l.merchantEarnings), 0);
 
   // Group by type
   const byType: Record<string, { count: number; amount: number }> = {};
@@ -657,7 +658,7 @@ export async function generateReconciliationReport(
       byType[t.type] = { count: 0, amount: 0 };
     }
     byType[t.type].count++;
-    byType[t.type].amount += t.amount;
+    byType[t.type].amount += toNumber(t.amount);
   }
 
   // Group by status
@@ -667,7 +668,7 @@ export async function generateReconciliationReport(
       byStatus[t.status] = { count: 0, amount: 0 };
     }
     byStatus[t.status].count++;
-    byStatus[t.status].amount += t.amount;
+    byStatus[t.status].amount += toNumber(t.amount);
   }
 
   // Check for discrepancies
@@ -758,35 +759,35 @@ export async function generateFinancialStatement(
   for (const log of financeLogs) {
     switch (log.transactionType) {
       case 'RIDE_PAYMENT':
-        revenue.ridePayments += log.amount;
+        revenue.ridePayments += toNumber(log.amount);
         break;
       case 'FOOD_ORDER_PAYMENT':
-        revenue.foodOrders += log.amount;
+        revenue.foodOrders += toNumber(log.amount);
         break;
       case 'SHOPPING_ORDER_PAYMENT':
-        revenue.shoppingOrders += log.amount;
+        revenue.shoppingOrders += toNumber(log.amount);
         break;
       case 'ITEM_DELIVERY_PAYMENT':
-        revenue.itemDelivery += log.amount;
+        revenue.itemDelivery += toNumber(log.amount);
         break;
       case 'HEALTH_ORDER_PAYMENT':
-        revenue.healthOrders += log.amount;
+        revenue.healthOrders += toNumber(log.amount);
         break;
       case 'RIDER_PAYOUT':
-        costs.riderPayouts += log.amount;
+        costs.riderPayouts += toNumber(log.amount);
         break;
       case 'MERCHANT_PAYOUT':
-        costs.merchantPayouts += log.amount;
+        costs.merchantPayouts += toNumber(log.amount);
         break;
       case 'PLATFORM_COMMISSION':
-        platform.grossCommission += log.platformCommission || 0;
+        platform.grossCommission += toNumber(log.platformCommission);
         break;
     }
 
     // Note: platformCommission is only counted in the PLATFORM_COMMISSION case above,
     // not unconditionally, to avoid double-counting.
-    costs.riderPayouts += log.riderEarnings || 0;
-    costs.merchantPayouts += log.merchantEarnings || 0;
+    costs.riderPayouts += toNumber(log.riderEarnings);
+    costs.merchantPayouts += toNumber(log.merchantEarnings);
   }
 
   revenue.totalRevenue = 
@@ -806,7 +807,7 @@ export async function generateFinancialStatement(
 
   platform.netCommission = platform.grossCommission + platform.serviceFees + platform.surcharges;
 
-  const netIncome = revenue.totalRevenue - costs.totalPayouts;
+  const netIncome = revenue.totalRevenue - toNumber(costs.totalPayouts);
 
   return {
     periodStart: startDate,

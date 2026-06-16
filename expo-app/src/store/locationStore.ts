@@ -2,9 +2,12 @@
 // SMART RIDE MOBILE - LOCATION STORE
 // ============================================
 // Location store with expo-location integration
+// With persist middleware for data persistence
 // ============================================
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import { DEFAULT_LOCATION } from '../constants';
 
@@ -39,8 +42,10 @@ interface LocationState {
   clearDropoffLocation: () => void;
 }
 
-// Location store with expo-location
-export const useLocationStore = create<LocationState>((set, get) => ({
+// Location store with expo-location and persistence
+export const useLocationStore = create<LocationState>()(
+  persist(
+    (set, get) => ({
   // Default to Kampala
   latitude: DEFAULT_LOCATION.latitude,
   longitude: DEFAULT_LOCATION.longitude,
@@ -144,6 +149,19 @@ export const useLocationStore = create<LocationState>((set, get) => ({
   setDropoffLocation: (location) => set({ dropoffLocation: location }),
   clearPickupLocation: () => set({ pickupLocation: null }),
   clearDropoffLocation: () => set({ dropoffLocation: null }),
-}));
+}),
+  {
+    name: 'smart-ride-location',
+    storage: createJSONStorage(() => AsyncStorage),
+    partialize: (state) => ({
+      latitude: state.latitude,
+      longitude: state.longitude,
+      address: state.address,
+      pickupLocation: state.pickupLocation,
+      dropoffLocation: state.dropoffLocation,
+    }),
+  }
+  )
+);
 
-console.log('[LOCATION-STORE] Store initialized with expo-location');
+console.log('[LOCATION-STORE] Store initialized with expo-location and persist');

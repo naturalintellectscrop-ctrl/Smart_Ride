@@ -1,10 +1,11 @@
 /**
  * GET /api/setup
  * Database health check and setup endpoint
- * 
- * Tests database connection, checks for admin users,
- * and provides diagnostic information.
- * 
+ *
+ * SECURITY:
+ * - GET: Returns diagnostic info — rate limited, admin-only in production
+ * - POST: Creates admin users — rate limited, only allowed if no admin users exist
+ *
  * POST /api/setup
  * Seeds the initial admin user if none exists.
  * Requires a setup key for security.
@@ -14,6 +15,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { hashPassword } from '@/lib/auth/password';
 import { z } from 'zod';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
+import { requireAdmin } from '@/lib/auth/guards';
 
 const setupAdminSchema = z.object({
   setupKey: z.string().min(1, 'Setup key is required'),
@@ -23,7 +26,24 @@ const setupAdminSchema = z.object({
   role: z.enum(['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN']).default('SUPER_ADMIN'),
 });
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.search);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.search);
+  }
+
+  // In production, require admin auth to view diagnostics
+  if (process.env.NODE_ENV === 'production') {
+    const authResult = requireAdmin(request);
+    if (!authResult.success) {
+      return NextResponse.json(
+        { success: false, error: authResult.error },
+        { status: authResult.statusCode }
+      );
+    }
+  }
+
   await setServiceRoleContext();
   const diagnostics: Record<string, unknown> = {
     timestamp: new Date().toISOString(),
@@ -131,16 +151,39 @@ export async function GET() {
     fromEmail: process.env.EMAIL_FROM || 'not set',
   };
 
-  return NextResponse.json({
-    success: true,
-    diagnostics,
-  });
-  await resetRLSContext();
+  try {
+    return NextResponse.json({
+      success: true,
+      diagnostics,
+    });
+  } finally {
+    await resetRLSContext();
+  }
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting — strict, like registration
+  const rateResult = checkRateLimit(request, RATE_LIMITS.auth.register);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.auth.register);
+  }
+
   await setServiceRoleContext();
   try {
+    // SECURITY: If admin users already exist, reject setup with 403
+    const adminCount = await db.user.count({
+      where: {
+        role: { in: ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN'] },
+      },
+    });
+
+    if (adminCount > 0) {
+      return NextResponse.json(
+        { success: false, error: 'Setup is disabled. Admin users already exist.' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const validationResult = setupAdminSchema.safeParse(body);
 

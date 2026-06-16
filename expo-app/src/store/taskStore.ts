@@ -2,9 +2,12 @@
 // SMART RIDE MOBILE - TASK STORE
 // ============================================
 // Task store for managing rides and deliveries
+// With persist middleware for data persistence
 // ============================================
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Task } from '../types';
 
 // Incoming request type for driver
@@ -59,7 +62,9 @@ interface TaskState {
   removeDriverTask: (taskId: string) => void;
 }
 
-export const useTaskStore = create<TaskState>((set, get) => ({
+export const useTaskStore = create<TaskState>()(
+  persist(
+    (set, get) => ({
   // Initial state
   pendingTask: null,
   currentTask: null,
@@ -111,6 +116,18 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   removeDriverTask: (taskId) => set((state) => ({
     driverTasks: state.driverTasks.filter(t => t.id !== taskId),
   })),
-}));
+}),
+  {
+    name: 'smart-ride-task',
+    storage: createJSONStorage(() => AsyncStorage),
+    partialize: (state) => ({
+      pendingTask: state.pendingTask,
+      currentTask: state.currentTask,
+      taskHistory: state.taskHistory,
+      driverTasks: state.driverTasks,
+    }),
+  }
+  )
+);
 
-console.log('[TASK-STORE] Store initialized');
+console.log('[TASK-STORE] Store initialized with persist');

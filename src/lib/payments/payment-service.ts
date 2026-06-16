@@ -8,6 +8,7 @@ import { PaymentMethod, TaskType, TransactionType } from '@prisma/client';
 import { MTN_MOMO, generateReferenceId as generateMTNReference, isConfigured as isMTNConfigured } from './mtn-momo';
 import { AIRTEL_MONEY, generateReferenceId as generateAirtelReference, isConfigured as isAirtelConfigured } from './airtel-money';
 import { paymentLogger } from '@/lib/logging/logger';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ==========================================
 // Types
@@ -281,7 +282,7 @@ async function processWalletPayment(
     include: { rider: true },
   });
 
-  const walletBalance = user?.rider?.walletBalance || 0;
+  const walletBalance = toNumber(user?.rider?.walletBalance) || 0;
 
   if (walletBalance < amount) {
     await updatePaymentStatus(paymentId, 'FAILED', 'Insufficient wallet balance');
@@ -496,12 +497,12 @@ export async function handleSuccessfulPayment(paymentId: string): Promise<void> 
       data: {
         transactionType,
         referenceId: payment.taskId!,
-        amount: payment.amount,
+        amount: toNumber(payment.amount),
         currency: payment.currency,
         clientId: payment.userId,
         riderId: payment.task.riderId || undefined,
-        platformCommission: payment.task.platformCommission,
-        riderEarnings: payment.task.riderEarnings,
+        platformCommission: toNumber(payment.task.platformCommission),
+        riderEarnings: toNumber(payment.task.riderEarnings),
         status: 'COMPLETED',
         description: `Payment for task ${payment.task.taskNumber}`,
       },

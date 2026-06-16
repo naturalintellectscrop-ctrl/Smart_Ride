@@ -14,6 +14,7 @@
 
 import { db } from '@/lib/db';
 import { InventoryReservationStatus } from '@prisma/client';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // CONFIGURATION

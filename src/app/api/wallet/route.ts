@@ -3,8 +3,18 @@ import { db, resetRLSContext } from '@/lib/db';
 import { requireAuth, requireOwnershipOrAdmin } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
-import { checkRateLimit, paymentRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 import { PaymentService } from '@/lib/payments/payment-service';
+import { z } from 'zod';
+
+// Zod schema for wallet top-up
+const walletTopUpSchema = z.object({
+  amount: z.number().positive('Amount must be greater than 0'),
+  paymentMethod: z.enum(['MTN_MOMO', 'AIRTEL_MONEY'], {
+    errorMap: () => ({ message: 'Wallet top-up requires a payment method (MTN_MOMO or AIRTEL_MONEY)' }),
+  }),
+  phoneNumber: z.string().min(1, 'Phone number is required for mobile money top-up'),
+});
 
 // GET /api/wallet - Get wallet balance and info
 export async function GET(request: NextRequest) {
@@ -119,10 +129,10 @@ export async function GET(request: NextRequest) {
 // gateway is invoked. The balance is only incremented after the payment callback
 // confirms success.
 export async function POST(request: NextRequest) {
-  // Rate limiting check
-  const rateLimitResult = checkRateLimit(request, paymentRateLimit);
+  // Rate limiting check — 5 payment requests per minute
+  const rateLimitResult = checkRateLimit(request, RATE_LIMITS.payment.initiate);
   if (!rateLimitResult.success) {
-    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    return rateLimitResponse(rateLimitResult, RATE_LIMITS.payment.initiate);
   }
 
   // Require authentication
@@ -135,36 +145,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { amount, paymentMethod, phoneNumber } = body;
-
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ success: false, error: 'Valid amount is required' }, { status: 400 });
-    }
-
-    // Payment method is required — we must go through a real payment gateway
-    if (!paymentMethod) {
-      return NextResponse.json(
-        { success: false, error: 'Wallet top-up requires a payment method. Please add a payment method first.' },
-        { status: 400 }
-      );
-    }
-
-    // Only mobile money providers are supported for wallet top-up
-    const supportedMethods = ['MTN_MOMO', 'AIRTEL_MONEY'];
-    if (!supportedMethods.includes(paymentMethod)) {
-      return NextResponse.json(
-        { success: false, error: 'Wallet top-up requires a payment method. Please add a payment method first.' },
-        { status: 400 }
-      );
-    }
-
-    // Phone number is required for mobile money
-    if (!phoneNumber) {
-      return NextResponse.json(
-        { success: false, error: 'Phone number is required for mobile money top-up' },
-        { status: 400 }
-      );
-    }
+    const validated = walletTopUpSchema.parse(body);
+    const { amount, paymentMethod, phoneNumber } = validated;
 
     // Check if the payment provider is configured
     const isProviderConfigured = paymentMethod === 'MTN_MOMO'
@@ -280,6 +262,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ success: false, error: error.issues[0]?.message || 'Validation error' }, { status: 400 });
+    }
     return NextResponse.json({ success: false, error: 'Failed to top up wallet' }, { status: 500 });
   } finally {
     await resetRLSContext();

@@ -3,13 +3,21 @@
 // ============================================
 // Proxies Mapbox reverse geocoding requests.
 // Accepts lat/lng and returns a place name.
+// SECURITY: Rate limited to prevent Mapbox quota exhaustion
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 // GET /api/mapbox/reverse - Reverse geocode coordinates
 // No auth required — location picking happens before login
 export async function GET(request: NextRequest) {
+  // Rate limiting to prevent Mapbox quota exhaustion
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.search);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.search);
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const lat = searchParams.get('lat');

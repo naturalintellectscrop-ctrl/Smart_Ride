@@ -3,6 +3,17 @@ import { db } from '@/lib/db';
 import { requireAuth, requireAdmin, resetRLSContext } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
+import { z } from 'zod';
+
+// Zod schema for SOS alert creation
+const createSOSAlertSchema = z.object({
+  riderId: z.string().optional(),
+  taskId: z.string().optional(),
+  latitude: z.number().min(-90).max(90, 'Latitude must be between -90 and 90'),
+  longitude: z.number().min(-180).max(180, 'Longitude must be between -180 and 180'),
+  locationAddress: z.string().optional(),
+});
 
 // GET /api/sos - List SOS alerts (admin only)
 export async function GET(request: NextRequest) {
@@ -53,6 +64,12 @@ export async function GET(request: NextRequest) {
 
 // POST /api/sos - Create new SOS alert (authenticated users/riders)
 export async function POST(request: NextRequest) {
+  // Rate limiting — 60 requests per minute to prevent SOS abuse
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.standard);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.standard);
+  }
+
   // Require authentication (any authenticated user can trigger SOS)
   const authResult = await requireAuth(request);
   if (authResult instanceof NextResponse) {
@@ -63,20 +80,14 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
+    const validated = createSOSAlertSchema.parse(body);
     const {
       riderId,
       taskId,
       latitude,
       longitude,
       locationAddress,
-    } = body;
-
-    // Validate required fields
-    if (!latitude || !longitude) {
-      return NextResponse.json({ success: false, error: 'Location is required' },
-        { status: 400 }
-      );
-    }
+    } = validated;
 
     // Generate alert number
     const alertNumber = `SOS-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
@@ -153,6 +164,11 @@ export async function POST(request: NextRequest) {
       alert,
     });
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ success: false, error: error.issues[0]?.message || 'Validation error' },
+        { status: 400 }
+      );
+    }
     return NextResponse.json({ success: false, error: 'Failed to create SOS alert' },
       { status: 500 }
     );

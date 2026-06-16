@@ -20,6 +20,7 @@ import {
   WalletTransactionStatus,
 } from '@prisma/client';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -681,17 +682,17 @@ export class RiderOnboardingService {
 
     return {
       walletId: wallet.id,
-      balance: wallet.balance,
-      pendingBalance: wallet.pendingBalance,
+      balance: toNumber(wallet.balance),
+      pendingBalance: toNumber(wallet.pendingBalance),
       currency: wallet.currency,
       status: wallet.status,
-      totalDeposited: wallet.totalDeposited,
-      totalWithdrawn: wallet.totalWithdrawn,
-      totalReceived: wallet.totalReceived,
+      totalDeposited: toNumber(wallet.totalDeposited),
+      totalWithdrawn: toNumber(wallet.totalWithdrawn),
+      totalReceived: toNumber(wallet.totalReceived),
       recentTransactions: recentTransactions.map((t) => ({
         id: t.id,
         transactionType: t.transactionType,
-        amount: t.amount,
+        amount: toNumber(t.amount),
         description: t.description,
         status: t.status,
         createdAt: t.createdAt,

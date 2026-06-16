@@ -15,6 +15,7 @@ import { verifyAccessToken, extractTokenFromHeader, JWTPayload, isAdmin as isAdm
 import { UserRole } from '@prisma/client';
 import { db, setRLSContext, resetRLSContext, setServiceRoleContext } from '@/lib/db';
 import crypto from 'crypto';
+import { toNumber } from '@/lib/decimal-utils';
 
 // Re-export isAdmin for convenience
 export { isAdmin } from './jwt';

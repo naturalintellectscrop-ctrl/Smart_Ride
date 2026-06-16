@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sendOTP } from '@/lib/auth/otp-service';
 import { errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { z } from 'zod';
-import { checkRateLimit, authRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 // Validation schema
 const sendOTPSchema = z.object({
@@ -17,10 +17,10 @@ const sendOTPSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  // Rate limiting check
-  const rateLimitResult = checkRateLimit(request, authRateLimit);
+  // Rate limiting check — 5 OTP sends per hour
+  const rateLimitResult = checkRateLimit(request, RATE_LIMITS.auth.sendOtp);
   if (!rateLimitResult.success) {
-    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    return rateLimitResponse(rateLimitResult, RATE_LIMITS.auth.sendOtp);
   }
 
   try {

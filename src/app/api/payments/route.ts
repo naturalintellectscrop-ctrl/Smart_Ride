@@ -11,6 +11,7 @@ import {
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { generateCSV, csvResponse } from '@/lib/export';
 import { requireAdmin } from '@/lib/auth/guards';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 /**
  * GET /api/payments
@@ -19,6 +20,12 @@ import { requireAdmin } from '@/lib/auth/guards';
  * SECURITY: Admin-only access required
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateResult = checkRateLimit(request, RATE_LIMITS.payment.initiate);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.payment.initiate);
+  }
+
   const authResult = requireAdmin(request);
   if (!authResult.success) {
     return NextResponse.json(

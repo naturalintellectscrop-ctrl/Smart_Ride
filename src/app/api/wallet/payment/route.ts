@@ -4,6 +4,7 @@ import { payFromWallet, refundToWallet, hasSufficientBalance, getWalletBalance }
 import { requireAuth } from '@/lib/auth/guards';
 import { resetRLSContext } from '@/lib/auth-utils';
 import { z } from 'zod';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 // ============================================
 // VALIDATION SCHEMAS
@@ -32,6 +33,12 @@ const refundSchema = z.object({
 // ============================================
 
 export async function POST(request: NextRequest) {
+  // Rate limiting — 5 payment requests per minute
+  const rateLimitResult = checkRateLimit(request, RATE_LIMITS.payment.initiate);
+  if (!rateLimitResult.success) {
+    return rateLimitResponse(rateLimitResult, RATE_LIMITS.payment.initiate);
+  }
+
   // Require authentication
   const authResult = requireAuth(request);
   if (!authResult.success) {

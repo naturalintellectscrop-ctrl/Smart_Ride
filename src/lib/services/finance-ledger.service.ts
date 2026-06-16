@@ -14,6 +14,7 @@
 
 import { db } from '@/lib/db';
 import { TaskType, TransactionType } from '@prisma/client';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TASK TYPE → TRANSACTION TYPE MAPPING
@@ -111,9 +112,9 @@ export class FinanceLedgerService {
       }
 
       // Calculate financial values
-      const platformCommission = task.platformCommission ?? 0;
-      const riderEarnings = task.riderEarnings ?? 0;
-      const totalAmount = task.totalAmount ?? 0;
+      const platformCommission = toNumber(task.platformCommission);
+      const riderEarnings = toNumber(task.riderEarnings);
+      const totalAmount = toNumber(task.totalAmount);
       const merchantId = task.order?.merchantId ?? null;
 
       // Calculate merchant earnings if applicable (for food/shopping orders)
@@ -195,8 +196,8 @@ export class FinanceLedgerService {
               platformCommission,
               riderEarnings,
               merchantEarnings,
-              riderTotalEarnings: (task.rider?.totalEarnings ?? 0) + riderEarnings,
-              riderWalletBalance: (task.rider?.walletBalance ?? 0) + riderEarnings,
+              riderTotalEarnings: toNumber(task.rider?.totalEarnings) + riderEarnings,
+              riderWalletBalance: toNumber(task.rider?.walletBalance) + riderEarnings,
             }),
             source: 'SYSTEM',
           },
@@ -222,7 +223,7 @@ export class FinanceLedgerService {
                 taskType: task.taskType,
                 event: 'PLATFORM_COMMISSION',
                 sourceTaskId: taskId,
-                commissionRate: totalAmount > 0 ? (platformCommission / totalAmount * 100).toFixed(2) + '%' : '0%',
+                commissionRate: toNumber(totalAmount) > 0 ? (platformCommission / toNumber(totalAmount) * 100).toFixed(2) + '%' : '0%',
               }),
             },
           });
@@ -456,8 +457,8 @@ export class FinanceLedgerService {
       }
 
       const task = payment.task;
-      const riderEarnings = task?.riderEarnings ?? 0;
-      const refundAmount = payment.amount;
+      const riderEarnings = toNumber(task?.riderEarnings);
+      const refundAmount = toNumber(payment.amount);
 
       const result = await db.$transaction(async (tx) => {
         // Double-check idempotency inside transaction
@@ -490,7 +491,7 @@ export class FinanceLedgerService {
             currency: payment.currency,
             clientId: payment.userId,
             riderId: task?.riderId || null,
-            platformCommission: -(task?.platformCommission ?? 0),
+            platformCommission: -toNumber(task?.platformCommission),
             riderEarnings: -riderEarnings,
             status: 'COMPLETED',
             description: `Payment refund: payment ${payment.paymentReference} for ${refundAmount} UGX. Rider earnings deducted: ${riderEarnings} UGX.`,
@@ -593,8 +594,8 @@ export class FinanceLedgerService {
         _sum: { riderEarnings: true },
       });
 
-      const expected = completedTasksSum._sum.riderEarnings ?? 0;
-      const actual = rider.totalEarnings;
+      const expected = toNumber(completedTasksSum._sum.riderEarnings);
+      const actual = toNumber(rider.totalEarnings);
       const difference = actual - expected;
 
       return { expected, actual, difference };
@@ -639,8 +640,8 @@ export class FinanceLedgerService {
         _sum: { platformCommission: true },
       });
 
-      const expected = tasksCommission._sum.platformCommission ?? 0;
-      const actual = financeLogCommission._sum.platformCommission ?? 0;
+      const expected = toNumber(tasksCommission._sum.platformCommission);
+      const actual = toNumber(financeLogCommission._sum.platformCommission);
       const difference = actual - expected;
 
       return { expected, actual, difference };

@@ -1,12 +1,14 @@
 /**
- * API Endpoint: End an In-App Call Session
+ * API Endpoint: End a Call Session
  *
- * POST /api/calls/[sessionId]/end
+ * PATCH /api/calls/[sessionId]/end
  *
- * Ends an active call session:
- * - Updates the call record with end time and duration
- * - Sets status to 'ended' or 'missed' (if never connected)
- * - Notifies the other party via socket
+ * Ends an active call session by setting its status to "ended",
+ * recording the end time and duration, and broadcasting the
+ * call:ended event to both participants via realtime.
+ *
+ * SECURITY: Requires authentication. Only the caller or recipient
+ *           of the call can end it.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -17,11 +19,11 @@ import {
   errorResponse,
   serverErrorResponse,
   unauthorizedResponse,
-  notFoundResponse,
+  forbiddenResponse,
 } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
-export async function POST(
+export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> }
 ) {
@@ -38,61 +40,47 @@ export async function POST(
     return unauthorizedResponse('Invalid or expired token');
   }
 
+  const { sessionId } = await params;
+
   await setServiceRoleContext();
   try {
-    const { sessionId } = await params;
-
     // Find the call session
     const callSession = await db.callSession.findUnique({
       where: { id: sessionId },
-      include: {
-        caller: { select: { id: true, name: true } },
-        recipient: { select: { id: true, name: true } },
-      },
     });
 
     if (!callSession) {
-      return notFoundResponse('Call session');
+      return errorResponse('Call session not found', 404);
     }
 
-    // Verify the user is part of this call
-    if (decoded.userId !== callSession.callerId && decoded.userId !== callSession.recipientId) {
-      return errorResponse('You are not authorized to end this call', 403);
+    // Verify the user is a participant in this call
+    if (callSession.callerId !== decoded.userId && callSession.recipientId !== decoded.userId) {
+      return forbiddenResponse('You are not a participant in this call');
     }
 
-    // Check if already ended
-    if (callSession.status === 'ended' || callSession.status === 'missed') {
-      return successResponse({
-        sessionId: callSession.id,
-        status: callSession.status,
-        duration: callSession.duration,
-      }, 'Call already ended');
+    // Check if the call is already ended
+    if (callSession.status === 'ended') {
+      return errorResponse('Call has already ended', 400);
     }
 
+    // Calculate duration if the call was connected
     const now = new Date();
-    let duration: number | null = null;
-    let newStatus: string;
-
+    let duration = 0;
     if (callSession.startedAt) {
-      // Call was connected at some point - calculate duration
-      duration = Math.floor((now.getTime() - callSession.startedAt.getTime()) / 1000);
-      newStatus = 'ended';
-    } else {
-      // Call was never connected (ringing but never answered)
-      newStatus = 'missed';
+      duration = Math.round((now.getTime() - callSession.startedAt.getTime()) / 1000);
     }
 
     // Update the call session
     const updatedSession = await db.callSession.update({
       where: { id: sessionId },
       data: {
-        status: newStatus,
+        status: 'ended',
         endedAt: now,
         duration,
       },
     });
 
-    // Audit log
+    // Create audit log
     await createAuditLog({
       action: 'CALL_ENDED',
       entityType: EntityTypes.USER,
@@ -100,32 +88,40 @@ export async function POST(
       actorType: 'USER',
       actorId: decoded.userId,
       userId: decoded.userId,
-      taskId: callSession.taskId || undefined,
-      description: `Call ${newStatus}: ${callSession.caller.name} → ${callSession.recipient.name} (${duration !== null ? `${duration}s` : 'never connected'})`,
+      description: `Call session ${sessionId} ended by ${decoded.name || decoded.userId}`,
       source: 'MOBILE_APP',
-      newValues: {
-        status: newStatus,
-        duration,
-        endedAt: now.toISOString(),
-      },
     });
 
-    // Return the ended session details
-    // The caller's client should notify the other party via Socket.io
-    // that the call has ended
+    // Broadcast call:ended to both participants via realtime
+    try {
+      const { broadcastToUser } = await import('@/lib/realtime-server');
+
+      await broadcastToUser(callSession.callerId, 'call:ended', {
+        sessionId: callSession.id,
+        duration,
+        endedBy: decoded.userId,
+      });
+
+      await broadcastToUser(callSession.recipientId, 'call:ended', {
+        sessionId: callSession.id,
+        duration,
+        endedBy: decoded.userId,
+      });
+    } catch (e) {
+      console.warn('[CALLS] Failed to broadcast call ended:', e);
+    }
+
     return successResponse({
       sessionId: updatedSession.id,
-      channelId: updatedSession.channelId,
       status: updatedSession.status,
+      endedAt: updatedSession.endedAt?.toISOString(),
       duration: updatedSession.duration,
-      endedAt: updatedSession.endedAt,
-      // Include recipient info for push notification
-      otherPartyId: decoded.userId === callSession.callerId
-        ? callSession.recipientId
-        : callSession.callerId,
-    }, `Call ${newStatus}`);
+    }, 'Call ended successfully');
   } catch (error) {
-    console.error('Error ending call:', error);
+    if (error instanceof Error && error.name === 'ZodError') {
+      return errorResponse('Validation error');
+    }
+    console.error('[CALLS] Error ending call:', error);
     return serverErrorResponse('Failed to end call');
   } finally {
     await resetRLSContext();

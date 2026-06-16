@@ -2,9 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
+import { requireAuth, requireAdmin } from '@/lib/auth/guards';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 // GET /api/alerts - Get connection alerts
 export async function GET(request: NextRequest) {
+  // Require authentication
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
@@ -64,6 +75,21 @@ export async function GET(request: NextRequest) {
 
 // POST /api/alerts - Create a new alert (usually done by monitoring service)
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.standard);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.standard);
+  }
+
+  // Require admin authentication for creating alerts
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -108,6 +134,15 @@ export async function POST(request: NextRequest) {
 
 // PATCH /api/alerts - Acknowledge an alert
 export async function PATCH(request: NextRequest) {
+  // Require authentication
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();

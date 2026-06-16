@@ -21,6 +21,7 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -32,6 +33,7 @@ import { useAuthStore } from '@/src/store';
 import { socketService } from '@/src/services/socket.service';
 import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlassCard } from '@/src/components/GlassCard';
+import { pickImage } from '@/src/utils/imagePicker';
 
 // ============================================
 // TYPING INDICATOR COMPONENT
@@ -121,6 +123,7 @@ function StitchChatBubble({
   isRead,
   senderName,
   type,
+  imageUrl,
 }: {
   message: string;
   time: string;
@@ -128,6 +131,7 @@ function StitchChatBubble({
   isRead?: boolean;
   senderName?: string;
   type?: 'text' | 'image' | 'system';
+  imageUrl?: string;
 }) {
   if (type === 'system') {
     return (
@@ -143,6 +147,9 @@ function StitchChatBubble({
         <Text style={bubbleStyles.senderName}>{senderName}</Text>
       )}
       <View style={[bubbleStyles.bubble, isOwn ? bubbleStyles.ownBubble : bubbleStyles.otherBubble]}>
+        {type === 'image' && imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={bubbleStyles.image} resizeMode="cover" />
+        ) : null}
         <Text style={[bubbleStyles.message, isOwn ? bubbleStyles.ownMessage : bubbleStyles.otherMessage]}>
           {message}
         </Text>
@@ -224,6 +231,12 @@ const bubbleStyles = StyleSheet.create({
   },
   readIcon: {
     marginTop: -1,
+  },
+  image: {
+    width: 200,
+    height: 150,
+    borderRadius: RADIUS.md,
+    marginBottom: SPACING.xs,
   },
   systemContainer: {
     alignItems: 'center',
@@ -377,16 +390,18 @@ export default function ChatDetailScreen() {
     );
   }, [conversationId, sendMessage]);
 
-  const handleAttachment = useCallback(() => {
+  const handleAttachment = useCallback(async () => {
     Alert.alert('Attach', 'Choose an attachment type', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Photo',
-        onPress: () => {
-          if (conversationId) {
-            sendMessage(conversationId, {
+        onPress: async () => {
+          const image = await pickImage({ allowsEditing: false, quality: 0.7 });
+          if (image && conversationId) {
+            await sendMessage(conversationId, {
               content: 'Sent a photo',
-              type: 'TEXT',
+              type: 'IMAGE',
+              imageUrl: image.uri,
             });
           }
         },
@@ -432,7 +447,8 @@ export default function ChatDetailScreen() {
           isOwn={isOwn}
           isRead={item.isRead}
           senderName={item.senderName}
-          type={isSystem ? 'system' : 'text'}
+          type={isSystem ? 'system' : (item.type === 'IMAGE' ? 'image' : 'text')}
+          imageUrl={item.imageUrl || item.mediaUrl}
         />
       </View>
     );
@@ -534,6 +550,23 @@ export default function ChatDetailScreen() {
         >
           <Ionicons name="call-outline" size={16} color={COLORS.primary} />
           <Text style={styles.quickActionText}>Call</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickActionButton}
+          onPress={async () => {
+            const image = await pickImage({ allowsEditing: false, quality: 0.7 });
+            if (image && conversationId) {
+              await sendMessage(conversationId, {
+                content: 'Sent a photo',
+                type: 'IMAGE',
+                imageUrl: image.uri,
+              });
+            }
+          }}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="image-outline" size={16} color={COLORS.primary} />
+          <Text style={styles.quickActionText}>Photo</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickActionButton}

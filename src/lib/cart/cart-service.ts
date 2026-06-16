@@ -1,4 +1,5 @@
 import { db } from '@/lib/db';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -485,7 +486,7 @@ export async function validateCart(userId: string): Promise<CartValidationResult
         cartItemId: item.id,
         menuItemId: item.menuItemId,
         issue: 'DELETED',
-        cartPrice: item.priceSnapshot,
+        cartPrice: toNumber(item.priceSnapshot),
       });
       continue;
     }
@@ -495,8 +496,8 @@ export async function validateCart(userId: string): Promise<CartValidationResult
         cartItemId: item.id,
         menuItemId: item.menuItemId,
         issue: 'UNAVAILABLE',
-        currentPrice: menuItem.price,
-        cartPrice: item.priceSnapshot,
+        currentPrice: toNumber(menuItem.price),
+        cartPrice: toNumber(item.priceSnapshot),
       });
       continue;
     }
@@ -506,24 +507,24 @@ export async function validateCart(userId: string): Promise<CartValidationResult
         cartItemId: item.id,
         menuItemId: item.menuItemId,
         issue: 'MERCHANT_UNAVAILABLE',
-        currentPrice: menuItem.price,
-        cartPrice: item.priceSnapshot,
+        currentPrice: toNumber(menuItem.price),
+        cartPrice: toNumber(item.priceSnapshot),
       });
       continue;
     }
 
     // Check for significant price changes
-    if (menuItem.price !== item.priceSnapshot) {
-      const priceDiff = Math.abs(menuItem.price - item.priceSnapshot);
-      const priceDiffPercent = priceDiff / item.priceSnapshot;
+    if (toNumber(menuItem.price) !== toNumber(item.priceSnapshot)) {
+      const priceDiff = Math.abs(toNumber(menuItem.price) - toNumber(item.priceSnapshot));
+      const priceDiffPercent = priceDiff / toNumber(item.priceSnapshot);
 
       if (priceDiffPercent > PRICE_CHANGE_THRESHOLD) {
         issues.push({
           cartItemId: item.id,
           menuItemId: item.menuItemId,
           issue: 'PRICE_CHANGED',
-          currentPrice: menuItem.price,
-          cartPrice: item.priceSnapshot,
+          currentPrice: toNumber(menuItem.price),
+          cartPrice: toNumber(item.priceSnapshot),
         });
       }
     }

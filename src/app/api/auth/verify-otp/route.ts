@@ -10,7 +10,7 @@ import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { z } from 'zod';
 import { UserRole, UserStatus } from '@prisma/client';
-import { checkRateLimit, authRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 // Validation schema
 const verifyOTPSchema = z.object({
@@ -30,10 +30,10 @@ const verifyOTPSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  // Rate limiting check
-  const rateLimitResult = checkRateLimit(request, authRateLimit);
+  // Rate limiting check — 5 OTP verifications per hour
+  const rateLimitResult = checkRateLimit(request, RATE_LIMITS.auth.verifyOtp);
   if (!rateLimitResult.success) {
-    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    return rateLimitResponse(rateLimitResult, RATE_LIMITS.auth.verifyOtp);
   }
 
   await setServiceRoleContext();

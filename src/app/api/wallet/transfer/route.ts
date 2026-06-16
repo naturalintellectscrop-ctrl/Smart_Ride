@@ -3,14 +3,14 @@ import { db } from '@/lib/db';
 import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
-import { checkRateLimit, paymentRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 // POST /api/wallet/transfer - Transfer money to another user
 export async function POST(request: NextRequest) {
-  // Rate limiting check
-  const rateLimitResult = checkRateLimit(request, paymentRateLimit);
+  // Rate limiting check — 5 payment requests per minute
+  const rateLimitResult = checkRateLimit(request, RATE_LIMITS.payment.initiate);
   if (!rateLimitResult.success) {
-    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    return rateLimitResponse(rateLimitResult, RATE_LIMITS.payment.initiate);
   }
 
   // Require authentication - sender must be the authenticated user

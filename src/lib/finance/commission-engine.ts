@@ -15,6 +15,7 @@
 
 import { db } from '@/lib/db';
 import { TaskType, TransactionType } from '@prisma/client';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -182,11 +183,11 @@ export async function getCommissionConfig(taskType: TaskType): Promise<Commissio
   if (dbConfig) {
     return {
       serviceType: dbConfig.serviceType,
-      baseFare: dbConfig.baseFare,
-      perKmRate: dbConfig.perKmRate,
-      perMinuteRate: dbConfig.perMinuteRate || 0,
-      minimumFare: dbConfig.minimumFare,
-      maximumFare: dbConfig.maximumFare || undefined,
+      baseFare: toNumber(dbConfig.baseFare),
+      perKmRate: toNumber(dbConfig.perKmRate),
+      perMinuteRate: toNumber(dbConfig.perMinuteRate) || 0,
+      minimumFare: toNumber(dbConfig.minimumFare),
+      maximumFare: toNumber(dbConfig.maximumFare) || undefined,
       platformCommissionPercent:
         dbConfig.platformCommissionPercent ||
         DEFAULT_COMMISSION_RATES[taskType].platformCommissionPercent,
@@ -405,7 +406,7 @@ export async function calculateAndPersistCommission(
   const commissionInput: CommissionInput = {
     taskId: task.id,
     taskType: task.taskType,
-    totalAmount: task.totalAmount,
+    totalAmount: toNumber(task.totalAmount),
     distanceKm: task.distanceKm ?? undefined,
     riderId: task.riderId ?? undefined,
     clientId: task.clientId,
@@ -424,7 +425,7 @@ export async function calculateAndPersistCommission(
       select: { commissionRate: true },
     });
     if (merchant) {
-      commissionInput.customCommissionRate = merchant.commissionRate * 100; // Convert from decimal to percent
+      commissionInput.customCommissionRate = toNumber(merchant.commissionRate) * 100; // Convert from decimal to percent
     }
   }
 
@@ -435,7 +436,7 @@ export async function calculateAndPersistCommission(
       select: { commissionRate: true },
     });
     if (provider && !commissionInput.customCommissionRate) {
-      commissionInput.customCommissionRate = provider.commissionRate * 100;
+      commissionInput.customCommissionRate = toNumber(provider.commissionRate) * 100;
     }
   }
 
@@ -457,22 +458,22 @@ export async function calculateAndPersistCommission(
       riderId: task.riderId || undefined,
       merchantId: task.order?.merchantId || undefined,
       platformCommission: breakdown.totalPlatformCommission,
-      riderEarnings: breakdown.riderEarnings,
-      merchantEarnings: breakdown.merchantEarnings || 0,
+      riderEarnings: toNumber(breakdown.riderEarnings),
+      merchantEarnings: toNumber(breakdown.merchantEarnings),
       status: 'COMPLETED',
       description: `Commission calculated for task ${task.taskNumber} (${task.taskType})`,
       metadata: JSON.stringify({
         taskId: task.id,
         taskNumber: task.taskNumber,
         taskType: task.taskType,
-        totalAmount: task.totalAmount,
+        totalAmount: toNumber(task.totalAmount),
         baseCommission: breakdown.baseCommission,
-        serviceFee: breakdown.serviceFee,
+        serviceFee: toNumber(breakdown.serviceFee),
         nightSurcharge: breakdown.nightSurcharge,
         peakSurcharge: breakdown.peakSurcharge,
         totalPlatformCommission: breakdown.totalPlatformCommission,
-        riderEarnings: breakdown.riderEarnings,
-        merchantEarnings: breakdown.merchantEarnings,
+        riderEarnings: toNumber(breakdown.riderEarnings),
+        merchantEarnings: toNumber(breakdown.merchantEarnings),
         commissionPercent: breakdown.commissionPercent,
         calculatedAt: breakdown.calculatedAt.toISOString(),
       }),
@@ -498,7 +499,7 @@ export async function calculateAndPersistCommission(
         taskType: task.taskType,
         commissionPercent: breakdown.commissionPercent,
         baseCommission: breakdown.baseCommission,
-        serviceFee: breakdown.serviceFee,
+        serviceFee: toNumber(breakdown.serviceFee),
         nightSurcharge: breakdown.nightSurcharge,
         peakSurcharge: breakdown.peakSurcharge,
       }),
@@ -510,7 +511,7 @@ export async function calculateAndPersistCommission(
     where: { id: taskId },
     data: {
       platformCommission: breakdown.totalPlatformCommission,
-      riderEarnings: breakdown.riderEarnings,
+      riderEarnings: toNumber(breakdown.riderEarnings),
     },
   });
 
@@ -526,8 +527,8 @@ export async function calculateAndPersistCommission(
         description: `Commission calculated for task ${task.taskNumber}: Platform=${breakdown.totalPlatformCommission}, Rider=${breakdown.riderEarnings}, Merchant=${breakdown.merchantEarnings}`,
         newValues: JSON.stringify({
           platformCommission: breakdown.totalPlatformCommission,
-          riderEarnings: breakdown.riderEarnings,
-          merchantEarnings: breakdown.merchantEarnings,
+          riderEarnings: toNumber(breakdown.riderEarnings),
+          merchantEarnings: toNumber(breakdown.merchantEarnings),
           commissionPercent: breakdown.commissionPercent,
         }),
         source: 'SYSTEM',
@@ -543,10 +544,10 @@ export async function calculateAndPersistCommission(
 
   // 7. Return the calculation breakdown
   return {
-    totalAmount: breakdown.totalAmount,
+    totalAmount: toNumber(breakdown.totalAmount),
     platformCommission: breakdown.totalPlatformCommission,
-    riderEarnings: breakdown.riderEarnings,
-    merchantEarnings: breakdown.merchantEarnings,
+    riderEarnings: toNumber(breakdown.riderEarnings),
+    merchantEarnings: toNumber(breakdown.merchantEarnings),
     commissionRate: breakdown.commissionPercent,
     serviceType: task.taskType,
   };
@@ -570,7 +571,7 @@ export async function calculateAndRecordCommission(
     where: { id: input.taskId },
     data: {
       platformCommission: breakdown.totalPlatformCommission,
-      riderEarnings: breakdown.riderEarnings,
+      riderEarnings: toNumber(breakdown.riderEarnings),
     },
   });
 
@@ -616,7 +617,7 @@ export function formatCommissionBreakdown(breakdown: CommissionBreakdown): strin
     `Rider Earnings: UGX ${breakdown.riderEarnings.toLocaleString()}`
   );
 
-  if (breakdown.merchantEarnings > 0) {
+  if (toNumber(breakdown.merchantEarnings) > 0) {
     lines.push(
       `Merchant Earnings: UGX ${breakdown.merchantEarnings.toLocaleString()}`
     );
@@ -693,10 +694,10 @@ export async function getPlatformEarningsSummary(
   const breakdown: Record<string, { count: number; revenue: number; commission: number }> = {};
 
   for (const log of financeLogs) {
-    totalRevenue += log.amount;
-    totalCommission += log.platformCommission || 0;
-    totalRiderPayouts += log.riderEarnings || 0;
-    totalMerchantPayouts += log.merchantEarnings || 0;
+    totalRevenue += toNumber(log.amount);
+    totalCommission += toNumber(log.platformCommission);
+    totalRiderPayouts += toNumber(log.riderEarnings);
+    totalMerchantPayouts += toNumber(log.merchantEarnings);
   }
 
   for (const task of tasks) {
@@ -705,8 +706,8 @@ export async function getPlatformEarningsSummary(
       breakdown[type] = { count: 0, revenue: 0, commission: 0 };
     }
     breakdown[type].count++;
-    breakdown[type].revenue += task.totalAmount;
-    breakdown[type].commission += task.platformCommission || 0;
+    breakdown[type].revenue += toNumber(task.totalAmount);
+    breakdown[type].commission += toNumber(task.platformCommission);
   }
 
   return {

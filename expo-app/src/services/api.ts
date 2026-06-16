@@ -8,6 +8,7 @@ import { ApiResponse, Task, Order, Merchant, User, Rider } from '../types';
 import { API_CONFIG, STORAGE_KEYS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
+import { secureStorage } from '../utils/secureStorage';
 
 // ============================================
 // API CLIENT
@@ -29,7 +30,8 @@ class ApiService {
       'Content-Type': 'application/json',
     };
     
-    const token = await AsyncStorage.getItem(STORAGE_KEYS.authToken);
+    // Read access token from SecureStore (encrypted storage)
+    const token = await secureStorage.getAccessToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
@@ -73,7 +75,7 @@ class ApiService {
           return this.request<T>(endpoint, method, body, true);
         }
         // Refresh failed - clear tokens and log out
-        await AsyncStorage.multiRemove([STORAGE_KEYS.authToken, STORAGE_KEYS.refreshToken]);
+        await secureStorage.clearAll();
         try { useAuthStore.getState().logout(); } catch {}
       }
 
@@ -122,7 +124,8 @@ class ApiService {
       const refreshTimeoutId = setTimeout(() => refreshController.abort(), ApiService.WRITE_TIMEOUT);
 
       try {
-        const refreshToken = await AsyncStorage.getItem(STORAGE_KEYS.refreshToken);
+        // Read refresh token from SecureStore (encrypted storage)
+        const refreshToken = await secureStorage.getRefreshToken();
         if (!refreshToken) {
           console.log('[API] No refresh token available');
           return null;
@@ -139,10 +142,10 @@ class ApiService {
         const data = await response.json();
 
         if (data.success && data.data?.accessToken) {
+          // Save refreshed tokens to SecureStore
+          await secureStorage.saveTokens(data.data.accessToken, data.data.refreshToken || '');
+          // Also update AsyncStorage for backward compat with auth store
           await AsyncStorage.setItem(STORAGE_KEYS.authToken, data.data.accessToken);
-          if (data.data.refreshToken) {
-            await AsyncStorage.setItem(STORAGE_KEYS.refreshToken, data.data.refreshToken);
-          }
           console.log('[API] Token refresh successful');
           return data.data.accessToken;
         }
@@ -177,6 +180,7 @@ class ApiService {
     });
     
     if (response.success && response.data?.accessToken) {
+      await secureStorage.saveTokens(response.data.accessToken, '');
       await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
     }
     
@@ -187,6 +191,7 @@ class ApiService {
     const response = await this.request<{ user: User; accessToken: string }>('/auth/register', 'POST', data);
     
     if (response.success && response.data?.accessToken) {
+      await secureStorage.saveTokens(response.data.accessToken, '');
       await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
     }
     
@@ -199,6 +204,7 @@ class ApiService {
     });
     
     if (response.success && response.data?.accessToken) {
+      await secureStorage.saveTokens(response.data.accessToken, '');
       await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
     }
     
@@ -227,6 +233,7 @@ class ApiService {
     const response = await this.request<{ user: User; accessToken: string; refreshToken?: string }>('/auth/verify-otp', 'POST', data);
     
     if (response.success && response.data?.accessToken) {
+      await secureStorage.saveTokens(response.data.accessToken, response.data.refreshToken || '');
       await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
     }
     
@@ -240,6 +247,7 @@ class ApiService {
 
   async logout(): Promise<ApiResponse<void>> {
     const response = await this.request<void>('/auth/logout', 'POST');
+    await secureStorage.clearAll();
     await AsyncStorage.multiRemove([STORAGE_KEYS.authToken, STORAGE_KEYS.refreshToken]);
     return response;
   }
@@ -258,6 +266,10 @@ class ApiService {
 
   async resetPassword(token: string, newPassword: string): Promise<ApiResponse<{ message: string }>> {
     return this.request<{ message: string }>('/auth/reset-password', 'POST', { token, newPassword });
+  }
+
+  async changePassword(currentPassword: string, newPassword: string): Promise<ApiResponse<any>> {
+    return this.request('/auth/change-password', 'POST', { currentPassword, newPassword });
   }
 
   // ==========================================
@@ -832,6 +844,48 @@ class ApiService {
     agoraAppId: string;
   }>> {
     return this.request(`/calls/${sessionId}`);
+  }
+
+  // ==========================================
+  // CHAT & MESSAGING
+  // ==========================================
+
+  /**
+   * Get all conversations for the authenticated user
+   * Supports cursor-based pagination
+   */
+  async getConversations(cursor?: string, limit?: number): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams();
+    if (cursor) params.set('cursor', cursor);
+    if (limit) params.set('limit', String(limit));
+    const query = params.toString();
+    return this.request(`/chat/conversations${query ? `?${query}` : ''}`);
+  }
+
+  /**
+   * Get messages for a specific conversation
+   * Supports cursor-based pagination
+   */
+  async getMessages(conversationId: string, cursor?: string, limit?: number): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams();
+    if (cursor) params.set('cursor', cursor);
+    if (limit) params.set('limit', String(limit));
+    const query = params.toString();
+    return this.request(`/chat/${conversationId}/messages${query ? `?${query}` : ''}`);
+  }
+
+  /**
+   * Send a message in a conversation
+   */
+  async sendMessage(conversationId: string, data: { content: string; type?: string; metadata?: any }): Promise<ApiResponse<any>> {
+    return this.request(`/chat/${conversationId}/send`, 'POST', data);
+  }
+
+  /**
+   * Mark all unread messages in a conversation as read
+   */
+  async markMessagesRead(conversationId: string): Promise<ApiResponse<any>> {
+    return this.request(`/chat/${conversationId}/read`, 'POST');
   }
 }
 

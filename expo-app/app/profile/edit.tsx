@@ -26,8 +26,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, API_CONFIG } from '@/src/constants';
 import { Ionicons } from '@expo/vector-icons';
+import { pickImage } from '@/src/utils/imagePicker';
 
 interface UserProfile {
   name: string;
@@ -39,7 +40,7 @@ interface UserProfile {
 
 export default function ProfileEditScreen() {
   const router = useRouter();
-  const { user } = useAuthStore();
+  const { user, setUser } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile>({
     name: '',
     email: '',
@@ -48,6 +49,7 @@ export default function ProfileEditScreen() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -56,9 +58,47 @@ export default function ProfileEditScreen() {
         email: user.email || '',
         phone: user.phone || '',
         address: '',
+        avatar: (user as any).avatarUrl,
       });
     }
   }, [user]);
+
+  const handleAvatarPress = async () => {
+    try {
+      const image = await pickImage({ allowsEditing: true, aspect: [1, 1], quality: 0.7 });
+      if (!image) return;
+
+      setIsUploadingAvatar(true);
+
+      const formData = new FormData();
+      formData.append('avatar', {
+        uri: image.uri,
+        type: image.type,
+        name: image.name,
+      } as any);
+
+      const token = await (await import('@/src/utils/secureStorage')).secureStorage.getAccessToken();
+      const response = await fetch(`${API_CONFIG.baseUrl}/uploads/avatar`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (result.success && result.data?.avatarUrl) {
+        setProfile(prev => ({ ...prev, avatar: result.data.avatarUrl }));
+        setUser({ ...user!, avatarUrl: result.data.avatarUrl } as any);
+        Alert.alert('Success', 'Avatar updated!');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to upload avatar');
+      }
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      Alert.alert('Error', 'Failed to upload avatar');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -104,9 +144,11 @@ export default function ProfileEditScreen() {
           entering={ZoomIn.duration(400)}
           style={styles.avatarSection}
         >
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handleAvatarPress} activeOpacity={0.7} disabled={isUploadingAvatar}>
             <View style={styles.avatarContainer}>
-              {profile.avatar ? (
+              {isUploadingAvatar ? (
+                <ActivityIndicator color={COLORS.primary} size="small" />
+              ) : profile.avatar ? (
                 <Image source={{ uri: profile.avatar }} style={styles.avatarImage} />
               ) : (
                 <Ionicons name="person" size={40} color={COLORS.primary} />

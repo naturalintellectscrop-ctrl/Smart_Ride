@@ -6,6 +6,7 @@
 
 import { db } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // CUSTOM ERROR TYPES
@@ -237,10 +238,10 @@ export async function atomicWalletDebit(
     }
 
     if (wallet.status !== 'ACTIVE') {
-      throw new InsufficientBalanceError(walletId, amount, wallet.balance, `Wallet ${walletId} is not active`);
+      throw new InsufficientBalanceError(walletId, amount, toNumber(wallet.balance), `Wallet ${walletId} is not active`);
     }
 
-    const balanceBefore = wallet.balance;
+    const balanceBefore = toNumber(wallet.balance);
 
     if (balanceBefore < amount) {
       throw new InsufficientBalanceError(walletId, amount, balanceBefore);
@@ -318,7 +319,7 @@ export async function atomicWalletCredit(
       throw new Error(`Wallet ${walletId} not found`);
     }
 
-    const balanceBefore = wallet.balance;
+    const balanceBefore = toNumber(wallet.balance);
     const balanceAfter = balanceBefore + amount;
 
     await tx.wallet.update({

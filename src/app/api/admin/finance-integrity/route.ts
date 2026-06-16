@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { FinanceLedgerService } from '@/lib/services/finance-ledger.service';
+import { toNumber } from '@/lib/decimal-utils';
 
 // GET /api/admin/finance-integrity — Finance integrity and reconciliation data
 export async function GET(request: NextRequest) {
@@ -135,8 +136,8 @@ async function getPendingPayouts(): Promise<{ count: number; totalAmount: number
   ]);
 
   // Use settlements as the primary source
-  const settlementsTotal = pendingSettlements.reduce((sum, s) => sum + s.netAmount, 0);
-  const riderPayoutsTotal = pendingRiderPayouts.reduce((sum, p) => sum + p.amount, 0);
+  const settlementsTotal = pendingSettlements.reduce((sum, s) => sum + toNumber(s.netAmount), 0);
+  const riderPayoutsTotal = pendingRiderPayouts.reduce((sum, p) => sum + toNumber(p.amount), 0);
 
   return {
     count: Math.max(pendingSettlements.length, pendingRiderPayouts.length),
@@ -144,7 +145,7 @@ async function getPendingPayouts(): Promise<{ count: number; totalAmount: number
     payouts: pendingSettlements.map(s => ({
       id: s.id,
       riderId: s.recipientId,
-      amount: s.netAmount,
+      amount: toNumber(s.netAmount),
       periodStart: s.periodStart.toISOString(),
       periodEnd: s.periodEnd.toISOString(),
       createdAt: s.createdAt.toISOString(),
@@ -205,7 +206,7 @@ async function getUnreconciledTransactions() {
         financeLogId: log.id,
         referenceId: log.referenceId,
         transactionType: log.transactionType,
-        amount: log.amount,
+        amount: toNumber(log.amount),
         reason: 'No matching task found for FinanceLog referenceId',
       });
     } else if (matchingTask.status !== 'COMPLETED' && matchingTask.status !== 'PAID' && matchingTask.status !== 'CLOSED') {
@@ -213,7 +214,7 @@ async function getUnreconciledTransactions() {
         financeLogId: log.id,
         referenceId: log.referenceId,
         transactionType: log.transactionType,
-        amount: log.amount,
+        amount: toNumber(log.amount),
         reason: `Task status is ${matchingTask.status}, but FinanceLog is COMPLETED`,
       });
     }
@@ -251,7 +252,7 @@ async function getStalePayments() {
   return stalePayments.map(p => ({
     paymentId: p.id,
     paymentReference: p.paymentReference,
-    amount: p.amount,
+    amount: toNumber(p.amount),
     currency: p.currency,
     paymentMethod: p.paymentMethod,
     createdAt: p.createdAt.toISOString(),

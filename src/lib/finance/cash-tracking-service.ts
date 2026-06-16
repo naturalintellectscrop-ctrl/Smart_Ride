@@ -8,6 +8,7 @@
 
 import { db } from '@/lib/db';
 import { CollectionType, CollectionStatus, TaskStatus } from '@prisma/client';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -125,7 +126,7 @@ export async function recordCashCollection(
       riderId: input.riderId,
       taskId: input.taskId,
       userId: input.userId,
-      amount: input.amount,
+      amount: toNumber(input.amount),
       currency: 'UGX',
       collectionType: input.collectionType,
       status: 'PENDING',
@@ -147,7 +148,7 @@ export async function recordCashCollection(
     data: {
       transactionType: 'CASH_COLLECTION',
       referenceId: collection.id,
-      amount: input.amount,
+      amount: toNumber(input.amount),
       currency: 'UGX',
       riderId: input.riderId,
       clientId: input.userId,
@@ -157,7 +158,7 @@ export async function recordCashCollection(
   });
 
   // Check if this is a large collection
-  if (input.amount >= LARGE_COLLECTION_THRESHOLD) {
+  if (toNumber(input.amount) >= LARGE_COLLECTION_THRESHOLD) {
     // Could trigger notification in production
     console.log(`Large cash collection alert: UGX ${input.amount} for rider ${rider.fullName}`);
   }
@@ -174,7 +175,7 @@ export async function recordCashCollection(
     riderId: collection.riderId,
     taskId: collection.taskId || undefined,
     userId: collection.userId || undefined,
-    amount: collection.amount,
+    amount: toNumber(collection.amount),
     currency: collection.currency,
     collectionType: collection.collectionType,
     status: 'COLLECTED',
@@ -210,9 +211,9 @@ export async function recordCashDeposit(
     orderBy: { collectedAt: 'asc' },
   });
 
-  const totalPending = pendingCollections.reduce((sum, c) => sum + c.amount, 0);
+  const totalPending = pendingCollections.reduce((sum, c) => sum + toNumber(c.amount), 0);
 
-  if (input.amount > totalPending) {
+  if (toNumber(input.amount) > totalPending) {
     throw new Error(`Deposit amount (UGX ${input.amount}) exceeds pending cash (UGX ${totalPending})`);
   }
 
@@ -250,7 +251,7 @@ export async function recordCashDeposit(
     data: {
       transactionType: 'CASH_COLLECTION',
       referenceId: deposit.id,
-      amount: input.amount,
+      amount: toNumber(input.amount),
       riderId: input.riderId,
       status: 'COMPLETED',
       description: `Cash deposit by rider ${rider.fullName}`,
@@ -260,7 +261,7 @@ export async function recordCashDeposit(
   return {
     id: deposit.id,
     riderId: deposit.riderId,
-    amount: input.amount,
+    amount: toNumber(input.amount),
     currency: deposit.currency,
     collectionType: 'DEPOSIT',
     status: 'DEPOSITED',
@@ -315,24 +316,24 @@ export async function getRiderCashSummary(riderId: string): Promise<RiderCashSum
 
   for (const c of collections) {
     if (c.collectionType === 'COD_PAYMENT') {
-      totalCashCollected += c.amount;
+      totalCashCollected += toNumber(c.amount);
 
       if (c.status === 'COLLECTED') {
-        pendingCash += c.amount;
+        pendingCash += toNumber(c.amount);
         if (c.collectedAt && c.collectedAt < overdueThreshold) {
-          overdueAmount += c.amount;
+          overdueAmount += toNumber(c.amount);
         }
       } else if (c.status === 'DEPOSITED') {
         // Already deposited
       } else if (c.status === 'VERIFIED') {
-        verifiedCash += c.amount;
+        verifiedCash += toNumber(c.amount);
       }
 
       if (!lastCollectionDate || (c.collectedAt && c.collectedAt > lastCollectionDate)) {
         lastCollectionDate = c.collectedAt || undefined;
       }
     } else if (c.collectionType === 'DEPOSIT') {
-      totalCashDeposited += Math.abs(c.amount);
+      totalCashDeposited += Math.abs(toNumber(c.amount));
       if (!lastDepositDate || (c.depositedAt && c.depositedAt > lastDepositDate)) {
         lastDepositDate = c.depositedAt || undefined;
       }
@@ -344,7 +345,7 @@ export async function getRiderCashSummary(riderId: string): Promise<RiderCashSum
       taskId: c.taskId || undefined,
       userId: c.userId || undefined,
       userName: c.user?.name || undefined,
-      amount: Math.abs(c.amount),
+      amount: Math.abs(toNumber(c.amount)),
       currency: c.currency,
       collectionType: c.collectionType,
       status: c.status,
@@ -393,7 +394,7 @@ export async function verifyCashCollection(
     riderId: collection.riderId,
     taskId: collection.taskId || undefined,
     userId: collection.userId || undefined,
-    amount: collection.amount,
+    amount: toNumber(collection.amount),
     currency: collection.currency,
     collectionType: collection.collectionType,
     status: collection.status,
@@ -442,8 +443,8 @@ export async function reconcileCashCollections(
     },
   });
 
-  const expectedCash = cashTasks.reduce((sum, t) => sum + t.totalAmount, 0);
-  const reportedCash = collections.reduce((sum, c) => sum + c.amount, 0);
+  const expectedCash = cashTasks.reduce((sum, t) => sum + toNumber(t.totalAmount), 0);
+  const reportedCash = collections.reduce((sum, c) => sum + toNumber(c.amount), 0);
   const discrepancy = expectedCash - reportedCash;
 
   // Count reconciled tasks
@@ -545,7 +546,7 @@ export async function getPendingCashCollections(options?: {
       taskId: c.taskId || undefined,
       userId: c.userId || undefined,
       userName: c.user?.name || undefined,
-      amount: c.amount,
+      amount: toNumber(c.amount),
       currency: c.currency,
       collectionType: c.collectionType,
       status: c.status,
@@ -580,7 +581,7 @@ export async function recordCashAdjustment(
   return {
     id: adjustment.id,
     riderId: adjustment.riderId,
-    amount: adjustment.amount,
+    amount: toNumber(adjustment.amount),
     currency: adjustment.currency,
     collectionType: adjustment.collectionType,
     status: adjustment.status,
@@ -638,7 +639,7 @@ export async function getCashCollectionSummary(): Promise<{
     totalPendingCash,
     totalRidersWithCash: ridersWithCash,
     totalOverdueCash,
-    recentDeposits: Math.abs(recentDeposits._sum.amount || 0),
+    recentDeposits: Math.abs(recentDeposits.toNumber(_sum.amount)),
     alertCount,
   };
 }
@@ -718,17 +719,17 @@ export async function getRiderFloat(riderId: string): Promise<FloatBalance> {
 
   for (const tx of transactions) {
     if (tx.metadata?.includes('FLOAT')) {
-      currentFloat = tx.balanceAfter;
+      currentFloat = toNumber(tx.balanceAfter);
 
       floatTransactions.push({
         id: tx.id,
         riderId: tx.riderId || '',
-        amount: tx.amount,
+        amount: toNumber(tx.amount),
         type: tx.metadata?.includes('INIT') ? 'INITIAL' :
               tx.metadata?.includes('REPLENISH') ? 'REPLENISH' :
               tx.metadata?.includes('RESET') ? 'RESET' : 'ADJUSTMENT',
-        balanceBefore: tx.balanceBefore,
-        balanceAfter: tx.balanceAfter,
+        balanceBefore: toNumber(tx.balanceBefore),
+        balanceAfter: toNumber(tx.balanceAfter),
         notes: tx.description || undefined,
         createdAt: tx.createdAt,
       });

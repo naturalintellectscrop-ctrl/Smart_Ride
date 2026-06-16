@@ -5,6 +5,7 @@ import { db } from '@/lib/db';
 import { IncentiveType, IncentiveStatus, ParticipationStatus, RewardType } from '@prisma/client';
 import { createNotification } from '@/lib/services/notification.service';
 import { creditRewardToWallet } from '@/lib/wallet/wallet-service';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES

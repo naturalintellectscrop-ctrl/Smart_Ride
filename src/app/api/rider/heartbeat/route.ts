@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
+import { z } from 'zod';
 
 // Heartbeat configuration
 const HEARTBEAT_CONFIG = {
@@ -19,6 +20,19 @@ const HEARTBEAT_ACTIVE_STATES = [
   'IN_PROGRESS',
   'IN_TRANSIT',
 ];
+
+// Zod schema for heartbeat POST
+const heartbeatSchema = z.object({
+  latitude: z.number().min(-90).max(90, 'Latitude must be between -90 and 90'),
+  longitude: z.number().min(-180).max(180, 'Longitude must be between -180 and 180'),
+  speed: z.number().optional(),
+  battery_level: z.number().optional(),
+  heading: z.number().optional(),
+  accuracy: z.number().optional(),
+  is_charging: z.boolean().optional(),
+  network_type: z.string().optional(),
+  task_id: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,6 +60,7 @@ export async function POST(request: NextRequest) {
     
     // Parse request body
     const body = await request.json();
+    const validated = heartbeatSchema.parse(body);
     const {
       latitude,
       longitude,
@@ -56,13 +71,7 @@ export async function POST(request: NextRequest) {
       is_charging,
       network_type,
       task_id,
-    } = body;
-
-    if (latitude === undefined || longitude === undefined) {
-      return NextResponse.json({ success: false, error: 'Missing required fields: latitude, longitude' },
-        { status: 400 }
-      );
-    }
+    } = validated;
 
     const now = new Date();
     const connectionStatus = 'ACTIVE';
@@ -131,6 +140,23 @@ export async function POST(request: NextRequest) {
       return { rider: updatedRider, task: updatedTask, heartbeatLog };
     });
 
+    // Broadcast location update via realtime if a task is associated
+    if (task_id && result.task) {
+      try {
+        const { broadcastToTask } = await import('@/lib/realtime-server');
+        await broadcastToTask(task_id, 'location:update', {
+          riderId: authResult.userId,
+          latitude,
+          longitude,
+          heading: heading ?? null,
+          speed: speed ?? null,
+          timestamp: now.toISOString(),
+        });
+      } catch (e) {
+        console.warn('[HEARTBEAT] Failed to broadcast location:', e);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       timestamp: now.toISOString(),
@@ -147,6 +173,11 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({ success: false, error: error.issues[0]?.message || 'Validation error' },
+        { status: 400 }
+      );
+    }
     console.error('Heartbeat error:', error);
     return NextResponse.json({ success: false, error: 'Internal server error' },
       { status: 500 }

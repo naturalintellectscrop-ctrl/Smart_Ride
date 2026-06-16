@@ -1,6 +1,14 @@
-// Safe notification service that works in both Expo Go and development builds
+// ============================================
+// SMART RIDE MOBILE - NOTIFICATION SERVICE
+// ============================================
+// Safe notification service that works in both
+// Expo Go and development builds.
+// Registers push tokens with the backend.
+// ============================================
+
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import { api } from './api';
 
 let isAvailable = false;
 
@@ -34,10 +42,27 @@ export const notificationService = {
 
       const token = await Notifications.getExpoPushTokenAsync();
       console.log('[NotificationService] Token obtained');
+
+      // Register the token with the backend
+      await notificationService.registerWithBackend(token.data);
+
       return token.data;
     } catch (error) {
       console.log('[NotificationService] Init failed (non-fatal):', error);
       return null;
+    }
+  },
+
+  /**
+   * Register push token with the backend so the server
+   * can send push notifications to this device.
+   */
+  async registerWithBackend(token: string): Promise<void> {
+    try {
+      await api.registerPushToken(token, Platform.OS);
+      console.log('[NotificationService] Push token registered with backend');
+    } catch (error) {
+      console.warn('[NotificationService] Failed to register push token with backend:', error);
     }
   },
 

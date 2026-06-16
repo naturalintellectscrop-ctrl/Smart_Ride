@@ -10,12 +10,22 @@ import {
 } from '@/lib/api/response';
 import { PharmacyStatus } from '@prisma/client';
 import { z } from 'zod';
+import { requireAuth, requireAdmin } from '@/lib/auth/guards';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 /**
  * GET /api/pharmacies
  * List all pharmacies with pagination
+ *
+ * SECURITY: Public for search (rate limited), no auth required
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting for public search endpoint
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.search);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.search);
+  }
+
   await setServiceRoleContext();
   try {
     const { page, limit, skip } = getPaginationParams(request);
@@ -97,8 +107,22 @@ const createPharmacySchema = z.object({
 /**
  * POST /api/pharmacies
  * Create a new pharmacy (register as pharmacy merchant)
+ *
+ * SECURITY: Requires authentication
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.write);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.write);
+  }
+
+  // Require authentication
+  const authResult = requireAuth(request);
+  if (!authResult.success) {
+    return errorResponse(authResult.error || 'Authentication required', authResult.statusCode || 401);
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();

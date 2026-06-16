@@ -1,12 +1,23 @@
 /**
  * GET /api/debug/db
  * Tests database connectivity - for debugging only
+ *
+ * SECURITY: Only accessible in development mode.
+ * Returns 404 in production.
  */
 
 import { NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 export async function GET() {
+  // SECURITY: Block access in production
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { success: false, error: 'Not found' },
+      { status: 404 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     // Get the database host from the URL (hide password)

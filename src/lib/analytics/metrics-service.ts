@@ -7,6 +7,7 @@
 
 import { db } from '@/lib/db';
 import { TaskStatus, TaskType, RiderRole } from '@prisma/client';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -217,7 +218,7 @@ export class MetricsService {
 
     const totalEarnings = rider.tasks
       .filter(t => t.riderEarnings)
-      .reduce((sum, t) => sum + (t.riderEarnings || 0), 0);
+      .reduce((sum, t) => sum + toNumber(t.riderEarnings), 0);
 
     const avgRating = rider.ratingsReceived.length > 0
       ? rider.ratingsReceived.reduce((sum, r) => sum + r.score, 0) / rider.ratingsReceived.length
@@ -388,7 +389,7 @@ export class MetricsService {
         cancelledTrips: rider.cancelledTrips,
         completionRate: rider.totalTrips > 0 ? (rider.completedTrips / rider.totalTrips) * 100 : 0,
         averageRating: avgRating,
-        totalEarnings: rider.totalEarnings,
+        totalEarnings: toNumber(rider.totalEarnings),
         averageEarningsPerDay: rider.totalEarnings / 30,
         onTimeRate,
         averageResponseTime: avgResponseTime,
@@ -428,9 +429,9 @@ export class MetricsService {
       },
     });
 
-    const totalRevenue = tasks.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
-    const platformCommission = tasks.reduce((sum, t) => sum + (t.platformCommission || 0), 0);
-    const riderEarnings = tasks.reduce((sum, t) => sum + (t.riderEarnings || 0), 0);
+    const totalRevenue = tasks.reduce((sum, t) => sum + toNumber(t.totalAmount), 0);
+    const platformCommission = tasks.reduce((sum, t) => sum + toNumber(t.platformCommission), 0);
+    const riderEarnings = tasks.reduce((sum, t) => sum + toNumber(t.riderEarnings), 0);
 
     const byServiceType: Record<string, { revenue: number; commission: number; count: number }> = {};
 
@@ -438,8 +439,8 @@ export class MetricsService {
       if (!byServiceType[task.taskType]) {
         byServiceType[task.taskType] = { revenue: 0, commission: 0, count: 0 };
       }
-      byServiceType[task.taskType].revenue += task.totalAmount || 0;
-      byServiceType[task.taskType].commission += task.platformCommission || 0;
+      byServiceType[task.taskType].revenue += toNumber(task.totalAmount);
+      byServiceType[task.taskType].commission += toNumber(task.platformCommission);
       byServiceType[task.taskType].count++;
     }
 
@@ -455,8 +456,8 @@ export class MetricsService {
       }
       
       const dayData = dailyMap.get(dateKey)!;
-      dayData.revenue += task.totalAmount || 0;
-      dayData.commission += task.platformCommission || 0;
+      dayData.revenue += toNumber(task.totalAmount);
+      dayData.commission += toNumber(task.platformCommission);
       dayData.taskCount++;
     }
 

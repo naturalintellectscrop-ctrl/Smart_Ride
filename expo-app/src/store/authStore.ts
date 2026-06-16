@@ -1,12 +1,16 @@
 // ============================================
 // SMART RIDE MOBILE - AUTH STORE
 // ============================================
-// Minimal auth store for boot - no external dependencies
+// Auth store with SecureStore for token storage.
+// Access/refresh tokens are stored in SecureStore
+// (encrypted, device-only). Only non-sensitive
+// user info is persisted via AsyncStorage.
 // ============================================
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureStorage } from '../utils/secureStorage';
 
 // Types
 interface User {
@@ -30,6 +34,9 @@ interface AuthState {
 }
 
 // Auth Store with persistence
+// NOTE: accessToken is NOT persisted to AsyncStorage — it lives in
+// SecureStore only. The partialize function excludes it so that
+// zustand's AsyncStorage persistence only saves the user object.
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -45,27 +52,32 @@ export const useAuthStore = create<AuthState>()(
         isAuthenticated: !!token 
       }),
       
-      login: (user, token) => set({ 
-        user, 
-        accessToken: token, 
-        isAuthenticated: true 
-      }),
+      login: (user, token) => {
+        // Store the token in SecureStore (encrypted)
+        secureStorage.saveTokens(token, '').catch((e) => {
+          console.warn('[AUTH-STORE] Failed to save token to SecureStore:', e);
+        });
+        set({ user, accessToken: token, isAuthenticated: true });
+      },
       
-      logout: () => set({ 
-        user: null, 
-        accessToken: null, 
-        isAuthenticated: false 
-      }),
+      logout: () => {
+        // Clear tokens from SecureStore
+        secureStorage.clearAll().catch((e) => {
+          console.warn('[AUTH-STORE] Failed to clear SecureStore:', e);
+        });
+        set({ user: null, accessToken: null, isAuthenticated: false });
+      },
     }),
     {
       name: 'smart-ride-auth',
       storage: createJSONStorage(() => AsyncStorage),
+      // Only persist user info — NOT the access token.
+      // The access token is stored in SecureStore for security.
       partialize: (state) => ({
         user: state.user,
-        accessToken: state.accessToken,
       }),
     }
   )
 );
 
-console.log('[AUTH-STORE] Store initialized');
+console.log('[AUTH-STORE] Store initialized (SecureStore mode)');

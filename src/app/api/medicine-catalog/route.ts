@@ -10,12 +10,22 @@ import {
 } from '@/lib/api/response';
 import { MedicineCategory } from '@prisma/client';
 import { z } from 'zod';
+import { requireAuth, requireAdmin } from '@/lib/auth/guards';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 /**
  * GET /api/medicine-catalog
  * List all medicines with pagination and filtering
+ *
+ * SECURITY: Public for search (rate limited), no auth required
  */
 export async function GET(request: NextRequest) {
+  // Rate limiting for public search endpoint
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.search);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.search);
+  }
+
   await setServiceRoleContext();
   try {
     const { page, limit, skip } = getPaginationParams(request);
@@ -89,8 +99,22 @@ const createMedicineSchema = z.object({
 /**
  * POST /api/medicine-catalog
  * Add a new medicine to catalog
+ *
+ * SECURITY: Requires auth + admin role
  */
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.write);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.write);
+  }
+
+  // Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return errorResponse(authResult.error || 'Admin access required', authResult.statusCode || 403);
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -143,8 +167,22 @@ export async function POST(request: NextRequest) {
 /**
  * PUT /api/medicine-catalog
  * Update stock quantity
+ *
+ * SECURITY: Requires auth + admin role
  */
 export async function PUT(request: NextRequest) {
+  // Rate limiting
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.write);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.write);
+  }
+
+  // Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return errorResponse(authResult.error || 'Admin access required', authResult.statusCode || 403);
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();

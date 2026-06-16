@@ -7,13 +7,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { PaymentService } from '@/lib/payments/payment-service';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { setRLSContext, resetRLSContext } from '@/lib/db';
-import { checkRateLimit, paymentRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 export async function POST(request: NextRequest) {
-  // Rate limiting check
-  const rateLimitResult = checkRateLimit(request, paymentRateLimit);
+  // Rate limiting check — 5 payment requests per minute
+  const rateLimitResult = checkRateLimit(request, RATE_LIMITS.payment.initiate);
   if (!rateLimitResult.success) {
-    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    return rateLimitResponse(rateLimitResult, RATE_LIMITS.payment.initiate);
   }
 
   // Verify authentication

@@ -8,16 +8,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { db, resetRLSContext } from '@/lib/db';
-import { checkRateLimit, paymentRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
+import { toNumber } from '@/lib/decimal-utils';
 
 const VALID_PROVIDERS = ['MTN_MOMO', 'AIRTEL_MONEY'];
 
 // POST /api/wallet/withdraw - Withdraw from wallet
 export async function POST(request: NextRequest) {
-  // Rate limiting check
-  const rateLimitResult = checkRateLimit(request, paymentRateLimit);
+  // Rate limiting check — 5 payment requests per minute
+  const rateLimitResult = checkRateLimit(request, RATE_LIMITS.payment.initiate);
   if (!rateLimitResult.success) {
-    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    return rateLimitResponse(rateLimitResult, RATE_LIMITS.payment.initiate);
   }
 
   const authResult = await requireAuthWithRLS(request);
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check sufficient balance
-    if (wallet.balance < amount) {
+    if (toNumber(wallet.balance) < amount) {
       return NextResponse.json(
         { success: false, error: 'Insufficient wallet balance' },
         { status: 400 }
@@ -107,8 +108,8 @@ export async function POST(request: NextRequest) {
     // Execute withdrawal in a transaction
     const result = await db.$transaction(async (tx) => {
       // Deduct from wallet balance
-      const newBalance = wallet!.balance - amount;
-      const newWithdrawn = wallet!.totalWithdrawn + amount;
+      const newBalance = toNumber(wallet!.balance) - amount;
+      const newWithdrawn = toNumber(wallet!.totalWithdrawn) + amount;
 
       const updatedWallet = await tx.wallet.update({
         where: { id: wallet!.id },

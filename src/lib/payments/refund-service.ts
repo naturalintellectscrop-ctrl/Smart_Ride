@@ -13,6 +13,7 @@ import { db } from '@/lib/db';
 import { PaymentMethod, TransactionType } from '@prisma/client';
 import { transitionPaymentStatus, validateTransition } from './payment-state-machine';
 import { refundToWallet } from '@/lib/wallet/wallet-service';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -99,9 +100,9 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
   }
 
   // 3. Determine refund amount
-  const refundAmount = params.amount ?? payment.amount;
+  const refundAmount = params.amount ?? toNumber(payment.amount);
 
-  if (refundAmount <= 0) {
+  if (toNumber(refundAmount) <= 0) {
     return {
       success: false,
       paymentId,
@@ -112,7 +113,7 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
     };
   }
 
-  if (refundAmount > payment.amount) {
+  if (refundAmount > toNumber(payment.amount)) {
     return {
       success: false,
       paymentId,
@@ -134,23 +135,23 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
   });
 
   const totalPreviouslyRefunded = existingRefundLogs.reduce(
-    (sum, log) => sum + log.amount,
+    (sum, log) => sum + toNumber(log.amount),
     0
   );
 
-  if (totalPreviouslyRefunded + refundAmount > payment.amount) {
+  if (totalPreviouslyRefunded + refundAmount > toNumber(payment.amount)) {
     return {
       success: false,
       paymentId,
       refundAmount: 0,
       walletCredited: false,
       financeLogCreated: false,
-      error: `Total refund amount (${totalPreviouslyRefunded + refundAmount}) would exceed original payment amount (${payment.amount}). Previously refunded: ${totalPreviouslyRefunded}`,
+      error: `Total refund amount (${totalPreviouslyRefunded + refundAmount}) would exceed original payment amount (${toNumber(payment.amount)}). Previously refunded: ${totalPreviouslyRefunded}`,
     };
   }
 
-  const isFullRefund = refundAmount === payment.amount;
-  const isPartialRefund = refundAmount < payment.amount;
+  const isFullRefund = refundAmount === toNumber(payment.amount);
+  const isPartialRefund = refundAmount < toNumber(payment.amount);
   const isMomoPayment = payment.paymentMethod === 'MTN_MOMO' || payment.paymentMethod === 'AIRTEL_MONEY';
 
   // 4. For full refunds, transition payment status via state machine
@@ -264,7 +265,7 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
         description: `Payment ${payment.paymentReference} refunded${isPartialRefund ? ` partially (${refundAmount}/${payment.amount})` : ''}. Reason: ${reason}. ${isMomoPayment ? 'No provider reversal — wallet credit only.' : ''}`,
         oldValues: JSON.stringify({
           status: payment.status,
-          amount: payment.amount,
+          amount: toNumber(payment.amount),
         }),
         newValues: JSON.stringify({
           refundAmount,

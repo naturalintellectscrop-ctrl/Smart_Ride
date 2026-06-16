@@ -3,6 +3,7 @@
 
 import { db } from '@/lib/db';
 import { WalletStatus, WalletTransactionType, WalletOwnerType } from '@prisma/client';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -89,8 +90,8 @@ export async function getOrCreateWallet(
 
   return {
     walletId: wallet.id,
-    balance: wallet.balance,
-    pendingBalance: wallet.pendingBalance,
+    balance: toNumber(wallet.balance),
+    pendingBalance: toNumber(wallet.pendingBalance),
     currency: wallet.currency,
     status: wallet.status,
   };
@@ -113,8 +114,8 @@ export async function getWalletBalance(
 
   return {
     walletId: wallet.id,
-    balance: wallet.balance,
-    pendingBalance: wallet.pendingBalance,
+    balance: toNumber(wallet.balance),
+    pendingBalance: toNumber(wallet.pendingBalance),
     currency: wallet.currency,
     status: wallet.status,
   };
@@ -170,7 +171,7 @@ export async function depositToWallet(input: DepositInput): Promise<{
         throw new Error('Wallet not found');
       }
 
-      const balanceBefore = walletRecord.balance;
+      const balanceBefore = toNumber(walletRecord.balance);
       const balanceAfter = balanceBefore + input.amount;
 
       // Create transaction record
@@ -247,7 +248,7 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
       }
 
       // Check balance with fresh value
-      if (walletRecord.balance < input.amount) {
+      if (toNumber(walletRecord.balance) < input.amount) {
         throw new Error('Insufficient balance');
       }
 
@@ -256,7 +257,7 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
         throw new Error('Wallet is not active');
       }
 
-      const balanceBefore = walletRecord.balance;
+      const balanceBefore = toNumber(walletRecord.balance);
       const balanceAfter = balanceBefore - input.amount;
 
       // Create transaction record
@@ -333,7 +334,7 @@ export async function payFromWallet(input: PaymentInput): Promise<{
       }
 
       // Check balance with fresh value
-      if (walletRecord.balance < input.amount) {
+      if (toNumber(walletRecord.balance) < input.amount) {
         throw new Error('Insufficient balance');
       }
 
@@ -342,7 +343,7 @@ export async function payFromWallet(input: PaymentInput): Promise<{
         throw new Error('Wallet is not active');
       }
 
-      const balanceBefore = walletRecord.balance;
+      const balanceBefore = toNumber(walletRecord.balance);
       const balanceAfter = balanceBefore - input.amount;
 
       // Create transaction record
@@ -408,7 +409,7 @@ export async function creditRewardToWallet(input: RewardInput): Promise<{
         throw new Error('Wallet not found');
       }
 
-      const balanceBefore = walletRecord.balance;
+      const balanceBefore = toNumber(walletRecord.balance);
       const balanceAfter = balanceBefore + input.amount;
 
       // Create transaction record
@@ -474,7 +475,7 @@ export async function creditCashbackToWallet(input: RewardInput): Promise<{
         throw new Error('Wallet not found');
       }
 
-      const balanceBefore = walletRecord.balance;
+      const balanceBefore = toNumber(walletRecord.balance);
       const balanceAfter = balanceBefore + input.amount;
 
       // Create transaction record
@@ -540,7 +541,7 @@ export async function refundToWallet(input: PaymentInput): Promise<{
         throw new Error('Wallet not found');
       }
 
-      const balanceBefore = walletRecord.balance;
+      const balanceBefore = toNumber(walletRecord.balance);
       const balanceAfter = balanceBefore + input.amount;
 
       // Create transaction record
@@ -655,14 +656,14 @@ export async function getWalletStats(
   });
 
   const stats = {
-    balance: wallet.balance,
-    pendingBalance: wallet.pendingBalance,
+    balance: toNumber(wallet.balance),
+    pendingBalance: toNumber(wallet.pendingBalance),
     currency: wallet.currency,
     status: wallet.status,
-    totalDeposited: wallet.totalDeposited,
-    totalWithdrawn: wallet.totalWithdrawn,
-    totalSpent: wallet.totalSpent,
-    totalReceived: wallet.totalReceived,
+    totalDeposited: toNumber(wallet.totalDeposited),
+    totalWithdrawn: toNumber(wallet.totalWithdrawn),
+    totalSpent: toNumber(wallet.totalSpent),
+    totalReceived: toNumber(wallet.totalReceived),
     last30Days: {
       deposits: 0,
       withdrawals: 0,
@@ -675,17 +676,17 @@ export async function getWalletStats(
   for (const tx of recentTransactions) {
     switch (tx.transactionType) {
       case 'DEPOSIT':
-        stats.last30Days.deposits += tx.amount;
+        stats.last30Days.deposits += toNumber(tx.amount);
         break;
       case 'WITHDRAWAL':
-        stats.last30Days.withdrawals += tx.amount;
+        stats.last30Days.withdrawals += toNumber(tx.amount);
         break;
       case 'PAYMENT':
-        stats.last30Days.payments += tx.amount;
+        stats.last30Days.payments += toNumber(tx.amount);
         break;
       case 'REWARD':
       case 'CASHBACK':
-        stats.last30Days.rewards += tx.amount;
+        stats.last30Days.rewards += toNumber(tx.amount);
         break;
     }
   }

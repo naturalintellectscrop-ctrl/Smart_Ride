@@ -13,6 +13,7 @@ import { verifyMtnSignature } from '@/lib/auth/guards';
 import { isWebhookProcessed, recordWebhookProcessed } from '@/lib/security/webhook-protection';
 import { sendPaymentNotification } from '@/lib/services/notification.service';
 import { handleSuccessfulPayment } from '@/lib/payments/payment-service';
+import { toNumber } from '@/lib/decimal-utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
     await sendPaymentNotification(
       payment.userId,
       payment.id,
-      payment.amount,
+      toNumber(payment.amount),
       newStatus === PaymentStatus.COMPLETED ? 'COMPLETED' :
       newStatus === PaymentStatus.FAILED ? 'FAILED' : 'REFUNDED'
     );

@@ -6,6 +6,7 @@ export { api, default as apiService } from './api';
 export { socketService, default } from './socket.service';
 export { auditService, MobileAudit } from './audit.service';
 export { notificationService } from './notification.service';
+export { locationService } from './location.service';
 export {
   loginWithEmail,
   registerUser,

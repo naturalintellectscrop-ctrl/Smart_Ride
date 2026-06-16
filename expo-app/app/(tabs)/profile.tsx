@@ -4,7 +4,7 @@
 // Theme-aware with GlowHeader & Custom Components
 // ============================================
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -13,6 +13,8 @@ import {
   Alert,
   Switch,
   Linking,
+  Image,
+  ActivityIndicator,
   StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -28,13 +30,16 @@ import { api } from '@/src/services';
 import { useTheme, ThemeColors } from '@/src/context/theme-context';
 import { GlowHeader, GlassCard, GradientButton } from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
+import { pickImage } from '@/src/utils/imagePicker';
+import { API_CONFIG } from '@/src/constants';
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { user, logout } = useAuthStore();
+  const { user, logout, setUser } = useAuthStore();
   const { isDark, toggleTheme, colors } = useTheme();
   
   const [isLoading, setIsLoading] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [stats, setStats] = useState({ totalRides: 0, orders: 0, rating: '-' });
 
@@ -62,6 +67,42 @@ export default function ProfileScreen() {
       console.error('Failed to load stats:', e);
     }
   };
+
+  const handleAvatarPress = useCallback(async () => {
+    try {
+      const image = await pickImage({ allowsEditing: true, aspect: [1, 1], quality: 0.7 });
+      if (!image) return;
+
+      setIsUploadingAvatar(true);
+
+      const formData = new FormData();
+      formData.append('avatar', {
+        uri: image.uri,
+        type: image.type,
+        name: image.name,
+      } as any);
+
+      const token = await (await import('@/src/utils/secureStorage')).secureStorage.getAccessToken();
+      const response = await fetch(`${API_CONFIG.baseUrl}/uploads/avatar`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+
+      const result = await response.json();
+      if (result.success && result.data?.avatarUrl) {
+        setUser({ ...user!, avatarUrl: result.data.avatarUrl } as any);
+        Alert.alert('Success', 'Avatar updated!');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to upload avatar');
+      }
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      Alert.alert('Error', 'Failed to upload avatar');
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  }, [user, setUser]);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -100,6 +141,7 @@ export default function ProfileScreen() {
         { icon: 'location-outline', label: 'Saved Addresses', onPress: () => Alert.alert('Coming Soon', 'Saved addresses will be available soon') },
         { icon: 'card-outline', label: 'Payment Methods', onPress: () => router.push('/wallet') },
         { icon: 'people-outline', label: 'Emergency Contacts', onPress: () => router.push('/sos') },
+        { icon: 'key-outline', label: 'Change Password', onPress: () => router.push('/auth/change-password') },
       ],
     },
     {
@@ -144,12 +186,27 @@ export default function ProfileScreen() {
           >
             {/* User Info as children of GlowHeader */}
             <View style={styles.userInfo}>
-              <Animated.View 
-                entering={ZoomIn.delay(200).duration(300)}
-                style={styles.avatar}
+              <TouchableOpacity 
+                onPress={handleAvatarPress}
+                activeOpacity={0.7}
+                disabled={isUploadingAvatar}
               >
-                <Ionicons name="person" size={32} color={colors.primary} />
-              </Animated.View>
+                <Animated.View 
+                  entering={ZoomIn.delay(200).duration(300)}
+                  style={styles.avatar}
+                >
+                  {isUploadingAvatar ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (user as any)?.avatarUrl ? (
+                    <Image source={{ uri: (user as any).avatarUrl }} style={styles.avatarImage} />
+                  ) : (
+                    <Ionicons name="person" size={32} color={colors.primary} />
+                  )}
+                  <View style={styles.avatarBadge}>
+                    <Ionicons name="camera-outline" size={12} color={colors.onPrimary} />
+                  </View>
+                </Animated.View>
+              </TouchableOpacity>
               <View style={styles.userDetails}>
                 <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
                 <Text style={styles.userEmail}>{user?.email || ''}</Text>
@@ -344,6 +401,20 @@ function createStyles(colors: ThemeColors) {
       marginRight: 16,
       borderWidth: 2,
       borderColor: colors.primary,
+      overflow: 'hidden',
+    },
+    avatarImage: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+    },
+    avatarBadge: {
+      position: 'absolute',
+      bottom: 0,
+      right: 0,
+      backgroundColor: colors.primary,
+      borderRadius: 10,
+      padding: 4,
     },
     avatarText: {
       fontSize: 32,

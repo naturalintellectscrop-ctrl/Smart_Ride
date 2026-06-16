@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { toNumber } from '@/lib/decimal-utils';
 
 // GET - Fetch pharmacy earnings and financial data
 export async function GET(request: NextRequest) {
@@ -88,9 +89,9 @@ async function getEarningsSummary(startDate?: string | null, endDate?: string | 
 
   // Calculate summary statistics
   const totalOrders = healthOrders.length;
-  const totalRevenue = healthOrders.reduce((sum, order) => sum + order.totalAmount, 0);
-  const totalDeliveryFees = healthOrders.reduce((sum, order) => sum + order.deliveryFee, 0);
-  const totalServiceFees = healthOrders.reduce((sum, order) => sum + (order.serviceFee || 0), 0);
+  const totalRevenue = healthOrders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
+  const totalDeliveryFees = healthOrders.reduce((sum, order) => sum + toNumber(order.deliveryFee), 0);
+  const totalServiceFees = healthOrders.reduce((sum, order) => sum + toNumber(order.serviceFee), 0);
   
   // Calculate provider earnings and platform commission
   let totalProviderEarnings = 0;
@@ -141,7 +142,7 @@ async function getEarningsSummary(startDate?: string | null, endDate?: string | 
     },
   });
   
-  const todayEarnings = todayOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+  const todayEarnings = todayOrders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
 
   // Get earnings by order type
   const prescriptionOrders = healthOrders.filter(o => o.orderType === 'PRESCRIPTION_MEDICINE');
@@ -163,15 +164,15 @@ async function getEarningsSummary(startDate?: string | null, endDate?: string | 
       total: totalProviders,
       active: activeProviders,
     },
-    pendingPayouts: pendingPayouts._sum.pendingPayout || 0,
+    pendingPayouts: pendingPayouts.toNumber(_sum.pendingPayout),
     orderTypes: {
       prescription: {
         count: prescriptionOrders.length,
-        revenue: prescriptionOrders.reduce((sum, o) => sum + o.totalAmount, 0),
+        revenue: prescriptionOrders.reduce((sum, o) => sum + toNumber(o.totalAmount), 0),
       },
       otc: {
         count: otcOrders.length,
-        revenue: otcOrders.reduce((sum, o) => sum + o.totalAmount, 0),
+        revenue: otcOrders.reduce((sum, o) => sum + toNumber(o.totalAmount), 0),
       },
     },
   });
@@ -202,7 +203,7 @@ async function getProviderEarnings(providerId?: string | null, startDate?: strin
     }
 
     const orders = provider.healthOrders;
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const totalRevenue = orders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
     const providerEarnings = orders.reduce((sum, order) => {
       return sum + (order.subtotal * (1 - provider.commissionRate));
     }, 0);
@@ -220,8 +221,8 @@ async function getProviderEarnings(providerId?: string | null, startDate?: strin
         totalRevenue,
         providerEarnings,
         platformCommission,
-        pendingPayout: provider.pendingPayout,
-        totalEarnings: provider.totalEarnings,
+        pendingPayout: toNumber(provider.pendingPayout),
+        totalEarnings: toNumber(provider.totalEarnings),
         rating: provider.rating,
         isVerified: provider.verificationStatus === 'APPROVED',
       },
@@ -261,7 +262,7 @@ async function getProviderEarnings(providerId?: string | null, startDate?: strin
         },
       });
 
-      const revenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+      const revenue = orders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
       const earnings = orders.reduce((sum, order) => sum + (order.subtotal * (1 - provider.commissionRate)), 0);
       const commission = orders.reduce((sum, order) => sum + (order.subtotal * provider.commissionRate), 0);
 
@@ -274,8 +275,8 @@ async function getProviderEarnings(providerId?: string | null, startDate?: strin
         revenue,
         earnings,
         commission,
-        pendingPayout: provider.pendingPayout,
-        totalEarnings: provider.totalEarnings,
+        pendingPayout: toNumber(provider.pendingPayout),
+        totalEarnings: toNumber(provider.totalEarnings),
         rating: provider.rating,
         isOpen: provider.isOpenNow,
       };
@@ -335,7 +336,7 @@ async function getPayoutHistory(providerId?: string | null) {
 
   return NextResponse.json({
     pendingPayouts: providers,
-    totalPending: providers.reduce((sum, p) => sum + p.pendingPayout, 0),
+    totalPending: providers.reduce((sum, p) => sum + toNumber(p.pendingPayout), 0),
   });
 }
 
@@ -369,7 +370,7 @@ async function getEarningsAnalytics(startDate?: string | null, endDate?: string 
     if (!dailyEarnings[dateKey]) {
       dailyEarnings[dateKey] = { revenue: 0, orders: 0 };
     }
-    dailyEarnings[dateKey].revenue += order.totalAmount;
+    dailyEarnings[dateKey].revenue += toNumber(order.totalAmount);
     dailyEarnings[dateKey].orders += 1;
   });
 
@@ -421,8 +422,8 @@ async function getEarningsAnalytics(startDate?: string | null, endDate?: string 
     providerTypes: providerTypes.map(pt => ({
       type: pt.providerType,
       count: pt._count.id,
-      totalEarnings: pt._sum.totalEarnings || 0,
-      pendingPayout: pt._sum.pendingPayout || 0,
+      totalEarnings: toNumber(pt._sum.totalEarnings),
+      pendingPayout: toNumber(pt._sum.pendingPayout),
     })),
   });
 }
@@ -439,7 +440,7 @@ async function recordPayout(data: { providerId: string; amount: number; referenc
     return NextResponse.json({ success: false, error: 'Provider not found' }, { status: 404 });
   }
 
-  if (provider.pendingPayout < amount) {
+  if (toNumber(provider.pendingPayout) < amount) {
     return NextResponse.json({ success: false, error: 'Insufficient pending payout balance' }, { status: 400 });
   }
 

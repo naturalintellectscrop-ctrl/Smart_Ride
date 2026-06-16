@@ -4,10 +4,13 @@
  * Server-side proxy for Mapbox Geocoding API to keep access token secure.
  * Searches for places in Uganda with specific types (POI, addresses, etc.)
  * 
+ * SECURITY: Rate limited to prevent Mapbox quota exhaustion
+ * 
  * Endpoint: /api/mapbox/geocoding?search=bugolobi
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 const MAPBOX_API_BASE = 'https://api.mapbox.com';
 
@@ -21,6 +24,12 @@ const PLACE_TYPES = 'poi,address,place,locality,neighborhood,poi.landmark';
 const KAMPALA_CENTER = '32.58,0.34';
 
 export async function GET(request: NextRequest) {
+  // Rate limiting to prevent Mapbox quota exhaustion
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.search);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.search);
+  }
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get('search');
   const lat = searchParams.get('lat');

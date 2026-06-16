@@ -7,10 +7,17 @@ import { DispatchService, DispatchRequest } from '@/lib/services/dispatch-persis
 import { authGuard } from '@/lib/auth/guards';
 import { setRLSContext, resetRLSContext } from '@/lib/db';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 import { z } from 'zod';
 
 // POST /api/dispatch/assign - Find and assign rider
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.standard);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.standard);
+  }
+
   try {
     const user = await authGuard(request);
     if (!user) {

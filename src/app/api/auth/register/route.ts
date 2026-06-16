@@ -7,13 +7,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { registerUser, registerSchema } from '@/lib/services/auth.service';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
-import { checkRateLimit, authRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 export async function POST(request: NextRequest) {
-  // Rate limiting check
-  const rateLimitResult = checkRateLimit(request, authRateLimit);
+  // Rate limiting check — 3 registrations per hour
+  const rateLimitResult = checkRateLimit(request, RATE_LIMITS.auth.register);
   if (!rateLimitResult.success) {
-    return NextResponse.json({ success: false, error: 'Too many requests' }, { status: 429 });
+    return rateLimitResponse(rateLimitResult, RATE_LIMITS.auth.register);
   }
 
   try {

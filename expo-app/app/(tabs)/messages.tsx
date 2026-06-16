@@ -13,7 +13,6 @@ import {
   TouchableOpacity,
   RefreshControl,
   StyleSheet,
-  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +22,7 @@ import { useChatStore } from '@/src/store/chatStore';
 import { socketService } from '@/src/services/socket.service';
 import { COLORS, GRADIENTS } from '@/src/constants';
 import { Conversation } from '@/src/store/chatStore';
+import { ConversationSkeleton } from '@/src/components/Skeleton';
 
 export default function MessagesTabScreen() {
   const router = useRouter();
@@ -207,9 +207,12 @@ export default function MessagesTabScreen() {
 
       {/* Conversations List */}
       {isLoadingConversations && conversations.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading conversations...</Text>
+        <View style={styles.skeletonContainer}>
+          <ConversationSkeleton />
+          <ConversationSkeleton />
+          <ConversationSkeleton />
+          <ConversationSkeleton />
+          <ConversationSkeleton />
         </View>
       ) : (
         <FlatList
@@ -406,6 +409,10 @@ const styles = StyleSheet.create({
     color: COLORS.surface,
     fontSize: 16,
     fontWeight: '600',
+  },
+  skeletonContainer: {
+    flex: 1,
+    paddingTop: 8,
   },
   loadingContainer: {
     flex: 1,

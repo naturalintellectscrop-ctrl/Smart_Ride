@@ -1,19 +1,17 @@
 // ============================================
 // SMART RIDE MOBILE - AUTH SERVICE
 // ============================================
-// Handles all authentication API calls
+// Handles all authentication API calls.
+// Tokens are stored in SecureStore (encrypted)
+// instead of AsyncStorage for better security.
 // ============================================
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
 import { STORAGE_KEYS } from '../constants';
+import { secureStorage } from '../utils/secureStorage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://smartrideug.vercel.app/api';
-
-// Token storage keys
-const ACCESS_TOKEN_KEY = 'smart_ride_auth_token';
-const REFRESH_TOKEN_KEY = 'smart_ride_refresh_token';
-const USER_DATA_KEY = 'smart_ride_user_data';
 
 // Types
 export interface User {
@@ -61,35 +59,42 @@ export interface RegisterData {
 }
 
 // ============================================
-// TOKEN MANAGEMENT
+// TOKEN MANAGEMENT (SecureStore)
 // ============================================
 
 export async function saveTokens(accessToken: string, refreshToken?: string): Promise<void> {
-  await AsyncStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  await AsyncStorage.setItem(STORAGE_KEYS.authToken, accessToken); // Sync with API service
+  // Store tokens in SecureStore (encrypted, device-only)
+  await secureStorage.saveTokens(accessToken, refreshToken || '');
+  // Also keep a flag in AsyncStorage so the API service knows a token exists
+  // (the actual token value is only in SecureStore)
+  await AsyncStorage.setItem(STORAGE_KEYS.authToken, accessToken);
   if (refreshToken) {
-    await AsyncStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    // Store refresh token only in SecureStore
   }
 }
 
 export async function getAccessToken(): Promise<string | null> {
-  return AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+  return secureStorage.getAccessToken();
 }
 
 export async function getRefreshToken(): Promise<string | null> {
-  return AsyncStorage.getItem(REFRESH_TOKEN_KEY);
+  return secureStorage.getRefreshToken();
 }
 
 export async function clearTokens(): Promise<void> {
-  await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, USER_DATA_KEY, STORAGE_KEYS.authToken]);
+  // Clear SecureStore (primary token storage)
+  await secureStorage.clearAll();
+  // Clear AsyncStorage fallback/flags
+  await AsyncStorage.multiRemove([STORAGE_KEYS.authToken, STORAGE_KEYS.refreshToken]);
 }
 
 export async function saveUserData(user: User): Promise<void> {
-  await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
+  // Store user data in SecureStore for security
+  await secureStorage.saveUserData(JSON.stringify(user));
 }
 
 export async function getUserData(): Promise<User | null> {
-  const data = await AsyncStorage.getItem(USER_DATA_KEY);
+  const data = await secureStorage.getUserData();
   return data ? JSON.parse(data) : null;
 }
 

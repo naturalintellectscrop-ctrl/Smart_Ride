@@ -9,10 +9,13 @@
  *  - Search filtering (?search=ntinda)
  *  - Nearby sorting (?lat=0.34&lng=32.58)
  *
+ * SECURITY: Rate limited to prevent abuse
+ *
  * Endpoint: /api/mapbox/kampala-places
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 // ==========================================
 // Curated Kampala Places Database
@@ -631,6 +634,12 @@ const CATEGORY_LABELS: Record<string, string> = {
 // ==========================================
 
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.search);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.search);
+  }
+
   const { searchParams } = new URL(request.url);
   const category = searchParams.get('category');
   const search = searchParams.get('search');

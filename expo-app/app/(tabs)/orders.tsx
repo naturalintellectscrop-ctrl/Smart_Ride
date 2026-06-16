@@ -16,7 +16,6 @@ import {
   Text, 
   FlatList, 
   TouchableOpacity, 
-  ActivityIndicator,
   RefreshControl,
   StyleSheet
 } from 'react-native';
@@ -40,6 +39,7 @@ import { GlowHeader } from '@/src/components/GlowHeader';
 import { GlassCard } from '@/src/components/GlassCard';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { ServiceIcon } from '@/src/components/ServiceIcon';
+import { OrderSkeleton } from '@/src/components/Skeleton';
 
 // ============================================
 // FILTER TABS CONFIG
@@ -190,9 +190,10 @@ export default function OrdersScreen() {
 
       {/* Orders List */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading orders...</Text>
+        <View style={styles.skeletonContainer}>
+          <OrderSkeleton />
+          <OrderSkeleton />
+          <OrderSkeleton />
         </View>
       ) : (
         <FlatList
@@ -488,6 +489,11 @@ const styles = StyleSheet.create({
   },
 
   // Loading
+  skeletonContainer: {
+    flex: 1,
+    padding: SPACING.containerMargin,
+    paddingTop: SPACING.md,
+  },
   loadingContainer: {
     flex: 1,
     alignItems: 'center',

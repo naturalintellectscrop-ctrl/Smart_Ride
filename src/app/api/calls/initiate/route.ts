@@ -6,6 +6,8 @@
  * Creates a new in-app VoIP call session between two parties using
  * Agora.io (or similar) for real-time audio. Returns a session ID
  * and channel info for the caller to join the audio channel.
+ *
+ * SECURITY: Rate limited to prevent call spam
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,6 +20,7 @@ import {
   unauthorizedResponse,
 } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 import { z } from 'zod';
 import crypto from 'crypto';
 
@@ -28,6 +31,12 @@ const initiateCallSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
+  // Rate limiting — 60 requests per minute to prevent call spam
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.standard);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.standard);
+  }
+
   // Verify authentication
   const authHeader = request.headers.get('authorization');
   const token = authHeader?.replace('Bearer ', '');
@@ -116,6 +125,20 @@ export async function POST(request: NextRequest) {
       description: `Call initiated by ${decoded.name} to ${recipient.name}`,
       source: 'MOBILE_APP',
     });
+
+    // Broadcast incoming call to recipient via realtime
+    try {
+      const { broadcastToUser } = await import('@/lib/realtime-server');
+      await broadcastToUser(validatedData.recipientId, 'call:incoming', {
+        sessionId: callSession.id,
+        channelId: callSession.channelId,
+        callerId: decoded.userId,
+        callerName: decoded.name || decoded.userId,
+        callType: 'VOICE',
+      });
+    } catch (e) {
+      console.warn('[CALLS] Failed to broadcast incoming call:', e);
+    }
 
     // Return session info and channel details
     // The caller will use the channelId to request an Agora token

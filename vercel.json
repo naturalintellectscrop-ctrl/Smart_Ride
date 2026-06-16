@@ -6,12 +6,16 @@
   "regions": ["iad1"],
   "crons": [
     {
-      "path": "/api/dispatch/process-expired",
-      "schedule": "* * * * *"
+      "path": "/api/cron/dispatch-timeout",
+      "schedule": "*/1 * * * *"
     },
     {
-      "path": "/api/admin/cleanup?cleanup=expired-sessions",
-      "schedule": "0 3 * * *"
+      "path": "/api/cron/cleanup-sessions",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-otp",
+      "schedule": "0 */1 * * *"
     }
   ]
 }

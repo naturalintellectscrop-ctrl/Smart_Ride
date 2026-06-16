@@ -1,0 +1,71 @@
+// ============================================
+// SMART RIDE MOBILE - IMAGE PICKER UTILITY
+// ============================================
+// Handles photo selection from gallery and camera
+// with permission management
+// ============================================
+
+import * as ImagePicker from 'expo-image-picker';
+import { Alert, Platform } from 'react-native';
+
+export interface ImagePickerResult {
+  uri: string;
+  type: string;
+  name: string;
+  size?: number;
+}
+
+export async function pickImage(options?: {
+  allowsEditing?: boolean;
+  aspect?: [number, number];
+  quality?: number;
+}): Promise<ImagePickerResult | null> {
+  // Request permission
+  if (Platform.OS !== 'web') {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please grant photo library access to upload images.');
+      return null;
+    }
+  }
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ['images'],
+    allowsEditing: options?.allowsEditing ?? true,
+    aspect: options?.aspect ?? [1, 1],
+    quality: options?.quality ?? 0.7,
+  });
+
+  if (result.canceled || !result.assets?.[0]) return null;
+
+  const asset = result.assets[0];
+  const uri = asset.uri;
+  const name = uri.split('/').pop() || 'photo.jpg';
+  const type = `image/${name.split('.').pop()?.toLowerCase() || 'jpeg'}`;
+
+  return { uri, type, name, size: asset.fileSize };
+}
+
+export async function takePhoto(): Promise<ImagePickerResult | null> {
+  if (Platform.OS !== 'web') {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please grant camera access to take photos.');
+      return null;
+    }
+  }
+
+  const result = await ImagePicker.launchCameraAsync({
+    allowsEditing: true,
+    aspect: [1, 1],
+    quality: 0.7,
+  });
+
+  if (result.canceled || !result.assets?.[0]) return null;
+
+  const asset = result.assets[0];
+  const uri = asset.uri;
+  const name = uri.split('/').pop() || 'photo.jpg';
+
+  return { uri, type: `image/${name.split('.').pop()?.toLowerCase() || 'jpeg'}`, name, size: asset.fileSize };
+}

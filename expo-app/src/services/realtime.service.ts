@@ -7,7 +7,7 @@
 // ============================================
 
 import { createClient, SupabaseClient, RealtimeChannel, RealtimePostgresChangesPayload } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { secureStorage } from '../utils/secureStorage';
 import { STORAGE_KEYS } from '../constants';
 
 // ============================================
@@ -115,19 +115,14 @@ class RealtimeService {
     }
 
     try {
-      // Token can be passed directly (from useRealtime hook) or read from storage
+      // Token can be passed directly (from useRealtime hook) or read from SecureStore
       let authToken = token;
       if (!authToken) {
-        // Try reading from Zustand-persisted auth store
+        // Read from SecureStore (encrypted storage)
         try {
-          const stored = await AsyncStorage.getItem('smart-ride-auth');
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            authToken = parsed?.state?.accessToken;
-          }
+          authToken = await secureStorage.getAccessToken() || undefined;
         } catch {
-          // Fallback to legacy key
-          authToken = await AsyncStorage.getItem(STORAGE_KEYS.authToken) || undefined;
+          console.warn('[Realtime] Failed to read token from SecureStore');
         }
       }
 

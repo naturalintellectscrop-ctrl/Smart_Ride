@@ -37,11 +37,13 @@
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
         "ACCESS_NETWORK_STATE",
         "ACCESS_WIFI_STATE",
         "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
         "WAKE_LOCK"
       ],
       "intentFilters": [
@@ -99,7 +101,8 @@
       ],
       "expo-font",
       "./plugins/withAgoraPermissions",
-      "./plugins/withAbiSplits"
+      "./plugins/withAbiSplits",
+      "@sentry/react-native/expo"
     ],
     "experiments": {
       "typedRoutes": true

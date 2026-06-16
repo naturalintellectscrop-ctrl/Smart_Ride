@@ -9,18 +9,26 @@
 // CRITICAL: Reanimated must be first import
 import 'react-native-reanimated';
 
+// Initialize Sentry for crash reporting (must be early)
+import { initSentry } from '../src/lib/sentry';
+initSentry();
+
 // NOTE: global.css (NativeWind) removed - was causing style recalculation
 // on every render, contributing to jumpy cursor in TextInput fields.
 // All styles use StyleSheet.create() directly instead.
 
-import React, { Component, ReactNode, useEffect } from 'react';
-import { View, Text, StyleSheet, LogBox } from 'react-native';
+import React, { Component, ReactNode, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, LogBox, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, useTheme } from '../src/context/theme-context';
+import { useRealtime } from '@/src/hooks/useRealtime';
+import { useAuthStore } from '@/src/store/authStore';
+import { OfflineBanner } from '@/src/components/OfflineBanner';
 
 // Suppress known benign warnings in production
 LogBox.ignoreLogs([
@@ -84,6 +92,56 @@ const queryClient = createQueryClient();
 // ============================================
 function ThemedRootLayout() {
   const { isDark, colors } = useTheme();
+  const { isAuthenticated, setAccessToken, user } = useAuthStore();
+
+  // Connect to Supabase Realtime when authenticated
+  useRealtime();
+
+  // Rehydrate access token from SecureStore on app start.
+  // Since accessToken is no longer persisted in AsyncStorage,
+  // we need to load it from SecureStore and set it in the store.
+  useEffect(() => {
+    if (!isAuthenticated && user) {
+      (async () => {
+        try {
+          const { secureStorage } = require('../src/utils/secureStorage');
+          const token = await secureStorage.getAccessToken();
+          if (token) {
+            setAccessToken(token);
+            console.log('[App] Access token rehydrated from SecureStore');
+          }
+        } catch (e) {
+          console.warn('[App] Failed to rehydrate token from SecureStore:', e);
+        }
+      })();
+    }
+  }, []); // Run once on mount
+
+  // Register push notifications with backend when authenticated
+  const registerForPushNotifications = useCallback(async () => {
+    try {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') return;
+
+      const token = await Notifications.getExpoPushTokenAsync({
+        projectId: 'cc0d40b0-12ac-4997-876c-5f03c9a9ae61',
+      });
+
+      if (token.data) {
+        const { api } = require('../src/services/api');
+        await api.registerPushToken(token.data, Platform.OS);
+        console.log('[PUSH] Token registered with backend');
+      }
+    } catch (e) {
+      console.warn('[PUSH] Failed to register:', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      registerForPushNotifications();
+    }
+  }, [isAuthenticated, registerForPushNotifications]);
 
   // Initialize native services AFTER first render
   // Each is wrapped safely so nothing blocks the app
@@ -136,6 +194,7 @@ function ThemedRootLayout() {
   return (
     <>
       <StatusBar style={isDark ? 'light' : 'dark'} backgroundColor={colors.background} />
+      <OfflineBanner />
       <ProviderErrorBoundary name="Navigation">
         <Stack 
           screenOptions={{ 
@@ -150,6 +209,7 @@ function ThemedRootLayout() {
           <Stack.Screen name="auth/verify-otp" />
           <Stack.Screen name="auth/forgot-password" />
           <Stack.Screen name="auth/reset-password" />
+          <Stack.Screen name="auth/change-password" />
           <Stack.Screen name="auth/role-selection" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="delivery/index" />

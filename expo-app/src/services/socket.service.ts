@@ -7,8 +7,7 @@
 // ============================================
 
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEYS } from '../constants';
+import { secureStorage } from '../utils/secureStorage';
 
 // ============================================
 // TYPES
@@ -88,7 +87,7 @@ class SocketService {
     }
 
     try {
-      const token = await AsyncStorage.getItem(STORAGE_KEYS.authToken);
+      const token = await secureStorage.getAccessToken();
       if (!token) {
         console.warn('[Realtime] No auth token found');
         return;

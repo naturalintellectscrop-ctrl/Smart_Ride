@@ -7,6 +7,7 @@
 
 import { db } from '@/lib/db';
 import { MetricsService } from './metrics-service';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -169,7 +170,7 @@ export class DashboardService {
       recentActivity.push({
         id: payment.id,
         type: 'PAYMENT',
-        description: `Payment of UGX ${(payment.amount || 0).toLocaleString()} received`,
+        description: `Payment of UGX ${toNumber(payment.amount).toLocaleString()} received`,
         createdAt: payment.createdAt,
       });
     }
@@ -218,7 +219,7 @@ export class DashboardService {
       onlineRiders: riderUtilization.onlineRiders,
       pendingVerifications,
       activeSOSAlerts,
-      todayRevenue: todayRevenue._sum.platformCommission || 0,
+      todayRevenue: todayRevenue.toNumber(_sum.platformCommission),
       todayCompletedTasks,
       averageWaitTime,
       riderUtilization: riderUtilization.utilizationRate,
@@ -355,9 +356,9 @@ export class DashboardService {
       : 0;
 
     return {
-      todayEarnings: todayEarnings._sum.riderEarnings || 0,
-      weekEarnings: weekEarnings._sum.riderEarnings || 0,
-      monthEarnings: monthEarnings._sum.riderEarnings || 0,
+      todayEarnings: todayEarnings.toNumber(_sum.riderEarnings),
+      weekEarnings: weekEarnings.toNumber(_sum.riderEarnings),
+      monthEarnings: monthEarnings.toNumber(_sum.riderEarnings),
       totalTrips: rider.totalTrips,
       rating: avgRating,
       activeTask,

@@ -30,10 +30,17 @@ import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { z } from 'zod';
 import { coordinatesSchema } from '@/lib/validation/api-schemas';
 import { requireAuth } from '@/lib/auth/guards';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 import { NextRequest as NWRequest, NextResponse as NWResponse } from 'next/server';
 
 // GET /api/dispatch - Get dispatch stats and pending requests
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.standard);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.standard);
+  }
+
   // Require authentication
   const authResult = requireAuth(request as unknown as NWRequest);
   if (!authResult.success) {
@@ -141,6 +148,12 @@ export async function GET(request: NextRequest) {
 
 // POST /api/dispatch - Various dispatch actions
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const rateResult = checkRateLimit(request, RATE_LIMITS.api.standard);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.api.standard);
+  }
+
   // Require authentication
   const authResult = requireAuth(request as unknown as NWRequest);
   if (!authResult.success) {

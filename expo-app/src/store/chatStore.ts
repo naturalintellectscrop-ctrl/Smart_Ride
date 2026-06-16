@@ -5,6 +5,8 @@
 // ============================================
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../services/api';
 import { socketService } from '../services/socket.service';
 
@@ -65,10 +67,13 @@ interface ChatState {
   isLoadingMessages: boolean;
   isSendingMessage: boolean;
   error: string | null;
+  conversationsNextCursor: string | null;
+  messagesNextCursor: string | null;
 
   // Actions
-  loadConversations: () => Promise<void>;
+  loadConversations: (append?: boolean) => Promise<void>;
   loadMessages: (conversationId: string) => Promise<void>;
+  loadMoreMessages: () => Promise<void>;
   sendMessage: (conversationId: string, data: { content: string; type?: 'TEXT' | 'IMAGE'; imageUrl?: string }) => Promise<void>;
   markAsRead: (conversationId: string) => Promise<void>;
   setActiveConversation: (conversationId: string | null) => void;
@@ -89,7 +94,9 @@ interface ChatState {
 // CHAT STORE
 // ============================================
 
-export const useChatStore = create<ChatState>()((set, get) => ({
+export const useChatStore = create<ChatState>()(
+  persist(
+    (set, get) => ({
   conversations: [],
   activeConversationId: null,
   messages: [],
@@ -98,38 +105,79 @@ export const useChatStore = create<ChatState>()((set, get) => ({
   isLoadingMessages: false,
   isSendingMessage: false,
   error: null,
+  conversationsNextCursor: null,
+  messagesNextCursor: null,
 
-  loadConversations: async () => {
+  loadConversations: async (append?: boolean) => {
+    const currentState = get();
+    if (append && !currentState.conversationsNextCursor) return; // No more pages
     set({ isLoadingConversations: true, error: null });
     try {
-      const response = await api.getConversations();
+      const cursor = append ? currentState.conversationsNextCursor || undefined : undefined;
+      const response = await api.getConversations(cursor);
       if (response.success && response.data) {
-        set({ conversations: response.data, isLoadingConversations: false });
+        // Unwrap the nested API response: response.data = { success, data: { conversations, nextCursor } }
+        const responseData = response.data.data || response.data;
+        const newConversations = responseData.conversations || [];
+        const nextCursor = responseData.nextCursor || null;
+        set({
+          conversations: append ? [...currentState.conversations, ...newConversations] : newConversations,
+          conversationsNextCursor: nextCursor,
+          isLoadingConversations: false,
+        });
       } else {
-        // Show empty state instead of mock data
         console.warn('[CHAT-STORE] API failed to load conversations');
-        set({ conversations: [], isLoadingConversations: false });
+        set({ conversations: [], conversationsNextCursor: null, isLoadingConversations: false });
       }
     } catch (error) {
       console.warn('[CHAT-STORE] Error loading conversations:', error);
-      set({ conversations: [], isLoadingConversations: false });
+      set({ conversations: [], conversationsNextCursor: null, isLoadingConversations: false });
     }
   },
 
   loadMessages: async (conversationId: string) => {
-    set({ isLoadingMessages: true, error: null, messages: [], activeConversationId: conversationId });
+    set({ isLoadingMessages: true, error: null, messages: [], activeConversationId: conversationId, messagesNextCursor: null });
     try {
       const response = await api.getMessages(conversationId);
       if (response.success && response.data) {
-        set({ messages: response.data, isLoadingMessages: false });
+        // Unwrap the nested API response: response.data = { success, data: { messages, nextCursor } }
+        const responseData = response.data.data || response.data;
+        const messages = responseData.messages || [];
+        const nextCursor = responseData.nextCursor || null;
+        // Messages come newest-first from API, reverse for display (oldest at top)
+        set({ messages: messages.reverse(), messagesNextCursor: nextCursor, isLoadingMessages: false });
       } else {
-        // Show empty state instead of mock data
         console.warn('[CHAT-STORE] API failed to load messages');
-        set({ messages: [], isLoadingMessages: false });
+        set({ messages: [], messagesNextCursor: null, isLoadingMessages: false });
       }
     } catch (error) {
       console.warn('[CHAT-STORE] Error loading messages:', error);
-      set({ messages: [], isLoadingMessages: false });
+      set({ messages: [], messagesNextCursor: null, isLoadingMessages: false });
+    }
+  },
+
+  loadMoreMessages: async () => {
+    const { activeConversationId, messagesNextCursor, messages, isLoadingMessages } = get();
+    if (!activeConversationId || !messagesNextCursor || isLoadingMessages) return;
+    set({ isLoadingMessages: true });
+    try {
+      const response = await api.getMessages(activeConversationId, messagesNextCursor);
+      if (response.success && response.data) {
+        const responseData = response.data.data || response.data;
+        const olderMessages = responseData.messages || [];
+        const nextCursor = responseData.nextCursor || null;
+        // Prepend older messages (reversed so oldest is at top)
+        set({
+          messages: [...olderMessages.reverse(), ...messages],
+          messagesNextCursor: nextCursor,
+          isLoadingMessages: false,
+        });
+      } else {
+        set({ isLoadingMessages: false });
+      }
+    } catch (error) {
+      console.warn('[CHAT-STORE] Error loading more messages:', error);
+      set({ isLoadingMessages: false });
     }
   },
 
@@ -138,17 +186,32 @@ export const useChatStore = create<ChatState>()((set, get) => ({
     try {
       const response = await api.sendMessage(conversationId, data);
       if (response.success && response.data) {
-        // Add message to local state
-        const newMessage: Message = {
-          id: response.data.id || `msg-${Date.now()}`,
-          conversationId,
-          senderId: 'client-1',
-          content: data.content,
-          type: data.type || 'TEXT',
-          imageUrl: data.imageUrl,
-          isRead: false,
-          createdAt: new Date().toISOString(),
-        };
+        // Unwrap the nested API response: response.data = { success, data: { message } }
+        const responseData = response.data.data || response.data;
+        const serverMessage = responseData.message;
+        // Add message to local state — prefer server data if available
+        const newMessage: Message = serverMessage
+          ? {
+              id: serverMessage.id,
+              conversationId: serverMessage.conversationId || conversationId,
+              senderId: serverMessage.senderId,
+              content: serverMessage.content || data.content,
+              type: serverMessage.type || data.type || 'TEXT',
+              mediaUrl: serverMessage.mediaUrl,
+              isRead: serverMessage.isRead || false,
+              readAt: serverMessage.readAt,
+              createdAt: serverMessage.createdAt || new Date().toISOString(),
+            }
+          : {
+              id: `msg-${Date.now()}`,
+              conversationId,
+              senderId: 'client-1',
+              content: data.content,
+              type: data.type || 'TEXT',
+              imageUrl: data.imageUrl,
+              isRead: false,
+              createdAt: new Date().toISOString(),
+            };
         set((state) => ({
           messages: [...state.messages, newMessage],
           isSendingMessage: false,
@@ -363,4 +426,13 @@ export const useChatStore = create<ChatState>()((set, get) => ({
       ),
     }));
   },
-}));
+}),
+  {
+    name: 'smart-ride-chat',
+    storage: createJSONStorage(() => AsyncStorage),
+    partialize: (state) => ({
+      conversations: state.conversations,
+    }),
+  }
+  )
+);

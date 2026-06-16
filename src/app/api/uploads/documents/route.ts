@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import { existsSync } from 'fs';
-import path from 'path';
 import { randomUUID } from 'crypto';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
+import { getStorageProvider } from '@/lib/storage';
 
 // POST /api/uploads/documents - Upload a document
 export async function POST(request: NextRequest) {
@@ -49,33 +47,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate unique filename
+    // Generate unique filename and storage key
     const extension = file.name.split('.').pop() || 'bin';
     const filename = `${documentType}_${randomUUID()}.${extension}`;
-    
-    // Create directory structure: uploads/{type}/{year}/{month}
+
+    // Create key path: {type}/{year}/{month}/{filename}
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
-    const uploadDir = path.join(process.cwd(), 'uploads', type, String(year), month);
-    
-    // Ensure directory exists
-    if (!existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
+    const key = `${type}/${year}/${month}/${filename}`;
 
-    // Write file
-    const filePath = path.join(uploadDir, filename);
+    // Upload using storage provider
+    const storage = getStorageProvider();
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
-
-    // Construct URL for the file
-    const url = `/api/uploads/${type}/${year}/${month}/${filename}`;
+    const url = await storage.upload(key, buffer, file.type);
 
     return NextResponse.json({
       success: true,
       url,
+      key,
       filename,
       originalName: file.name,
       size: file.size,
@@ -86,5 +77,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Failed to upload document' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }

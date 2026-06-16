@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readFile, stat } from 'fs/promises';
-import { existsSync } from 'fs';
 import path from 'path';
-import { requireAuth } from '@/lib/auth-utils';
+import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
+import { isLocalStorage, getLocalStorageProvider, getS3StorageProvider } from '@/lib/storage';
 
 // Serve uploaded files
+// For local storage: read from filesystem and serve
+// For S3 storage: redirect to the S3 URL
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
@@ -17,56 +18,58 @@ export async function GET(
 
   try {
     const { path: pathSegments } = await params;
-    const filePath = path.join(process.cwd(), 'uploads', ...pathSegments);
+    const key = pathSegments.join('/');
 
-    // Security check - ensure the path is within uploads folder
-    const uploadsDir = path.join(process.cwd(), 'uploads');
-    const resolvedPath = path.resolve(filePath);
-    if (!resolvedPath.startsWith(uploadsDir)) {
-      return NextResponse.json({ success: false, error: 'Access denied' }, { status: 403 });
+    if (isLocalStorage()) {
+      // Local storage: serve file from filesystem
+      const localProvider = getLocalStorageProvider();
+      if (!localProvider) {
+        return NextResponse.json({ success: false, error: 'Storage not configured' }, { status: 500 });
+      }
+
+      const fileBuffer = await localProvider.readFile(key);
+      if (!fileBuffer) {
+        return NextResponse.json({ success: false, error: 'File not found' }, { status: 404 });
+      }
+
+      // Determine content type from extension
+      const extension = path.extname(key).toLowerCase();
+      const contentTypes: Record<string, string> = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
+        '.pdf': 'application/pdf',
+      };
+      const contentType = contentTypes[extension] || 'application/octet-stream';
+
+      const headers: Record<string, string> = {
+        'Content-Type': contentType,
+        'Content-Length': fileBuffer.length.toString(),
+        'Cache-Control': 'private, no-cache, no-store, max-age=0',
+      };
+
+      if (contentType === 'application/pdf') {
+        headers['Content-Disposition'] = `attachment; filename="${path.basename(key)}"`;
+      }
+
+      return new NextResponse(fileBuffer, { headers });
+    } else {
+      // S3 storage: redirect to the S3 URL (or presigned URL for private buckets)
+      const s3Provider = getS3StorageProvider();
+      if (!s3Provider) {
+        return NextResponse.json({ success: false, error: 'Storage not configured' }, { status: 500 });
+      }
+
+      // Use presigned URL for secure access (1 hour expiry)
+      const presignedUrl = await s3Provider.getPresignedUrl(key, 3600);
+      return NextResponse.redirect(presignedUrl);
     }
-
-    // Check if file exists
-    if (!existsSync(resolvedPath)) {
-      return NextResponse.json({ success: false, error: 'File not found' }, { status: 404 });
-    }
-
-    // Get file info
-    const fileStat = await stat(resolvedPath);
-    if (!fileStat.isFile()) {
-      return NextResponse.json({ success: false, error: 'Not a file' }, { status: 400 });
-    }
-
-    // Determine content type
-    const extension = path.extname(resolvedPath).toLowerCase();
-    const contentTypes: Record<string, string> = {
-      '.jpg': 'image/jpeg',
-      '.jpeg': 'image/jpeg',
-      '.png': 'image/png',
-      '.gif': 'image/gif',
-      '.webp': 'image/webp',
-      '.pdf': 'application/pdf',
-    };
-    const contentType = contentTypes[extension] || 'application/octet-stream';
-
-    // Read and return file
-    const fileBuffer = await readFile(resolvedPath);
-    
-    const headers: Record<string, string> = {
-      'Content-Type': contentType,
-      'Content-Length': fileStat.size.toString(),
-      'Cache-Control': 'private, no-cache, no-store, max-age=0',
-    };
-
-    if (contentType === 'application/pdf') {
-      headers['Content-Disposition'] = `attachment; filename="${path.basename(resolvedPath)}"`;
-    }
-
-    return new NextResponse(fileBuffer, {
-      headers,
-    });
   } catch (error) {
     console.error('Error serving file:', error);
     return NextResponse.json({ success: false, error: 'Failed to serve file' }, { status: 500 });
+  } finally {
+    await resetRLSContext();
   }
 }

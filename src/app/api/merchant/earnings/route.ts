@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { toNumber } from '@/lib/decimal-utils';
 
 // GET - Fetch merchant earnings and financial data
 export async function GET(request: NextRequest) {
@@ -91,10 +92,10 @@ async function getEarningsSummary(startDate?: string | null, endDate?: string | 
 
   // Calculate summary statistics
   const totalOrders = orders.length;
-  const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
-  const totalDeliveryFees = orders.reduce((sum, order) => sum + order.deliveryFee, 0);
-  const totalServiceFees = orders.reduce((sum, order) => sum + (order.serviceFee || 0), 0);
-  const totalSubtotal = orders.reduce((sum, order) => sum + order.subtotal, 0);
+  const totalRevenue = orders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
+  const totalDeliveryFees = orders.reduce((sum, order) => sum + toNumber(order.deliveryFee), 0);
+  const totalServiceFees = orders.reduce((sum, order) => sum + toNumber(order.serviceFee), 0);
+  const totalSubtotal = orders.reduce((sum, order) => sum + toNumber(order.subtotal), 0);
   
   // Calculate merchant earnings and platform commission
   let totalMerchantEarnings = 0;
@@ -136,7 +137,7 @@ async function getEarningsSummary(startDate?: string | null, endDate?: string | 
     },
   });
   
-  const todayEarnings = todayOrders.reduce((sum, order) => sum + order.totalAmount, 0);
+  const todayEarnings = todayOrders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
 
   // Get orders by type
   const foodOrders = orders.filter(o => o.orderType === 'FOOD_DELIVERY');
@@ -173,11 +174,11 @@ async function getEarningsSummary(startDate?: string | null, endDate?: string | 
     orderTypes: {
       food: {
         count: foodOrders.length,
-        revenue: foodOrders.reduce((sum, o) => sum + o.totalAmount, 0),
+        revenue: foodOrders.reduce((sum, o) => sum + toNumber(o.totalAmount), 0),
       },
       shopping: {
         count: shoppingOrders.length,
-        revenue: shoppingOrders.reduce((sum, o) => sum + o.totalAmount, 0),
+        revenue: shoppingOrders.reduce((sum, o) => sum + toNumber(o.totalAmount), 0),
       },
     },
     merchantsByType: merchantsByType.map(m => ({
@@ -215,7 +216,7 @@ async function getMerchantEarnings(merchantId?: string | null, startDate?: strin
     }
 
     const orders = merchant.orders;
-    const totalRevenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const totalRevenue = orders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
     const merchantEarnings = orders.reduce((sum, order) => {
       return sum + (order.subtotal * (1 - merchant.commissionRate));
     }, 0);
@@ -263,8 +264,8 @@ async function getMerchantEarnings(merchantId?: string | null, startDate?: strin
         },
       });
 
-      const revenue = orders.reduce((sum, order) => sum + order.totalAmount, 0);
-      const subtotal = orders.reduce((sum, order) => sum + order.subtotal, 0);
+      const revenue = orders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
+      const subtotal = orders.reduce((sum, order) => sum + toNumber(order.subtotal), 0);
       const earnings = subtotal * (1 - merchant.commissionRate);
       const commission = subtotal * merchant.commissionRate;
 
@@ -345,7 +346,7 @@ async function getPayoutHistory(merchantId?: string | null) {
   return NextResponse.json({
     payouts,
     merchants,
-    totalPayouts: payouts.reduce((sum, p) => sum + p.amount, 0),
+    totalPayouts: payouts.reduce((sum, p) => sum + toNumber(p.amount), 0),
   });
 }
 
@@ -378,8 +379,8 @@ async function getEarningsAnalytics(startDate?: string | null, endDate?: string 
     if (!dailyEarnings[dateKey]) {
       dailyEarnings[dateKey] = { revenue: 0, orders: 0, subtotal: 0 };
     }
-    dailyEarnings[dateKey].revenue += order.totalAmount;
-    dailyEarnings[dateKey].subtotal += order.subtotal;
+    dailyEarnings[dateKey].revenue += toNumber(order.totalAmount);
+    dailyEarnings[dateKey].subtotal += toNumber(order.subtotal);
     dailyEarnings[dateKey].orders += 1;
   });
 
@@ -389,7 +390,7 @@ async function getEarningsAnalytics(startDate?: string | null, endDate?: string 
       date,
       revenue: data.revenue,
       orders: data.orders,
-      subtotal: data.subtotal,
+      subtotal: toNumber(data.subtotal),
     }))
     .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -416,8 +417,8 @@ async function getEarningsAnalytics(startDate?: string | null, endDate?: string 
   const topMerchantsWithEarnings = await Promise.all(
     topMerchants.map(async (merchant) => {
       const merchantOrders = orders.filter(o => o.merchantId === merchant.id);
-      const revenue = merchantOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-      const subtotal = merchantOrders.reduce((sum, o) => sum + o.subtotal, 0);
+      const revenue = merchantOrders.reduce((sum, o) => sum + toNumber(o.totalAmount), 0);
+      const subtotal = merchantOrders.reduce((sum, o) => sum + toNumber(o.subtotal), 0);
       
       return {
         ...merchant,
@@ -477,8 +478,8 @@ async function getEarningsByMerchantType() {
         },
       });
 
-      const totalRevenue = orders.reduce((sum, o) => sum + o.totalAmount, 0);
-      const totalSubtotal = orders.reduce((sum, o) => sum + o.subtotal, 0);
+      const totalRevenue = orders.reduce((sum, o) => sum + toNumber(o.totalAmount), 0);
+      const totalSubtotal = orders.reduce((sum, o) => sum + toNumber(o.subtotal), 0);
       
       // Calculate commission
       let totalCommission = 0;
@@ -503,7 +504,7 @@ async function getEarningsByMerchantType() {
 
   return NextResponse.json({
     types: typeEarnings,
-    total: typeEarnings.reduce((sum, t) => sum + t.totalRevenue, 0),
+    total: typeEarnings.reduce((sum, t) => sum + toNumber(t.totalRevenue), 0),
   });
 }
 

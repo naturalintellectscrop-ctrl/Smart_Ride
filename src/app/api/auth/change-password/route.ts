@@ -1,82 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
-import { verifyToken } from '@/lib/auth/jwt';
-import { hash, compare } from 'bcryptjs';
+import { verifyAccessToken } from '@/lib/auth/jwt';
+import { successResponse, errorResponse, serverErrorResponse, unauthorizedResponse } from '@/lib/api/response';
 import { z } from 'zod';
+import bcrypt from 'bcryptjs';
 
-const changePasswordSchema = z.object({
+const schema = z.object({
   currentPassword: z.string().min(1, 'Current password is required'),
   newPassword: z.string().min(8, 'New password must be at least 8 characters'),
 });
 
 export async function POST(request: NextRequest) {
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  if (!token) return unauthorizedResponse('Authentication required');
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded) return unauthorizedResponse('Invalid or expired token');
+
   await setServiceRoleContext();
   try {
-    // Get token from cookie
-    const token = request.cookies.get('admin-session')?.value;
-    if (!token) {
-      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
-    }
-
-    // Verify token using jsonwebtoken (consistent with rest of codebase)
-    const payload = verifyToken(token);
-    if (!payload || !payload.userId) {
-      return NextResponse.json({ success: false, error: 'Invalid or expired token' }, { status: 401 });
-    }
-    const userId = payload.userId;
-
-    // Validate request body
     const body = await request.json();
-    const { currentPassword, newPassword } = changePasswordSchema.parse(body);
+    const validated = schema.parse(body);
 
     // Get user with password hash
     const user = await db.user.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        passwordHash: true,
-      },
+      where: { id: decoded.userId },
+      select: { id: true, password: true },
     });
 
-    if (!user || !user.passwordHash) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    if (!user || !user.password) {
+      return errorResponse('User not found or no password set', 404);
     }
 
     // Verify current password
-    const passwordValid = await compare(currentPassword, user.passwordHash);
-    if (!passwordValid) {
-      return NextResponse.json({ success: false, error: 'Current password is incorrect' }, { status: 400 });
+    const isValid = await bcrypt.compare(validated.currentPassword, user.password);
+    if (!isValid) {
+      return errorResponse('Current password is incorrect', 400);
     }
 
     // Hash new password
-    const newPasswordHash = await hash(newPassword, 10);
+    const hashedPassword = await bcrypt.hash(validated.newPassword, 12);
 
     // Update password
     await db.user.update({
-      where: { id: userId },
-      data: { passwordHash: newPasswordHash },
+      where: { id: decoded.userId },
+      data: { password: hashedPassword },
     });
 
-    // Create audit log
-    await db.auditLog.create({
-      data: {
-        actorType: 'ADMIN',
-        userId,
-        action: 'PASSWORD_CHANGED',
-        entityType: 'User',
-        entityId: userId,
-        description: `Admin changed their own password: ${user.email}`,
-      },
-    });
-
-    return NextResponse.json({ success: true, message: 'Password updated successfully' });
+    return successResponse(null, 'Password changed successfully');
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ success: false, error: error.issues[0].message }, { status: 400 });
+      return errorResponse(error.issues[0]?.message || 'Validation error');
     }
-    console.error('Change password error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to change password' }, { status: 500 });
+    console.error('Error changing password:', error);
+    return serverErrorResponse('Failed to change password');
   } finally {
     await resetRLSContext();
   }

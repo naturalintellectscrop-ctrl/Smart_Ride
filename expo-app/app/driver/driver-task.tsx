@@ -34,6 +34,7 @@ import { SmartRideMap } from '@/src/components/SmartRideMap';
 import * as Location from 'expo-location';
 import { useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
+import { locationService } from '@/src/services/location.service';
 import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
 import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
@@ -126,6 +127,19 @@ export default function DriverTaskScreen() {
       }
     };
   }, [params.taskId]);
+
+  // Background location tracking: start when task is active, stop when terminal
+  useEffect(() => {
+    const activeStatuses = ['ASSIGNED', 'ACCEPTED', 'ARRIVED', 'PICKED_UP', 'IN_TRANSIT'];
+    if (task && activeStatuses.includes(task.status)) {
+      locationService.startTracking();
+    } else {
+      locationService.stopTracking();
+    }
+    return () => {
+      locationService.stopTracking();
+    };
+  }, [task?.status]);
 
   // Animated style for the pulsing dot
   const pulseAnimatedStyle = useAnimatedStyle(() => ({

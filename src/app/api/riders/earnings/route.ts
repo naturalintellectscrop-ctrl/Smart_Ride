@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { db } from '@/lib/db';
+import { toNumber } from '@/lib/decimal-utils';
 
 // Commission rates by service type
 const COMMISSION_RATES: Record<string, { riderPercent: number; platformPercent: number }> = {
@@ -33,9 +34,9 @@ interface PeriodEarnings {
 }
 
 function calcEarnings(tasks: { riderEarnings: number | null; platformCommission: number | null; totalAmount: number | null; taskType: string }[]): PeriodEarnings {
-  const totalEarnings = tasks.reduce((sum, t) => sum + (t.riderEarnings || 0), 0);
-  const totalCommission = tasks.reduce((sum, t) => sum + (t.platformCommission || 0), 0);
-  const totalRevenue = tasks.reduce((sum, t) => sum + (t.totalAmount || 0), 0);
+  const totalEarnings = tasks.reduce((sum, t) => sum + toNumber(t.riderEarnings), 0);
+  const totalCommission = tasks.reduce((sum, t) => sum + toNumber(t.platformCommission), 0);
+  const totalRevenue = tasks.reduce((sum, t) => sum + toNumber(t.totalAmount), 0);
   const rides = tasks.filter(t => t.taskType === 'SMART_BODA_RIDE' || t.taskType === 'SMART_CAR_RIDE').length;
   const deliveries = tasks.filter(t => t.taskType === 'FOOD_DELIVERY' || t.taskType === 'SHOPPING' || t.taskType === 'ITEM_DELIVERY').length;
   const health = tasks.filter(t => t.taskType === 'SMART_HEALTH_DELIVERY').length;
@@ -96,11 +97,19 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // Calculate earnings by period
-    const today = calcEarnings(todayTasks);
-    const week = calcEarnings(weekTasks);
-    const month = calcEarnings(monthTasks);
-    const lifetime = calcEarnings(allTasks);
+    // Calculate earnings by period - map Decimal fields to numbers
+    const mapTasks = (tasks: { totalAmount: any; platformCommission: any; riderEarnings: any; taskType: any; completedAt: any }[]) =>
+      tasks.map(t => ({
+        totalAmount: toNumber(t.totalAmount),
+        platformCommission: toNumber(t.platformCommission),
+        riderEarnings: toNumber(t.riderEarnings),
+        taskType: t.taskType as string,
+        completedAt: t.completedAt,
+      }));
+    const today = calcEarnings(mapTasks(todayTasks));
+    const week = calcEarnings(mapTasks(weekTasks));
+    const month = calcEarnings(mapTasks(monthTasks));
+    const lifetime = calcEarnings(mapTasks(allTasks));
 
     // Get wallet balance
     const wallet = await db.wallet.findUnique({
@@ -138,7 +147,7 @@ export async function GET(request: NextRequest) {
         totalWithdrawn: wallet?.totalWithdrawn || 0,
       },
       rider: {
-        totalEarnings: rider.totalEarnings,
+        totalEarnings: toNumber(rider.totalEarnings),
         totalTrips: rider.totalTrips,
         completedTrips: rider.completedTrips,
         cancelledTrips: rider.cancelledTrips,

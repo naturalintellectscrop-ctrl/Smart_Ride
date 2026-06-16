@@ -8,6 +8,7 @@
 import { db } from '@/lib/db';
 import { MerchantStatus, MerchantType, DocumentType, DocumentStatus } from '@prisma/client';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
 // TYPES
@@ -585,8 +586,8 @@ export class MerchantOnboardingService {
       }),
     ]);
 
-    const thisMonthRevenue = thisMonthRevenueResult._sum.amount || 0;
-    const lastMonthRevenue = lastMonthRevenueResult._sum.amount || 0;
+    const thisMonthRevenue = thisMonthRevenueResult.toNumber(_sum.amount);
+    const lastMonthRevenue = lastMonthRevenueResult.toNumber(_sum.amount);
     const monthlyChange = lastMonthRevenue > 0
       ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
       : thisMonthRevenue > 0 ? 100 : 0;
@@ -669,7 +670,7 @@ export class MerchantOnboardingService {
           name: mi.name,
           category: mi.category,
           totalSold: item._sum.quantity || 0,
-          revenue: item._sum.totalPrice || 0,
+          revenue: toNumber(item._sum.totalPrice),
         };
       });
 
@@ -724,7 +725,7 @@ export class MerchantOnboardingService {
 
     return {
       revenue: {
-        total: totalRevenueResult._sum.amount || 0,
+        total: totalRevenueResult.toNumber(_sum.amount),
         thisMonth: thisMonthRevenue,
         lastMonth: lastMonthRevenue,
         monthlyChange: Math.round(monthlyChange * 100) / 100,

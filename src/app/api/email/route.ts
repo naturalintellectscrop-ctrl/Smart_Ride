@@ -1,14 +1,35 @@
 /**
  * Email Sending API
  * POST /api/email/send - Send an email
- * 
+ *
+ * SECURITY:
+ * - POST: Requires admin authentication + rate limiting
+ * - GET: Requires admin authentication (exposes service config)
+ *
  * Uses Resend for email delivery
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail, emailService } from '@/lib/email';
+import { requireAdmin } from '@/lib/auth/guards';
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 
 export async function POST(request: NextRequest) {
+  // Rate limiting — strict, like registration (3/hour)
+  const rateResult = checkRateLimit(request, RATE_LIMITS.auth.register);
+  if (!rateResult.success) {
+    return rateLimitResponse(rateResult, RATE_LIMITS.auth.register);
+  }
+
+  // Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+
   try {
     const body = await request.json();
     const { type, to, data } = body;
@@ -132,7 +153,16 @@ export async function POST(request: NextRequest) {
 }
 
 // GET endpoint to check email service status
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Require admin authentication
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error },
+      { status: authResult.statusCode }
+    );
+  }
+
   const isConfigured = !!process.env.RESEND_API_KEY;
   
   return NextResponse.json({
