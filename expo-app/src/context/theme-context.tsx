@@ -114,7 +114,7 @@ const THEME_STORAGE_KEY = 'smart_ride_theme';
 // ============================================
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>('dark');
+  const [theme, setThemeState] = useState<ThemeMode>('light');
   const [isReady, setIsReady] = useState(false);
 
   // Load saved theme on mount
