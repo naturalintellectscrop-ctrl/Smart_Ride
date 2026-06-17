@@ -14,10 +14,27 @@ import { TaskStatus } from '@prisma/client';
 import { z } from 'zod';
 import { broadcastEvent, broadcastToUser } from '@/lib/realtime-server';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
+import { verifyAccessToken } from '@/lib/auth/jwt';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
 }
+
+// Role-based action permissions for order PATCH.
+// MERCHANT-only: accept, reject, preparing, ready
+// RIDER-only: pickup, deliver
+// CLIENT (order owner) + MERCHANT: cancel
+// ADMIN: any action
+const ACTION_ROLE_MATRIX: Record<string, string[]> = {
+  'confirm-payment': ['CLIENT', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'],
+  'accept':          ['MERCHANT', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'],
+  'reject':          ['MERCHANT', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'],
+  'preparing':       ['MERCHANT', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'],
+  'ready':           ['MERCHANT', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'],
+  'pickup':          ['RIDER', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'],
+  'deliver':         ['RIDER', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'],
+  'cancel':          ['CLIENT', 'MERCHANT', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'],
+};
 
 // Schema for confirming payment
 const confirmPaymentSchema = z.object({
@@ -160,30 +177,83 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * Actions: confirm-payment, accept, reject, preparing, ready, pickup, deliver, cancel
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  // ============================================================
+  // SECURITY: Authentication + role-based authorization
+  // Previously this endpoint had NO auth check — anyone (even
+  // unauthenticated) could drive an order through its full lifecycle.
+  // Now: every PATCH requires a valid access token, and the action
+  // must be permitted for the user's role per ACTION_ROLE_MATRIX.
+  // ============================================================
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  if (!token) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
+  const decoded = verifyAccessToken(token);
+  if (!decoded) {
+    return NextResponse.json(
+      { success: false, error: 'Invalid or expired token' },
+      { status: 401 }
+    );
+  }
+
+  const { id } = await params;
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get('action');
+
+  if (!action || !ACTION_ROLE_MATRIX[action]) {
+    return errorResponse('Invalid action. Use: confirm-payment, accept, reject, preparing, ready, pickup, deliver, or cancel');
+  }
+
+  // Role check
+  const allowedRoles = ACTION_ROLE_MATRIX[action];
+  if (!allowedRoles.includes(decoded.role)) {
+    // Audit unauthorized attempt
+    try {
+      await setServiceRoleContext();
+      await createAuditLog({
+        action: AuditActions.ORDER_CANCELLED, // closest action for unauthorized access log
+        entityType: EntityTypes.ORDER,
+        entityId: id,
+        actorType: 'USER',
+        actorId: decoded.userId,
+        userId: decoded.userId,
+        orderId: id,
+        description: `UNAUTHORIZED: User ${decoded.userId} (role: ${decoded.role}) attempted action '${action}' on order ${id}`,
+        source: 'API',
+      });
+    } catch { /* non-blocking */ }
+    await resetRLSContext();
+    return NextResponse.json(
+      { success: false, error: `Role '${decoded.role}' is not permitted to perform action '${action}' on orders` },
+      { status: 403 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
-    const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get('action');
     const body = await request.json();
 
     switch (action) {
       case 'confirm-payment':
-        return handleConfirmPayment(id, body);
+        return handleConfirmPayment(id, body, decoded);
       case 'accept':
-        return handleAccept(id, body);
+        return handleAccept(id, body, decoded);
       case 'reject':
-        return handleReject(id, body);
+        return handleReject(id, body, decoded);
       case 'preparing':
-        return handlePreparing(id, body);
+        return handlePreparing(id, body, decoded);
       case 'ready':
-        return handleReady(id, body);
+        return handleReady(id, body, decoded);
       case 'pickup':
-        return handlePickup(id, body);
+        return handlePickup(id, body, decoded);
       case 'deliver':
-        return handleDeliver(id, body);
+        return handleDeliver(id, body, decoded);
       case 'cancel':
-        return handleCancel(id, body);
+        return handleCancel(id, body, decoded);
       default:
         return errorResponse('Invalid action. Use: confirm-payment, accept, reject, preparing, ready, pickup, deliver, or cancel');
     }
@@ -198,7 +268,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 /**
  * Handle payment confirmation - creates KOT, notifies merchant and client
  */
-async function handleConfirmPayment(orderId: string, body: Record<string, unknown>) {
+async function handleConfirmPayment(orderId: string, body: Record<string, unknown>, decoded: { userId: string; role: string }) {
   const validatedData = confirmPaymentSchema.parse(body);
 
   const order = await db.order.findUnique({
@@ -302,7 +372,7 @@ async function handleConfirmPayment(orderId: string, body: Record<string, unknow
 /**
  * Handle merchant accepting order
  */
-async function handleAccept(orderId: string, body: Record<string, unknown>) {
+async function handleAccept(orderId: string, body: Record<string, unknown>, decoded: { userId: string; role: string }) {
   const validatedData = acceptOrderSchema.parse(body);
 
   const order = await db.order.findUnique({
@@ -371,7 +441,7 @@ async function handleAccept(orderId: string, body: Record<string, unknown>) {
 /**
  * Handle merchant rejecting order
  */
-async function handleReject(orderId: string, body: Record<string, unknown>) {
+async function handleReject(orderId: string, body: Record<string, unknown>, decoded: { userId: string; role: string }) {
   const validatedData = rejectOrderSchema.parse(body);
 
   const order = await db.order.findUnique({
@@ -435,7 +505,7 @@ async function handleReject(orderId: string, body: Record<string, unknown>) {
 /**
  * Handle order starting preparation
  */
-async function handlePreparing(orderId: string, body: Record<string, unknown>) {
+async function handlePreparing(orderId: string, body: Record<string, unknown>, decoded: { userId: string; role: string }) {
   const order = await db.order.findUnique({
     where: { id: orderId },
     include: { kot: true },
@@ -499,7 +569,7 @@ async function handlePreparing(orderId: string, body: Record<string, unknown>) {
 /**
  * Handle order ready for pickup - creates FOOD_DELIVERY task and dispatches rider
  */
-async function handleReady(orderId: string, body: Record<string, unknown>) {
+async function handleReady(orderId: string, body: Record<string, unknown>, decoded: { userId: string; role: string }) {
   const validatedData = readySchema.parse(body);
 
   const order = await db.order.findUnique({
@@ -680,7 +750,7 @@ async function handleReady(orderId: string, body: Record<string, unknown>) {
 /**
  * Handle rider pickup - updates both order and task
  */
-async function handlePickup(orderId: string, body: Record<string, unknown>) {
+async function handlePickup(orderId: string, body: Record<string, unknown>, decoded: { userId: string; role: string }) {
   const validatedData = pickupSchema.parse(body || {});
 
   const order = await db.order.findUnique({
@@ -752,7 +822,7 @@ async function handlePickup(orderId: string, body: Record<string, unknown>) {
 /**
  * Handle delivery confirmation - updates both order and task
  */
-async function handleDeliver(orderId: string, body: Record<string, unknown>) {
+async function handleDeliver(orderId: string, body: Record<string, unknown>, decoded: { userId: string; role: string }) {
   const validatedData = deliverSchema.parse(body || {});
 
   const order = await db.order.findUnique({
@@ -824,7 +894,7 @@ async function handleDeliver(orderId: string, body: Record<string, unknown>) {
 /**
  * Handle order cancellation by customer
  */
-async function handleCancel(orderId: string, body: Record<string, unknown>) {
+async function handleCancel(orderId: string, body: Record<string, unknown>, decoded: { userId: string; role: string }) {
   const cancelSchema = z.object({
     reason: z.string().min(3, 'Cancellation reason is required'),
     cancelledBy: z.enum(['CUSTOMER', 'MERCHANT', 'SYSTEM']).default('CUSTOMER'),

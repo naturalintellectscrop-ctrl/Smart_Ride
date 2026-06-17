@@ -6,15 +6,22 @@ This document outlines all the fixes applied to the Google Sign-In (OAuth) authe
 
 ## Issues Found & Fixed
 
-### 1. **Android Client ID Not Explicitly Set**
-**Problem:** Android's `androidClientId` was not being configured, only the web client ID.
-**Fix:** Added explicit `androidClientId` configuration in `google.ts`:
+### 1. **Android `androidClientId` Was Being Passed Explicitly (CAUSED DEVELOPER_ERROR)**
+**Problem (old behavior):** The code passed `androidClientId` explicitly in `GoogleSignin.configure()`. This OVERRRODE the library's runtime auto-detection of the correct Android OAuth client from `google-services.json` based on the APK signing certificate — causing `DEVELOPER_ERROR` whenever the hardcoded client ID didn't match the actual signing cert (e.g. debug vs release build, or EAS build vs local build).
+
+**Fix (current behavior):** `androidClientId` is INTENTIONALLY NOT passed. The library auto-resolves the correct Android OAuth client from `google-services.json` at runtime based on the APK signing certificate. Both debug and upload keystore SHA-1 fingerprints are registered in `google-services.json`, so the library can match either.
+
+**Code reference:** `expo-app/src/config/google.ts:88-93`
 ```typescript
-if (Platform.OS === 'android') {
-  config.androidClientId = GOOGLE_CLIENT_IDS.androidClientId;
-}
+// ANDROID: DO NOT set androidClientId here!
+// The library auto-resolves the correct Android OAuth client from
+// google-services.json based on the APK signing certificate at runtime.
+// Passing androidClientId explicitly overrides this and causes
+// DEVELOPER_ERROR when it doesn't match the actual signing cert.
+// See: https://github.com/react-native-google-signin/google-signin/issues/917
 ```
-**Impact:** Ensures Android devices properly authenticate with Google Play Services.
+
+**Impact:** Eliminates `DEVELOPER_ERROR` across debug, release, and EAS builds. The same code path works regardless of which keystore signed the APK.
 
 ---
 
@@ -116,7 +123,8 @@ export function resetGoogleSignInConfig(): void {
 ## File Changes
 
 ### `src/config/google.ts`
-- Added platform-specific client ID configuration
+- INTENTIONALLY OMITS `androidClientId` from `configure()` (the actual fix for DEVELOPER_ERROR)
+- Passes `webClientId` (type-3 web OAuth client) — required for backend token verification
 - Added `isGoogleSignInConfigured()` function
 - Added `resetGoogleSignInConfig()` function for testing
 - Improved logging with platform information
@@ -165,8 +173,10 @@ export function resetGoogleSignInConfig(): void {
      "googleServicesFile": "./google-services.json"
    }
    ```
-3. Ensure Google Play Services are installed on test device
-4. Run: `eas build --platform android` or `expo run:android`
+3. **DO NOT pass `androidClientId` in `configure()`** — let the library auto-resolve from `google-services.json` at runtime (see fix #1 above)
+4. Ensure both debug + upload keystore SHA-1 fingerprints are registered in `google-services.json`
+5. Ensure Google Play Services are installed on test device
+6. Run: `eas build --platform android` or `expo run:android`
 
 ---
 
@@ -200,12 +210,16 @@ export function resetGoogleSignInConfig(): void {
 
 No additional environment variables required. All client IDs are hardcoded in `src/config/google.ts`.
 
-**Client IDs (from Firebase Console — updated March 2025):**
-- Web (type 3): `531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com`
-- Android (type 1): `531949209415-oc8o4mfd2hd3l1mbqecdui2jfhrupe56.apps.googleusercontent.com`
+**Client IDs (from Firebase Console — current as of last audit):**
+- Web (type 3, used as `webClientId`): `531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com`
+- Android (type 1, NOT passed in code — auto-resolved from `google-services.json` at runtime): `531949209415-oc8o4mfd2hd3l1mbqecdui2jfhrupe56.apps.googleusercontent.com`
 - iOS (type 2): `531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar.apps.googleusercontent.com`
 
-**Android SHA-1 Fingerprint (debug):** `F2:8C:61:CC:4F:2A:57:00:A0:18:25:57:CF:CB:75:A4:2A:96:0A:E1`
+**Android SHA-1 Fingerprints (both registered in `google-services.json`):**
+- Debug keystore: `F2:8C:61:CC:4F:2A:57:00:A0:18:25:57:CF:CB:75:A4:2A:96:0A:E1`
+- Upload keystore (`expo-app/keystores/smartride-upload.keystore`): `98:EA:9B:4B:18:47:E1:CA:61:A0:49:10:80:5B:BD:22:DB:9D:78:F4`
+
+**Firebase Project ID:** `smart-ride-774e7` (consistent across `google-services.json`, `GoogleService-Info.plist`, and `.env`)
 
 ---
 
@@ -240,11 +254,12 @@ No additional environment variables required. All client IDs are hardcoded in `s
 ## Common Issues & Solutions
 
 ### DEVELOPER_ERROR on Android
-**Cause:** google-services.json missing or app package name mismatch
-**Solution:** 
-1. Download fresh `google-services.json` from Firebase Console
-2. Verify package name matches: `ug.smartride.app`
-3. Rebuild app
+**Cause (historical):** `androidClientId` was being passed explicitly to `GoogleSignin.configure()`, overriding the library's runtime auto-detection. The hardcoded client ID didn't match the actual APK signing certificate.
+**Solution (current):**
+1. Ensure `androidClientId` is NOT set in `configure()` — see `expo-app/src/config/google.ts:88-93`.
+2. Verify both debug + upload keystore SHA-1 fingerprints are registered in `google-services.json` (currently: `f28c61cc...` for debug, `98ea9b4b...` for upload).
+3. Verify Android `package` name in `app.json` (`ug.smartride.app`) matches `package_name` in `google-services.json`.
+4. Rebuild app after any `google-services.json` change.
 
 ### Network timeout
 **Cause:** Slow internet connection during sign-in

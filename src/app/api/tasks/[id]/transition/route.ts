@@ -126,12 +126,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // Build transition context
+    // Build transition context.
+    // Map all admin-tier roles (SUPER_ADMIN, OPERATIONS_ADMIN, COMPLIANCE_ADMIN,
+    // FINANCE_ADMIN, ADMIN) to triggeredByType='ADMIN' so the state machine's
+    // role checks accept them. Previously only 'ADMIN' was mapped, which left
+    // SUPER_ADMIN/OPERATIONS_ADMIN/COMPLIANCE_ADMIN/FINANCE_ADMIN falling through
+    // to 'CLIENT' — the state machine then rejected their transitions.
+    const ADMIN_TIER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN'];
+    const triggeredByType: 'RIDER' | 'ADMIN' | 'CLIENT' =
+      user.role === 'RIDER' ? 'RIDER' :
+      ADMIN_TIER_ROLES.includes(user.role) ? 'ADMIN' :
+      'CLIENT';
+
     const context: TransitionContext = {
       userId: user.id,
       riderId,
-      triggeredByType: user.role === 'RIDER' ? 'RIDER' : 
-                        user.role === 'ADMIN' ? 'ADMIN' : 'CLIENT',
+      triggeredByType,
       reason,
       metadata,
       latitude,

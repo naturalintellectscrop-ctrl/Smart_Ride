@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
+import { TaskStatus } from '@prisma/client';
+import {
+  generateTaskNumber,
+  EnhancedTaskStateMachine,
+} from '@/lib/services/enhanced-task-state-machine.service';
+import { DispatchService } from '@/lib/services/dispatch-persistence.service';
+import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
+import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 export async function GET(req: NextRequest) {
   try {
@@ -133,7 +141,89 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json({ success: true, data: ride }, { status: 201 });
+    // ============================================================
+    // AUTO-TRANSITION to MATCHING (mirrors /api/tasks POST).
+    // Previously this endpoint left the task stuck in CREATED, which
+    // meant the dispatch service never picked it up.
+    // ============================================================
+    let matchingRide = ride;
+    try {
+      const transitionResult = await EnhancedTaskStateMachine.transition(
+        ride.id,
+        TaskStatus.MATCHING,
+        { triggeredByType: 'SYSTEM', reason: 'Ride created, starting dispatch' }
+      );
+      if (transitionResult.success && transitionResult.task) {
+        matchingRide = transitionResult.task;
+      } else {
+        console.error(`[Rides] Failed to transition ride ${ride.id} to MATCHING:`, transitionResult.error);
+      }
+    } catch (err) {
+      console.error(`[Rides] Exception transitioning ride ${ride.id} to MATCHING:`, err);
+    }
+
+    // Audit log for ride creation
+    try {
+      await createAuditLog({
+        action: AuditActions.TASK_CREATED,
+        entityType: EntityTypes.TASK,
+        entityId: ride.id,
+        actorType: 'USER',
+        userId: payload.userId,
+        taskId: ride.id,
+        description: `Ride created: ${ride.taskNumber} (${taskType})`,
+      });
+    } catch (auditErr) {
+      console.error('[Rides] Audit log failed (non-blocking):', auditErr);
+    }
+
+    // Notify client about MATCHING status
+    try {
+      await sendTaskUpdateNotification(
+        payload.userId,
+        ride.id,
+        ride.taskNumber,
+        'MATCHING'
+      );
+    } catch (notifErr) {
+      console.error('[Rides] MATCHING notification failed (non-blocking):', notifErr);
+    }
+
+    // Auto-dispatch: find and offer ride to nearest rider (async, non-blocking).
+    // The match starts as PENDING; rider must explicitly accept via
+    // /api/dispatch/[id]/accept — only then does the task transition to ASSIGNED.
+    DispatchService.findAndAssign({
+      taskId: ride.id,
+      taskType,
+      pickupLatitude: pickupLatitude || 0,
+      pickupLongitude: pickupLongitude || 0,
+    }).then(async (result) => {
+      if (result.success && result.match) {
+        try {
+          await createAuditLog({
+            action: AuditActions.DISPATCH_ASSIGNED,
+            entityType: EntityTypes.DISPATCH,
+            entityId: result.match.id,
+            actorType: 'SYSTEM',
+            taskId: ride.id,
+            description: `Dispatch match created for ride ${ride.taskNumber}, awaiting rider acceptance`,
+          });
+        } catch {}
+      } else if (result.noRidersAvailable) {
+        // No riders available - transition to SEARCHING
+        try {
+          await EnhancedTaskStateMachine.transition(
+            ride.id,
+            TaskStatus.SEARCHING,
+            { triggeredByType: 'SYSTEM', reason: 'No riders available, continuing search' }
+          );
+        } catch {}
+      }
+    }).catch((error) => {
+      console.error('[Rides] Auto-dispatch error (non-blocking):', error);
+    });
+
+    return NextResponse.json({ success: true, data: matchingRide }, { status: 201 });
   } catch (error) {
     console.error('Rides POST error:', error);
     return NextResponse.json(

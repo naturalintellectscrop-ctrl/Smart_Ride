@@ -38,6 +38,11 @@ export default function ForgotPasswordScreen() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  // Animation swap state — switches form wrapper to plain View after entrance
+  // animation completes to prevent Animated.View transforms from interfering
+  // with TextInput cursor on Android (pattern proven in register.tsx).
+  const [animationDone, setAnimationDone] = useState(false);
+
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -58,7 +63,11 @@ export default function ForgotPasswordScreen() {
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-    ]).start();
+    ]).start(() => {
+      // After entrance animation completes, swap form wrapper to plain View
+      // to prevent Animated.View transforms from causing cursor jitter on Android.
+      setAnimationDone(true);
+    });
 
     // Logo floating animation
     const logoLoop = Animated.loop(
@@ -186,83 +195,152 @@ export default function ForgotPasswordScreen() {
           </GlowHeader>
         </Animated.View>
 
-        {/* Form Card */}
-        <Animated.View 
-          style={[
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          <GlassCard variant="elevated" padding={24} borderRadius={24} style={styles.formCard}>
-            {success ? (
-              /* Success State */
-              <View style={styles.successContainer}>
-                <View style={styles.successIconContainer}>
-                  <Ionicons name="checkmark-circle" size={36} color={COLORS.success} />
-                </View>
-                <Text style={styles.successTitle}>Check Your Email</Text>
-                <Text style={styles.successMessage}>
-                  If an account with that email exists, a reset link has been sent.
-                </Text>
-                <Text style={styles.successHint}>
-                  Didn't receive the email? Check your spam folder.
-                </Text>
-                <GradientButton
-                  title="Back to Login"
-                  onPress={() => router.replace('/auth/login')}
-                  variant="primary"
-                  size="md"
-                  style={{ marginTop: 8 }}
-                />
-              </View>
-            ) : (
-              /* Forgot Password Form */
-              <>
-                {/* Info Banner */}
-                <View style={styles.infoContainer}>
-                  <Ionicons name="key-outline" size={18} color={COLORS.primary} />
-                  <Text style={styles.infoText}>
-                    We'll send a password reset link to your registered email address
-                  </Text>
-                </View>
-
-                {error && (
-                  <View style={styles.errorContainer}>
-                    <Ionicons name="alert-circle" size={16} color={COLORS.error} />
-                    <Text style={styles.errorText}>{error}</Text>
+        {/* Form Card — Animated.View swapped to plain View after entrance animation
+            completes to prevent transforms from interfering with TextInput cursor on Android. */}
+        {animationDone ? (
+          <View>
+            <GlassCard variant="elevated" padding={24} borderRadius={24} style={styles.formCard}>
+              {success ? (
+                /* Success State */
+                <View style={styles.successContainer}>
+                  <View style={styles.successIconContainer}>
+                    <Ionicons name="checkmark-circle" size={36} color={COLORS.success} />
                   </View>
-                )}
+                  <Text style={styles.successTitle}>Check Your Email</Text>
+                  <Text style={styles.successMessage}>
+                    If an account with that email exists, a reset link has been sent.
+                  </Text>
+                  <Text style={styles.successHint}>
+                    Didn't receive the email? Check your spam folder.
+                  </Text>
+                  <GradientButton
+                    title="Back to Login"
+                    onPress={() => router.replace('/auth/login')}
+                    variant="primary"
+                    size="md"
+                    style={{ marginTop: 8 }}
+                  />
+                </View>
+              ) : (
+                /* Forgot Password Form */
+                <>
+                  {/* Info Banner */}
+                  <View style={styles.infoContainer}>
+                    <Ionicons name="key-outline" size={18} color={COLORS.primary} />
+                    <Text style={styles.infoText}>
+                      We'll send a password reset link to your registered email address
+                    </Text>
+                  </View>
 
-                {/* Email Input */}
-                <IconInput
-                  label="Email Address"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    if (error) setError(null);
-                  }}
-                  icon="mail-outline"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
+                  <View style={[styles.errorContainer, !error && styles.errorHidden]}>
+                    <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+                    <Text style={styles.errorText}>{error || ''}</Text>
+                  </View>
 
-                {/* Submit Button */}
-                <GradientButton
-                  title="Send Reset Link"
-                  onPress={handleSubmit}
-                  variant="primary"
-                  loading={isLoading}
-                  disabled={isLoading}
-                  size="lg"
-                />
-              </>
-            )}
-          </GlassCard>
-        </Animated.View>
+                  {/* Email Input */}
+                  <IconInput
+                    label="Email Address"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      if (error) setError(null);
+                    }}
+                    icon="mail-outline"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                  />
+
+                  {/* Submit Button */}
+                  <GradientButton
+                    title="Send Reset Link"
+                    onPress={handleSubmit}
+                    variant="primary"
+                    loading={isLoading}
+                    disabled={isLoading}
+                    size="lg"
+                  />
+                </>
+              )}
+            </GlassCard>
+          </View>
+        ) : (
+          <Animated.View 
+            style={[
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }
+            ]}
+          >
+            <GlassCard variant="elevated" padding={24} borderRadius={24} style={styles.formCard}>
+              {success ? (
+                /* Success State */
+                <View style={styles.successContainer}>
+                  <View style={styles.successIconContainer}>
+                    <Ionicons name="checkmark-circle" size={36} color={COLORS.success} />
+                  </View>
+                  <Text style={styles.successTitle}>Check Your Email</Text>
+                  <Text style={styles.successMessage}>
+                    If an account with that email exists, a reset link has been sent.
+                  </Text>
+                  <Text style={styles.successHint}>
+                    Didn't receive the email? Check your spam folder.
+                  </Text>
+                  <GradientButton
+                    title="Back to Login"
+                    onPress={() => router.replace('/auth/login')}
+                    variant="primary"
+                    size="md"
+                    style={{ marginTop: 8 }}
+                  />
+                </View>
+              ) : (
+                /* Forgot Password Form */
+                <>
+                  {/* Info Banner */}
+                  <View style={styles.infoContainer}>
+                    <Ionicons name="key-outline" size={18} color={COLORS.primary} />
+                    <Text style={styles.infoText}>
+                      We'll send a password reset link to your registered email address
+                    </Text>
+                  </View>
+
+                  <View style={[styles.errorContainer, !error && styles.errorHidden]}>
+                    <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+                    <Text style={styles.errorText}>{error || ''}</Text>
+                  </View>
+
+                  {/* Email Input */}
+                  <IconInput
+                    label="Email Address"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      if (error) setError(null);
+                    }}
+                    icon="mail-outline"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={!isLoading}
+                  />
+
+                  {/* Submit Button */}
+                  <GradientButton
+                    title="Send Reset Link"
+                    onPress={handleSubmit}
+                    variant="primary"
+                    loading={isLoading}
+                    disabled={isLoading}
+                    size="lg"
+                  />
+                </>
+              )}
+            </GlassCard>
+          </Animated.View>
+        )}
 
         {/* Back to Login Link */}
         {!success && (
@@ -392,6 +470,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  // Always-rendered error container — zeroed-out style applied when no error
+  // so the container occupies no height, preventing layout shift on keystroke
+  // (which would cause Android cursor jitter).
+  errorHidden: {
+    opacity: 0,
+    height: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    borderWidth: 0,
+    overflow: 'hidden',
   },
   errorText: {
     color: COLORS.error,

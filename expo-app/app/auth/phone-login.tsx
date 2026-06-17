@@ -203,13 +203,11 @@ export default function PhoneLoginScreen() {
 
         {/* Phone Input Card */}
         <View style={styles.inputSection}>
-          {/* Error Message */}
-          {error && (
-            <View style={styles.errorContainer}>
-              <Ionicons name="alert-circle" size={18} color={COLORS.error} />
-              <Text style={styles.errorText}>{error}</Text>
-            </View>
-          )}
+          {/* Error Message — always rendered to prevent layout shift (cursor jump) */}
+          <View style={[styles.errorContainer, !error && styles.errorHidden]}>
+            <Ionicons name="alert-circle" size={18} color={COLORS.error} />
+            <Text style={styles.errorText}>{error || ''}</Text>
+          </View>
 
           {/* Phone Input Container */}
           <View
@@ -400,6 +398,19 @@ const styles = StyleSheet.create({
     padding: SPACING.md,
     marginBottom: SPACING.md,
     gap: SPACING.sm,
+  },
+  // Always-rendered error container — zeroed-out style applied when no error
+  // so the container occupies no height, preventing layout shift on keystroke
+  // (which would cause Android cursor jitter).
+  errorHidden: {
+    opacity: 0,
+    height: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    borderLeftWidth: 0,
+    overflow: 'hidden',
   },
 
   errorText: {

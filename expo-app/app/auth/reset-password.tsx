@@ -54,6 +54,11 @@ export default function ResetPasswordScreen() {
   const [success, setSuccess] = useState(false);
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
 
+  // Animation swap state — switches form wrapper to plain View after entrance
+  // animation completes to prevent Animated.View transforms from interfering
+  // with TextInput cursor on Android (pattern proven in register.tsx).
+  const [animationDone, setAnimationDone] = useState(false);
+
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -82,7 +87,11 @@ export default function ResetPasswordScreen() {
         easing: Easing.out(Easing.cubic),
         useNativeDriver: true,
       }),
-    ]).start();
+    ]).start(() => {
+      // After entrance animation completes, swap form wrapper to plain View
+      // to prevent Animated.View transforms from causing cursor jitter on Android.
+      setAnimationDone(true);
+    });
 
     // Logo floating animation
     const logoLoop = Animated.loop(
@@ -241,12 +250,10 @@ export default function ResetPasswordScreen() {
           Create a strong password for your account
         </Text>
 
-        {error && (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
+        <View style={[styles.errorContainer, !error && styles.errorHidden]}>
+          <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
+          <Text style={styles.errorText}>{error || ''}</Text>
+        </View>
 
         {/* New Password Input */}
         <View style={styles.inputGroup}>
@@ -401,18 +408,25 @@ export default function ResetPasswordScreen() {
           </Text>
         </Animated.View>
 
-        {/* Form Card */}
-        <Animated.View 
-          style={[
-            styles.formCard,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          {renderContent()}
-        </Animated.View>
+        {/* Form Card — Animated.View swapped to plain View after entrance animation
+            completes to prevent transforms from interfering with TextInput cursor on Android. */}
+        {animationDone ? (
+          <View style={styles.formCard}>
+            {renderContent()}
+          </View>
+        ) : (
+          <Animated.View 
+            style={[
+              styles.formCard,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              }
+            ]}
+          >
+            {renderContent()}
+          </Animated.View>
+        )}
 
         {/* Back to Login Link */}
         {!success && (
@@ -578,6 +592,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  // Always-rendered error container — zeroed-out style applied when no error
+  // so the container occupies no height, preventing layout shift on keystroke
+  // (which would cause Android cursor jitter).
+  errorHidden: {
+    opacity: 0,
+    height: 0,
+    paddingTop: 0,
+    paddingBottom: 0,
+    marginTop: 0,
+    marginBottom: 0,
+    borderWidth: 0,
+    overflow: 'hidden',
   },
   errorIcon: {
     fontSize: 14,

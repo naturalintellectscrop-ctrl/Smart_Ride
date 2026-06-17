@@ -370,8 +370,13 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
       },
     });
     
-    // In production, send OTP via email/SMS
-    console.log(`Password reset OTP for ${email}: ${otp}`);
+    // In production, send OTP via email/SMS.
+    // SECURITY: Only log OTP in non-production environments (dev/test).
+    // Previously this was an unconditional console.log — in production it
+    // would leak OTPs to stdout (visible in Vercel/Supabase logs).
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`[DEV] Password reset OTP for ${email}: ${otp}`);
+    }
     
     // SECURITY: Only return OTP in development with explicit opt-in
     const isDevelopment = process.env.NODE_ENV !== 'production';
