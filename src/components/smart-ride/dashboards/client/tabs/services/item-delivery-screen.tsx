@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -250,6 +250,21 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
   const [matchedProvider, setMatchedProvider] = useState<DeliveryProvider | null>(null);
   const [showSOS, setShowSOS] = useState(false);
   
+  // Ref for the task-polling interval (real rider matching). Replaces the
+  // previous fake setTimeout that hardcoded "David Mukasa" as the courier.
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clear any active polling interval when the component unmounts to avoid
+  // setState-after-unmount and stray network requests.
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, []);
+  
   // API hooks
   const { createTask, loading: creatingTask } = useCreateTask();
   const { createDispatch, loading: dispatching } = useCreateDispatch();
@@ -331,32 +346,75 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
       const result = await createTask(taskData);
       
       if (result.success && result.data) {
+        const taskId = result.data.id;
         setCurrentTask({
-          id: result.data.id,
+          id: taskId,
           taskNumber: result.data.taskNumber,
           status: result.data.status,
         });
-        
-        await createDispatch(
-          result.data.id,
+
+        // Trigger backend dispatch matching (async). Errors here are
+        // non-fatal — polling the task below is the source of truth for
+        // rider assignment.
+        createDispatch(
+          taskId,
           'ITEM_DELIVERY',
           { latitude: pickup.latitude, longitude: pickup.longitude }
-        );
-        
-        // Simulate matching
-        setTimeout(() => {
-          setMatchedProvider({
-            id: 'rider_delivery_001',
-            name: 'David Mukasa',
-            rating: 4.9,
-            deliveries: 567,
-            vehicle: 'Toyota Probox',
-            plateNumber: 'UBD 456X',
-            phone: '+256 701 234 567',
-            eta: 5,
-          });
-          setStep('matched');
-        }, 2000 + Math.random() * 2000);
+        ).catch(() => { /* polling will detect no-match */ });
+
+        // REAL RIDER MATCHING: poll the task until a rider is assigned
+        // (or the request expires / times out). This replaces the previous
+        // hardcoded "David Mukasa" fake-rider setTimeout.
+        const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+        const startTime = Date.now();
+        const MAX_POLL_MS = 120000; // give dispatch up to 2 minutes
+
+        // Clear any previous interval before starting a new one.
+        if (pollingRef.current) clearInterval(pollingRef.current);
+
+        pollingRef.current = setInterval(async () => {
+          try {
+            const res = await fetch(`/api/tasks/${taskId}`, {
+              headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+            });
+            if (!res.ok) return;
+            const json = await res.json();
+            const task = json?.data;
+            if (!task) return;
+
+            const assigned = task.status === 'ASSIGNED' || task.status === 'ACCEPTED' || task.status === 'EN_ROUTE_PICKUP';
+            const failed = task.status === 'CANCELLED' || task.status === 'FAILED' || task.status === 'EXPIRED';
+
+            if (assigned && task.rider) {
+              // Real rider assigned — populate from actual task.rider data.
+              if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+              setMatchedProvider({
+                id: task.rider.id,
+                name: task.rider.fullName || 'Courier',
+                // The task include exposes id/fullName/phone/riderRole/coords
+                // but not rating/deliveries/plate. Use sane defaults; the
+                // backend can be extended later to include these.
+                rating: 4.8,
+                deliveries: 0,
+                vehicle: task.rider.riderRole === 'SMART_BODA_RIDER' ? 'Motorcycle' : 'Van',
+                plateNumber: '—',
+                phone: task.rider.phone || '',
+                eta: 5,
+              });
+              setStep('matched');
+            } else if (failed) {
+              if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+              setStep('confirmation');
+              alert('No courier was available for your delivery. Please try again.');
+            } else if (Date.now() - startTime > MAX_POLL_MS) {
+              if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+              setStep('confirmation');
+              alert('No courier was available within 2 minutes. Please try again.');
+            }
+          } catch {
+            // Transient network error — keep polling until timeout.
+          }
+        }, 5000);
       } else {
         setStep('confirmation');
         alert('Failed to create delivery request. Please try again.');
@@ -378,11 +436,11 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
     pickupAddress: pickup?.address || 'Pickup',
     dropoffAddress: dropoff?.address || 'Destination',
     riderInfo: {
-      name: matchedProvider?.name || 'Driver',
-      phone: matchedProvider?.phone || '+256 700 000 000',
-      vehicleMake: 'Toyota',
-      vehicleModel: matchedProvider?.vehicle || 'Probox',
-      plateNumber: matchedProvider?.plateNumber || 'UBD 456X',
+      name: matchedProvider?.name || 'Courier',
+      phone: matchedProvider?.phone || '',
+      vehicleMake: matchedProvider?.vehicle || '',
+      vehicleModel: matchedProvider?.vehicle || '',
+      plateNumber: matchedProvider?.plateNumber || '',
     },
   } : undefined;
 
@@ -563,7 +621,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                 <div className="flex items-center gap-2 mt-1">
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                    <span className="text-sm font-medium text-[#191c1d]">{matchedProvider?.rating || 4.9}</span>
+                    <span className="text-sm font-medium text-[#191c1d]">{matchedProvider?.rating ?? '—'}</span>
                   </div>
                   <span className="text-[#bec9bf]">•</span>
                   <span className="text-sm text-[#6f7a71]">{matchedProvider?.deliveries || 0} deliveries</span>
@@ -586,7 +644,7 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[#6f7a71]">Plate</p>
-                  <p className="font-medium text-[#191c1d]">{matchedProvider?.plateNumber || 'UBD 456X'}</p>
+                  <p className="font-medium text-[#191c1d]">{matchedProvider?.plateNumber || '—'}</p>
                 </div>
               </div>
             </div>

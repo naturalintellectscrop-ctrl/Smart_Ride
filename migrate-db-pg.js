@@ -1,12 +1,18 @@
 /**
- * Database Migration: Railway → Render
+ * Database Migration: Railway → Supabase
  * Using node-postgres (pg) for direct SQL operations
  */
 
 const { Client } = require('pg');
 
-const RAILWAY_URL = "postgresql://postgres:yGphbfshRKrZSMLNPGCwJXGckrTOalVL@maglev.proxy.rlwy.net:55740/railway";
-const RENDER_URL = "postgresql://smart_ride_db_user:UVJ2Gd3Nn4BWnQhyXqMIFrNMHJJUThBQ@dpg-d7ficoreo5us73eu1oi0-a.frankfurt-postgres.render.com/smart_ride_db";
+const RAILWAY_URL = process.env.RAILWAY_URL || "postgresql://postgres:yGphbfshRKrZSMLNPGCwJXGckrTOalVL@maglev.proxy.rlwy.net:55740/railway";
+// Target = Supabase. Read from env — never hardcode credentials.
+const SUPABASE_URL = process.env.DATABASE_URL;
+
+if (!SUPABASE_URL) {
+  console.error('ERROR: DATABASE_URL env var must be set to the Supabase connection string.');
+  process.exit(1);
+}
 
 // Tables in dependency order
 const TABLES = [
@@ -22,11 +28,11 @@ const TABLES = [
 ];
 
 async function migrate() {
-  console.log('🚀 Starting Database Migration: Railway → Render');
+  console.log('🚀 Starting Database Migration: Railway → Supabase');
   console.log('='.repeat(60));
   
   const source = new Client({ connectionString: RAILWAY_URL, ssl: { rejectUnauthorized: false } });
-  const target = new Client({ connectionString: RENDER_URL, ssl: { rejectUnauthorized: false } });
+  const target = new Client({ connectionString: SUPABASE_URL, ssl: { rejectUnauthorized: false } });
   
   try {
     // Connect
@@ -34,7 +40,7 @@ async function migrate() {
     await source.connect();
     console.log('  ✅ Connected to Railway');
     await target.connect();
-    console.log('  ✅ Connected to Render');
+    console.log('  ✅ Connected to Supabase');
     
     // Analyze source
     console.log('\n📊 Analyzing source database...');

@@ -1,14 +1,21 @@
 /**
- * Database Migration Script: Railway → Render
- * 
- * This script migrates all data from Railway PostgreSQL to Render PostgreSQL
+ * Database Migration Script: Railway → Supabase
+ *
+ * This script migrates all data from Railway PostgreSQL to Supabase PostgreSQL.
+ * Target connection string is read from the DATABASE_URL env var (Supabase).
  */
 
 const { PrismaClient } = require('@prisma/client');
 
-// Database URLs
-const RAILWAY_URL = "postgresql://postgres:yGphbfshRKrZSMLNPGCwJXGckrTOalVL@maglev.proxy.rlwy.net:55740/railway";
-const RENDER_URL = "postgresql://smart_ride_db_user:UVJ2Gd3Nn4BWnQhyXqMIFrNMHJJUThBQ@dpg-d7ficoreo5us73eu1oi0-a.frankfurt-postgres.render.com/smart_ride_db";
+// Source database (legacy Railway). Override with RAILWAY_URL env var if needed.
+const RAILWAY_URL = process.env.RAILWAY_URL || "postgresql://postgres:yGphbfshRKrZSMLNPGCwJXGckrTOalVL@maglev.proxy.rlwy.net:55740/railway";
+// Target database = Supabase. Read from env — never hardcode credentials.
+const SUPABASE_URL = process.env.DATABASE_URL;
+
+if (!SUPABASE_URL) {
+  console.error('ERROR: DATABASE_URL env var must be set to the Supabase connection string.');
+  process.exit(1);
+}
 
 // Create Prisma clients for both databases
 const sourcePrisma = new PrismaClient({
@@ -19,7 +26,7 @@ const sourcePrisma = new PrismaClient({
 
 const targetPrisma = new PrismaClient({
   datasources: {
-    db: { url: RENDER_URL }
+    db: { url: SUPABASE_URL }
   }
 });
 
@@ -97,10 +104,10 @@ async function migrateTable(modelName) {
 }
 
 async function main() {
-  console.log('🚀 Starting Database Migration: Railway → Render');
+  console.log('🚀 Starting Database Migration: Railway → Supabase');
   console.log('='.repeat(50));
   console.log(`Source: Railway (${RAILWAY_URL.split('@')[1]?.split('/')[0] || 'railway'})`);
-  console.log(`Target: Render (${RENDER_URL.split('@')[1]?.split('/')[0] || 'render'})`);
+  console.log(`Target: Supabase (${SUPABASE_URL.split('@')[1]?.split('/')[0] || 'supabase'})`);
   console.log('='.repeat(50));
   
   const results = [];
@@ -118,9 +125,9 @@ async function main() {
   
   try {
     await targetPrisma.$connect();
-    console.log('  ✅ Connected to Render (target)');
+    console.log('  ✅ Connected to Supabase (target)');
   } catch (error) {
-    console.error('  ❌ Failed to connect to Render:', error.message);
+    console.error('  ❌ Failed to connect to Supabase:', error.message);
     process.exit(1);
   }
   

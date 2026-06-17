@@ -1,15 +1,21 @@
 /**
- * Database Migration Script: Railway → Render
- * 
- * This script migrates all data from Railway PostgreSQL to Render PostgreSQL
+ * Database Migration Script: Railway → Supabase
+ *
+ * This script migrates all data from Railway PostgreSQL to Supabase PostgreSQL
  * Using raw SQL for better performance and reliability
  */
 
 const { PrismaClient } = require('@prisma/client');
 
 // Database URLs
-const RAILWAY_URL = "postgresql://postgres:yGphbfshRKrZSMLNPGCwJXGckrTOalVL@maglev.proxy.rlwy.net:55740/railway";
-const RENDER_URL = "postgresql://smart_ride_db_user:UVJ2Gd3Nn4BWnQhyXqMIFrNMHJJUThBQ@dpg-d7ficoreo5us73eu1oi0-a.frankfurt-postgres.render.com/smart_ride_db";
+const RAILWAY_URL = process.env.RAILWAY_URL || "postgresql://postgres:yGphbfshRKrZSMLNPGCwJXGckrTOalVL@maglev.proxy.rlwy.net:55740/railway";
+// Target = Supabase. Read from env — never hardcode credentials.
+const SUPABASE_URL = process.env.DATABASE_URL;
+
+if (!SUPABASE_URL) {
+  console.error('ERROR: DATABASE_URL env var must be set to the Supabase connection string.');
+  process.exit(1);
+}
 
 // Table names to migrate (in order of foreign key dependencies)
 const TABLES = [
@@ -57,7 +63,7 @@ const TABLES = [
 ];
 
 async function migrateWithPrismaClients() {
-  console.log('🚀 Starting Database Migration: Railway → Render');
+  console.log('🚀 Starting Database Migration: Railway → Supabase');
   console.log('='.repeat(60));
   
   // Create two Prisma instances
@@ -66,7 +72,7 @@ async function migrateWithPrismaClients() {
   });
   
   const targetPrisma = new PrismaClient({
-    datasources: { db: { url: RENDER_URL } }
+    datasources: { db: { url: SUPABASE_URL } }
   });
   
   try {
@@ -77,7 +83,7 @@ async function migrateWithPrismaClients() {
     console.log('  ✅ Connected to Railway (source)');
     
     await targetPrisma.$queryRaw`SELECT 1`;
-    console.log('  ✅ Connected to Render (target)');
+    console.log('  ✅ Connected to Supabase (target)');
     
     // Get table row counts from source
     console.log('\n📊 Analyzing source database...');

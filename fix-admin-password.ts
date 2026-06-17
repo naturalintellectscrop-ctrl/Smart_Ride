@@ -3,8 +3,11 @@ import bcrypt from 'bcryptjs';
 
 const { PrismaClient } = pkg;
 
+// Database is hosted on Supabase (PostgreSQL). Read the connection string from
+// the environment — never hardcode credentials. Set DATABASE_URL in your shell
+// or .env before running this script.
 const prisma = new PrismaClient({
-  datasourceUrl: 'postgresql://smart_ride_db_user:UVJ2Gd3Nn4BWnQhyXqMIFrNMHJJUThBQ@dpg-d7ficoreo5us73eu1oi0-a.frankfurt-postgres.render.com/smart_ride_db'
+  datasourceUrl: process.env.DATABASE_URL,
 });
 
 async function main() {
