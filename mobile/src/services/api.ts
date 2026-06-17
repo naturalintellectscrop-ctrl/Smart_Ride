@@ -79,9 +79,21 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
-        return { success: false, error: data.error || 'Request failed' };
+        return { success: false, error: data?.error || 'Request failed' };
       }
 
+      // Unwrap the backend response envelope.
+      // The backend wraps ALL responses in { success, data, ... } (see
+      // src/lib/api/response.ts → successResponse / paginatedResponse).
+      // Without unwrapping, callers receive a double-wrapped payload
+      // (response.data = { success, data }) and field access like
+      // response.data.token silently returns undefined — breaking
+      // token persistence, profile loading, and every typed consumer.
+      if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
+        return { success: true, data: (data as any).data };
+      }
+
+      // Fallback for endpoints that return a raw (un-wrapped) payload.
       return { success: true, data };
     } catch (error) {
       return { success: false, error: 'Network error' };
