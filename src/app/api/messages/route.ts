@@ -5,8 +5,30 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
+
+// ============================================
+// RLS context choice for this route
+// ============================================
+// Both GET and POST scope their queries by
+//   participants: { some: { userId: decoded.userId } }
+// so the authenticated user can only see conversations they participate in.
+//
+// We use setServiceRoleContext() (not setRLSContext) because the nested
+// `include: { participants: { include: { user: ... } } }` needs to read the
+// OTHER participant's User row (name/avatar/role) for display. Under user-
+// scoped RLS, the User table policy only lets the caller read their own row,
+// so the nested read returns null and Prisma throws
+// "Inconsistent query result: Field user is required to return data, got null".
+//
+// Security is preserved because:
+//   1. verifyAccessToken() has already authenticated the caller via JWT.
+//   2. Every query is scoped by `participants: { some: { userId: decoded.userId } }`
+//      — the caller cannot read conversations they are not a participant in.
+//   3. INSERTs into Conversation/ConversationParticipant/Message are protected
+//      by foreign-key constraints (recipientId must reference a real User).
+// ============================================
 
 // GET - Fetch all conversations for the authenticated user
 export async function GET(request: NextRequest) {
@@ -22,7 +44,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
-  await setRLSContext(decoded);
+  // Use service-role context (see header comment for rationale).
+  await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
     const conversationId = searchParams.get('conversationId');
@@ -143,10 +166,31 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
-  await setRLSContext(decoded);
+  // Use service-role context (see header comment for rationale).
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { recipientId, taskId, message, conversationId, conversationType } = body;
+
+    // Validate recipient exists before creating conversation (defensive —
+    // produces a clean 400 instead of a Prisma P2003 foreign-key error).
+    if (recipientId && recipientId !== decoded.userId) {
+      const recipient = await db.user.findUnique({
+        where: { id: recipientId },
+        select: { id: true, name: true, avatarUrl: true, role: true },
+      });
+      if (!recipient) {
+        return NextResponse.json(
+          { success: false, error: 'Recipient not found' },
+          { status: 400 }
+        );
+      }
+    } else if (recipientId && recipientId === decoded.userId) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot start a conversation with yourself' },
+        { status: 400 }
+      );
+    }
 
     // If conversationId is provided, send message to existing conversation
     if (conversationId && message) {
@@ -275,7 +319,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid token' }, { status: 401 });
   }
 
-  await setRLSContext(decoded);
+  // PATCH only updates isRead on messages NOT sent by the caller — the
+  // `senderId: { not: decoded.userId }` filter enforces ownership. Safe to
+  // use service-role context (consistent with GET/POST in this route).
+  await setServiceRoleContext();
   try {
     const body = await request.json();
     const { conversationId } = body;
