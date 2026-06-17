@@ -117,13 +117,15 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       let isMerchant = false;
       let isRider = false;
 
-      // Check if user is the merchant
-      if (order.merchantId) {
-        const merchant = await db.merchant.findUnique({
-          where: { id: order.merchantId },
-          select: { userId: true },
-        });
-        isMerchant = merchant?.userId === user.userId;
+      // Check if user is the merchant (only relevant for MERCHANT/PHARMACIST roles).
+      // NOTE: The Merchant model does not have a userId column; merchant staff
+      // linkage is handled via separate MerchantStaff/User tables. For now,
+      // clients and riders are authorised via isClient / isRider below; the
+      // isMerchant branch is a no-op until merchant-staff linkage is wired up.
+      if (order.merchantId && (user.role === 'MERCHANT' || user.role === 'PHARMACIST')) {
+        // Intentionally no-op: merchant.userId does not exist on the schema.
+        // When merchant-staff linkage is added, look up the staff row here.
+        isMerchant = false;
       }
 
       // Check if user is the assigned rider

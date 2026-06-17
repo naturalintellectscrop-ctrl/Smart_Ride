@@ -117,7 +117,8 @@ export async function GET(request: NextRequest) {
 
 // Order creation schema
 const createOrderSchema = z.object({
-  clientId: z.string(),
+  // clientId is OPTIONAL — auto-filled from the auth token to prevent IDOR.
+  clientId: z.string().optional(),
   merchantId: z.string(),
   orderType: z.enum(['FOOD_DELIVERY', 'SHOPPING']),
   items: z.array(z.object({
@@ -162,10 +163,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createOrderSchema.parse(body);
 
-    // SECURITY: IDOR prevention - client must be the authenticated user
-    // Admins can create orders for other users
+    // SECURITY: Auto-fill clientId from the auth token if not provided.
+    // Prevents IDOR — non-admins cannot create orders for other users.
+    const effectiveClientId = validatedData.clientId || user.userId;
     if (!isAdmin(user.role)) {
-      if (validatedData.clientId !== user.userId) {
+      if (validatedData.clientId && validatedData.clientId !== user.userId) {
         return NextResponse.json(
           { success: false, error: 'Cannot create orders for other users' },
           { status: 403 }
@@ -175,7 +177,7 @@ export async function POST(request: NextRequest) {
 
     // Verify client exists
     const client = await db.user.findUnique({
-      where: { id: validatedData.clientId },
+      where: { id: effectiveClientId },
     });
     if (!client) {
       return notFoundResponse('Client');
@@ -198,7 +200,7 @@ export async function POST(request: NextRequest) {
         data: {
           orderNumber: generateOrderNumber(),
           orderType: validatedData.orderType as OrderType,
-          clientId: validatedData.clientId,
+          clientId: effectiveClientId,
           merchantId: validatedData.merchantId,
           status: 'ORDER_CREATED',
           subtotal: validatedData.subtotal,
@@ -237,7 +239,7 @@ export async function POST(request: NextRequest) {
         data: {
           taskNumber: `TSK-${Date.now().toString(36).toUpperCase()}`,
           taskType: 'FOOD_DELIVERY',
-          clientId: validatedData.clientId,
+          clientId: effectiveClientId,
           orderId: order.id,
           status: 'CREATED',
           pickupAddress: merchant.address || merchant.name,
@@ -246,6 +248,12 @@ export async function POST(request: NextRequest) {
           dropoffAddress: validatedData.deliveryAddress,
           dropoffLatitude: validatedData.deliveryLatitude || null,
           dropoffLongitude: validatedData.deliveryLongitude || null,
+          // Task.baseFare is a required Decimal field (no default). The
+          // authoritative fare breakdown lives on the Order; mirror the
+          // subtotal here so the Task row satisfies the schema.
+          baseFare: validatedData.subtotal,
+          deliveryFee: validatedData.deliveryFee,
+          serviceFee: validatedData.serviceFee || 0,
           totalAmount: validatedData.totalAmount,
           paymentMethod: validatedData.paymentMethod,
           itemDescription: `Order ${order.orderNumber} - ${validatedData.items.length} item(s)`,

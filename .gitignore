@@ -91,3 +91,5 @@ smart-ride-mobile/GoogleService-Info.plist
 google-services.json
 design-files/
 upload/
+verify-home-logo.png
+*.verify-screenshot.png

@@ -202,11 +202,13 @@ export async function POST(request: NextRequest) {
     });
 
     // Create Pharmacy Order Ticket (POT)
+    // NOTE: PharmacyOrderTicket schema does not have a pharmacyId column —
+    // the pharmacy is reachable via healthOrder.pharmacyId. We intentionally
+    // omit pharmacyId here.
     await db.pharmacyOrderTicket.create({
       data: {
         potNumber: generatePOTNumber(),
         healthOrderId: order.id,
-        pharmacyId: validatedData.pharmacyId,
         items: JSON.stringify(validatedData.items),
         prescriptionRef: validatedData.prescriptionId || null,
         preparationNotes: validatedData.prescriptionNotes || null,

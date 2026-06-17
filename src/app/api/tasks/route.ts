@@ -123,8 +123,10 @@ export async function GET(request: NextRequest) {
 // Task creation schema
 const createTaskSchema = z.object({
   taskType: z.enum(['SMART_BODA_RIDE', 'SMART_CAR_RIDE', 'FOOD_DELIVERY', 'SHOPPING', 'ITEM_DELIVERY']),
-  clientId: z.string(),
-  
+  // clientId is OPTIONAL in the request — it's auto-filled from the auth token
+  // to prevent IDOR. Admins may override it explicitly.
+  clientId: z.string().optional(),
+
   // Location
   pickupAddress: z.string(),
   pickupLatitude: z.number().optional(),
@@ -132,13 +134,13 @@ const createTaskSchema = z.object({
   dropoffAddress: z.string(),
   dropoffLatitude: z.number().optional(),
   dropoffLongitude: z.number().optional(),
-  
+
   // Distance (calculated or provided)
   distanceKm: z.number(),
-  
+
   // Payment
   paymentMethod: z.enum(['CASH', 'MTN_MOMO', 'AIRTEL_MONEY', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD', 'WALLET']),
-  
+
   // Optional details
   pickupContactName: z.string().optional(),
   pickupContactPhone: z.string().optional(),
@@ -150,7 +152,7 @@ const createTaskSchema = z.object({
   itemWeight: z.number().optional(),
   itemValue: z.number().optional(),
   orderId: z.string().optional(),
-  
+
   // Pricing override (optional)
   customPricing: z.object({
     baseFare: z.number(),
@@ -184,10 +186,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createTaskSchema.parse(body);
 
-    // SECURITY: Prevent IDOR - client must be the authenticated user
-    // Admins can create tasks for other users
+    // SECURITY: Auto-fill clientId from the auth token if not provided.
+    // Prevents IDOR — non-admins cannot create tasks for other users.
+    const effectiveClientId = validatedData.clientId || user.userId;
     if (!isAdmin(user.role)) {
-      if (validatedData.clientId !== user.userId) {
+      if (validatedData.clientId && validatedData.clientId !== user.userId) {
         return NextResponse.json(
           { success: false, error: 'Cannot create tasks for other users' },
           { status: 403 }
@@ -197,7 +200,7 @@ export async function POST(request: NextRequest) {
 
     // Verify client exists
     const client = await db.user.findUnique({
-      where: { id: validatedData.clientId },
+      where: { id: effectiveClientId },
     });
 
     if (!client) {
@@ -216,7 +219,7 @@ export async function POST(request: NextRequest) {
       data: {
         taskNumber: generateTaskNumber(),
         taskType: validatedData.taskType as TaskType,
-        clientId: validatedData.clientId,
+        clientId: effectiveClientId,
         orderId: validatedData.orderId || null,
         status: 'CREATED',
         
@@ -259,7 +262,7 @@ export async function POST(request: NextRequest) {
       entityType: EntityTypes.TASK,
       entityId: task.id,
       actorType: 'USER',
-      userId: validatedData.clientId,
+      userId: effectiveClientId,
       taskId: task.id,
       description: `Task created: ${task.taskNumber} (${validatedData.taskType})`,
     });
@@ -278,7 +281,7 @@ export async function POST(request: NextRequest) {
     // Send MATCHING notification to client
     if (transitionResult.success) {
       await sendTaskUpdateNotification(
-        validatedData.clientId,
+        effectiveClientId,
         task.id,
         task.taskNumber,
         'MATCHING'

@@ -32,7 +32,9 @@ export async function createNotification(input: CreateNotificationInput): Promis
   try {
     const notification = await db.notification.create({
       data: {
-        userId: input.userId,
+        // Use the relation connect syntax — Prisma 6.x is stricter about
+        // relation fields and prefers the connect object over the raw FK.
+        user: { connect: { id: input.userId } },
         type: input.type as NotificationType,
         title: input.title,
         message: input.message,
