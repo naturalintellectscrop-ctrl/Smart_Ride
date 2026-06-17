@@ -2186,3 +2186,358 @@ Stage Summary:
 - Updated production readiness estimate: 6.1/10 → ~8.5/10 (Internal Testing Ready + Closed Beta Ready after Vercel env vars + real SMS/payment gateway).
 - Chat (flow 10 of 17) now PASSES — was the only failing flow in the audit.
 - All changes ready for git commit + push.
+
+---
+Task ID: P1-HANDOFF-VALIDATION
+Agent: Phase 1 Handoff Validation Auditor
+Task: Verify SMART_RIDE_MASTER_HANDOFF.md claims against actual codebase
+
+Work Log:
+- Read worklog.md (last 300 lines), SMART_RIDE_MASTER_HANDOFF.md (full 1387 lines), FRESH_VERIFICATION_AUDIT.md (full 473 lines) for prior context
+- Inventoried project layout: src/app/api/ (~180 route files), expo-app/app/ (~50 screens), src/components/dashboard/ (23 files), supabase/migrations/ (11 files), prisma/schema.prisma (2327 lines)
+- Verified 21 features by reading actual route handlers + mobile screens, NOT trusting handoff claims
+- For each feature, captured file:line evidence (e.g. /api/auth/login/route.ts:97, /api/rides/route.ts:151, /api/orders/route.ts:241, etc.)
+- Cross-checked handoff's 17 production flows against fresh audit's findings (15/17 → 16/17 after migration 009)
+- Confirmed 4 critical bugs from fresh audit (B1 chat RLS, B2 orders PATCH auth, B3 splash assets, H2 rides auto-transition, H3 admin role mapping) — all 4 are now RESOLVED in code:
+  * B1: migration 009 file exists with proper Conversation/Message/HeartbeatLog RLS policies
+  * B2: orders/[id]/route.ts:179-234 now has ACTION_ROLE_MATRIX + JWT verify
+  * B3: splash.png/icon.png/adaptive-icon.png now have distinct MD5 hashes (cf0630be, 1dc002d5, 9cca0ad7) — regenerated post-audit
+  * H2: rides/route.ts:145-163 auto-transitions CREATED → MATCHING via EnhancedTaskStateMachine
+  * H3: tasks/[id]/transition/route.ts:135-139 maps all admin-tier roles to 'ADMIN' triggeredByType
+- Discovered 3 NEW bugs NOT mentioned in handoff:
+  * /api/orders POST hardcodes taskType='FOOD_DELIVERY' for the linked Task even when orderType='SHOPPING' (orders/route.ts:241)
+  * /api/health-orders POST has NO auth check — accepts clientId from body without verifying against auth token (health-orders/route.ts:126)
+  * /api/health-provider/verify POST has NO auth check — accepts adminId from body without requireAdmin guard (health-provider/verify/route.ts:6-12)
+- Confirmed handoff's accurate claims: env vars NOT set (AFRICASTALKING/RESEND/MTN_MOMO/AIRTEL/FLUTTERWAVE/FIREBASE server/AGORA), wallet topup in DEMO_AUTO_COMPLETE mode, Apple Sign-In does NOT do full JWT signature verification (apple/route.ts:80-84 comment), force_complete fails for non-adjacent transitions (admin/task-override/route.ts:422-428), ?action=start dead code still in tasks/[id]/route.ts:513, 12 Stitch screens missing (no onboarding_slides/e_receipt/trip_summary_rating/delivery_confirmation/transaction_details/promotions_rewards/help_center/account_settings/multi_stop_delivery_route/live_rider_matching screens in expo-app/app/)
+- Confirmed handoff's "12 missing Stitch screens" claim is accurate (grep for promotions|loyalty in expo-app/app/ returns no matches)
+- Confirmed support is only external URL link in profile.tsx:213, no in-app help center
+
+Stage Summary:
+- Audited 21 features against actual code; 9 PRODUCTION READY, 7 PARTIAL, 2 BROKEN, 1 UNTESTED, 2 NOT_APPLICABLE_TO_PRODUCTION (promotions/support)
+- 3 NEW critical security/correctness bugs found NOT documented in handoff (orders taskType hardcoding, health-orders no-auth, health-provider verify no-auth)
+- 4 prior critical/high bugs (B1/B2/B3/H2/H3) confirmed FIXED in code — handoff's "FIX-ALL-BUGS round" claims are accurate at the file level
+- Discrepancy count: 6 (3 new bugs undocumented + 3 overstatements of "production ready" for wallet/promotions/support that need external configuration)
+- Critical gaps: health-orders & health-provider/verify have authentication bypass vulnerabilities; orders POST mislabels SHOPPING tasks as FOOD_DELIVERY
+- Recommendation: handoff is ~85% accurate but UNDERSTATES remaining security debt. Master handoff should be amended to flag the 3 new bugs. Phase 2 should prioritize fixing them before any user launch.
+
+---
+Task ID: P3-MOBILE-APP-AUDIT
+Agent: Phase 3 Mobile App Auditor
+Task: Audit every Expo Router screen for production readiness
+
+Work Log:
+- Read worklog.md last 400 lines (P1-HANDOFF-VALIDATION + AUDIT-S7-PRODUCTION-FLOWS + FIX-ALL-BUGS context), SMART_RIDE_MASTER_HANDOFF.md §7 Mobile + §11 Admin, FRESH_VERIFICATION_AUDIT.md §3 Stitch Design.
+- Inventoried 54 .tsx screen files under expo-app/app/ via find (38,249 total lines). NO (onboarding) group route exists; NO app/orders/index.tsx (only cart/merchant/[id]/order-tracking/restaurants); NO app/+not-found.tsx; NO app/+html.tsx; NO expo-router.config.js.
+- Read root app/_layout.tsx (315 lines) — global providers, OfflineBanner, ProviderErrorBoundary, push notif listener, 53 Stack.Screen entries. CRITICAL: NO auth guard at root. Only (tabs)/_layout.tsx guards via <Redirect href="/auth/login" /> when !isAuthenticated (line 23-25).
+- Read app.json (119 lines): splash config (#005f3a), scheme "smartride", iOS CFBundleURLSchemes [smartride, googleusercontent], Android intentFilters ONLY for https://smartrideug.vercel.app/reset-password. NO universal links config for /rides, /orders, /chat, etc.
+- Audited every required screen in the brief:
+  * Splash (app/index.tsx, 453 lines): Always renders CTAs regardless of auth state — does NOT auto-route authenticated users. Login screen has its own checkAuth redirect (login.tsx:74-100), but splash itself does not.
+  * Onboarding (app/(onboarding)/...): DOES NOT EXIST. Stitch onboarding_slides #1 still missing.
+  * Login (auth/login.tsx, 844 lines): Email + Google + Apple. has try/catch on all 3 paths. navigateByRole redirect (line 86-100). Uses animationDone swap pattern (M1 fixed). Solid.
+  * Register (auth/register.tsx, 976 lines): 5-role picker + email + Google. Has try/catch + navigateByRole. Does NOT call Apple sign-in (only login does).
+  * Home (app/(tabs)/index.tsx, 381 lines): 5 services grid + Quick Ride cards. RefreshControl. No skeleton (just immediate render). No error state.
+  * Booking (rider/ride-request.tsx, 1024 lines): Map + vehicle picker + payment tray + fare estimate. Pre-checks !user?.id at line 186 and redirects to /auth/login — but ONLY after user taps "Request Ride", not on screen mount. So an unauth user can fill the whole form before being kicked out.
+  * Tracking (rider/ride-tracking.tsx, 675 lines): Polling (3s/10s) + socket fallback. Rating via Alert.alert with text buttons "★★★★★ (5 stars)" (line 130-140) — NO real trip_summary_rating UI.
+  * Orders (app/(tabs)/orders.tsx, 641 lines): Filter tabs + skeleton + empty state. CRITICAL: loadOrders() catches errors with console.error only (line 74-75) — never surfaces error to user, falls through to "No orders yet" empty state. Compare rides.tsx which DOES surface errors with Retry button.
+  * Profile (app/(tabs)/profile.tsx, 536 lines): Avatar upload, stats, menu items. Settings icon shows Alert "Coming Soon" (line 227). Language also "Coming Soon" (line 206). Help Center is external URL (line 212).
+  * Wallet (app/wallet/index.tsx, 751 lines): Balance + payment methods + transactions. TopUpModal + WithdrawModal. Has error state with retry (line 138-149).
+  * Chat (chat/index.tsx 537 lines, chat/[id].tsx 953 lines): List + detail with typing indicator, call button, attachments. Solid empty state on both. Secure badge "End-to-end encrypted".
+  * Notifications (notifications/index.tsx, 764 lines): 5 filter tabs + mark-as-read. Navigates only to list pages ((tabs)/rides, (tabs)/orders) — NOT to specific entities (line 234-240).
+- Cross-cutting findings:
+  * Navigation: router.push/replace used correctly throughout. NO calls to nonexistent routes (verified via grep — all /merchant, /driver, /pharmacist, /wallet, /delivery, /shopping, /health, /notifications, /sos routes resolve to existing index.tsx).
+  * Routing: useLocalSearchParams used with typed generics on all [id].tsx and query-param screens. typedRoutes:true in app.json — but many router.push calls use `as any` cast for query strings.
+  * Deep links: Only /reset-password configured for Android universal link. iOS has scheme but no apple-app-site-association. Push notifications navigate to list pages only, never to entity detail.
+  * Auth guards: ONLY (tabs)/_layout.tsx redirects. /wallet, /chat/*, /rider/*, /driver/*, /merchant/*, /pharmacist/*, /orders/*, /profile/*, /delivery, /shopping, /health/*, /notifications, /sos, /location-picker, /call/* — ALL mountable without auth via deep link. api.ts:79 calls logout() on 401-refresh-fail but never router.replace('/auth/login').
+  * Error handling: Inconsistent. Wallet, health, shopping, rides, profile-edit, merchant/index have explicit error states with Retry. Orders tab, messages tab, restaurants, notifications swallow errors via console.error and show empty state instead. Most API calls have try/catch but ~30% surface error only via Alert (no inline UI).
+  * Loading states: ActivityIndicator used widely. Skeletons only on (tabs)/orders, (tabs)/rides, (tabs)/messages (OrderSkeleton, TaskSkeleton, ConversationSkeleton). Other screens show bare spinner.
+  * Empty states: Solid on (tabs)/orders, (tabs)/rides, (tabs)/messages, chat/index, chat/[id], notifications, merchant/orders, pharmacist/orders, restaurants (ListEmptyComponent). Missing on (tabs)/index (home), wallet (no transactions empty state), merchant/index (orders empty exists), pharmacist/index.
+  * Offline states: OfflineBanner component (src/components/OfflineBanner.tsx, 62 lines) uses NetInfo, shows red banner at top of all screens via _layout.tsx:197. Does NOT block actions or queue requests. No offline state for in-flight ride — polling continues blindly when offline, socket attempts reconnect. No "You're offline — ride paused" UI on ride-tracking screen.
+- Verified NO placeholder screens (no `<View><Text>TODO</Text></View>` patterns). Verified NO duplicate routes. Verified NO dead screens (every file is referenced by at least one router.push or _layout Stack.Screen entry).
+- Identified 2 dead UI elements: merchant/index.tsx:268 settings button `onPress: () => {}` (does nothing), and profile.tsx:227 settings icon shows "Coming Soon" Alert.
+- Identified missing screens beyond the 12 Stitch gaps: NO /orders/index.tsx (so `/orders` deep link 404s — only /(tabs)/orders works), NO /rider/index.tsx (only sub-routes exist; OK since no code calls /rider), NO account_settings, NO help_center, NO trip_summary_rating, NO e_receipt, NO transaction_details, NO promotions_rewards, NO delivery_confirmation, NO multi_stop_delivery_route, NO live_rider_matching, NO onboarding_slides.
+
+Stage Summary:
+- Screen count: 54 .tsx files (8 auth, 5 tabs, 5 rider, 2 driver, 6 merchant, 6 pharmacist, 4 orders, 3 health, 1 wallet, 1 notifications, 1 sos, 1 delivery, 1 shopping, 2 chat, 1 call, 1 location-picker, 3 profile, 1 root layout, 1 index/splash, 1 tabs layout, 1 global.css).
+- Missing screens: (onboarding) entirely absent — Stitch #1 onboarding_slides NOT implemented. 12 Stitch design gaps persist (onboarding_slides, transaction_details, e_receipt, trip_summary_rating, promotions_rewards, live_rider_matching, delivery_confirmation, multi_stop_delivery_route, account_settings, help_center). Plus app/orders/index.tsx absent (deep-link gap).
+- Critical mobile bugs (5):
+  1. CRITICAL — Root _layout.tsx has no auth guard; all non-tab protected screens mountable via deep link without auth.
+  2. HIGH — api.ts 401-refresh-fail calls logout() but never router.replace('/auth/login'); screens stuck on error state.
+  3. HIGH — (tabs)/orders.tsx swallows load errors via console.error; users see "No orders yet" instead of network error + retry.
+  4. HIGH — ride-request.tsx only checks auth AFTER user taps "Request Ride"; lets unauth users fill entire form then kicks them out.
+  5. MEDIUM — Deep link config minimal (only /reset-password on Android); push notifications navigate to list pages, not entity detail; no iOS universal links.
+- Production readiness estimate: 7.5/10 — Internal Testing Ready, NOT Closed Beta Ready. Auth guard gap is the biggest blocker for any external user testing.
+
+---
+Task ID: P4-GOOGLE-SIGNIN-AUDIT
+Agent: Phase 4 Google Sign-In Auditor
+Task: Complete Google authentication audit
+
+Work Log:
+- Read /home/z/my-project/worklog.md (2269 lines) for prior context — focused on AUDIT-S1-GOOGLE-SIGNIN (line 1554), P1-HANDOFF-VALIDATION (line 2191), P3-MOBILE-APP-AUDIT (line 2224).
+- Read /home/z/my-project/SMART_RIDE_MASTER_HANDOFF.md §9 Google Sign-In (lines 601-663) and §20 Play Store launch checklist (lines 1217-1224).
+- Read /home/z/my-project/expo-app/GOOGLE_SIGNIN_FIX.md IN FULL (322 lines) — confirmed current version accurately describes the androidClientId-omission fix.
+- Read /home/z/my-project/FRESH_VERIFICATION_AUDIT.md §1 Google Sign-In (lines 1-47) — gave 10/10 FIXED score; this P4 audit DISPUTES that score (should be ~6/10 — see Stage Summary).
+- Step 1: Read /home/z/my-project/expo-app/google-services.json IN FULL (62 lines). Found 2 type-1 Android OAuth clients (debug SHA-1 f28c61cc... + upload SHA-1 98ea9b4b...), 1 type-3 web client (h0ri57i2...), 1 type-2 iOS client (1knt1vf2...) under other_platform_oauth_client. NO EAS-managed keystore SHA-1 registered. NO Play App Signing SHA-1 registered.
+- Step 2: Read /home/z/my-project/expo-app/app.json IN FULL (119 lines). Plugin @react-native-google-signin/google-signin correctly configured at line 72-77 with iosUrlScheme. android.googleServicesFile=./google-services.json at line 36. ios.googleServicesFile=./GoogleService-Info.plist at line 18. scheme=smartride at line 14. android.intentFilters only for https://smartrideug.vercel.app/reset-password (no Google-specific intent filters needed). NO app.config.js / app.config.ts dynamic override exists.
+- Step 3: Confirmed Firebase is used for BOTH Google Sign-In AND FCM push notifications (src/lib/firebase/fcm-server-service.ts, fcm-service.ts, src/lib/services/notification.service.ts, push-notification.service.ts). google-services.json (Android) + GoogleService-Info.plist (iOS) both present and consistent. NEXT_PUBLIC_FIREBASE_PROJECT_ID=smart-ride-774e7 in /home/z/my-project/.env:47 matches google-services.json:4 and plist:20. messagingSenderId 531949209415 consistent across all sources.
+- Step 4: Verified OAuth client IDs. webClientId in src/config/google.ts:41 = 531949209415-h0ri57i233r1l767tnc4i26brdt3asb3... MATCHES google-services.json:33 type-3 client. iosClientId in src/config/google.ts:53 = 531949209415-1knt1vf2v8g5fh7rltg31knps9j2otar... MATCHES GoogleService-Info.plist:6 CLIENT_ID. androidClientId is INTENTIONALLY NOT passed in configure() (src/config/google.ts:88-93) — this is the prior fix. Found STALE ANDROID_CLIENT_ID field in GoogleService-Info.plist:10 = 531949209415-ja4espd5h0m6p74esft4iv541os5ertj... which does NOT appear in google-services.json — dangling legacy field, should be cleaned by re-downloading plist from Firebase Console.
+- Step 5: Read /home/z/my-project/expo-app/.env.example (20 lines). Listed Google-related env vars: EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID (line 19), EXPO_PUBLIC_GOOGLE_MAPS_API_KEY (line 16). Confirmed NO expo-app/.env file exists (only .env.example). Confirmed src/config/google.ts NEVER reads process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID — the client ID is hardcoded at line 41. So missing env var has zero runtime impact, but the .env.example entry is misleading documentation. Backend GOOGLE_CLIENT_ID is set in /home/z/my-project/.env:53 = same type-3 web client ID. eas.json injects only EXPO_PUBLIC_API_BASE_URL into EAS build env (lines 16, 26, 37, 47) — no Google env vars injected.
+- Step 6: Read /home/z/my-project/expo-app/babel.config.js (32 lines) — standard babel-preset-expo + reanimated + module-resolver + transform-remove-console. No Google-specific babel config. Read /home/z/my-project/expo-app/package.json — @react-native-google-signin/google-signin ^16.1.2 listed at line 15 (installed). Read plugins/withAgoraPermissions.js (82 lines, only adds Agora permissions) and plugins/withAbiSplits.js (80 lines, only modifies gradle ABI splits + R8 minify). Neither touches Google Sign-In config. Confirmed plugin is properly wired in app.json:72-77.
+- Step 7: Read /home/z/my-project/expo-app/src/config/google.ts IN FULL (127 lines) — confirmed androidClientId omission fix at lines 88-93 with explanatory comment. configureGoogleSignIn() is called from 3 places (app/_layout.tsx:151-152, login.tsx:64+120, register.tsx:73+152) — triple-redundant but safe (guarded by isConfigured flag at google.ts:67). Read login.tsx handleGoogleSignIn (lines 108-217) — has specific error handling for SIGN_IN_CANCELLED, DEVELOPER_ERROR, PLAY_SERVICES_NOT_AVAILABLE, IN_PROGRESS. Verified login.tsx:124 calls GoogleSignin.hasPlayServices() with NO arguments, contradicting GOOGLE_SIGNIN_FIX.md:97-99 which claims { showPlayServicesUpdateDialog: true } is passed — DOC REGRESSION. Verified login.tsx catch block does NOT string-match "Network error" as GOOGLE_SIGNIN_FIX.md:82-84 claims — DOC REGRESSION. Read register.tsx handleGoogleSignIn (lines 140-229) — same structure as login.
+- Step 8: Read /home/z/my-project/src/app/api/auth/google/route.ts IN FULL (170 lines). Token verification uses Google's https://oauth2.googleapis.com/tokeninfo endpoint (line 22-23) — network fetch per request, no JWT signature verification, no caching. Audience check at line 38-42 is CONDITIONAL: `if (expectedClientId && data.aud !== expectedClientId)` — the `expectedClientId &&` guard means if both GOOGLE_CLIENT_ID and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID env vars are unset, the audience check is SKIPPED entirely, accepting any Google idToken regardless of which OAuth client it was issued for. Currently safe because GOOGLE_CLIENT_ID is set in /home/z/my-project/.env:53, but a misconfigured prod deploy would silently disable the audience check. BLOCKER 3. Backend does NOT use google-auth-library's verifyIdToken() (best practice for signature verification + JWKS caching).
+- Cross-checked /home/z/my-project/ANDROID_STUDIO_BUILD_GUIDE.md:187 — instructs users to generate a NEW smartride.keystore (alias smartride), DIFFERENT from the existing expo-app/keystores/smartride-upload.keystore whose SHA-1 (98ea9b4b...) IS registered in google-services.json. Following this guide would create a keystore with an UNREGISTERED SHA-1 → DEVELOPER_ERROR. DOC INCONSISTENCY.
+- Cross-checked eas.json IN FULL (54 lines). NO credentialsSource field on any of the 4 build profiles (development, preview, production, apk). Default is "remote" → EAS auto-generates a remote keystore per project → its SHA-1 is NOT in google-services.json → BLOCKER 1.
+- Cross-checked app.json — NO android.keystore / signingConfig / uploadKeyFilePath config. Local release builds won't automatically use the existing upload keystore.
+- Verified NO native android/ or ios/ directories exist (managed workflow, expo prebuild not yet run).
+
+Stage Summary:
+- Config items verified: 34 items in Configuration Matrix (see report Section A). 22 ✅, 6 ⚠️, 6 ❌.
+- Production blockers (3 CRITICAL):
+  1. BLOCKER 1 — Missing EAS-managed keystore SHA-1 in Firebase Console. eas.json has no credentialsSource:local → EAS auto-generates remote keystore → its SHA-1 not registered → DEVELOPER_ERROR on every EAS-built APK. Fix: either set credentialsSource:local + wire existing upload keystore into app.json, OR run eas credentials to view EAS keystore SHA-1 + add to Firebase Console + re-download google-services.json.
+  2. BLOCKER 2 — Missing Play App Signing SHA-1 in Firebase Console. SMART_RIDE_MASTER_HANDOFF.md:1221 confirms Play App Signing is the production plan. Google rotates the signing key on Play Store release → that SHA-1 not registered → DEVELOPER_ERROR on every Play Store install. Fix: after first AAB upload, copy Play Console → App integrity → SHA-1 → add to Firebase → re-download google-services.json.
+  3. BLOCKER 3 — Backend audience check is conditional on env var presence (route.ts:38 — `if (expectedClientId && data.aud !== expectedClientId)`). If both GOOGLE_CLIENT_ID and EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID env vars are unset, audience check is skipped → any Google idToken accepted. Currently safe (GOOGLE_CLIENT_ID is set in .env:53), but latent security risk if env vars are removed. Fix: change to require GOOGLE_CLIENT_ID to be set, refuse verification if missing.
+- Failure modes identified: 25 distinct failure modes cataloged in report Section B. Beyond the 3 blockers, notable: stale ANDROID_CLIENT_ID in iOS plist (line 10), backend tokeninfo network dependency, ANDROID_STUDIO_BUILD_GUIDE.md:187 instructs wrong keystore filename, GOOGLE_SIGNIN_FIX.md doc regressions (claims showPlayServicesUpdateDialog + Network error branch that don't exist in code), FCM push notifications will ALSO break on EAS/Play Store builds (same SHA-1 registration needed for Firebase Cloud Messaging).
+- Disputes prior audit scores: AUDIT-S1-GOOGLE-SIGNIN (line 1570) and FRESH_VERIFICATION_AUDIT §1 (line 14) both gave 10/10 FIXED. Actual score: ~6/10. Code-level fix is correct, but neither prior audit inspected eas.json for credentialsSource, neither inspected route.ts for conditional audience check, neither flagged stale ANDROID_CLIENT_ID in iOS plist, neither caught ANDROID_STUDIO_BUILD_GUIDE.md:187 keystore filename discrepancy. Recommend amending both prior audit docs.
+
+---
+Task ID: P5-REGISTRATION-LOGIN-AUDIT
+Agent: Phase 5 Registration/Login Auditor
+Task: Audit auth screens for cursor-jump/freeze root causes
+
+Work Log:
+- Read /home/z/my-project/worklog.md (2301 lines) for prior context — focused on AUDIT-S2-AUTH-SCREENS (line 1642), FIX-H4-M1-AUTH-SCREENS (line 2043), FIX-ALL-BUGS (line 2083), VERIFY-FIXES-AND-REMEDIATE (line 2130), P3-MOBILE-APP-AUDIT (line 2224).
+- Read /home/z/my-project/SMART_RIDE_MASTER_HANDOFF.md §8 Authentication (lines 488-599) + §7 Mobile (lines 444-486) + §17 Current Bugs (L1/L8 at lines 1101, 1106).
+- Read /home/z/my-project/FRESH_VERIFICATION_AUDIT.md §2 Login & Register Screens (lines 50-92) — confirmed prior audit found H4 (Animated.View wraps TextInput) + M1 (conditional error container) + L1 (IconInput no forwardRef) + F2/F3 (phone/password formatter) issues. 11 fixes claimed in FIX-ALL-BUGS.
+- Listed /home/z/my-project/expo-app/app/auth/ — confirmed 8 auth screen files exist (login, register, verify-otp, forgot-password, reset-password, change-password, phone-login, role-selection). Total 5930 lines.
+- Read /home/z/my-project/expo-app/src/components/IconInput.tsx IN FULL (179 lines) — confirmed: useRef for focus tracking (line 64), no-op handleFocus/handleBlur (lines 67-74), static borderWidth 1.5 (line 146), direct value/onChangeText pass-through (lines 101-102), blurOnSubmit={false} (line 111). Does NOT use forwardRef (L1 issue confirmed). Internal `{error && <Text>}` conditional render at line 123 — latent M1 bug inside IconInput itself, but NO auth screen passes `error` prop to IconInput (grep confirmed), so currently dead code.
+- Read /home/z/my-project/expo-app/src/components/GradientButton.tsx IN FULL (175 lines) — confirmed `isDisabled = disabled || loading` (line 39) auto-disables button when loading=true. So login.tsx:508 `loading={emailLoading}` DOES prevent double-tap.
+- Read login.tsx IN FULL (844 lines): KeyboardAvoidingView behavior=ios?padding:undefined (line 317-318) ✅. Phone input raw TextInput with returnKeyType="go" + onSubmitEditing (lines 383-384) ✅. Email IconInput returnKeyType="next" but NO onSubmitEditing (line 475) ❌ focus-move gap. Password IconInput returnKeyType="go" + onSubmitEditing (lines 490-491) ✅. Error container always-rendered with errorHidden (lines 460, 793-800) ✅ M1 fixed. BUT error NOT cleared on typing (lines 470, 483 use direct setEmail/setPassword) ⚠️ UX issue. Email/password use raw text, normalization only at submit (lines 288-289) ✅ F3 confirmed. No Animated.View wrapping form ✅.
+- Read register.tsx IN FULL (976 lines): animationDone swap pattern (lines 68, 89-93, 367-381, 384-414) ✅ H4 fixed. Error container always-rendered (lines 427, 791-798) ✅ M1 fixed. name/email/phone/password IconInputs have returnKeyType="next" but NO onSubmitEditing (lines 441, 454, 466, 481) ❌ focus-move gap. Confirm password has returnKeyType="go" + onSubmitEditing (lines 496-497) ✅. Phone uses raw setPhone (line 462), formattedPhone only at submit (line 289) ✅ F2 confirmed. Error NOT cleared on typing (lines 437, 449, 462, 474, 489) ⚠️ UX issue.
+- Read verify-otp.tsx IN FULL (833 lines): 6 OTP boxes with auto-advance (lines 210-213) + backspace navigation (lines 218-221) ✅. Auto-submit useEffect when 6 digits entered (lines 143-148) ✅. ActivityIndicator during loading (line 477) ✅. ❌ CONDITIONAL error container `{error ? (...) : null}` (lines 394-399) — M1 BUG NOT FIXED, layout shift on error clear during typing. ❌ Animated.View with `transform: [{ translateX: shakeAnim }]` wraps OTP boxes (line 403) — H4 pattern present (shakeAnim stays at 0 when not shaking, lower risk than entrance animation but still bound). No errorHidden style defined.
+- Read forgot-password.tsx IN FULL (546 lines): animationDone swap (lines 44, 66-70, 200-343) ✅ H4 fixed. Error container always-rendered with errorHidden (lines 235, 310, 477-486) ✅ M1 fixed. onChangeText clears error on typing (lines 245-248, 320-323) ✅. logoFloat + glowPulse Animated.loops run continuously (lines 73-108) — L8 LOW issue. No returnKeyType/onSubmitEditing on email field ⚠️ could add for UX.
+- Read reset-password.tsx IN FULL (838 lines): animationDone swap (lines 60, 90-94, 413-429) ✅ H4 fixed. Error container always-rendered (lines 253, 599-608) ✅ M1 fixed. onChangeText clears error (lines 268-271, 314-317) ✅. ❌ Password strength bar CONDITIONAL on `newPassword.length > 0` (line 288) — appears on first keystroke, pushes confirm password input down → layout shift during typing. ❌ No returnKeyType/onSubmitEditing on either password field. logoFloat + glowPulse loops continuous (lines 97-132) — L8. getPasswordStrength runs 5 regex tests per render (lines 190-197) — minor CPU per keystroke.
+- Read change-password.tsx IN FULL (813 lines): animationDone swap (lines 60, 82-86, 459-475) ✅ H4 fixed. Error container always-rendered (lines 249, 639-648) ✅ M1 fixed. onChangeText clears error (lines 264-267, 293-296, 342-345) ✅. ❌ Password strength bar CONDITIONAL on `newPassword.length > 0` (line 313) — layout shift on first keystroke. ❌ "Passwords do not match" text CONDITIONAL (lines 359-361) — appears/disappears on EVERY keystroke in confirm password when passwords don't match → layout shift during typing. ❌ No returnKeyType/onSubmitEditing on any of 3 password fields. logoFloat + glowPulse loops continuous (lines 89-124) — L8.
+- Read phone-login.tsx IN FULL (572 lines): Error container always-rendered with errorHidden (lines 207, 405-414) ✅ M1 fixed. handlePhoneChange FILTERS non-digit/space/dash/plus via regex (lines 162-168) — filter not reformatter, cursor preserved for valid input ✅ F2 confirmed. normalizePhone only at submit (line 124) ✅. isFocused state changes borderColor only (lines 213-218, 434-441), borderWidth stays 1.5 ✅. onChangeText clears error (lines 165-167) ✅. No returnKeyType/onSubmitEditing on phone input ⚠️. Auto-focus via setTimeout(400ms) (lines 108-113) ✅.
+- Read role-selection.tsx IN FULL (508 lines): N/A — no TextInput fields, pure TouchableOpacity selection screen. No keyboard interaction.
+- Grep-verified NO auth screen passes `error` prop to IconInput — IconInput's internal conditional error text (line 123) is dead code in auth context.
+- Grep-verified NO `useAnimatedStyle`/`useSharedValue`/`react-native-reanimated` imports in any auth screen — Reimated worklet issue NOT present.
+- Grep-verified NO `useNativeDriver: false` in any auth screen — all Animated.loops use native driver.
+- Grep-verified NO `useEffect` overwriting own field value (classic cursor-jump anti-pattern) — zero matches across all 8 auth screens.
+- Grep-verified `global.css` NOT imported (comment at _layout.tsx:16) + `nativewind/babel` NOT in babel.config.js (comment at line 6) — F7 fix confirmed, no NativeWind style recalculation on auth screens.
+- Grep-verified all 7 input-bearing screens have `keyboardShouldPersistTaps="handled"`.
+
+Stage Summary:
+- Screens audited: 8 auth screens (login, register, verify-otp, forgot-password, reset-password, change-password, phone-login, role-selection) + IconInput + GradientButton = 10 files, 6284 lines total.
+- Cursor-jump root causes confirmed:
+  * H4 (Animated.View wraps TextInput): FIXED in forgot/reset/change-password.tsx via animationDone swap. STILL PRESENT in verify-otp.tsx:403 (Animated.View with translateX:shakeAnim wraps OTP boxes — lower risk since shakeAnim stays at 0 when not shaking, but pattern is unfixed).
+  * M1 (conditional error container): FIXED in forgot/reset/change-password.tsx + phone-login.tsx + login.tsx + register.tsx. STILL PRESENT in verify-otp.tsx:394-399 (`{error ? (...) : null}` — no errorHidden style).
+  * NEW M1-adjacent bug: Password strength bar conditional render in reset-password.tsx:288 + change-password.tsx:313 — appears on first keystroke, causes layout shift.
+  * NEW M1-adjacent bug: "Passwords do not match" text conditional in change-password.tsx:359-361 — appears/disappears on every keystroke in confirm password.
+  * F2 (phone formatter): CONFIRMED FIXED — phone-login.tsx:162-168 filters (not reformats), register.tsx:462 raw setPhone, normalization only at submit.
+  * F3 (password reformatting): CONFIRMED FIXED — login.tsx:483 raw setPassword, trim/lowercase only at submit.
+  * F4 (useEffect overwriting own field): CONFIRMED NEVER EXISTED — zero matches.
+  * F7 (NativeWind style recalc): CONFIRMED FIXED — global.css + nativewind/babel removed.
+  * Cause #5 (Reanimated worklet): NEVER EXISTED — no reanimated imports in auth screens.
+  * Cause #6 (KeyboardAvoidingView behavior='position'): NEVER EXISTED — all screens use behavior=ios?padding:undefined.
+  * Cause #7 (NativeWind className changes): NEVER EXISTED — all auth screens use StyleSheet, not className.
+- Form-freeze root causes confirmed:
+  * Cause #1 (sync heavy loop on render): NEVER EXISTED — no heavy loops. Minor: getPasswordStrength runs 5 regex tests per render in reset/change-password.tsx (not a freeze, just minor CPU).
+  * Cause #2 (Animated.loop useNativeDriver:false): NEVER EXISTED — all loops use useNativeDriver:true.
+  * Cause #3 (async without await): NEVER EXISTED — all submit handlers are async with await.
+  * Cause #4 (Promise never resolves): NOT REPRODUCIBLE at code level — depends on backend. All finally blocks set loading=false.
+  * Cause #5 (setState in render): NEVER EXISTED.
+  * Cause #6 (useEffect wrong deps): MINOR — verify-otp.tsx:143-148 auto-submit effect has [otp] deps, handleVerifyOTP not in deps (stale closure mitigated by passing otpString explicitly). Not a freeze.
+  * Cause #7 (Reanimated worklet crash): NEVER EXISTED — no reanimated.
+- Claimed fixes verified:
+  * H4 (animationDone swap): VERIFIED in forgot-password.tsx:44,66-70,200-343 + reset-password.tsx:60,90-94,413-429 + change-password.tsx:60,82-86,459-475. Prevents bug ✅. No regression. NOT applied to verify-otp.tsx (gap).
+  * M1 (always-render error container): VERIFIED in forgot-password.tsx:235,310 + reset-password.tsx:253 + change-password.tsx:249 + phone-login.tsx:207 + login.tsx:460 + register.tsx:427. Prevents bug ✅. No regression. NOT applied to verify-otp.tsx (gap). NEW regression-adjacent: password strength bar + match-error text conditionals in reset/change-password.tsx introduce NEW layout shifts not covered by M1 fix.
+  * F2 (phone formatter raw text): VERIFIED in register.tsx:462 + phone-login.tsx:162-168. Prevents bug ✅. No regression.
+  * F3 (password raw text): VERIFIED in login.tsx:483. Prevents bug ✅. No regression.
+- Top 5 auth bugs found:
+  1. HIGH — verify-otp.tsx:394-399 conditional error container causes layout shift on error clear during typing (M1 gap).
+  2. MEDIUM — change-password.tsx:359-361 "Passwords do not match" text conditional causes layout shift on every keystroke in confirm password.
+  3. MEDIUM — reset-password.tsx:288 + change-password.tsx:313 password strength bar conditional causes layout shift on first keystroke.
+  4. LOW — IconInput.tsx does NOT use forwardRef; login.tsx:475 + register.tsx:441,454,466,481 have returnKeyType="next" but NO onSubmitEditing — focus move broken (L1 issue, pre-existing).
+  5. LOW — logoFloat + glowPulse Animated.loops run continuously on 3 password screens during typing (L8 issue, pre-existing).
+
+---
+Task ID: P6-DESIGN-AUDIT
+Agent: Phase 6 Design Implementation Auditor
+Task: Compare Stitch designs vs actual mobile implementation
+
+Work Log:
+- Read /home/z/my-project/worklog.md (2362 lines) for prior P1-P5 context — paid attention to P1-HANDOFF-VALIDATION (line 2191), P3-MOBILE-APP-AUDIT (line 2224), P4-GOOGLE-SIGNIN-AUDIT (line 2271), P5-REGISTRATION-LOGIN-AUDIT (line 2303), and the prior Stitch Design Auditor entry (line 1795).
+- Read /home/z/my-project/SMART_RIDE_MASTER_HANDOFF.md §12 Design System (lines 803-863) — confirmed handoff claim of "6 of 29 Stitch screens fully implemented, 11 partial, 12 missing (~39.7% completion)".
+- Read /home/z/my-project/FRESH_VERIFICATION_AUDIT.md §3 Stitch Design Implementation (lines 100-145) IN FULL — confirmed 6 MATCH / 11 PARTIAL / 12 MISSING classifications.
+- Inventoried Stitch design folders across 3 source roots:
+  * /home/z/my-project/stitch-designs/part1/ (13 design folders + smart_ride_design_system + image.png)
+  * /home/z/my-project/stitch-designs/part2/ (3 design folders: login_screen, onboarding_slides, create_account)
+  * /home/z/my-project/stitch-designs/part3/ (1 design folder: parcel_price_estimate)
+  * /home/z/my-project/part2/stitch_smart_ride_super_app_ui_ux/ (16 design folders — superset)
+  * /home/z/my-project/part3/stitch_smart_ride_super_app_ui_ux/ (10 design folders — superset)
+  * The handoff §12 incorrectly claims stitch-designs/part1+part2+part3 contains 10+15+8=33 designs; actual counts are 13+3+1=17 designs. The remaining designs live only in /part2/ and /part3/ at repo root.
+- Counted 33 UNIQUE Stitch designs (after merging _new_design + _updated_branding variants of smart_ride_home, rider_dashboard, wallet). The handoff claim of "29 designs" UNDERCOUNTS by 4 — missing splash_screen, incoming_request_boda, delivery_dashboard_orders_queue, menu_management_java_house.
+- Read DESIGN.md from stitch-designs/part1/.../smart_ride_design_system/ — confirmed MD3 green theme: primary #005f3a, Plus Jakarta Sans + Inter typography, 4px baseline grid, "Layered Bottom Sheet" philosophy.
+- Read /home/z/my-project/expo-app/src/constants/index.ts IN FULL (371 lines) — confirmed COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, GRADIENTS all implement MD3 design tokens. COLORS.primary = '#005f3a' (line 16) matches DESIGN.md. TYPOGRAPHY (lines 130-140) has all 9 type styles but MISSING fontFamily field — only fontSize/fontWeight/lineHeight/letterSpacing.
+- Read /home/z/my-project/expo-app/src/components/{GlassCard,GradientButton,GlowHeader,IconInput,ServiceIcon,StatusBadge,ChatBubble}.tsx IN FULL — confirmed all 7 shared components exist and use design tokens (COLORS/SPACING/RADIUS/TYPOGRAPHY/SHADOWS).
+- Read /home/z/my-project/expo-app/tailwind.config.js IN FULL — discovered it defines primary as '#00FF88' (emerald) NOT '#005f3a' (brand green) — DESIGN SYSTEM DRIFT.
+- Read /home/z/my-project/expo-app/app/global.css IN FULL — references @tailwind directives and #005f3a only in scrollbar; however grep confirmed global.css is NOT imported anywhere (comment in app/_layout.tsx:16-18 says it was removed to fix cursor-jumping bugs).
+- Read /home/z/my-project/expo-app/app.json IN FULL (119 lines) — NO fonts array defined. expo-font plugin listed but no font files registered.
+- Listed /home/z/my-project/expo-app/assets/ — NO fonts/ subdirectory. Zero font files. Plus Jakarta Sans + Inter are NEVER loaded at runtime; TYPOGRAPHY constant omits fontFamily entirely; app falls back to system default sans-serif.
+- Verified specific PARTIAL claims by reading mobile code:
+  * /app/(tabs)/index.tsx (smart_ride_home): grep for "Wallet Balance", "Need assistance?", "Nearby Favorites", "FAB" → 0 matches. Design has all 4. PARTIAL confirmed.
+  * /app/rider/ride-request.tsx (book_a_ride): grep for "SmartRide XL", "Live in Kampala", "Available Rides", "Group • 6 Seats" → 0 matches. Design has all 4. PARTIAL confirmed.
+  * /app/orders/restaurants.tsx (food_shop): grep for "Featured", "Trending", "Secure Delivery", "Secure Chat", "Pharmacy", "Groceries", "Electronics", "Courier", "Smart Connect", "Quick-Cure", "Kampala Grill" → 0 matches. Design has all of them. PARTIAL confirmed.
+  * /app/driver/index.tsx (rider_dashboard): grep for "Gold", "Weekly Goal", "Recent Trips", "14 Trips", "4.9" → 0 matches. Design has "Gold Member 4.9", "14 Trips", "8.2 hrs online" stats. PARTIAL confirmed.
+  * /app/sos/index.tsx (safety_sos): grep for "Slide to Alert", "Smart Ride Secure Line", "On Trip", "Trusted Contacts" → 0 matches. Uses "Emergency Contacts" (line 655) and "Hold for 3 seconds" (line 465). Design uses "SLIDE TO ALERT SECURITY" + "Trusted Contacts" + "On Trip" card with driver name + Toyota Fielder + UBL 245Z plate. PARTIAL confirmed.
+  * /app/orders/order-tracking.tsx (live_parcel_tracking): grep for "Live Tracking", "ETA", "Estimated arrival", "Order Picked Up", "In Transit", "Arriving Soon", "Safe Delivery", "insured", "insurance" → 0 matches. Has delivery location + driver/rider info + in-app call/chat buttons (lines 400-413). Missing timeline, ETA card, insurance banner. PARTIAL confirmed.
+  * /app/rider/onboarding.tsx (vehicle_verification): grep for "Vehicle Logbook", "Logbook", "Verified", "Pending", "Action Required", "Encrypted", "Secure Verification" → 0 matches. Has Selfie/National ID Front+Back/License Number+Expiry+Photo/Vehicle Photo uploads (lines 474-540). Missing Vehicle Logbook upload, per-document status badges, encrypted footer. PARTIAL confirmed.
+  * /app/(tabs)/profile.tsx (user_profile): grep for "Gold", "Points", "Sustainability", "Quick Actions", "Refer", "tier" → 0 matches. Has stats (Total Rides, Orders, Rating) at lines 264-272 and menu sections. Missing Gold tier badge, Points/Trips/Sustainability stats, Quick Actions grid (My Wallet/Promotions/Refer & Earn/Safety Toolkit). PARTIAL confirmed.
+  * /app/merchant/index.tsx + /orders.tsx (merchant_orders / merchant_dashboard_java_house): grep for "Java House", "Auto-refresh", "Live • Accepting", "Top 5%", "Merchant Rating", "Daily Target", "View All History" → 0 matches in both files. PARTIAL confirmed.
+  * /app/auth/verify-otp.tsx (otp_verification): OTP_LENGTH = 6 (line 36, design uses 4). No custom numeric keypad (no ABC/DEF/GHI... 9-key pad). Uses 6 separate TextInputs. PARTIAL confirmed.
+  * /app/auth/register.tsx (create_account): grep for "Referral", "Kampala dusk", "Reliable trips" → 0 matches. PARTIAL confirmed.
+- Verified specific MISSING claims by globbing /home/z/my-project/expo-app/app/**/*.{tsx,ts}:
+  * transaction_details → no file. MISSING confirmed.
+  * e_receipt → no file. MISSING confirmed.
+  * trip_summary_rating → no file. Only Alert.prompt in ride-tracking.tsx. MISSING confirmed.
+  * promotions_rewards → no file. MISSING confirmed.
+  * delivery_confirmation → no file. MISSING confirmed.
+  * multi_stop_delivery_route → no file. MISSING confirmed.
+  * account_settings → no dedicated screen. Settings scattered in (tabs)/profile.tsx menu. MISSING confirmed.
+  * help_center → only external URL link in profile.tsx:212. MISSING confirmed.
+  * live_rider_matching_1 / live_rider_matching_2 → no file. MISSING confirmed.
+  * onboarding_slides → app/index.tsx is a SINGLE splash screen, no carousel. MISSING confirmed.
+- Verified specific MATCH claims by reading mobile code:
+  * /app/auth/login.tsx (login_screen): has Email + Password + Google + Apple + phone option. MATCH confirmed.
+  * /app/wallet/index.tsx (wallet_overview/wallet_payments): has Available Balance + Top Up + Withdraw + MTN/Airtel/Cash payment methods + Recent Transactions + TopUpModal + WithdrawModal. MATCH confirmed.
+  * /app/chat/[id].tsx (secure_chat_interface): has "End-to-end encrypted" secure badge (line 609), attachment button (line 479). MATCH confirmed.
+  * /app/call/[id].tsx (secure_in_app_call): has Mute/Speaker/Chat/End Call buttons, VoIP indicator, recipient name + timer, "End Call" state. MATCH confirmed.
+  * /app/delivery/index.tsx (parcel_price_estimate): has Pickup/Drop-off, Choose Service (BODA/CAR/STANDARD), package size selector, price summary, Request Delivery CTA. MATCH confirmed.
+  * /app/notifications/index.tsx (notifications_center): has All/Orders/Payments filter tabs (lines 120-123), Mark All Read button, empty state. Missing Promotions tab — slight gap but still MATCH.
+- Verified design system token usage via grep counts:
+  * COLORS.* used in 51 files (2347 occurrences) — broadly adopted.
+  * SPACING.* used in 41 files (1342 occurrences) — broadly adopted.
+  * TYPOGRAPHY.* used in 41 files (675 occurrences) — broadly adopted.
+  * GlassCard used in 28 files (209 occurrences) — broadly adopted.
+  * GradientButton used in 28 files (89 occurrences) — broadly adopted.
+  * GlowHeader used in 13 files (49 occurrences) — moderate.
+  * StatusBadge used in 17 files (36 occurrences) — moderate.
+  * IconInput used in 8 files (20 occurrences) — limited (auth + delivery + health + shopping).
+  * ServiceIcon used in 5 files (12 occurrences) — limited (tabs/index, shopping, orders, health).
+  * ChatBubble used in 1 file (chat/[id].tsx) — only where expected.
+  * #005f3a hardcoded in 8 files (20 occurrences) — mostly in app.json/constants/global.css, plus 4 screens (index.tsx, role-selection.tsx, health/prescriptions.tsx, profile/saved-addresses.tsx) that hardcode brand green instead of using COLORS.primary.
+  * #0e7a4d hardcoded in 4 files (12 occurrences) — constants + theme-context + role-selection + index.tsx.
+  * Design system drift detected:
+    * 188 raw `paddingHorizontal/Vertical: <number>` occurrences across 38 files (instead of SPACING.*).
+    * 285 raw `fontSize: <number>` occurrences across 44 files (instead of TYPOGRAPHY.*).
+    * tailwind.config.js primary '#00FF88' (emerald) diverges from design '#005f3a' (brand green).
+    * global.css + nativewind/babel REMOVED from _layout.tsx to fix cursor-jump — NativeWind styles not applied at all.
+    * No font loading — Plus Jakarta Sans + Inter NEVER loaded; TYPOGRAPHY constant omits fontFamily; system font fallback used.
+
+Stage Summary:
+- Stitch design count: 33 unique designs (handoff claims 29 — UNDERCOUNTS by 4: missing splash_screen, incoming_request_boda, delivery_dashboard_orders_queue, menu_management_java_house).
+- Design source locations:
+  * stitch-designs/part1 = 13 designs (canonical Stitch design system folder)
+  * stitch-designs/part2 = 3 designs (login_screen, onboarding_slides, create_account)
+  * stitch-designs/part3 = 1 design (parcel_price_estimate)
+  * /home/z/my-project/part2/ + /home/z/my-project/part3/ = 16 + 10 = 26 designs (superset, contains the rest)
+- Match count: 6 confirmed MATCH (login_screen, wallet_overview/wallet_payments, secure_chat_interface, secure_in_app_call, parcel_price_estimate, notifications_center) — matches prior audit.
+- Partial count: 11 confirmed PARTIAL (create_account, otp_verification, smart_ride_home, book_a_ride_updated_branding, food_shop_updated_branding, rider_dashboard, merchant_orders/merchant_dashboard_java_house, safety_sos_screen, live_parcel_tracking, vehicle_verification, user_profile) — matches prior audit.
+- Missing screens: 12 confirmed MISSING (onboarding_slides, transaction_details, e_receipt, trip_summary_rating, promotions_rewards, live_rider_matching_1, live_rider_matching_2, delivery_confirmation, multi_stop_delivery_route, account_settings, help_center/help_center_dark_mode) — matches prior audit.
+- 4 ADDITIONAL designs NOT audited by prior audits (splash_screen, incoming_request_boda, delivery_dashboard_orders_queue, menu_management_java_house) — these need to be added to the design audit checklist.
+- Completion percentage: ~39.7% (6 + 11×0.5 + 12×0)/33 = 11.5/33 = 34.8% — actually LOWER than handoff claim because the design inventory was undercounted.
+- Design system drift (5 issues):
+  1. HIGH — Typography system broken: Plus Jakarta Sans + Inter NEVER loaded; no fonts/ folder; no fonts array in app.json; TYPOGRAPHY constant omits fontFamily. App uses system default sans-serif throughout. DESIGN.md specifies Plus Jakarta Sans for headlines + Inter for body.
+  2. MEDIUM — NativeWind/tailwind disabled: global.css + nativewind/babel REMOVED from _layout.tsx (cursor-jump fix). tailwind.config.js defines primary='#00FF88' (emerald, wrong) — but never applied. Inconsistency between tailwind config and constants/index.ts.
+  3. MEDIUM — Ad-hoc spacing values: 188 raw `paddingHorizontal/Vertical: <number>` occurrences across 38 files instead of SPACING.* tokens. Drift from "4px baseline grid" design philosophy.
+  4. MEDIUM — Ad-hoc font sizes: 285 raw `fontSize: <number>` occurrences across 44 files instead of TYPOGRAPHY.* tokens. Drift from MD3 type scale.
+  5. LOW — Hardcoded hex colors: 20 occurrences of '#005f3a' + 12 of '#0e7a4d' in 12 files outside constants; 4 screens hardcode brand green instead of using COLORS.primary.
+- Handoff claim "39.7% completion" is VERIFIED but understates the gap: design inventory undercount means true completion is ~34.8%.
+- Critical post-transaction UX screens missing: transaction_details, e_receipt, trip_summary_rating, delivery_confirmation — all 4 high-value post-payment/post-trip flows entirely absent from mobile app. Users cannot view transaction breakdowns, download receipts, rate trips, or confirm deliveries.
+- Loyalty program (promotions_rewards) entirely missing — Gold Member/Points Balance/Referral Code UX absent.
+- Multi-stop delivery + live rider matching animation screens missing — delivery UX gap for higher-tier service.
+
+---
+Task ID: P8-CRITICAL-BUG-HUNT
+Agent: Phase 8 Critical Bug Hunter
+Task: Grep entire repo for TODO/FIXME/HACK/MOCK/STUB/PLACEHOLDER + security anti-patterns
+
+Work Log:
+- Read /home/z/my-project/worklog.md (last 600 lines, lines 1858-2458) for prior P1-P6 context — focused on P1-HANDOFF-VALIDATION (line 2191), P3-MOBILE-APP-AUDIT (line 2224), P4-GOOGLE-SIGNIN-AUDIT (line 2271), P5-REGISTRATION-LOGIN-AUDIT (line 2303), P6-DESIGN-AUDIT (line 2364).
+- Read /home/z/my-project/SMART_RIDE_MASTER_HANDOFF.md §17 Current Bugs (lines 1072-1110) + §18 Production Readiness + §19 Next Action Plan + §20 AI Continuation Guide.
+- Step 1: Ran Grep tool (ripgrep) for TODO/FIXME/HACK/MOCK/STUB/PLACEHOLDER/XXX/BROKEN/NOT IMPLEMENTED/NOT WORKING/SHOULD NEVER/WTF in `*.{ts,tsx,js,jsx,json,prisma,sql,md}` excluding node_modules/.next/.git/dist/build/coverage/android/ios/.expo/. Collected ~489 raw matches across the repo.
+- Step 2: Grep for mockData/mockUsers/mockRides/mockOrders/mockTasks/MOCK_*/testUser/testEmail/dummyData/fakeData/DEMO_AUTO_COMPLETE/demo_mode/isDemoMode/password='test'/password='password'/password123/admin123/123456/console.log.*test/mock/debug/Math.random()/if(NODE_ENV==='test')/if(DEBUG)/DEMO_AUTO_COMPLETE. Found 8 mockData-pattern matches, 1 DEMO_AUTO_COMPLETE in production path, 0 hardcoded test passwords in source (only in scripts).
+- Step 3: Grep for http://localhost:, https://smartrideug.vercel.app, supabase.co, service_role, JWT_SECRET, process.env.X || 'fallback', process.env.X ?? 'default'. Found 3 CRITICAL hardcoded Railway Postgres credentials in migrate-db*.js files, 2 INTERNAL_API_KEY hardcoded fallbacks, 1 JWT_SECRET fallback to 'setup' string, 1 conditional Google audience check, 1 Apple JWT signature verification skip, multiple safe localhost fallbacks (only relevant in misconfigured prod).
+- Step 4: Grep for eval(, new Function(, dangerouslySetInnerHTML, BYPASSRLS, // TODO auth/security/verify. Found 2 dangerouslySetInnerHTML (legitimate React usage in chart.tsx + layout.tsx with static CSS strings), 0 eval/new Function (good), 0 BYPASSRLS in code (only in scripts/apply-rls.ts as a column name query), 0 TODO auth comments.
+- Step 5: Investigated each finding by reading source files to determine dead-code status (per handoff §L5-L7 — src/components/smart-ride/, src/components/mobile/, mobile/, mini-services/ are all dead). Verified production-reachability by grepping for imports of each suspect function/component.
+- Generated full markdown report (581 lines, 46KB) saved to /home/z/my-project/P8_CRITICAL_BUG_HUNT_REPORT.md.
+
+Stage Summary:
+- Total matches scanned: ~489 raw grep hits across 14 patterns + 8 mock-data patterns + 6 hardcoded-value patterns + 4 security-anti-pattern checks.
+- Production blockers found: 10 CRITICAL + 13 HIGH = 23 production-relevant findings.
+- Top 10 dangerous findings (ranked):
+  1. CRITICAL #1 — Hardcoded Railway Postgres credentials in migrate-db.js:11 + migrate-db-pg.js:8 + migrate-data.js:11 (password yGphbfshRKrZSMLNPGCwJXGckrTOalVL committed to repo).
+  2. CRITICAL #4 — Apple Sign-In (/api/auth/apple/route.ts:78-129) does NOT verify JWT signature despite jose library being installed. Anyone can forge an Apple login.
+  3. CRITICAL #6 — Wallet topup (/api/wallet/topup/route.ts:65-103) auto-credits balance in DEMO_AUTO_COMPLETE mode without real payment. Unlimited free money exploit.
+  4. CRITICAL #3 — /api/dispatch/process-expired/route.ts:15 has hardcoded INTERNAL_API_KEY fallback 'smart-ride-internal-api-key-2024' — public endpoint with service-role DB access.
+  5. CRITICAL #2 — /api/setup/route.ts:201 falls back to setupKey='setup' if JWT_SECRET unset — allows SUPER_ADMIN creation on fresh deploys.
+  6. CRITICAL #5 — /api/auth/google/route.ts:38-42 has conditional audience check that silently disables if env vars unset.
+  7. CRITICAL #7 — 3 prisma seed files (prisma/seed.ts, prisma/seed-admin.ts, prisma/seeds/seed.ts) hardcode admin credentials (admin@smartride.com/owner123, naturalintellectscrop@gmail.com/Admin@123, admin@smartride.ug/Admin@123456).
+  8. HIGH #10 — /api/payments/mtn-callback/route.ts:24 + /api/payments/airtel-callback/route.ts:20 log entire webhook body to stdout in production (PII/payment data leak to Vercel logs).
+  9. HIGH #11+#12 — /api/calling/initiate/route.ts has NO auth check + validateTaskParticipants is a stub returning {valid: true}.
+  10. HIGH #9 — /api/routing/route.ts (no auth) exposes mock geocoding (random coordinates for unknown addresses) + mock surge (Math.random 0.8-2.5x) publicly.
+- Handoff §17 claim "Critical — NONE ✅" is DISPUTED — this audit found 10 NEW CRITICAL issues not in handoff. Handoff's M6 (DEMO_AUTO_COMPLETE wallet topup) is upgraded from MEDIUM → CRITICAL (direct financial loss exploit).
+- Full report with all 70 findings (10 CRITICAL + 13 HIGH + 27 MEDIUM + 30 LOW) saved to /home/z/my-project/P8_CRITICAL_BUG_HUNT_REPORT.md.
+
+---
+Task ID: P9-APK-BUILD-AUDIT
+Agent: Phase 9 APK & Build Auditor
+Task: Audit APK size, dependencies, assets, build config
+
+Work Log:
+- Read /home/z/my-project/worklog.md (last 600 lines, lines 1890-2491) for prior P1-P8 context — paid attention to AUDIT-S5-S6-APK-SIZE-ROUTING (line 1727), P3-MOBILE-APP-AUDIT (line 2224), P4-GOOGLE-SIGNIN-AUDIT (line 2271), P6-DESIGN-AUDIT (line 2364), P8-CRITICAL-BUG-HUNT (line 2461).
+- Read /home/z/my-project/SMART_RIDE_MASTER_HANDOFF.md §13 Build System (lines 866-937) — confirmed handoff claim of 4 EAS profiles (development/preview/production/apk) ALL shipping APK with EXPO_PUBLIC_API_BASE_URL env var; keystore smartride-upload.keystore (2,782 bytes) at /home/z/my-project/expo-app/keystores/.
+- Read /home/z/my-project/FRESH_VERIFICATION_AUDIT.md §5 APK Size (lines 186-233) IN FULL — confirmed 10 largest deps with @rnmapbox/maps ~10MB and react-native-agora ~8MB leading; ~52MB per-ABI APK estimate; 4 removal/optimization opportunities totaling ~15-20MB potential savings.
+- Step 1 — Read /home/z/my-project/expo-app/package.json IN FULL (62 lines): 38 dependencies + 7 devDependencies. Categorized each by APK contribution and usage status (see report Section A).
+- Step 2 — Read /home/z/my-project/expo-app/eas.json IN FULL (55 lines): 4 build profiles (development/preview/production/apk). VERIFIED ALL 4 set buildType:"apk". NO credentialsSource field anywhere (defaults to "remote" — links to P4 Google Sign-In SHA-1 issue). env vars per profile: EAS_BUILD_NO_EXPO_WARNING="true" + EXPO_PUBLIC_API_BASE_URL="https://smartrideug.vercel.app/api". NO Mapbox/Agora/Sentry/Google env vars set at build time → all 4 builds will run with missing runtime tokens. NO submit config for production (empty {} at line 51-53).
+- Step 3 — Read /home/z/my-project/expo-app/app.json IN FULL (119 lines). Plugins array (11 entries): expo-router, expo-location, @react-native-google-signin/google-signin, @rnmapbox/maps (RNMapboxMapsImpl:"mapbox"), expo-apple-authentication, expo-notifications, expo-build-properties (enableProguardInReleaseBuilds:true, enableShrinkInReleaseBuilds:true, useLegacyPackaging:true), expo-font, ./plugins/withAgoraPermissions, ./plugins/withAbiSplits, @sentry/react-native/expo. Android permissions (10): location (3) + audio (2) + network/wifi (2) + foreground service (2) + wakelock. iOS Info.plist has CFBundleURLSchemes for smartride + Google reverse client ID. NO updates/OTA config. NO assets array. NO fonts array (expo-font plugin listed but never used). splash resizeMode:"contain" backgroundColor:"#005f3a" — but splash.png is opaque navy (FRESH_VERIFICATION_AUDIT V9).
+- Step 4 — Read /home/z/my-project/expo-app/babel.config.js IN FULL (33 lines): presets=[babel-preset-expo]; plugins=[react-native-reanimated/plugin, module-resolver (alias @/src→./src), conditional transform-remove-console (excludes error/warn) in production]. NOTE: nativewind/babel explicitly REMOVED (comment explains cursor-jump fix). This is the correct size-optimization setup.
+- Step 5 — Read /home/z/my-project/expo-app/metro.config.js IN FULL (15 lines): just `getDefaultConfig(__dirname)` + module.exports. NO custom minifier, NO extra resolver config, NO tree-shaking overrides. Default Expo Metro config is sufficient — already enables Hermes + minification.
+- Step 6 — Ran Grep for every dependency's `from 'pkg'` and `require('pkg')` imports across /home/z/my-project/expo-app/src/ + /home/z/my-project/expo-app/app/ (see report Section A for per-dep results). Confirmed 7 UNUSED direct-import deps (zero `from` AND zero `require`): expo-constants, expo-device, expo-splash-screen, expo-web-browser, expo-linking, react-native-web, react-native-worklets. Plus 1 build-only: expo-build-properties (config-plugin only, never imported).
+- Step 7 — Verified NO duplicate functionality in active expo-app: only ONE map SDK (@rnmapbox/maps — react-native-maps NOT in package.json); NO axios (uses fetch in src/services/api.ts); NO redux (uses zustand in 6 stores + @tanstack/react-query for server state); only ONE icons library (@expo/vector-icons — react-native-vector-icons NOT in package.json). Web duplicate RN 0.73.2 in /home/z/my-project/mobile/ is DEAD (already flagged in AUDIT-S5-S6 worklog entry).
+- Step 8 — Inventoried /home/z/my-project/expo-app/assets/ (5 PNG files, 684 KB total): icon.png (1024×1024 RGB opaque, 112 KB, MD5 1dc002d5...), splash.png (1242×2436 RGBA, 144 KB, MD5 cf0630be...), adaptive-icon.png (1024×1024 RGB opaque, 67 KB, MD5 9cca0ad7...), favicon.png (48×48 RGB opaque, 1.2 KB, MD5 f98e7315...), images/smartride-logo.png (1024×1024 RGBA, 355 KB, MD5 7c825c2c...). NO fonts/, NO video/audio. NOTE: icon.png + adaptive-icon.png are RGB (NO alpha channel) — corroborates FRESH_VERIFICATION_AUDIT V9 that they're opaque navy tiles, not transparent logos. Total asset weight is ~684 KB — negligible compared to native module bloat. Lossless recompression (pngquant/oxipng) would save ~250-350 KB.
+- Step 9 — Native module bloat cross-check via Grep imports (see report Section D): @rnmapbox/maps USED (require'd in src/components/SmartRideMap.tsx:64, plugin in app.json:78-83); react-native-agora USED (require'd in src/hooks/useAgoraCall.ts:80); @sentry/react-native USED but DSN unset (import in src/lib/sentry.ts:9; initSentry() called in app/_layout.tsx:14; SENTRY_DSN="" → no-op at runtime but native SDK still bundled); react-native-reanimated USED (import in app/_layout.tsx:10, plugin in babel.config.js:11, 23 file matches); react-native-worklets UNUSED direct-imports (Reanimated 4.2.1 bundles own worklet runtime — safe to remove); expo-notifications USED (app/_layout.tsx:22 + src/services/notification.service.ts:1); @expo/vector-icons USED (60 file matches); @react-native-google-signin/google-signin USED (require'd in src/config/google.ts:26); expo-apple-authentication USED (require'd in src/config/apple.ts:24, iOS-only). All native modules are USED except react-native-worklets.
+- Step 10 — Computed APK size breakdown (see report Section G): baseline RN+Expo SDK 55 ~28 MB + Mapbox ~10 MB + Agora ~7 MB + Sentry ~3 MB + Reanimated ~2.5 MB + Worklets ~2 MB + Notifications ~1.5 MB + vector-icons ~1.5 MB + Google-Sign-In ~1.5 MB + image-picker ~1 MB + linear-gradient ~0.5 MB + location ~0.5 MB + secure-store ~0.5 MB + task-manager ~0.5 MB + async-storage ~0.5 MB + apple-auth ~1 MB (iOS only) + supabase-js ~1 MB + web-browser ~0.5 MB + other small ~1.5 MB = ~65 MB raw universal; withAbiSplits (~40% reduction for arm64-v8a single-arch) = ~52 MB per-ABI APK. AAB would yield ~31 MB user download. Confirmed alignment with FRESH_VERIFICATION_AUDIT.md estimate of ~52 MB.
+- No code changes made — audit-only task. Findings documented in this worklog entry + in-line summary below.
+
+Stage Summary:
+- Total dependencies inventoried: 38 production + 7 dev = 45 packages.
+- Unused direct-import dependencies (safe to remove from package.json — transitive deps will still install via `expo`/`expo-router` peers): 7 — react-native-worklets (2 MB APK), expo-web-browser (500 KB APK), expo-constants (transitive of expo), expo-device (transitive of expo-notifications), expo-splash-screen (transitive of expo), expo-linking (transitive of expo-router), react-native-web (1 MB JS-only, NOT in native APK; safe but saves JS bundle). Plus 1 build-only: expo-build-properties (config-plugin only, not bundled — keep, it powers enableProguardInReleaseBuilds + enableShrinkInReleaseBuilds).
+- Native module bloat verified: 11 native modules in active use. Largest contributors: @rnmapbox/maps (~10 MB, USED), react-native-agora (~7 MB, USED), @sentry/react-native (~3 MB, USED but DSN unset → runtime no-op + ~3 MB dead native code), react-native-reanimated (~2.5 MB, USED), react-native-worklets (~2 MB, UNUSED direct-import).
+- Duplicate functionality: NONE in active expo-app (only ONE map SDK, ONE icons lib, ONE state mgmt, ONE http client, ONE navigation). Dead duplicates in /home/z/my-project/mobile/ (already flagged in AUDIT-S5-S6) — out of scope for this audit (source-tree bloat, not APK bloat).
+- Asset audit: 5 PNG files, 684 KB total. Largest: smartride-logo.png (355 KB, RGBA, transparent — the canonical logo, UNUSED in app.json but referenced via images/). icon.png + splash.png + adaptive-icon.png are opaque RGB (corroborates FRESH_VERIFICATION_AUDIT V9 branding bug — separate issue from APK size). Lossless recompression would save ~250-350 KB total — negligible vs native modules.
+- Estimated per-ABI APK size: ~52 MB (matches handoff claim + FRESH_VERIFICATION_AUDIT estimate). Estimated AAB download size: ~31 MB (40% reduction via Play Store dynamic delivery). 
+- Estimated potential APK reduction (without losing functionality): ~5-6 MB — react-native-worklets removal (-2 MB), expo-web-browser removal (-500 KB), lossless image compression (-300 KB), Sentry removal (-3 MB, but loses crash reporting). Agora deferral to Play Feature Delivery would save additional ~6-8 MB on initial install but adds complexity.
+- Estimated user download reduction (independent of APK shrink): ~21 MB by switching eas.json production profile from buildType:"apk" to buildType:"aab" (Play Store dynamic delivery).
+- Build config issues: (1) production profile ships APK not AAB; (2) NO credentialsSource field — defaults to "remote" EAS-managed keystore, may not match Google Sign-In SHA-1 fingerprint registered in Google Cloud Console (P4 issue); (3) NO env vars for EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN, EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID, EXPO_PUBLIC_AGORA_APP_ID, EXPO_PUBLIC_SENTRY_DSN, EXPO_PUBLIC_FIREBASE_* at build time — builds will produce APKs with empty runtime tokens; (4) NO submit.production config for Play Store; (5) `appVersionSource: "remote"` requires EAS to manage version bumps — fine but means local `./gradlew assembleRelease` builds may diverge from EAS builds.
+- Top 3 highest-impact actions (ranked by total user-experience benefit): (1) Switch eas.json production to buildType:"aab" — saves ~21 MB user download (40% reduction, zero code changes, zero risk); (2) Remove react-native-worklets from package.json — saves ~2 MB APK, Reanimated 4.x bundles own worklet runtime (zero risk, one-line package.json edit); (3) Remove expo-web-browser from package.json + app.json plugins (already NOT in plugins) — saves ~500 KB APK (zero risk, one-line package.json edit).
+
+---
+Task ID: P2-P7-P10-SYNTHESIS
+Agent: Main Agent (synthesis)
+Task: Phase 2 (E2E flows) + Phase 7 (production readiness scoring) + Phase 10 (action plan) + compile final audit report
+
+Work Log:
+- Phase 2 (End-to-End Flows): Live-tested via curl against running dev server. Flow 1 (Ride): PASS — verified via dev.log evidence (POST /api/rides 201, POST /api/tasks/{id}/transition 200, POST /api/tasks/{id}/rate exists). Full lifecycle not live-walked due to rate limiter (5 logins/15min), but each step independently verified via code + dev.log. Flow 2 (Food): PASS — GET /api/merchants?type=RESTAURANT 200, POST /api/orders 201. Flow 3 (Shopping): PARTIAL — D1 bug (orders/route.ts:241 hardcodes taskType='FOOD_DELIVERY' for all orders including SHOPPING). Flow 4 (Item Delivery): PASS — POST /api/tasks 201. Flow 5 (Health): PARTIAL — D2 bug (health-orders POST no auth check). Health delivery never live-tested (no entries in dev.log).
+- Phase 7 (Production Readiness Scoring): Synthesized scores from all 7 subagent reports. Architecture 7.5/10 (solid foundation, but 2 parallel dispatch impls + 4 dead code folders). Security 3.5/10 (CRITICAL — 10 production-blocking vulnerabilities). Performance 6.5/10 (52MB APK bloat, no OTA, no fonts). UX 5.5/10 (12 missing Stitch screens, typography broken, cursor-jump gaps). Reliability 6.0/10 (15/17 flows pass). Testing 4.0/10 (no test suite). Production Readiness 5.5/10 — Internal Testing Ready only.
+- Phase 10 (Final Action Plan): Categorized all findings into 14 CRITICAL blockers + 12 HIGH + 10 MEDIUM + 11 LOW priority fixes. Created "Fastest Path to Google Play Internal Testing" (2-3 days, 9 steps). Answered "If I gave this app to 100 real users tomorrow, what would break first?" — top 5: Google Sign-In fails (EAS SHA-1), wallet free-money exploit, health orders no auth, Apple Sign-In forged tokens, splash navy square.
+- Compiled final SMART_RIDE_FINAL_AUDIT.md (comprehensive 10-phase report, ~800 lines) covering all phases with evidence + file:line citations.
+
+Stage Summary:
+- All 10 phases complete. 7 subagents + main agent synthesis.
+- Final production readiness score: 5.5/10 (Internal Testing Ready only — NOT Closed Beta Ready).
+- Handoff was 85% accurate but missed 10 CRITICAL security bugs + 3 Google Sign-In blockers + 12 missing Stitch screens + broken typography.
+- 14 CRITICAL blockers identified with exact file:line + fix for each.
+- Fastest path to Play Internal Testing: 2-3 days (6-8 hours code fixes + 1 hour Firebase/Play config + 1 hour build/upload + 30 min env vars + 1 hour device testing).
+- Final report saved to /home/z/my-project/SMART_RIDE_FINAL_AUDIT.md.
+- Do NOT give this app to 100 real users tomorrow — fix CB1-CB14 first.
