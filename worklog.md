@@ -2103,3 +2103,25 @@ Stage Summary:
 - Updated production readiness score (estimated): 6.1/10 → ~8.5/10 (Closed Beta Ready after env vars set + real SMS/payment gateway configured).
 - Migration 009 applied to Supabase production database.
 - All changes ready for git commit + push.
+
+---
+Task ID: HANDOFF-RESEARCH
+Agent: Codebase Researcher
+Task: Gather facts for master handoff document
+
+Work Log:
+- Read full worklog.md (2,105 lines) + FRESH_VERIFICATION_AUDIT.md (472 lines) to understand project history (Apple Sign-In, Mapbox, Stitch migration, In-App Calls, Chat API, Decimal-Float migration, Realtime/SecureStore/Push/Cron wiring, dispatch/state-machine Phase 3 integration, fresh 6-section audit, FIX-ALL-BUGS round closing 11 issues B1/B2/B3/H1/H2/H3/H4/H5/M1/M4/L11).
+- Read prisma/schema.prisma (2,328 lines, 67 models, 54 enums) — documented full Task model, all enums, and TaskStatus state machine map at enhanced-task-state-machine.service.ts:114-132 (isValidTransition VALID_TRANSITIONS table).
+- Read src/lib/services/enhanced-task-state-machine.service.ts (1,544 lines) — captured Phase-3 architecture: idempotency window (5s), actor validation (getAllowedActors), transaction-participant pattern (transitionInTx + emitPostTransitionSideEffects), post-commit side-effects via SocketReliabilityService + FinanceLedgerService.
+- Read src/lib/services/dispatch-persistence.service.ts (981 lines) + mini-services/dispatch-service/index.ts (1,325 lines) + scoring-engine.ts (325 lines) — documented two parallel dispatch implementations: the ACTIVE DispatchService class (Supabase Realtime via broadcastToUser) vs the LEGACY standalone Socket.io mini-service (port 3003, in-memory maps, currently not imported by src/).
+- Read src/lib/realtime-server.ts (246 lines) + expo-app/src/services/realtime.service.ts (888 lines) + socket.service.ts (695 lines) — confirmed full migration to Supabase Realtime (realtime-service/index.ts process.exit(0) on startup); listed all broadcast event names and channel naming conventions (task:${taskId}, user:${userId}, rider:${riderId}, chat:${roomId}, db:task:${taskId}).
+- Read src/lib/auth/jwt.ts (171 lines) + guards.ts (661 lines) + all 10 auth route files — documented JWT structure (HS256, issuer=smart-ride, aud=smart-ride-api, claims userId/email/role/name + iat/exp), access TTL 7d (env-overridable), refresh TTL 30d, dual storage (Authorization Bearer header for mobile + httpOnly cookie refreshToken for web/admin), OTP+Google+Apple flows.
+- Read src/components/dashboard/admin-dashboard.tsx + sidebar.tsx (13 admin nav views) + task-override/route.ts (5 actions: force_redispatch, force_cancel, force_complete, emergency_reassign, force_assign) + riders/approve + riders/reject + admin/merchants/verify + admin/health-providers/verify.
+- Read .env.example (160 lines) + .env (57 lines) + expo-app/.env.example + eas.json — produced complete env var inventory (55+ vars) with provider attribution.
+- Read vercel.json + Caddyfile + package.json scripts + eas.json (4 build profiles: development, preview, production, apk — all APK not AAB).
+- Confirmed Stitch Design counts from AUDIT-S3 worklog entry: 6 fully / 11 partial / 12 missing of 29 designs (~39.7% completion).
+- Compared FIX-ALL-BUGS worklog entry against the 15 V1-V15 audit findings to enumerate the 11 FIXED vs ~13 remaining issues with severities and recommended next fixes.
+
+Stage Summary:
+- Research complete across 11 topic areas
+- Key findings: (1) Smart Ride is a 67-model Prisma/PostgreSQL + Next.js + Expo multi-service platform with a Phase-3 integrated state machine that delegates all task transitions through EnhancedTaskStateMachine (idempotency + actor-RBAC + post-commit analytics/socket/finance hooks); (2) Real-time stack has been fully migrated from Socket.io mini-services to Supabase Realtime (realtime-service mini-service is DEPRECATED via process.exit(0)); dispatch-service and heartbeat-monitor mini-services still exist as standalone Socket.io servers on ports 3003/3004 but are NOT imported by the active src/ — the production DispatchService class lives in src/lib/services/dispatch-persistence.service.ts and uses Supabase broadcastToUser; (3) Of the 15 audit-flagged issues (V1-V15), 11 were just resolved in FIX-ALL-BUGS (3 critical RLS/auth/asset + 5 high + 2 medium + 1 low); remaining ~13 issues are all LOW/MEDIUM severity (IconInput forwardRef, dead code cleanup, AAB switch, real SMS/payment gateway integration, 12 missing Stitch screens) plus 1 HIGH pending-in-production action (set 6 env vars in Vercel dashboard: JWT_SECRET, CRON_SECRET, CORS_ALLOWED_ORIGINS, NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_API_URL, DATABASE_URL=direct host).
