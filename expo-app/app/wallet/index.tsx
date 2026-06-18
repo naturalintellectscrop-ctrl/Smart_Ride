@@ -263,7 +263,21 @@ export default function WalletScreen() {
         style={styles.paymentMethodsSection}
       >
         <Text style={styles.sectionTitle}>Payment Methods</Text>
-        <View style={styles.paymentMethodsRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.paymentMethodsRow}
+        >
+          {/* NylonPay (NEW — unified gateway) */}
+          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
+            <View style={styles.paymentMethodContent}>
+              <View style={[styles.paymentIconCircle, { backgroundColor: `${COLORS.primary}15` }]}>
+                <Ionicons name="wallet" size={20} color={COLORS.primary} />
+              </View>
+              <Text style={styles.paymentMethodName}>NylonPay</Text>
+            </View>
+          </GlassCard>
+
           {/* MTN MoMo */}
           <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
             <View style={styles.paymentMethodContent}>
@@ -293,7 +307,7 @@ export default function WalletScreen() {
               <Text style={styles.paymentMethodName}>Cash</Text>
             </View>
           </GlassCard>
-        </View>
+        </ScrollView>
       </Animated.View>
 
       {/* Transaction History */}
@@ -616,6 +630,8 @@ const styles = StyleSheet.create({
   paymentMethodsRow: {
     flexDirection: 'row',
     gap: SPACING.gutter,
+    paddingHorizontal: SPACING.containerMargin,
+    paddingVertical: 2,
   },
   paymentMethodContent: {
     alignItems: 'center',

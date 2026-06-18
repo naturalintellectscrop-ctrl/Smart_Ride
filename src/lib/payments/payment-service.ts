@@ -7,6 +7,12 @@ import { db } from '@/lib/db';
 import { PaymentMethod, TaskType, TransactionType } from '@prisma/client';
 import { MTN_MOMO, generateReferenceId as generateMTNReference, isConfigured as isMTNConfigured } from './mtn-momo';
 import { AIRTEL_MONEY, generateReferenceId as generateAirtelReference, isConfigured as isAirtelConfigured } from './airtel-money';
+import {
+  isNylonPayConfigured,
+  getNylonPayClient,
+  generateNylonPayReference,
+  mapNylonPayStatus,
+} from './nylonpay';
 import { paymentLogger } from '@/lib/logging/logger';
 import { toNumber } from '@/lib/decimal-utils';
 
@@ -14,7 +20,7 @@ import { toNumber } from '@/lib/decimal-utils';
 // Types
 // ==========================================
 
-export type PaymentProvider = 'MTN_MOMO' | 'AIRTEL_MONEY' | 'VISA' | 'MASTERCARD' | 'CASH' | 'WALLET';
+export type PaymentProvider = 'MTN_MOMO' | 'AIRTEL_MONEY' | 'VISA' | 'MASTERCARD' | 'CASH' | 'WALLET' | 'NYLON_PAY';
 
 export interface InitiatePaymentParams {
   userId: string;
@@ -121,7 +127,21 @@ export async function initiatePayment(params: InitiatePaymentParams): Promise<Pa
       
       case 'WALLET':
         return await processWalletPayment(payment.id, reference, userId, amount);
-      
+
+      case 'NYLON_PAY':
+        if (!isNylonPayConfigured()) {
+          paymentLogger.warn('NylonPay gateway not configured. Set NYLONPAY_API_KEY and NYLONPAY_API_SECRET environment variables.');
+          await updatePaymentStatus(payment.id, 'FAILED', 'NylonPay gateway not configured');
+          return {
+            success: false,
+            paymentId: payment.id,
+            reference,
+            status: 'FAILED',
+            message: 'NylonPay gateway not configured. Please try another payment method.',
+          };
+        }
+        return await processNylonPayPayment(payment.id, reference, userId, amount, phoneNumber, description);
+
       default:
         throw new Error(`Unsupported payment method: ${paymentMethod}`);
     }
@@ -265,6 +285,115 @@ async function processCashPayment(
     status: 'PENDING',
     message: 'Cash payment will be collected upon delivery/completion.',
   };
+}
+
+/**
+ * Process NylonPay payment (mobile money collection via the unified gateway)
+ *
+ * NylonPay acts as merchant of record: it abstracts the underlying telco
+ * (MTN MoMo / Airtel Money) so we don't need to know which one the customer
+ * uses. The SDK returns a PaymentInstance that emits events as the STK push
+ * progresses. The authoritative terminal status comes via webhook
+ * (/api/payments/nylonpay/callback) — this function only initiates.
+ */
+async function processNylonPayPayment(
+  paymentId: string,
+  reference: string,
+  userId: string,
+  amount: number,
+  phoneNumber: string | undefined,
+  description?: string,
+): Promise<PaymentResult> {
+  if (!phoneNumber) {
+    await updatePaymentStatus(paymentId, 'FAILED', 'Phone number required for NylonPay collection');
+    return {
+      success: false,
+      paymentId,
+      reference,
+      status: 'FAILED',
+      message: 'Phone number is required for NylonPay payment.',
+    };
+  }
+
+  try {
+    // Fetch customer name from DB for the NylonPay record
+    const user = await db.user.findUnique({
+      where: { id: userId },
+      select: { name: true, email: true },
+    });
+
+    const nylonpay = getNylonPayClient();
+    const instance = await nylonpay.collectPayment({
+      amount,
+      currency: 'UGX',
+      description: description || 'Smart Ride Payment',
+      customer: {
+        name: user?.name || 'Smart Ride Customer',
+        phoneNumber: formatPhone('NYLON_PAY', phoneNumber),
+        ...(user?.email ? { email: user.email } : {}),
+      },
+      reference,
+      metadata: { paymentId, userId, purpose: 'service_payment' },
+    });
+
+    // Wire up async event handlers — DO NOT await these.
+    // The webhook is authoritative; these are for fast UX feedback only.
+    instance
+      .on('processing', () => {
+        db.payment.updateMany({
+          where: { id: paymentId, status: 'PENDING' },
+          data: { status: 'PROCESSING' },
+        }).catch((e) => paymentLogger.error('nylonpay.processing update failed', { error: String(e) }));
+      })
+      .on('success', ({ transaction }) => {
+        paymentLogger.info('nylonpay.success (sdk event)', {
+          reference,
+          operatorTid: transaction?.operatorTid,
+        });
+      })
+      .on('failed', () => {
+        paymentLogger.warn('nylonpay.failed (sdk event)', { reference });
+      })
+      .on('error', ({ error, category, retryable }) => {
+        paymentLogger.error('nylonpay.error (sdk event)', {
+          reference,
+          category,
+          error,
+          retryable,
+        });
+      });
+
+    // Update payment to PROCESSING — webhook will set terminal status
+    await db.payment.update({
+      where: { id: paymentId },
+      data: {
+        status: 'PROCESSING',
+        momoTransactionId: reference, // NylonPay uses our reference as the lookup key
+      },
+    });
+
+    return {
+      success: true,
+      paymentId,
+      reference,
+      status: 'PENDING',
+      message: 'Payment request sent. Please approve the prompt on your phone.',
+      providerResponse: { reference, sdkReference: instance.reference },
+    };
+  } catch (error) {
+    await updatePaymentStatus(
+      paymentId,
+      'FAILED',
+      error instanceof Error ? error.message : 'NylonPay payment failed',
+    );
+    return {
+      success: false,
+      paymentId,
+      reference,
+      status: 'FAILED',
+      message: error instanceof Error ? error.message : 'NylonPay payment failed',
+    };
+  }
 }
 
 /**
@@ -464,6 +593,103 @@ export async function handleAirtelCallback(data: PaymentCallbackData): Promise<v
 }
 
 /**
+ * Handle NylonPay webhook callback.
+ *
+ * The webhook is the AUTHORITATIVE source of payment status. The SDK's
+ * event handlers (in processNylonPayPayment) only provide fast UX feedback;
+ * this function is what actually marks the payment COMPLETED and triggers
+ * downstream fulfillment (task update, finance log, rider earnings).
+ *
+ * Signature verification is done by the route handler BEFORE calling this —
+ * we trust the data here.
+ */
+export async function handleNylonPayCallback(data: {
+  reference: string;
+  status: string;
+  transactionId?: string;
+  operatorTid?: string | null;
+  amount?: number;
+  currency?: string;
+  failureReason?: string | null;
+  event: string;
+  rawPayload: unknown;
+}): Promise<void> {
+  try {
+    const payment = await db.payment.findFirst({
+      where: { paymentReference: data.reference },
+    });
+
+    if (!payment) {
+      console.error('NylonPay callback: payment not found', { reference: data.reference });
+      return;
+    }
+
+    const mappedStatus = mapNylonPayStatus(data.status);
+    const dbStatus = mappedStatus; // already in DB enum terms
+
+    // Race condition guard: only update if payment is still in a non-final state
+    const updateResult = await db.payment.updateMany({
+      where: {
+        id: payment.id,
+        status: { in: ['PENDING', 'PROCESSING'] },
+      },
+      data: {
+        status: dbStatus,
+        transactionId: data.transactionId || payment.transactionId,
+        providerResponse: JSON.stringify(data.rawPayload),
+        processedAt: mappedStatus === 'COMPLETED' ? new Date() : null,
+        failureReason:
+          mappedStatus === 'FAILED'
+            ? (data.failureReason || `${data.event}: ${data.status}`)
+            : null,
+      },
+    });
+
+    if (updateResult.count === 0) {
+      console.warn('NylonPay callback: payment already processed, skipping', {
+        paymentId: payment.id,
+        event: data.event,
+      });
+      return;
+    }
+
+    // If successful, trigger post-payment actions (task update, finance log)
+    if (mappedStatus === 'COMPLETED') {
+      try {
+        await handleSuccessfulPayment(payment.id);
+      } catch (financeError) {
+        console.error('NylonPay callback: handleSuccessfulPayment failed:', financeError);
+        // Don't rethrow — payment status is already updated, finance reconciliation can be retried
+      }
+    }
+
+    // Create audit log
+    try {
+      await db.auditLog.create({
+        data: {
+          actorType: 'SYSTEM',
+          action: 'PAYMENT_CALLBACK_PROCESSED',
+          entityType: 'Payment',
+          entityId: payment.id,
+          taskId: payment.taskId,
+          description: `NylonPay webhook: payment ${payment.paymentReference} → ${dbStatus} (${data.event})`,
+          newValues: JSON.stringify({
+            event: data.event,
+            status: dbStatus,
+            transactionId: data.transactionId,
+            operatorTid: data.operatorTid,
+          }),
+        },
+      });
+    } catch (auditError) {
+      console.error('NylonPay callback: audit log creation failed:', auditError);
+    }
+  } catch (error) {
+    console.error('NylonPay callback handling error:', error);
+  }
+}
+
+/**
  * Handle successful payment - update related records
  */
 export async function handleSuccessfulPayment(paymentId: string): Promise<void> {
@@ -609,6 +835,7 @@ function generateReference(method: PaymentProvider): string {
     MASTERCARD: 'MAS',
     CASH: 'CSH',
     WALLET: 'WAL',
+    NYLON_PAY: 'NYP',
   };
 
   const timestamp = Date.now().toString(36).toUpperCase();
@@ -624,6 +851,7 @@ function mapPaymentMethod(method: PaymentProvider): PaymentMethod {
     MASTERCARD: 'MASTERCARD',
     CASH: 'CASH',
     WALLET: 'CASH', // Wallet uses CASH type in DB
+    NYLON_PAY: 'NYLON_PAY',
   };
   return mapping[method];
 }
@@ -634,6 +862,15 @@ function formatPhone(method: PaymentProvider, phone: string): string {
   }
   if (method === 'AIRTEL_MONEY') {
     return AIRTEL_MONEY.formatUgandaPhone(phone);
+  }
+  if (method === 'NYLON_PAY') {
+    // NylonPay normalizes phone numbers itself, but we still tidy up whitespace
+    // and ensure a leading + for international format.
+    const cleaned = phone.replace(/[\s\-()]/g, '');
+    if (!cleaned.startsWith('+') && /^\d{10,}$/.test(cleaned)) {
+      return '+' + cleaned;
+    }
+    return cleaned;
   }
   return phone;
 }
@@ -661,9 +898,11 @@ export const PaymentService = {
   checkPaymentStatus,
   handleMTNCallback,
   handleAirtelCallback,
+  handleNylonPayCallback,
   handleSuccessfulPayment,
   isMTNConfigured,
   isAirtelConfigured,
+  isNylonPayConfigured,
 };
 
 export default PaymentService;

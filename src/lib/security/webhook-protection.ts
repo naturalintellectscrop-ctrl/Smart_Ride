@@ -14,8 +14,10 @@ import { NextRequest, NextResponse } from 'next/server';
 // Types
 // ============================================================================
 
+export type WebhookProvider = 'MTN' | 'AIRTEL' | 'FLUTTERWAVE' | 'NYLONPAY';
+
 export interface WebhookRecord {
-  provider: 'MTN' | 'AIRTEL' | 'FLUTTERWAVE';
+  provider: WebhookProvider;
   transactionId: string;
   referenceId: string;
   status: string;
@@ -33,7 +35,7 @@ const WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000; // 5 minutes
  * Check if a webhook has already been processed
  */
 export async function isWebhookProcessed(
-  provider: 'MTN' | 'AIRTEL' | 'FLUTTERWAVE',
+  provider: WebhookProvider,
   transactionId: string
 ): Promise<boolean> {
   try {
@@ -85,7 +87,7 @@ export function validateWebhookTimestamp(
  * Record webhook as processed
  */
 export async function recordWebhookProcessed(
-  provider: 'MTN' | 'AIRTEL' | 'FLUTTERWAVE',
+  provider: WebhookProvider,
   transactionId: string,
   referenceId: string,
   status: string,

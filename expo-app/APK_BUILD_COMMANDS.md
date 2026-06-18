@@ -187,6 +187,94 @@ Verify the file exists:
 ls -la /c/path/to/my-project/expo-app/android/app/build/outputs/apk/release/app-release.apk
 ```
 
+> **The build does NOT auto-download or auto-install the APK.** `./gradlew assembleDebug`
+> just compiles the code and drops the APK file at the path above. You then have to
+> install it on your phone yourself (Step 6 below). No "download" prompt appears in
+> GitBash — Gradle is a build tool, not a package manager.
+
+---
+
+## Step 5.5 — "Build succeeded but where's my APK?"
+
+If `BUILD SUCCESSFUL` printed but you can't find the APK and `adb` doesn't see your
+phone, work through this checklist in order:
+
+### 1. Confirm the APK actually exists on disk
+
+In GitBash, from the `expo-app/` folder:
+
+```bash
+# For a debug build
+ls -la android/app/build/outputs/apk/debug/
+
+# For a release build
+ls -la android/app/build/outputs/apk/release/
+```
+
+You should see `app-debug.apk` (or `app-release.apk`), typically 30–80 MB. If the
+folder is empty or doesn't exist, the build didn't actually finish — re-check the
+Gradle output for `BUILD SUCCESSFUL`.
+
+Open the folder in Windows Explorer to confirm:
+
+```bash
+explorer.exe android/app/build/outputs/apk/debug
+```
+
+### 2. Make sure your phone is actually visible to ADB
+
+Plug the phone in via USB, then:
+
+```bash
+adb devices
+```
+
+You should see something like:
+
+```
+List of devices attached
+R5CT30XXXXX     device
+```
+
+If the list is **empty** or shows `unauthorized`, the problem is the USB connection,
+not the build:
+
+| Symptom | Fix |
+|---|---|
+| `List of devices attached` is empty | Phone is charging-only. On the phone: pull down the notification shade → tap the "USB charging" / "Charging this device via USB" notification → switch to **File Transfer (MTP)** or **PTP**. Then re-run `adb devices`. |
+| Shows `unauthorized` | On the phone: a dialog "Allow USB debugging?" should have popped up the first time you plugged in. Tap **Allow** (and tick "Always allow from this computer"). If you missed it, revoke and re-grant: Settings → Developer options → "Revoke USB debugging authorizations" → plug phone back in. |
+| `adb: command not found` | Add `C:\Users\YOUR_USERNAME\AppData\Local\Android\Sdk\platform-tools` to your `Path` env var (see Prerequisites section) and **restart GitBash**. |
+| Phone still not detected | Try a different USB cable (some cables are power-only and don't carry data). Try a different USB port. Restart ADB server: `adb kill-server && adb start-server`. |
+
+### 3. Install the APK
+
+Once `adb devices` shows your phone as `device`:
+
+```bash
+# Debug build
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+
+# Release build
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+```
+
+- `-r` reinstalls if the app is already on the phone (preserves data).
+- Output should say `Success`.
+- The app icon ("Smart Ride") will appear in your phone's app drawer.
+
+### 4. Manual install (no ADB required)
+
+If `adb` won't cooperate, copy the APK file to your phone and install it manually:
+
+1. **Copy the APK** to your phone — any of:
+   - Drag `app-debug.apk` from Windows Explorer into your phone's "Internal storage"
+     folder via Windows File Explorer (the phone must be in MTP mode).
+   - Upload to Google Drive → download on phone.
+   - Send to yourself on WhatsApp/Telegram → download on phone.
+2. **On the phone**, open the Files app → find the APK → tap it.
+3. If prompted, allow "Install unknown apps" for the Files app (one-time permission).
+4. Tap **Install** → **Open** when done.
+
 ---
 
 ## Step 6 — Install the APK on a phone

@@ -2831,3 +2831,63 @@ Stage Summary:
     DATABASE_URL="$(grep ^DATABASE_URL .env.production | cut -d= -f2-)" bunx tsx scripts/delete-test-users.ts  # dry run
     DATABASE_URL="$(grep ^DATABASE_URL .env.production | cut -d= -f2-)" CONFIRM=1 bunx tsx scripts/delete-test-users.ts  # actual delete
 - Cookie path fix (/admin → /) may resolve pre-existing admin session refresh issues
+
+---
+Task ID: NYLONPAY-1
+Agent: Main Agent
+Task: Implement NylonPay payment gateway + document APK install path for user
+
+Work Log:
+- Read user-supplied build log (Pasted Content_1781802368203.txt) — confirmed `BUILD SUCCESSFUL in 46m 9s` (debug build). User confused because no APK "downloaded" — explained that gradle just drops the file on disk; it doesn't auto-install.
+- Read existing NylonPay research doc at agent-ctx/NP-1-nylonpay-research.md (76KB, 1449 lines) — full integration plan with SDK code samples.
+- Installed SDK: `bun add @nile-squad/nylonpay-ts` → resolved to v1.2.0. Verified exports by reading dist/index.d.ts: createNylonPay, verifyWebhookSignature, collectPayment, collectPaymentAndResolve, makePayout, getStatus, getTransaction, createInvoice, verifyPhone + all types.
+- Prisma schema: added `NYLON_PAY` to `PaymentMethod` enum. Local db:push via temporary sqlite provider swap (production schema stays postgresql — production DB has its own migration path). Regenerated Prisma client.
+- Created src/lib/payments/nylonpay.ts (singleton + helpers): getNylonPayClient, isNylonPayConfigured, generateNylonPayReference (14-char hex, fits 13–15 char requirement), mapNylonPayStatus (pending/processing/successful/failed/cancelled → PENDING/PROCESSING/COMPLETED/FAILED), verifyNylonPayWebhook (wraps SDK's verifyWebhookSignature with 5-min freshness check), collectPaymentAndResolve (one-shot blocking variant). Includes lifecycle hooks for beforeCollect/afterCollect/beforePayout/afterPayout with structured logging.
+- Wired into src/lib/payments/payment-service.ts:
+  * Added 'NYLON_PAY' to PaymentProvider type
+  * Added processNylonPayPayment() — creates Payment row, calls nylonpay.collectPayment() with customer info, wires SDK event handlers (processing/success/failed/error) for fast UX feedback, returns PENDING (webhook is authoritative)
+  * Added handleNylonPayCallback() — race-condition guard (only updates PENDING/PROCESSING), maps status, fires handleSuccessfulPayment on COMPLETED (task update + finance log + rider earnings), creates audit log
+  * Updated generateReference() prefix map (NYLON_PAY → 'NYP')
+  * Updated mapPaymentMethod() (NYLON_PAY → 'NYLON_PAY')
+  * Updated formatPhone() (cleans whitespace, ensures leading + for international format; NylonPay normalizes the rest)
+  * Exported isNylonPayConfigured + handleNylonPayCallback on PaymentService
+- Updated src/lib/security/webhook-protection.ts: extracted WebhookProvider type union (now 'MTN' | 'AIRTEL' | 'FLUTTERWAVE' | 'NYLONPAY'), updated isWebhookProcessed + recordWebhookProcessed signatures to use the new type. Backwards-compatible.
+- Created 3 API routes:
+  * POST /api/payments/nylonpay/initiate — auth-required, rate-limited, zod-validated; creates PENDING Payment row with paymentMethod='NYLON_PAY', calls nylonpay.collectPayment(), wires event handlers, returns {paymentId, reference, status, sdkReference}. GET variant returns availability check (used by mobile app to decide whether to show the option).
+  * POST /api/payments/nylonpay/callback — webhook receiver; captures RAW body before JSON parse (critical for HMAC), verifies signature via verifyNylonPayWebhook (HMAC-SHA256 + 5-min freshness), dedupes on (reference, event), re-verifies with getStatus() on collection.completed (defense in depth), delegates to handleNylonPayCallback. GET variant is a health check for the NylonPay dashboard.
+  * GET /api/payments/nylonpay/verify?reference=SR... — auth-required, rate-limited; one-shot status check. Returns current DB status if already terminal, else calls nylonpay.getStatus() and updates DB (with race-condition guard). Fires handleSuccessfulPayment if just transitioned to COMPLETED.
+- All 3 routes use `export const runtime = 'nodejs'` (not edge — needs raw body + node:crypto).
+- Updated .env.production.example: uncommented the NylonPay section, added sandbox vs live key prefix guidance, added webhook URL note.
+- env-validation.ts already had NYLONPAY_* registered as optional (from prior FIX-A task) — no change needed.
+- Updated expo-app/src/components/TopUpModal.tsx:
+  * Added NYLON_PAY as the FIRST payment provider (before MTN/Airtel) with a 'NEW' badge
+  * Default selected provider is now NYLON_PAY (was MTN_MOMO)
+  * Added badge styles (primary color background, onPrimary text)
+  * Updated subtitle to mention "NylonPay supports both MTN and Airtel automatically"
+- Updated expo-app/app/wallet/index.tsx:
+  * Added NylonPay as the first card in the Payment Methods row (wallet icon, primary color)
+  * Switched the row from a fixed View to a horizontal ScrollView (4 cards now, won't fit on narrow screens)
+- Updated expo-app/APK_BUILD_COMMANDS.md with a new "Step 5.5 — Build succeeded but where's my APK?" section:
+  * Explains that gradle doesn't auto-download/install the APK — it just drops the file on disk
+  * 4-step checklist: (1) confirm APK exists with ls/explorer, (2) make phone visible to ADB (MTP mode, USB debugging prompt, PATH), (3) install via adb install -r, (4) manual install via file copy if adb won't cooperate
+  * Troubleshooting table for empty/unauthorized/not-found adb devices
+  * Manual install path: copy APK to phone via Drive/WhatsApp/USB → tap in Files app → allow unknown apps → Install
+
+Verification:
+- bun run lint: PASSED (0 errors)
+- Dev server starts cleanly, no compile errors
+- Agent Browser verification (all passed):
+  * GET /intellects/login → 200, renders "Smart Ride Admin" heading + email/password textboxes + Sign In button + Forgot password link
+  * GET /api/payments/nylonpay/callback → 200, returns {"success":true,"provider":"nylonpay","configured":false,"timestamp":"..."} (configured:false expected — no real NYLONPAY_API_KEY in dev env)
+  * POST /api/payments/nylonpay/initiate (no auth) → 401 {"success":false,"error":"Unauthorized"}
+  * GET /api/payments/nylonpay/verify (no auth) → 401 {"success":false,"error":"Unauthorized"}
+- Dev log shows all 4 requests processed with correct status codes and fast response times (164ms–1773ms)
+
+Stage Summary:
+- NylonPay fully integrated end-to-end: SDK installed, singleton service created, payment-service.ts wired, 3 API routes created, webhook signature verification + replay protection + idempotency + race-condition guards all in place
+- Mobile UI updated: TopUpModal defaults to NylonPay with 'NEW' badge; wallet screen shows NylonPay as first payment method card
+- APK install path documented: Step 5.5 in APK_BUILD_COMMANDS.md walks user through finding the APK file on disk, getting ADB to see their phone, and installing via USB or manual file copy
+- All NylonPay env vars already in .env.production.example (uncommented, with sandbox/live key prefix guidance)
+- Production schema stays postgresql; local dev uses sqlite (temporary swap during db:push)
+- Webhook URL to register in NylonPay dashboard: https://smartrideug.vercel.app/api/payments/nylonpay/callback
+- Next steps for user: (1) get NylonPay sandbox keys from dashboard.nylonpay.nilesquad.com, (2) set NYLONPAY_API_KEY/SECRET/WEBHOOK_SECRET in Vercel env vars, (3) register the webhook URL in the NylonPay dashboard, (4) rebuild APK to see the new NylonPay option in the wallet TopUp modal

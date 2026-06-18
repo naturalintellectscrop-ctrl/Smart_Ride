@@ -28,6 +28,13 @@ import { GradientButton } from './GradientButton';
 
 const PAYMENT_PROVIDERS = [
   {
+    id: 'NYLON_PAY',
+    name: 'NylonPay',
+    color: COLORS.primary,
+    icon: 'wallet-outline' as const,
+    badge: 'NEW',
+  },
+  {
     id: 'MTN_MOMO',
     name: 'MTN MoMo',
     color: COLORS.mtnYellow,
@@ -59,7 +66,7 @@ export function TopUpModal({
 }: TopUpModalProps) {
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState(defaultPhoneNumber || '');
-  const [provider, setProvider] = useState('MTN_MOMO');
+  const [provider, setProvider] = useState('NYLON_PAY');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -76,7 +83,7 @@ export function TopUpModal({
 
   const reset = () => {
     setAmount('');
-    setProvider('MTN_MOMO');
+    setProvider('NYLON_PAY');
     setError(null);
   };
 
@@ -174,7 +181,8 @@ export function TopUpModal({
             </View>
 
             <Text style={styles.subtitle}>
-              Add money to your Smart Ride wallet via mobile money
+              Add money to your Smart Ride wallet via mobile money. NylonPay
+              supports both MTN and Airtel automatically.
             </Text>
 
             {/* Provider selector */}
@@ -208,6 +216,11 @@ export function TopUpModal({
                     >
                       {p.name}
                     </Text>
+                    {'badge' in p && p.badge ? (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{p.badge}</Text>
+                      </View>
+                    ) : null}
                   </TouchableOpacity>
                 );
               })}
@@ -391,6 +404,19 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1.5,
     borderColor: 'transparent',
+  },
+  badge: {
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    marginLeft: 2,
+  },
+  badgeText: {
+    color: COLORS.onPrimary,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   providerCardActive: {
     backgroundColor: `${COLORS.primary}10`,
