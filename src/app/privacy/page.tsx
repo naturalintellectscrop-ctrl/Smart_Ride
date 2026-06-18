@@ -1,82 +1,57 @@
-'use client';
-
-import React from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import Logo from '@/components/Logo';
-import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Logo from '@/components/Logo';
 import {
   Shield,
+  ArrowLeft,
   Calendar,
-  Clock,
   Mail,
   Globe,
-  CheckCircle2,
-  ChevronRight,
-  ArrowLeft,
-  FileText,
-  Lock,
   UserCircle,
+  MapPin,
   CreditCard,
   Smartphone,
   BarChart3,
-  MessageSquare,
-  Eye,
   Share2,
+  Lock,
+  Database,
+  Eye,
+  Cookie,
   Baby,
+  RefreshCw,
   Building2,
-  Scale,
-  MapPin,
+  CheckCircle2,
+  ChevronRight,
 } from 'lucide-react';
 
-// ─── Animation helpers ───────────────────────────────────────────────────────
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: 'easeOut' as const },
+export const metadata: Metadata = {
+  title: 'Privacy Policy | Smart Ride',
+  description:
+    'Smart Ride Privacy Policy — how we collect, use, share, store, and protect your personal information across our Ugandan ride-hailing and services super-app.',
+  alternates: {
+    canonical: 'https://smartrideug.vercel.app/privacy',
+  },
+  openGraph: {
+    title: 'Privacy Policy | Smart Ride',
+    description:
+      'How Smart Ride collects, uses, shares, and protects your personal information.',
+    url: 'https://smartrideug.vercel.app/privacy',
   },
 };
 
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// ─── Data ────────────────────────────────────────────────────────────────────
-
-const navLinks = [
-  { label: 'Home', href: '/' },
-  { label: 'About', href: '/about' },
-  { label: 'Help', href: '/help' },
-  { label: 'Contact', href: '/contact' },
-];
-
-const tocSections = [
-  { id: 'about', label: 'About Smart Ride' },
-  { id: 'information-we-collect', label: 'Information We Collect' },
-  { id: 'how-we-use-information', label: 'How We Use Information' },
-  { id: 'legal-basis', label: 'Legal Basis for Processing' },
-  { id: 'how-information-is-shared', label: 'How Information Is Shared' },
-  { id: 'data-security', label: 'Data Security' },
-  { id: 'data-retention', label: 'Data Retention' },
-  { id: 'your-rights', label: 'Your Rights' },
-  { id: 'account-deletion', label: 'Account Deletion' },
-  { id: 'childrens-privacy', label: "Children's Privacy" },
-  { id: 'international-data-transfers', label: 'International Data Transfers' },
-  { id: 'third-party-services', label: 'Third-Party Services' },
-  { id: 'changes', label: 'Changes to This Privacy Policy' },
-  { id: 'contact-us', label: 'Contact Us' },
-  { id: 'data-safety-statement', label: 'Data Safety Statement' },
-];
-
-// Bullet list helper
 function BulletList({ items }: { items: string[] }) {
   return (
-    <ul className="space-y-2.5 ml-1">
+    <ul className="space-y-2.5 ml-1 mt-3">
       {items.map((item, i) => (
         <li
           key={i}
@@ -90,7 +65,6 @@ function BulletList({ items }: { items: string[] }) {
   );
 }
 
-// Section heading with green accent bar + icon
 function SectionHeading({
   number,
   title,
@@ -101,8 +75,10 @@ function SectionHeading({
   Icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white scroll-mt-24">
-      <span className="w-1.5 h-7 rounded-full bg-[#22C55E] shrink-0" />
+    <h2
+      id={`section-${number}`}
+      className="border-l-4 border-[#22C55E] pl-4 flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white scroll-mt-24"
+    >
       <Icon className="w-6 h-6 text-[#22C55E] shrink-0" />
       <span>
         <span className="text-[#22C55E] mr-2">{number}.</span>
@@ -112,41 +88,25 @@ function SectionHeading({
   );
 }
 
-// Sub-heading A/B/C/D
 function SubHeading({ label }: { label: string }) {
   return (
-    <h3 className="text-lg font-semibold text-[#22C55E] mt-6 mb-2 flex items-center gap-2">
+    <h3 className="text-base sm:text-lg font-semibold text-[#22C55E] mt-6 mb-1 flex items-center gap-2">
       <ChevronRight className="w-4 h-4" />
       {label}
     </h3>
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-[#111827] text-white flex flex-col">
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* STICKY HEADER                                                       */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <header className="sticky top-0 z-50 bg-[#111827]/80 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ═══════ STICKY HEADER ═══════ */}
+      <header className="sticky top-0 z-50 bg-[#111827]/85 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Logo variant="dark" />
-
-            <div className="hidden md:flex items-center gap-8">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-gray-300 hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-
             <Link href="/">
               <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white">
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -157,23 +117,15 @@ export default function PrivacyPage() {
         </div>
       </header>
 
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* HERO                                                                */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden py-20 px-4">
-        {/* Decorative background glow */}
-        <div className="absolute inset-0 -z-10">
+      {/* ═══════ HERO ═══════ */}
+      <section className="relative overflow-hidden py-16 px-4">
+        <div className="absolute inset-0 -z-10 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#22C55E]/10 rounded-full blur-[120px]" />
           <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-[#005f3a]/20 rounded-full blur-[100px]" />
         </div>
 
-        <motion.div
-          className="max-w-4xl mx-auto text-center"
-          initial="hidden"
-          animate="visible"
-          variants={stagger}
-        >
-          <motion.div variants={fadeUp} className="flex justify-center mb-6">
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="flex justify-center mb-6">
             <Badge
               variant="outline"
               className="bg-[#22C55E]/10 border-[#22C55E]/30 text-[#22C55E] px-4 py-1.5 text-sm gap-2"
@@ -181,19 +133,13 @@ export default function PrivacyPage() {
               <Shield className="w-4 h-4" />
               Privacy Policy
             </Badge>
-          </motion.div>
+          </div>
 
-          <motion.h1
-            variants={fadeUp}
-            className="text-4xl sm:text-5xl font-bold tracking-tight mb-6"
-          >
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
             Smart Ride Privacy Policy
-          </motion.h1>
+          </h1>
 
-          <motion.div
-            variants={fadeUp}
-            className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm text-gray-400"
-          >
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm text-gray-400">
             <span className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[#22C55E]" />
               Effective Date:{' '}
@@ -201,725 +147,570 @@ export default function PrivacyPage() {
             </span>
             <span className="hidden sm:inline w-px h-4 bg-white/20" />
             <span className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#22C55E]" />
+              <RefreshCw className="w-4 h-4 text-[#22C55E]" />
               Last Updated:{' '}
               <span className="text-white font-medium">June 18, 2026</span>
             </span>
-          </motion.div>
-
-          <motion.div
-            variants={fadeUp}
-            className="bg-[#005f3a]/15 border border-[#22C55E]/20 rounded-2xl p-6 sm:p-8 text-left"
-          >
-            <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
-              Smart Ride (&ldquo;Smart Ride&rdquo;, &ldquo;we&rdquo;,
-              &ldquo;our&rdquo;, or &ldquo;us&rdquo;) is committed to protecting
-              your privacy and safeguarding your personal information. This
-              Privacy Policy explains how we collect, use, store, share, and
-              protect information when you use the Smart Ride mobile
-              application, website, and related services.
-            </p>
-            <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base mt-4">
-              By using Smart Ride, you agree to the practices described in this
-              Privacy Policy.
-            </p>
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* TABLE OF CONTENTS                                                   */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <section className="px-4 pb-12">
-        <motion.div
-          className="max-w-3xl mx-auto"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-50px' }}
-          variants={fadeUp}
-        >
-          <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <FileText className="w-5 h-5 text-[#22C55E]" />
-              <h2 className="text-lg font-semibold text-white">
-                Table of Contents
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {tocSections.map((section, i) => (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  className="flex items-center gap-2 text-sm text-gray-300 hover:text-[#22C55E] transition-colors duration-200 py-1.5 px-2 rounded-lg hover:bg-white/5"
-                >
-                  <span className="text-[#22C55E] font-semibold w-6 text-right">
-                    {i + 1}.
-                  </span>
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-                  <span>{section.label}</span>
-                </a>
-              ))}
-            </div>
           </div>
-        </motion.div>
+
+          <Card className="bg-[#005f3a]/15 border-[#22C55E]/20 text-left">
+            <CardContent className="space-y-4">
+              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+                Smart Ride (&ldquo;Smart Ride&rdquo;, &ldquo;we&rdquo;,
+                &ldquo;our&rdquo;, or &ldquo;us&rdquo;) is operated by{' '}
+                <span className="text-white font-semibold">
+                  Natural Intellects Corp
+                </span>
+                , a company registered in the Republic of Uganda. We are
+                committed to protecting your privacy and safeguarding your
+                personal information.
+              </p>
+              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+                This Privacy Policy explains how we collect, use, store, share,
+                and protect information when you use the Smart Ride mobile
+                application, website ({' '}
+                <a
+                  href="https://smartrideug.vercel.app"
+                  className="text-[#22C55E] hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  smartrideug.vercel.app
+                </a>{' '}
+                ), and related services.
+              </p>
+              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+                By using Smart Ride, you agree to the practices described in
+                this Privacy Policy.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* MAIN CONTENT                                                        */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* ═══════ MAIN CONTENT ═══════ */}
       <main className="flex-1 px-4 pb-20">
-        <div className="max-w-4xl mx-auto space-y-12">
-          {/* ── 1. About Smart Ride ─────────────────────────────────────────── */}
-          <motion.section
-            id="about"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+        <div className="max-w-3xl mx-auto space-y-12">
+          {/* ── 1. Introduction ────────────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={1}
-              title="About Smart Ride"
+              title="Introduction"
               Icon={Building2}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Smart Ride is a technology platform that connects customers with
-                transportation and delivery service providers. Services may
-                include:
+                This Privacy Policy applies to all users of Smart Ride,
+                including customers (riders), driver-partners, merchants,
+                pharmacy partners, and any other individuals who interact with
+                our platform.
               </p>
-              <BulletList
-                items={[
-                  'Ride-hailing',
-                  'Food delivery',
-                  'Shopping delivery',
-                  'Parcel delivery',
-                  'Health and pharmacy item delivery',
-                  'Other logistics services offered through the platform',
-                ]}
-              />
+              <p className="text-gray-300 leading-relaxed">
+                Smart Ride is a Ugandan ride-hailing and services super-app
+                that connects customers with transportation and on-demand
+                services including food delivery, shopping, parcel delivery,
+                health & pharmacy, and wallet services.
+              </p>
+              <p className="text-gray-300 leading-relaxed">
+                We are committed to handling your personal information in
+                accordance with the Uganda Data Protection and Privacy Act,
+                2019, and applicable international privacy standards.
+              </p>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 2. Information We Collect ───────────────────────────────────── */}
-          <motion.section
-            id="information-we-collect"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 2. Information We Collect ──────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={2}
               title="Information We Collect"
               Icon={Eye}
             />
-            <div className="mt-4 space-y-4">
-              {/* A */}
-              <div>
-                <SubHeading label="A. Information You Provide" />
-                <p className="text-gray-300 leading-relaxed mb-3">
-                  When creating an account or using Smart Ride, we may collect:
-                </p>
-                <BulletList
-                  items={[
-                    'Full name',
-                    'Phone number',
-                    'Email address',
-                    'Profile photograph (optional)',
-                    'Account credentials',
-                    'Emergency contact information (if provided)',
-                    'Support requests and communications',
-                  ]}
-                />
-              </div>
+            <div className="mt-4 space-y-2">
+              <p className="text-gray-300 leading-relaxed">
+                We collect information that you provide directly to us and
+                information collected automatically when you use Smart Ride.
+              </p>
 
-              {/* B */}
-              <div>
-                <SubHeading label="B. Location Information" />
-                <p className="text-gray-300 leading-relaxed mb-3">
-                  To provide Smart Ride services, we collect:
-                </p>
-                <BulletList
-                  items={[
-                    'Precise GPS location',
-                    'Pickup locations',
-                    'Destination locations',
-                    'Route information',
-                    'Real-time trip location data during active services',
-                  ]}
-                />
-                <p className="text-gray-300 leading-relaxed mt-3">
-                  Location collection may occur while the application is open and
-                  actively being used.
-                </p>
-              </div>
+              <SubHeading label="A. Account Information" />
+              <p className="text-gray-300 leading-relaxed">
+                When you create an account, we collect:
+              </p>
+              <BulletList
+                items={[
+                  'Full name',
+                  'Email address',
+                  'Phone number',
+                  'Profile photograph (optional)',
+                  'Account credentials (securely hashed)',
+                  'Emergency contact information (if provided)',
+                ]}
+              />
 
-              {/* C */}
-              <div>
-                <SubHeading label="C. Service Information" />
-                <p className="text-gray-300 leading-relaxed mb-3">
-                  We collect information related to services requested through
-                  Smart Ride, including:
-                </p>
-                <BulletList
-                  items={[
-                    'Ride requests',
-                    'Delivery requests',
-                    'Shopping orders',
-                    'Health delivery requests',
-                    'Order details',
-                    'Service history',
-                    'Ratings and reviews',
-                  ]}
-                />
-              </div>
+              <SubHeading label="B. Location Data" />
+              <p className="text-gray-300 leading-relaxed">
+                To provide ride-hailing and delivery services, we collect:
+              </p>
+              <BulletList
+                items={[
+                  'Precise GPS location (during active rides/orders)',
+                  'Pickup and drop-off locations',
+                  'Saved addresses',
+                  'Real-time route information',
+                  'Approximate location when the app is in the foreground',
+                ]}
+              />
 
-              {/* D */}
-              <div>
-                <SubHeading label="D. Device Information" />
-                <p className="text-gray-300 leading-relaxed mb-3">
-                  We may automatically collect:
-                </p>
-                <BulletList
-                  items={[
-                    'Device model',
-                    'Operating system',
-                    'App version',
-                    'Device identifiers',
-                    'IP address',
-                    'Network information',
-                    'Crash reports',
-                    'Diagnostic information',
-                  ]}
-                />
-              </div>
+              <SubHeading label="C. Payment Information" />
+              <p className="text-gray-300 leading-relaxed">
+                To process payments, we collect:
+              </p>
+              <BulletList
+                items={[
+                  'Mobile money account details (MTN MoMo, Airtel Money)',
+                  'Nylon Pay wallet identifiers',
+                  'Card information (processed securely via payment partners — we do not store full card numbers)',
+                  'Wallet top-up and withdrawal history',
+                  'Transaction records and receipts',
+                ]}
+              />
 
-              {/* E */}
-              <div>
-                <SubHeading label="E. Communications" />
-                <p className="text-gray-300 leading-relaxed mb-3">
-                  We may collect:
-                </p>
-                <BulletList
-                  items={[
-                    'In-app chat messages',
-                    'Customer support communications',
-                    'Feedback submissions',
-                    'Service-related notifications',
-                  ]}
-                />
-              </div>
+              <SubHeading label="D. Device Information" />
+              <p className="text-gray-300 leading-relaxed">
+                We automatically collect:
+              </p>
+              <BulletList
+                items={[
+                  'Device model and operating system',
+                  'App version',
+                  'Device identifiers',
+                  'IP address',
+                  'Network information (Wi-Fi, mobile data)',
+                  'Crash reports and diagnostic logs',
+                ]}
+              />
+
+              <SubHeading label="E. Usage Data" />
+              <p className="text-gray-300 leading-relaxed">
+                We collect information about how you use Smart Ride:
+              </p>
+              <BulletList
+                items={[
+                  'Ride and order history',
+                  'Search queries and viewed items',
+                  'App interactions and taps',
+                  'Ratings and reviews submitted',
+                  'In-app chat messages with drivers, merchants, and support',
+                  'Customer support communications',
+                ]}
+              />
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 3. How We Use Information ──────────────────────────────────── */}
-          <motion.section
-            id="how-we-use-information"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 3. How We Use Your Information ────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={3}
-              title="How We Use Information"
+              title="How We Use Your Information"
               Icon={BarChart3}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">We use information to:</p>
+              <p className="text-gray-300 leading-relaxed">
+                We use the information we collect to:
+              </p>
               <BulletList
                 items={[
-                  'Create and manage user accounts',
-                  'Match customers with riders and drivers',
-                  'Provide transportation and delivery services',
-                  'Calculate routes and fares',
-                  'Enable communication between users and service providers',
-                  'Improve service quality',
-                  'Prevent fraud and abuse',
-                  'Verify identities',
-                  'Maintain platform security',
-                  'Respond to support requests',
-                  'Comply with legal obligations',
+                  'Provide ride-hailing, delivery, shopping, pharmacy, and wallet services',
+                  'Match customers with nearby drivers and service providers',
+                  'Calculate routes, fares, and delivery fees',
+                  'Process payments and issue receipts through MTN MoMo, Airtel Money, Nylon Pay, and cards',
+                  'Verify identities and prevent fraud, abuse, and unauthorized access',
+                  'Ensure safety through features like SOS, live location sharing, and trip monitoring',
+                  'Provide customer support and resolve disputes',
+                  'Send service-related notifications (ride updates, order status, OTPs)',
+                  'Send marketing and promotional communications (with your consent)',
+                  'Improve our services, develop new features, and conduct analytics',
+                  'Comply with legal, tax, and regulatory obligations in Uganda',
                 ]}
               />
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 4. Legal Basis for Processing ──────────────────────────────── */}
-          <motion.section
-            id="legal-basis"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 4. Information Sharing ────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={4}
-              title="Legal Basis for Processing"
-              Icon={Scale}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Where applicable, we process information based on:
-              </p>
-              <BulletList
-                items={[
-                  'User consent',
-                  'Performance of a contract',
-                  'Legitimate business interests',
-                  'Compliance with legal obligations',
-                  'Protection of users and public safety',
-                ]}
-              />
-            </div>
-          </motion.section>
-
-          {/* ── 5. How Information Is Shared ───────────────────────────────── */}
-          <motion.section
-            id="how-information-is-shared"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={5}
-              title="How Information Is Shared"
+              title="Information Sharing"
               Icon={Share2}
             />
-            <div className="mt-4 space-y-4">
-              {/* A */}
-              <div>
-                <SubHeading label="A. With Drivers and Delivery Personnel" />
-                <p className="text-gray-300 leading-relaxed mb-3">
-                  To complete services, we may share:
-                </p>
-                <BulletList
-                  items={[
-                    'Customer name',
-                    'Pickup location',
-                    'Drop-off location',
-                    'Contact information necessary to complete the service',
-                  ]}
-                />
-              </div>
-
-              {/* B */}
-              <div>
-                <SubHeading label="B. With Customers" />
-                <p className="text-gray-300 leading-relaxed mb-3">
-                  Customers may receive:
-                </p>
-                <BulletList
-                  items={[
-                    'Driver or rider name',
-                    'Profile photo',
-                    'Vehicle information',
-                    'Service status updates',
-                  ]}
-                />
-              </div>
-
-              {/* C */}
-              <div>
-                <SubHeading label="C. Service Providers" />
-                <p className="text-gray-300 leading-relaxed mb-3">
-                  We may share information with trusted third-party providers
-                  that help operate Smart Ride, including:
-                </p>
-                <BulletList
-                  items={[
-                    'Cloud hosting providers',
-                    'Mapping and navigation providers',
-                    'Authentication providers',
-                    'Analytics providers',
-                    'Communication providers',
-                  ]}
-                />
-              </div>
-
-              {/* D */}
-              <div>
-                <SubHeading label="D. Legal Requirements" />
-                <p className="text-gray-300 leading-relaxed">
-                  We may disclose information when required by law, regulation,
-                  court order, or government request.
-                </p>
-              </div>
-            </div>
-          </motion.section>
-
-          {/* ── 6. Data Security ───────────────────────────────────────────── */}
-          <motion.section
-            id="data-security"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading number={6} title="Data Security" Icon={Lock} />
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-2">
               <p className="text-gray-300 leading-relaxed">
-                We implement reasonable administrative, technical, and
-                organizational safeguards designed to protect personal
-                information from:
+                We do not sell your personal information. We share information
+                only in the following circumstances:
+              </p>
+
+              <SubHeading label="A. Service Providers" />
+              <p className="text-gray-300 leading-relaxed">
+                We share information with trusted third-party service providers
+                that help operate Smart Ride:
               </p>
               <BulletList
                 items={[
-                  'Unauthorized access',
-                  'Loss',
-                  'Misuse',
-                  'Disclosure',
-                  'Alteration',
-                  'Destruction',
+                  'Payment processors: Nylon Pay, MTN MoMo, Airtel Money, Flutterwave (cards)',
+                  'Cloud hosting and infrastructure providers',
+                  'Mapping and navigation providers (Mapbox)',
+                  'Authentication providers (Google, Apple Sign-In)',
+                  'Push notification and messaging providers (Firebase)',
+                  'Analytics providers',
                 ]}
               />
-              <p className="text-gray-300 leading-relaxed">
-                However, no system can guarantee complete security.
-              </p>
-            </div>
-          </motion.section>
 
-          {/* ── 7. Data Retention ──────────────────────────────────────────── */}
-          <motion.section
-            id="data-retention"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading number={7} title="Data Retention" Icon={Clock} />
-            <div className="mt-4 space-y-4">
+              <SubHeading label="B. With Drivers, Merchants & Service Partners" />
               <p className="text-gray-300 leading-relaxed">
-                We retain information only for as long as necessary to:
+                To complete services, we share the minimum information
+                necessary:
               </p>
               <BulletList
                 items={[
-                  'Provide services',
-                  'Maintain business records',
-                  'Resolve disputes',
-                  'Prevent fraud',
-                  'Comply with legal obligations',
+                  'Your name and contact details with the assigned driver or merchant',
+                  'Pickup and drop-off locations',
+                  'Order details and special instructions',
+                  'Payment confirmation (not full payment details)',
                 ]}
               />
-              <p className="text-gray-300 leading-relaxed">
-                Retention periods may vary depending on the type of information.
-              </p>
-            </div>
-          </motion.section>
 
-          {/* ── 8. Your Rights ─────────────────────────────────────────────── */}
-          <motion.section
-            id="your-rights"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading number={8} title="Your Rights" Icon={UserCircle} />
-            <div className="mt-4 space-y-4">
+              <SubHeading label="C. Legal Compliance" />
               <p className="text-gray-300 leading-relaxed">
-                Subject to applicable law, users may:
+                We may disclose information when required by:
               </p>
               <BulletList
                 items={[
-                  'Access their information',
-                  'Update account information',
-                  'Request correction of inaccurate information',
-                  'Request deletion of their account',
-                  'Request a copy of certain personal information',
-                  'Object to certain processing activities',
+                  'Law, regulation, or court order',
+                  'Requests from Ugandan law enforcement or government authorities',
+                  'Subpoenas, search warrants, or other legal process',
+                  'Tax authority requirements (Uganda Revenue Authority)',
                 ]}
               />
+
+              <SubHeading label="D. Safety & Protection" />
               <p className="text-gray-300 leading-relaxed">
-                Requests may be submitted through our support channels.
+                We may share information to:
+              </p>
+              <BulletList
+                items={[
+                  'Protect the safety, rights, or property of Smart Ride users',
+                  'Investigate fraud, abuse, or violations of our Terms',
+                  'Respond to emergencies or SOS alerts',
+                  'Prevent harm to the public',
+                ]}
+              />
+
+              <SubHeading label="E. Business Transfers" />
+              <p className="text-gray-300 leading-relaxed">
+                In the event of a merger, acquisition, or asset sale, user
+                information may be transferred as a business asset. We will
+                notify you before your information is transferred and becomes
+                subject to a different privacy policy.
               </p>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 9. Account Deletion ────────────────────────────────────────── */}
-          <motion.section
-            id="account-deletion"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 5. Data Security ──────────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
-              number={9}
-              title="Account Deletion"
-              Icon={FileText}
+              number={5}
+              title="Data Security"
+              Icon={Lock}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Users may request deletion of their Smart Ride account.
+                We implement industry-standard security measures to protect
+                your personal information:
               </p>
+              <div className="grid sm:grid-cols-3 gap-4 mt-4">
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <Lock className="w-5 h-5 text-[#22C55E]" />
+                    <CardTitle className="text-white text-base">
+                      Encryption
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      All data in transit is secured with TLS 1.2+ encryption.
+                      Sensitive data at rest is encrypted with AES-256.
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <Database className="w-5 h-5 text-[#22C55E]" />
+                    <CardTitle className="text-white text-base">
+                      Secure Storage
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Data is stored in secure, access-controlled databases
+                      with regular backups and disaster recovery procedures.
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <Shield className="w-5 h-5 text-[#22C55E]" />
+                    <CardTitle className="text-white text-base">
+                      Access Controls
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Strict role-based access controls limit data access to
+                      authorized personnel only. All access is logged and
+                      audited.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              <p className="text-gray-300 leading-relaxed mt-4">
+                Despite our safeguards, no system is 100% secure. If a data
+                breach occurs, we will notify affected users and the relevant
+                authorities in accordance with Ugandan law.
+              </p>
+            </div>
+          </section>
+
+          {/* ── 6. Data Retention ─────────────────────────────────────────── */}
+          <section className="scroll-mt-24">
+            <SectionHeading
+              number={6}
+              title="Data Retention"
+              Icon={Database}
+            />
+            <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Upon verification of the request:
+                We retain your personal information for as long as your account
+                is active, and thereafter as needed to comply with legal
+                obligations, resolve disputes, and enforce our agreements.
               </p>
               <BulletList
                 items={[
-                  'Account access may be disabled',
-                  'Personal information may be deleted or anonymized',
-                  'Certain records may be retained where required by law, fraud prevention, dispute resolution, or business obligations',
+                  'Account data: retained while your account is active',
+                  'Transaction records: retained for 7 years per Uganda tax law',
+                  'Ride and delivery history: retained for 7 years for tax and audit purposes',
+                  'Customer support records: retained for 3 years',
+                  'Device and usage logs: retained for up to 24 months',
+                  'Marketing consent records: retained until you withdraw consent',
                 ]}
               />
+              <p className="text-gray-300 leading-relaxed">
+                When data is no longer needed, we delete it or anonymize it so
+                it can no longer be associated with you. See our{' '}
+                <Link
+                  href="/delete-account"
+                  className="text-[#22C55E] hover:underline"
+                >
+                  Account Deletion Policy
+                </Link>{' '}
+                for details.
+              </p>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 10. Children's Privacy ─────────────────────────────────────── */}
-          <motion.section
-            id="childrens-privacy"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 7. Your Rights ────────────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
-              number={10}
+              number={7}
+              title="Your Rights"
+              Icon={UserCircle}
+            />
+            <div className="mt-4 space-y-4">
+              <p className="text-gray-300 leading-relaxed">
+                Under the Uganda Data Protection and Privacy Act, 2019, you
+                have the following rights regarding your personal information:
+              </p>
+              <BulletList
+                items={[
+                  'Access: Request a copy of the personal information we hold about you',
+                  'Correction: Request correction of inaccurate or incomplete information',
+                  'Deletion: Request deletion of your account and personal data (subject to legal retention requirements)',
+                  'Data Export: Receive an export of your personal data in a portable format',
+                  'Withdraw Consent: Withdraw consent for marketing communications at any time',
+                  'Object: Object to processing of your data for specific purposes',
+                  'Complain: Lodge a complaint with the Uganda Personal Data Protection Office',
+                ]}
+              />
+              <p className="text-gray-300 leading-relaxed">
+                To exercise any of these rights, contact us at{' '}
+                <a
+                  href="mailto:support@smartride.ug"
+                  className="text-[#22C55E] hover:underline"
+                >
+                  support@smartride.ug
+                </a>
+                . We will respond within 30 days.
+              </p>
+            </div>
+          </section>
+
+          {/* ── 8. Cookies & Tracking ─────────────────────────────────────── */}
+          <section className="scroll-mt-24">
+            <SectionHeading
+              number={8}
+              title="Cookies & Tracking"
+              Icon={Cookie}
+            />
+            <div className="mt-4 space-y-4">
+              <p className="text-gray-300 leading-relaxed">
+                Smart Ride uses cookies and similar tracking technologies on
+                our website to:
+              </p>
+              <BulletList
+                items={[
+                  'Keep you logged in during your session',
+                  'Remember your preferences (language, theme)',
+                  'Analyze website traffic and usage patterns',
+                  'Improve website performance and features',
+                  'Serve relevant marketing content (with your consent)',
+                ]}
+              />
+              <p className="text-gray-300 leading-relaxed">
+                You can control cookies through your browser settings. Disabling
+                cookies may affect some website functionality. The mobile app
+                uses anonymous device identifiers for analytics and fraud
+                prevention, which you can manage in your device settings.
+              </p>
+            </div>
+          </section>
+
+          {/* ── 9. Children's Privacy ─────────────────────────────────────── */}
+          <section className="scroll-mt-24">
+            <SectionHeading
+              number={9}
               title="Children's Privacy"
               Icon={Baby}
             />
             <div className="mt-4 space-y-4">
+              <Card className="bg-[#005f3a]/10 border-[#22C55E]/20">
+                <CardContent>
+                  <p className="text-gray-200 leading-relaxed">
+                    Smart Ride is not intended for children under{' '}
+                    <span className="text-[#22C55E] font-semibold">13 years</span>{' '}
+                    of age. We do not knowingly collect personal information
+                    from children under 13.
+                  </p>
+                </CardContent>
+              </Card>
               <p className="text-gray-300 leading-relaxed">
-                Smart Ride is not intended for children under the age permitted
-                by applicable law.
+                Users between 13 and 18 may use Smart Ride only with the
+                involvement of a parent or legal guardian. Driver-partners and
+                merchants must be at least 18 years old.
               </p>
               <p className="text-gray-300 leading-relaxed">
-                We do not knowingly collect personal information from children.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                If we become aware that information has been collected from a
-                child without appropriate authorization, we will take reasonable
-                steps to delete it.
+                If you believe we have collected information from a child under
+                13, please contact us at{' '}
+                <a
+                  href="mailto:support@smartride.ug"
+                  className="text-[#22C55E] hover:underline"
+                >
+                  support@smartride.ug
+                </a>{' '}
+                and we will promptly delete it.
               </p>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 11. International Data Transfers ───────────────────────────── */}
-          <motion.section
-            id="international-data-transfers"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 10. Changes to This Policy ────────────────────────────────── */}
+          <section className="scroll-mt-24">
+            <SectionHeading
+              number={10}
+              title="Changes to This Policy"
+              Icon={RefreshCw}
+            />
+            <div className="mt-4 space-y-4">
+              <p className="text-gray-300 leading-relaxed">
+                We may update this Privacy Policy from time to time to reflect
+                changes in our practices, technologies, legal requirements, or
+                other factors.
+              </p>
+              <p className="text-gray-300 leading-relaxed">
+                We will notify you of material changes by posting the updated
+                policy on this page and updating the &ldquo;Last Updated&rdquo;
+                date. For significant changes, we may also send a notification
+                through the app or via email.
+              </p>
+              <p className="text-gray-300 leading-relaxed">
+                Continued use of Smart Ride after the effective date of any
+                changes constitutes your acceptance of the updated Privacy
+                Policy.
+              </p>
+            </div>
+          </section>
+
+          {/* ── 11. Contact Us ────────────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={11}
-              title="International Data Transfers"
-              Icon={Globe}
+              title="Contact Us"
+              Icon={Mail}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Information may be processed and stored in countries where Smart
-                Ride or its service providers operate.
+                If you have questions, concerns, or requests regarding this
+                Privacy Policy or your personal information, please contact
+                our Data Protection Officer:
               </p>
-              <p className="text-gray-300 leading-relaxed">
-                By using Smart Ride, you understand that information may be
-                transferred across borders where permitted by law.
-              </p>
+              <Card className="bg-white/5 border-white/10">
+                <CardContent className="space-y-3">
+                  <p className="text-white font-semibold text-lg">
+                    Natural Intellects Corp
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Operator of Smart Ride Uganda
+                  </p>
+                  <div className="flex items-center gap-3 text-gray-300 pt-2">
+                    <Mail className="w-5 h-5 text-[#22C55E] shrink-0" />
+                    <a
+                      href="mailto:support@smartride.ug"
+                      className="hover:text-[#22C55E] transition-colors"
+                    >
+                      support@smartride.ug
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-300">
+                    <Globe className="w-5 h-5 text-[#22C55E] shrink-0" />
+                    <a
+                      href="https://smartrideug.vercel.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[#22C55E] transition-colors"
+                    >
+                      smartrideug.vercel.app
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-300">
+                    <MapPin className="w-5 h-5 text-[#22C55E] shrink-0" />
+                    <span>Kampala, Uganda</span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </motion.section>
-
-          {/* ── 12. Third-Party Services ───────────────────────────────────── */}
-          <motion.section
-            id="third-party-services"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={12}
-              title="Third-Party Services"
-              Icon={Share2}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Smart Ride may contain links to third-party websites or services.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                We are not responsible for the privacy practices of third
-                parties.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                Users should review the privacy policies of those services
-                separately.
-              </p>
-            </div>
-          </motion.section>
-
-          {/* ── 13. Changes to This Privacy Policy ─────────────────────────── */}
-          <motion.section
-            id="changes"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={13}
-              title="Changes to This Privacy Policy"
-              Icon={Clock}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                We may update this Privacy Policy periodically.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                Updated versions will be posted within the application, on our
-                website, or through other appropriate channels.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                Continued use of Smart Ride after updates become effective
-                constitutes acceptance of the revised Privacy Policy.
-              </p>
-            </div>
-          </motion.section>
-
-          {/* ── 14. Contact Us ─────────────────────────────────────────────── */}
-          <motion.section
-            id="contact-us"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading number={14} title="Contact Us" Icon={Mail} />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                For privacy questions, requests, or concerns, contact:
-              </p>
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
-                <p className="text-white font-semibold text-lg">
-                  Smart Ride Support
-                </p>
-                <div className="flex items-center gap-3 text-gray-300">
-                  <Mail className="w-5 h-5 text-[#22C55E] shrink-0" />
-                  <a
-                    href="mailto:support@smartride.ug"
-                    className="hover:text-[#22C55E] transition-colors"
-                  >
-                    support@smartride.ug
-                  </a>
-                </div>
-                <div className="flex items-center gap-3 text-gray-300">
-                  <Globe className="w-5 h-5 text-[#22C55E] shrink-0" />
-                  <a
-                    href="https://smartride.ug"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-[#22C55E] transition-colors"
-                  >
-                    https://smartride.ug
-                  </a>
-                </div>
-                <div className="flex items-center gap-3 text-gray-300">
-                  <MapPin className="w-5 h-5 text-[#22C55E] shrink-0" />
-                  <span>Kampala, Uganda</span>
-                </div>
-              </div>
-            </div>
-          </motion.section>
-
-          {/* ── 15. Data Safety Statement ──────────────────────────────────── */}
-          <motion.section
-            id="data-safety-statement"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={15}
-              title="Data Safety Statement"
-              Icon={Shield}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Smart Ride does not sell personal information to third parties.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                Personal information is collected and used solely for operating,
-                improving, securing, and supporting Smart Ride services.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                Location data, account information, communications, and service
-                history are processed only as necessary to provide requested
-                services and maintain platform functionality.
-              </p>
-              <div className="bg-[#005f3a]/15 border border-[#22C55E]/20 rounded-2xl p-6 mt-6">
-                <p className="text-gray-200 leading-relaxed font-medium">
-                  By using Smart Ride, you acknowledge that you have read and
-                  understood this Privacy Policy.
-                </p>
-              </div>
-            </div>
-          </motion.section>
+          </section>
         </div>
       </main>
 
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* FOOTER (sticky to bottom)                                           */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* ═══════ STICKY FOOTER ═══════ */}
       <footer className="mt-auto bg-[#0a0f1a] border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {/* Contact card */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8 mb-10">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-              <div>
-                <h3 className="text-xl font-bold text-white mb-1">
-                  Questions about your privacy?
-                </h3>
-                <p className="text-gray-400 text-sm">
-                  Reach out to Smart Ride Support — we&rsquo;re here to help.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                <a href="mailto:support@smartride.ug" className="block">
-                  <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white w-full sm:w-auto">
-                    <Mail className="w-4 h-4 mr-2" />
-                    support@smartride.ug
-                  </Button>
-                </a>
-                <a
-                  href="https://smartride.ug"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <Button
-                    variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10 hover:text-white w-full sm:w-auto"
-                  >
-                    <Globe className="w-4 h-4 mr-2" />
-                    Visit Website
-                  </Button>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Links row */}
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
             <Logo variant="dark" />
-            <div className="flex items-center gap-6 text-sm">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
+              <Link
+                href="/privacy"
+                className="text-gray-400 hover:text-[#22C55E] transition-colors"
+              >
+                Privacy Policy
+              </Link>
               <Link
                 href="/terms"
                 className="text-gray-400 hover:text-[#22C55E] transition-colors"
@@ -930,22 +721,22 @@ export default function PrivacyPage() {
                 href="/delete-account"
                 className="text-gray-400 hover:text-[#22C55E] transition-colors"
               >
-                Delete Account
-              </Link>
-              <Link
-                href="/privacy"
-                className="text-gray-400 hover:text-[#22C55E] transition-colors"
-              >
-                Privacy Policy
+                Account Deletion
               </Link>
             </div>
           </div>
-
-          {/* Copyright */}
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-4">
+            <Mail className="w-4 h-4 text-[#22C55E]" />
+            <a
+              href="mailto:support@smartride.ug"
+              className="hover:text-[#22C55E] transition-colors"
+            >
+              support@smartride.ug
+            </a>
+          </div>
           <div className="pt-6 border-t border-white/10 text-center">
             <p className="text-gray-500 text-sm">
-              &copy; {new Date().getFullYear()} Smart Ride. All rights reserved.
-              Kampala, Uganda.
+              &copy; 2025 Smart Ride. All rights reserved.
             </p>
           </div>
         </div>

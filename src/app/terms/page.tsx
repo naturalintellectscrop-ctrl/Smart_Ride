@@ -1,21 +1,23 @@
-'use client';
-
-import React from 'react';
+import type { Metadata } from 'next';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
-import Logo from '@/components/Logo';
-import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import Logo from '@/components/Logo';
 import {
   FileText,
+  ArrowLeft,
   Calendar,
-  Clock,
   Mail,
   Globe,
+  MapPin,
   CheckCircle2,
   ChevronRight,
-  ArrowLeft,
-  BookOpen,
   UserCheck,
   Car,
   Package,
@@ -25,55 +27,34 @@ import {
   AlertTriangle,
   Scale,
   Gavel,
-  Settings,
+  RefreshCw,
+  Building2,
+  Wallet,
+  UserX,
+  Copyright,
+  Trash2,
 } from 'lucide-react';
 
-// ─── Animation helpers ───────────────────────────────────────────────────────
-
-const fadeUp = {
-  hidden: { opacity: 0, y: 30 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: 'easeOut' as const },
+export const metadata: Metadata = {
+  title: 'Terms of Service | Smart Ride',
+  description:
+    'Smart Ride Terms of Service — the rules and conditions that govern your use of our Ugandan ride-hailing, delivery, shopping, pharmacy, and wallet super-app.',
+  alternates: {
+    canonical: 'https://smartrideug.vercel.app/terms',
+  },
+  openGraph: {
+    title: 'Terms of Service | Smart Ride',
+    description:
+      'The rules and conditions that govern your use of Smart Ride in Uganda.',
+    url: 'https://smartrideug.vercel.app/terms',
   },
 };
 
-const stagger = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
-};
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
-// ─── Data ────────────────────────────────────────────────────────────────────
-
-const navLinks = [
-  { label: 'Home', href: '/' },
-  { label: 'About', href: '/about' },
-  { label: 'Help', href: '/help' },
-  { label: 'Contact', href: '/contact' },
-];
-
-const tocSections = [
-  { id: 'definitions', label: 'Definitions' },
-  { id: 'eligibility', label: 'Eligibility' },
-  { id: 'account-responsibilities', label: 'Account Responsibilities' },
-  { id: 'services', label: 'Services' },
-  { id: 'booking-and-delivery-requests', label: 'Booking and Delivery Requests' },
-  { id: 'payments', label: 'Payments' },
-  { id: 'prohibited-activities', label: 'Prohibited Activities' },
-  { id: 'driver-and-delivery-personnel-conduct', label: 'Driver and Delivery Personnel Conduct' },
-  { id: 'safety', label: 'Safety' },
-  { id: 'limitation-of-liability', label: 'Limitation of Liability' },
-  { id: 'suspension-and-termination', label: 'Suspension and Termination' },
-  { id: 'changes-to-services', label: 'Changes to Services' },
-  { id: 'governing-law', label: 'Governing Law' },
-  { id: 'contact', label: 'Contact' },
-];
-
-// Bullet list helper
 function BulletList({ items }: { items: string[] }) {
   return (
-    <ul className="space-y-2.5 ml-1">
+    <ul className="space-y-2.5 ml-1 mt-3">
       {items.map((item, i) => (
         <li
           key={i}
@@ -87,7 +68,6 @@ function BulletList({ items }: { items: string[] }) {
   );
 }
 
-// Section heading with green accent bar + icon
 function SectionHeading({
   number,
   title,
@@ -98,8 +78,10 @@ function SectionHeading({
   Icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <h2 className="flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white scroll-mt-24">
-      <span className="w-1.5 h-7 rounded-full bg-[#22C55E] shrink-0" />
+    <h2
+      id={`section-${number}`}
+      className="border-l-4 border-[#22C55E] pl-4 flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white scroll-mt-24"
+    >
       <Icon className="w-6 h-6 text-[#22C55E] shrink-0" />
       <span>
         <span className="text-[#22C55E] mr-2">{number}.</span>
@@ -109,31 +91,25 @@ function SectionHeading({
   );
 }
 
-// ─── Page ────────────────────────────────────────────────────────────────────
+function SubHeading({ label }: { label: string }) {
+  return (
+    <h3 className="text-base sm:text-lg font-semibold text-[#22C55E] mt-6 mb-1 flex items-center gap-2">
+      <ChevronRight className="w-4 h-4" />
+      {label}
+    </h3>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function TermsPage() {
   return (
     <div className="min-h-screen bg-[#111827] text-white flex flex-col">
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* STICKY HEADER                                                       */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <header className="sticky top-0 z-50 bg-[#111827]/80 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* ═══════ STICKY HEADER ═══════ */}
+      <header className="sticky top-0 z-50 bg-[#111827]/85 backdrop-blur-xl border-b border-white/10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Logo variant="dark" />
-
-            <div className="hidden md:flex items-center gap-8">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-gray-300 hover:text-[#22C55E] transition-colors duration-200 text-sm font-medium"
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </div>
-
             <Link href="/">
               <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white">
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -144,23 +120,15 @@ export default function TermsPage() {
         </div>
       </header>
 
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* HERO                                                                */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <section className="relative overflow-hidden py-20 px-4">
-        {/* Decorative background glow */}
-        <div className="absolute inset-0 -z-10">
+      {/* ═══════ HERO ═══════ */}
+      <section className="relative overflow-hidden py-16 px-4">
+        <div className="absolute inset-0 -z-10 pointer-events-none">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#22C55E]/10 rounded-full blur-[120px]" />
           <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-[#005f3a]/20 rounded-full blur-[100px]" />
         </div>
 
-        <motion.div
-          className="max-w-4xl mx-auto text-center"
-          initial="hidden"
-          animate="visible"
-          variants={stagger}
-        >
-          <motion.div variants={fadeUp} className="flex justify-center mb-6">
+        <div className="max-w-3xl mx-auto text-center">
+          <div className="flex justify-center mb-6">
             <Badge
               variant="outline"
               className="bg-[#22C55E]/10 border-[#22C55E]/30 text-[#22C55E] px-4 py-1.5 text-sm gap-2"
@@ -168,522 +136,654 @@ export default function TermsPage() {
               <FileText className="w-4 h-4" />
               Terms of Service
             </Badge>
-          </motion.div>
+          </div>
 
-          <motion.h1
-            variants={fadeUp}
-            className="text-4xl sm:text-5xl font-bold tracking-tight mb-6"
-          >
+          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
             Smart Ride Terms of Service
-          </motion.h1>
+          </h1>
 
-          <motion.div
-            variants={fadeUp}
-            className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm text-gray-400"
-          >
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm text-gray-400">
             <span className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[#22C55E]" />
-              Last Updated:{' '}
-              <span className="text-white font-medium">June 2026</span>
+              Effective Date:{' '}
+              <span className="text-white font-medium">June 18, 2026</span>
             </span>
             <span className="hidden sm:inline w-px h-4 bg-white/20" />
             <span className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#22C55E]" />
-              Effective:{' '}
-              <span className="text-white font-medium">June 2026</span>
+              <RefreshCw className="w-4 h-4 text-[#22C55E]" />
+              Last Updated:{' '}
+              <span className="text-white font-medium">June 18, 2026</span>
             </span>
-          </motion.div>
-
-          <motion.div
-            variants={fadeUp}
-            className="bg-[#005f3a]/15 border border-[#22C55E]/20 rounded-2xl p-6 sm:p-8 text-left"
-          >
-            <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
-              Welcome to Smart Ride.
-            </p>
-            <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base mt-4">
-              These Terms of Service govern your use of the Smart Ride mobile
-              application, website, and related services.
-            </p>
-            <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base mt-4">
-              By creating an account or using Smart Ride, you agree to these
-              Terms.
-            </p>
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* TABLE OF CONTENTS                                                   */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      <section className="px-4 pb-12">
-        <motion.div
-          className="max-w-3xl mx-auto"
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: '-50px' }}
-          variants={fadeUp}
-        >
-          <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6">
-            <div className="flex items-center gap-2 mb-4">
-              <FileText className="w-5 h-5 text-[#22C55E]" />
-              <h2 className="text-lg font-semibold text-white">
-                Table of Contents
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {tocSections.map((section, i) => (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  className="flex items-center gap-2 text-sm text-gray-300 hover:text-[#22C55E] transition-colors duration-200 py-1.5 px-2 rounded-lg hover:bg-white/5"
-                >
-                  <span className="text-[#22C55E] font-semibold w-6 text-right">
-                    {i + 1}.
-                  </span>
-                  <ChevronRight className="w-3.5 h-3.5 text-gray-500 shrink-0" />
-                  <span>{section.label}</span>
-                </a>
-              ))}
-            </div>
           </div>
-        </motion.div>
+
+          <Card className="bg-[#005f3a]/15 border-[#22C55E]/20 text-left">
+            <CardContent className="space-y-4">
+              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+                Welcome to Smart Ride, a Ugandan ride-hailing and services
+                super-app operated by{' '}
+                <span className="text-white font-semibold">
+                  Natural Intellects Corp
+                </span>
+                .
+              </p>
+              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+                These Terms of Service govern your use of the Smart Ride mobile
+                application, website ({' '}
+                <a
+                  href="https://smartrideug.vercel.app"
+                  className="text-[#22C55E] hover:underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  smartrideug.vercel.app
+                </a>{' '}
+                ), and related services.
+              </p>
+              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+                By creating an account or using Smart Ride, you agree to be
+                bound by these Terms. If you do not agree, please do not use
+                our services.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* MAIN CONTENT                                                        */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* ═══════ MAIN CONTENT ═══════ */}
       <main className="flex-1 px-4 pb-20">
-        <div className="max-w-4xl mx-auto space-y-12">
-          {/* ── 1. Definitions ─────────────────────────────────────────────── */}
-          <motion.section
-            id="definitions"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+        <div className="max-w-3xl mx-auto space-y-12">
+          {/* ── 1. Acceptance of Terms ────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={1}
-              title="Definitions"
-              Icon={BookOpen}
+              title="Acceptance of Terms"
+              Icon={FileText}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                <span className="text-white font-semibold">&ldquo;Smart Ride&rdquo;</span>{' '}
-                refers to the Smart Ride platform, including mobile applications,
-                websites, and services.
+                By downloading, installing, accessing, or using the Smart Ride
+                application or website, you acknowledge that you have read,
+                understood, and agree to be bound by these Terms of Service and
+                our{' '}
+                <Link
+                  href="/privacy"
+                  className="text-[#22C55E] hover:underline"
+                >
+                  Privacy Policy
+                </Link>
+                .
               </p>
               <p className="text-gray-300 leading-relaxed">
-                <span className="text-white font-semibold">&ldquo;User&rdquo;</span>{' '}
-                refers to any customer, rider, driver, delivery personnel,
-                merchant, or business using the platform.
+                If you are using Smart Ride on behalf of a business, you
+                represent that you have the authority to bind that business to
+                these Terms.
+              </p>
+              <p className="text-gray-300 leading-relaxed">
+                These Terms constitute a legally binding agreement between you
+                and Natural Intellects Corp. If you do not agree to any part of
+                these Terms, you must not access or use Smart Ride.
               </p>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 2. Eligibility ─────────────────────────────────────────────── */}
-          <motion.section
-            id="eligibility"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 2. Description of Service ─────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={2}
-              title="Eligibility"
-              Icon={UserCheck}
+              title="Description of Service"
+              Icon={Car}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Users must be at least 18 years old or meet the legal age
-                requirements applicable in their jurisdiction.
+                Smart Ride is a technology platform that connects customers
+                with independent service providers across Uganda. Our services
+                include:
               </p>
-              <p className="text-gray-300 leading-relaxed">
-                Users are responsible for ensuring that information provided
-                during registration is accurate and current.
+              <div className="grid sm:grid-cols-2 gap-4 mt-4">
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <Car className="w-5 h-5 text-[#22C55E]" />
+                    <CardTitle className="text-white text-base">
+                      Ride-Hailing
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Smart Boda (motorcycle) and Smart Car rides across
+                      Kampala and beyond.
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <Package className="w-5 h-5 text-[#22C55E]" />
+                    <CardTitle className="text-white text-base">
+                      Delivery Services
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Food delivery, parcel delivery, and item delivery
+                      services.
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <Package className="w-5 h-5 text-[#22C55E]" />
+                    <CardTitle className="text-white text-base">
+                      Shopping
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Grocery and retail shopping with delivery from local
+                      merchants.
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <Shield className="w-5 h-5 text-[#22C55E]" />
+                    <CardTitle className="text-white text-base">
+                      Health & Pharmacy
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Pharmacy item delivery and connection to licensed health
+                      providers.
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <Wallet className="w-5 h-5 text-[#22C55E]" />
+                    <CardTitle className="text-white text-base">
+                      Smart Wallet
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      Digital wallet for top-ups, transfers, and payments
+                      within the platform.
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card className="bg-white/5 border-white/10">
+                  <CardHeader>
+                    <AlertTriangle className="w-5 h-5 text-[#22C55E]" />
+                    <CardTitle className="text-white text-base">
+                      Safety Features
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      SOS alerts, live location sharing, masked calling, and
+                      trip monitoring.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+              <p className="text-gray-300 leading-relaxed mt-4">
+                Smart Ride acts as a technology intermediary. We do not provide
+                transportation or delivery services ourselves; these are
+                provided by independent driver-partners and merchants who use
+                our platform.
               </p>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 3. Account Responsibilities ───────────────────────────────── */}
-          <motion.section
-            id="account-responsibilities"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 3. User Accounts ──────────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={3}
-              title="Account Responsibilities"
-              Icon={Shield}
+              title="User Accounts"
+              Icon={UserCheck}
             />
-            <div className="mt-4 space-y-4">
+            <div className="mt-4 space-y-2">
+              <SubHeading label="Registration" />
               <p className="text-gray-300 leading-relaxed">
-                Users are responsible for:
+                To use Smart Ride, you must register an account with a valid
+                phone number, email address, and full name. You may also
+                register using Google or Apple Sign-In.
+              </p>
+
+              <SubHeading label="Accuracy of Information" />
+              <p className="text-gray-300 leading-relaxed">
+                You agree to provide accurate, current, and complete
+                information during registration and to keep your account
+                information updated.
+              </p>
+
+              <SubHeading label="Account Security" />
+              <p className="text-gray-300 leading-relaxed">
+                You are responsible for:
               </p>
               <BulletList
                 items={[
-                  'Maintaining account security',
-                  'Protecting passwords and verification codes',
-                  'Providing accurate information',
-                  'Reporting unauthorized account access',
+                  'Maintaining the confidentiality of your password and OTP codes',
+                  'All activities that occur under your account',
+                  ' promptly notifying Smart Ride of any unauthorized access',
+                  'Logging out of shared devices',
                 ]}
               />
-              <p className="text-gray-300 leading-relaxed">
-                Smart Ride reserves the right to suspend or terminate accounts
-                that violate these Terms.
-              </p>
-            </div>
-          </motion.section>
 
-          {/* ── 4. Services ───────────────────────────────────────────────── */}
-          <motion.section
-            id="services"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading number={4} title="Services" Icon={Car} />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Smart Ride may provide:
-              </p>
-              <BulletList
-                items={[
-                  'Ride-hailing services',
-                  'Food delivery services',
-                  'Shopping delivery services',
-                  'Parcel delivery services',
-                  'Health item delivery services',
-                ]}
-              />
-              <p className="text-gray-300 leading-relaxed">
-                Availability may vary by location.
-              </p>
+              <SubHeading label="Eligibility" />
+              <Card className="bg-[#005f3a]/10 border-[#22C55E]/20 mt-3">
+                <CardContent>
+                  <p className="text-gray-200 leading-relaxed">
+                    You must be at least{' '}
+                    <span className="text-[#22C55E] font-semibold">
+                      18 years old
+                    </span>{' '}
+                    to register an account and use Smart Ride services.
+                    Driver-partners and merchants must additionally meet
+                    licensing and regulatory requirements under Ugandan law.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 5. Booking and Delivery Requests ──────────────────────────── */}
-          <motion.section
-            id="booking-and-delivery-requests"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 4. User Conduct ───────────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
-              number={5}
-              title="Booking and Delivery Requests"
-              Icon={Package}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Users are responsible for:
-              </p>
-              <BulletList
-                items={[
-                  'Providing accurate pickup and destination information',
-                  'Being available at pickup locations',
-                  'Ensuring lawful contents of deliveries',
-                ]}
-              />
-              <p className="text-gray-300 leading-relaxed">
-                Smart Ride may cancel requests that violate laws or platform
-                policies.
-              </p>
-            </div>
-          </motion.section>
-
-          {/* ── 6. Payments ───────────────────────────────────────────────── */}
-          <motion.section
-            id="payments"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading number={6} title="Payments" Icon={CreditCard} />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                At launch, Smart Ride may support cash payments and other
-                approved payment methods.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                Users agree to pay all applicable fares, delivery fees, service
-                fees, and charges displayed before confirmation.
-              </p>
-            </div>
-          </motion.section>
-
-          {/* ── 7. Prohibited Activities ──────────────────────────────────── */}
-          <motion.section
-            id="prohibited-activities"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={7}
-              title="Prohibited Activities"
+              number={4}
+              title="User Conduct"
               Icon={Ban}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">Users may not:</p>
+              <p className="text-gray-300 leading-relaxed">
+                You agree to use Smart Ride only for lawful purposes. The
+                following activities are strictly prohibited:
+              </p>
               <BulletList
                 items={[
-                  'Commit fraud',
-                  'Impersonate others',
-                  'Abuse platform features',
-                  'Harass drivers, riders, or customers',
-                  'Transport illegal goods',
-                  'Use the platform for unlawful purposes',
+                  'Using Smart Ride for any illegal activity under Ugandan law',
+                  'Harassing, abusing, or threatening drivers, merchants, or other users',
+                  'Discriminating against any user based on race, ethnicity, gender, religion, or disability',
+                  'Carrying illegal, dangerous, or prohibited items (weapons, drugs, explosives)',
+                  'Requesting off-platform services to bypass Smart Ride fees',
+                  'Creating fake or duplicate accounts',
+                  'Selling, renting, or transferring your account',
+                  'Tampering with the app, reverse engineering, or using bots',
+                  'Interfering with the proper functioning of GPS, payments, or ratings',
+                  'Using Smart Ride to transport illicit goods or persons',
+                  'Smoking, consuming alcohol, or using drugs in a Smart Ride vehicle',
                 ]}
               />
+              <p className="text-gray-300 leading-relaxed">
+                Violations may result in account suspension, permanent
+                termination, and reporting to Ugandan law enforcement
+                authorities.
+              </p>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 8. Driver and Delivery Personnel Conduct ──────────────────── */}
-          <motion.section
-            id="driver-and-delivery-personnel-conduct"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 5. Payments & Wallet ──────────────────────────────────────── */}
+          <section className="scroll-mt-24">
+            <SectionHeading
+              number={5}
+              title="Payments & Wallet"
+              Icon={CreditCard}
+            />
+            <div className="mt-4 space-y-2">
+              <p className="text-gray-300 leading-relaxed">
+                Smart Ride supports the following payment methods in Uganda:
+              </p>
+              <BulletList
+                items={[
+                  'MTN MoMo (Mobile Money)',
+                  'Airtel Money',
+                  'Nylon Pay (digital wallet)',
+                  'Visa / Mastercard (via Flutterwave)',
+                  'Cash (for select rides and orders)',
+                  'Smart Ride Wallet balance',
+                ]}
+              />
+
+              <SubHeading label="Wallet Terms" />
+              <p className="text-gray-300 leading-relaxed">
+                The Smart Ride Wallet allows you to top up, store, transfer,
+                and spend money within the platform:
+              </p>
+              <BulletList
+                items={[
+                  'Wallet balances are held in Ugandan Shillings (UGX)',
+                  'Top-ups are processed through MTN MoMo, Airtel Money, Nylon Pay, or cards',
+                  'Wallet funds are not bank deposits and do not earn interest',
+                  'Wallet balances are non-transferable to third parties outside Smart Ride',
+                  'You must withdraw any balance before deleting your account — unclaimed balances are forfeited',
+                ]}
+              />
+
+              <SubHeading label="Refunds" />
+              <Card className="bg-[#005f3a]/10 border-[#22C55E]/20 mt-3">
+                <CardContent>
+                  <p className="text-gray-200 leading-relaxed">
+                    All payments are final. Refunds are issued only where
+                    required by Ugandan law, or in cases of confirmed service
+                    failure (e.g., order not delivered, driver cancellation
+                    after pickup). Refund requests must be submitted within{' '}
+                    <span className="text-[#22C55E] font-semibold">48 hours</span>{' '}
+                    of the incident.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* ── 6. Ride & Service Terms ───────────────────────────────────── */}
+          <section className="scroll-mt-24">
+            <SectionHeading
+              number={6}
+              title="Ride & Service Terms"
+              Icon={Car}
+            />
+            <div className="mt-4 space-y-2">
+              <SubHeading label="Driver-Partner Relationship" />
+              <p className="text-gray-300 leading-relaxed">
+                Smart Ride connects you with independent driver-partners and
+                merchants. These service providers are not employees of Smart
+                Ride or Natural Intellects Corp. Smart Ride is not liable for
+                the acts or omissions of driver-partners or merchants.
+              </p>
+
+              <SubHeading label="Ratings & Reviews" />
+              <p className="text-gray-300 leading-relaxed">
+                After each ride or order, you may rate the driver or merchant.
+                Ratings help maintain service quality. Consistently low-rated
+                users may be restricted from using Smart Ride.
+              </p>
+
+              <SubHeading label="Cancellations" />
+              <BulletList
+                items={[
+                  'You may cancel a ride or order free of charge before a driver-partner accepts',
+                  'Cancellations after acceptance may incur a fee',
+                  'Repeated cancellations may result in account restrictions',
+                  'Driver-partners may also cancel rides with valid reasons (e.g., safety concerns)',
+                ]}
+              />
+
+              <SubHeading label="Fares & Surge Pricing" />
+              <p className="text-gray-300 leading-relaxed">
+                Fares are calculated based on distance, time, and service type.
+                During periods of high demand, surge pricing may apply. The
+                estimated fare is shown before you confirm your booking.
+              </p>
+            </div>
+          </section>
+
+          {/* ── 7. Driver/Merchant Terms ──────────────────────────────────── */}
+          <section className="scroll-mt-24">
+            <SectionHeading
+              number={7}
+              title="Driver & Merchant Terms"
+              Icon={Building2}
+            />
+            <div className="mt-4 space-y-2">
+              <SubHeading label="Partnerships" />
+              <p className="text-gray-300 leading-relaxed">
+                Driver-partners and merchants operate as independent
+                businesses. They must:
+              </p>
+              <BulletList
+                items={[
+                  'Hold valid Ugandan driving licenses, vehicle permits, and PSV badges (drivers)',
+                  'Hold valid business registration and trading licenses (merchants)',
+                  'Comply with all Ugandan laws, including traffic and tax laws',
+                  'Maintain vehicle roadworthiness and insurance (drivers)',
+                  'Provide accurate menu, pricing, and inventory information (merchants)',
+                  'Maintain hygiene and food safety standards (food merchants)',
+                ]}
+              />
+
+              <SubHeading label="Payouts" />
+              <p className="text-gray-300 leading-relaxed">
+                Driver-partner and merchant earnings are calculated based on
+                completed rides/orders minus Smart Ride commission. Payouts are
+                made to your registered mobile money or bank account according
+                to the agreed payout schedule. You are responsible for all
+                taxes on your earnings.
+              </p>
+
+              <SubHeading label="Termination of Partnership" />
+              <p className="text-gray-300 leading-relaxed">
+                Smart Ride may suspend or terminate driver-partner or merchant
+                accounts for violations of these Terms, low performance
+                ratings, fraud, or regulatory non-compliance.
+              </p>
+            </div>
+          </section>
+
+          {/* ── 8. Intellectual Property ──────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={8}
-              title="Driver and Delivery Personnel Conduct"
-              Icon={UserCheck}
+              title="Intellectual Property"
+              Icon={Copyright}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Drivers and delivery personnel must:
+                The Smart Ride platform, including its name, logo, software,
+                design, content, and trademarks, is owned by Natural
+                Intellects Corp and protected by Ugandan and international
+                intellectual property laws.
+              </p>
+              <p className="text-gray-300 leading-relaxed">
+                You may not:
               </p>
               <BulletList
                 items={[
-                  'Maintain valid licenses where required',
-                  'Follow applicable laws',
-                  'Treat users respectfully',
-                  'Comply with platform safety requirements',
+                  'Copy, modify, or distribute Smart Ride content without permission',
+                  'Use the Smart Ride name or logo without authorization',
+                  'Reverse engineer or decompile the application',
+                  'Remove copyright or trademark notices',
                 ]}
               />
+              <p className="text-gray-300 leading-relaxed">
+                User-generated content (reviews, ratings, photos) remains the
+                property of the user, but you grant Smart Ride a non-exclusive,
+                royalty-free license to use, display, and distribute that
+                content within the platform.
+              </p>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 9. Safety ─────────────────────────────────────────────────── */}
-          <motion.section
-            id="safety"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading number={9} title="Safety" Icon={AlertTriangle} />
+          {/* ── 9. Disclaimers & Limitation of Liability ──────────────────── */}
+          <section className="scroll-mt-24">
+            <SectionHeading
+              number={9}
+              title="Disclaimers & Limitation of Liability"
+              Icon={AlertTriangle}
+            />
             <div className="mt-4 space-y-4">
+              <SubHeading label="Disclaimers" />
               <p className="text-gray-300 leading-relaxed">
-                Users should exercise reasonable care when using Smart Ride
-                services.
+                Smart Ride is provided on an &ldquo;as is&rdquo; and{' '}
+                &ldquo;as available&rdquo; basis. We do not warrant that:
               </p>
-              <p className="text-gray-300 leading-relaxed">
-                Emergency situations should be reported to local authorities
-                immediately.
-              </p>
-            </div>
-          </motion.section>
+              <BulletList
+                items={[
+                  'Services will be uninterrupted, error-free, or available at all times',
+                  'Drivers or merchants will perform services to a specific standard',
+                  'Pricing, ETA, or location information will always be accurate',
+                  'The platform is free of viruses or other harmful components',
+                ]}
+              />
 
-          {/* ── 10. Limitation of Liability ───────────────────────────────── */}
-          <motion.section
-            id="limitation-of-liability"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+              <SubHeading label="Limitation of Liability" />
+              <Card className="bg-[#005f3a]/10 border-[#22C55E]/20 mt-3">
+                <CardContent>
+                  <p className="text-gray-200 leading-relaxed">
+                    To the maximum extent permitted by Ugandan law, Natural
+                    Intellects Corp shall not be liable for any indirect,
+                    incidental, special, consequential, or punitive damages,
+                    including loss of profits, data, or goodwill, arising out
+                    of or related to your use of Smart Ride. Our total
+                    liability shall not exceed the total amount you paid to
+                    Smart Ride in the 12 months preceding the claim.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* ── 10. Termination ───────────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={10}
-              title="Limitation of Liability"
+              title="Termination"
+              Icon={UserX}
+            />
+            <div className="mt-4 space-y-4">
+              <p className="text-gray-300 leading-relaxed">
+                You may delete your account at any time through the app or by
+                visiting our{' '}
+                <Link
+                  href="/delete-account"
+                  className="text-[#22C55E] hover:underline"
+                >
+                  Account Deletion Policy
+                </Link>{' '}
+                page.
+              </p>
+              <p className="text-gray-300 leading-relaxed">
+                Smart Ride may suspend or terminate your account if:
+              </p>
+              <BulletList
+                items={[
+                  'You violate these Terms of Service',
+                  'You engage in fraudulent, abusive, or unlawful activity',
+                  'You fail to pay for services rendered',
+                  'Your account is inactive for more than 24 months',
+                  'Required by law or regulatory authority',
+                ]}
+              />
+              <p className="text-gray-300 leading-relaxed">
+                Upon termination, your right to use Smart Ride ceases
+                immediately. Provisions that should reasonably survive
+                termination (including payment obligations, intellectual
+                property, and liability limitations) will continue in effect.
+              </p>
+            </div>
+          </section>
+
+          {/* ── 11. Governing Law ─────────────────────────────────────────── */}
+          <section className="scroll-mt-24">
+            <SectionHeading
+              number={11}
+              title="Governing Law"
               Icon={Scale}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                To the fullest extent permitted by law, Smart Ride shall not be
-                liable for indirect, incidental, special, or consequential
-                damages arising from use of the platform.
+                These Terms of Service are governed by and construed in
+                accordance with the laws of the{' '}
+                <span className="text-white font-semibold">
+                  Republic of Uganda
+                </span>
+                , without regard to its conflict of law provisions.
               </p>
-            </div>
-          </motion.section>
-
-          {/* ── 11. Suspension and Termination ────────────────────────────── */}
-          <motion.section
-            id="suspension-and-termination"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={11}
-              title="Suspension and Termination"
-              Icon={Ban}
-            />
-            <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Smart Ride may suspend or terminate accounts that violate these
-                Terms or create risks to users or the platform.
+                Any dispute arising out of or relating to these Terms shall be
+                subject to the exclusive jurisdiction of the courts of Uganda,
+                with the primary venue being Kampala.
+              </p>
+              <p className="text-gray-300 leading-relaxed">
+                Where required by Ugandan law, parties may first attempt to
+                resolve disputes through mediation or arbitration administered
+                by the Uganda Centre for Arbitration and Dispute Resolution
+                (CADER).
               </p>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 12. Changes to Services ───────────────────────────────────── */}
-          <motion.section
-            id="changes-to-services"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 12. Changes to Terms ──────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={12}
-              title="Changes to Services"
-              Icon={Settings}
+              title="Changes to Terms"
+              Icon={RefreshCw}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Smart Ride may modify, suspend, or discontinue services at any
-                time.
+                We may update these Terms of Service from time to time. When we
+                do, we will revise the &ldquo;Last Updated&rdquo; date at the
+                top of this page.
+              </p>
+              <p className="text-gray-300 leading-relaxed">
+                For material changes, we will notify you through the app or via
+                email before the changes take effect. Continued use of Smart
+                Ride after the effective date constitutes acceptance of the
+                updated Terms.
+              </p>
+              <p className="text-gray-300 leading-relaxed">
+                If you do not agree to the updated Terms, you must stop using
+                Smart Ride and may delete your account.
               </p>
             </div>
-          </motion.section>
+          </section>
 
-          {/* ── 13. Governing Law ─────────────────────────────────────────── */}
-          <motion.section
-            id="governing-law"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
+          {/* ── 13. Contact Us ────────────────────────────────────────────── */}
+          <section className="scroll-mt-24">
             <SectionHeading
               number={13}
-              title="Governing Law"
-              Icon={Gavel}
+              title="Contact Us"
+              Icon={Mail}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                These Terms shall be governed by the laws applicable in the
-                Republic of Uganda unless otherwise required by law.
+                If you have questions, concerns, or requests regarding these
+                Terms of Service, please contact us:
               </p>
+              <Card className="bg-white/5 border-white/10">
+                <CardContent className="space-y-3">
+                  <p className="text-white font-semibold text-lg">
+                    Natural Intellects Corp
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    Operator of Smart Ride Uganda
+                  </p>
+                  <div className="flex items-center gap-3 text-gray-300 pt-2">
+                    <Mail className="w-5 h-5 text-[#22C55E] shrink-0" />
+                    <a
+                      href="mailto:support@smartride.ug"
+                      className="hover:text-[#22C55E] transition-colors"
+                    >
+                      support@smartride.ug
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-300">
+                    <Globe className="w-5 h-5 text-[#22C55E] shrink-0" />
+                    <a
+                      href="https://smartrideug.vercel.app"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[#22C55E] transition-colors"
+                    >
+                      smartrideug.vercel.app
+                    </a>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-300">
+                    <MapPin className="w-5 h-5 text-[#22C55E] shrink-0" />
+                    <span>Kampala, Uganda</span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </motion.section>
-
-          {/* ── 14. Contact ───────────────────────────────────────────────── */}
-          <motion.section
-            id="contact"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading number={14} title="Contact" Icon={Mail} />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Questions regarding these Terms may be directed to:
-              </p>
-              <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
-                <div className="flex items-center gap-3 text-gray-300">
-                  <Mail className="w-5 h-5 text-[#22C55E] shrink-0" />
-                  <a
-                    href="mailto:support@smartride.ug"
-                    className="hover:text-[#22C55E] transition-colors text-lg font-medium"
-                  >
-                    support@smartride.ug
-                  </a>
-                </div>
-              </div>
-            </div>
-          </motion.section>
-
-          {/* ── Final acknowledgement callout ─────────────────────────────── */}
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <div className="bg-[#005f3a]/15 border border-[#22C55E]/20 rounded-2xl p-6 sm:p-8 text-center">
-              <p className="text-gray-200 leading-relaxed font-medium text-[15px] sm:text-base">
-                By using Smart Ride, you acknowledge and agree to these Terms of
-                Service.
-              </p>
-            </div>
-          </motion.section>
+          </section>
         </div>
       </main>
 
-      {/* ═══════════════════════════════════════════════════════════════════ */}
-      {/* FOOTER (sticky to bottom)                                           */}
-      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* ═══════ STICKY FOOTER ═══════ */}
       <footer className="mt-auto bg-[#0a0f1a] border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          {/* Contact card */}
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8 mb-10">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-              <div>
-                <h3 className="text-xl font-bold text-white mb-1">
-                  Questions about these Terms?
-                </h3>
-                <p className="text-gray-400 text-sm">
-                  Reach out to Smart Ride Support — we&rsquo;re here to help.
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                <a href="mailto:support@smartride.ug" className="block">
-                  <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white w-full sm:w-auto">
-                    <Mail className="w-4 h-4 mr-2" />
-                    support@smartride.ug
-                  </Button>
-                </a>
-                <a
-                  href="https://smartride.ug"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block"
-                >
-                  <Button
-                    variant="outline"
-                    className="border-white/20 text-white hover:bg-white/10 hover:text-white w-full sm:w-auto"
-                  >
-                    <Globe className="w-4 h-4 mr-2" />
-                    Visit Website
-                  </Button>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* Links row */}
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
             <Logo variant="dark" />
-            <div className="flex items-center gap-6 text-sm">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
               <Link
                 href="/privacy"
                 className="text-gray-400 hover:text-[#22C55E] transition-colors"
@@ -691,25 +791,31 @@ export default function TermsPage() {
                 Privacy Policy
               </Link>
               <Link
-                href="/delete-account"
-                className="text-gray-400 hover:text-[#22C55E] transition-colors"
-              >
-                Delete Account
-              </Link>
-              <Link
                 href="/terms"
                 className="text-gray-400 hover:text-[#22C55E] transition-colors"
               >
                 Terms of Service
               </Link>
+              <Link
+                href="/delete-account"
+                className="text-gray-400 hover:text-[#22C55E] transition-colors"
+              >
+                Account Deletion
+              </Link>
             </div>
           </div>
-
-          {/* Copyright */}
+          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-4">
+            <Mail className="w-4 h-4 text-[#22C55E]" />
+            <a
+              href="mailto:support@smartride.ug"
+              className="hover:text-[#22C55E] transition-colors"
+            >
+              support@smartride.ug
+            </a>
+          </div>
           <div className="pt-6 border-t border-white/10 text-center">
             <p className="text-gray-500 text-sm">
-              &copy; {new Date().getFullYear()} Smart Ride. All rights reserved.
-              Kampala, Uganda.
+              &copy; 2025 Smart Ride. All rights reserved.
             </p>
           </div>
         </div>

@@ -7,6 +7,32 @@ Build the **expo-app** project into a signed APK using **GitBash + Android Studi
 
 ---
 
+## ⚠️ READ THIS FIRST — Why `installDebug` Produces a Crashing APK
+
+**If your APK crashes immediately on open, it's because you built a DEBUG APK.**
+
+`./gradlew installDebug` builds the **debug** variant, which does **NOT** bundle the JavaScript into the APK. The debug APK tries to fetch JS from a Metro dev server (`localhost:8081`) on your dev machine at runtime. On a real phone (which can't reach your computer's `localhost`), the JS load fails and the app crashes.
+
+| Command | JS bundled in APK? | Works on real phone? |
+|---|---|---|
+| `./gradlew installDebug` | ❌ No | ❌ Crashes on open |
+| `./gradlew assembleDebug` | ❌ No | ❌ Crashes on open |
+| **`./gradlew assembleRelease`** | ✅ **Yes** | ✅ **Works standalone** |
+
+### ✅ The Fix — Build a RELEASE APK
+
+```bash
+cd /c/path/to/my-project/expo-app/android
+./gradlew clean
+./gradlew assembleRelease
+```
+
+Output: `app/build/outputs/apk/release/app-release.apk` — a standalone APK that runs on any phone.
+
+> See **[APK_CRASH_FIX.md](./APK_CRASH_FIX.md)** for the full diagnosis + troubleshooting.
+
+---
+
 ## Prerequisites (one-time, if not already done)
 
 | Tool | Version | Check command |
