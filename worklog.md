@@ -3210,3 +3210,39 @@ Work Log:
 Stage Summary:
 - Nylon Pay credentials confirmed present in .env
 - No changes needed — payment aggregator integration (MTN MoMo, Airtel Money, cards via Nylon Pay) is ready to go live
+
+---
+Task ID: APK-CRASH-FIX-V2
+Agent: Main Agent
+Task: Fix recurring R8 build failure (minifyReleaseWithR8 FAILED) — previous plugin fix had a regex bug
+
+Work Log:
+- User ran `npx expo prebuild --platform android --clean` then `./gradlew assembleRelease` — build ran for 42m 53s then FAILED with the EXACT same error as before:
+  `> Task :app:minifyReleaseWithR8 FAILED`
+  `ERROR: R8: Missing class expo.modules.kotlin.types.AnyTypeCache`
+- This proved the previous withAbiSplits.js fix (v2) did NOT actually disable minification.
+- ROOT CAUSE OF V2 FAILURE: regex bug. The regex `/(release\s*\{)([\s\S]*?)(\n\s*\})/` matched the FIRST `release {` block in build.gradle — which is `signingConfigs.release`, NOT `buildTypes.release`. So v2 was modifying the signing config block and leaving `buildTypes.release` untouched with `minifyEnabled enableProguardInReleaseBuilds` still present. R8 still ran → build failed.
+- REWROTE withAbiSplits.js as v3 with proper brace-balanced parsing:
+  1. Find `buildTypes` keyword
+  2. Find its opening `{` and walk forward with depth counter until balanced (depth=0)
+  3. Extract the buildTypes inner content
+  4. Within that inner content, find `release {` (guaranteed to be buildTypes.release, NOT signingConfigs.release)
+  5. Balance-match to find the release block's closing `}`
+  6. Strip any existing `minifyEnabled`/`shrinkResources`/`proguardFiles` lines from release inner
+  7. Inject hardcoded `minifyEnabled false` + `shrinkResources false` + proguardFiles reference
+  8. Splice everything back together
+- VERIFIED the v3 logic with a Node.js simulation against a realistic Expo-generated build.gradle:
+  - `minifyEnabled false` correctly placed in buildTypes.release ✓
+  - `signingConfigs.release` untouched (keystore wiring preserved) ✓
+  - Old `minifyEnabled enableProguardInReleaseBuilds` completely removed ✓
+  - Old `shrinkResources enableShrinkResourcesInReleaseBuilds` completely removed ✓
+- Created belt-and-suspenders fallback: `plugins/withProguardRules.js` — a new config plugin that writes a comprehensive `proguard-rules.pro` to `android/app/proguard-rules.pro` during prebuild. Contains `-dontwarn` rules for ALL the missing classes R8 was complaining about (expo.modules.kotlin.types.*, com.mapbox.*, com.facebook.react.*, etc.) so even if R8 somehow still runs, the build won't fail.
+- Wired withProguardRules plugin into app.json plugins array
+- Also created root-level `proguard-rules.pro` for reference (the plugin writes the actual one to android/app/)
+
+Stage Summary:
+- withAbiSplits.js v3 correctly targets buildTypes.release (not signingConfigs.release) — VERIFIED via simulation
+- withProguardRules.js provides fallback -dontwarn rules so R8 can never fail the build
+- BOTH fixes are active: minify is forced OFF, AND proguard rules suppress any missing-class errors if R8 runs anyway
+- User must re-run `npx expo prebuild --platform android --clean` then `./gradlew clean && ./gradlew assembleRelease`
+- Expected outcome: BUILD SUCCESSFUL, output at android/app/build/outputs/apk/release/app-release.apk

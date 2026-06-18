@@ -135,16 +135,33 @@ Then run `./gradlew assembleRelease`. The APK will be signed with the debug key 
 
 This means R8 minification is still enabled. The fix:
 
-1. **Regenerate android/**: `npx expo prebuild --platform android --clean` (this applies the updated `withAbiSplits` plugin which forces `minifyEnabled false`)
-2. **OR manually edit** `expo-app/android/app/build.gradle`, find the `release` block, and set:
-   ```gradle
-   release {
-       minifyEnabled false
-       shrinkResources false
-       proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
-   }
-   ```
-3. Re-run `./gradlew clean && ./gradlew assembleRelease`
+**Option A — Regenerate android/ (recommended):**
+```bash
+cd /c/path/to/my-project/expo-app
+npx expo prebuild --platform android --clean
+cd android
+./gradlew clean && ./gradlew assembleRelease
+```
+The `withAbiSplits` v3 config plugin now uses brace-balanced parsing to correctly find the `buildTypes.release` block (v2 had a regex bug that matched `signingConfigs.release` instead) and forces `minifyEnabled false` + `shrinkResources false` inside it.
+
+**Option B — Manually edit build.gradle:**
+Open `expo-app/android/app/build.gradle`, find the `release` block INSIDE `buildTypes { ... }` (NOT the one inside `signingConfigs`), and set:
+```gradle
+buildTypes {
+    release {
+        signingConfig signingConfigs.release
+        minifyEnabled false
+        shrinkResources false
+        proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+    }
+}
+```
+Then re-run `./gradlew clean && ./gradlew assembleRelease`.
+
+**Option C — Belt-and-suspenders (already in place):**
+The `withProguardRules` config plugin auto-generates `android/app/proguard-rules.pro` with `-dontwarn` rules for every missing class R8 was complaining about (`expo.modules.kotlin.types.*`, `com.mapbox.*`, etc.). So even if R8 runs, it won't fail the build. This is a safety net on top of Option A.
+
+> If you manually edited `android/app/build.gradle` or `android/app/proguard-rules.pro` in a previous build, `npx expo prebuild --clean` will WIPE those changes. Either re-apply them after prebuild, or move them into the config plugins (`plugins/withAbiSplits.js`, `plugins/withProguardRules.js`).
 
 ### Error: `Keystore file not set for signing config release`
 

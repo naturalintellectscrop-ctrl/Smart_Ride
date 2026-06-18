@@ -102,6 +102,7 @@
       "expo-font",
       "./plugins/withAgoraPermissions",
       "./plugins/withAbiSplits",
+      "./plugins/withProguardRules",
       "@sentry/react-native/expo"
     ],
     "experiments": {
