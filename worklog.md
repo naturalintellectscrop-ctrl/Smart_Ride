@@ -2669,3 +2669,22 @@ Stage Summary:
 - Runbook §8 rewritten for local Android Studio + GitBash build path (no EAS required).
 - Lint: 0 errors. Dev server: 200 OK, 0 runtime errors, landing page renders.
 - Artifacts: next.config.ts, src/app/instrumentation.ts, src/app/global-error.tsx, sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts, src/middleware.ts, .gitignore, .env.production, .env.production.example, expo-app/.env, PRODUCTION_SETUP_RUNBOOK.md
+
+---
+Task ID: APK-BUILD-GUIDE
+Agent: Main Agent
+Task: Provide step-by-step instructions for building the Smart Ride APK using GitBash + Android Studio (no Expo)
+
+Work Log:
+- Inspected mobile/ folder — confirmed React Native CLI 0.73.2 project (NOT Expo), JS-only (no android/ folder yet)
+- Reviewed mobile/package.json (deps: @rnmapbox/maps, firebase, react-navigation, zustand, etc.)
+- Reviewed mobile/MIGRATION_GUIDE.md and mobile/App.tsx to confirm RN entry point
+- Wrote complete APK build guide at /home/z/my-project/mobile/APK_BUILD_GUIDE.md
+- Guide covers: prerequisites (JDK 17, Android Studio, SDK), env vars (JAVA_HOME, ANDROID_HOME), generating native android/ folder from RN 0.73 template, project config (package id, permissions, Mapbox token, Firebase google-services.json), keystore creation (keytool PKCS12), Gradle signing wiring, assembleRelease / bundleRelease commands, adb install, GitBash-specific troubleshooting table
+
+Stage Summary:
+- Artifact: mobile/APK_BUILD_GUIDE.md (12 sections)
+- Key insight for user: mobile/ has no native android/ folder yet, so step 3 generates it from `npx react-native@0.73.2 init` template before building
+- Critical Windows/GitBash gotchas documented: use ./gradlew (not gradlew.bat), restart GitBash after env vars, JAVA_HOME must point to Android Studio's jbr (JDK 17)
+- Release APK output path: mobile/android/app/build/outputs/apk/release/app-release.apk
+- Release AAB output path: mobile/android/app/build/outputs/bundle/release/app-release.aab
