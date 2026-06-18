@@ -2688,3 +2688,38 @@ Stage Summary:
 - Critical Windows/GitBash gotchas documented: use ./gradlew (not gradlew.bat), restart GitBash after env vars, JAVA_HOME must point to Android Studio's jbr (JDK 17)
 - Release APK output path: mobile/android/app/build/outputs/apk/release/app-release.apk
 - Release AAB output path: mobile/android/app/build/outputs/bundle/release/app-release.aab
+
+---
+Task ID: APK-BUILD-GUIDE-FIX
+Agent: Main Agent
+Task: Fix wrong APK guide — user clarified they build from expo-app/ (not mobile/), without EAS. Provide focused install + build commands.
+
+Work Log:
+- User feedback: previous APK-BUILD-GUIDE (Task APK-BUILD-GUIDE) incorrectly targeted /mobile/ folder. User builds from /expo-app/ locally without EAS cloud builds.
+- Verified worklog: confirmed ALL recent agent work (Apple Sign-In Task 1, Mapbox Task 2, Stitch Task 3b, Google Sign-In audit P4, auth guard CRITICAL-FIXES-1, env files FIX-A/FIX-B) was applied to /expo-app/. The /mobile/ folder is DEAD (flagged in P8-CRITICAL-BUG-HUNT, P9-APK-BUILD-AUDIT) — a legacy RN CLI scaffold, never edited recently.
+- Deleted wrong guide: rm /home/z/my-project/mobile/APK_BUILD_GUIDE.md
+- Inspected expo-app/ to confirm setup:
+  * Expo SDK 55, RN 0.83.6, TypeScript
+  * Existing keystore: expo-app/keystores/smartride-upload.keystore (2782 bytes, SHA-1 98ea9b4b... already in google-services.json per P4 audit)
+  * google-services.json present at expo-app/ root
+  * .env present with EXPO_PUBLIC_* vars (Mapbox, Firebase, Google, Agora, Sentry)
+  * app.json has 11 plugins including @rnmapbox/maps, expo-notifications, @sentry/react-native/expo, withAbiSplits, withAgoraPermissions
+  * eas.json has 4 profiles all set to buildType:apk (but user wants LOCAL build, not EAS)
+  * babel.config.js has transform-remove-console in production + module-resolver alias @/src
+- Wrote new focused guide at /home/z/my-project/expo-app/APK_BUILD_COMMANDS.md
+  * 6 steps: install deps → (optional prebuild) → wire keystore → build → locate output → install
+  * Quick reference: 3 daily-use commands
+  * GitBash/Windows troubleshooting table (11 common errors)
+  * Prerequisites detail section (only if env check fails)
+  * Critical warning: use EXISTING smartride-upload.keystore, do NOT create new one (would cause DEVELOPER_ERROR on Google Sign-In)
+
+Stage Summary:
+- Wrong guide deleted: /home/z/my-project/mobile/APK_BUILD_GUIDE.md (removed)
+- Correct guide created: /home/z/my-project/expo-app/APK_BUILD_COMMANDS.md
+- Core commands for user:
+    1. cd expo-app && npm install
+    2. cd android && ./gradlew clean && ./gradlew assembleRelease
+    3. adb install -r android/app/build/outputs/apk/release/app-release.apk
+- Release APK output: expo-app/android/app/build/outputs/apk/release/app-release.apk
+- Release AAB output: expo-app/android/app/build/outputs/bundle/release/app-release.aab
+- /mobile/ folder confirmed DEAD — not edited by any recent agent, can be safely deleted by user if desired
