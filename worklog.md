@@ -2764,3 +2764,70 @@ Stage Summary:
 - The 6 missing classes are expo-modules-kotlin internals, not user code — adding -dontwarn is safe
 - Recommended Option B (keep minify, add proguard rules) for production; Option A is fine for quick testing
 - Secondary todo for user: add C:\Users\GODWIN\AppData\Local\Android\Sdk\platform-tools to PATH so `adb install` works after build succeeds
+
+---
+Task ID: ADMIN-ROUTE-RENAME + USER-DELETE
+Agent: Main Agent
+Task: (1) Delete all test users from admin dashboard. (2) Change admin route from /admin/login to /intellects/login for obscurity.
+
+Work Log:
+- Explored src/app/admin/ folder (3 files: login, page, reset-password) and src/middleware.ts (only security headers, no route protection)
+- Grepped all /admin/* page references across codebase — found 10 files with references
+- Read admin-context.tsx, admin/login/page.tsx, admin/page.tsx, admin/reset-password/page.tsx, api/admin/forgot-password/route.ts
+- Inspected User model in prisma/schema.prisma — 18+ relations including 4 onDelete:Restrict (Order.client, Payment.user, CashCollection.rider x2)
+- Checked seed files — identified 4 known test users: client@demo.com, rider@demo.com, driver@demo.com, delivery@demo.com
+- Attempted to connect to production Supabase DB from sandbox — FAILED (network restriction blocks db.mmovwpdgrgdiyqheroak.supabase.co:5432)
+- Pivoted: wrote scripts for user to run locally + added DELETE endpoint + UI button
+
+DELETE endpoint implementation:
+- Added DELETE method to src/app/api/admin/users/route.ts
+- SUPER_ADMIN only (decoded.role check)
+- Prevents self-deletion (userId === decoded.userId)
+- Prevents admin account deletion (checks adminRoles)
+- Cascading delete order: Rider children (cashCollections, vehicle) → Rider → Order children (tasks, payments, ratings, KOTs, disputes) → Orders → Payments → Tasks (clientId) → remaining Cascade/SetNull relations → User
+- Fixed field name bugs: Task uses clientId (not userId), CashCollection uses userId (not collectedBy)
+- Creates audit log entry after deletion
+
+DELETE UI implementation:
+- Added AlertDialog import to user-management.tsx
+- Added isDeleteDialogOpen + isDeleting state
+- Added handleDeleteUser async function (calls DELETE /api/admin/users)
+- Added "Delete User" DropdownMenuItem with Trash2 icon
+- Added AlertDialog with red-themed confirmation showing user name/email + "cannot be undone" warning
+- Button disabled during deletion with Loader2 spinner
+
+Bulk delete script:
+- Created scripts/delete-test-users.ts
+- Dry run mode (default): lists test users without deleting
+- CONFIRM=1 mode: actually deletes
+- Identifies test users by email patterns (@demo.com, @test., @example.com) + known seed emails
+- NEVER deletes admin accounts (protected)
+- Same cascading delete logic as API endpoint
+- Creates audit log for each deletion
+
+Route rename /admin → /intellects:
+- git mv src/app/admin/{login,page.tsx,reset-password} → src/app/intellects/
+- Updated /admin → /intellects in: intellects/login/page.tsx (router.push), intellects/page.tsx (redirect), intellects/reset-password/page.tsx (4 links + redirect), lib/context/admin-context.tsx (logout redirect), lib/services/auth-api.ts (path check), lib/config/admin-access.ts (localPath + getAdminDashboardUrl), app/page.tsx (3 links: footer, desktop button, mobile menu)
+- Updated api/admin/forgot-password/route.ts: resetUrl from /admin/reset-password to /intellects/reset-password
+- Changed admin_refresh_token cookie path from /admin to / in api/admin/login/route.ts + api/auth/refresh/route.ts (fixes pre-existing bug where cookie wasn't sent to /api/auth/refresh)
+- API routes (/api/admin/*) UNCHANGED — backend routes don't need obscuring
+- Deleted empty src/app/admin/ directory
+
+Verification:
+- bun run lint: PASSED (0 errors)
+- Dev server: /intellects/login → 200, /intellects/reset-password → 200, /admin/login → 404, / → 200
+- Agent Browser: /intellects/login renders correctly with "Smart Ride Admin" heading, email/password fields, Sign In button, Forgot password link
+- Landing page: "Admin" button (header) + "Admin Portal" link (footer) both point to http://localhost:3000/intellects/login
+- No console errors on login page
+- Screenshots saved: verify-intellects-login.png, verify-intellects-login-final.png
+
+Stage Summary:
+- Pushed to GitHub: commit 0737e2a
+- Admin dashboard now accessible at https://smartrideug.vercel.app/intellects/login (not /admin/login)
+- Old /admin/* routes return 404
+- User management dashboard has "Delete User" button (SUPER_ADMIN only)
+- Bulk delete script ready at scripts/delete-test-users.ts for local execution
+- Sandbox CANNOT reach production DB — user must run the script locally:
+    DATABASE_URL="$(grep ^DATABASE_URL .env.production | cut -d= -f2-)" bunx tsx scripts/delete-test-users.ts  # dry run
+    DATABASE_URL="$(grep ^DATABASE_URL .env.production | cut -d= -f2-)" CONFIRM=1 bunx tsx scripts/delete-test-users.ts  # actual delete
+- Cookie path fix (/admin → /) may resolve pre-existing admin session refresh issues
