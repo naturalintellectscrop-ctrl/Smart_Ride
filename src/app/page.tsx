@@ -183,7 +183,7 @@ const footerLinks = {
     { label: 'Help Center', href: '/help' },
     { label: 'Contact', href: '/contact' },
     { label: 'Blog', href: '/blog' },
-    { label: 'Admin Portal', href: '/admin/login' },
+    { label: 'Admin Portal', href: '/intellects/login' },
   ],
   legal: [
     { label: 'Privacy Policy', href: '/privacy' },
@@ -222,7 +222,7 @@ export default function LandingPage() {
 
             {/* Desktop CTA Buttons */}
             <div className="hidden md:flex items-center gap-3">
-              <Link href="/admin/login">
+              <Link href="/intellects/login">
                 <Button
                   variant="ghost"
                   className="text-gray-300 hover:text-white hover:bg-white/10"
@@ -287,7 +287,7 @@ export default function LandingPage() {
                     ))}
                     <div className="border-t border-white/10 my-3" />
                     <Link
-                      href="/admin/login"
+                      href="/intellects/login"
                       onClick={() => setMobileMenuOpen(false)}
                       className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-colors text-base font-medium"
                     >

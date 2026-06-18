@@ -81,7 +81,7 @@ async function fetchApi<T>(
       clearTokens();
       // Only redirect if not already on an auth page
       const path = window.location.pathname;
-      if (!path.startsWith('/auth') && !path.startsWith('/admin/login')) {
+      if (!path.startsWith('/auth') && !path.startsWith('/intellects/login')) {
         window.location.href = '/auth/login';
       }
     }

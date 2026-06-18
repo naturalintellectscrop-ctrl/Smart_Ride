@@ -8,8 +8,8 @@ export const ADMIN_DASHBOARD_CONFIG = {
   // Admin domain
   domain: 'admin.smartride.com',
   
-  // Local development admin path
-  localPath: '/admin',
+  // Local development admin path (obscured from /admin to /intellects)
+  localPath: '/intellects',
   
   // Authentication method for admin dashboard
   authMethod: 'EMAIL_PASSWORD' as const,
@@ -109,7 +109,7 @@ export function isAdminDomain(request: Request): boolean {
  */
 export function getAdminDashboardUrl(isLocal: boolean = false): string {
   if (isLocal) {
-    return '/admin';
+    return '/intellects';
   }
   return `https://${ADMIN_DASHBOARD_CONFIG.domain}`;
 }

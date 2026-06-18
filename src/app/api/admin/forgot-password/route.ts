@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate reset URL
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://smartrideug.vercel.app'}/admin/reset-password`;
+    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://smartrideug.vercel.app'}/intellects/reset-password`;
 
     // Send email
     const emailTemplate = generatePasswordResetEmail(resetToken, resetUrl);

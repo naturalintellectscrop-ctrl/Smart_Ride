@@ -57,6 +57,16 @@ import {
   UserX,
   UserPlus
 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { EditUserDialog } from '@/components/dashboard/edit-user-dialog';
 import { downloadBlob } from '@/lib/export';
 
@@ -96,6 +106,8 @@ export function UserManagement() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   const [isExporting, setIsExporting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -162,6 +174,37 @@ export function UserManagement() {
     } catch (err) {
       console.error('Error updating user:', err);
       alert('Failed to update user');
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    setIsDeleting(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: selectedUser.id }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.details || 'Failed to delete user');
+      }
+
+      setIsDeleteDialogOpen(false);
+      setSelectedUser(null);
+      fetchUsers();
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      alert(err instanceof Error ? err.message : 'Failed to delete user');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -537,6 +580,17 @@ export function UserManagement() {
                                 <UserX className="h-4 w-4 mr-2" />
                                 Ban User
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator className="bg-white/5" />
+                              <DropdownMenuItem
+                                className="text-red-400 focus:bg-red-500/10"
+                                onClick={() => {
+                                  setSelectedUser(user);
+                                  setIsDeleteDialogOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete User
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -616,6 +670,55 @@ export function UserManagement() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Delete User Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent className="glass-card border-red-500/20 text-white">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-white flex items-center gap-2">
+              <Trash2 className="h-5 w-5 text-red-400" />
+              Delete User Permanently?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-gray-400">
+              {selectedUser && (
+                <>
+                  You are about to <span className="text-red-400 font-medium">permanently delete</span>{' '}
+                  <span className="text-white font-medium">{selectedUser.name}</span>{' '}
+                  (<span className="text-white">{selectedUser.email}</span>) and all their related data
+                  (orders, tasks, payments, ratings, rider profile, etc.).
+                  <br /><br />
+                  This action <span className="text-red-400 font-medium">cannot be undone</span>.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              className="border-white/10 text-gray-300 hover:bg-white/5"
+              disabled={isDeleting}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteUser}
+              disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700 text-white border-0"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Permanently
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

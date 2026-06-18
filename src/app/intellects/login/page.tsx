@@ -79,7 +79,7 @@ export default function AdminLoginPage() {
       localStorage.setItem('admin_user', JSON.stringify(data.user));
 
       // Redirect to admin dashboard
-      router.push('/admin');
+      router.push('/intellects');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {

@@ -16,7 +16,7 @@ function AdminPageContent() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/admin/login');
+      router.push('/intellects/login');
     }
   }, [isAuthenticated, isLoading, router]);
 
