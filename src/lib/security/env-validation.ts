@@ -26,14 +26,27 @@ const ENV_CONFIG: EnvConfig[] = [
   // Database
   { name: 'DATABASE_URL', required: true, sensitive: true },
   
-  // Payment Gateways
-  { name: 'MTN_MOMO_SECRET_KEY', required: true, sensitive: true },
-  { name: 'MTN_MOMO_API_KEY', required: true, sensitive: true },
-  { name: 'MTN_MOMO_SUBSCRIPTION_KEY', required: true, sensitive: true },
-  { name: 'AIRTEL_MONEY_SECRET_KEY', required: true, sensitive: true },
-  { name: 'AIRTEL_MONEY_API_KEY', required: true, sensitive: true },
-  { name: 'FLUTTERWAVE_SECRET_KEY', required: true, sensitive: true },
-  
+  // Payment Gateways — OPTIONAL. Smart Ride runs cash-only and is migrating
+  // to NylonPay (merchant of record) which replaces all direct gateways with
+  // a single NYLONPAY_API_KEY / NYLONPAY_API_SECRET pair. Keeping these
+  // optional lets the server boot in cash-only mode without crashing.
+  { name: 'MTN_MOMO_SECRET_KEY', required: false, sensitive: true },
+  { name: 'MTN_MOMO_API_KEY', required: false, sensitive: true },
+  { name: 'MTN_MOMO_SUBSCRIPTION_KEY', required: false, sensitive: true },
+  { name: 'AIRTEL_MONEY_SECRET_KEY', required: false, sensitive: true },
+  { name: 'AIRTEL_MONEY_API_KEY', required: false, sensitive: true },
+  { name: 'FLUTTERWAVE_SECRET_KEY', required: false, sensitive: true },
+
+  // NylonPay (merchant of record) — future unified payment path.
+  { name: 'NYLONPAY_API_KEY', required: false, sensitive: true },
+  { name: 'NYLONPAY_API_SECRET', required: false, sensitive: true },
+  { name: 'NYLONPAY_WEBHOOK_SECRET', required: false, sensitive: true },
+  { name: 'NYLONPAY_BASE_URL', required: false, defaultValue: 'https://api.nylonpay.nilesquad.com' },
+
+  // Internal API keys
+  { name: 'CRON_SECRET', required: false, sensitive: true },
+  { name: 'INTERNAL_API_KEY', required: false, sensitive: true },
+
   // System
   { name: 'SYSTEM_API_KEY', required: false, sensitive: true },
   
