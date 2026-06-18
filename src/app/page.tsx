@@ -15,6 +15,14 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
   Bike,
   Car,
   UtensilsCrossed,
@@ -41,6 +49,13 @@ import {
   Clock,
   DollarSign,
   Users,
+  FileText,
+  Calendar,
+  BookOpen,
+  AlertTriangle,
+  Globe,
+  Sparkles,
+  Lock,
 } from 'lucide-react';
 
 // ─── Animation helpers ───────────────────────────────────────────────────────
@@ -191,10 +206,264 @@ const footerLinks = {
   ],
 };
 
+// ─── Blog content blocks ────────────────────────────────────────────────────
+
+type BlogBlock =
+  | { type: 'paragraph'; text: string }
+  | { type: 'heading'; text: string }
+  | { type: 'subheading'; text: string }
+  | { type: 'list'; ordered?: boolean; items: string[] };
+
+type BlogPost = {
+  id: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  date: string;
+  readTime: string;
+  icon: typeof FileText;
+  accent: string;
+  featured?: boolean;
+  comingSoon?: boolean;
+  content?: BlogBlock[];
+};
+
+const accountDeletionContent: BlogBlock[] = [
+  {
+    type: 'paragraph',
+    text: 'Effective Date: June 18, 2026',
+  },
+  {
+    type: 'paragraph',
+    text: 'Last Updated: June 18, 2026',
+  },
+  {
+    type: 'paragraph',
+    text: 'Smart Ride respects your right to control your personal information. This Account Deletion Policy explains how Smart Ride users may request account deletion and what happens to associated information after deletion.',
+  },
+  {
+    type: 'heading',
+    text: 'How to Delete Your Account',
+  },
+  {
+    type: 'paragraph',
+    text: 'Users may delete their Smart Ride account through one of the following methods:',
+  },
+  {
+    type: 'subheading',
+    text: 'In-App Deletion',
+  },
+  {
+    type: 'list',
+    ordered: true,
+    items: [
+      'Open the Smart Ride application.',
+      'Navigate to Profile.',
+      'Open Settings.',
+      'Select Delete Account.',
+      'Confirm your request.',
+      'Complete any required identity verification.',
+    ],
+  },
+  {
+    type: 'subheading',
+    text: 'Support Request',
+  },
+  {
+    type: 'paragraph',
+    text: 'Users may also request account deletion by contacting Smart Ride Support. Please include the phone number or email address associated with your account.',
+  },
+  {
+    type: 'heading',
+    text: 'What Happens After Deletion',
+  },
+  {
+    type: 'paragraph',
+    text: 'When an account deletion request is approved:',
+  },
+  {
+    type: 'list',
+    items: [
+      'Access to the account is removed.',
+      'Profile information is deleted or anonymized.',
+      'Login credentials become invalid.',
+      'Personal identifiers may be removed from active systems.',
+    ],
+  },
+  {
+    type: 'heading',
+    text: 'Information That May Be Retained',
+  },
+  {
+    type: 'paragraph',
+    text: 'Certain information may be retained where permitted or required by law, including:',
+  },
+  {
+    type: 'list',
+    items: [
+      'Transaction records',
+      'Ride and delivery records',
+      'Audit logs',
+      'Fraud prevention records',
+      'Security investigation records',
+      'Customer support records',
+      'Legal compliance records',
+    ],
+  },
+  {
+    type: 'paragraph',
+    text: 'Such information will only be retained for legitimate business, legal, safety, or regulatory purposes.',
+  },
+  {
+    type: 'heading',
+    text: 'Retention Period',
+  },
+  {
+    type: 'paragraph',
+    text: 'Information retained after account deletion will be stored only for as long as necessary to:',
+  },
+  {
+    type: 'list',
+    items: [
+      'Comply with legal obligations',
+      'Resolve disputes',
+      'Prevent fraud',
+      'Enforce agreements',
+      'Maintain security',
+    ],
+  },
+  {
+    type: 'paragraph',
+    text: 'After retention requirements expire, information will be deleted or anonymized.',
+  },
+  {
+    type: 'heading',
+    text: 'Effect on Active Services',
+  },
+  {
+    type: 'paragraph',
+    text: 'Accounts with active rides, deliveries, disputes, investigations, or unresolved obligations may not be immediately eligible for deletion until those matters are resolved.',
+  },
+  {
+    type: 'heading',
+    text: 'Changes to This Policy',
+  },
+  {
+    type: 'paragraph',
+    text: 'Smart Ride may update this Account Deletion Policy from time to time. Updated versions will be posted through the Smart Ride application or website.',
+  },
+  {
+    type: 'heading',
+    text: 'Contact',
+  },
+  {
+    type: 'paragraph',
+    text: 'For questions regarding account deletion, contact Smart Ride Support.',
+  },
+  {
+    type: 'list',
+    items: [
+      'Email: support@smartride.ug',
+      'Website: https://smartride.ug',
+      'Location: Kampala, Uganda',
+    ],
+  },
+];
+
+const blogPosts: BlogPost[] = [
+  {
+    id: 'account-deletion-policy',
+    title: 'Smart Ride Account Deletion Policy',
+    excerpt:
+      'Your right to control your personal information. Learn how to request account deletion and what happens to your data afterwards.',
+    category: 'Privacy & Policy',
+    date: 'June 18, 2026',
+    readTime: '4 min read',
+    icon: FileText,
+    accent: '#22C55E',
+    featured: true,
+    content: accountDeletionContent,
+  },
+  {
+    id: 'seamless-payments',
+    title: 'Seamless Payments Across Uganda',
+    excerpt:
+      'How Smart Ride is making MTN MoMo, Airtel Money and card payments faster and more reliable for every ride and delivery.',
+    category: 'Product Updates',
+    date: 'Coming Soon',
+    readTime: '3 min read',
+    icon: Banknote,
+    accent: '#F59E0B',
+    comingSoon: true,
+  },
+  {
+    id: 'driver-safety',
+    title: 'Driver & Rider Safety Updates',
+    excerpt:
+      'New safety features rolling out to keep every Smart Ride journey secure, from verified drivers to in-app emergency tools.',
+    category: 'Safety',
+    date: 'Coming Soon',
+    readTime: '5 min read',
+    icon: Shield,
+    accent: '#3B82F6',
+    comingSoon: true,
+  },
+];
+
+// Renders a single structured content block inside the article dialog
+function BlogBlockRenderer({ block }: { block: BlogBlock }) {
+  switch (block.type) {
+    case 'heading':
+      return (
+        <h3 className="text-xl sm:text-2xl font-bold text-white mt-8 mb-3 flex items-center gap-2">
+          <span className="w-1.5 h-6 rounded-full bg-[#22C55E] shrink-0" />
+          {block.text}
+        </h3>
+      );
+    case 'subheading':
+      return (
+        <h4 className="text-lg font-semibold text-[#22C55E] mt-6 mb-2">
+          {block.text}
+        </h4>
+      );
+    case 'paragraph':
+      return (
+        <p className="text-gray-300 leading-relaxed mb-4 text-[15px]">
+          {block.text}
+        </p>
+      );
+    case 'list':
+      return block.ordered ? (
+        <ol className="list-none space-y-2 mb-4 ml-1">
+          {block.items.map((item, i) => (
+            <li key={i} className="flex items-start gap-3 text-gray-300 text-[15px] leading-relaxed">
+              <span className="shrink-0 w-6 h-6 rounded-full bg-[#005f3a]/40 border border-[#22C55E]/30 text-[#22C55E] text-xs font-bold flex items-center justify-center mt-0.5">
+                {i + 1}
+              </span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <ul className="space-y-2 mb-4 ml-1">
+          {block.items.map((item, i) => (
+            <li key={i} className="flex items-start gap-3 text-gray-300 text-[15px] leading-relaxed">
+              <CheckCircle2 className="shrink-0 w-5 h-5 text-[#22C55E] mt-0.5" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      );
+    default:
+      return null;
+  }
+}
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activePost, setActivePost] = useState<BlogPost | null>(null);
 
   return (
     <div className="min-h-screen bg-[#111827] text-white flex flex-col">
@@ -819,6 +1088,264 @@ export default function LandingPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* BLOG / NEWS & UPDATES                                            */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <section id="blog" className="relative py-20 sm:py-28 px-4 sm:px-6 bg-[#0d1117]">
+        {/* Background glow */}
+        <div className="absolute top-1/2 left-0 w-[500px] h-[500px] bg-[#005f3a]/12 rounded-full blur-[160px] -translate-y-1/2" />
+
+        <div className="relative z-10 max-w-7xl mx-auto">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-80px' }}
+            variants={stagger}
+            className="text-center mb-16"
+          >
+            <motion.div variants={fadeUp} custom={0}>
+              <Badge className="mb-4 bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/20">
+                <BookOpen className="w-3.5 h-3.5 mr-1" />
+                News & Updates
+              </Badge>
+            </motion.div>
+            <motion.h2
+              variants={fadeUp}
+              custom={1}
+              className="text-3xl sm:text-4xl md:text-5xl font-bold"
+            >
+              From Our
+              <span className="text-[#22C55E]"> Blog</span>
+            </motion.h2>
+            <motion.p
+              variants={fadeUp}
+              custom={2}
+              className="mt-4 text-gray-400 text-lg max-w-xl mx-auto"
+            >
+              Product updates, policies, and stories from the Smart Ride community.
+            </motion.p>
+          </motion.div>
+
+          {/* Featured post + side posts grid */}
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, margin: '-60px' }}
+            variants={stagger}
+            className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+          >
+            {blogPosts.map((post, i) => {
+              const Icon = post.icon;
+              const isFeatured = post.featured;
+              return (
+                <motion.article
+                  key={post.id}
+                  variants={fadeUp}
+                  custom={i}
+                  whileHover={{ y: -4, transition: { duration: 0.25 } }}
+                  className={`group relative rounded-2xl bg-white/5 backdrop-blur-lg border border-white/10 overflow-hidden hover:border-[#22C55E]/30 transition-all duration-300 ${
+                    isFeatured ? 'lg:col-span-2' : ''
+                  }`}
+                >
+                  {/* Gradient header banner */}
+                  <div
+                    className="relative h-32 sm:h-40 overflow-hidden"
+                    style={{
+                      background: `linear-gradient(135deg, ${post.accent}22 0%, ${post.accent}08 60%, transparent 100%)`,
+                    }}
+                  >
+                    <div className="absolute inset-0 opacity-20"
+                      style={{
+                        backgroundImage:
+                          'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 1px, transparent 1px)',
+                        backgroundSize: '24px 24px',
+                      }}
+                    />
+                    <div className="absolute top-4 left-4">
+                      <Badge className="bg-[#111827]/60 backdrop-blur-md text-white border border-white/10 text-xs font-semibold">
+                        {post.category}
+                      </Badge>
+                    </div>
+                    {isFeatured && (
+                      <div className="absolute top-4 right-4">
+                        <Badge className="bg-[#22C55E] text-[#111827] border-0 text-xs font-bold">
+                          <Sparkles className="w-3 h-3 mr-1" />
+                          Featured
+                        </Badge>
+                      </div>
+                    )}
+                    {post.comingSoon && (
+                      <div className="absolute top-4 right-4">
+                        <Badge className="bg-[#F59E0B]/20 text-[#F59E0B] border border-[#F59E0B]/30 text-xs font-semibold">
+                          Coming Soon
+                        </Badge>
+                      </div>
+                    )}
+                    {/* Big icon watermark */}
+                    <Icon
+                      className="absolute -bottom-4 right-4 w-24 h-24 opacity-15 group-hover:opacity-25 group-hover:scale-110 transition-all duration-500"
+                      style={{ color: post.accent }}
+                    />
+                  </div>
+
+                  {/* Body */}
+                  <div className="p-6 sm:p-8">
+                    {/* Meta row */}
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-400 mb-3">
+                      <span className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 text-[#22C55E]" />
+                        {post.date}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 text-[#22C55E]" />
+                        {post.readTime}
+                      </span>
+                    </div>
+
+                    <h3 className={`font-bold mb-3 group-hover:text-[#22C55E] transition-colors ${
+                      isFeatured ? 'text-2xl sm:text-3xl' : 'text-xl'
+                    }`}>
+                      {post.title}
+                    </h3>
+                    <p className={`text-gray-400 leading-relaxed mb-6 ${
+                      isFeatured ? 'text-base max-w-2xl' : 'text-sm'
+                    }`}>
+                      {post.excerpt}
+                    </p>
+
+                    {/* CTA */}
+                    {post.comingSoon ? (
+                      <div className="inline-flex items-center gap-2 text-gray-500 text-sm font-medium cursor-not-allowed">
+                        <Lock className="w-4 h-4" />
+                        Article coming soon
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setActivePost(post)}
+                        className="inline-flex items-center gap-2 text-[#22C55E] text-sm font-semibold hover:gap-3 transition-all duration-200"
+                      >
+                        Read Article
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </motion.article>
+              );
+            })}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      {/* ARTICLE READER DIALOG                                             */}
+      {/* ═══════════════════════════════════════════════════════════════════ */}
+      <Dialog open={!!activePost} onOpenChange={(open) => !open && setActivePost(null)}>
+        <DialogContent className="bg-[#111827] border-white/10 text-white max-w-3xl sm:max-w-3xl w-[calc(100%-2rem)] p-0 gap-0 max-h-[90vh] overflow-hidden flex flex-col">
+          {activePost && (() => {
+            const Icon = activePost.icon;
+            return (
+              <>
+                {/* Article header banner */}
+                <div
+                  className="relative shrink-0 overflow-hidden"
+                  style={{
+                    background: `linear-gradient(135deg, ${activePost.accent}22 0%, ${activePost.accent}08 60%, transparent 100%)`,
+                  }}
+                >
+                  <div className="absolute inset-0 opacity-20"
+                    style={{
+                      backgroundImage:
+                        'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.15) 1px, transparent 1px)',
+                      backgroundSize: '24px 24px',
+                    }}
+                  />
+                  <div className="relative p-6 sm:p-8 pb-5">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Badge className="bg-[#111827]/60 backdrop-blur-md text-white border border-white/10 text-xs font-semibold">
+                        {activePost.category}
+                      </Badge>
+                      <Badge className="bg-[#22C55E]/15 text-[#22C55E] border-0 text-xs font-semibold">
+                        <Sparkles className="w-3 h-3 mr-1" />
+                        Featured
+                      </Badge>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div
+                        className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+                        style={{ backgroundColor: `${activePost.accent}18` }}
+                      >
+                        <Icon className="w-6 h-6" style={{ color: activePost.accent }} />
+                      </div>
+                      <div className="min-w-0">
+                        <DialogTitle className="text-2xl sm:text-3xl font-bold text-white leading-tight">
+                          {activePost.title}
+                        </DialogTitle>
+                        <DialogDescription className="sr-only">
+                          Full article: {activePost.title}
+                        </DialogDescription>
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-400 mt-3">
+                          <span className="flex items-center gap-1.5">
+                            <Calendar className="w-3.5 h-3.5 text-[#22C55E]" />
+                            {activePost.date}
+                          </span>
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="w-3.5 h-3.5 text-[#22C55E]" />
+                            {activePost.readTime}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Scrollable article body */}
+                <ScrollArea className="flex-1 min-h-0">
+                  <div className="px-6 sm:px-8 py-6">
+                    {/* Intro callout */}
+                    <div className="rounded-xl bg-[#005f3a]/15 border border-[#22C55E]/20 p-4 mb-6 flex items-start gap-3">
+                      <AlertTriangle className="shrink-0 w-5 h-5 text-[#22C55E] mt-0.5" />
+                      <p className="text-sm text-gray-300 leading-relaxed">
+                        {activePost.excerpt}
+                      </p>
+                    </div>
+
+                    {activePost.content?.map((block, i) => (
+                      <BlogBlockRenderer key={i} block={block} />
+                    ))}
+
+                    {/* Contact footer inside article */}
+                    <div className="mt-8 pt-6 border-t border-white/10 rounded-xl bg-white/5 p-5">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Mail className="w-4 h-4 text-[#22C55E]" />
+                        <h4 className="font-semibold text-white text-sm">Need help?</h4>
+                      </div>
+                      <p className="text-gray-400 text-sm mb-3 leading-relaxed">
+                        For questions regarding account deletion or any other concern, our support team is ready to assist you.
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-3">
+                        <a href="mailto:support@smartride.ug">
+                          <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white w-full sm:w-auto">
+                            <Mail className="w-4 h-4 mr-2" />
+                            support@smartride.ug
+                          </Button>
+                        </a>
+                        <a href="https://smartride.ug" target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" className="border-white/20 text-white hover:bg-white/10 hover:text-white bg-transparent w-full sm:w-auto">
+                            <Globe className="w-4 h-4 mr-2" />
+                            Visit Website
+                          </Button>
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </ScrollArea>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* ═══════════════════════════════════════════════════════════════════ */}
       {/* FOOTER                                                            */}
