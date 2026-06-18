@@ -7,3 +7,5 @@ expo-env.d.ts
 
 # Environment variables
 .env*
+# ...but ALLOW the example template to be committed (no real secrets in it)
+!.env.example
