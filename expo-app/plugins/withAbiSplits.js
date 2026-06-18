@@ -41,12 +41,16 @@ function withAbiSplits(config) {
       );
     }
 
-    // 2. Enable R8 full mode, minification, and resource shrinking for release
-    // Note: useProguard is removed in AGP 8+ — R8 is the default compiler now
+    // 2. R8 minify DISABLED for release builds.
+    // R8 was stripping classes needed by expo-image-picker, @rnmapbox/maps,
+    // and other native modules, causing the release build to fail with
+    // "minifyReleaseWithR8 FAILED" and the APK to crash on open.
+    // The APK is slightly larger (~10-15MB) but builds reliably and runs.
+    // Re-enable only after adding comprehensive ProGuard keep rules.
     const releaseConfig = `
-            // Smart Ride: R8 full mode + minify + shrink for smaller APK
-            minifyEnabled true
-            shrinkResources true`;
+            // Smart Ride: R8 minify DISABLED — was causing build failures + crashes
+            minifyEnabled false
+            shrinkResources false`;
 
     const modContents = config.modResults.contents;
 

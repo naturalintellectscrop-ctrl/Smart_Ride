@@ -7,25 +7,25 @@ import Logo from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  FileText,
-  Calendar,
-  Clock,
+  Trash2,
+  Smartphone,
+  Settings,
   Mail,
-  Globe,
   CheckCircle2,
+  AlertTriangle,
+  FileText,
+  Clock,
+  Shield,
+  Calendar,
+  Globe,
+  MapPin,
   ChevronRight,
   ArrowLeft,
-  BookOpen,
-  UserCheck,
-  Car,
-  Package,
-  CreditCard,
-  Ban,
-  Shield,
-  AlertTriangle,
+  UserX,
+  Lock,
+  Database,
   Scale,
-  Gavel,
-  Settings,
+  RefreshCw,
 } from 'lucide-react';
 
 // ─── Animation helpers ───────────────────────────────────────────────────────
@@ -54,19 +54,12 @@ const navLinks = [
 ];
 
 const tocSections = [
-  { id: 'definitions', label: 'Definitions' },
-  { id: 'eligibility', label: 'Eligibility' },
-  { id: 'account-responsibilities', label: 'Account Responsibilities' },
-  { id: 'services', label: 'Services' },
-  { id: 'booking-and-delivery-requests', label: 'Booking and Delivery Requests' },
-  { id: 'payments', label: 'Payments' },
-  { id: 'prohibited-activities', label: 'Prohibited Activities' },
-  { id: 'driver-and-delivery-personnel-conduct', label: 'Driver and Delivery Personnel Conduct' },
-  { id: 'safety', label: 'Safety' },
-  { id: 'limitation-of-liability', label: 'Limitation of Liability' },
-  { id: 'suspension-and-termination', label: 'Suspension and Termination' },
-  { id: 'changes-to-services', label: 'Changes to Services' },
-  { id: 'governing-law', label: 'Governing Law' },
+  { id: 'how-to-delete', label: 'How to Delete Your Account' },
+  { id: 'after-deletion', label: 'What Happens After Deletion' },
+  { id: 'retained-info', label: 'Information That May Be Retained' },
+  { id: 'retention-period', label: 'Retention Period' },
+  { id: 'active-services', label: 'Effect on Active Services' },
+  { id: 'changes', label: 'Changes to This Policy' },
   { id: 'contact', label: 'Contact' },
 ];
 
@@ -109,9 +102,44 @@ function SectionHeading({
   );
 }
 
+// Sub-heading (e.g. "In-App Deletion", "Support Request")
+function SubHeading({
+  label,
+  Icon,
+}: {
+  label: string;
+  Icon?: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <h3 className="text-lg font-semibold text-[#22C55E] mt-6 mb-2 flex items-center gap-2">
+      {Icon ? <Icon className="w-5 h-5" /> : <ChevronRight className="w-4 h-4" />}
+      {label}
+    </h3>
+  );
+}
+
+// Ordered list with numbered circles (matching the blog's ordered list style)
+function NumberedList({ items }: { items: string[] }) {
+  return (
+    <ol className="space-y-3 ml-1">
+      {items.map((item, i) => (
+        <li
+          key={i}
+          className="flex items-start gap-3 text-gray-300 text-[15px] leading-relaxed"
+        >
+          <span className="shrink-0 w-6 h-6 rounded-full bg-[#005f3a]/40 border border-[#22C55E]/30 text-[#22C55E] text-xs font-bold flex items-center justify-center mt-0.5">
+            {i + 1}
+          </span>
+          <span className="pt-0.5">{item}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 // ─── Page ────────────────────────────────────────────────────────────────────
 
-export default function TermsPage() {
+export default function DeleteAccountPage() {
   return (
     <div className="min-h-screen bg-[#111827] text-white flex flex-col">
       {/* ═══════════════════════════════════════════════════════════════════ */}
@@ -165,8 +193,8 @@ export default function TermsPage() {
               variant="outline"
               className="bg-[#22C55E]/10 border-[#22C55E]/30 text-[#22C55E] px-4 py-1.5 text-sm gap-2"
             >
-              <FileText className="w-4 h-4" />
-              Terms of Service
+              <Trash2 className="w-4 h-4" />
+              Account Deletion Policy
             </Badge>
           </motion.div>
 
@@ -174,7 +202,7 @@ export default function TermsPage() {
             variants={fadeUp}
             className="text-4xl sm:text-5xl font-bold tracking-tight mb-6"
           >
-            Smart Ride Terms of Service
+            Smart Ride Account Deletion Policy
           </motion.h1>
 
           <motion.div
@@ -183,14 +211,14 @@ export default function TermsPage() {
           >
             <span className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-[#22C55E]" />
-              Last Updated:{' '}
-              <span className="text-white font-medium">June 2026</span>
+              Effective Date:{' '}
+              <span className="text-white font-medium">June 18, 2026</span>
             </span>
             <span className="hidden sm:inline w-px h-4 bg-white/20" />
             <span className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-[#22C55E]" />
-              Effective:{' '}
-              <span className="text-white font-medium">June 2026</span>
+              <Calendar className="w-4 h-4 text-[#22C55E]" />
+              Last Updated:{' '}
+              <span className="text-white font-medium">June 18, 2026</span>
             </span>
           </motion.div>
 
@@ -199,15 +227,10 @@ export default function TermsPage() {
             className="bg-[#005f3a]/15 border border-[#22C55E]/20 rounded-2xl p-6 sm:p-8 text-left"
           >
             <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
-              Welcome to Smart Ride.
-            </p>
-            <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base mt-4">
-              These Terms of Service govern your use of the Smart Ride mobile
-              application, website, and related services.
-            </p>
-            <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base mt-4">
-              By creating an account or using Smart Ride, you agree to these
-              Terms.
+              Smart Ride respects your right to control your personal
+              information. This Account Deletion Policy explains how Smart Ride
+              users may request account deletion and what happens to associated
+              information after deletion.
             </p>
           </motion.div>
         </motion.div>
@@ -255,9 +278,9 @@ export default function TermsPage() {
       {/* ═══════════════════════════════════════════════════════════════════ */}
       <main className="flex-1 px-4 pb-20">
         <div className="max-w-4xl mx-auto space-y-12">
-          {/* ── 1. Definitions ─────────────────────────────────────────────── */}
+          {/* ── 1. How to Delete Your Account ──────────────────────────────── */}
           <motion.section
-            id="definitions"
+            id="how-to-delete"
             className="scroll-mt-24"
             initial="hidden"
             whileInView="visible"
@@ -266,26 +289,53 @@ export default function TermsPage() {
           >
             <SectionHeading
               number={1}
-              title="Definitions"
-              Icon={BookOpen}
+              title="How to Delete Your Account"
+              Icon={Trash2}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                <span className="text-white font-semibold">&ldquo;Smart Ride&rdquo;</span>{' '}
-                refers to the Smart Ride platform, including mobile applications,
-                websites, and services.
+                Users may delete their Smart Ride account through one of the
+                following methods:
               </p>
-              <p className="text-gray-300 leading-relaxed">
-                <span className="text-white font-semibold">&ldquo;User&rdquo;</span>{' '}
-                refers to any customer, rider, driver, delivery personnel,
-                merchant, or business using the platform.
-              </p>
+
+              {/* In-App Deletion sub-section */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 sm:p-6">
+                <SubHeading label="In-App Deletion" Icon={Smartphone} />
+                <NumberedList
+                  items={[
+                    'Open the Smart Ride application.',
+                    'Navigate to Profile.',
+                    'Open Settings.',
+                    'Select Delete Account.',
+                    'Confirm your request.',
+                    'Complete any required identity verification.',
+                  ]}
+                />
+              </div>
+
+              {/* Support Request sub-section */}
+              <div className="bg-white/5 border border-white/10 rounded-2xl p-5 sm:p-6">
+                <SubHeading label="Support Request" Icon={Mail} />
+                <p className="text-gray-300 leading-relaxed mb-4">
+                  Users may also request account deletion by contacting:
+                </p>
+                <a href="mailto:support@smartride.ug" className="inline-block">
+                  <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white">
+                    <Mail className="w-4 h-4 mr-2" />
+                    support@smartride.ug
+                  </Button>
+                </a>
+                <p className="text-gray-300 leading-relaxed mt-4">
+                  Please include the phone number or email address associated
+                  with your account.
+                </p>
+              </div>
             </div>
           </motion.section>
 
-          {/* ── 2. Eligibility ─────────────────────────────────────────────── */}
+          {/* ── 2. What Happens After Deletion ─────────────────────────────── */}
           <motion.section
-            id="eligibility"
+            id="after-deletion"
             className="scroll-mt-24"
             initial="hidden"
             whileInView="visible"
@@ -294,24 +344,27 @@ export default function TermsPage() {
           >
             <SectionHeading
               number={2}
-              title="Eligibility"
-              Icon={UserCheck}
+              title="What Happens After Deletion"
+              Icon={UserX}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Users must be at least 18 years old or meet the legal age
-                requirements applicable in their jurisdiction.
+                When an account deletion request is approved:
               </p>
-              <p className="text-gray-300 leading-relaxed">
-                Users are responsible for ensuring that information provided
-                during registration is accurate and current.
-              </p>
+              <BulletList
+                items={[
+                  'Access to the account is removed.',
+                  'Profile information is deleted or anonymized.',
+                  'Login credentials become invalid.',
+                  'Personal identifiers may be removed from active systems.',
+                ]}
+              />
             </div>
           </motion.section>
 
-          {/* ── 3. Account Responsibilities ───────────────────────────────── */}
+          {/* ── 3. Information That May Be Retained ───────────────────────── */}
           <motion.section
-            id="account-responsibilities"
+            id="retained-info"
             className="scroll-mt-24"
             initial="hidden"
             whileInView="visible"
@@ -320,60 +373,66 @@ export default function TermsPage() {
           >
             <SectionHeading
               number={3}
-              title="Account Responsibilities"
-              Icon={Shield}
+              title="Information That May Be Retained"
+              Icon={Database}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Users are responsible for:
+                Certain information may be retained where permitted or required
+                by law, including:
               </p>
               <BulletList
                 items={[
-                  'Maintaining account security',
-                  'Protecting passwords and verification codes',
-                  'Providing accurate information',
-                  'Reporting unauthorized account access',
+                  'Transaction records',
+                  'Ride and delivery records',
+                  'Audit logs',
+                  'Fraud prevention records',
+                  'Security investigation records',
+                  'Customer support records',
+                  'Legal compliance records',
                 ]}
               />
               <p className="text-gray-300 leading-relaxed">
-                Smart Ride reserves the right to suspend or terminate accounts
-                that violate these Terms.
+                Such information will only be retained for legitimate business,
+                legal, safety, or regulatory purposes.
               </p>
             </div>
           </motion.section>
 
-          {/* ── 4. Services ───────────────────────────────────────────────── */}
+          {/* ── 4. Retention Period ───────────────────────────────────────── */}
           <motion.section
-            id="services"
+            id="retention-period"
             className="scroll-mt-24"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: '-80px' }}
             variants={fadeUp}
           >
-            <SectionHeading number={4} title="Services" Icon={Car} />
+            <SectionHeading number={4} title="Retention Period" Icon={Clock} />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Smart Ride may provide:
+                Information retained after account deletion will be stored only
+                for as long as necessary to:
               </p>
               <BulletList
                 items={[
-                  'Ride-hailing services',
-                  'Food delivery services',
-                  'Shopping delivery services',
-                  'Parcel delivery services',
-                  'Health item delivery services',
+                  'Comply with legal obligations',
+                  'Resolve disputes',
+                  'Prevent fraud',
+                  'Enforce agreements',
+                  'Maintain security',
                 ]}
               />
               <p className="text-gray-300 leading-relaxed">
-                Availability may vary by location.
+                After retention requirements expire, information will be deleted
+                or anonymized.
               </p>
             </div>
           </motion.section>
 
-          {/* ── 5. Booking and Delivery Requests ──────────────────────────── */}
+          {/* ── 5. Effect on Active Services ──────────────────────────────── */}
           <motion.section
-            id="booking-and-delivery-requests"
+            id="active-services"
             className="scroll-mt-24"
             initial="hidden"
             whileInView="visible"
@@ -382,52 +441,24 @@ export default function TermsPage() {
           >
             <SectionHeading
               number={5}
-              title="Booking and Delivery Requests"
-              Icon={Package}
+              title="Effect on Active Services"
+              Icon={AlertTriangle}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Users are responsible for:
-              </p>
-              <BulletList
-                items={[
-                  'Providing accurate pickup and destination information',
-                  'Being available at pickup locations',
-                  'Ensuring lawful contents of deliveries',
-                ]}
-              />
-              <p className="text-gray-300 leading-relaxed">
-                Smart Ride may cancel requests that violate laws or platform
-                policies.
-              </p>
+              <div className="bg-[#005f3a]/10 border border-[#22C55E]/20 rounded-2xl p-5 sm:p-6">
+                <p className="text-gray-200 leading-relaxed">
+                  Accounts with active rides, deliveries, disputes,
+                  investigations, or unresolved obligations may not be
+                  immediately eligible for deletion until those matters are
+                  resolved.
+                </p>
+              </div>
             </div>
           </motion.section>
 
-          {/* ── 6. Payments ───────────────────────────────────────────────── */}
+          {/* ── 6. Changes to This Policy ─────────────────────────────────── */}
           <motion.section
-            id="payments"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading number={6} title="Payments" Icon={CreditCard} />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                At launch, Smart Ride may support cash payments and other
-                approved payment methods.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                Users agree to pay all applicable fares, delivery fees, service
-                fees, and charges displayed before confirmation.
-              </p>
-            </div>
-          </motion.section>
-
-          {/* ── 7. Prohibited Activities ──────────────────────────────────── */}
-          <motion.section
-            id="prohibited-activities"
+            id="changes"
             className="scroll-mt-24"
             initial="hidden"
             whileInView="visible"
@@ -435,166 +466,23 @@ export default function TermsPage() {
             variants={fadeUp}
           >
             <SectionHeading
-              number={7}
-              title="Prohibited Activities"
-              Icon={Ban}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">Users may not:</p>
-              <BulletList
-                items={[
-                  'Commit fraud',
-                  'Impersonate others',
-                  'Abuse platform features',
-                  'Harass drivers, riders, or customers',
-                  'Transport illegal goods',
-                  'Use the platform for unlawful purposes',
-                ]}
-              />
-            </div>
-          </motion.section>
-
-          {/* ── 8. Driver and Delivery Personnel Conduct ──────────────────── */}
-          <motion.section
-            id="driver-and-delivery-personnel-conduct"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={8}
-              title="Driver and Delivery Personnel Conduct"
-              Icon={UserCheck}
+              number={6}
+              title="Changes to This Policy"
+              Icon={RefreshCw}
             />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Drivers and delivery personnel must:
-              </p>
-              <BulletList
-                items={[
-                  'Maintain valid licenses where required',
-                  'Follow applicable laws',
-                  'Treat users respectfully',
-                  'Comply with platform safety requirements',
-                ]}
-              />
-            </div>
-          </motion.section>
-
-          {/* ── 9. Safety ─────────────────────────────────────────────────── */}
-          <motion.section
-            id="safety"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading number={9} title="Safety" Icon={AlertTriangle} />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Users should exercise reasonable care when using Smart Ride
-                services.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                Emergency situations should be reported to local authorities
-                immediately.
-              </p>
-            </div>
-          </motion.section>
-
-          {/* ── 10. Limitation of Liability ───────────────────────────────── */}
-          <motion.section
-            id="limitation-of-liability"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={10}
-              title="Limitation of Liability"
-              Icon={Scale}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                To the fullest extent permitted by law, Smart Ride shall not be
-                liable for indirect, incidental, special, or consequential
-                damages arising from use of the platform.
-              </p>
-            </div>
-          </motion.section>
-
-          {/* ── 11. Suspension and Termination ────────────────────────────── */}
-          <motion.section
-            id="suspension-and-termination"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={11}
-              title="Suspension and Termination"
-              Icon={Ban}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Smart Ride may suspend or terminate accounts that violate these
-                Terms or create risks to users or the platform.
-              </p>
-            </div>
-          </motion.section>
-
-          {/* ── 12. Changes to Services ───────────────────────────────────── */}
-          <motion.section
-            id="changes-to-services"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={12}
-              title="Changes to Services"
-              Icon={Settings}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Smart Ride may modify, suspend, or discontinue services at any
+                Smart Ride may update this Account Deletion Policy from time to
                 time.
               </p>
-            </div>
-          </motion.section>
-
-          {/* ── 13. Governing Law ─────────────────────────────────────────── */}
-          <motion.section
-            id="governing-law"
-            className="scroll-mt-24"
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <SectionHeading
-              number={13}
-              title="Governing Law"
-              Icon={Gavel}
-            />
-            <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                These Terms shall be governed by the laws applicable in the
-                Republic of Uganda unless otherwise required by law.
+                Updated versions will be posted through the Smart Ride
+                application or website.
               </p>
             </div>
           </motion.section>
 
-          {/* ── 14. Contact ───────────────────────────────────────────────── */}
+          {/* ── 7. Contact ────────────────────────────────────────────────── */}
           <motion.section
             id="contact"
             className="scroll-mt-24"
@@ -603,37 +491,40 @@ export default function TermsPage() {
             viewport={{ once: true, margin: '-80px' }}
             variants={fadeUp}
           >
-            <SectionHeading number={14} title="Contact" Icon={Mail} />
+            <SectionHeading number={7} title="Contact" Icon={Mail} />
             <div className="mt-4 space-y-4">
               <p className="text-gray-300 leading-relaxed">
-                Questions regarding these Terms may be directed to:
+                For questions regarding account deletion, contact:
               </p>
               <div className="bg-white/5 border border-white/10 rounded-2xl p-6 space-y-3">
+                <p className="text-white font-semibold text-lg">
+                  Smart Ride Support
+                </p>
                 <div className="flex items-center gap-3 text-gray-300">
                   <Mail className="w-5 h-5 text-[#22C55E] shrink-0" />
                   <a
                     href="mailto:support@smartride.ug"
-                    className="hover:text-[#22C55E] transition-colors text-lg font-medium"
+                    className="hover:text-[#22C55E] transition-colors"
                   >
                     support@smartride.ug
                   </a>
                 </div>
+                <div className="flex items-center gap-3 text-gray-300">
+                  <Globe className="w-5 h-5 text-[#22C55E] shrink-0" />
+                  <a
+                    href="https://smartride.ug"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-[#22C55E] transition-colors"
+                  >
+                    https://smartride.ug
+                  </a>
+                </div>
+                <div className="flex items-center gap-3 text-gray-300">
+                  <MapPin className="w-5 h-5 text-[#22C55E] shrink-0" />
+                  <span>Kampala, Uganda</span>
+                </div>
               </div>
-            </div>
-          </motion.section>
-
-          {/* ── Final acknowledgement callout ─────────────────────────────── */}
-          <motion.section
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: '-80px' }}
-            variants={fadeUp}
-          >
-            <div className="bg-[#005f3a]/15 border border-[#22C55E]/20 rounded-2xl p-6 sm:p-8 text-center">
-              <p className="text-gray-200 leading-relaxed font-medium text-[15px] sm:text-base">
-                By using Smart Ride, you acknowledge and agree to these Terms of
-                Service.
-              </p>
             </div>
           </motion.section>
         </div>
@@ -649,7 +540,7 @@ export default function TermsPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
               <div>
                 <h3 className="text-xl font-bold text-white mb-1">
-                  Questions about these Terms?
+                  Need help deleting your account?
                 </h3>
                 <p className="text-gray-400 text-sm">
                   Reach out to Smart Ride Support — we&rsquo;re here to help.
@@ -689,12 +580,6 @@ export default function TermsPage() {
                 className="text-gray-400 hover:text-[#22C55E] transition-colors"
               >
                 Privacy Policy
-              </Link>
-              <Link
-                href="/delete-account"
-                className="text-gray-400 hover:text-[#22C55E] transition-colors"
-              >
-                Delete Account
               </Link>
               <Link
                 href="/terms"

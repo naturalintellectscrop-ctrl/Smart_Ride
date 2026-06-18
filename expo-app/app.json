@@ -93,8 +93,8 @@
         "expo-build-properties",
         {
           "android": {
-            "enableProguardInReleaseBuilds": true,
-            "enableShrinkInReleaseBuilds": true,
+            "enableProguardInReleaseBuilds": false,
+            "enableShrinkInReleaseBuilds": false,
             "useLegacyPackaging": true
           }
         }

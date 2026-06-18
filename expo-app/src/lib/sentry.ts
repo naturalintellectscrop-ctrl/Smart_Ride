@@ -15,21 +15,25 @@ const SENTRY_DSN = process.env.EXPO_PUBLIC_SENTRY_DSN || '';
  * Call this once in App.tsx or root layout before any other code.
  */
 export function initSentry(): void {
-  if (!SENTRY_DSN) {
+  // Guard: skip if DSN is empty or still a placeholder
+  if (!SENTRY_DSN || SENTRY_DSN.startsWith('REPLACE_')) {
     console.warn('[Sentry] DSN not configured — error monitoring disabled');
-    console.warn('[Sentry] Set EXPO_PUBLIC_SENTRY_DSN in your .env');
     return;
   }
 
-  Sentry.init({
-    dsn: SENTRY_DSN,
-    debug: __DEV__,
-    tracesSampleRate: __DEV__ ? 1.0 : 0.2,
-    enableNativeCrashHandling: true,
-    attachStacktrace: true,
-  });
-
-  console.log('[Sentry] Initialized');
+  try {
+    Sentry.init({
+      dsn: SENTRY_DSN,
+      debug: __DEV__,
+      tracesSampleRate: __DEV__ ? 1.0 : 0.2,
+      enableNativeCrashHandling: true,
+      attachStacktrace: true,
+    });
+    console.log('[Sentry] Initialized');
+  } catch (err) {
+    // Sentry.init should never crash the app — if it does, catch and log
+    console.warn('[Sentry] Failed to initialize (non-fatal):', err);
+  }
 }
 
 /**
