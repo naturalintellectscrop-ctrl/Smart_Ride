@@ -116,6 +116,63 @@ First build takes 10–20 minutes (downloads Gradle, NDK, AndroidX, Mapbox nativ
 
 ---
 
+## Step 4.5 — KNOWN BUILD FAILURE: `minifyReleaseWithR8 FAILED`
+
+If your build runs for ~40+ minutes and then fails with this:
+
+```
+> Task :app:minifyReleaseWithR8 FAILED
+
+ERROR: Missing classes detected while running R8.
+Missing class expo.modules.kotlin.types.AnyTypeCache
+Missing class expo.modules.kotlin.types.OptimizedRecord
+Missing class expo.modules.kotlin.types.descriptors.RawTypeDescriptor
+Missing class expo.modules.kotlin.types.descriptors.TypeDescriptor
+Missing class expo.modules.kotlin.types.descriptors.TypeDescriptorKt
+Missing class expo.modules.kotlin.types.descriptors.TypeDescriptorOfKt
+```
+
+**Cause:** `app.json` enables `enableProguardInReleaseBuilds` + `enableShrinkInReleaseBuilds` via the `expo-build-properties` plugin. R8 aggressively strips classes and crashes on some expo-modules-kotlin internals referenced by `expo-image-picker`.
+
+**Fix Option A — Fastest (1-line change, APK ~15 MB larger):**
+Edit `android/app/build.gradle`, find the `release` buildType, set both flags to `false`:
+```gradle
+buildTypes {
+    release {
+        signingConfig signingConfigs.release
+        minifyEnabled false      // was true
+        shrinkResources false    // was true
+        proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
+    }
+}
+```
+Then re-run `./gradlew clean && ./gradlew assembleRelease`. No `prebuild` needed.
+
+**Fix Option B — Proper (keeps minification, adds keep rules):**
+R8 already generated the rules you need. Append them:
+```bash
+cd /c/path/to/my-project/expo-app/android/app
+cat build/outputs/mapping/release/missing_rules.txt >> proguard-rules.pro
+```
+Or paste these lines manually into `proguard-rules.pro`:
+```
+-dontwarn expo.modules.kotlin.types.AnyTypeCache
+-dontwarn expo.modules.kotlin.types.OptimizedRecord
+-dontwarn expo.modules.kotlin.types.descriptors.RawTypeDescriptor
+-dontwarn expo.modules.kotlin.types.descriptors.TypeDescriptor
+-dontwarn expo.modules.kotlin.types.descriptors.TypeDescriptorKt
+-dontwarn expo.modules.kotlin.types.descriptors.TypeDescriptorOfKt
+-keep class expo.modules.kotlin.** { *; }
+-keep class expo.modules.imagepicker.** { *; }
+-keep class com.mapbox.** { *; }
+-keep class com.google.firebase.** { *; }
+-dontwarn com.mapbox.**
+-dontwarn com.google.firebase.**
+```
+Then re-run `./gradlew clean && ./gradlew assembleRelease`.
+
+---
+
 ## Step 5 — Locate the output
 
 | Build type | Output path (relative to `expo-app/`) |
@@ -178,6 +235,9 @@ adb install -r /c/path/to/my-project/expo-app/android/app/build/outputs/apk/rele
 | Build hangs at `bundleReleaseJsAndAssets` | Make sure Metro is NOT running in another tab, then re-run. |
 | `Execution failed for ':app:generatePackageList'` | Run `npm install` again in `expo-app/`, then `./gradlew clean`. |
 | Out of memory during build | Add `org.gradle.jvmargs=-Xmx4096m` to `expo-app/android/gradle.properties`. |
+| `minifyReleaseWithR8 FAILED` + "Missing class expo.modules.kotlin.types.*" | See **Step 4.5** above. Either disable minify or add keep rules to proguard-rules.pro. |
+| `adb: command not found` | Add `C:\Users\YOUR_USERNAME\AppData\Local\Android\Sdk\platform-tools` to your `Path` env var, then restart GitBash. |
+| `bash: adb: command not found` (after successful build) | Same as above — `adb` is in Android SDK's `platform-tools` folder. |
 
 ---
 

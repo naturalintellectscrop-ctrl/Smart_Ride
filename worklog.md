@@ -2723,3 +2723,44 @@ Stage Summary:
 - Release APK output: expo-app/android/app/build/outputs/apk/release/app-release.apk
 - Release AAB output: expo-app/android/app/build/outputs/bundle/release/app-release.aab
 - /mobile/ folder confirmed DEAD — not edited by any recent agent, can be safely deleted by user if desired
+
+---
+Task ID: APK-R8-MINIFY-FIX
+Agent: Main Agent
+Task: Diagnose build failure from user-supplied gradle log (C:\Smart_Ride\expo-app\android\ ./gradlew assembleRelease)
+
+Work Log:
+- Read user-uploaded build log (3548 lines, 137KB) from /home/z/my-project/upload/Pasted Content_1781795078308.txt
+- Build progressed normally through 815 gradle tasks (43m 32s):
+  * npm install: OK (851 packages, 19 moderate vulns)
+  * Gradle daemon start: OK
+  * ExpoRootProject versions: buildTools 36.0.0, compileSdk 36, targetSdk 36, minSdk 24, NDK 27.1.12297006, Kotlin 2.1.20
+  * expo-module-gradle-plugin compileKotlin: OK (only deprecation warnings)
+  * @rnmapbox/maps compile: OK (deprecation warnings only)
+  * Agora namespace warning (io.agora.rtc used by both agora-special-full:4.5.3.70 and iris-rtc:4.5.3-build.1) — non-fatal
+  * expo-image-picker AndroidManifest warnings (exported/authorities tagged to replace but no other declaration present) — non-fatal
+  * CMake builds for arm64-v8a/armeabi-v7a/x86/x86_64: OK
+  * FAILED at :app:minifyReleaseWithR8
+- Root cause: app.json expo-build-properties plugin has enableProguardInReleaseBuilds:true + enableShrinkInReleaseBuilds:true. R8 strips expo-modules-kotlin types referenced by expo-image-picker at minify time, then crashes:
+  * Missing class expo.modules.kotlin.types.AnyTypeCache (referenced from expo.modules.imagepicker.ImagePickerModule.definition())
+  * Missing class expo.modules.kotlin.types.OptimizedRecord (referenced from expo.modules.imagepicker.ImagePickerAsset$__Pika.<clinit>())
+  * Missing class expo.modules.kotlin.types.descriptors.RawTypeDescriptor
+  * Missing class expo.modules.kotlin.types.descriptors.TypeDescriptor
+  * Missing class expo.modules.kotlin.types.descriptors.TypeDescriptorKt
+  * Missing class expo.modules.kotlin.types.descriptors.TypeDescriptorOfKt
+- R8 itself outputs the fix: missing_rules.txt at C:\Smart_Ride\expo-app\android\app\build\outputs\mapping\release\missing_rules.txt
+- Also noted secondary issue: bash: adb: command not found (user's PATH missing platform-tools)
+- Provided TWO fix options to user:
+  * Option A (fast, 1-line): edit android/app/build.gradle, set minifyEnabled false + shrinkResources false in release buildType. APK ~15MB larger but builds. No prebuild needed.
+  * Option B (proper, keeps minify): append missing_rules.txt contents to android/app/proguard-rules.pro OR paste 6 -dontwarn rules + 4 -keep rules manually
+- Updated /home/z/my-project/expo-app/APK_BUILD_COMMANDS.md:
+  * Added new "Step 4.5 — KNOWN BUILD FAILURE: minifyReleaseWithR8 FAILED" section with both fix options
+  * Added 2 new rows to troubleshooting table (R8 missing class, adb not found)
+
+Stage Summary:
+- Build got to the very last step (R8 minify) before failing — everything else compiled successfully
+- Fix is small and well-documented; user just needs to edit one file on their Windows machine
+- All native deps (Mapbox, Agora, Firebase, Reanimated, Sentry, Google Sign-In, image-picker) compiled cleanly
+- The 6 missing classes are expo-modules-kotlin internals, not user code — adding -dontwarn is safe
+- Recommended Option B (keep minify, add proguard rules) for production; Option A is fine for quick testing
+- Secondary todo for user: add C:\Users\GODWIN\AppData\Local\Android\Sdk\platform-tools to PATH so `adb install` works after build succeeds
