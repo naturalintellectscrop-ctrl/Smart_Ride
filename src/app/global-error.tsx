@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 
 /**
  * Global Error Boundary — catches errors in the root layout.
  *
  * This is required because error.tsx only catches errors below the root layout.
  * Without this, layout crashes show a blank page or the default Next.js error page.
+ *
+ * Errors are reported to Sentry (when NEXT_PUBLIC_SENTRY_DSN is set) and also
+ * logged to the console for local debugging.
  */
 export default function GlobalError({
   error,
@@ -16,7 +20,9 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // In production, this would go to Sentry/Datadog
+    // Report to Sentry — no-op if DSN is unset (SDK auto-disables)
+    Sentry.captureException(error);
+    // Also log locally for dev visibility
     console.error('[SmartRide] Global unhandled error:', {
       message: error.message,
       digest: error.digest,

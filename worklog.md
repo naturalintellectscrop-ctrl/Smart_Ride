@@ -2640,3 +2640,32 @@ Stage Summary:
 - NylonPay integration guide ready for the payments phase (after APK test)
 - Lint: 0 errors. Dev server: / route returns 200.
 - Artifacts: PRODUCTION_SETUP_RUNBOOK.md, .env.production, .env.production.example, expo-app/.env, expo-app/.env.example, expo-app/google-services.json (merged), src/lib/security/env-validation.ts (fixed), agent-ctx/NP-1-nylonpay-research.md
+
+---
+Task ID: FIX-B
+Agent: Main Agent
+Task: Set up Sentry per GitHub skill + update env files with real values + delete outdated md files + add Android Studio build path
+
+Work Log:
+- Fetched Sentry Next.js SDK skill from https://github.com/getsentry/sentry-for-ai/blob/main/skills/sentry-nextjs-sdk/SKILL.md (495 lines). Read and followed Phase 1-3 (Detect, Recommend, Guide).
+- Discovered @sentry/nextjs was NOT installed despite 3 config files existing (sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts) — dead code. Installed @sentry/nextjs@^10.58.0 via bun add.
+- Wrapped next.config.ts with withSentryConfig(): added org/project (env-var driven), authToken for source maps, widenClientFileUpload, tunnelRoute "/monitoring", silent flag. Removed disableLogger (deprecated in v10).
+- Updated src/app/instrumentation.ts: added `export const onRequestError = Sentry.captureRequestError` for automatic server request error capture (requires @sentry/nextjs >= 8.28.0, we have 10.58.0).
+- Updated src/app/global-error.tsx: added `Sentry.captureException(error)` in useEffect (was only console.error before).
+- Upgraded all 3 Sentry config files: split DSN into NEXT_PUBLIC_SENTRY_DSN (client) + SENTRY_DSN (server/edge, falls back to public), added enableLogs: true (all runtimes), added includeLocalVariables: true (server only), kept sendDefaultPii: false (privacy).
+- Updated src/middleware.ts: excluded /monitoring from matcher so the Sentry tunnel route bypasses CORS/security headers (ad-blocker bypass).
+- Added .env.sentry-build-plugin + .env.production to .gitignore (Sentry auth token + real secrets must not commit).
+- Updated .env.production with ALL real values provided by user: DATABASE_URL (direct port 5432), SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_MAPBOX_TOKEN (real pk.eyJ token), NEXT_PUBLIC_FIREBASE_* (web app credentials — different from Android app in google-services.json), GOOGLE_CLIENT_ID, GEMINI_API_KEY, NEXTAUTH_SECRET/URL. Added NEXT_PUBLIC_SENTRY_DSN + SENTRY_DSN + SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT placeholders for when user creates Sentry project.
+- Updated .env.production.example to match new structure (Firebase web vars, Sentry vars, Gemini key, direct DB URL as primary).
+- Updated expo-app/.env with real Mapbox token (pk.eyJ naturalintellects). Kept Android Firebase values from google-services.json (different from web app). Added EXPO_PUBLIC_SENTRY_DSN placeholder.
+- Deleted 32 outdated .md files: 25 root docs (ANDROID_STUDIO_BUILD_GUIDE, AUTH_SYSTEM, DEPLOYMENT_GUIDE, DESIGN_SYSTEM_APPLICATION, EXECUTIVE_AUDIT_REPORT, FAILURE_TEST_REPORT, FINAL_AUTHORIZATION_AND_DESIGN_SUMMARY, FINAL_COMPLETION_SUMMARY, FIREBASE_SETUP, 5x GOOGLE_SIGNIN_* docs, INTEGRATION_GUIDE, INTEGRATION_SUMMARY, P8_CRITICAL_BUG_HUNT_REPORT, PRE_BUILD_FORENSIC_REPORT, PRE_PRODUCTION_VALIDATION_REPORT, QUICKSTART, RELEASE_CRASH_DIAGNOSIS, SMART_RIDE_FINAL_AUDIT, SYSTEM_CONSOLIDATION_AUDIT, VERIFICATION_AUDIT_REPORT, WORK_COMPLETION_VERIFICATION), 6 docs/ files (DATABASE_SETUP, DEPLOYMENT_GUIDE, FREE_MAPS_GUIDE, IMPLEMENTATION_PRIORITY_MATRIX, PRODUCTION_CUSTOMER_JOURNEY_AUDIT, SMART_RIDE_IMPLEMENTATION_PLAN), expo-app/GOOGLE_SIGNIN_FIX.md, GOOGLE_SIGNIN_CARD.txt. Removed empty docs/ directory. Kept only: README.md, PRODUCTION_SETUP_RUNBOOK.md, worklog.md, SMART_RIDE_MASTER_HANDOFF.md, FRESH_VERIFICATION_AUDIT.md.
+- Replaced runbook §8 with comprehensive Android Studio + GitBash local build guide: prerequisites (JDK 17, ANDROID_HOME), expo prebuild, keystore setup (EAS download OR new keytool), gradlew assembleDebug/assembleRelease, adb install, Android Studio GUI alternative, common build issues table, EAS fallback.
+- Verified: bun run lint passes with 0 errors. Dev server starts cleanly, GET / returns 200, title "Smart Ride - Multi-Service Mobility Platform", 0 runtime errors in dev.log.
+
+Stage Summary:
+- Sentry fully integrated per official skill: @sentry/nextjs@10.58.0 installed, next.config wrapped with withSentryConfig, instrumentation.ts has onRequestError hook, global-error.tsx captures exceptions, 3 config files upgraded with enableLogs + split DSN, /monitoring tunnel excluded from middleware, .env.sentry-build-plugin gitignored.
+- All env files updated with real values: Supabase (anon + service role), Mapbox (real token), Firebase web config, Gemini API key, direct DATABASE_URL, NEXTAUTH. Sentry DSN placeholders ready for user to fill.
+- 32 stale .md files deleted — repo cleaned from 30 root docs down to 5 essential ones.
+- Runbook §8 rewritten for local Android Studio + GitBash build path (no EAS required).
+- Lint: 0 errors. Dev server: 200 OK, 0 runtime errors, landing page renders.
+- Artifacts: next.config.ts, src/app/instrumentation.ts, src/app/global-error.tsx, sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts, src/middleware.ts, .gitignore, .env.production, .env.production.example, expo-app/.env, PRODUCTION_SETUP_RUNBOOK.md

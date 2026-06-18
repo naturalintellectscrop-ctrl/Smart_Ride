@@ -1,39 +1,39 @@
 // ============================================
-// SMART RIDE — Sentry Client Configuration
+// SMART RIDE — Sentry Client (Browser) Configuration
 // ============================================
-// Runs in the BROWSER. Captures React errors,
-// unhandled exceptions, and performance data.
+// Runs in the BROWSER. Captures React errors, unhandled exceptions,
+// and performance data. Auto-loaded by @sentry/nextjs.
 // ============================================
 
 import * as Sentry from '@sentry/nextjs';
 
 Sentry.init({
-  // Set your Sentry DSN in .env as NEXT_PUBLIC_SENTRY_DSN
+  // Public DSN (safe to expose). Uses NEXT_PUBLIC_SENTRY_DSN.
   dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  // Adjust sample rates based on your traffic volume
-  // For production with high traffic, reduce these values
+  // 100% in dev, 10% in production
   tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
 
-  // Replay configuration (captures session video for debugging)
-  replaysOnErrorSampleRate: 1.0, // Always capture on errors
-  replaysSessionSampleRate: 0.1, // Sample 10% of normal sessions
+  // Session Replay: 10% of all sessions, 100% of sessions with errors
+  replaysOnErrorSampleRate: 1.0,
+  replaysSessionSampleRate: 0.1,
 
-  // Enable Session Replay (requires explicit integration)
+  // Enable Sentry Logs (structured log search in dashboard)
+  enableLogs: true,
+
   integrations: [
     Sentry.replayIntegration(),
   ],
 
-  // Only enable in production or when DSN is set
+  // Only active in production or when DSN is explicitly set
   enabled: process.env.NODE_ENV === 'production' || !!process.env.NEXT_PUBLIC_SENTRY_DSN,
 
-  // Environment
   environment: process.env.NODE_ENV || 'development',
 
-  // Release version (set during CI/CD)
+  // Release = git commit SHA (auto-set by Vercel) or version tag
   release: process.env.NEXT_PUBLIC_SENTRY_RELEASE || process.env.VERCEL_GIT_COMMIT_SHA || 'dev',
 
-  // Ignore common noisy errors
+  // Ignore common noisy browser errors
   ignoreErrors: [
     'ResizeObserver loop limit exceeded',
     'ResizeObserver loop completed with undelivered notifications',
@@ -45,6 +45,6 @@ Sentry.init({
     'ChunkLoadError',
   ],
 
-  // Don't send PII
+  // Don't send PII (emails, IPs) to Sentry
   sendDefaultPii: false,
 });

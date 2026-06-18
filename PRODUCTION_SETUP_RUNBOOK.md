@@ -273,29 +273,145 @@ After setting all, **redeploy** the Vercel project (Deployments → latest → R
 
 ---
 
-## 8. Build the APK (for testing)
+## 8. Build the APK (LOCAL — Android Studio + GitBash, no EAS)
 
-`eas.json` is already configured for APK on the `preview`, `production`, and
-`apk` profiles. To build a testable APK:
+You said you want to use **Android Studio + GitBash** instead of EAS. This is
+the local-build path. It's faster (no upload to EAS servers) and gives you full
+control over the keystore.
+
+### 8a. Prerequisites (one-time setup)
+
+1. **Android Studio** installed (provides Android SDK + JDK 17).
+2. **GitBash** (you already have it — that's where you run commands).
+3. **Node + a package manager** (`bun` or `npm`) — you have this.
+4. **Java JDK 17** — Android Studio bundles it. Verify:
+   ```bash
+   java -version
+   # Should show 17.x.x. If not, set JAVA_HOME to Android Studio's JDK:
+   # export JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"
+   ```
+5. **ANDROID_HOME** env var pointing to the Android SDK:
+   ```bash
+   # Add to your ~/.bashrc (GitBash) so it persists:
+   echo 'export ANDROID_HOME="$HOME/AppData/Local/Android/Sdk"' >> ~/.bashrc
+   echo 'export PATH="$PATH:$ANDROID_HOME/platform-tools:$ANDROID_HOME/cmdline-tools/latest/bin"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+### 8b. Generate the native Android project (prebuild)
+
+Expo Router apps need a one-time `prebuild` to generate the native
+`android/` folder (Java/Kotlin + Gradle) from `app.json` + plugins:
 
 ```bash
 cd /c/Smart_Ride/expo-app
 
-# Internal-testing APK (installable on any Android device, no Play Store needed):
-eas build --profile apk --platform android --non-interactive
+# Generate the android/ folder (merges app.json plugins, google-services.json,
+# Mapbox, Google Sign-In, Sentry, etc. into native Gradle config):
+npx expo prebuild --platform android --clean
 
-# When it finishes, EAS gives you a download URL. Fetch the .apk:
-#   https://expo.dev/accounts/<you>/projects/smart-ride/builds/<build-id>
-# Download the .apk, transfer to your phone, install.
+# This creates /c/Smart_Ride/expo-app/android/ — open it in Android Studio:
+#   File → Open → select /c/Smart_Ride/expo-app/android
 ```
 
-> The `apk` profile uses `distribution: "internal"` so the APK is installable
-> directly (sideload). For Play Store Internal Testing you'd later switch to
-> `distribution: "store"` + `buildType: "app-bundle"`, but for one more test
-> round, APK is correct.
+> `--clean` wipes any previous `android/` folder. If you've made manual native
+> edits you want to keep, drop `--clean` (but for a fresh build, use it).
 
-Before building, make sure all EAS secrets (§3) are set — the build will fail
-or ship with broken maps if `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN` is missing.
+### 8c. Set up the signing keystore
+
+You need a release keystore to sign the APK. You can either:
+
+**Option A — Use the EAS keystore you already have** (recommended, so the
+SHA-1 matches Firebase):
+```bash
+cd /c/Smart_Ride/expo-app
+
+# Download your EAS keystore credentials:
+eas credentials --platform android
+# Navigate: Keystore → "Download keystore" → saves a .keystore file
+
+# Move it into place:
+mkdir -p android/app
+mv ~/Downloads/smart-ride.keystore android/app/smartride.keystore
+```
+
+**Option B — Create a new debug+release keystore** (if you don't care about
+SHA-1 matching Firebase — you'd need to re-register the new SHA-1 in Firebase):
+```bash
+keytool -genkeypair -v -storetype PKCS12 \
+  -keystore android/app/smartride.keystore \
+  -alias smartride-key \
+  -keyalg RSA -keysize 2048 -validity 10000 \
+  -dname "CN=Smart Ride, OU=Mobile, O=Natural Intellects, L=Kampala, C=UG"
+# Enter a keystore password (REMEMBER IT) — store in android/key.properties
+```
+
+Create `android/key.properties` (GITIGNORED — never commit):
+```bash
+cat > android/key.properties << 'EOF'
+storeFile=smartride.keystore
+storePassword=YOUR_KEYSTORE_PASSWORD
+keyAlias=smartride-key
+keyPassword=YOUR_KEY_PASSWORD
+EOF
+```
+
+### 8d. Build the APK from GitBash
+
+```bash
+cd /c/Smart_Ride/expo-app/android
+
+# Build the debug APK (fast, no signing needed — for quick testing):
+./gradlew assembleDebug
+
+# Build the release APK (signed, optimized — for real device testing):
+./gradlew assembleRelease
+
+# Output APK location:
+#   android/app/build/outputs/apk/debug/app-debug.apk
+#   android/app/build/outputs/apk/release/app-release.apk
+```
+
+> If `./gradlew` fails with "permission denied", run:
+> `chmod +x android/gradlew`
+
+### 8e. Install on your phone
+
+```bash
+# Option 1 — adb (USB debugging enabled on phone):
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+
+# Option 2 — manual: copy the .apk to your phone (USB/email/cloud) and tap to install.
+# You may need to enable "Install unknown apps" for your file manager.
+```
+
+### 8f. Build from Android Studio (GUI alternative)
+
+1. Open Android Studio → File → Open → `/c/Smart_Ride/expo-app/android`
+2. Wait for Gradle sync to finish (bottom-right spinner).
+3. Menu: **Build → Build Bundle(s) / APK(s) → Build APK(s)**.
+4. When done, click "locate" in the notification to find the `.apk`.
+
+### 8g. Common build issues
+
+| Error | Fix |
+|-------|-----|
+| `SDK location not found` | Create `android/local.properties` with `sdk.dir=C:\\Users\\YOURNAME\\AppData\\Local\\Android\\Sdk` (double backslashes in GitBash). |
+| `google-services.json not found` | Ensure `expo-app/google-services.json` exists (it does — merged with all 3 SHA-1s). Re-run `npx expo prebuild` if missing. |
+| `Mapbox download token missing` | Set `SDK_REGISTRY_TOKEN` env var to your Mapbox token, OR it's auto-read from `EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN` in `.env`. |
+| `OutOfMemoryError` in Gradle | Edit `android/gradle.properties`, set `org.gradle.jvmargs=-Xmx4096m`. |
+| `Could not resolve sentry` | Ensure `@sentry/react-native` is installed in `expo-app/`: `cd expo-app && bun add @sentry/react-native`. |
+| Google Sign-In `DEVELOPER_ERROR` | Your APK's signing SHA-1 must match one of the 3 registered in Firebase. Run `keytool -list -v -keystore android/app/smartride.keystore -alias smartride-key` to check. |
+
+### 8h. EAS alternative (if local build fails)
+
+If the local Android Studio path gives you trouble, EAS cloud builds still work:
+
+```bash
+cd /c/Smart_Ride/expo-app
+eas build --profile apk --platform android --non-interactive
+# Downloads from expo.dev when done.
+```
 
 ---
 

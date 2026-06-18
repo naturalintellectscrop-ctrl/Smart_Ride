@@ -93,3 +93,8 @@ design-files/
 upload/
 verify-home-logo.png
 *.verify-screenshot.png
+
+# Sentry build-time auth token (source map upload)
+.env.sentry-build-plugin
+# Local production env (real secrets)
+.env.production

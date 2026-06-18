@@ -74,6 +74,9 @@ export function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/api/:path*',
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    // Exclude: _next internals, favicon, and the Sentry tunnel route
+    // (/monitoring) which must NOT be touched by middleware/CORS/security headers
+    // or ad-blocker bypass will break.
+    '/((?!_next/static|_next/image|favicon.ico|monitoring).*)',
   ],
 };
