@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "531949209415-3fnqdkfo69dognl93ffp0keg0jusvq6t.apps.googleusercontent.com",
+          "client_id": "531949209415-of1eufeeu4fsl6s1n1c5tl7q75b0bk4h.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "ug.smartride.app",
-            "certificate_hash": "1aec66618cc98e58af951d55366d33be5c45ccf6"
+            "certificate_hash": "7892f118d02c2d9d34be97d261b5bc0165d7c839"
           }
         },
         {

@@ -16,14 +16,25 @@ async function main() {
   // ==========================================
   // 1. Create Admin User
   // ==========================================
+  // SECURITY: Admin credentials MUST come from env vars — no hardcoded password.
+  // This seed is for local/demo development only.
   console.log('👤 Creating admin user...');
-  const adminPassword = await hash('Admin@123456', 12);
+  const adminEmail = process.env.SEED_ADMIN_EMAIL || 'admin@smartride.ug';
+  const adminPasswordPlain = process.env.SEED_ADMIN_PASSWORD;
+  if (!adminPasswordPlain) {
+    console.error(
+      'ERROR: SEED_ADMIN_PASSWORD env var must be set to seed the admin user. ' +
+        'Refusing to seed with a hardcoded password.'
+    );
+    process.exit(1);
+  }
+  const adminPassword = await hash(adminPasswordPlain, 12);
 
   const admin = await prisma.user.upsert({
-    where: { email: 'admin@smartride.ug' },
+    where: { email: adminEmail },
     update: {},
     create: {
-      email: 'admin@smartride.ug',
+      email: adminEmail,
       name: 'System Admin',
       passwordHash: adminPassword,
       role: UserRole.SUPER_ADMIN,
@@ -405,14 +416,16 @@ async function main() {
    • 5 Pricing configurations
    • 6 System configurations
 
-🔐 Demo Credentials:
-   Admin:      admin@smartride.ug / Admin@123456
+🔐 Demo Credentials (local dev only — DO NOT use in production):
+   Admin:      (set via SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD env vars)
    Client:     client@demo.com / Client@123456
    Boda Rider: rider@demo.com / Rider@123456
    Car Driver: driver@demo.com / Driver@123456
    Delivery:   delivery@demo.com / Delivery@123456
 
-⚠️  IMPORTANT: Change these passwords in production!
+⚠️  IMPORTANT: These demo users are for LOCAL DEVELOPMENT ONLY. Never run
+   this seed against a production database. Production admins must be created
+   via prisma/seed-production-admin.ts with SEED_ADMIN_* env vars.
 `);
 }
 

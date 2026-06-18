@@ -21,7 +21,17 @@ export async function POST(request: NextRequest) {
     const rawBody = await request.text();
     const body = JSON.parse(rawBody);
 
-    console.log('MTN MoMo Callback received:', JSON.stringify(body, null, 2));
+    // SECURITY: Log only non-PII metadata. The full webhook body may contain
+    // payer phone numbers, names, and financial details — never dump it to
+    // stdout (which is captured by Vercel logs and could leak PII).
+    console.log('[MTN-Callback] received', {
+      referenceId: body?.referenceId,
+      externalId: body?.externalId,
+      transactionId: body?.transactionId,
+      status: body?.status,
+      amount: body?.amount,
+      currency: body?.currency,
+    });
 
     // SECURITY: Always verify webhook signature — even in development/test.
     // Configure MTN_MOMO_SECRET_KEY (use test keys for non-production environments).

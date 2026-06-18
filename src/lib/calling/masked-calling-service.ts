@@ -293,14 +293,108 @@ function generateSessionId(): string {
   return `call_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
+/**
+ * Validate that both the caller and callee are legitimate participants of the
+ * same task (ride / food / shopping / item / health delivery).
+ *
+ * A task's participants are:
+ *   - the client            (Task.clientId — a User id)
+ *   - the assigned rider    (Task.riderId → Rider.userId)
+ *   - the merchant owner    (Task.orderId → Order.merchantId → Merchant.userId)
+ *   - the pharmacy owner    (Task.healthOrderId → HealthOrder.pharmacyId →
+ *                            Pharmacy.merchantId → Merchant.userId)
+ *
+ * If either the caller or callee is NOT in this participant set, the call is
+ * rejected (prevents stalking / harassment via the masked-calling feature).
+ */
 async function validateTaskParticipants(
   callerId: string,
   calleeId: string,
   taskId: string
 ): Promise<{ valid: boolean; error?: string }> {
-  // In production, verify that both users are participants in the same task
-  // For now, return valid
-  return { valid: true };
+  try {
+    // Lazily import db to avoid a circular dependency at module load time.
+    const { db } = await import('@/lib/db');
+
+    const task = await db.task.findUnique({
+      where: { id: taskId },
+      select: {
+        clientId: true,
+        riderId: true,
+        orderId: true,
+        healthOrderId: true,
+      },
+    });
+
+    if (!task) {
+      return { valid: false, error: 'Task not found' };
+    }
+
+    // Collect the set of user IDs that are valid participants of this task.
+    const participantUserIds = new Set<string>();
+
+    // 1. Client
+    if (task.clientId) participantUserIds.add(task.clientId);
+
+    // 2. Rider → Rider.userId
+    if (task.riderId) {
+      const rider = await db.rider.findUnique({
+        where: { id: task.riderId },
+        select: { userId: true },
+      });
+      if (rider?.userId) participantUserIds.add(rider.userId);
+    }
+
+    // 3. Order → Merchant.userId
+    if (task.orderId) {
+      const order = await db.order.findUnique({
+        where: { id: task.orderId },
+        select: { merchantId: true },
+      });
+      if (order?.merchantId) {
+        const merchant = await db.merchant.findUnique({
+          where: { id: order.merchantId },
+          select: { userId: true },
+        });
+        if (merchant?.userId) participantUserIds.add(merchant.userId);
+      }
+    }
+
+    // 4. HealthOrder → Pharmacy.merchantId → Merchant.userId
+    if (task.healthOrderId) {
+      const healthOrder = await db.healthOrder.findUnique({
+        where: { id: task.healthOrderId },
+        select: { pharmacyId: true },
+      });
+      if (healthOrder?.pharmacyId) {
+        const pharmacy = await db.pharmacy.findUnique({
+          where: { id: healthOrder.pharmacyId },
+          select: { merchantId: true },
+        });
+        if (pharmacy?.merchantId) {
+          const merchant = await db.merchant.findUnique({
+            where: { id: pharmacy.merchantId },
+            select: { userId: true },
+          });
+          if (merchant?.userId) participantUserIds.add(merchant.userId);
+        }
+      }
+    }
+
+    // Both caller and callee must be in the participant set.
+    if (!participantUserIds.has(callerId)) {
+      return { valid: false, error: 'Caller is not a participant of this task' };
+    }
+    if (!participantUserIds.has(calleeId)) {
+      return { valid: false, error: 'Callee is not a participant of this task' };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    console.error('[masked-calling] validateTaskParticipants error:', error);
+    // Fail-closed: if the DB lookup errors, reject the call.
+    return { valid: false, error: 'Unable to verify task participants' };
+  }
 }
 
 async function simulateCallInitiation(

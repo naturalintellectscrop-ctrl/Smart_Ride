@@ -1,16 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { Prisma } from '@prisma/client';
+import { verifyAccessToken } from '@/lib/auth/jwt';
+
+const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN'];
 
 // POST /api/health-provider/verify - Admin approves/rejects provider
+// SECURITY: Requires an authenticated admin. adminId is derived from the JWT,
+// NOT accepted from the request body.
 export async function POST(request: NextRequest) {
+  // SECURITY: Require admin authentication BEFORE any DB access.
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  if (!token) {
+    return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
+  }
+  const decoded = verifyAccessToken(token);
+  if (!decoded) {
+    return NextResponse.json({ success: false, error: 'Invalid or expired token' }, { status: 401 });
+  }
+  if (!ADMIN_ROLES.includes(decoded.role)) {
+    return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
-    const { providerId, action, adminId, notes, rejectionReason } = body;
+    const { providerId, action, notes, rejectionReason } = body;
 
-    if (!providerId || !action || !adminId) {
-      return NextResponse.json({ success: false, error: 'Provider ID, action, and admin ID are required' },
+    // adminId comes from the JWT — never trust the request body.
+    const adminId = decoded.userId;
+
+    if (!providerId || !action) {
+      return NextResponse.json({ success: false, error: 'Provider ID and action are required' },
         { status: 400 }
       );
     }
@@ -116,7 +138,22 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/health-provider/verify - Get pending providers for admin review
+// SECURITY: Requires admin authentication. Returns owner PII + license numbers.
 export async function GET(request: NextRequest) {
+  // Require admin authentication.
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  if (!token) {
+    return NextResponse.json({ success: false, error: 'Authentication required' }, { status: 401 });
+  }
+  const decoded = verifyAccessToken(token);
+  if (!decoded) {
+    return NextResponse.json({ success: false, error: 'Invalid or expired token' }, { status: 401 });
+  }
+  if (!ADMIN_ROLES.includes(decoded.role)) {
+    return NextResponse.json({ success: false, error: 'Admin access required' }, { status: 403 });
+  }
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);

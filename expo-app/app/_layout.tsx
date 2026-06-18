@@ -20,7 +20,7 @@ initSentry();
 import React, { Component, ReactNode, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, LogBox, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -93,9 +93,39 @@ const queryClient = createQueryClient();
 function ThemedRootLayout() {
   const { isDark, colors } = useTheme();
   const { isAuthenticated, setAccessToken, user } = useAuthStore();
+  const segments = useSegments();
+  const navigationState = useRootNavigationState();
 
   // Connect to Supabase Realtime when authenticated
   useRealtime();
+
+  // ============================================
+  // ROOT AUTH GUARD (CB12)
+  // ============================================
+  // Without this guard, ANY non-tab screen (/wallet, /chat/*, /rider/*,
+  // /orders/*, /health/*, /notifications, /sos, etc.) could be opened via a
+  // deep link without authentication, showing broken UI or leaking data.
+  // The (tabs)/_layout.tsx guard only protects tab screens.
+  //
+  // Public routes (accessible without auth):
+  //   - auth/*            (login, register, forgot-password, verify-otp, etc.)
+  //   - index             (splash / landing)
+  //
+  // Everything else requires isAuthenticated. If an unauthenticated user
+  // lands on a protected route (e.g. via deep link), redirect to login.
+  useEffect(() => {
+    // Navigation must be ready before we can redirect.
+    if (!navigationState?.key) return;
+
+    const firstSegment = segments[0];
+    const inAuthGroup = firstSegment === 'auth';
+    const isPublicRoute = inAuthGroup || firstSegment === 'index' || firstSegment === undefined;
+
+    if (!isAuthenticated && !isPublicRoute) {
+      // Use replace so the user can't press "back" into the protected screen.
+      router.replace('/auth/login');
+    }
+  }, [isAuthenticated, segments, navigationState?.key]);
 
   // Rehydrate access token from SecureStore on app start.
   // Since accessToken is no longer persisted in AsyncStorage,

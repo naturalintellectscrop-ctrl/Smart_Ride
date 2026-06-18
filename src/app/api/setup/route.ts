@@ -196,12 +196,15 @@ export async function POST(request: NextRequest) {
 
     const { email, password, name, role } = validationResult.data;
 
-    // Verify setup key matches JWT_SECRET (simple security measure)
+    // Verify setup key matches JWT_SECRET.
+    // SECURITY: JWT_SECRET MUST be set via env var. No 'setup' fallback —
+    // a fallback would let anyone create the first admin on a fresh deploy
+    // where JWT_SECRET is accidentally unset.
     const setupKey = validationResult.data.setupKey;
-    const expectedKey = process.env.JWT_SECRET || 'setup';
-    if (setupKey !== expectedKey) {
+    const expectedKey = process.env.JWT_SECRET;
+    if (!expectedKey || setupKey !== expectedKey) {
       return NextResponse.json(
-        { success: false, error: 'Invalid setup key. Use your JWT_SECRET as the setup key.' },
+        { success: false, error: 'Invalid setup key or JWT_SECRET not configured.' },
         { status: 401 }
       );
     }

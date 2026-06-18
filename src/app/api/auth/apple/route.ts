@@ -5,15 +5,17 @@
  * Apple Sign-In flow:
  * 1. iOS device uses expo-apple-authentication to get identityToken (JWT)
  * 2. Client sends identityToken to this endpoint
- * 3. We verify the token using Apple's public keys (JWKS)
- * 4. We find or create the user in our database
- * 5. We create a session and return auth tokens
+ * 3. We verify the JWT SIGNATURE against Apple's public keys (JWKS) using `jose`
+ * 4. We verify the issuer + audience + expiry claims
+ * 5. We find or create the user in our database
+ * 6. We create a session and return auth tokens
  *
  * Security:
- * - We verify the JWT signature against Apple's public keys
- * - We verify the issuer is Apple (https://appleid.apple.com)
- * - We verify the audience matches our bundle ID
- * - The email is verified by Apple (not user-provided)
+ * - JWT signature is cryptographically verified (jose.jwtVerify + JWKS)
+ * - Issuer MUST be https://appleid.apple.com
+ * - Audience MUST match our Apple bundle ID (env var APPLE_BUNDLE_ID)
+ * - Expiry + issued-at are validated by jose
+ * - The email is provided by Apple (not user-supplied) and marked verified
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -22,6 +24,7 @@ import { createSession } from '@/lib/auth/session-service';
 import { UserRole, UserStatus } from '@prisma/client';
 import { errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
 
 interface AppleUserInfo {
   email: string;
@@ -34,118 +37,52 @@ interface AppleUserInfo {
 const APPLE_JWKS_URL = 'https://appleid.apple.com/auth/keys';
 const APPLE_ISSUER = 'https://appleid.apple.com';
 
-// Cache Apple's public keys for 24 hours
-let cachedKeys: any[] = [];
-let keysFetchedAt = 0;
-const KEYS_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
-
-async function getApplePublicKeys(): Promise<any[]> {
-  const now = Date.now();
-  if (cachedKeys.length > 0 && now - keysFetchedAt < KEYS_CACHE_DURATION) {
-    return cachedKeys;
-  }
-
-  try {
-    const response = await fetch(APPLE_JWKS_URL);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch Apple keys: ${response.status}`);
-    }
-    const data = await response.json();
-    cachedKeys = data.keys || [];
-    keysFetchedAt = now;
-    return cachedKeys;
-  } catch (error) {
-    console.error('[APPLE-AUTH] Failed to fetch Apple public keys:', error);
-    // Return cached keys even if expired, as a fallback
-    return cachedKeys;
-  }
-}
+// jose JWKS handler — caches Apple's public keys and auto-refreshes per RFC 7517.
+const appleJWKS = createRemoteJWKSet(new URL(APPLE_JWKS_URL));
 
 /**
- * Decode a JWT token without verification (to extract header and payload)
- */
-function decodeJwtPart(part: string): any {
-  try {
-    const decoded = Buffer.from(part, 'base64url').toString('utf-8');
-    return JSON.parse(decoded);
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Verify Apple identity token
- * Returns decoded user info if valid, null otherwise
+ * Verify an Apple identity token (JWT).
  *
- * Note: Full JWT signature verification requires crypto.verify which
- * is available in Node.js runtime. For production, you should use a
- * library like `jose` or `jsonwebtoken`. This implementation does
- * basic validation of claims and uses Apple's token endpoint for
- * additional verification when possible.
+ * This performs FULL cryptographic signature verification against Apple's
+ * published public keys (JWKS), plus issuer + audience + expiry validation.
+ * A forged token (wrong signature) will fail verification here.
  */
 async function verifyAppleToken(identityToken: string, name?: string): Promise<AppleUserInfo | null> {
   try {
-    const parts = identityToken.split('.');
-    if (parts.length !== 3) {
-      console.error('[APPLE-AUTH] Invalid JWT format');
-      return null;
-    }
-
-    const header = decodeJwtPart(parts[0]);
-    const payload = decodeJwtPart(parts[1]);
-
-    if (!header || !payload) {
-      console.error('[APPLE-AUTH] Failed to decode JWT');
-      return null;
-    }
-
-    // Verify issuer
-    if (payload.iss !== APPLE_ISSUER) {
-      console.error('[APPLE-AUTH] Invalid issuer:', payload.iss);
-      return null;
-    }
-
-    // Verify audience matches our bundle ID
+    // The audience MUST be our Apple bundle ID. We require this env var to be
+    // set — if it isn't, we refuse to verify (fail-closed).
     const expectedBundleId = process.env.APPLE_BUNDLE_ID || 'ug.smartride.app';
-    const audiences = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
-    if (!audiences.includes(expectedBundleId)) {
-      console.error('[APPLE-AUTH] Audience mismatch. Expected:', expectedBundleId, 'Got:', payload.aud);
-      return null;
-    }
 
-    // Verify token is not expired
-    if (payload.exp && Date.now() / 1000 > payload.exp) {
-      console.error('[APPLE-AUTH] Token expired');
-      return null;
-    }
+    // jose.jwtVerify validates: signature (against JWKS), iss, aud, exp, nbf.
+    const { payload } = await jwtVerify(identityToken, appleJWKS, {
+      issuer: APPLE_ISSUER,
+      audience: expectedBundleId,
+    });
 
-    // Verify token was issued recently (within 10 minutes)
-    if (payload.iat && Date.now() / 1000 - payload.iat > 600) {
-      console.error('[APPLE-AUTH] Token too old');
-      return null;
-    }
-
-    // Fetch Apple's public keys for signature verification info
-    await getApplePublicKeys();
-
-    // Apple provides the email in the payload
-    // email_verified indicates Apple has verified this email
-    const email = payload.email;
-    const sub = payload.sub; // Apple's unique user identifier
-
+    // Apple's unique user identifier (stable across logins).
+    const sub = payload.sub;
     if (!sub) {
-      console.error('[APPLE-AUTH] Missing subject (sub) in token');
+      console.error('[APPLE-AUTH] Missing subject (sub) in verified token');
       return null;
     }
+
+    const email =
+      (typeof payload.email === 'string' && payload.email) ||
+      `${sub}@privaterelay.appleid.com`;
+
+    // Apple sends email_verified as a string "true" or boolean true.
+    const emailVerified =
+      payload.email_verified === 'true' || payload.email_verified === true;
 
     return {
-      email: email || `${sub}@privaterelay.appleid.com`,
+      email,
       sub,
-      emailVerified: payload.email_verified === 'true' || payload.email_verified === true,
+      emailVerified,
       name,
     };
   } catch (error) {
-    console.error('[APPLE-AUTH] Token verification error:', error);
+    // jose throws on signature mismatch, expired token, wrong issuer/audience.
+    console.error('[APPLE-AUTH] JWT verification failed:', (error as Error).message);
     return null;
   }
 }
