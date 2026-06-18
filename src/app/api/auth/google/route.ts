@@ -34,9 +34,16 @@ async function verifyGoogleToken(idToken: string): Promise<GoogleUserInfo | null
       return null;
     }
     
-    // Verify audience - critical security check
+    // Verify audience - critical security check.
+    // SECURITY: GOOGLE_CLIENT_ID MUST be set. No conditional skip — if the env
+    // var is unset we reject the token rather than silently accepting any
+    // Google idToken (which would allow forged logins).
     const expectedClientId = process.env.GOOGLE_CLIENT_ID || process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-    if (expectedClientId && data.aud !== expectedClientId) {
+    if (!expectedClientId) {
+      console.error('[GOOGLE-AUTH] GOOGLE_CLIENT_ID env var not configured — refusing to verify token');
+      return null;
+    }
+    if (data.aud !== expectedClientId) {
       console.error('[GOOGLE-AUTH] Audience mismatch. Expected:', expectedClientId, 'Got:', data.aud);
       return null;
     }

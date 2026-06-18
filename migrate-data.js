@@ -7,11 +7,15 @@
 
 const { PrismaClient } = require('@prisma/client');
 
-// Database URLs
-const RAILWAY_URL = process.env.RAILWAY_URL || "postgresql://postgres:yGphbfshRKrZSMLNPGCwJXGckrTOalVL@maglev.proxy.rlwy.net:55740/railway";
+// Database URLs — MUST be provided via env vars. Never hardcode credentials.
+const RAILWAY_URL = process.env.RAILWAY_URL;
 // Target = Supabase. Read from env — never hardcode credentials.
 const SUPABASE_URL = process.env.DATABASE_URL;
 
+if (!RAILWAY_URL) {
+  console.error('ERROR: RAILWAY_URL env var must be set to the source Railway connection string.');
+  process.exit(1);
+}
 if (!SUPABASE_URL) {
   console.error('ERROR: DATABASE_URL env var must be set to the Supabase connection string.');
   process.exit(1);

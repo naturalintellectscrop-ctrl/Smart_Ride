@@ -1,39 +1,62 @@
 import { NextRequest } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
-import { 
-  successResponse, 
-  errorResponse, 
+import {
+  successResponse,
+  errorResponse,
   notFoundResponse,
   serverErrorResponse,
   paginatedResponse,
-  getPaginationParams 
+  getPaginationParams,
+  unauthorizedResponse,
 } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { generateHealthOrderNumber, generatePOTNumber } from '@/lib/api/health-state-machine';
 import { HealthOrderType, HealthOrderStatus, PaymentStatus } from '@prisma/client';
+import { verifyAccessToken } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
 /**
  * GET /api/health-orders
- * List all health orders with pagination
+ * List health orders with pagination.
+ * SECURITY: Requires authentication. Non-admin users only see their own
+ * orders (patient privacy). Admins can see all + filter by clientId.
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: Require authentication.
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  if (!token) return unauthorizedResponse('Authentication required');
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded) return unauthorizedResponse('Invalid or expired token');
+
+  // Admin roles can view all orders; everyone else is scoped to their own.
+  const adminRoles = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN'];
+  const isAdmin = adminRoles.includes(decoded.role);
+
   await setServiceRoleContext();
   try {
     const { page, limit, skip } = getPaginationParams(request);
     const { searchParams } = new URL(request.url);
-    
+
     const status = searchParams.get('status');
     const pharmacyId = searchParams.get('pharmacyId');
-    const clientId = searchParams.get('clientId');
     const orderType = searchParams.get('orderType');
     const search = searchParams.get('search');
 
     const where: Record<string, unknown> = {};
-    
+
+    // Non-admins are always scoped to their own orders, regardless of any
+    // clientId query param they try to pass.
+    if (!isAdmin) {
+      where.clientId = decoded.userId;
+    } else {
+      const clientIdParam = searchParams.get('clientId');
+      if (clientIdParam) where.clientId = clientIdParam;
+    }
+
     if (status) where.status = status;
     if (pharmacyId) where.pharmacyId = pharmacyId;
-    if (clientId) where.clientId = clientId;
     if (orderType) where.orderType = orderType;
     if (search) {
       where.OR = [
@@ -73,9 +96,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Health order creation schema
+// Health order creation schema.
+// SECURITY: clientId is NOT accepted from the body — it is derived from the
+// authenticated user's JWT to prevent IDOR (creating orders on behalf of
+// other users).
 const createHealthOrderSchema = z.object({
-  clientId: z.string(),
   pharmacyId: z.string(),
   orderType: z.enum(['PRESCRIPTION_MEDICINE', 'OVER_THE_COUNTER']),
   
@@ -122,12 +147,24 @@ const createHealthOrderSchema = z.object({
 /**
  * POST /api/health-orders
  * Create a new health order
+ * SECURITY: Requires authentication. clientId is derived from the JWT.
  */
 export async function POST(request: NextRequest) {
+  // SECURITY: Require authentication BEFORE any DB access.
+  const authHeader = request.headers.get('authorization');
+  const token = authHeader?.replace('Bearer ', '');
+  if (!token) return unauthorizedResponse('Authentication required');
+
+  const decoded = verifyAccessToken(token);
+  if (!decoded) return unauthorizedResponse('Invalid or expired token');
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
     const validatedData = createHealthOrderSchema.parse(body);
+
+    // Derive clientId from the JWT — never trust the request body.
+    const clientId = decoded.userId;
 
     // Verify pharmacy exists and is open
     const pharmacy = await db.pharmacy.findUnique({
@@ -162,7 +199,7 @@ export async function POST(request: NextRequest) {
       data: {
         orderNumber: generateHealthOrderNumber(),
         orderType: validatedData.orderType as HealthOrderType,
-        clientId: validatedData.clientId,
+        clientId,
         pharmacyId: validatedData.pharmacyId,
         prescriptionId: validatedData.prescriptionId || null,
         status: validatedData.orderType === 'PRESCRIPTION_MEDICINE' ? 'PHARMACY_REVIEW' : 'ORDER_PLACED',
@@ -230,7 +267,7 @@ export async function POST(request: NextRequest) {
       entityType: 'HEALTH_ORDER',
       entityId: order.id,
       actorType: 'USER',
-      userId: validatedData.clientId,
+      userId: clientId,
       healthOrderId: order.id,
       description: `Health order ${order.orderNumber} created`,
     });

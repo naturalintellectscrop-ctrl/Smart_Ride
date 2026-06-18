@@ -238,7 +238,9 @@ export async function POST(request: NextRequest) {
       const task = await tx.task.create({
         data: {
           taskNumber: `TSK-${Date.now().toString(36).toUpperCase()}`,
-          taskType: 'FOOD_DELIVERY',
+          // Use the orderType from the request so SHOPPING orders use the
+          // SHOPPING_TRANSITIONS state machine (not FOOD_DELIVERY).
+          taskType: validatedData.orderType,
           clientId: effectiveClientId,
           orderId: order.id,
           status: 'CREATED',

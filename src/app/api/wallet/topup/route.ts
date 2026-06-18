@@ -3,10 +3,17 @@
 // ============================================
 // POST /api/wallet/topup
 // Initiates a wallet top-up via MTN MoMo / Airtel Money.
-// In demo mode (no payment provider configured) the top-up
-// is auto-completed so the user sees the balance update.
-// In production, this should be replaced by a real payment
-// gateway integration with a confirmation callback.
+//
+// SECURITY: This endpoint does NOT credit the wallet balance. It only creates
+// a PENDING WalletTransaction. The balance is credited exclusively by the
+// payment-provider webhook (/api/payments/mtn-callback or /api/payments/
+// airtel-callback) after verifying the provider's signature and a
+// SUCCESSFUL payment status. This prevents the "free-money" exploit where
+// a top-up request instantly credited balance without any real payment.
+//
+// Until a real payment gateway (MTN MoMo / Airtel Money) is configured with
+// valid API credentials and webhook secrets, top-ups will remain PENDING and
+// the balance will NOT change. This is intentional and correct.
 // ============================================
 
 import { NextRequest } from 'next/server';
@@ -40,6 +47,21 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validated = schema.parse(body);
 
+    // Verify a payment provider is actually configured before accepting the
+    // top-up request. Without provider credentials we cannot initiate a real
+    // collection, so we refuse rather than silently creating a stuck PENDING.
+    const providerConfigured =
+      validated.paymentMethod === 'MTN_MOMO'
+        ? !!(process.env.MTN_MOMO_API_USER && process.env.MTN_MOMO_API_KEY && process.env.MTN_MOMO_SUBSCRIPTION_KEY)
+        : !!(process.env.AIRTEL_MONEY_CLIENT_ID && process.env.AIRTEL_MONEY_CLIENT_SECRET && process.env.AIRTEL_MONEY_WEBHOOK_SECRET);
+
+    if (!providerConfigured) {
+      return errorResponse(
+        'Wallet top-up is not available yet. Payment provider is not configured. Please use Cash on Delivery for now.',
+        503
+      );
+    }
+
     // Get the user's wallet (USER-owned). Create if missing.
     let wallet = await db.wallet.findFirst({
       where: { ownerId: decoded.userId, ownerType: 'USER' },
@@ -62,56 +84,50 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Execute the top-up atomically (demo mode — auto-complete).
-    // TODO: Replace with real payment gateway integration when MoR is ready.
-    const result = await db.$transaction(async (tx) => {
-      const balanceBefore = toNumber(wallet!.balance);
-      const balanceAfter = balanceBefore + validated.amount;
-      const newDeposited = toNumber(wallet!.totalDeposited) + validated.amount;
-
-      const updatedWallet = await tx.wallet.update({
-        where: { id: wallet!.id },
-        data: {
-          balance: balanceAfter,
-          totalDeposited: newDeposited,
-          lastDepositAt: new Date(),
-          lastTransactionAt: new Date(),
-        },
-      });
-
-      const transaction = await tx.walletTransaction.create({
-        data: {
-          walletId: wallet!.id,
-          transactionType: 'DEPOSIT',
-          amount: validated.amount,
-          balanceBefore,
-          balanceAfter,
-          externalProvider: validated.paymentMethod,
-          description: `Wallet top-up via ${validated.paymentMethod}`,
-          status: 'COMPLETED',
-          metadata: JSON.stringify({
-            paymentMethod: validated.paymentMethod,
-            phoneNumber: validated.phoneNumber,
-            reference: `TOPUP-${Date.now()}`,
-            userId: decoded.userId,
-            mode: 'DEMO_AUTO_COMPLETE',
-          }),
-        },
-      });
-
-      return { updatedWallet, transaction };
+    // Create a PENDING transaction. Balance is NOT credited here.
+    // The webhook handler will flip this to COMPLETED and credit the wallet
+    // only after a verified SUCCESSFUL payment notification from the provider.
+    const reference = `TOPUP-${Date.now()}`;
+    const transaction = await db.walletTransaction.create({
+      data: {
+        walletId: wallet.id,
+        transactionType: 'DEPOSIT',
+        amount: validated.amount,
+        balanceBefore: toNumber(wallet.balance),
+        balanceAfter: toNumber(wallet.balance), // unchanged until webhook confirms
+        externalProvider: validated.paymentMethod,
+        description: `Wallet top-up via ${validated.paymentMethod} (pending provider confirmation)`,
+        status: 'PENDING',
+        metadata: JSON.stringify({
+          paymentMethod: validated.paymentMethod,
+          phoneNumber: validated.phoneNumber,
+          reference,
+          userId: decoded.userId,
+          // Explicitly mark that this is awaiting real payment confirmation.
+          // The DEMO_AUTO_COMPLETE mode has been removed to prevent free-money.
+          mode: 'PENDING_PROVIDER_CONFIRMATION',
+        }),
+      },
     });
+
+    // TODO (integration): When MTN MoMo / Airtel Money SDK is wired up, call
+    // the provider's "request to pay" API here using the reference above and
+    // the user's phoneNumber. The provider will then trigger the webhook at
+    // /api/payments/{mtn,airtel}-callback which verifies the signature and
+    // credits the wallet. Until then the transaction stays PENDING.
 
     return successResponse(
       {
-        transactionId: result.transaction.id,
+        transactionId: transaction.id,
+        reference,
         amount: validated.amount,
-        status: 'COMPLETED',
+        status: 'PENDING',
         paymentMethod: validated.paymentMethod,
-        newBalance: toNumber(result.updatedWallet.balance),
-        message: 'Top-up completed successfully',
+        newBalance: toNumber(wallet.balance),
+        message:
+          'Top-up initiated. Your balance will update once the payment is confirmed by the provider.',
       },
-      'Top-up processed successfully'
+      'Top-up initiated successfully'
     );
   } catch (error) {
     if (error instanceof z.ZodError) {

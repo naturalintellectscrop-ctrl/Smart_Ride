@@ -23,16 +23,11 @@ interface AdminData {
   phone?: string;
 }
 
-// Default admins to create
-const DEFAULT_ADMINS: AdminData[] = [
-  {
-    email: 'naturalintellectscrop@gmail.com',
-    password: 'Admin@123',
-    name: 'System Administrator',
-    role: 'SUPER_ADMIN',
-    phone: '+256700000000',
-  },
-];
+// SECURITY: No default admins are hardcoded. Admins must be created via:
+//   1. CLI args:  bun prisma/seed-admin.ts <email> <password> <role> [name]
+//   2. Env vars:  SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, SEED_ADMIN_ROLE,
+//                 SEED_ADMIN_NAME (optional)
+// Running with no args and no env vars will refuse to seed.
 
 async function createAdmin(adminData: AdminData) {
   console.log(`\nChecking admin: ${adminData.email}`);
@@ -90,12 +85,25 @@ async function main() {
       role: role as AdminData['role'],
     });
   } else {
-    // Create default admins
-    console.log('\nCreating default admins...\n');
-    
-    for (const adminData of DEFAULT_ADMINS) {
-      await createAdmin(adminData);
+    // SECURITY: No hardcoded defaults. Fall back to env vars, or refuse.
+    const email = process.env.SEED_ADMIN_EMAIL;
+    const password = process.env.SEED_ADMIN_PASSWORD;
+    const role = (process.env.SEED_ADMIN_ROLE as AdminData['role']) || 'ADMIN';
+    const name = process.env.SEED_ADMIN_NAME || 'Admin User';
+
+    if (!email || !password) {
+      console.error(
+        '\nERROR: No admin credentials provided.\n' +
+          'Provide admin details via CLI args:\n' +
+          '  bun prisma/seed-admin.ts <email> <password> <role> [name]\n' +
+          'Or via env vars:\n' +
+          '  SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, SEED_ADMIN_ROLE (optional), SEED_ADMIN_NAME (optional)\n' +
+          'Refusing to seed with hardcoded credentials.'
+      );
+      process.exit(1);
     }
+
+    await createAdmin({ email, password, role, name });
   }
   
   console.log('\n=================================');

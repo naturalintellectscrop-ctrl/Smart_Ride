@@ -12,7 +12,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
-const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY || 'smart-ride-internal-api-key-2024';
+// SECURITY: INTERNAL_API_KEY MUST be set via env var. No hardcoded fallback —
+// a fallback would let anyone who reads the source code call this service-role
+// endpoint and execute dispatch operations.
+const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
 
 /**
  * POST /api/dispatch/process-expired
@@ -39,9 +42,9 @@ export async function POST(request: NextRequest) {
     // Continue — the actual DB operations will also fail and be caught below
   }
   try {
-    // Verify internal API key
+    // Verify internal API key (reject if env var unset OR key mismatch)
     const providedKey = request.headers.get('X-Internal-Key');
-    if (!providedKey || providedKey !== INTERNAL_API_KEY) {
+    if (!INTERNAL_API_KEY || !providedKey || providedKey !== INTERNAL_API_KEY) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized - invalid internal API key' },
         { status: 401 }
@@ -101,9 +104,9 @@ export async function GET(request: NextRequest) {
     // RLS context fails gracefully when DB is unavailable
   }
   try {
-    // Verify internal API key
+    // Verify internal API key (reject if env var unset OR key mismatch)
     const providedKey = request.headers.get('X-Internal-Key');
-    if (!providedKey || providedKey !== INTERNAL_API_KEY) {
+    if (!INTERNAL_API_KEY || !providedKey || providedKey !== INTERNAL_API_KEY) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized - invalid internal API key' },
         { status: 401 }

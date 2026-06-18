@@ -17,7 +17,16 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    console.log('Airtel Money Callback received:', JSON.stringify(body, null, 2));
+    // SECURITY: Log only non-PII metadata. The full webhook body may contain
+    // payer phone numbers, names, and financial details — never dump it to
+    // stdout (which is captured by Vercel logs and could leak PII).
+    console.log('[Airtel-Callback] received', {
+      transactionId: body?.transactionId,
+      reference: body?.reference,
+      status: body?.status,
+      amount: body?.amount,
+      currency: body?.currency,
+    });
 
     // SECURITY: Always verify webhook signature — even in development/test.
     // TODO: The current verification is a simple header-to-secret comparison.
