@@ -580,26 +580,35 @@ export default function RegisterScreen() {
               />
             </View>
 
-            {/* Google Sign-In Button */}
-            <TouchableOpacity
-              style={styles.googleButton}
-              onPress={handleGoogleSignIn}
-              disabled={googleLoading || isLoading}
-              activeOpacity={0.7}
-            >
-              {googleLoading ? (
-                <Animated.View style={styles.googleLoadingContainer}>
-                  <Ionicons name="refresh" size={20} color={COLORS.onSurface} />
-                </Animated.View>
-              ) : (
-                <>
-                  <View style={styles.googleIconContainer}>
-                    <Ionicons name="logo-google" size={20} color={COLORS.googleBlue} />
-                  </View>
-                  <Text style={styles.googleButtonText}>Continue with Google</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            {/* Google Sign-In — Hovering Circular Icon Card */}
+            <View style={styles.socialRow}>
+              <TouchableOpacity
+                style={[styles.socialCircle, (googleLoading || isLoading) && styles.socialCircleDisabled]}
+                onPress={handleGoogleSignIn}
+                disabled={googleLoading || isLoading}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Sign up with Google"
+              >
+                {googleLoading ? (
+                  <Ionicons name="refresh" size={26} color={COLORS.googleBlue} />
+                ) : (
+                  <Ionicons name="logo-google" size={28} color={COLORS.googleBlue} />
+                )}
+              </TouchableOpacity>
+
+              {/* Phone signup — circular hovering card */}
+              <TouchableOpacity
+                style={styles.socialCircle}
+                onPress={handlePhoneRegister}
+                disabled={googleLoading || isLoading}
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel="Sign up with phone number"
+              >
+                <Ionicons name="call" size={26} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
@@ -882,34 +891,33 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   // Google Sign-In button
-  googleButton: {
+  // ─── Social Sign-Up — Hovering Circular Icon Cards ───
+  socialRow: {
     flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.lg,
+    marginTop: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  socialCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surface,
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
-    paddingVertical: 14,
-    paddingHorizontal: SPACING.lg,
-    marginTop: SPACING.md,
-    minHeight: 52,
+    ...SHADOWS.active,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  googleIconContainer: {
-    width: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleButtonText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurface,
-    fontWeight: '600',
-  },
-  googleLoadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  socialCircleDisabled: {
+    opacity: 0.5,
   },
   // Decorative card at bottom
   decorativeCard: {

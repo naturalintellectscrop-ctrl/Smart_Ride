@@ -409,43 +409,55 @@ export default function LoginScreen() {
           <View style={styles.dividerLine} />
         </View>
 
-        {/* ─── Social Login Buttons ──────────────── */}
-        <View style={styles.socialGrid}>
-          {/* Google */}
+        {/* ─── Social Login — Hovering Circular Icon Cards ─────────── */}
+        <View style={styles.socialRow}>
+          {/* Google — circular hovering card */}
           <TouchableOpacity
-            style={[styles.socialButton, googleLoading && styles.socialButtonDisabled]}
+            style={[styles.socialCircle, googleLoading && styles.socialCircleDisabled]}
             onPress={handleGoogleSignIn}
             disabled={googleLoading}
-            activeOpacity={0.7}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in with Google"
           >
             {googleLoading ? (
-              <Text style={styles.socialButtonLoadingText}>…</Text>
+              <Ionicons name="refresh" size={26} color={COLORS.googleBlue} />
             ) : (
-              <>
-                <Text style={styles.googleIconText}>G</Text>
-                <Text style={styles.socialButtonText}>Google</Text>
-              </>
+              <Ionicons name="logo-google" size={28} color={COLORS.googleBlue} />
             )}
           </TouchableOpacity>
 
-          {/* Apple — only shown on iOS */}
+          {/* Phone — circular hovering card (always available) */}
+          <TouchableOpacity
+            style={styles.socialCircle}
+            onPress={handlePhoneContinue}
+            disabled={googleLoading}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in with phone number"
+          >
+            <Ionicons name="call" size={26} color={COLORS.primary} />
+          </TouchableOpacity>
+
+          {/* Apple — circular hovering card, only shown on iOS */}
           {appleAvailable && (
             <TouchableOpacity
-              style={[styles.socialButton, appleLoading && styles.socialButtonDisabled]}
+              style={[styles.socialCircle, styles.socialCircleApple, appleLoading && styles.socialCircleDisabled]}
               onPress={handleAppleSignIn}
               disabled={appleLoading}
-              activeOpacity={0.7}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in with Apple"
             >
               {appleLoading ? (
-                <Text style={styles.socialButtonLoadingText}>…</Text>
+                <Ionicons name="refresh" size={26} color={COLORS.onPrimary} />
               ) : (
-                <>
-                  <Ionicons name="logo-apple" size={20} color={COLORS.onSurface} />
-                  <Text style={styles.socialButtonText}>Apple</Text>
-                </>
+                <Ionicons name="logo-apple" size={28} color={COLORS.onPrimary} />
               )}
             </TouchableOpacity>
           )}
+        </View>
+
         </View>
 
         {/* ─── Email / Password Fallback ─────────── */}
@@ -720,40 +732,41 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
-  // ─── Social Login Buttons ───────────────────────
-  socialGrid: {
+  // ─── Social Login — Hovering Circular Icon Cards ───
+  socialRow: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: SPACING.lg,
     paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
   },
-  socialButton: {
-    flex: 1,
-    flexDirection: 'row',
+  // Base circular card — white surface with strong elevation shadow to "hover"
+  socialCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.sm,
-    height: 56, // h-14
     backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.lg, // rounded-xl
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
+    // Strong drop shadow -> makes the icon card visibly "hover" above the surface
+    ...SHADOWS.active,
+    // iOS shadow props (explicit, for older RN versions)
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  socialButtonDisabled: {
+  // Apple variant — dark card, white icon (premium contrast)
+  socialCircleApple: {
+    backgroundColor: COLORS.onSurface, // near-black
+    borderColor: COLORS.onSurface,
+  },
+  socialCircleDisabled: {
     opacity: 0.5,
-  },
-  googleIconText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.onSurface,
-  },
-  socialButtonText: {
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '600',
-    color: COLORS.onSurface,
-  },
-  socialButtonLoadingText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurfaceVariant,
   },
 
   // ─── Email Section ──────────────────────────────
