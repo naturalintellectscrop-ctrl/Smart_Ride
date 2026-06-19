@@ -3277,3 +3277,45 @@ Stage Summary:
 - All changes pushed to GitHub: github.com/naturalintellectscorp-ctrl/Smart_Ride
 - User must re-run: npx expo prebuild --platform android --clean && cd android && ./gradlew clean && ./gradlew assembleRelease
 - .env has Nylon Pay creds locally; user must add them to Vercel dashboard (env vars are gitignored)
+
+---
+Task ID: ADMIN-LOGIN-SECURE
+Agent: Main Agent
+Task: Ensure admin dashboard login uses the agreed URL (/intellects/login) and agreed credentials (naturalintellectscrop@gmail.com / intellects@nrtcorp) — fix security risks from stale /admin paths and credential env-var mismatch
+
+Work Log:
+- Read worklog.md to understand prior context (admin route was renamed /admin -> /intellects in commit 0737e2a; agreed creds documented in PRODUCTION_SETUP_RUNBOOK.md as naturalintellectscrop@gmail.com / intellects@nrtcorp)
+- Confirmed via `find src/app` that NO /admin page route exists (only /api/admin/* API routes, which are fine). The /intellects/login page route already exists and is fully functional.
+- ROOT CAUSE #1 (credentials not changing): /api/admin/setup/route.ts read ADMIN_SETUP_EMAIL / ADMIN_SETUP_PASSWORD env vars, but PRODUCTION_SETUP_RUNBOOK.md and ALL prisma seed scripts (prisma/seed.ts, seed-admin.ts, seed-production-admin.ts, seeds/seed.ts) use SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD. So when user set the agreed creds in Vercel under the documented SEED_ADMIN_* names, the setup endpoint ignored them -> admin account kept old password.
+- ROOT CAUSE #2 (stale credentials in code): fix-admin-password.ts hardcoded email naturalintellectscrop@gmail.com with password 'Admin@123' (wrong password + security risk). Also used wrong schema field 'password' (schema uses 'passwordHash') so the script would have failed at runtime.
+- ROOT CAUSE #3 (stale /admin references): src/proxy.ts.bak2 backup file still contained references to /admin/login (not active code, but security hygiene concern).
+- ROOT CAUSE #4 (no redirect for old /admin paths): navigating to /admin/login on the deployed site returned a 404 (leaks that no admin panel exists at /admin, but breaks old bookmarks).
+
+Fixes applied:
+1. src/app/api/admin/setup/route.ts: now reads SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD (primary) with ADMIN_SETUP_EMAIL / ADMIN_SETUP_PASSWORD as backward-compat fallback. Setup endpoint and seed scripts now agree on env-var names.
+2. fix-admin-password.ts: fully rewritten to read creds from SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD env vars only — no hardcoded password. Uses correct schema field 'passwordHash'. Validates password >= 8 chars. Updates existing user to SUPER_ADMIN/ACTIVE, or creates new user if not found.
+3. next.config.ts: added async redirects() returning 3 permanent (308) redirects: /admin/login -> /intellects/login, /admin -> /intellects/login, /admin/:path* -> /intellects/login. /api/admin/* intentionally NOT redirected (it's the authenticated JSON API, not a login page).
+4. Deleted stale src/proxy.ts.bak2 (was the only file referencing /admin/login).
+5. .env.production.example: rewrote the admin seed credentials section to document SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, ADMIN_SETUP_KEY, and the /intellects/login URL consistently. Pre-filled the agreed production email.
+6. PRODUCTION_SETUP_RUNBOOK.md: updated verification checklist (line 500) from /admin to /intellects/login with explicit creds; added curl-based setup alternative after the seed-script section; added SECURITY note explaining the /admin -> /intellects obscuring + 308 redirect policy.
+
+Verification:
+- bun run lint: clean (0 errors, 0 warnings)
+- curl http://localhost:3000/intellects/login -> HTTP 200 (page renders)
+- curl http://localhost:3000/admin/login -> HTTP 308 -> Location: /intellects/login
+- curl http://localhost:3000/admin -> HTTP 308 -> Location: /intellects/login
+- curl http://localhost:3000/admin/dashboard -> HTTP 308 -> Location: /intellects/login
+- Agent Browser: opened /intellects/login -> page renders Smart Ride Admin login form (h1 "Smart Ride Admin", h2 "Welcome Back", email textbox, password textbox, Sign In button, Forgot password link, Back to Smart Ride link). No console errors.
+- Agent Browser: opened /admin/login -> automatically redirected to /intellects/login (confirmed via `get url`). Page title correct. No console errors.
+- dev.log: clean, all requests 200, no compile errors.
+
+Git:
+- Committed as d9fc83b: "fix(admin): secure admin login at /intellects/login + credential env-var alignment"
+- Pushed to github.com/naturalintellectscorp-ctrl/Smart_Ride main branch (2a958f1..d9fc83b)
+
+Stage Summary:
+- Admin login page is at /intellects/login (and was already there) — now PERMANENTLY enforced via 308 redirects from /admin, /admin/login, /admin/:path*.
+- Credential env-var mismatch FIXED: /api/admin/setup now honors SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD (matching docs + seed scripts). Setting the agreed creds in Vercel will now actually take effect.
+- Stale hardcoded password 'Admin@123' removed from fix-admin-password.ts (now reads env vars only).
+- Stale backup src/proxy.ts.bak2 deleted.
+- POST-DEPLOY ACTION FOR USER: After Vercel redeploys this commit, set in Vercel dashboard: SEED_ADMIN_EMAIL=naturalintellectscrop@gmail.com, SEED_ADMIN_PASSWORD=intellects@nrtcorp, ADMIN_SETUP_KEY=<strong random string>. Then run once: curl 'https://smartrideug.vercel.app/api/admin/setup?key=<ADMIN_SETUP_KEY>'. Login at https://smartrideug.vercel.app/intellects/login with the agreed creds.
