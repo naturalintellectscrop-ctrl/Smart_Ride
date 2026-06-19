@@ -3443,3 +3443,31 @@ Stage Summary:
 Next actions for user:
 - Verify the page renders correctly at https://smartrideug.vercel.app after the next deploy
 - Optional: if 1006 lines still feels long, the hero phone mockup (~60 lines) and download-section mockup (~25 lines) can be replaced with the actual Smart Ride app screenshots for a more authentic look — would also reduce file size
+
+---
+Task ID: VERCEL-DEPLOYMENT-CHAIN-FIX + ADMIN-AUTO-SEED + LANDING-REDESIGN
+Agent: Main Agent + frontend-styling-expert (subagent)
+Task: Fix Vercel deployment chain (cron + missing dep), auto-seed admin password on every deploy, redesign landing page as single-page site with consistent branding, address adb crash log issue
+
+Work Log:
+- User reported Vercel build error: "Module not found: Can't resolve '@aws-sdk/s3-request-presigner'" at src/lib/storage/index.ts:19. Installed @aws-sdk/s3-request-presigner@3.1072.0 and pushed (commit cbf2b7c). Vercel cron fix from previous session WORKED — Vercel is now actually building code instead of silently failing at cron validation.
+
+- User reported admin dashboard password "didn't change" — still using old password instead of agreed 'intellects@nrtcorp'. ROOT CAUSE: /api/admin/setup requires manual curl call with ADMIN_SETUP_KEY, and prisma/seed-production-admin.ts requires manual execution. Neither runs automatically during Vercel deployment, so even when SEED_ADMIN_PASSWORD was set in Vercel env vars, the DB admin account kept its old password.
+- FIX: Created scripts/postbuild-seed-admin.ts — runs automatically after 'next build' during Vercel's build step. Connects to DB and creates/updates admin user with SEED_ADMIN_PASSWORD. Added 'postbuild' script to package.json using 'npx --yes tsx'. Added tsx as devDependency. Updated vercel.json buildCommand to 'npm run build' (triggers postbuild via npm lifecycle). Script is non-blocking — if DB unreachable or env vars missing, logs warning and exits 0 (build succeeds).
+- Committed as a082bce.
+
+- User requested landing page be a "one site site" (single-page) with consistent branding. Delegated to frontend-styling-expert subagent.
+- Subagent rewrote src/app/page.tsx from 1485 lines to 1006 lines (-32%). Locked branding to 4 core colors (#22C55E, #005f3a, #0D0D12, #111827). Removed all non-brand colors (blue #3B82F6, pink #EC4899, purple #8B5CF6, etc.). 9 sections: sticky header, hero, services grid, why-choose-us, stats, app-download, blog preview, contact CTA, sticky footer. Admin Login link → /intellects/login. Footer links → /privacy, /terms, /delete-account, /contact, /about, /blog, /help. Mobile-responsive with Sheet menu.
+- Verified via Agent Browser: page renders correctly, no console errors, all sections present, footer sticky with mt-auto.
+- Committed as 629b240.
+
+- User reported adb logcat showed "- waiting for device -" and only system logs (SurfaceFlinger, WindowManager) — NOT Smart Ride app logs. This means the phone was NOT connected via USB debugging when the command was run. The crash log was not captured. Provided instructions: connect phone via USB data cable, enable Developer Options + USB debugging, authorize computer on phone, then re-run adb commands.
+
+- FINAL AUDIT: All commits on origin/main (629b240). Local and remote in sync. All key files verified: admin login route EXISTS, admin setup route EXISTS, postbuild seed EXISTS, vercel.json has 2 Hobby-compliant crons, GitHub Actions cron EXISTS, all 3 legal pages EXIST, AWS SDK presigner INSTALLED, tsx INSTALLED.
+
+Stage Summary:
+- VERCEL DEPLOYMENT CHAIN: FIXED. Cron jobs are Hobby-compliant, missing AWS SDK dep installed, build should now succeed on commit 629b240.
+- ADMIN PASSWORD: FIXED. Auto-seeds on every Vercel deploy via postbuild script. User must set SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD, and DATABASE_URL in Vercel env vars — then every deploy automatically syncs the admin password.
+- LANDING PAGE: REDESIGNED. Clean single-page site, 4-color branding, 9 sections, mobile-responsive, consistent with Smart Ride brand.
+- APK CRASH: Still needs adb logcat from a properly connected phone. Previous attempt captured only system logs because phone wasn't connected via USB debugging.
+- ALL RECENT WORK IS ON VERCEL: Commits 0737e2a through 629b240 (admin route obscure, legal pages, APK crash fixes, Nylon Pay, admin login security, cron fix, AWS SDK fix, admin auto-seed, landing redesign) — all on origin/main and will deploy when Vercel builds commit 629b240.
