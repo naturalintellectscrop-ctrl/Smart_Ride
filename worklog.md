@@ -3666,3 +3666,75 @@ Stage Summary:
 - Admin setup: improved error messages guide user to find real ADMIN_SETUP_KEY value
 - APK install: one-command auto-install via USB documented
 - Verified via Agent Browser: logoSrc=/smartride-logo-new.png, favicon=/favicon-new.png, hasStats=false, adminLinks=0, fakeNumbers=0
+
+---
+Task ID: 7-expo-fake-data
+Agent: General-Purpose (expo-app fake-data sweep)
+Task: Remove all hardcoded fake/mock data from the expo-app mobile app
+
+Work Log:
+- Read /home/z/my-project/worklog.md (last ~250 lines) for context — confirmed Tasks 6-landing-cleanup and 7-website-fake-data already cleaned the Next.js website. Did NOT touch /home/z/my-project/src/ (web). Only worked inside /home/z/my-project/expo-app/.
+- Surveyed the full expo-app file tree (60+ TS/TSX files under app/ and src/) and grepped aggressively for fake-data patterns: TRENDING_DEALS|deals=|DEALS, mock|Mock|MOCK|dummy|seed|sample data, hardcoded names (John/Jane/Demo/Test User/Sarah/Mike/Alex/David/Mary), rating: 4.|rating: 5.|★, plateNumber, phone: '+256, hardcoded UGX amounts in arrays, image/avatar URL seeds, and const X = [ {id|name|title|label: ... ] array patterns.
+- Confirmed the following stores already start empty (no seeded fake data): src/store/chatStore.ts (conversations: [], messages: [] — even has a comment "Mock data removed — show empty state instead of fake data when API fails"), src/store/merchantStore.ts (merchant: null, orders: [], menuItems: [], etc.), src/store/taskStore.ts (pendingTask: null, currentTask: null, taskHistory: [], driverTasks: []), src/store/authStore.ts (user: null), src/store/cartStore.ts (items: []), src/store/locationStore.ts. No edits needed.
+- EDITED app/shopping/index.tsx — removed the entire TRENDING_DEALS array (lines 68-77, explicitly labeled "(static mock)" — fake products "Fresh Produce Bundle UGX 25,000", "Electronics Sale From UGX 50,000", "Household Essentials UGX 15,000", "Fashion Picks From UGX 30,000" with fabricated discounts 20%/30%/15%/25% off). Also removed: the "Trending Deals" section header (Animated.Text), the dealsGrid Animated.View block that .map()'d TRENDING_DEALS into GlassCard deal cards with an Alert.alert(...) browse-category popup, and 8 now-unused StyleSheet entries (dealsGrid, dealCard, dealIconCircle, dealTitle, dealPrice, dealBadge, dealBadgeText). Removed orphaned imports: `Alert` from 'react-native' (was only used inside the TRENDING_DEALS onPress Alert.alert popup) and `ServiceIcon` from '@/src/components' (was unused). Kept the rest of the screen intact — CATEGORIES UI config, the API-driven merchants fetch (api.getMerchants), Featured Stores horizontal scroll, All Stores list, and the existing empty-state card are all untouched.
+- EDITED app/(tabs)/profile.tsx — removed the fabricated hardcoded user rating '4.8' that was being shown in the Stats card as if it were the user's real rating. Changed `setStats({ totalRides, orders, rating: user ? '4.8' : '-' })` → `setStats({ totalRides, orders, rating: '-' })`. totalRides and orders are still fetched from real APIs (api.getTaskHistory, api.getOrders) and remain unchanged. The Rating stat now honestly shows '-' until a real rating API is wired in. (Did not try to invent a rating value — that would be introducing new fake data.)
+- Verified all other candidate files were already clean / API-driven and required no edits:
+  * app/wallet/index.tsx — fully driven by api.getWallet(); empty-state card "No transactions yet" shown when API returns no transactions. No fake data.
+  * app/rider/earnings.tsx, app/rider/wallet.tsx — earningsData/walletData/riderData all start as null, fetched from api.getRiderEarnings/api.getRiderWallet. WITHDRAWAL_PROVIDERS (MTN/Airtel) is UI config. Quick-amount presets (legit UX) only.
+  * app/rider/onboarding.tsx — VEHICLE_TYPES is UI config; plateNumber/make/model state all start as empty strings. No seeded fake vehicle data.
+  * app/rider/ride-request.tsx, app/rider/ride-tracking.tsx — fare estimates use real RIDE_TYPES.baseFare config (BODA 2000, CAR 5000). Star-rating picker (★★★★★) is a UI input, not fake data.
+  * app/health/index.tsx — api.getPharmacies() driven; HEALTH_CATEGORIES/HEALTH_FILTERS are UI config. Empty state shown when no pharmacies.
+  * app/health/prescriptions.tsx — setPrescriptions([]) on load; STATUS_COLORS/STATUS_LABELS are UI config.
+  * app/notifications/index.tsx — FILTER_TABS is UI config; notifications loaded from API.
+  * app/(tabs)/orders.tsx, app/(tabs)/messages.tsx — ORDER_TABS is UI config; data from API/stores.
+  * app/(tabs)/index.tsx (home) — HOME_SERVICES is UI config (5 service category buttons). "From UGX 2,000"/"From UGX 5,000" on Quick Ride cards are real RIDE_TYPES.baseFare values (2000/5000) — legit business config per task spec, not fake data. Promo banner is generic marketing copy ("Welcome to Smart Ride!").
+  * app/(tabs)/rides.tsx — FILTER_TABS UI config; rides from taskStore (which is empty by default).
+  * app/chat/[id].tsx, app/chat/index.tsx — all conversations/messages come from useChatStore (already empty by default).
+  * app/merchant/index.tsx, app/merchant/orders.tsx, app/merchant/orders/[id].tsx, app/merchant/menu.tsx, app/merchant/earnings.tsx, app/merchant/register.tsx — all driven by useMerchantStore (which fetches via api). ORDER_TABS / TABS / STATUS_FLOW / MERCHANT_TYPES / PERIOD_TABS are UI config.
+  * app/pharmacist/index.tsx, app/pharmacist/orders.tsx, app/pharmacist/orders/[id].tsx, app/pharmacist/catalog.tsx, app/pharmacist/prescriptions.tsx, app/pharmacist/earnings.tsx — ORDER_TABS / PRESCRIPTION_TABS / timelineSteps are UI config; data fetched from API.
+  * app/driver/index.tsx, app/driver/driver-task.tsx — active status list is UI logic; data from taskStore/API.
+  * app/delivery/index.tsx — DELIVERY_OPTIONS / PACKAGE_SIZES are UI config; data from API.
+  * app/orders/cart.tsx, app/orders/restaurants.tsx, app/orders/merchant/[id].tsx, app/orders/order-tracking.tsx — categories / ORDER_STATUS_FLOW / cats (category buckets) are UI config; cart comes from cartStore, restaurants/merchants from API.
+  * app/profile/saved-addresses.tsx — PRESET_LABELS (Home/Work/Other) is label-suggestion UI config; addresses fetched from api.getSavedAddresses().
+  * app/sos/index.tsx — FALLBACK_CONTACTS (Police 999, Ambulance 911) are REAL public Ugandan emergency service numbers shown as a safety net when user has no saved contacts or API fails — not fabricated user data. SMART_RIDE_EMERGENCY = '+256800100100' is a single support-hotline config value (not a hardcoded array of fake data); left as-is because removing the "Call SmartRide Support" button would break a critical safety UX, and the number format is consistent with a Ugandan toll-free line.
+  * src/components/TopUpModal.tsx, src/components/WithdrawModal.tsx — QUICK_AMOUNTS = [5000, 10000, 20000, 50000] are preset quick-amount buttons (legit UX per task spec); PAYMENT_PROVIDERS/WITHDRAWAL_PROVIDERS are payment-method UI config; balance is passed in as a prop from real wallet data. No fake balances/transactions.
+  * src/mocks/react-native-maps.tsx — legitimate module mock for the test environment per task spec. Left untouched.
+  * src/constants/index.ts — verified RIDE_TYPES, KAMPALA_POPULAR_PLACES, SERVICES, PAYMENT_METHODS, STORAGE_KEYS, NOTIFICATION_TYPES, COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, GRADIENTS, GLASS, API_CONFIG, MAPBOX_CONFIG are all legitimate design tokens / business config / real geographic data per task spec. None are fake data.
+  * auth screens (login/register/verify-otp/reset-password/change-password/role-selection/phone-login/forgot-password) — only placeholder text ("Enter your password", "your@email.com", "2024", etc.) which is explicitly allowed. No seeded demo credentials.
+- After edits, ran `cd /home/z/my-project/expo-app && npx tsc --noEmit` (installed node_modules temporarily via `bun install` to enable type checking, then removed node_modules and restored bun.lock afterwards to keep the working tree clean). The tsc output showed ~50 pre-existing errors across many files (theme-color type mismatches like colors.onPrimary/onSurfaceMuted/onSurfaceSecondary/onSurfaceDim, missing ApiService methods like getHealthProviderCatalog/updateMedicineAvailability/registerMerchant, missing MerchantTransaction type, etc.) — ALL of these are pre-existing and unrelated to my edits. None of my edited lines/regions produced any tsc error. Specifically verified: app/shopping/index.tsx produced ZERO tsc errors; the only tsc error mentioning app/(tabs)/profile.tsx was on line 248 (colors.onPrimary — pre-existing, unrelated to my line-105 edit). My edits did not introduce any new TS errors.
+- Confirmed working-tree changes via `git diff --stat`: only expo-app/app/(tabs)/profile.tsx (+1/-1) and expo-app/app/shopping/index.tsx (~107 lines removed) are mine. (Pre-existing uncommitted changes to src/app/page.tsx and bun.lock churn were restored / left alone — not my scope.)
+
+Stage Summary:
+- Files changed (2):
+  1. expo-app/app/shopping/index.tsx — removed the entire TRENDING_DEALS static-mock array (4 fake products with fabricated UGX prices and discount %s), the "Trending Deals" UI section (header + grid + Alert popup), 8 associated style definitions, and orphaned imports (Alert, ServiceIcon). Rest of the screen (CATEGORIES UI, API-driven Featured Stores + All Stores lists, search, cart badge, empty-state card) is untouched and still functional.
+  2. expo-app/app/(tabs)/profile.tsx — removed the fabricated '4.8' user rating that was being shown as if real in the Stats card. Rating now honestly shows '-' until a real rating API is wired in. (totalRides and orders remain API-driven.)
+- Fake data approach: prefer "remove the fake array + the section that rendered it" (shopping) or "drop the fabricated value, leave an honest '-'" (profile rating). Did NOT introduce any new fake data. Did NOT touch legitimately-API-driven screens or UI config arrays.
+- tsc result: `npx tsc --noEmit` produces ~50 PRE-EXISTING errors (theme-color type drift, missing ApiService methods, missing MerchantTransaction type, etc.) — NONE caused by my edits. My two edited files introduce zero new errors. (Pre-existing errors noted but not fixed, per task instructions.)
+- Fake data intentionally kept in place:
+  1. app/sos/index.tsx → FALLBACK_CONTACTS (Police Emergency 999, Ambulance 911) — these are REAL Ugandan public emergency service numbers, not fabricated user data; they're a safety-net fallback shown only when the user has no saved contacts or the API fails. Keeping them protects user safety.
+  2. app/sos/index.tsx → SMART_RIDE_EMERGENCY = '+256800100100' — a single support-hotline config value (not a hardcoded array). Cannot verify whether it's a real registered Smart Ride number, but removing the "Call SmartRide Support" button from the SOS screen would break critical safety UX. Recommended follow-up: the team should confirm/replace this number with a verified real support line. Left as-is to preserve safety UX.
+  3. Home-screen Quick Ride card "From UGX 2,000" / "From UGX 5,000" — these match RIDE_TYPES.BODA.baseFare (2000) and RIDE_TYPES.CAR.baseFare (5000) in src/constants/index.ts, which the task explicitly classified as real business pricing config, NOT fake data.
+  4. QUICK_AMOUNTS preset buttons ([5000, 10000, 20000, 50000]) in TopUpModal/WithdrawModal/rider wallet — explicitly legit UX per task spec.
+  5. All UI/category/status-filter config arrays (HOME_SERVICES, CATEGORIES, ORDER_TABS, FILTER_TABS, HEALTH_CATEGORIES, VEHICLE_TYPES, PACKAGE_SIZES, DELIVERY_OPTIONS, PRESET_LABELS, MERCHANT_TYPES, ORDER_STATUS_COLORS/LABELS, STATUS_FLOW, etc.) — UI config per task spec, not fake data.
+  6. src/mocks/react-native-maps.tsx — legitimate test-environment module mock per task spec.
+
+---
+Task ID: 7-website-fake-data
+Agent: Main Agent
+Task: Remove all remaining fake data from the website (src/app/page.tsx)
+
+Work Log:
+- Read full src/app/page.tsx (1523 lines) to map every remaining fake-data location after the prior Task 6-landing-cleanup pass.
+- Removed fabricated blog like counts: deleted `likes: number` from the BlogPost interface and the `likes: 248/312/197/421/286/354` fields from all 6 blog posts. Removed the two `{post.likes + (liked ? 1 : 0)}` numeric spans (BlogModal + blog card) so the Like button now shows only the heart icon + "Like"/"Liked" label — no fake aggregate count.
+- Removed fabricated blog dates: deleted `date: string` from the BlogPost interface and the `date: '2026-02-18' / '2026-02-10' / '2026-02-02' / '2026-01-22' / '2026-01-14' / '2026-01-05'` fields from all 6 posts. Removed both date-display blocks (BlogModal + blog card) so each post now shows only `Author · readTime`.
+- Removed fake placeholder phone number from the Contact section: deleted the `{ icon: Phone, label: 'Phone', value: '+256 (0) 700 000 000', href: 'tel:+256700000000' }` row. Contact now lists only Email (support@smartride.ug), Office (Kampala, Uganda), Support hours (24/7 — always on). Removed the now-unused `Phone` lucide import to keep lint clean.
+- Removed unverified promotional claims from the Download section: deleted the "Free first ride when you sign up" bullet (replaced with the honest "Pay for rides, food, and shopping in one app") and rewrote the description from "…and your first ride is on us." to "…and move in minutes."
+- Confirmed the newsletter subscriber count already reflects the real localStorage count (0 by default, no fake floor) from Task 6.
+- Ran `bun run lint` → exit 0, clean (0 errors, 0 warnings). Dev server serving `/` with HTTP 200.
+- Verified via Agent Browser (eval on rendered DOM): hasFakePhone=false, hasFreeFirstRide=false, hasFirstRideOnUs=false, has1200Subscribers=false, has4_8Rating=false, has12kRiders=false, has1MRides=false, blogHasLikeNumbers=false, contactHasPhoneLabel=false. The only "2026" string on the page is the legitimate footer copyright year (`new Date().getFullYear()` — system clock is June 2026). No page errors. Screenshot saved to verify-fakedata-removed.png.
+- Contact section innerText confirmed: "EMAIL · support@smartride.ug | OFFICE · Kampala, Uganda | SUPPORT HOURS · 24/7 — always on" (no Phone).
+
+Stage Summary:
+- src/app/page.tsx: 15 surgical edits, all fake user-facing data purged (blog like counts, blog dates, fake phone, "free first ride" claims). Blog posts retain their qualitative marketing/vision content + author + readTime only.
+- Lint clean. Dev server HTTP 200. Browser-verified: zero fake-data markers remain on the rendered page.
+- Admin setup /api/admin/setup route is correct; the user's "Unauthorized" error is an env-var mismatch on Vercel (ADMIN_SETUP_KEY on Vercel Production is set to a different value than the key supplied). Not a code bug — operational fix: set ADMIN_SETUP_KEY in Vercel → Settings → Environment Variables (Production) to the desired value, redeploy, then retry.

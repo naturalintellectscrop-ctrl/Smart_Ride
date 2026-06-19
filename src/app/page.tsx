@@ -47,7 +47,6 @@ import {
   Heart,
   Bookmark,
   X,
-  Phone,
   Send,
   BadgePercent,
   Headphones,
@@ -106,10 +105,8 @@ interface BlogPost {
   category: string;
   author: string;
   authorRole: string;
-  date: string;
   readTime: string;
   image: string;
-  likes: number;
 }
 
 // ─── Data ────────────────────────────────────────────────────────────────────
@@ -223,10 +220,8 @@ const blogPosts: BlogPost[] = [
     category: 'Safety',
     author: 'Smart Ride Safety Team',
     authorRole: 'Smart Ride Team',
-    date: '2026-02-18',
     readTime: '5 min read',
     image: '/images/boda-ride.png',
-    likes: 248,
   },
   {
     id: 'smart-ride-wallet-explained',
@@ -238,10 +233,8 @@ const blogPosts: BlogPost[] = [
     category: 'Fintech',
     author: 'Smart Ride Wallet Team',
     authorRole: 'Smart Ride Team',
-    date: '2026-02-10',
     readTime: '6 min read',
     image: '',
-    likes: 312,
   },
   {
     id: 'supporting-local-drivers',
@@ -253,10 +246,8 @@ const blogPosts: BlogPost[] = [
     category: 'Drivers',
     author: 'Smart Ride Driver Team',
     authorRole: 'Smart Ride Team',
-    date: '2026-02-02',
     readTime: '4 min read',
     image: '',
-    likes: 197,
   },
   {
     id: 'sos-safety-every-ride',
@@ -268,10 +259,8 @@ const blogPosts: BlogPost[] = [
     category: 'Product',
     author: 'Smart Ride Safety Team',
     authorRole: 'Smart Ride Team',
-    date: '2026-01-22',
     readTime: '5 min read',
     image: '',
-    likes: 421,
   },
   {
     id: 'marketplace-groceries-pharmacy',
@@ -283,10 +272,8 @@ const blogPosts: BlogPost[] = [
     category: 'Product',
     author: 'Smart Ride Marketplace Team',
     authorRole: 'Smart Ride Team',
-    date: '2026-01-14',
     readTime: '6 min read',
     image: '/images/food-hero.png',
-    likes: 286,
   },
   {
     id: 'expanding-beyond-kampala',
@@ -298,10 +285,8 @@ const blogPosts: BlogPost[] = [
     category: 'Community',
     author: 'Smart Ride Expansion Team',
     authorRole: 'Smart Ride Team',
-    date: '2026-01-05',
     readTime: '5 min read',
     image: '/images/kampala-hero.png',
-    likes: 354,
   },
 ];
 
@@ -501,8 +486,6 @@ function BlogModal({
             <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/50">
               <span className="font-medium text-white/70">{post.author}</span>
               <span aria-hidden>·</span>
-              <span>{new Date(post.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-              <span aria-hidden>·</span>
               <span>{post.readTime}</span>
             </div>
           </div>
@@ -532,7 +515,6 @@ function BlogModal({
             >
               <Heart className={`size-4 ${liked ? 'fill-[#F43F5E]' : ''}`} />
               {liked ? 'Liked' : 'Like'}
-              <span className="ml-1 tabular-nums">{post.likes + (liked ? 1 : 0)}</span>
             </Button>
             <Button
               type="button"
@@ -1088,8 +1070,6 @@ export default function LandingPage() {
                       <div className="mt-3 flex items-center gap-2 text-xs text-white/40">
                         <span>{post.author}</span>
                         <span aria-hidden>·</span>
-                        <span>{new Date(post.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                        <span aria-hidden>·</span>
                         <span>{post.readTime}</span>
                       </div>
 
@@ -1105,9 +1085,6 @@ export default function LandingPage() {
                           <Heart
                             className={`size-4 ${liked ? 'fill-[#F43F5E] text-[#F43F5E]' : 'text-white/60'}`}
                           />
-                          <span className={`tabular-nums ${liked ? 'text-[#F43F5E]' : 'text-white/60'}`}>
-                            {post.likes + (liked ? 1 : 0)}
-                          </span>
                         </button>
 
                         <Button
@@ -1238,7 +1215,7 @@ export default function LandingPage() {
               </motion.h2>
               <motion.p variants={fadeUp} className="mt-4 text-base text-white/70 sm:text-lg">
                 Free to download. Available on Android and iOS. Top up with MTN
-                MoMo or Airtel Money and your first ride is on us.
+                MoMo or Airtel Money and move in minutes.
               </motion.p>
 
               <motion.div variants={fadeUp} className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -1263,8 +1240,8 @@ export default function LandingPage() {
 
               <motion.ul variants={fadeUp} className="mt-8 grid gap-2 text-sm text-white/60">
                 {[
-                  'Free first ride when you sign up',
                   'Top up instantly with MTN MoMo or Airtel Money',
+                  'Pay for rides, food, and shopping in one app',
                   'SOS safety built into every trip',
                 ].map((item) => (
                   <li key={item} className="flex items-center gap-2">
@@ -1319,7 +1296,6 @@ export default function LandingPage() {
             >
               {[
                 { icon: Mail, label: 'Email', value: 'support@smartride.ug', href: 'mailto:support@smartride.ug' },
-                { icon: Phone, label: 'Phone', value: '+256 (0) 700 000 000', href: 'tel:+256700000000' },
                 { icon: MapPin, label: 'Office', value: 'Kampala, Uganda', href: null },
                 { icon: Clock, label: 'Support hours', value: '24/7 — always on', href: null },
               ].map((c) => (

@@ -15,7 +15,6 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -28,7 +27,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useCartStore } from '@/src/store';
-import { GlowHeader, GlassCard, GradientButton, ServiceIcon, IconInput } from '@/src/components';
+import { GlowHeader, GlassCard, GradientButton, IconInput } from '@/src/components';
 
 // ============================================
 // TYPES
@@ -63,17 +62,6 @@ const CATEGORIES: CategoryItem[] = [
   { label: 'Fashion', emoji: 'shirt', serviceKey: 'custom', customColor: '#EC4899', apiType: undefined, icon: 'shirt' },
   { label: 'Home', emoji: 'home', serviceKey: 'custom', customColor: '#F59E0B', apiType: 'GROCERY', icon: 'home' },
   { label: 'More', emoji: '⋯', serviceKey: 'custom', customColor: COLORS.tertiary, apiType: undefined, icon: 'ellipsis-horizontal' },
-];
-
-// ============================================
-// TRENDING DEALS (static mock)
-// ============================================
-
-const TRENDING_DEALS = [
-  { id: 'd1', title: 'Fresh Produce Bundle', price: 'UGX 25,000', discount: '20% off', color: COLORS.primary, categoryIndex: 0 },
-  { id: 'd2', title: 'Electronics Sale', price: 'From UGX 50,000', discount: 'Up to 30% off', color: '#3B82F6', categoryIndex: 1 },
-  { id: 'd3', title: 'Household Essentials', price: 'UGX 15,000', discount: '15% off', color: '#F59E0B', categoryIndex: 3 },
-  { id: 'd4', title: 'Fashion Picks', price: 'From UGX 30,000', discount: '25% off', color: '#EC4899', categoryIndex: 2 },
 ];
 
 // ============================================
@@ -310,58 +298,6 @@ export default function ShoppingScreen() {
               </GlassCard>
             )}
           </ScrollView>
-        </Animated.View>
-
-        {/* Trending Deals Grid */}
-        <Animated.Text
-          entering={FadeIn.duration(300)}
-          style={styles.sectionTitle}
-        >
-          Trending Deals
-        </Animated.Text>
-
-        <Animated.View
-          entering={FadeInUp.duration(400).delay(300)}
-          style={styles.dealsGrid}
-        >
-          {TRENDING_DEALS.map((deal, index) => (
-            <TouchableOpacity
-              key={deal.id}
-              activeOpacity={0.8}
-              onPress={() => {
-                // Show deal info and offer to jump to the relevant category
-                const targetIndex = deal.categoryIndex ?? 0;
-                const targetLabel = CATEGORIES[targetIndex]?.label ?? 'stores';
-                Alert.alert(
-                  deal.title,
-                  `${deal.discount}\n${deal.price}\n\nBrowse ${targetLabel} stores?`,
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    {
-                      text: 'Browse',
-                      onPress: () => handleCategoryPress(targetIndex),
-                    },
-                  ]
-                );
-              }}
-            >
-              <GlassCard
-                variant="default"
-                padding={SPACING.md}
-                borderRadius={RADIUS.xl}
-                style={styles.dealCard}
-              >
-                <View style={[styles.dealIconCircle, { backgroundColor: `${deal.color}15` }]}>
-                  <Ionicons name="pricetag" size={20} color={deal.color} />
-                </View>
-                <Text style={styles.dealTitle} numberOfLines={1}>{deal.title}</Text>
-                <Text style={styles.dealPrice}>{deal.price}</Text>
-                <View style={[styles.dealBadge, { backgroundColor: `${deal.color}15` }]}>
-                  <Text style={[styles.dealBadgeText, { color: deal.color }]}>{deal.discount}</Text>
-                </View>
-              </GlassCard>
-            </TouchableOpacity>
-          ))}
         </Animated.View>
 
         {/* All Stores List */}
@@ -713,47 +649,6 @@ const styles = StyleSheet.create({
   emptyFeaturedText: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
-  },
-
-  // Deals grid
-  dealsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: SPACING.containerMargin,
-    gap: SPACING.sm,
-  },
-  dealCard: {
-    width: '48%',
-  },
-  dealIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.sm,
-  },
-  dealTitle: {
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '600',
-    color: COLORS.onSurface,
-    marginBottom: 2,
-  },
-  dealPrice: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    fontWeight: '700',
-    marginBottom: SPACING.xs,
-  },
-  dealBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-    borderRadius: RADIUS.sm,
-  },
-  dealBadgeText: {
-    ...TYPOGRAPHY.labelMd,
-    fontWeight: '700',
   },
 
   // Merchant list

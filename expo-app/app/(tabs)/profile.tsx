@@ -102,7 +102,7 @@ export default function ProfileScreen() {
       const orders = orderRes.success && orderRes.data ?
         (Array.isArray(orderRes.data) ? orderRes.data.length : (orderRes.data as any).pagination?.total || 0) : 0;
 
-      setStats({ totalRides, orders, rating: user ? '4.8' : '-' });
+      setStats({ totalRides, orders, rating: '-' });
     } catch (e) {
       console.error('Failed to load stats:', e);
     }
