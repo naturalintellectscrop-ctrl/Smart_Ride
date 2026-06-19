@@ -481,8 +481,6 @@ export default function LoginScreen() {
           )}
         </View>
 
-        </View>
-
         {/* ─── Email / Password Fallback ─────────── */}
         <View style={styles.emailSection}>
           <View style={styles.emailDividerContainer}>
