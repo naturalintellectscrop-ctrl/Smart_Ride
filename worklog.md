@@ -3557,3 +3557,38 @@ Stage Summary:
 - Sticky footer (mt-auto) with legal links to /privacy, /terms, /delete-account. No link to /intellects/admin (admin path stays obscured).
 - Branding consistent: green/neon-green/cyan, NO indigo/blue, Framer Motion animations, shadcn/ui components, Lucide icons.
 - Lint clean. Dev server serving HTTP 200.
+
+---
+Task ID: 5-verify
+Agent: Main Agent
+Task: Verify landing page redesign + commit and push all changes
+
+Work Log:
+- Ran `bun run lint` — passed clean (0 errors)
+- Used Agent Browser to verify the landing page at http://localhost:3000:
+  - Page renders with HTTP 200, no fatal errors
+  - Nav has correct links: Services, Why Smart Ride, Blogs, Newsletter, Contact, Get the App (NO admin link)
+  - 6 blog posts render with Like/Read more/Save buttons
+  - Blog modal opens correctly with title, content, like/save buttons, close button
+  - Scroll area exists (blog-modal-scroll class, max-h-[70vh] overflow-y-auto)
+  - Scroll progress bar exists (green gradient div with dynamic width)
+  - Like button works: persists to localStorage smartride_blog_likes={"boda-safety-kampala":true}
+  - Save button works: persists to localStorage smartride_blog_saved=["boda-safety-kampala"]
+  - Newsletter section exists with "Join our Newsletter" heading, email input, Subscribe button
+  - Newsletter signup works: persists emails to localStorage, shows success toast "Thanks for subscribing!"
+  - Subscriber count shows "Join 1,200 subscribers" (Math.max(1200, storedCount))
+  - Sticky footer confirmed: root div has flex min-h-screen flex-col, footer has mt-auto
+- Verified admin path redirects via curl:
+  - /intellects/login → 308 → /intellects/admin ✓
+  - /admin → 308 → /intellects/admin ✓
+  - /admin/login → 308 → /intellects/admin ✓
+- Verified /intellects/admin renders the login page (h1: Smart Ride Admin, email/password inputs, submit button)
+- Committed all changes (13 files, +1711/-918 lines) as commit 1b3e448
+- Pushed to origin/main successfully
+
+Stage Summary:
+- All changes pushed to GitHub (commit 1b3e448)
+- Vercel will auto-deploy this commit
+- Landing page is a complete one-page site with Blogs (scrolling popup, like, save) + Newsletter
+- Admin login is ONLY at /intellects/admin (all old paths redirect)
+- APK crash fix (version mismatch) + size reduction (399MB → ~40-70MB) ready for user to rebuild
