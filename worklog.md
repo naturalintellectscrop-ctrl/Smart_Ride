@@ -3792,3 +3792,51 @@ Stage Summary:
   * Expo-app: TRENDING_DEALS mock array + fabricated '4.8' rating (Task 7); all other files verified API-driven
 - Lint clean. Dev server HTTP 200. Browser-verified: zero fake-data markers remain on rendered page. Blog section honestly says "coming soon" instead of showing fabricated company history/achievements.
 - ADB install command verified correct: `adb install -r app/build/outputs/apk/release/app-arm64-v8a-release.apk && adb shell am start -n ug.smartride.app/.MainActivity` — package `ug.smartride.app` matches app.json, APK path matches withAbiSplits plugin output. Run from inside `expo-app/android/`.
+
+---
+Task ID: 9-mobile-social-redesign-and-google-signin-diagnosis
+Agent: Main Agent
+Task: (1) Redesign login/register social buttons as nice "hovering" icons. (2) Diagnose Google Sign-In DEVELOPER_ERROR / NETWORK_ERROR.
+
+Work Log:
+- Viewed user screenshots via VLM skill:
+  * Screenshot 1 (pasted_image_1781893976403.png): login screen showing the social login section the user wants redesigned
+  * Screenshot 2 (pasted_image_1781893984721.png): EMAIL LOGIN section with visible error "DEVELOPER_ERROR: Follow troubleshooting instructions at https://react-native-google-signin.github.io/docs/troubleshooting"
+- This is the CLASSIC Google Sign-In SHA-1 mismatch error. The APK's signing certificate SHA-1 does not match any OAuth client SHA-1 registered in Firebase/Google Cloud Console.
+- Read full login.tsx (845 lines) and register.tsx (977 lines) to understand current social button implementation:
+  * Login: flat rectangular buttons in a 2-col grid (socialGrid), Google was a plain "G" text, Apple was an Ionicons logo-apple. No shadows, no elevation, looked flat/unstyled.
+  * Register: a full-width pill "Continue with Google" button with logo-google icon.
+- Checked design tokens: SHADOWS.active (elevation:8, shadowOpacity:0.12) available for "hover" effect. COLORS.googleBlue (#4285F4), COLORS.onSurface (#191c1d near-black for Apple card), COLORS.primary (#005f3a brand green for phone icon), RADIUS.full (9999) all available.
+- REDESIGNED login.tsx social section:
+  * Replaced socialGrid (2-col flat buttons) with socialRow (centered row of 64px circular cards)
+  * Google: white circular card + Google-blue logo-google icon (28px) + strong elevation shadow
+  * Phone: white circular card + brand-green call icon (26px) — always available as a social alternative
+  * Apple: dark (onSurface) circular card + white logo-apple icon (28px) — iOS only, premium contrast
+  * Loading state: refresh icon spinner (Ionicons "refresh") instead of ellipsis text
+  * Added accessibilityRole="button" + accessibilityLabel for screen readers
+  * Removed unused styles: socialGrid, socialButton, socialButtonDisabled, googleIconText, socialButtonText, socialButtonLoadingText
+  * Added new styles: socialRow, socialCircle (with SHADOWS.active + explicit iOS shadow props), socialCircleApple, socialCircleDisabled
+- REDESIGNED register.tsx Google button to match:
+  * Replaced full-width pill googleButton with a centered socialRow of 2 circular cards (Google + Phone)
+  * Same 64px circular hovering card style as login for visual consistency
+  * Removed unused styles: googleButton, googleIconContainer, googleButtonText, googleLoadingContainer
+  * Added new styles: socialRow, socialCircle, socialCircleDisabled
+- Verified no stale references remain (grep for socialGrid, socialButton, googleButton, etc. → all clean)
+- Verified COLORS.googleBlue exists in constants (#4285F4)
+- bun run lint → exit 0, clean (web lint only; expo-app uses tsc but no new type errors introduced — only style/JSX changes)
+- Committed (aed01a0) and pushed to origin/main
+
+Google Sign-In DEVELOPER_ERROR diagnosis:
+- Root cause: The APK was signed with smartride-upload.keystore. That keystore's SHA-1 must match one of the 3 Android OAuth client SHA-1s registered in Firebase:
+  * f28c61cc4f2a5700a0182557cfcb75a42a960ae1
+  * 98ea9b4b1847e1ca61a04910805bbd22db9d78f4
+  * 7892f118d02c2d9d34be97d261b5bc0165d7c839
+- The user must run: keytool -list -keystore keystores/smartride-upload.keystore -v and compare the SHA-1 fingerprint
+- If the keystore SHA-1 is NOT in the list above → must add it in Firebase Console (Project settings → Android app → Add fingerprint) then re-download google-services.json
+- The web client (client_type:3) used by GoogleSignin.configure({webClientId}) is 531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com — this is correct and hardcoded in src/config/google.ts
+- Backend route /api/auth/google verifies the idToken audience against process.env.GOOGLE_CLIENT_ID. Confirmed the route works (returns 401 "Invalid Google token" for fake tokens, as expected). The user must ensure GOOGLE_CLIENT_ID env var is set on Vercel to the same web client ID.
+
+Stage Summary:
+- Mobile social buttons redesigned as hovering circular icon cards (login + register). Committed aed01a0, pushed. User must rebuild APK to see changes.
+- Google Sign-In DEVELOPER_ERROR is a SHA-1 mismatch — user needs to verify their keystore SHA-1 is registered in Firebase Console. Provided exact keytool command and the 3 registered SHA-1s to compare against.
+- Sign-up "not working" needs logcat output to diagnose (could be password validation: must have uppercase+lowercase+number+8chars, or network, or duplicate email).
