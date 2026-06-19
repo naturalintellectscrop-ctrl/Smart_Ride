@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -16,13 +16,6 @@ import {
   SheetTrigger,
   SheetClose,
 } from '@/components/ui/sheet';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import {
   Bike,
@@ -44,9 +37,7 @@ import {
   MapPin,
   CheckCircle2,
   Apple,
-  Heart,
   Bookmark,
-  X,
   Send,
   BadgePercent,
   Headphones,
@@ -57,7 +48,6 @@ import {
   Instagram,
   Linkedin,
   QrCode,
-  ChevronRight,
 } from 'lucide-react';
 
 // ─── Brand tokens ────────────────────────────────────────────────────────────
@@ -96,19 +86,6 @@ const scaleIn = {
   },
 };
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-interface BlogPost {
-  id: string;
-  title: string;
-  excerpt: string;
-  content: string;
-  category: string;
-  author: string;
-  authorRole: string;
-  readTime: string;
-  image: string;
-}
-
 // ─── Data ────────────────────────────────────────────────────────────────────
 const navLinks = [
   { label: 'Services', href: '#services' },
@@ -135,7 +112,7 @@ const services = [
     icon: UtensilsCrossed,
     title: 'Food Delivery',
     description:
-      'Order from your favourite restaurants — Cafe Java, Ugandan Kitchen, and more. Hot meals delivered fast.',
+      'Order from your favourite restaurants and local eateries. Hot meals delivered fast.',
   },
   {
     icon: Package,
@@ -208,88 +185,6 @@ const benefits = [
   },
 ];
 
-// ─── Blog Posts (real Ugandan-context content) ───────────────────────────────
-const blogPosts: BlogPost[] = [
-  {
-    id: 'boda-safety-kampala',
-    title: 'How Smart Ride is making boda bodas safer in Kampala',
-    excerpt:
-      'From verified riders to live trip tracking and one-tap SOS, here is how we are rethinking boda safety from the ground up.',
-    content:
-      'Boda bodas are the lifeblood of Kampala. They weave through traffic, deliver goods, and get thousands of Ugandans to work every morning. But for years, safety on a boda has been a gamble — unverified riders, no helmets, no way to share your trip with family.\n\nAt Smart Ride, we believe that getting across town should never feel risky. That is why every rider on our platform goes through a multi-step onboarding: national ID verification, a riding skills test, a background check, and a customer-service orientation. Only a fraction of applicants make it through.\n\nOnce a rider is on the platform, every trip is tracked end-to-end. You can share your live location with up to three trusted contacts from inside the app, and our 24/7 support team monitors trips flagged for route deviations or unexpected stops. The SOS button — built into every ride screen — instantly connects you to our safety desk and shares your coordinates.\n\nWe also provide helmets to every new rider partner and run regular safety refresher courses in partnership with local riding associations. The results speak for themselves: incidents on Smart Ride trips have been significantly reduced, and our riders consistently receive high ratings from passengers.\n\nThis is just the beginning. Over the coming months we are rolling out in-ride speed monitoring, automatic crash detection, and a community safety council made up of passengers and riders. Safer bodas are not a luxury — they are the baseline.',
-    category: 'Safety',
-    author: 'Smart Ride Safety Team',
-    authorRole: 'Smart Ride Team',
-    readTime: '5 min read',
-    image: '/images/boda-ride.png',
-  },
-  {
-    id: 'smart-ride-wallet-explained',
-    title: 'The future of mobile money: Smart Ride Wallet explained',
-    excerpt:
-      'Top up with MTN MoMo or Airtel Money, pay for rides and food with one tap, and earn cashback. Here is how the Smart Ride Wallet works.',
-    content:
-      'Mobile money changed Uganda. From paying school fees to settling a boda fare, MTN MoMo and Airtel Money are how Ugandans move money. Smart Ride Wallet builds on that foundation — it is a single balance that powers every service inside the app.\n\nGetting started is simple. Open the Wallet tab, tap "Top up", and choose MTN MoMo or Airtel Money. Enter the amount, approve the STK push on your phone, and your balance updates instantly. There are no top-up fees, and the money stays in your wallet until you spend it.\n\nFrom there, your wallet becomes your universal payment method. Hail a boda — pay from your wallet. Order lunch from Cafe Java — pay from your wallet. Send a package, buy groceries, refill a prescription — all from one balance. Drivers and merchants receive their share instantly, with no settlement delays.\n\nThe Wallet also rewards you. Rides paid from your wallet earn cashback, credited weekly. Refer a friend and you both earn a reward once they take their first trip. During promotions we have offered additional cashback on off-peak rides to help ease Kampala\'s rush-hour congestion.\n\nSecurity is built in. Every payment requires your Smart Ride PIN or biometric confirmation, every transaction is logged in your activity feed, and our fraud team monitors for unusual patterns around the clock. If something goes wrong, refunds land back in your wallet promptly.\n\nWe are not trying to replace MTN MoMo or Airtel Money — we are building on top of them to make everyday payments in Uganda faster, safer, and a little more rewarding.',
-    category: 'Fintech',
-    author: 'Smart Ride Wallet Team',
-    authorRole: 'Smart Ride Team',
-    readTime: '6 min read',
-    image: '',
-  },
-  {
-    id: 'supporting-local-drivers',
-    title: '5 ways Smart Ride supports local drivers',
-    excerpt:
-      'A ride-hailing app is only as good as its riders. Here are five concrete ways we invest in the people who power Smart Ride.',
-    content:
-      'When you tap "Request boda", a real person — a Ugandan with a family, a dream, and a motorbike — answers. Smart Ride does not work without them. So we have built the platform around their success, not just ours.\n\nFirst, fair earnings. We keep our commission low and transparent, well below the industry standard. Riders keep the rest, and they see exactly what each trip pays before they accept it. No opaque algorithms, no surprise deductions.\n\nSecond, fast payouts. Riders can cash out to MTN MoMo or Airtel Money instantly, 24/7, for a small flat fee. There is no minimum balance and no weekly waiting period. Money earned today is money in their pocket tonight.\n\nThird, rider financing. Through partnerships with local SACCOs, qualified riders can access bike financing at below-market rates, with repayments deducted daily from their earnings. Many riders have purchased their own bikes through this program.\n\nFourth, insurance. Every active rider is covered by an accident insurance policy that pays out for medical bills, lost income, and — in the worst case — a benefit to their family. This is funded by Smart Ride, not the rider.\n\nFifth, growth. Our top riders earn a healthy monthly income, and we run free training on customer service, route optimisation, and financial literacy every quarter at our regional hubs.\n\nWhen riders win, passengers win. That is the whole idea.',
-    category: 'Drivers',
-    author: 'Smart Ride Driver Team',
-    authorRole: 'Smart Ride Team',
-    readTime: '4 min read',
-    image: '',
-  },
-  {
-    id: 'sos-safety-every-ride',
-    title: 'Why we built SOS safety into every ride',
-    excerpt:
-      'A single button that shares your live location with trusted contacts and our safety desk. The story behind Smart Ride\'s SOS feature.',
-    content:
-      'The idea for Smart Ride\'s SOS button came from a late-night conversation with a passenger in Wandegeya. She had taken a boda home after work and felt unsafe halfway through the trip — the rider had taken an unfamiliar route. She had no way to alert anyone without escalating the situation.\n\nThat conversation became a feature. Today, every Smart Ride ride — boda, car, or delivery — has a red SOS button on the live tracking screen. One tap does three things instantly: it shares your live GPS coordinates with up to three pre-selected emergency contacts, it alerts our 24/7 safety desk with your trip details, and it begins an audio recording on your phone that is uploaded securely to our servers.\n\nOur safety desk is staffed round the clock by trained Ugandans who can call you, call the rider, or escalate to the nearest police station. In genuine emergencies we work directly with the Uganda Police Force to share trip data and rider information.\n\nThe SOS feature is designed to be discreet. It does not flash a warning on the rider\'s screen, it does not make a sound, and it works even if your phone is on silent. You can trigger it from the lock screen using a configurable triple-press of the power button.\n\nSince launching SOS, we have responded to thousands of activations. The vast majority were resolved with a quick check-in call. But in a handful of cases, the feature genuinely helped — including a passenger in Mukono whose contact arrived shortly after the rider deviated from the route.\n\nSafety is not a feature you monetise. It is the price of being allowed to operate. That is why SOS will always be free, always be on, and always be one tap away.',
-    category: 'Product',
-    author: 'Smart Ride Safety Team',
-    authorRole: 'Smart Ride Team',
-    readTime: '5 min read',
-    image: '',
-  },
-  {
-    id: 'marketplace-groceries-pharmacy',
-    title: 'Smart Ride marketplace: From groceries to pharmacy, delivered',
-    excerpt:
-      'One app, a growing network of vendors. How Smart Ride Marketplace connects you to groceries, restaurants, and pharmacy items in minutes.',
-    content:
-      'Smart Ride started as a ride-hailing app. But the moment we had a network of riders moving across Kampala every minute of the day, we realised the same network could carry far more than people. It could carry food, groceries, medicine, parcels — anything that fits on a boda.\n\nToday, Smart Ride Marketplace is a single tab in the app that connects you to a growing network of vendors across multiple Ugandan cities. That includes restaurants like Cafe Java and Ugandan Kitchen, supermarkets, fresh produce markets, pharmacies, and specialty stores for electronics and gifts.\n\nThe experience is consistent across categories. You browse, you add to cart, you see an upfront delivery fee based on distance, and you check out with your Smart Ride Wallet, MTN MoMo, Airtel Money, or cash on delivery. A rider is matched automatically and you track them on the map from the store to your door.\n\nFor pharmacy orders, we have built a discreet mode: the delivery description shows only "Personal items" so your neighbours do not see what you ordered. Prescription medicines require a photo of your prescription, which our partner pharmacists verify before dispatch.\n\nFor groceries, we partnered with fresh produce markets in Nakawa, Nakasero, and Owino to bring wholesale prices to households. A bunch of matooke that costs a premium at the local kiosk often lands at your door for less — including delivery.\n\nEvery vendor on the marketplace is vetted, rated, and insured. If something is wrong with your order — a missing item, spoiled produce, the wrong prescription — our support team refunds you promptly. No back-and-forth with the vendor.\n\nThe marketplace is how Smart Ride becomes the everyday app for Uganda. Not just for getting somewhere, but for getting anything.',
-    category: 'Product',
-    author: 'Smart Ride Marketplace Team',
-    authorRole: 'Smart Ride Team',
-    readTime: '6 min read',
-    image: '/images/food-hero.png',
-  },
-  {
-    id: 'expanding-beyond-kampala',
-    title: 'Expanding beyond Kampala: Our journey across Uganda',
-    excerpt:
-      'From Kampala to towns across Uganda — the story of how Smart Ride is growing to serve every major region.',
-    content:
-      'Smart Ride launched in Kampala with a small team of riders and a single office in Kamwokya. Today, we are live in multiple cities and towns across Uganda — and we are just getting started.\n\nExpansion is not just about putting a pin on a map. Each new city is a months-long process: we recruit local riders, partner with restaurants and pharmacies, set up a local support presence, and tune our pricing to local realities. A boda ride in one town cannot cost the same as one in another.\n\nOur expansion has followed demand — first to nearby towns, then to western and eastern Uganda, and more recently to northern Uganda, working closely with local boda associations to onboard riders who already knew every shortcut.\n\nThe challenges of expansion are real. In smaller towns, demand is lower and rider earnings are harder to sustain. We solve this by combining categories — a rider in a smaller town might do a mix of passenger trips, food deliveries, and parcel pickups in a single day, smoothing out their income.\n\nConnectivity is another hurdle. We rebuilt our app to work on 2G networks and to cache trip data offline, so a rider in a dead zone can still complete a delivery once they get back to signal. We also partnered with MTN and Airtel to offer zero-rated data on the Smart Ride app for riders on selected bundles.\n\nLooking ahead, we plan to be live in more cities across western, eastern, and northern Uganda. Every city we enter, we hire locally — our support team now speaks multiple Ugandan languages.\n\nSmart Ride is not just a Kampala app. It is a Uganda app — built, staffed, and grown by Ugandans, for every corner of this country.',
-    category: 'Community',
-    author: 'Smart Ride Expansion Team',
-    authorRole: 'Smart Ride Team',
-    readTime: '5 min read',
-    image: '/images/kampala-hero.png',
-  },
-];
-
 const footerLinks = {
   company: [
     { label: 'Services', href: '#services' },
@@ -350,8 +245,6 @@ function SectionHeading({
 }
 
 // ─── localStorage helpers ────────────────────────────────────────────────────
-const LIKES_KEY = 'smartride_blog_likes';
-const SAVED_KEY = 'smartride_blog_saved';
 const NEWSLETTER_KEY = 'smartride_newsletter_emails';
 
 function readJSON<T>(key: string, fallback: T): T {
@@ -374,180 +267,10 @@ function writeJSON<T>(key: string, value: T) {
   }
 }
 
-// ─── Blog Modal (with scrolling progress bar) ────────────────────────────────
-function BlogModal({
-  post,
-  liked,
-  saved,
-  onToggleLike,
-  onToggleSave,
-  onClose,
-}: {
-  post: BlogPost | null;
-  liked: boolean;
-  saved: boolean;
-  onToggleLike: (id: string) => void;
-  onToggleSave: (id: string) => void;
-  onClose: () => void;
-}) {
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const [progress, setProgress] = useState(0);
-
-  // Reset scroll + progress when opening a new post
-  useEffect(() => {
-    if (post) {
-      setProgress(0);
-      if (scrollRef.current) scrollRef.current.scrollTop = 0;
-    }
-  }, [post]);
-
-  // Escape to close
-  useEffect(() => {
-    if (!post) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [post, onClose]);
-
-  const handleScroll = useCallback(() => {
-    const node = scrollRef.current;
-    if (!node) return;
-    const max = node.scrollHeight - node.clientHeight;
-    const pct = max > 0 ? (node.scrollTop / max) * 100 : 0;
-    setProgress(Math.min(100, Math.max(0, pct)));
-  }, []);
-
-  if (!post) return null;
-
-  const paragraphs = post.content.split('\n\n');
-
-  return (
-    <Dialog open={!!post} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className="max-w-2xl overflow-hidden border-white/10 bg-[#1A1A1F] p-0 text-white sm:max-w-2xl"
-        showCloseButton={false}
-      >
-        {/* Scrolling progress bar — the "scrolling bar" requirement */}
-        <div className="absolute left-0 right-0 top-0 z-20 h-1 bg-white/5">
-          <div
-            className="h-full bg-gradient-to-r from-[#00FF88] to-[#00FFF3] transition-[width] duration-75 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          aria-label="Close blog post"
-          className="absolute right-3 top-4 z-30 rounded-full bg-white/5 p-2 text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-        >
-          <X className="size-4" />
-        </button>
-
-        <DialogHeader className="sr-only">
-          <DialogTitle>{post.title}</DialogTitle>
-          <DialogDescription>{post.excerpt}</DialogDescription>
-        </DialogHeader>
-
-        {/* Hero image (or gradient) */}
-        {post.image ? (
-          <div className="relative h-48 w-full overflow-hidden sm:h-56">
-            <Image
-              src={post.image}
-              alt={post.title}
-              fill
-              className="object-cover"
-              sizes="(max-width: 640px) 100vw, 672px"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-[#1A1A1F] via-[#1A1A1F]/30 to-transparent" />
-          </div>
-        ) : (
-          <div className="relative h-32 w-full bg-gradient-to-br from-[#005f3a] via-[#1A1A1F] to-[#111827]" />
-        )}
-
-        {/* Scrollable content area with custom scrollbar */}
-        <div
-          ref={scrollRef}
-          onScroll={handleScroll}
-          className="blog-modal-scroll max-h-[70vh] overflow-y-auto px-6 pb-8"
-        >
-          <div className="pt-4">
-            <Badge
-              variant="outline"
-              className="mb-3 border-[#00FF88]/40 bg-[#00FF88]/10 text-[#00FF88]"
-            >
-              {post.category}
-            </Badge>
-            <h2 className="text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl">
-              {post.title}
-            </h2>
-            <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-white/50">
-              <span className="font-medium text-white/70">{post.author}</span>
-              <span aria-hidden>·</span>
-              <span>{post.readTime}</span>
-            </div>
-          </div>
-
-          {/* Body */}
-          <div className="mt-6 space-y-4">
-            {paragraphs.map((p, i) => (
-              <p key={i} className="text-base leading-relaxed text-white/80">
-                {p}
-              </p>
-            ))}
-          </div>
-
-          {/* Actions */}
-          <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-white/10 pt-6">
-            <Button
-              type="button"
-              variant={liked ? 'default' : 'outline'}
-              onClick={() => onToggleLike(post.id)}
-              aria-pressed={liked}
-              aria-label={liked ? 'Unlike this blog post' : 'Like this blog post'}
-              className={
-                liked
-                  ? 'border-[#F43F5E] bg-[#F43F5E]/15 text-[#F43F5E] hover:bg-[#F43F5E]/25'
-                  : 'border-white/15 bg-white/5 text-white/80 hover:bg-white/10'
-              }
-            >
-              <Heart className={`size-4 ${liked ? 'fill-[#F43F5E]' : ''}`} />
-              {liked ? 'Liked' : 'Like'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onToggleSave(post.id)}
-              aria-pressed={saved}
-              aria-label={saved ? 'Remove from saved blogs' : 'Save this blog post'}
-              className={
-                saved
-                  ? 'border-[#00FF88]/50 bg-[#00FF88]/15 text-[#00FF88] hover:bg-[#00FF88]/25'
-                  : 'border-white/15 bg-white/5 text-white/80 hover:bg-white/10'
-              }
-            >
-              <Bookmark className={`size-4 ${saved ? 'fill-[#00FF88]' : ''}`} />
-              {saved ? 'Saved' : 'Save'}
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 // ─── Component ───────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const { toast } = useToast();
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  // Blog state
-  const [selectedBlog, setSelectedBlog] = useState<BlogPost | null>(null);
-  const [likedBlogs, setLikedBlogs] = useState<Record<string, boolean>>({});
-  const [savedBlogs, setSavedBlogs] = useState<string[]>([]);
-  const [showSavedOnly, setShowSavedOnly] = useState(false);
 
   // Newsletter state
   const [newsletterEmail, setNewsletterEmail] = useState('');
@@ -560,28 +283,8 @@ export default function LandingPage() {
 
   // ─── Load persisted state on mount ─────────────────────────────────────────
   useEffect(() => {
-    setLikedBlogs(readJSON<Record<string, boolean>>(LIKES_KEY, {}));
-    setSavedBlogs(readJSON<string[]>(SAVED_KEY, []));
     const stored = readJSON<string[]>(NEWSLETTER_KEY, []);
     setSubscriberCount(stored.length);
-  }, []);
-
-  // ─── Like / Save handlers ──────────────────────────────────────────────────
-  const toggleLike = useCallback((id: string) => {
-    setLikedBlogs((prev) => {
-      const next = { ...prev, [id]: !prev[id] };
-      writeJSON(LIKES_KEY, next);
-      return next;
-    });
-  }, []);
-
-  const toggleSave = useCallback((id: string) => {
-    setSavedBlogs((prev) => {
-      const exists = prev.includes(id);
-      const next = exists ? prev.filter((x) => x !== id) : [...prev, id];
-      writeJSON(SAVED_KEY, next);
-      return next;
-    });
   }, []);
 
   // ─── Newsletter submit ─────────────────────────────────────────────────────
@@ -634,11 +337,6 @@ export default function LandingPage() {
     setContactEmail('');
     setContactMessage('');
   };
-
-  // ─── Filtered blog list ────────────────────────────────────────────────────
-  const visibleBlogs = showSavedOnly
-    ? blogPosts.filter((b) => savedBlogs.includes(b.id))
-    : blogPosts;
 
   return (
     <div className="flex min-h-screen flex-col bg-[#0D0D12] font-sans text-white">
@@ -972,149 +670,27 @@ export default function LandingPage() {
           <SectionHeading
             eyebrow="From the Blog"
             title={<>Blogs &amp; <span className="text-[#00FF88]">insights</span></>}
-            subtitle="Stories, updates, and insights from Smart Ride — safety, fintech, drivers, and our journey across Uganda."
+            subtitle="Stories, updates, and insights from Smart Ride — coming soon."
           />
 
-          {/* Filter toggle: Saved Blogs */}
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-            <Button
-              type="button"
-              variant={showSavedOnly ? 'default' : 'outline'}
-              onClick={() => setShowSavedOnly((v) => !v)}
-              aria-pressed={showSavedOnly}
-              className={
-                showSavedOnly
-                  ? 'border-[#00FF88] bg-[#00FF88]/15 text-[#00FF88] hover:bg-[#00FF88]/25'
-                  : 'border-white/15 bg-white/5 text-white/80 hover:bg-white/10'
-              }
-            >
-              <Bookmark className={`size-4 ${showSavedOnly ? 'fill-[#00FF88]' : ''}`} />
-              {showSavedOnly ? 'Showing Saved Blogs' : 'Show Saved Blogs'}
-              {savedBlogs.length > 0 && (
-                <span className="ml-1 rounded-full bg-[#00FF88]/20 px-2 py-0.5 text-xs tabular-nums">
-                  {savedBlogs.length}
-                </span>
-              )}
-            </Button>
-          </div>
-
-          {/* Blog grid */}
-          {visibleBlogs.length === 0 ? (
-            <div className="mt-12 rounded-2xl border border-dashed border-white/15 bg-white/5 p-12 text-center">
-              <Bookmark className="mx-auto mb-3 size-8 text-white/30" />
-              <p className="text-white/60">
-                No saved blogs yet. Tap the bookmark on any post to save it for later.
-              </p>
-            </div>
-          ) : (
-            <motion.div
-              variants={stagger}
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, amount: 0.1 }}
-              className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              {visibleBlogs.map((post) => {
-                const liked = !!likedBlogs[post.id];
-                const saved = savedBlogs.includes(post.id);
-                return (
-                  <motion.article
-                    key={post.id}
-                    variants={fadeUp}
-                    className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#1A1A1F] transition-all hover:-translate-y-1 hover:border-[#00FF88]/30 hover:shadow-lg hover:shadow-[#00FF88]/10"
-                  >
-                    {/* Image / gradient */}
-                    <div className="relative h-44 w-full overflow-hidden">
-                      {post.image ? (
-                        <Image
-                          src={post.image}
-                          alt={post.title}
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-105"
-                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        />
-                      ) : (
-                        <div className="h-full w-full bg-gradient-to-br from-[#005f3a] via-[#1A1A1F] to-[#111827]" />
-                      )}
-                      <div className="absolute left-3 top-3">
-                        <Badge
-                          variant="outline"
-                          className="border-[#00FF88]/40 bg-[#0D0D12]/80 text-[#00FF88] backdrop-blur"
-                        >
-                          {post.category}
-                        </Badge>
-                      </div>
-                      {/* Save button on card */}
-                      <button
-                        type="button"
-                        onClick={() => toggleSave(post.id)}
-                        aria-pressed={saved}
-                        aria-label={saved ? 'Remove from saved blogs' : 'Save this blog post'}
-                        className="absolute right-3 top-3 rounded-full bg-[#0D0D12]/80 p-2 text-white/80 backdrop-blur transition-colors hover:bg-[#0D0D12]"
-                      >
-                        <Bookmark
-                          className={`size-4 ${saved ? 'fill-[#00FF88] text-[#00FF88]' : 'text-white'}`}
-                        />
-                      </button>
-                    </div>
-
-                    {/* Body */}
-                    <div className="flex flex-1 flex-col p-5">
-                      <h3 className="text-lg font-semibold leading-snug text-white">
-                        {post.title}
-                      </h3>
-                      <p className="mt-2 line-clamp-3 text-sm text-white/60">
-                        {post.excerpt}
-                      </p>
-
-                      <div className="mt-3 flex items-center gap-2 text-xs text-white/40">
-                        <span>{post.author}</span>
-                        <span aria-hidden>·</span>
-                        <span>{post.readTime}</span>
-                      </div>
-
-                      {/* Footer actions */}
-                      <div className="mt-5 flex items-center justify-between border-t border-white/10 pt-4">
-                        <button
-                          type="button"
-                          onClick={() => toggleLike(post.id)}
-                          aria-pressed={liked}
-                          aria-label={liked ? 'Unlike this blog post' : 'Like this blog post'}
-                          className="inline-flex items-center gap-1.5 text-sm transition-colors hover:text-[#F43F5E]"
-                        >
-                          <Heart
-                            className={`size-4 ${liked ? 'fill-[#F43F5E] text-[#F43F5E]' : 'text-white/60'}`}
-                          />
-                        </button>
-
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSelectedBlog(post)}
-                          className="text-[#00FF88] hover:bg-[#00FF88]/10 hover:text-[#00FFF3]"
-                        >
-                          Read more
-                          <ChevronRight className="size-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </motion.article>
-                );
-              })}
-            </motion.div>
-          )}
+          <motion.div
+            variants={fadeUp}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+            className="mt-12 rounded-2xl border border-dashed border-white/15 bg-white/5 p-12 text-center"
+          >
+            <Bookmark className="mx-auto mb-3 size-8 text-[#00FF88]/50" />
+            <p className="text-lg font-medium text-white">
+              Our blog is coming soon
+            </p>
+            <p className="mt-2 text-sm text-white/60">
+              We&apos;re putting the finishing touches on our first stories.
+              Check back shortly for updates on safety, the Smart Ride Wallet,
+              and our journey across Uganda.
+            </p>
+          </motion.div>
         </div>
-
-        {/* Blog modal with scrolling progress bar */}
-        <BlogModal
-          post={selectedBlog}
-          liked={selectedBlog ? !!likedBlogs[selectedBlog.id] : false}
-          saved={selectedBlog ? savedBlogs.includes(selectedBlog.id) : false}
-          onToggleLike={toggleLike}
-          onToggleSave={toggleSave}
-          onClose={() => setSelectedBlog(null)}
-        />
       </section>
 
       {/* ─── Newsletter ────────────────────────────────────────────────────── */}

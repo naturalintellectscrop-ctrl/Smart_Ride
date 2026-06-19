@@ -3738,3 +3738,57 @@ Stage Summary:
 - src/app/page.tsx: 15 surgical edits, all fake user-facing data purged (blog like counts, blog dates, fake phone, "free first ride" claims). Blog posts retain their qualitative marketing/vision content + author + readTime only.
 - Lint clean. Dev server HTTP 200. Browser-verified: zero fake-data markers remain on the rendered page.
 - Admin setup /api/admin/setup route is correct; the user's "Unauthorized" error is an env-var mismatch on Vercel (ADMIN_SETUP_KEY on Vercel Production is set to a different value than the key supplied). Not a code bug — operational fix: set ADMIN_SETUP_KEY in Vercel → Settings → Environment Variables (Production) to the desired value, redeploy, then retry.
+
+---
+Task ID: 8-website-blog-fake-data
+Agent: Main Agent
+Task: Remove all remaining fake data from the website — fabricated blog articles containing fake operational claims, statistics, and partnerships
+
+Work Log:
+- Read /home/z/my-project/worklog.md (last ~80 lines) to understand prior work. Confirmed Task 7-expo-fake-data already swept the entire expo-app (removed TRENDING_DEALS mock array + fabricated '4.8' rating; all other files verified API-driven or legitimate UI config). Confirmed Task 7-website-fake-data already removed fake blog like-counts, dates, fake phone number, and "free first ride" claims — but LEFT the 6 fabricated blog articles intact as "marketing/vision content".
+- Re-read full src/app/page.tsx (1499 lines) and identified that the 6 blogPosts still contained fabricated operational claims presented as current facts:
+  * "we have responded to thousands of [SOS] activations" (fake statistic)
+  * "we are live in multiple cities and towns across Uganda" (fake operational scale)
+  * "we partnered with fresh produce markets in Nakawa, Nakasero, and Owino" (fake partnerships)
+  * "restaurants like Cafe Java and Ugandan Kitchen" (fake restaurant partnerships)
+  * "We also provide helmets to every new rider partner" (fake benefit program)
+  * "Every active rider is covered by an accident insurance policy" (fake insurance claim)
+  * "Through partnerships with local SACCOs, qualified riders can access bike financing" (fake financing program)
+  * Fake author attributions: "Smart Ride Safety Team", "Smart Ride Wallet Team", "Smart Ride Driver Team", "Smart Ride Marketplace Team", "Smart Ride Expansion Team"
+- Wrote a Python script (/tmp/clean_blog.py) to perform 12 surgical transformations reliably (large text blocks made MultiEdit string-matching risky):
+  1. React import: removed useRef, useCallback (only used by blog code)
+  2. Removed Dialog/DialogContent/DialogHeader/DialogTitle/DialogDescription imports (only used by BlogModal)
+  3. Removed Heart, X, ChevronRight from lucide imports (only used by blog cards/modal)
+  4. Removed BlogPost interface
+  5. Removed entire blogPosts array (6 fabricated articles, ~80 lines)
+  6. Removed LIKES_KEY, SAVED_KEY constants (kept NEWSLETTER_KEY)
+  7. Removed entire BlogModal component (~163 lines)
+  8. Removed blog state (selectedBlog, likedBlogs, savedBlogs, showSavedOnly)
+  9. Updated mount useEffect to only load newsletter subscriber count
+  10. Removed toggleLike/toggleSave handlers
+  11. Removed visibleBlogs computed value
+  12. Replaced blog section JSX (filter toggle + grid + BlogModal usage) with a clean "Our blog is coming soon" dashed card
+- Verified zero stale references remain (grep for blogPosts, BlogPost, BlogModal, selectedBlog, likedBlogs, savedBlogs, showSavedOnly, toggleLike, toggleSave, visibleBlogs, LIKES_KEY, SAVED_KEY → all "(none)")
+- Found "Cafe Java" / "Ugandan Kitchen" still in the Food Delivery service description (services array) — naming specific real restaurants as if they're platform partners. Replaced with generic "Order from your favourite restaurants and local eateries. Hot meals delivered fast."
+- Ran `bun run lint` → exit 0, clean (0 errors, 0 warnings)
+- Verified via Agent Browser (eval on rendered DOM after reload):
+  * hasBlogComingSoon: true — blog section shows "Our blog is coming soon" dashed card
+  * hasFakeAuthor: false — no "Smart Ride X Team" bylines
+  * hasAnyFakeStats: false — no "thousands of activations", "live in multiple cities", "helmets to every", "accident insurance"
+  * hasCafeJava: false — no fake restaurant partnerships
+  * hasNakawaMarket: false
+  * hasBlogPosts: 0 articles (fake posts gone)
+  * blogHasNoArticles: true
+  * All 7 sections present (hero, services, why, blogs, newsletter, download, contact)
+  * Nav + footer "Blogs" links still work (anchor to #blogs)
+  * No admin link visible to general users (hasAdminLink: false)
+  * No console/page errors
+  * Mobile (390x844) and desktop (1280x800) both render cleanly
+
+Stage Summary:
+- Files changed (1): src/app/page.tsx — 25,426 chars removed (66,336 → 40,910). Removed all 6 fabricated blog articles + BlogModal component + like/save infrastructure + dead imports. Replaced blog section with an honest "Our blog is coming soon" placeholder card. Removed fake restaurant partnership names (Cafe Java, Ugandan Kitchen) from Food Delivery description.
+- Fake data now fully purged from BOTH website and expo-app:
+  * Website: blog like-counts, dates, fake phone, "free first ride" claims (Task 7) + fabricated blog articles + fake restaurant partnerships (Task 8)
+  * Expo-app: TRENDING_DEALS mock array + fabricated '4.8' rating (Task 7); all other files verified API-driven
+- Lint clean. Dev server HTTP 200. Browser-verified: zero fake-data markers remain on rendered page. Blog section honestly says "coming soon" instead of showing fabricated company history/achievements.
+- ADB install command verified correct: `adb install -r app/build/outputs/apk/release/app-arm64-v8a-release.apk && adb shell am start -n ug.smartride.app/.MainActivity` — package `ug.smartride.app` matches app.json, APK path matches withAbiSplits plugin output. Run from inside `expo-app/android/`.
