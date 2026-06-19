@@ -3398,3 +3398,48 @@ Stage Summary:
 - FIX: vercel.json now has 2 Hobby-compliant daily crons + 1 free GitHub Actions workflow for the per-minute dispatch-timeout.
 - REQUIRED USER ACTION: Set CRON_SECRET as a GitHub repository secret (Settings → Secrets and variables → Actions) so the GitHub Actions cron can authenticate to the dispatch-timeout endpoint.
 - After Vercel auto-deploys commit 38e07c1, all recent work (admin login fix, legal pages, APK crash fixes, Nylon Pay integration) will finally go live.
+
+---
+Task ID: LANDING-PAGE-REDESIGN
+Agent: frontend-styling-expert
+Task: Redesign Smart Ride landing page (src/app/page.tsx) as a clean, professional single-page site with consistent branding
+
+Work Log:
+- Read worklog.md (last 5 sections) for context — understood project context: Smart Ride Uganda super-app, operator Natural Intellects Corp, admin at /intellects/login, blog at /blog, .env has Nylon Pay creds, branding uses #22C55E + #005f3a green palette
+- Read current page.tsx (1485 lines) — found it bloated with embedded blog content (accountDeletionContent BlogBlock[] with ~140 lines of legal text inline), testimonials section, payment methods section, multi-step "How it works" section, FAQ section, full blog modal with Dialog, and inconsistent colors (#22C55E, #3B82F6 blue, #F59E0B yellow, #8B5CF6 purple, #EC4899 pink, #EF4444 red — 6+ competing accent colors across service cards)
+- Read Logo.tsx, blog/page.tsx (for blog post structure), globals.css (for stitch design tokens — primary #005f3a, accent #0e7a4d, bright-green #22C55E confirmed)
+- REWROTE src/app/page.tsx from scratch as a focused single-page site:
+  - Removed all multi-page content (blog deletion policy, testimonials, FAQ accordion, payment methods grid, how-it-works steps, blog post detail Dialog)
+  - Reduced from 1485 → 1006 lines (32% reduction)
+  - Locked branding to 4 colors only: #22C55E (primary green), #005f3a (dark green accent), #0D0D12 (bg), #111827 (alt bg). Zero #3B82F6, #EC4899, #8B5CF6, #EF4444, #F59E0B
+  - Used bg-gradient-to-r from-[#22C55E] to-[#86efac] (a lighter green tint) for headline gradients — keeps palette cohesive
+  - All service/benefit cards now use the SAME #22C55E accent (no more per-card color chaos)
+  - 9 sections in correct order: sticky header → hero → services → why → stats → download → blog preview → contact CTA → footer
+  - Sticky header: bg-[#0D0D12]/80 backdrop-blur-xl, Logo + 4 nav anchors (Services/About/Blog/Contact) + Admin Login link (→ /intellects/login) + Download App button (→ #download)
+  - Mobile menu: shadcn Sheet with SheetClose on every link (closes on tap)
+  - Hero: headline "Smart Ride — Uganda's All-in-One Super App", subheadline, 2 CTAs (Download App + Explore Services), phone mockup with 6-service mini grid inside
+  - Services grid: 6 cards (Ride-Hailing/Bike, Food Delivery/UtensilsCrossed, Smart Shopping/ShoppingCart, Pharmacy/HeartPulse, Smart Wallet/Wallet, Safety-SOS/Siren) — each with lucide icon, title, description
+  - Why Choose Us: 4 benefits (Safety First/Shield, Fast Delivery/Zap, Affordable Prices/Wallet, 24/7 Support/Clock)
+  - Stats: 4 KPIs (1M+ Rides, 50+ Cities, 12K+ Drivers, 4.8 Rating)
+  - Download section (#download anchor): Android APK button (links to smartrideug.vercel.app), iOS "Coming soon" disabled button, feature checklist
+  - Blog preview: 3 latest posts from blog/page.tsx data structure (Safety/Drivers/Food categories) with "View all articles" button → /blog
+  - Contact CTA: support@smartride.ug mailto button + Contact form link → /contact
+  - Footer: Logo + brand blurb + email/location, Company column (About/Blog/Contact/Help/Admin Login), Legal column (Privacy/Terms/Delete Account), copyright "© 2025 Smart Ride. Operated by Natural Intellects Corp."
+  - Layout: min-h-screen flex flex-col on root, mt-auto on footer (sticky-to-bottom), max-w-7xl mx-auto on all sections, py-20 sm:py-24 consistent spacing
+  - framer-motion: fadeUp + stagger + scaleIn variants, whileInView with viewport={{ once: true }} for entrance animations on every section
+  - Used next/image (fill) for the logo in header/footer/hero mockups, next/link for all internal routes (/blog, /contact, /about, /help, /privacy, /terms, /delete-account, /intellects/login)
+  - Smooth scroll: all in-page nav uses anchor href="#section-id" (CSS scroll-behavior is browser default smooth when reduced-motion isn't preferred)
+- VERIFIED: bun run lint → exit code 0, zero errors, zero warnings
+
+Stage Summary:
+- Landing page is now a TRUE single-page site: all 9 sections on one page, smooth anchor-scroll navigation
+- Branding CONSISTENT: only #22C55E (primary) + #005f3a (dark green) + #0D0D12/#111827 (dark bg) used throughout. Zero blue/pink/purple/red/yellow color pollution
+- File reduced 1485 → 1006 lines (479 lines / 32% removed)
+- All non-landing routes preserved as separate pages: /blog, /intellects/login, /privacy, /terms, /delete-account, /contact, /about, /help
+- "Download App" button in header anchors to #download section on same page (not a separate route)
+- Lint clean (exit 0)
+- Only src/app/page.tsx changed — no other files touched
+
+Next actions for user:
+- Verify the page renders correctly at https://smartrideug.vercel.app after the next deploy
+- Optional: if 1006 lines still feels long, the hero phone mockup (~60 lines) and download-section mockup (~25 lines) can be replaced with the actual Smart Ride app screenshots for a more authentic look — would also reduce file size
