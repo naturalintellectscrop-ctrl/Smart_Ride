@@ -14,11 +14,27 @@
       },
       "oauth_client": [
         {
-          "client_id": "531949209415-3fnqdkfo69dognl93ffp0keg0jusvq6t.apps.googleusercontent.com",
+          "client_id": "531949209415-oc8o4mfd2hd3l1mbqecdui2jfhrupe56.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "ug.smartride.app",
-            "certificate_hash": "1aec66618cc98e58af951d55366d33be5c45ccf6"
+            "certificate_hash": "f28c61cc4f2a5700a0182557cfcb75a42a960ae1"
+          }
+        },
+        {
+          "client_id": "531949209415-of1eufeeu4fsl6s1n1c5tl7q75b0bk4h.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ug.smartride.app",
+            "certificate_hash": "7892f118d02c2d9d34be97d261b5bc0165d7c839"
+          }
+        },
+        {
+          "client_id": "531949209415-qpv85egps3qrq3ko6ecr7uckoko66qm2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "ug.smartride.app",
+            "certificate_hash": "98ea9b4b1847e1ca61a04910805bbd22db9d78f4"
           }
         },
         {

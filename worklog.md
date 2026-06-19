@@ -3840,3 +3840,49 @@ Stage Summary:
 - Mobile social buttons redesigned as hovering circular icon cards (login + register). Committed aed01a0, pushed. User must rebuild APK to see changes.
 - Google Sign-In DEVELOPER_ERROR is a SHA-1 mismatch — user needs to verify their keystore SHA-1 is registered in Firebase Console. Provided exact keytool command and the 3 registered SHA-1s to compare against.
 - Sign-up "not working" needs logcat output to diagnose (could be password validation: must have uppercase+lowercase+number+8chars, or network, or duplicate email).
+
+---
+Task ID: 10-env-mixup-fix-and-json-push
+Agent: Main Agent
+Task: User uploaded Smart_Ride.env + google-services (3).json, hoping the .env is the correct expo-app .env, and asked to push the json so they can git pull it.
+
+Work Log:
+- Read uploaded /home/z/my-project/upload/Smart_Ride.env (22 lines)
+- CRITICAL FINDING: The uploaded .env is the WEBSITE's .env, NOT the expo-app's .env.
+  Evidence — it contains only website vars: DATABASE_URL, SUPABASE_*, NEXTAUTH_*,
+  NEXT_PUBLIC_FIREBASE_*, GOOGLE_CLIENT_ID, NEXT_PUBLIC_MAPBOX_TOKEN,
+  GEMINI_API_KEY, NYLONPAY_*. None of the EXPO_PUBLIC_* variables the mobile
+  app reads (per src/constants/index.ts) are present.
+- Confirmed /home/z/my-project/expo-app/.env did NOT exist (gitignored, never created).
+- Read uploaded /home/z/my-project/upload/google-services (3).json — this IS correct:
+  * package_name: ug.smartride.app ✓
+  * mobilesdk_app_id: 1:531949209415:android:73229ed013d4d5f507ae62 ✓
+  * api_key: AIzaSyB6d8SCey9MX_fJy6nXx9ycqtNmPw6fuGg ✓
+  * 3 Android OAuth SHA-1 fingerprints registered (f28c61cc, 98ea9b4b, 7892f118) ✓
+  * Web client ID (client_type 3): 531949209415-h0ri57i233r1l767tnc4i26brdt3asb3.apps.googleusercontent.com ✓
+- Diffed repo's expo-app/google-services.json vs uploaded — only difference was
+  ordering of oauth_client entries 2 and 3 (functionally identical). Replaced
+  repo file with uploaded version anyway for exact-match traceability.
+- Built the CORRECT expo-app/.env by extracting values from the uploaded website
+  .env (Mapbox token, Supabase URL/anon key) + google-services.json (Firebase
+  Android config) + hardcoded Google web client ID from src/config/google.ts.
+  Created at /home/z/my-project/expo-app/.env with all 9 EXPO_PUBLIC_* vars.
+- Created /home/z/my-project/expo-app/.env.example as a committed template
+  (gitignore has `!.env.example` exception so it CAN be committed).
+- Verified .env* is gitignored at both root and expo-app level — the real .env
+  with secrets CANNOT be pushed; user must create it locally.
+- Committed (9609fc5): google-services.json + .env.example. Pushed to origin/main.
+
+Stage Summary:
+- ROOT CAUSE of maps not working + (part of) sign-in issues: user's expo-app/.env
+  on their PC was actually the WEBSITE's .env. EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN
+  was therefore empty/undefined at APK build time → blank/broken maps.
+- The user's local C:\Smart_Ride\expo-app\.env must be replaced with the
+  EXPO_PUBLIC_* version (contents provided in chat). The .env is gitignored so
+  it cannot be pushed — user must create it locally.
+- google-services.json is now pushed (commit 9609fc5). User can `git pull` to
+  get the exact file they uploaded.
+- NETWORK_ERROR on Google Sign-In is NOT a config issue — the google-services.json
+  is correct and the webClientId is hardcoded correctly in src/config/google.ts.
+  NETWORK_ERROR = device/network issue (no internet, Play Services outdated,
+  wrong date/time, firewall blocking Google). Provided diagnostic steps to user.
