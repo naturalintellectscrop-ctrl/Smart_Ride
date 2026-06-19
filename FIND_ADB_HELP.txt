@@ -1,0 +1,84 @@
+=============================================================
+HOW TO FIND ADB ON YOUR WINDOWS PC (and get the crash log)
+=============================================================
+
+The issue: $USER is empty in GitBash, so the path
+"/c/Users/$USER/AppData/..." expands to "/c/Users//AppData/..." (note
+the double slash) which doesn't exist.
+
+STEP 1: Run this EXACT command in GitBash to find adb.exe on your PC.
+        Copy and paste the whole block (including the backticks):
+
+```
+# Print your actual Windows username
+echo "Your Windows username is: $USERNAME"
+
+# Search all common Android SDK locations for adb.exe
+find "/c/Users/$USERNAME/AppData/Local/Android" -name "adb.exe" 2>/dev/null
+find "/c/Users/$USERNAME/AppData/Local/Android Sdk" -name "adb.exe" 2>/dev/null
+find "/c/Android" -name "adb.exe" 2>/dev/null
+find "/c/Program Files/Android" -name "adb.exe" 2>/dev/null
+find "/c/Program Files (x86)/Android" -name "adb.exe" 2>/dev/null
+find "/c/Users/$USERNAME" -maxdepth 5 -name "adb.exe" 2>/dev/null
+echo "---search complete---"
+```
+
+This will print one or more full paths like:
+  /c/Users/Godwin/AppData/Local/Android/Sdk/platform-tools/adb.exe
+
+STEP 2: Once you have the path, set ADB to a variable and use it.
+        Replace the path below with the one Step 1 found:
+
+```
+# Set ADB to the full path (EDIT THIS LINE with your actual path)
+ADB="/c/Users/Godwin/AppData/Local/Android/Sdk/platform-tools/adb.exe"
+
+# Verify adb works
+"$ADB" version
+
+# Clear old logs
+"$ADB" logcat -c
+
+# NOW tap the Smart Ride app on your phone to crash it
+# (Wait 5 seconds for the crash to happen)
+
+# Capture the crash log
+"$ADB" logcat -d *:E AndroidRuntime:E ReactNative:E ReactNativeJS:E > /c/Smart_Ride/crash-log.txt
+
+# View the log
+cat /c/Smart_Ride/crash-log.txt
+```
+
+STEP 3: Paste the entire contents of crash-log.txt back to me.
+
+=============================================================
+IF ADB STILL CAN'T BE FOUND (Android SDK not installed)
+=============================================================
+
+If Step 1 found nothing, you don't have the Android SDK platform-tools
+installed. Two options:
+
+OPTION A: Install Android Studio (includes platform-tools with adb)
+  - Download: https://developer.android.com/studio
+  - During install, make sure "Android SDK" and "Android SDK Platform-Tools" are checked
+  - After install, retry Step 1
+
+OPTION B: Download just platform-tools (smaller, faster)
+  - Go to: https://developer.android.com/tools/releases/platform-tools
+  - Download the Windows ZIP (about 15 MB)
+  - Extract it to e.g. C:\Android\platform-tools
+  - Then in GitBash:
+    ADB="/c/Android/platform-tools/adb.exe"
+    "$ADB" version
+
+=============================================================
+IF YOUR PHONE ISN'T BEING DETECTED BY ADB
+=============================================================
+
+1. Connect phone via USB cable (not just charging cable — needs data)
+2. On phone: Settings → About phone → tap "Build number" 7 times to enable Developer options
+3. On phone: Settings → System → Developer options → enable "USB debugging"
+4. When you connect, phone will show "Allow USB debugging?" popup → tap Allow
+5. Verify: "$ADB" devices   (should list your phone's serial number)
+
+=============================================================
