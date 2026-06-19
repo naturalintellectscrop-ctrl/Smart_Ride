@@ -3629,3 +3629,40 @@ Stage Summary:
 - No admin hints remain — only the "Natural Intellects Corp." business name in footer (acceptable per task).
 - Landing page confirmed single-page: all nav links are `#section` anchors; only legal routes (/privacy, /terms, /delete-account) are external pages.
 - Lint clean. Dev server serving HTTP 200. Ready for commit & deploy.
+
+---
+Task ID: 6-brand-cleanup-verify
+Agent: Main Agent
+Task: Replace brand assets everywhere + remove fake data + fix admin setup errors + add APK auto-install command
+
+Work Log:
+- Copied uploaded logo (pasted_image_1781871516008.png = SmartRide full logo with map pin) to all public/ paths:
+  smartride-logo-new.png, smartride-logo-transparent.png, images/smart-ride-logo.png, logo.png, logo.jpeg
+- Copied uploaded favicon mark (pasted_image_1781871527511.png = single map pin icon) to:
+  favicon-new.png, favicon.png, favicon.svg, icon.png, icon-new.png, icons/icon-192x192.png, icons/icon-512x512.png
+- Updated public/manifest.json: all icons now point to /favicon-new.png
+- Updated src/app/layout.tsx: metadata.icons, openGraph.images, twitter.images, msapplication-TileImage, apple-touch-icon all point to new assets
+- Updated expo-app/assets/: icon.png, splash.png, adaptive-icon.png, favicon.png, images/smartride-logo.png all replaced with new brand assets
+- Launched full-stack-developer subagent (Task 6-landing-cleanup) which:
+  - Removed entire Stats section (fake: 1M rides, 12K riders, 50 cities, 4.8 rating) + AnimatedCounter component
+  - Removed fake hero trust badges (4.8/5 rating, 12K+ active riders)
+  - Changed newsletter subscriber count from fake 1200 floor to real count (0 if none)
+  - Softened all 6 blog posts to remove fabricated metrics (60% YoY, 600 vendors, 800 riders, UGX 1.2M, 12,000 activations, etc.)
+  - Updated all 3 logo references in page.tsx to /smartride-logo-new.png
+  - Verified nav links are all #section anchors (no separate /about or /contact pages)
+- Improved /api/admin/setup endpoint:
+  - Added POST handler (accepts {key} in body) alongside GET ?key=
+  - Better error messages: detects when user sends literal placeholder 'YOUR_ADMIN_SETUP_KEY' and explains to find real value in Vercel env vars
+  - Returns loginUrl: /intellects/admin in success response
+- Updated .env.production.example with clearer ADMIN_SETUP_KEY instructions
+- Updated expo-app/APK_BUILD_COMMANDS.md with comprehensive USB auto-install command:
+  adb install -r <apk> && adb shell am start -n ug.smartride.app/.MainActivity
+  Plus ABI split guidance and Windows GitBash one-liner
+- Committed (28 files, +234/-185) as commit 7748666, pushed to origin/main
+
+Stage Summary:
+- Brand: new SmartRide logo + favicon mark deployed everywhere (web + expo app)
+- Landing page: all fake data removed, no admin hints, single-page with section anchors
+- Admin setup: improved error messages guide user to find real ADMIN_SETUP_KEY value
+- APK install: one-command auto-install via USB documented
+- Verified via Agent Browser: logoSrc=/smartride-logo-new.png, favicon=/favicon-new.png, hasStats=false, adminLinks=0, fakeNumbers=0
