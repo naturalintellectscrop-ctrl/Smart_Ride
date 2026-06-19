@@ -51,18 +51,18 @@ export const metadata: Metadata = {
   // PWA Configuration
   manifest: "/manifest.json",
   
-  // Icons - Smart Ride Logo with transparent background
+  // Icons - Smart Ride single mark (map pin + road)
   icons: {
     icon: [
-      { url: "/favicon.png", type: "image/png", sizes: "512x512" },
-      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
-      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+      { url: "/favicon-new.png", type: "image/png", sizes: "512x512" },
+      { url: "/favicon-new.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon-new.png", type: "image/png", sizes: "16x16" },
     ],
     apple: [
-      { url: "/smartride-logo-transparent.png", sizes: "1024x1024", type: "image/png" },
+      { url: "/favicon-new.png", sizes: "1024x1024", type: "image/png" },
     ],
     other: [
-      { rel: "mask-icon", url: "/smartride-logo-transparent.png", color: "#00FF88" },
+      { rel: "mask-icon", url: "/favicon-new.png", color: "#00FF88" },
     ],
   },
   
@@ -83,7 +83,7 @@ export const metadata: Metadata = {
     description: "Uganda's premier mobility platform for rides, food delivery, shopping, and more.",
     images: [
       {
-        url: "/smartride-logo-transparent.png",
+        url: "/smartride-logo-new.png",
         width: 1024,
         height: 1024,
         alt: "Smart Ride Uganda",
@@ -96,7 +96,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Smart Ride - Multi-Service Mobility Platform",
     description: "Uganda's premier mobility platform for rides, food delivery, shopping, and more.",
-    images: ["/smartride-logo-transparent.png"],
+    images: ["/smartride-logo-new.png"],
   },
   
   // Additional PWA
@@ -132,11 +132,12 @@ export default function RootLayout({
         <meta name="application-name" content="Smart Ride" />
         <meta name="msapplication-TileColor" content="#00FF88" />
         <meta name="msapplication-tap-highlight" content="no" />
-        <meta name="msapplication-TileImage" content="/smartride-logo-transparent.png" />
+        <meta name="msapplication-TileImage" content="/favicon-new.png" />
         
         {/* iOS Splash Screens */}
-        <link rel="apple-touch-startup-image" href="/smartride-logo-transparent.png" />
-        <link rel="apple-touch-icon" href="/smartride-logo-transparent.png" />
+        <link rel="apple-touch-startup-image" href="/favicon-new.png" />
+        <link rel="apple-touch-icon" href="/favicon-new.png" />
+        <link rel="icon" href="/favicon-new.png" type="image/png" />
         
         {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://api.mapbox.com" />

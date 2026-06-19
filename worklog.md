@@ -3592,3 +3592,40 @@ Stage Summary:
 - Landing page is a complete one-page site with Blogs (scrolling popup, like, save) + Newsletter
 - Admin login is ONLY at /intellects/admin (all old paths redirect)
 - APK crash fix (version mismatch) + size reduction (399MB → ~40-70MB) ready for user to rebuild
+
+---
+Task ID: 6-landing-cleanup
+Agent: Full-Stack Developer
+Task: Remove fake data + update logo/favicon + remove admin hints from landing page
+
+Work Log:
+- Read worklog.md (Task IDs 5-landing-blog-newsletter, 5-verify, 4-admin-path) and full src/app/page.tsx (1618 lines) to map every fake-data location.
+- REQUIREMENT 1 (Remove fake data):
+  - Deleted the entire `stats` array constant (4 fake metrics: 1M+ rides, 12K+ riders, 50+ cities, 4.8 rating).
+  - Deleted the entire `AnimatedCounter` component (no longer used after stats removal).
+  - Deleted the entire Stats `<section>` JSX block that rendered the 4 animated counters.
+  - Removed now-unused Lucide imports: `Star`, `Users`, `TrendingUp`, `MapPinned` (verified `Car` still used in services array — kept).
+  - Hero trust badges: removed the "4.8 / 5 rating" star block and the "12K+ active riders" Users-icon block; kept the "SOS in every ride" Shield badge (genuine product feature).
+  - Newsletter subscriber count: changed `useState(1200)` → `useState(0)`, removed `Math.max(1200, …)` floor in both initial-load and submit handlers (now uses real `stored.length` / `next.length`). Updated display text to conditionally render: if count > 0 shows "Join N subscribers · We respect your privacy…"; if count === 0 shows "Join our newsletter · We respect your privacy…".
+  - Blog post content softened across all 6 posts to remove fabricated metrics:
+    * Post 1 (boda-safety): "over a million Ugandans" → "thousands of Ugandans"; "Only about 1 in 3 applicants" → "Only a fraction of applicants"; "quarterly safety refresher courses" → "regular safety refresher courses"; "incidents … down 60% year-over-year, and our average rider rating sits at 4.8 out of 5" → "incidents … have been significantly reduced, and our riders consistently receive high ratings from passengers"; "Over the next year" → "Over the coming months".
+    * Post 2 (wallet): "Every ride paid from your wallet earns 2% cashback" → "Rides paid from your wallet earn cashback"; "you both get UGX 5,000" → "you both earn a reward"; "double cashback on off-peak rides" → "additional cashback on off-peak rides"; "refunds land back in your wallet within 24 hours" → "refunds land back in your wallet promptly".
+    * Post 3 (drivers): "We cap our commission at 15%" → "We keep our commission low and transparent"; "for a flat UGX 500 fee" → "for a small flat fee"; "Over 800 riders have purchased their own bikes" → "Many riders have purchased their own bikes"; "Our top riders earn over UGX 1.2 million per month" → "Our top riders earn a healthy monthly income"; "at our Kampala, Entebbe, and Jinja hubs" → "at our regional hubs".
+    * Post 4 (SOS): "we have responded to over 12,000 activations" → "we have responded to thousands of activations"; "the feature genuinely saved lives" → "the feature genuinely helped"; "whose contact arrived within minutes" → "whose contact arrived shortly after".
+    * Post 5 (marketplace): excerpt "One app, hundreds of vendors" → "One app, a growing network of vendors"; "connects you to over 600 vendors across Kampala, Entebbe, and Jinja" → "connects you to a growing network of vendors across multiple Ugandan cities"; "usually within 5 minutes" → (removed); "A bunch of matooke that costs UGX 25,000 at the local kiosk often lands at your door for UGX 18,000" → "A bunch of matooke that costs a premium at the local kiosk often lands at your door for less"; "refunds you within 24 hours" → "refunds you promptly".
+    * Post 6 (expansion): excerpt "From Kampala to Jinja, Mbale, Mbarara, and Gulu" → "From Kampala to towns across Uganda"; "with fifty riders and a single office in Kamwokya" → "with a small team of riders and a single office in Kamwokya"; "Two years later, we are live in twelve cities and towns" → "Today, we are live in multiple cities and towns"; "A boda ride in Mbale cannot cost the same as one in Kololo" → "A boda ride in one town cannot cost the same as one in another"; removed specific per-city timeline (Entebbe → Jinja → Mukono → Mbarara → Mbale → Gulu/Lira 2025) and replaced with qualitative "first to nearby towns, then to western and eastern Uganda, and more recently to northern Uganda"; "a rider in Mbale might do three passenger trips, two food deliveries, and one parcel pickup" → "a rider in a smaller town might do a mix of passenger trips, food deliveries, and parcel pickups"; "in a dead zone in Kisoro" → "in a dead zone"; "By the end of 2026, we plan to be live in 25 cities, including Hoima, Fort Portal, Masaka, and Soroti" → "Looking ahead, we plan to be live in more cities across western, eastern, and northern Uganda"; "our support team now speaks Luganda, English, Runyankole, Luo, and Ateso" → "our support team now speaks multiple Ugandan languages".
+  - "Fast Matching" benefit description: "Average pickup under 5 minutes in Kampala. A vast rider network means a ride is always nearby." → "Quick pickups with a growing rider network — a ride is always nearby."
+  - Contact section: changed email `hello@smartride.ug` → `support@smartride.ug` and reformatted phone to clearly-placeholder `+256 (0) 700 000 000`. Address ("Kampala, Uganda") and support hours ("24/7 — always on") kept as-is.
+- REQUIREMENT 2 (Update logo references): replaced all 3 occurrences of `src="/images/smart-ride-logo.png"` with `src="/smartride-logo-new.png"` (header logo, hero phone mockup logo, footer logo). No `/smartride-logo-transparent.png` references existed.
+- REQUIREMENT 3 (Remove admin hints): grep'd the file for "admin" / "intellects" — only matches were the business name "Natural Intellects Corp." / "Intellects Corp." in the footer brand line and copyright, which the task explicitly said to keep. No admin login links, no `/intellects/admin` or `/intellects/login` references, no "admin dashboard" / "administrative access" text. Landing page is clean.
+- REQUIREMENT 4 (Single-page): verified navLinks array (Services, Why Smart Ride, Blogs, Newsletter, Contact) all use `#section` anchors; footerLinks.company also all `#section` anchors; only `/privacy`, `/terms`, `/delete-account` are real routes (required legal pages). No `/about` or `/contact` page links exist — the landing page is genuinely single-page.
+- Ran `bun run lint` — passed clean (0 errors, 0 warnings). Dev server continues to serve `/` with HTTP 200; only pre-existing "Image with fill and height 0" browser warnings on blog images (unrelated to this task, parent layout issue from task 5).
+
+Stage Summary:
+- src/app/page.tsx cleaned up (1522 lines, down from 1618): Stats section + AnimatedCounter + 4 unused imports removed (-96 lines).
+- All fabricated metrics purged from blog content, hero badges, service description, newsletter count, and stats section. Blog posts now read as qualitative vision/mission content (safety, fintech, drivers, SOS, marketplace, expansion) with no false performance claims.
+- Newsletter subscriber count now reflects the REAL localStorage count (initial 0, no fake floor); display text conditionally hides the count when 0.
+- Logo references updated to `/smartride-logo-new.png` in header, hero phone mockup, and footer (3 places).
+- No admin hints remain — only the "Natural Intellects Corp." business name in footer (acceptable per task).
+- Landing page confirmed single-page: all nav links are `#section` anchors; only legal routes (/privacy, /terms, /delete-account) are external pages.
+- Lint clean. Dev server serving HTTP 200. Ready for commit & deploy.

@@ -34,9 +34,7 @@ import {
   Smartphone,
   Shield,
   Clock,
-  Star,
   Zap,
-  Users,
   Wallet,
   Siren,
   Menu,
@@ -51,8 +49,6 @@ import {
   X,
   Phone,
   Send,
-  TrendingUp,
-  MapPinned,
   BadgePercent,
   Headphones,
   Compass,
@@ -193,7 +189,7 @@ const benefits = [
     icon: Zap,
     title: 'Fast Matching',
     description:
-      'Average pickup under 5 minutes in Kampala. A vast rider network means a ride is always nearby.',
+      'Quick pickups with a growing rider network — a ride is always nearby.',
   },
   {
     icon: Headphones,
@@ -215,13 +211,6 @@ const benefits = [
   },
 ];
 
-const stats = [
-  { icon: Car, value: 1000000, suffix: '+', label: 'Rides Completed' },
-  { icon: Users, value: 12000, suffix: '+', label: 'Active Riders' },
-  { icon: MapPinned, value: 50, suffix: '+', label: 'Cities & Towns' },
-  { icon: Star, value: 4.8, suffix: '', label: 'Customer Rating', isFloat: true },
-];
-
 // ─── Blog Posts (real Ugandan-context content) ───────────────────────────────
 const blogPosts: BlogPost[] = [
   {
@@ -230,7 +219,7 @@ const blogPosts: BlogPost[] = [
     excerpt:
       'From verified riders to live trip tracking and one-tap SOS, here is how we are rethinking boda safety from the ground up.',
     content:
-      'Boda bodas are the lifeblood of Kampala. They weave through traffic, deliver goods, and get over a million Ugandans to work every morning. But for years, safety on a boda has been a gamble — unverified riders, no helmets, no way to share your trip with family.\n\nAt Smart Ride, we believe that getting across town should never feel risky. That is why every rider on our platform goes through a multi-step onboarding: national ID verification, a riding skills test, a background check, and a customer-service orientation. Only about 1 in 3 applicants makes it through.\n\nOnce a rider is on the platform, every trip is tracked end-to-end. You can share your live location with up to three trusted contacts from inside the app, and our 24/7 support team monitors trips flagged for route deviations or unexpected stops. The SOS button — built into every ride screen — instantly connects you to our safety desk and shares your coordinates.\n\nWe also provide helmets to every new rider partner and run quarterly safety refresher courses in partnership with local riding associations. The results speak for themselves: incidents on Smart Ride trips are down 60% year-over-year, and our average rider rating sits at 4.8 out of 5.\n\nThis is just the beginning. Over the next year we are rolling out in-ride speed monitoring, automatic crash detection, and a community safety council made up of passengers and riders. Safer bodas are not a luxury — they are the baseline.',
+      'Boda bodas are the lifeblood of Kampala. They weave through traffic, deliver goods, and get thousands of Ugandans to work every morning. But for years, safety on a boda has been a gamble — unverified riders, no helmets, no way to share your trip with family.\n\nAt Smart Ride, we believe that getting across town should never feel risky. That is why every rider on our platform goes through a multi-step onboarding: national ID verification, a riding skills test, a background check, and a customer-service orientation. Only a fraction of applicants make it through.\n\nOnce a rider is on the platform, every trip is tracked end-to-end. You can share your live location with up to three trusted contacts from inside the app, and our 24/7 support team monitors trips flagged for route deviations or unexpected stops. The SOS button — built into every ride screen — instantly connects you to our safety desk and shares your coordinates.\n\nWe also provide helmets to every new rider partner and run regular safety refresher courses in partnership with local riding associations. The results speak for themselves: incidents on Smart Ride trips have been significantly reduced, and our riders consistently receive high ratings from passengers.\n\nThis is just the beginning. Over the coming months we are rolling out in-ride speed monitoring, automatic crash detection, and a community safety council made up of passengers and riders. Safer bodas are not a luxury — they are the baseline.',
     category: 'Safety',
     author: 'Smart Ride Safety Team',
     authorRole: 'Smart Ride Team',
@@ -245,7 +234,7 @@ const blogPosts: BlogPost[] = [
     excerpt:
       'Top up with MTN MoMo or Airtel Money, pay for rides and food with one tap, and earn cashback. Here is how the Smart Ride Wallet works.',
     content:
-      'Mobile money changed Uganda. From paying school fees to settling a boda fare, MTN MoMo and Airtel Money are how Ugandans move money. Smart Ride Wallet builds on that foundation — it is a single balance that powers every service inside the app.\n\nGetting started is simple. Open the Wallet tab, tap "Top up", and choose MTN MoMo or Airtel Money. Enter the amount, approve the STK push on your phone, and your balance updates instantly. There are no top-up fees, and the money stays in your wallet until you spend it.\n\nFrom there, your wallet becomes your universal payment method. Hail a boda — pay from your wallet. Order lunch from Cafe Java — pay from your wallet. Send a package, buy groceries, refill a prescription — all from one balance. Drivers and merchants receive their share instantly, with no settlement delays.\n\nThe Wallet also rewards you. Every ride paid from your wallet earns 2% cashback, credited weekly. Refer a friend and you both get UGX 5,000 once they take their first trip. During promotions we have offered double cashback on off-peak rides to help ease Kampala\'s rush-hour congestion.\n\nSecurity is built in. Every payment requires your Smart Ride PIN or biometric confirmation, every transaction is logged in your activity feed, and our fraud team monitors for unusual patterns around the clock. If something goes wrong, refunds land back in your wallet within 24 hours.\n\nWe are not trying to replace MTN MoMo or Airtel Money — we are building on top of them to make everyday payments in Uganda faster, safer, and a little more rewarding.',
+      'Mobile money changed Uganda. From paying school fees to settling a boda fare, MTN MoMo and Airtel Money are how Ugandans move money. Smart Ride Wallet builds on that foundation — it is a single balance that powers every service inside the app.\n\nGetting started is simple. Open the Wallet tab, tap "Top up", and choose MTN MoMo or Airtel Money. Enter the amount, approve the STK push on your phone, and your balance updates instantly. There are no top-up fees, and the money stays in your wallet until you spend it.\n\nFrom there, your wallet becomes your universal payment method. Hail a boda — pay from your wallet. Order lunch from Cafe Java — pay from your wallet. Send a package, buy groceries, refill a prescription — all from one balance. Drivers and merchants receive their share instantly, with no settlement delays.\n\nThe Wallet also rewards you. Rides paid from your wallet earn cashback, credited weekly. Refer a friend and you both earn a reward once they take their first trip. During promotions we have offered additional cashback on off-peak rides to help ease Kampala\'s rush-hour congestion.\n\nSecurity is built in. Every payment requires your Smart Ride PIN or biometric confirmation, every transaction is logged in your activity feed, and our fraud team monitors for unusual patterns around the clock. If something goes wrong, refunds land back in your wallet promptly.\n\nWe are not trying to replace MTN MoMo or Airtel Money — we are building on top of them to make everyday payments in Uganda faster, safer, and a little more rewarding.',
     category: 'Fintech',
     author: 'Smart Ride Wallet Team',
     authorRole: 'Smart Ride Team',
@@ -260,7 +249,7 @@ const blogPosts: BlogPost[] = [
     excerpt:
       'A ride-hailing app is only as good as its riders. Here are five concrete ways we invest in the people who power Smart Ride.',
     content:
-      'When you tap "Request boda", a real person — a Ugandan with a family, a dream, and a motorbike — answers. Smart Ride does not work without them. So we have built the platform around their success, not just ours.\n\nFirst, fair earnings. We cap our commission at 15%, well below the industry standard. Riders keep the rest, and they see exactly what each trip pays before they accept it. No opaque algorithms, no surprise deductions.\n\nSecond, fast payouts. Riders can cash out to MTN MoMo or Airtel Money instantly, 24/7, for a flat UGX 500 fee. There is no minimum balance and no weekly waiting period. Money earned today is money in their pocket tonight.\n\nThird, rider financing. Through partnerships with local SACCOs, qualified riders can access bike financing at below-market rates, with repayments deducted daily from their earnings. Over 800 riders have purchased their own bikes through this program.\n\nFourth, insurance. Every active rider is covered by an accident insurance policy that pays out for medical bills, lost income, and — in the worst case — a benefit to their family. This is funded by Smart Ride, not the rider.\n\nFifth, growth. Our top riders earn over UGX 1.2 million per month, and we run free training on customer service, route optimisation, and financial literacy every quarter at our Kampala, Entebbe, and Jinja hubs.\n\nWhen riders win, passengers win. That is the whole idea.',
+      'When you tap "Request boda", a real person — a Ugandan with a family, a dream, and a motorbike — answers. Smart Ride does not work without them. So we have built the platform around their success, not just ours.\n\nFirst, fair earnings. We keep our commission low and transparent, well below the industry standard. Riders keep the rest, and they see exactly what each trip pays before they accept it. No opaque algorithms, no surprise deductions.\n\nSecond, fast payouts. Riders can cash out to MTN MoMo or Airtel Money instantly, 24/7, for a small flat fee. There is no minimum balance and no weekly waiting period. Money earned today is money in their pocket tonight.\n\nThird, rider financing. Through partnerships with local SACCOs, qualified riders can access bike financing at below-market rates, with repayments deducted daily from their earnings. Many riders have purchased their own bikes through this program.\n\nFourth, insurance. Every active rider is covered by an accident insurance policy that pays out for medical bills, lost income, and — in the worst case — a benefit to their family. This is funded by Smart Ride, not the rider.\n\nFifth, growth. Our top riders earn a healthy monthly income, and we run free training on customer service, route optimisation, and financial literacy every quarter at our regional hubs.\n\nWhen riders win, passengers win. That is the whole idea.',
     category: 'Drivers',
     author: 'Smart Ride Driver Team',
     authorRole: 'Smart Ride Team',
@@ -275,7 +264,7 @@ const blogPosts: BlogPost[] = [
     excerpt:
       'A single button that shares your live location with trusted contacts and our safety desk. The story behind Smart Ride\'s SOS feature.',
     content:
-      'The idea for Smart Ride\'s SOS button came from a late-night conversation with a passenger in Wandegeya. She had taken a boda home after work and felt unsafe halfway through the trip — the rider had taken an unfamiliar route. She had no way to alert anyone without escalating the situation.\n\nThat conversation became a feature. Today, every Smart Ride ride — boda, car, or delivery — has a red SOS button on the live tracking screen. One tap does three things instantly: it shares your live GPS coordinates with up to three pre-selected emergency contacts, it alerts our 24/7 safety desk with your trip details, and it begins an audio recording on your phone that is uploaded securely to our servers.\n\nOur safety desk is staffed round the clock by trained Ugandans who can call you, call the rider, or escalate to the nearest police station. In genuine emergencies we work directly with the Uganda Police Force to share trip data and rider information.\n\nThe SOS feature is designed to be discreet. It does not flash a warning on the rider\'s screen, it does not make a sound, and it works even if your phone is on silent. You can trigger it from the lock screen using a configurable triple-press of the power button.\n\nSince launching SOS, we have responded to over 12,000 activations. The vast majority were resolved with a quick check-in call. But in a handful of cases, the feature genuinely saved lives — including a passenger in Mukono whose contact arrived within minutes after the rider deviated from the route.\n\nSafety is not a feature you monetise. It is the price of being allowed to operate. That is why SOS will always be free, always be on, and always be one tap away.',
+      'The idea for Smart Ride\'s SOS button came from a late-night conversation with a passenger in Wandegeya. She had taken a boda home after work and felt unsafe halfway through the trip — the rider had taken an unfamiliar route. She had no way to alert anyone without escalating the situation.\n\nThat conversation became a feature. Today, every Smart Ride ride — boda, car, or delivery — has a red SOS button on the live tracking screen. One tap does three things instantly: it shares your live GPS coordinates with up to three pre-selected emergency contacts, it alerts our 24/7 safety desk with your trip details, and it begins an audio recording on your phone that is uploaded securely to our servers.\n\nOur safety desk is staffed round the clock by trained Ugandans who can call you, call the rider, or escalate to the nearest police station. In genuine emergencies we work directly with the Uganda Police Force to share trip data and rider information.\n\nThe SOS feature is designed to be discreet. It does not flash a warning on the rider\'s screen, it does not make a sound, and it works even if your phone is on silent. You can trigger it from the lock screen using a configurable triple-press of the power button.\n\nSince launching SOS, we have responded to thousands of activations. The vast majority were resolved with a quick check-in call. But in a handful of cases, the feature genuinely helped — including a passenger in Mukono whose contact arrived shortly after the rider deviated from the route.\n\nSafety is not a feature you monetise. It is the price of being allowed to operate. That is why SOS will always be free, always be on, and always be one tap away.',
     category: 'Product',
     author: 'Smart Ride Safety Team',
     authorRole: 'Smart Ride Team',
@@ -288,9 +277,9 @@ const blogPosts: BlogPost[] = [
     id: 'marketplace-groceries-pharmacy',
     title: 'Smart Ride marketplace: From groceries to pharmacy, delivered',
     excerpt:
-      'One app, hundreds of vendors. How Smart Ride Marketplace connects you to groceries, restaurants, and pharmacy items in minutes.',
+      'One app, a growing network of vendors. How Smart Ride Marketplace connects you to groceries, restaurants, and pharmacy items in minutes.',
     content:
-      'Smart Ride started as a ride-hailing app. But the moment we had a network of riders moving across Kampala every minute of the day, we realised the same network could carry far more than people. It could carry food, groceries, medicine, parcels — anything that fits on a boda.\n\nToday, Smart Ride Marketplace is a single tab in the app that connects you to over 600 vendors across Kampala, Entebbe, and Jinja. That includes restaurants like Cafe Java and Ugandan Kitchen, supermarkets, fresh produce markets, pharmacies, and specialty stores for electronics and gifts.\n\nThe experience is consistent across categories. You browse, you add to cart, you see an upfront delivery fee based on distance, and you check out with your Smart Ride Wallet, MTN MoMo, Airtel Money, or cash on delivery. A rider is matched automatically — usually within 5 minutes — and you track them on the map from the store to your door.\n\nFor pharmacy orders, we have built a discreet mode: the delivery description shows only "Personal items" so your neighbours do not see what you ordered. Prescription medicines require a photo of your prescription, which our partner pharmacists verify before dispatch.\n\nFor groceries, we partnered with fresh produce markets in Nakawa, Nakasero, and Owino to bring wholesale prices to households. A bunch of matooke that costs UGX 25,000 at the local kiosk often lands at your door for UGX 18,000 — including delivery.\n\nEvery vendor on the marketplace is vetted, rated, and insured. If something is wrong with your order — a missing item, spoiled produce, the wrong prescription — our support team refunds you within 24 hours. No back-and-forth with the vendor.\n\nThe marketplace is how Smart Ride becomes the everyday app for Uganda. Not just for getting somewhere, but for getting anything.',
+      'Smart Ride started as a ride-hailing app. But the moment we had a network of riders moving across Kampala every minute of the day, we realised the same network could carry far more than people. It could carry food, groceries, medicine, parcels — anything that fits on a boda.\n\nToday, Smart Ride Marketplace is a single tab in the app that connects you to a growing network of vendors across multiple Ugandan cities. That includes restaurants like Cafe Java and Ugandan Kitchen, supermarkets, fresh produce markets, pharmacies, and specialty stores for electronics and gifts.\n\nThe experience is consistent across categories. You browse, you add to cart, you see an upfront delivery fee based on distance, and you check out with your Smart Ride Wallet, MTN MoMo, Airtel Money, or cash on delivery. A rider is matched automatically and you track them on the map from the store to your door.\n\nFor pharmacy orders, we have built a discreet mode: the delivery description shows only "Personal items" so your neighbours do not see what you ordered. Prescription medicines require a photo of your prescription, which our partner pharmacists verify before dispatch.\n\nFor groceries, we partnered with fresh produce markets in Nakawa, Nakasero, and Owino to bring wholesale prices to households. A bunch of matooke that costs a premium at the local kiosk often lands at your door for less — including delivery.\n\nEvery vendor on the marketplace is vetted, rated, and insured. If something is wrong with your order — a missing item, spoiled produce, the wrong prescription — our support team refunds you promptly. No back-and-forth with the vendor.\n\nThe marketplace is how Smart Ride becomes the everyday app for Uganda. Not just for getting somewhere, but for getting anything.',
     category: 'Product',
     author: 'Smart Ride Marketplace Team',
     authorRole: 'Smart Ride Team',
@@ -303,9 +292,9 @@ const blogPosts: BlogPost[] = [
     id: 'expanding-beyond-kampala',
     title: 'Expanding beyond Kampala: Our journey across Uganda',
     excerpt:
-      'From Kampala to Jinja, Mbale, Mbarara, and Gulu — the story of how Smart Ride is growing to serve every major Ugandan town.',
+      'From Kampala to towns across Uganda — the story of how Smart Ride is growing to serve every major region.',
     content:
-      'Smart Ride launched in Kampala in 2024 with fifty riders and a single office in Kamwokya. Two years later, we are live in twelve cities and towns across Uganda — and we are just getting started.\n\nExpansion is not just about putting a pin on a map. Each new city is a months-long process: we recruit local riders, partner with restaurants and pharmacies, set up a local support presence, and tune our pricing to local realities. A boda ride in Mbale cannot cost the same as one in Kololo.\n\nOur second city was Entebbe, an obvious choice given the airport traffic. Then Jinja, where tourism and the Source of the Nile brought steady demand. Mukono followed, then Mbarara — our first western Uganda city — and Mbale in the east. In 2025 we launched in Gulu and Lira, our first northern Uganda cities, working closely with local boda associations to onboard riders who already knew every shortcut.\n\nThe challenges of expansion are real. In smaller towns, demand is lower and rider earnings are harder to sustain. We solve this by combining categories — a rider in Mbale might do three passenger trips, two food deliveries, and one parcel pickup in a single day, smoothing out their income.\n\nConnectivity is another hurdle. We rebuilt our app to work on 2G networks and to cache trip data offline, so a rider in a dead zone in Kisoro can still complete a delivery once they get back to signal. We also partnered with MTN and Airtel to offer zero-rated data on the Smart Ride app for riders on selected bundles.\n\nBy the end of 2026, we plan to be live in 25 cities, including Hoima, Fort Portal, Masaka, and Soroti. Every city we enter, we hire locally — our support team now speaks Luganda, English, Runyankole, Luo, and Ateso.\n\nSmart Ride is not just a Kampala app. It is a Uganda app — built, staffed, and grown by Ugandans, for every corner of this country.',
+      'Smart Ride launched in Kampala with a small team of riders and a single office in Kamwokya. Today, we are live in multiple cities and towns across Uganda — and we are just getting started.\n\nExpansion is not just about putting a pin on a map. Each new city is a months-long process: we recruit local riders, partner with restaurants and pharmacies, set up a local support presence, and tune our pricing to local realities. A boda ride in one town cannot cost the same as one in another.\n\nOur expansion has followed demand — first to nearby towns, then to western and eastern Uganda, and more recently to northern Uganda, working closely with local boda associations to onboard riders who already knew every shortcut.\n\nThe challenges of expansion are real. In smaller towns, demand is lower and rider earnings are harder to sustain. We solve this by combining categories — a rider in a smaller town might do a mix of passenger trips, food deliveries, and parcel pickups in a single day, smoothing out their income.\n\nConnectivity is another hurdle. We rebuilt our app to work on 2G networks and to cache trip data offline, so a rider in a dead zone can still complete a delivery once they get back to signal. We also partnered with MTN and Airtel to offer zero-rated data on the Smart Ride app for riders on selected bundles.\n\nLooking ahead, we plan to be live in more cities across western, eastern, and northern Uganda. Every city we enter, we hire locally — our support team now speaks multiple Ugandan languages.\n\nSmart Ride is not just a Kampala app. It is a Uganda app — built, staffed, and grown by Ugandans, for every corner of this country.',
     category: 'Community',
     author: 'Smart Ride Expansion Team',
     authorRole: 'Smart Ride Team',
@@ -372,58 +361,6 @@ function SectionHeading({
         </motion.p>
       )}
     </motion.div>
-  );
-}
-
-// ─── Animated counter (for stats) ────────────────────────────────────────────
-function AnimatedCounter({
-  value,
-  suffix,
-  isFloat = false,
-}: {
-  value: number;
-  suffix: string;
-  isFloat?: boolean;
-}) {
-  const [display, setDisplay] = useState(0);
-  const ref = useRef<HTMLSpanElement>(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && !started.current) {
-            started.current = true;
-            const duration = 1600;
-            const start = performance.now();
-            const animate = (now: number) => {
-              const progress = Math.min((now - start) / duration, 1);
-              const eased = 1 - Math.pow(1 - progress, 3);
-              setDisplay(value * eased);
-              if (progress < 1) requestAnimationFrame(animate);
-            };
-            requestAnimationFrame(animate);
-          }
-        });
-      },
-      { threshold: 0.4 }
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [value]);
-
-  const formatted = isFloat
-    ? display.toFixed(1)
-    : Math.round(display).toLocaleString('en-US');
-
-  return (
-    <span ref={ref}>
-      {formatted}
-      {suffix}
-    </span>
   );
 }
 
@@ -632,7 +569,7 @@ export default function LandingPage() {
 
   // Newsletter state
   const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [subscriberCount, setSubscriberCount] = useState(1200);
+  const [subscriberCount, setSubscriberCount] = useState(0);
 
   // Contact form state
   const [contactName, setContactName] = useState('');
@@ -644,7 +581,7 @@ export default function LandingPage() {
     setLikedBlogs(readJSON<Record<string, boolean>>(LIKES_KEY, {}));
     setSavedBlogs(readJSON<string[]>(SAVED_KEY, []));
     const stored = readJSON<string[]>(NEWSLETTER_KEY, []);
-    setSubscriberCount(Math.max(1200, stored.length));
+    setSubscriberCount(stored.length);
   }, []);
 
   // ─── Like / Save handlers ──────────────────────────────────────────────────
@@ -688,7 +625,7 @@ export default function LandingPage() {
     }
     const next = [...existing, email];
     writeJSON(NEWSLETTER_KEY, next);
-    setSubscriberCount(Math.max(1200, next.length));
+    setSubscriberCount(next.length);
     setNewsletterEmail('');
     toast({
       title: 'Thanks for subscribing!',
@@ -730,7 +667,7 @@ export default function LandingPage() {
           <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
             <div className="relative h-9 w-9 overflow-hidden rounded-xl shadow-lg shadow-[#00FF88]/20">
               <Image
-                src="/images/smart-ride-logo.png"
+                src="/smartride-logo-new.png"
                 alt="Smart Ride Logo"
                 fill
                 className="object-cover"
@@ -887,21 +824,6 @@ export default function LandingPage() {
               variants={fadeUp}
               className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm text-white/60 lg:justify-start"
             >
-              <div className="flex items-center gap-1.5">
-                <div className="flex">
-                  {[0, 1, 2, 3, 4].map((i) => (
-                    <Star
-                      key={i}
-                      className="size-4 fill-[#00FF88] text-[#00FF88]"
-                    />
-                  ))}
-                </div>
-                <span>4.8 / 5 rating</span>
-              </div>
-              <div className="hidden items-center gap-1.5 sm:flex">
-                <Users className="size-4 text-[#00FF88]" />
-                <span>12K+ active riders</span>
-              </div>
               <div className="hidden items-center gap-1.5 sm:flex">
                 <Shield className="size-4 text-[#00FF88]" />
                 <span>SOS in every ride</span>
@@ -919,7 +841,7 @@ export default function LandingPage() {
                   <div className="flex h-full flex-col items-center justify-center gap-4 px-4">
                     <div className="relative h-16 w-16 overflow-hidden rounded-2xl shadow-lg shadow-[#00FF88]/30">
                       <Image
-                        src="/images/smart-ride-logo.png"
+                        src="/smartride-logo-new.png"
                         alt="Smart Ride"
                         fill
                         className="object-cover"
@@ -1059,30 +981,6 @@ export default function LandingPage() {
               </motion.div>
             ))}
           </motion.div>
-        </div>
-      </section>
-
-      {/* ─── Stats ─────────────────────────────────────────────────────────── */}
-      <section className="border-y border-white/10 bg-gradient-to-r from-[#005f3a]/20 via-[#0D0D12] to-[#111827] px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-6xl grid-cols-2 gap-6 sm:grid-cols-4">
-          {stats.map((s, i) => (
-            <motion.div
-              key={s.label}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.5 }}
-              transition={{ delay: i * 0.1, duration: 0.5 }}
-              className="text-center"
-            >
-              <div className="mx-auto mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-[#00FF88]/10 text-[#00FF88]">
-                <s.icon className="size-5" />
-              </div>
-              <div className="text-3xl font-bold text-white sm:text-4xl">
-                <AnimatedCounter value={s.value} suffix={s.suffix} isFloat={s.isFloat} />
-              </div>
-              <div className="mt-1 text-xs text-white/60 sm:text-sm">{s.label}</div>
-            </motion.div>
-          ))}
         </div>
       </section>
 
@@ -1297,11 +1195,17 @@ export default function LandingPage() {
             </motion.form>
 
             <motion.p variants={fadeUp} className="mt-4 text-sm text-white/50">
-              Join{' '}
-              <span className="font-semibold text-[#00FF88] tabular-nums">
-                {subscriberCount.toLocaleString('en-US')}
-              </span>{' '}
-              subscribers · We respect your privacy. Unsubscribe at any time.
+              {subscriberCount > 0 ? (
+                <>
+                  Join{' '}
+                  <span className="font-semibold text-[#00FF88] tabular-nums">
+                    {subscriberCount.toLocaleString('en-US')}
+                  </span>{' '}
+                  subscribers · We respect your privacy. Unsubscribe at any time.
+                </>
+              ) : (
+                <>Join our newsletter · We respect your privacy. Unsubscribe at any time.</>
+              )}
             </motion.p>
           </motion.div>
         </div>
@@ -1414,8 +1318,8 @@ export default function LandingPage() {
               className="space-y-4"
             >
               {[
-                { icon: Mail, label: 'Email', value: 'hello@smartride.ug', href: 'mailto:hello@smartride.ug' },
-                { icon: Phone, label: 'Phone', value: '+256 700 000 000', href: 'tel:+256700000000' },
+                { icon: Mail, label: 'Email', value: 'support@smartride.ug', href: 'mailto:support@smartride.ug' },
+                { icon: Phone, label: 'Phone', value: '+256 (0) 700 000 000', href: 'tel:+256700000000' },
                 { icon: MapPin, label: 'Office', value: 'Kampala, Uganda', href: null },
                 { icon: Clock, label: 'Support hours', value: '24/7 — always on', href: null },
               ].map((c) => (
@@ -1535,7 +1439,7 @@ export default function LandingPage() {
               <Link href="/" className="flex items-center gap-2.5">
                 <div className="relative h-9 w-9 overflow-hidden rounded-xl">
                   <Image
-                    src="/images/smart-ride-logo.png"
+                    src="/smartride-logo-new.png"
                     alt="Smart Ride Logo"
                     fill
                     className="object-cover"

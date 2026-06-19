@@ -133,31 +133,71 @@ ls -la android/app/build/outputs/apk/release/
 
 ## Step 6 — Install the APK on a phone
 
-### Via USB (ADB)
+### ⚡ Via USB cable — automatic install with ADB (RECOMMENDED)
+
+This is the fastest method. One command detects your phone, installs the APK, and launches it.
+
+**Prerequisites (one-time):**
+1. Phone connected via USB cable (data cable, not charge-only)
+2. USB Debugging enabled on the phone (Settings → Developer options → USB debugging)
+3. `adb` on your computer (Android Studio installs it; see `FIND_ADB_HELP.txt`)
+
+**The all-in-one command** (run from `expo-app/android/`):
 
 ```bash
-adb devices
-adb install -r android/app/build/outputs/apk/release/app-release.apk
+# Detect phone → install APK → launch the app
+adb devices && \
+adb install -r app/build/outputs/apk/release/app-release.apk && \
+adb shell am start -n ug.smartride.app/.MainActivity
 ```
 
-### Via file copy (no ADB required)
+**What each part does:**
+- `adb devices` — lists connected phones (your phone must show as `device`, not `unauthorized`)
+- `adb install -r` — installs (or reinstalls if already installed) the APK
+- `adb shell am start -n ug.smartride.app/.MainActivity` — launches Smart Ride immediately
 
-Copy `app-release.apk` to your phone (Drive, WhatsApp, USB), open it in Files, allow "Install unknown apps", tap Install.
+**One-liner for Windows GitBash** (with the ADB path from FIND_ADB_HELP.txt):
+
+```bash
+ADB="/c/Users/$USERNAME/AppData/Local/Android/Sdk/platform-tools/adb.exe"
+"$ADB" devices && \
+"$ADB" install -r app/build/outputs/apk/release/app-release.apk && \
+"$ADB" shell am start -n ug.smartride.app/.MainActivity
+```
+
+If your APK uses ABI splits (newer builds produce one APK per CPU architecture), pick the right one:
+
+```bash
+# For Samsung Galaxy S21 / S22 / S23 / S24 / modern phones (arm64):
+adb install -r app/build/outputs/apk/release/app-arm64-v8a-release.apk
+
+# For older 32-bit phones:
+adb install -r app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+```
+
+### Via USB cable — manual file copy (no ADB)
+
+1. Copy `app-release.apk` to your phone (via USB file transfer, Drive, WhatsApp, etc.)
+2. On the phone, open Files → tap the APK → allow "Install unknown apps" → Install
 
 ---
 
-## Quick reference — the 3 commands you'll actually use
+## Quick reference — the 4 commands you'll actually use
 
 ```bash
-# 1. Install deps
+# 1. Install deps (after pulling latest code)
 cd /c/path/to/my-project/expo-app && npm install
 
 # 2. Build release APK
 cd /c/path/to/my-project/expo-app && npx expo prebuild --platform android --clean
 cd android && ./gradlew clean && ./gradlew assembleRelease
 
-# 3. Install on phone
-adb install -r android/app/build/outputs/apk/release/app-release.apk
+# 3. Plug in phone via USB (enable USB debugging first), then auto-install + launch:
+adb install -r app/build/outputs/apk/release/app-release.apk && \
+adb shell am start -n ug.smartride.app/.MainActivity
+
+# 4. (Optional) View live app logs to diagnose any runtime crash:
+adb logcat -d *:E AndroidRuntime:E ReactNative:E ReactNativeJS:E
 ```
 
 ---
