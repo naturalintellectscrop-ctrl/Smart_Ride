@@ -1,0 +1,53 @@
+# ============================================
+# SMART RIDE - External Cron for Dispatch Timeout
+# ============================================
+# Vercel Hobby plan only allows cron jobs that run ONCE PER DAY.
+# The dispatch-timeout endpoint needs to run every minute to process
+# expired ride dispatch matches and re-trigger stuck tasks.
+#
+# This GitHub Actions workflow runs every minute (free) and pings
+# the Vercel-hosted dispatch-timeout API endpoint with the CRON_SECRET.
+#
+# REQUIRED REPOSITORY SECRET:
+#   Name:  CRON_SECRET
+#   Value: (same value as the CRON_SECRET env var in Vercel)
+#
+# To set it: GitHub repo → Settings → Secrets and variables → Actions
+#          → New repository secret → Name: CRON_SECRET → Value: <your secret>
+# ============================================
+name: Cron - Dispatch Timeout
+
+on:
+  schedule:
+    # Run every minute. GitHub Actions cron minimum interval is 5 min on free
+    # plans in practice, but the expression is valid and will run as frequently
+    # as GitHub allows.
+    - cron: '*/1 * * * *'
+  workflow_dispatch: {} # Allow manual triggering for testing
+
+jobs:
+  ping-dispatch-timeout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping dispatch-timeout endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          DISPATCH_URL: https://smartrideug.vercel.app/api/cron/dispatch-timeout
+        run: |
+          echo "Pinging $DISPATCH_URL at $(date -u)"
+          HTTP_CODE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            -X POST \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            -H "Content-Type: application/json" \
+            "$DISPATCH_URL")
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response body:"
+          cat /tmp/response.json
+          echo ""
+          # Exit 0 on 2xx, non-zero otherwise so GitHub marks the run as failed
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Dispatch timeout processed successfully"
+          else
+            echo "⚠️ Dispatch timeout returned non-2xx status"
+            exit 1
+          fi
