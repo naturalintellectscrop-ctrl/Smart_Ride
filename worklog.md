@@ -3949,3 +3949,61 @@ Stage Summary:
   -storepass smartride123 and verify the SHA-1 matches 98ea9b4b...78f4.
 - The catch-block fix ensures even if DEVELOPER_ERROR recurs, the user sees
   a friendly message instead of the scary raw error string.
+
+---
+Task ID: 12-fix-jsx-syntax-error-and-build-script
+Agent: Main Agent
+Task: User pasted 54-min build log showing BUILD FAILED. Diagnose + fix + provide one-command rebuild.
+
+Work Log:
+- Read user's pasted build log (10002 lines, 682KB):
+  * Line 6358: Earlier "BUILD SUCCESSFUL in 14m 19s" (a previous build)
+  * Line 7114: SyntaxError in login.tsx:
+    "SyntaxError: C:\Smart_Ride\expo-app\app\auth\login.tsx: Expected
+    corresponding JSX closing tag for <ScrollView>. (484:8)"
+    > 482 |         </View>
+    > 484 |         </View>   ← orphaned closing tag
+  * Line 9911: > Task :app:createBundleReleaseJsAndAssets FAILED
+  * Line 9932: BUILD FAILED in 54m 12s
+  * Line 10002: "adb.exe: no devices/emulators found"
+- ROOT CAUSE: The social redesign commit (aed01a0) introduced a DUPLICATE
+  </View> tag at line 484 in login.tsx. The socialRow <View> opens at line
+  436 and correctly closes at line 482, but a stray </View> at line 484
+  had no matching opening tag. Metro bundler detected this during JS
+  bundling (createBundleReleaseJsAndAssets task) and failed the build.
+- This is NOT related to my DEVELOPER_ERROR catch-block fix (commit 4dc108a).
+  The duplicate </View> was already in the file from the earlier social
+  redesign. The user's 54-min build ran on code that had BOTH commits.
+- FIXED login.tsx: removed the orphaned </View> at line 484.
+  Verified tag balance with node script:
+    <View> normal opens: 15, closes: 15 — BALANCED ✓
+    <View .../> self-closing: 8
+    ScrollView: 1 open, 1 close — BALANCED ✓
+    TouchableOpacity: 6 open, 6 close — BALANCED ✓
+- Checked register.tsx for the same issue — its socialRow section is clean
+  (no duplicate closing tags).
+- Committed fix as 1e7cbae: "fix(mobile): remove duplicate </View> that
+  broke login.tsx JSX (BUILD FAILED)" — pushed to origin/main.
+- Created build-and-install.sh — one-command script that does:
+  1. git pull
+  2. npx expo prebuild --clean
+  3. gradlew clean
+  4. gradlew assembleRelease
+  5. find APK
+  6. adb install -r
+  7. adb shell am start (launch app)
+  Includes adb path detection (GitBash Windows), phone connection check,
+  colorized output. Committed as c94ebcf — pushed.
+
+Stage Summary:
+- BUILD FAILURE ROOT CAUSE: Duplicate </View> tag in login.tsx (from social
+  redesign commit aed01a0). Metro bundler failed during
+  createBundleReleaseJsAndAssets. Fixed in commit 1e7cbae.
+- The user wasted 54 minutes on a build that was doomed from the start
+  because of this JSX syntax error. The fix is a 2-line deletion.
+- One-command build script (build-and-install.sh) pushed. User can now run:
+    cd /c/Smart_Ride/expo-app && bash build-and-install.sh
+  and it does everything: pull → prebuild → clean → assembleRelease →
+  install → launch.
+- IMPORTANT: The user must git pull FIRST to get the fix before rebuilding,
+  or the build will fail again with the same error.
