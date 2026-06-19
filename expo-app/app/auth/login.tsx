@@ -180,37 +180,60 @@ export default function LoginScreen() {
         stringified: JSON.stringify(err, Object.getOwnPropertyNames(err)),
       });
 
-      // Handle specific error codes
-      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
+      // Normalize error code + message for robust matching.
+      // statusCodes may be an empty object if the native module require failed,
+      // so we ALSO match against the well-known string constants and the
+      // human-readable message text as a fallback.
+      const errCode = (err?.code ?? '') + '';
+      const errMsg = (err?.message ?? '') + '';
+      const isCancelled =
+        errCode === statusCodes.SIGN_IN_CANCELLED ||
+        errCode === 'SIGN_IN_CANCELLED' ||
+        errMsg.includes('SIGN_IN_CANCELLED');
+      const isDeveloperError =
+        errCode === statusCodes.DEVELOPER_ERROR ||
+        errCode === 'DEVELOPER_ERROR' ||
+        errMsg.includes('DEVELOPER_ERROR');
+      const isPlayServicesMissing =
+        errCode === statusCodes.PLAY_SERVICES_NOT_AVAILABLE ||
+        errCode === 'PLAY_SERVICES_NOT_AVAILABLE' ||
+        errMsg.includes('PLAY_SERVICES_NOT_AVAILABLE');
+      const isInProgress =
+        errCode === statusCodes.IN_PROGRESS ||
+        errCode === 'IN_PROGRESS';
+
+      if (isCancelled) {
         // User cancelled — silently ignore
         console.log('[LOGIN] GoogleSignin: User cancelled sign-in');
         return;
       }
 
-      if (err.code === statusCodes.DEVELOPER_ERROR) {
-        console.error('[LOGIN] DEVELOPER_ERROR: This typically means the APK signing certificate ' +
-          'does not match any OAuth client in google-services.json. ' +
-          'Check: 1) SHA-1 of the APK cert matches Firebase, 2) androidClientId is NOT being passed in configure(), ' +
-          '3) google-services.json is bundled in the APK');
+      if (isDeveloperError) {
+        console.error('[LOGIN] DEVELOPER_ERROR: The APK signing certificate does not match any ' +
+          'OAuth client in google-services.json, OR the google-services.json bundled in the APK ' +
+          'is stale. Fix: git pull → npx expo prebuild --clean → ./gradlew assembleRelease → reinstall.', {
+          code: errCode, message: errMsg,
+        });
         setError(
-          'Google Sign-In is not configured for this device. ' +
-          'Please ensure Google Play Services is up to date, or try another login method.'
+          'Google Sign-In needs to be reconfigured for this build. ' +
+          'Please rebuild the APK with the latest google-services.json, or use email/phone login for now.'
         );
         return;
       }
 
-      if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      if (isPlayServicesMissing) {
         setError('Google Play Services is not available on this device. Please use phone or email login.');
         return;
       }
 
-      if (err.code === statusCodes.IN_PROGRESS) {
+      if (isInProgress) {
         // Sign-in already in progress — just wait
         return;
       }
 
-      // Generic error
-      setError(err.message || 'Google Sign-In failed. Please try again.');
+      // Generic error — strip the noisy "Follow troubleshooting instructions..." suffix
+      const cleanMsg = errMsg.split(': Follow troubleshooting')[0] || 'Google Sign-In failed. Please try again.';
+      setError(cleanMsg);
     } finally {
       setGoogleLoading(false);
     }

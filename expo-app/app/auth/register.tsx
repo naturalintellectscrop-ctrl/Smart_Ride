@@ -210,23 +210,44 @@ export default function RegisterScreen() {
         stringified: JSON.stringify(err, Object.getOwnPropertyNames(err)),
       });
 
-      if (err.code === statusCodes.SIGN_IN_CANCELLED) {
+      // Robust error matching — see login.tsx for full rationale.
+      const errCode = (err?.code ?? '') + '';
+      const errMsg = (err?.message ?? '') + '';
+      const isCancelled =
+        errCode === statusCodes.SIGN_IN_CANCELLED ||
+        errCode === 'SIGN_IN_CANCELLED' ||
+        errMsg.includes('SIGN_IN_CANCELLED');
+      const isDeveloperError =
+        errCode === statusCodes.DEVELOPER_ERROR ||
+        errCode === 'DEVELOPER_ERROR' ||
+        errMsg.includes('DEVELOPER_ERROR');
+      const isPlayServicesMissing =
+        errCode === statusCodes.PLAY_SERVICES_NOT_AVAILABLE ||
+        errCode === 'PLAY_SERVICES_NOT_AVAILABLE' ||
+        errMsg.includes('PLAY_SERVICES_NOT_AVAILABLE');
+      const isInProgress =
+        errCode === statusCodes.IN_PROGRESS ||
+        errCode === 'IN_PROGRESS';
+
+      if (isCancelled) {
         console.log('[REGISTER] GoogleSignin: User cancelled sign-in');
-      } else if (err.code === statusCodes.IN_PROGRESS) {
+      } else if (isInProgress) {
         // Sign-in already in progress — silent
-      } else if (err.code === statusCodes.DEVELOPER_ERROR) {
-        console.error('[REGISTER] DEVELOPER_ERROR: This typically means the APK signing certificate ' +
-          'does not match any OAuth client in google-services.json. ' +
-          'Check: 1) SHA-1 of the APK cert matches Firebase, 2) androidClientId is NOT being passed in configure(), ' +
-          '3) google-services.json is bundled in the APK');
+      } else if (isDeveloperError) {
+        console.error('[REGISTER] DEVELOPER_ERROR: The APK signing certificate does not match any ' +
+          'OAuth client in google-services.json, OR the google-services.json bundled in the APK ' +
+          'is stale. Fix: git pull → npx expo prebuild --clean → ./gradlew assembleRelease → reinstall.', {
+          code: errCode, message: errMsg,
+        });
         setError(
-          'Google Sign-In is not configured for this device. ' +
-          'Please ensure Google Play Services is up to date, or try another registration method.'
+          'Google Sign-In needs to be reconfigured for this build. ' +
+          'Please rebuild the APK with the latest google-services.json, or use email/phone registration for now.'
         );
-      } else if (err.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
+      } else if (isPlayServicesMissing) {
         setError('Google Play Services is not available on this device');
       } else {
-        setError(err.message || 'Google sign-in failed. Please try again.');
+        const cleanMsg = errMsg.split(': Follow troubleshooting')[0] || 'Google sign-in failed. Please try again.';
+        setError(cleanMsg);
       }
     } finally {
       setGoogleLoading(false);
