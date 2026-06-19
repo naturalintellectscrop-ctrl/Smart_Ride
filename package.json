@@ -4,6 +4,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "build": "next build",
+    "postbuild": "npx --yes tsx scripts/postbuild-seed-admin.ts || echo 'postbuild-seed skipped (non-blocking)'",
     "start": "next start",
     "lint": "eslint .",
     "db:push": "prisma db push",
@@ -91,6 +92,7 @@
     "eslint": "^9",
     "eslint-config-next": "^16.1.1",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "~5.9.2"
   },
   "private": true,
