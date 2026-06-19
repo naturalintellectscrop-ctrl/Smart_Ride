@@ -17,18 +17,21 @@ const nextConfig: NextConfig = {
     'c-6a26afc3-1445a456-c6ab506c40f1',
     '21.0.11.154',
   ],
-  // SECURITY: The admin dashboard used to live at /admin/* and was deliberately
-  // obscured to /intellects/* to reduce drive-by probing. Any stale /admin page
-  // URL (old bookmarks, search-engine caches, attacker reconnaissance) is
-  // permanently redirected to the new obscured login at /intellects/login so
-  // legit users land on the right page and probes don't get a telling 404.
+  // SECURITY: The admin dashboard login used to live at /admin/* and was
+  // deliberately obscured to /intellects/admin to reduce drive-by probing.
+  // Any stale /admin/* URL (old bookmarks, search-engine caches, attacker
+  // reconnaissance) is permanently redirected to the obscured login at
+  // /intellects/admin so legit users land on the right page and probes
+  // don't get a telling 404. The old /intellects/login path is also
+  // redirected to /intellects/admin for consistency.
   // Note: /api/admin/* is intentionally NOT redirected — it is the backend
   // API surface used by the dashboard, not a discoverable login page.
   async redirects() {
     return [
-      { source: '/admin/login', destination: '/intellects/login', permanent: true },
-      { source: '/admin', destination: '/intellects/login', permanent: true },
-      { source: '/admin/:path*', destination: '/intellects/login', permanent: true },
+      { source: '/admin/login', destination: '/intellects/admin', permanent: true },
+      { source: '/admin', destination: '/intellects/admin', permanent: true },
+      { source: '/admin/:path*', destination: '/intellects/admin', permanent: true },
+      { source: '/intellects/login', destination: '/intellects/admin', permanent: true },
     ];
   },
 };

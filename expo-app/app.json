@@ -95,7 +95,8 @@
           "android": {
             "enableProguardInReleaseBuilds": false,
             "enableShrinkInReleaseBuilds": false,
-            "useLegacyPackaging": true
+            "useLegacyPackaging": false,
+            "minSdkVersion": 24
           }
         }
       ],

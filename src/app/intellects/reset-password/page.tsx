@@ -102,7 +102,7 @@ function ResetPasswordForm() {
       setSuccess(true);
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        router.push('/intellects/login');
+        router.push('/intellects/admin');
       }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to reset password');
@@ -165,7 +165,7 @@ function ResetPasswordForm() {
                     Your password has been reset successfully. Redirecting to login...
                   </p>
                   <Link
-                    href="/intellects/login"
+                    href="/intellects/admin"
                     className="inline-flex items-center gap-2 text-[#00FF88] hover:text-[#00FFF3] transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -181,7 +181,7 @@ function ResetPasswordForm() {
                   <h2 className="text-2xl font-bold text-white mb-3">Invalid Link</h2>
                   <p className="text-white/50 text-sm mb-6">{error}</p>
                   <Link
-                    href="/intellects/login"
+                    href="/intellects/admin"
                     className="inline-flex items-center gap-2 text-[#00FF88] hover:text-[#00FFF3] transition-colors"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -299,7 +299,7 @@ function ResetPasswordForm() {
           {/* Footer */}
           <div className="text-center mt-6 animate-fade-up delay-900">
             <Link
-              href="/intellects/login"
+              href="/intellects/admin"
               className="text-white/30 text-sm hover:text-[#00FF88] transition-colors duration-200 inline-flex items-center gap-1"
             >
               <ArrowLeft className="w-4 h-4" />

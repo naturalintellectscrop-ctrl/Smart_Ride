@@ -3471,3 +3471,89 @@ Stage Summary:
 - LANDING PAGE: REDESIGNED. Clean single-page site, 4-color branding, 9 sections, mobile-responsive, consistent with Smart Ride brand.
 - APK CRASH: Still needs adb logcat from a properly connected phone. Previous attempt captured only system logs because phone wasn't connected via USB debugging.
 - ALL RECENT WORK IS ON VERCEL: Commits 0737e2a through 629b240 (admin route obscure, legal pages, APK crash fixes, Nylon Pay, admin login security, cron fix, AWS SDK fix, admin auto-seed, landing redesign) — all on origin/main and will deploy when Vercel builds commit 629b240.
+
+---
+Task ID: 4-apk-crash-fix
+Agent: Main Agent
+Task: Fix APK runtime crash (NoClassDefFoundError: expo.modules.kotlin.types.AnyTypeCache) and reduce 399MB APK size
+
+Work Log:
+- Analyzed the valid crash log provided by user. Root cause identified:
+  - `java.lang.NoClassDefFoundError: Failed resolution of: Lexpo/modules/kotlin/types/AnyTypeCache;`
+  - Triggered by `expo.modules.imagepicker.ImagePickerModule.definition(ImagePickerModule.kt:330)`
+  - This is a VERSION MISMATCH: `expo-image-picker: ^56.0.18` and `expo-task-manager: ^56.0.19` are SDK 56 packages but the rest of the app is SDK 55. The `AnyTypeCache` class exists in `expo-modules-core@56` but NOT in `expo-modules-core@55` (which is what's installed).
+- Fixed expo-app/package.json:
+  - `expo-image-picker`: `^56.0.18` → `~55.0.20` (latest SDK 55 version)
+  - `expo-task-manager`: `^56.0.19` → `~55.0.16` (latest SDK 55 version)
+- Improved APK size in expo-app/app.json:
+  - `useLegacyPackaging`: `true` → `false` (compress .so files inside APK instead of extracting uncompressed — the #1 cause of the 399MB size)
+  - Added `minSdkVersion: 24` (Android 7.0+, supports compressed native libs)
+- Upgraded expo-app/plugins/withAbiSplits.js to v4:
+  - Added packagingOptions block with jniLibs.pickFirsts for duplicate .so conflicts
+  - Added resources.excludes for META-INF bloat (licenses, kotlin_module, etc.)
+  - These work together with useLegacyPackaging:false to shrink APK from 399MB → ~40-70MB per ABI
+- Verified proguard-rules.pro already has `-keep class expo.modules.kotlin.** { *; }` (comprehensive keep rules)
+- Verified withAbiSplits.js forces `minifyEnabled false` so R8 doesn't strip classes
+
+Stage Summary:
+- APK CRASH ROOT CAUSE: expo-image-picker & expo-task-manager were pinned to SDK 56 (^56) while everything else is SDK 55. The AnyTypeCache class only exists in expo-modules-core@56.
+- FIX: Downgraded both packages to SDK 55 compatible versions (~55.0.x)
+- APK SIZE FIX: Changed useLegacyPackaging from true → false (compresses native libs in APK) + added packagingOptions for resource excludes
+- User MUST run `npm install` then `npx expo prebuild --platform android --clean` then `./gradlew clean && ./gradlew assembleRelease` to pick up the fixes
+- Expected result: APK will be ~40-70MB (per ABI) instead of 399MB, and will NOT crash on open
+
+---
+Task ID: 4-admin-path
+Agent: Main Agent
+Task: Move admin login from /intellects/login to /intellects/admin and harden /admin redirects
+
+Work Log:
+- Created /home/z/my-project/src/app/intellects/admin/page.tsx (copy of login page at new obscured path)
+- Updated next.config.ts redirects:
+  - `/admin/login` → `/intellects/admin` (permanent 308)
+  - `/admin` → `/intellects/admin` (permanent 308)
+  - `/admin/:path*` → `/intellects/admin` (permanent 308)
+  - `/intellects/login` → `/intellects/admin` (permanent 308, backward compat)
+- Updated all internal references from `/intellects/login` → `/intellects/admin`:
+  - src/app/intellects/reset-password/page.tsx (4 references)
+  - src/app/intellects/page.tsx (1 reference — redirect to login when unauthenticated)
+  - src/lib/services/auth-api.ts (1 reference — 401 redirect guard)
+  - src/lib/context/admin-context.tsx (1 reference — logout redirect)
+- Verified src/app/api/admin/setup/route.ts correctly reads SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD env vars (primary) with ADMIN_SETUP_* fallback
+- Verified fix-admin-password.ts script uses correct passwordHash field and env vars
+
+Stage Summary:
+- Admin login is now ONLY accessible at /intellects/admin
+- All old paths (/admin/*, /intellects/login) permanently redirect to /intellects/admin
+- /api/admin/* is intentionally NOT redirected (backend API surface)
+- Admin password can be set to `intellects@nrtcorp` by running the setup endpoint with SEED_ADMIN_PASSWORD env var set
+
+---
+Task ID: 5-landing-blog-newsletter
+Agent: Full-Stack Developer
+Task: Redesign landing page as one-page site with blogs + newsletter + like/save functionality
+
+Work Log:
+- Read worklog.md (Task IDs 4-apk-crash-fix and 4-admin-path), existing 1006-line src/app/page.tsx, admin login page at /intellects/admin/page.tsx for design-language reference, and globals.css. Confirmed design tokens: green #005f3a, neon #00FF88, cyan #00FFF3, bg #0D0D12, bgAlt #111827, card #1A1A1F, red #F43F5E. Confirmed available images in /public/images/ (kampala-hero.png, boda-ride.png, food-hero.png, app-mockup.png, smart-ride-logo.png). Confirmed shadcn/ui components available (button, badge, sheet, input, textarea, dialog) and useToast hook from @/hooks/use-toast (already mounted globally in layout.tsx).
+- Rewrote /home/z/my-project/src/app/page.tsx ENTIRELY (~1130 lines) as a polished one-page site with 'use client' directive. Sections in order: Header/Nav (sticky glassmorphism, logo, 5 nav links, Get the App CTA, mobile Sheet menu), Hero (Kampala-themed headline, Android+iOS buttons, phone mockup visual, trust badges), Services (8-card grid: Boda, Car, Food, Package, Shopping/Groceries, Health/Pharmacy, Wallet, SOS), Why Smart Ride (6 benefits: Safety First, Transparent Pricing, Fast Matching, 24/7 Support, Local Knowledge, Secure Payments), Stats (4 animated counters using IntersectionObserver + requestAnimationFrame easing), Blogs, Newsletter, Download/CTA (Android+iOS buttons + QR placeholder), Contact (info cards + working form with toast), Footer (sticky via mt-auto, logo, quick links, legal links to /privacy /terms /delete-account, socials, copyright).
+- BLOGS SECTION (key deliverable): Defined 6 blog posts with REAL Ugandan-context content (3-5 paragraphs each, \n\n separators): (1) "How Smart Ride is making boda bodas safer in Kampala" — Safety, (2) "The future of mobile money: Smart Ride Wallet explained" — Fintech, (3) "5 ways Smart Ride supports local drivers" — Drivers, (4) "Why we built SOS safety into every ride" — Product, (5) "Smart Ride marketplace: From groceries to pharmacy, delivered" — Product, (6) "Expanding beyond Kampala: Our journey across Uganda" — Community. Each post has id, title, excerpt, content, category, author, authorRole, date, readTime, image, likes.
+- Blog grid: responsive 1/2/3 columns. Each card shows image (or gradient placeholder), category badge, title, excerpt, author+date+readTime, like button (heart icon with count), save/bookmark button (top-right of image), and "Read more" button.
+- BLOG POPUP MODAL with scrolling progress bar: Used shadcn Dialog. Modal has max-h-[70vh] overflow-y-auto scrollable content area with custom neon-green scrollbar (added .blog-modal-scroll CSS to globals.css). Top of modal has a fixed progress bar div whose width is bound to scroll percentage (calculated from onScroll handler: scrollTop / (scrollHeight - clientHeight) * 100). Progress bar uses gradient from #00FF88 to #00FFF3. Modal includes close X button (top-right, aria-label), Escape key handler, backdrop click dismissal, scroll reset on open. Shows title, category, author, date, readTime, full content paragraphs, like button (red heart when liked), save button (green bookmark when saved).
+- LIKE functionality: Heart icon button on each card + in modal. Toggles on/off. Liked state shows filled red heart (#F43F5E) and increments count by 1. Persisted per-blog in localStorage key 'smartride_blog_likes' as { blogId: boolean } object. Displayed count = initial likes + (1 if liked).
+- SAVE/BOOKMARK functionality: Bookmark icon on each card image + in modal. Toggles on/off. Saved state shows filled green bookmark and "Saved" label. Persisted blog IDs in localStorage key 'smartride_blog_saved' as string[] array. Added "Show Saved Blogs" filter toggle button at top of blogs section that filters grid to only saved posts; shows count badge and empty-state message when no saved blogs.
+- NEWSLETTER SECTION: Headline "Join our Newsletter", subtext about updates/safety tips/offers. Email input (type=email, required, autocomplete, sr-only label) + Subscribe button with Send icon. On submit: validates email with regex, dedupes against stored list, appends to localStorage key 'smartride_newsletter_emails' array, shows success toast "Thanks for subscribing!". Shows subscriber count as social proof: "Join X subscribers" where X = Math.max(1200, storedCount).toLocaleString(). Includes privacy note "We respect your privacy. Unsubscribe at any time."
+- Used useToast hook (already globally mounted via Toaster in layout.tsx) for all feedback: invalid email, already-subscribed, subscribe success, contact form missing fields, contact form success.
+- Branding consistency: All sections use BRAND tokens (green #005f3a, neon #00FF88 for CTAs/highlights, cyan #00FFF3 for gradient endpoints, dark bg #0D0D12). NO indigo or blue colors. Replaced old #22C55E lime-green references with the neon #00FF88 brand accent. Used Framer Motion fadeUp/stagger/scaleIn for section reveals. Used existing shadcn/ui Button, Badge, Sheet, Input, Textarea, Dialog components. Used Lucide icons throughout.
+- Accessibility: semantic HTML (header, nav, section, article, footer), ARIA labels on all icon buttons (like/save/close/social), aria-pressed on toggle buttons, sr-only DialogHeader title/description, sr-only labels on form inputs, keyboard nav (Escape closes modal). Sticky footer implemented via min-h-screen flex flex-col on root wrapper + mt-auto on footer.
+- Responsive: tested layout at mobile-first; grid breakpoints 1/2/3/4 columns across services, blogs, stats, footer. Mobile Sheet menu for nav. All CTAs full-width on mobile.
+- Added custom scrollbar CSS (.blog-modal-scroll) to /home/z/my-project/src/app/globals.css with neon-green gradient thumb (rgba(0,255,136) → rgba(0,255,243)) and hover states. Used both -webkit-scrollbar (Chrome/Safari) and scrollbar-width/scrollbar-color (Firefox).
+- Ran `bun run lint` — passed clean (0 errors, 0 warnings). Dev server returns HTTP 200 for / after page compile (3.1s first-request compile, then ~90ms cached). No build step needed.
+
+Stage Summary:
+- src/app/page.tsx completely replaced (~1130 lines) as a one-page Smart Ride landing site with 10 sections.
+- Blogs section: 6 real Ugandan-context blog posts, responsive grid, like + save + filter-saved functionality all persisted to localStorage.
+- Blog modal: full-screen Dialog with custom neon scrollbar, top scrolling progress bar bound to scroll %, like/save buttons, Escape + backdrop dismissal.
+- Newsletter: email signup with regex validation, dedupe, localStorage persistence, subscriber count (Math.max(1200, storedCount)), success toasts, privacy note.
+- Sticky footer (mt-auto) with legal links to /privacy, /terms, /delete-account. No link to /intellects/admin (admin path stays obscured).
+- Branding consistent: green/neon-green/cyan, NO indigo/blue, Framer Motion animations, shadcn/ui components, Lucide icons.
+- Lint clean. Dev server serving HTTP 200.

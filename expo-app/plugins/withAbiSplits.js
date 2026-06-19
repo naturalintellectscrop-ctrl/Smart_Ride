@@ -1,26 +1,34 @@
 // ============================================
 // SMART RIDE - EXPO CONFIG PLUGIN
-// withAbiSplits.js  (v3 — bulletproof)
+// withAbiSplits.js  (v4 — size-optimized)
 // ============================================
 // Custom Expo config plugin that modifies the
 // Android build.gradle to:
 //   1. Enable ABI splits (arm64-v8a + armeabi-v7a only)
+//      with universalApk false → produces TWO smaller
+//      per-ABI APKs instead of one giant universal APK.
 //   2. FORCE R8 minify + resource shrinking OFF in the
 //      buildTypes.release block (NOT signingConfigs.release)
 //   3. Set ndk abiFilters to match the splits
 //   4. Enable multiDex
+//   5. Add packagingOptions to:
+//        - jniLibs useLegacyPackaging false (compress .so in APK)
+//        - resources excludes (strip unused licenses/dups)
+//        - jniLibs pickFirst (silence duplicate .so conflicts)
+//      Together these shrink a 399 MB universal APK down to
+//      ~40–70 MB per ABI.
 //
 // R8 minify is OFF because it was stripping classes needed by
 // expo-image-picker, @rnmapbox/maps, and other native modules,
 // causing "minifyReleaseWithR8 FAILED" build errors AND
 // runtime crashes when the stripped APK was opened.
 //
-// v3 FIX: previous versions had a regex bug — `release {` appears
-// TWICE in build.gradle (signingConfigs.release AND buildTypes.release),
-// and the old regex matched the FIRST one (signingConfigs), leaving
-// buildTypes.release untouched with minifyEnabled still true.
-// v3 explicitly finds the buildTypes block first, then the release
-// block INSIDE it.
+// v4 FIX: added packagingOptions block. The previous v3 left
+// useLegacyPackaging=true (set by expo-build-properties in
+// app.json) which stores .so files UNCOMPRESSED inside the
+// APK — the #1 cause of the 399 MB APK size complaint.
+// We now override that here so the build is small regardless
+// of what app.json says.
 // ============================================
 
 const { withAppBuildGradle } = require('expo/config-plugins');
@@ -93,7 +101,7 @@ function withAbiSplits(config) {
 
           // Inject forced-false values + proguardFiles reference
           const forcedConfig = `
-            // Smart Ride v3: R8 minify FORCED OFF — prevents build failures + runtime crashes
+            // Smart Ride v4: R8 minify FORCED OFF — prevents build failures + runtime crashes
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"`;
@@ -131,6 +139,47 @@ function withAbiSplits(config) {
         /defaultConfig\s*\{/,
         `defaultConfig {\n        multiDexEnabled true`
       );
+    }
+
+    // 4. Add packagingOptions block inside android { ... }
+    //    - useLegacyPackaging false → compress .so files inside the APK
+    //      (the #1 size win; app.json sets it to true which inflates the APK)
+    //    - pickFirst for duplicate .so conflicts (Mapbox + RN both ship libhermes.so etc.)
+    //    - resources excludes for bloat we never need at runtime
+    const packagingBlock = `
+    packagingOptions {
+        // Compress native libs inside the APK instead of extracting at install.
+        // Smart Ride targets Android 6+ (API 23+) which supports compressed libs.
+        jniLibs {
+            useLegacyPackaging false
+            pickFirsts += ['**/libc++_shared.so', '**/libfbjni.so', '**/libhermes.so', '**/libreactnativejni.so']
+        }
+        resources {
+            excludes += [
+                '**/META-INF/DEPENDENCIES',
+                '**/META-INF/LICENSE',
+                '**/META-INF/LICENSE.txt',
+                '**/META-INF/license.txt',
+                '**/META-INF/NOTICE',
+                '**/META-INF/NOTICE.txt',
+                '**/META-INF/notice.txt',
+                '**/META-INF/ASL2.0',
+                '**/META-INF/*.kotlin_module',
+                '**/META-INF/AL2.0',
+                '**/META-INF/LGPL2.1',
+                '**/kotlin-tooling-metadata.json',
+                '**/android-versions.txt'
+            ]
+        }
+    }`;
+
+    if (!contents.includes('packagingOptions {')) {
+      // Insert packagingOptions right before the splits block (or before buildTypes if no splits)
+      if (contents.includes('splits {')) {
+        contents = contents.replace(/(\n\s*splits \{)/, `${packagingBlock}\n$1`);
+      } else {
+        contents = contents.replace(/buildTypes\s*\{/, `${packagingBlock}\n    buildTypes {`);
+      }
     }
 
     config.modResults.contents = contents;

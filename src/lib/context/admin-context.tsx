@@ -34,7 +34,7 @@ export function AdminProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('admin_user');
     setUser(null);
-    router.push('/intellects/login');
+    router.push('/intellects/admin');
   }, [router]);
 
   const refreshSession = useCallback(async () => {
