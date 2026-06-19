@@ -96,9 +96,6 @@ const PROGUARD_RULES = `# ============================================
 function withProguardRules(config) {
   return withAppBuildGradle(config, (config) => {
     try {
-      // Resolve the android/app/ directory robustly.
-      // modRequest.projectRoot = JS project root (the expo-app folder)
-      // modRequest.platformProjectPath = relative path to android/ folder (e.g. "android")
       const projectRoot = config.modRequest.projectRoot;
       const platformProjectPath = config.modRequest.platformProjectPath || 'android';
       const androidProjectPath = path.isAbsolute(platformProjectPath)
@@ -107,13 +104,12 @@ function withProguardRules(config) {
       const appDir = path.join(androidProjectPath, 'app');
       const proguardPath = path.join(appDir, 'proguard-rules.pro');
 
-      // Ensure app/ dir exists (it should after prebuild)
       if (!fs.existsSync(appDir)) {
         fs.mkdirSync(appDir, { recursive: true });
       }
 
       fs.writeFileSync(proguardPath, PROGUARD_RULES, 'utf8');
-      console.log('[withProguardRules] ✅ Wrote proguard-rules.pro to', proguardPath);
+      console.log('[withProguardRules] Wrote proguard-rules.pro to', proguardPath);
     } catch (err) {
       console.warn('[withProguardRules] Failed to write proguard-rules.pro:', err.message);
     }

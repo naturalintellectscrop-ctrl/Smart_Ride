@@ -50,15 +50,10 @@ function withAbiSplits(config) {
     //    The release block appears INSIDE buildTypes { ... }. We must find
     //    buildTypes first, then the release block within it, to avoid
     //    accidentally modifying signingConfigs.release.
-    //
-    // Strategy: locate the buildTypes { ... } block (top-level, balanced braces),
-    // then within that block, find release { ... } and rewrite its
-    // minifyEnabled / shrinkResources lines.
     const buildTypesStart = contents.indexOf('buildTypes');
     if (buildTypesStart === -1) {
       console.warn('[withAbiSplits] Could not find buildTypes block — skipping minify override');
     } else {
-      // Find the opening brace of buildTypes
       let i = contents.indexOf('{', buildTypesStart);
       if (i === -1) {
         console.warn('[withAbiSplits] buildTypes has no opening brace — skipping');
@@ -71,8 +66,6 @@ function withAbiSplits(config) {
           else if (contents[j] === '}') depth--;
           j++;
         }
-        // contents[i+1 .. j-1] is the inside of buildTypes (exclusive of braces)
-        // contents[i .. j-1] includes the braces
         const buildTypesBlock = contents.slice(i, j); // includes outer { }
         const buildTypesInner = buildTypesBlock.slice(1, -1); // inner content
 
@@ -89,11 +82,10 @@ function withAbiSplits(config) {
             else if (buildTypesInner[k] === '}') depth2--;
             k++;
           }
-          // buildTypesInner[releaseBraceIdx .. k-1] is release { ... } with braces
           const releaseBlock = buildTypesInner.slice(releaseBraceIdx, k);
-          const releaseInner = releaseBlock.slice(1, -1); // inner of release block
+          const releaseInner = releaseBlock.slice(1, -1);
 
-          // Remove any existing minifyEnabled / shrinkResources lines
+          // Remove any existing minifyEnabled / shrinkResources / proguardFiles lines
           let cleanedRelease = releaseInner
             .replace(/^\s*minifyEnabled\s+.*$/gm, '')
             .replace(/^\s*shrinkResources\s+.*$/gm, '')
@@ -108,13 +100,11 @@ function withAbiSplits(config) {
 
           const newReleaseBlock = '{' + forcedConfig + cleanedRelease + '}';
 
-          // Rebuild buildTypesInner with the new release block
           const newBuildTypesInner =
             buildTypesInner.slice(0, releaseBraceIdx) +
             newReleaseBlock +
             buildTypesInner.slice(k);
 
-          // Rebuild the full buildTypes block and splice back into contents
           const newBuildTypesBlock = '{' + newBuildTypesInner + '}';
           contents =
             contents.slice(0, i) +

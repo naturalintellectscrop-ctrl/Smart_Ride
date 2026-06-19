@@ -1,749 +1,423 @@
-import type { Metadata } from 'next';
+'use client';
+
+import React from 'react';
 import Link from 'next/link';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 import {
   Trash2,
-  Smartphone,
-  Settings,
+  UserX,
+  Clock,
+  Wallet,
+  AlertTriangle,
+  ShieldCheck,
+  Database,
+  RotateCcw,
+  Users,
   Mail,
   Globe,
-  CheckCircle2,
-  AlertTriangle,
-  Calendar,
-  Clock,
-  MapPin,
-  ChevronRight,
-  UserX,
-  Lock,
-  Database,
-  Scale,
-  RefreshCw,
-  Wallet,
-  Link2,
-  FileText,
   ArrowLeft,
-  XCircle,
+  FileText,
 } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'Account Deletion Policy | Smart Ride',
-  description:
-    'Smart Ride Account Deletion Policy — how to request account deletion, what happens to your data, retention timelines, wallet balance rules, and your rights under Ugandan law.',
-  alternates: {
-    canonical: 'https://smartrideug.vercel.app/delete-account',
-  },
-  openGraph: {
-    title: 'Account Deletion Policy | Smart Ride',
-    description:
-      'How to delete your Smart Ride account, what data is removed, and what is retained for legal compliance.',
-    url: 'https://smartrideug.vercel.app/delete-account',
-  },
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
-function BulletList({ items }: { items: string[] }) {
-  return (
-    <ul className="space-y-2.5 ml-1 mt-3">
-      {items.map((item, i) => (
-        <li
-          key={i}
-          className="flex items-start gap-3 text-gray-300 text-[15px] leading-relaxed"
-        >
-          <CheckCircle2 className="shrink-0 w-5 h-5 text-[#22C55E] mt-0.5" />
-          <span>{item}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function WarningList({ items }: { items: string[] }) {
-  return (
-    <ul className="space-y-2.5 ml-1 mt-3">
-      {items.map((item, i) => (
-        <li
-          key={i}
-          className="flex items-start gap-3 text-gray-200 text-[15px] leading-relaxed"
-        >
-          <XCircle className="shrink-0 w-5 h-5 text-red-400 mt-0.5" />
-          <span>{item}</span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function SectionHeading({
-  number,
-  title,
-  Icon,
-}: {
-  number: number;
-  title: string;
-  Icon: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <h2
-      id={`section-${number}`}
-      className="border-l-4 border-[#22C55E] pl-4 flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white scroll-mt-24"
-    >
-      <Icon className="w-6 h-6 text-[#22C55E] shrink-0" />
-      <span>
-        <span className="text-[#22C55E] mr-2">{number}.</span>
-        {title}
-      </span>
-    </h2>
-  );
-}
-
-function SubHeading({
-  label,
-  Icon,
-}: {
-  label: string;
-  Icon?: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <h3 className="text-base sm:text-lg font-semibold text-[#22C55E] mt-6 mb-1 flex items-center gap-2">
-      {Icon ? <Icon className="w-5 h-5" /> : <ChevronRight className="w-4 h-4" />}
-      {label}
-    </h3>
-  );
-}
-
-function NumberedList({ items }: { items: string[] }) {
-  return (
-    <ol className="space-y-3 ml-1 mt-3">
-      {items.map((item, i) => (
-        <li
-          key={i}
-          className="flex items-start gap-3 text-gray-300 text-[15px] leading-relaxed"
-        >
-          <span className="shrink-0 w-6 h-6 rounded-full bg-[#005f3a]/40 border border-[#22C55E]/30 text-[#22C55E] text-xs font-bold flex items-center justify-center mt-0.5">
-            {i + 1}
-          </span>
-          <span className="pt-0.5">{item}</span>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
+const tocSections = [
+  { id: 'introduction', label: 'Introduction' },
+  { id: 'how-to-delete', label: 'How to Delete Your Account' },
+  { id: 'what-happens', label: 'What Happens When You Delete' },
+  { id: 'data-retained', label: 'Data Retained for Legal Obligations' },
+  { id: 'wallet-balance', label: 'Wallet Balance' },
+  { id: 'active-orders', label: 'Active Rides & Orders' },
+  { id: 'recovery', label: 'Recovery Window' },
+  { id: 'connected-accounts', label: 'Connected Accounts' },
+  { id: 'timeline', label: 'Deletion Timeline' },
+  { id: 'contact', label: 'Contact Us' },
+];
 
 export default function DeleteAccountPage() {
   return (
-    <div className="min-h-screen bg-[#111827] text-white flex flex-col">
-      {/* ═══════ STICKY HEADER ═══════ */}
-      <header className="sticky top-0 z-50 bg-[#111827]/85 backdrop-blur-xl border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex flex-col bg-[#0D0D12] font-['Inter',sans-serif]">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D12]/90 backdrop-blur-md border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <Logo variant="dark" />
-            <Link href="/">
-              <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Home
-              </Button>
+            <Logo />
+            <div className="hidden md:flex items-center gap-8">
+              <Link href="/" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">Home</Link>
+              <Link href="/about" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">About</Link>
+              <Link href="/help" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">Help</Link>
+              <Link href="/contact" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">Contact</Link>
+            </div>
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-white/60 hover:text-white text-sm font-medium transition-colors duration-200"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back to Home</span>
             </Link>
           </div>
         </div>
-      </header>
+      </nav>
 
-      {/* ═══════ HERO ═══════ */}
-      <section className="relative overflow-hidden py-16 px-4">
-        <div className="absolute inset-0 -z-10 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#22C55E]/10 rounded-full blur-[120px]" />
-          <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-[#005f3a]/20 rounded-full blur-[100px]" />
-        </div>
-
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="flex justify-center mb-6">
-            <Badge
-              variant="outline"
-              className="bg-[#22C55E]/10 border-[#22C55E]/30 text-[#22C55E] px-4 py-1.5 text-sm gap-2"
-            >
-              <Trash2 className="w-4 h-4" />
-              Account Deletion Policy
-            </Badge>
+      {/* Hero */}
+      <section className="relative pt-24 pb-12 overflow-hidden">
+        <div className="absolute inset-0 opacity-10" style={{ background: 'linear-gradient(135deg, #00FF88 0%, #00FFF3 100%)' }} />
+        <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-[#00FF88] rounded-full blur-[128px] opacity-15" />
+        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-[#00FFF3] rounded-full blur-[128px] opacity-15" />
+        <div className="relative z-10 text-center px-4">
+          <div className="inline-flex items-center gap-2 bg-[#1A1A1F] border border-white/10 rounded-full px-4 py-2 mb-6">
+            <Trash2 className="w-4 h-4 text-[#00FF88]" />
+            <span className="text-white/60 text-sm">Legal Document</span>
           </div>
-
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6">
-            Smart Ride Account Deletion Policy
+          <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight max-w-4xl mx-auto">
+            Account{' '}
+            <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(135deg, #00FF88 0%, #00FFF3 100%)' }}>
+              Deletion Policy
+            </span>
           </h1>
-
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm text-gray-400">
-            <span className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#22C55E]" />
-              Effective Date:{' '}
-              <span className="text-white font-medium">June 18, 2026</span>
-            </span>
-            <span className="hidden sm:inline w-px h-4 bg-white/20" />
-            <span className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-[#22C55E]" />
-              Last Updated:{' '}
-              <span className="text-white font-medium">June 18, 2026</span>
-            </span>
-          </div>
-
-          <Card className="bg-[#005f3a]/15 border-[#22C55E]/20 text-left">
-            <CardContent>
-              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
-                Smart Ride respects your right to control your personal
-                information and to delete your account at any time. This
-                Account Deletion Policy explains what happens when you request
-                account deletion, what data is removed, what data is retained
-                for legal obligations, and the timelines involved.
-              </p>
-            </CardContent>
-          </Card>
+          <p className="mt-4 text-white/50 text-base max-w-2xl mx-auto">
+            Last updated: June 2025 &middot; Smart Ride Uganda Limited
+          </p>
         </div>
       </section>
 
-      {/* ═══════ MAIN CONTENT ═══════ */}
-      <main className="flex-1 px-4 pb-20">
-        <div className="max-w-3xl mx-auto space-y-12">
-          {/* ── 1. Introduction ───────────────────────────────────────────── */}
-          <section className="scroll-mt-24">
-            <SectionHeading
-              number={1}
-              title="Introduction"
-              Icon={FileText}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Smart Ride, operated by Natural Intellects Corp, is committed
-                to respecting your privacy and your right to be forgotten. This
-                policy explains the process and consequences of deleting your
-                Smart Ride account.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                This policy complies with the Uganda Data Protection and
-                Privacy Act, 2019, and applies to all user accounts including
-                customers, driver-partners, merchants, and pharmacy partners.
-              </p>
-              <p className="text-gray-300 leading-relaxed">
-                Please read this policy carefully before requesting account
-                deletion, as the process is{' '}
-                <span className="text-white font-semibold">
-                  irreversible after the 30-day grace period
-                </span>
-                .
-              </p>
-            </div>
-          </section>
+      {/* Main Content */}
+      <main className="flex-1 px-4 sm:px-6 lg:px-8 pb-16">
+        <div className="max-w-4xl mx-auto">
+          {/* Back to Home */}
+          <Link href="/" className="inline-flex items-center gap-2 text-white/50 hover:text-[#00FF88] text-sm font-medium transition-colors duration-200 mb-8">
+            <ArrowLeft className="w-4 h-4" />
+            Back to Home
+          </Link>
 
-          {/* ── 2. How to Request Account Deletion ────────────────────────── */}
-          <section className="scroll-mt-24">
-            <SectionHeading
-              number={2}
-              title="How to Request Account Deletion"
-              Icon={Trash2}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                You can request account deletion through any of the following
-                methods:
-              </p>
-
-              {/* In-App */}
-              <Card className="bg-white/5 border-white/10">
-                <CardHeader>
-                  <CardTitle className="text-white text-base flex items-center gap-2">
-                    <Smartphone className="w-5 h-5 text-[#22C55E]" />
-                    Option A: In-App Deletion
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-300 leading-relaxed mb-2">
-                    Delete your account directly from the Smart Ride mobile
-                    application:
-                  </p>
-                  <NumberedList
-                    items={[
-                      'Open the Smart Ride application on your device',
-                      'Navigate to Profile',
-                      'Tap Settings',
-                      'Scroll down and select Delete Account',
-                      'Review the warning message and confirm',
-                      'Enter the OTP sent to your phone to verify your identity',
-                      'Tap Confirm Deletion to submit your request',
-                    ]}
-                  />
-                </CardContent>
-              </Card>
-
-              {/* Online */}
-              <Card className="bg-white/5 border-white/10">
-                <CardHeader>
-                  <CardTitle className="text-white text-base flex items-center gap-2">
-                    <Globe className="w-5 h-5 text-[#22C55E]" />
-                    Option B: Online Request
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-300 leading-relaxed mb-3">
-                    Visit this page at{' '}
-                    <a
-                      href="https://smartrideug.vercel.app/delete-account"
-                      className="text-[#22C55E] hover:underline"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      smartrideug.vercel.app/delete-account
-                    </a>{' '}
-                    and submit a deletion request, or email our support team
-                    directly:
-                  </p>
-                  <a
-                    href="mailto:support@smartride.ug?subject=Account%20Deletion%20Request"
-                    className="inline-block"
-                  >
-                    <Button className="bg-[#005f3a] hover:bg-[#0e7a4d] text-white">
-                      <Mail className="w-4 h-4 mr-2" />
-                      support@smartride.ug
-                    </Button>
-                  </a>
-                  <p className="text-gray-400 text-sm leading-relaxed mt-4">
-                    When emailing, please include the phone number and email
-                    address associated with your account. We may request
-                    identity verification before processing your request.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-
-          {/* ── 3. What Happens When You Delete Your Account ───────────────── */}
-          <section className="scroll-mt-24">
-            <SectionHeading
-              number={3}
-              title="What Happens When You Delete Your Account"
-              Icon={UserX}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Once your account deletion request is approved and processed:
-              </p>
-              <BulletList
-                items={[
-                  'Your account is deactivated immediately and you cannot log in',
-                  'Your personal data is permanently deleted within 30 days',
-                  'You lose access to all data associated with your account',
-                ]}
-              />
-
-              <Card className="bg-red-950/30 border-red-500/30 mt-4">
-                <CardHeader>
-                  <CardTitle className="text-red-300 text-base flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-red-400" />
-                    Data You Lose Access To
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <WarningList
-                    items={[
-                      'Ride and delivery history',
-                      'Wallet balance (if not withdrawn — see Section 5)',
-                      'Saved addresses and favorite locations',
-                      'Saved payment methods (MTN MoMo, Airtel Money, cards)',
-                      'Chat history with drivers, merchants, and support',
-                      'Ratings and reviews you submitted',
-                      'Order receipts and transaction records (personal copy)',
-                      'Loyalty rewards and promotional credits',
-                    ]}
-                  />
-                </CardContent>
-              </Card>
-
-              <p className="text-gray-300 leading-relaxed mt-4">
-                This data cannot be recovered once deletion is complete. Please
-                export any data you wish to keep before submitting your
-                deletion request.
-              </p>
-            </div>
-          </section>
-
-          {/* ── 4. Data Retained for Legal Obligations ────────────────────── */}
-          <section className="scroll-mt-24">
-            <SectionHeading
-              number={4}
-              title="Data Retained for Legal Obligations"
-              Icon={Database}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Some information must be retained even after account deletion
-                to comply with Ugandan law and protect our platform:
-              </p>
-              <BulletList
-                items={[
-                  'Transaction records: retained for 7 years per the Uganda Tax Procedures Code Act (tax compliance)',
-                  'Ride and delivery records: retained for 7 years for audit and dispute resolution',
-                  'Fraud prevention records: retained for up to 5 years to protect against future fraud',
-                  'Records required by court order: retained until the order expires',
-                  'KYC and verification documents (driver-partners/merchants): retained per regulatory requirements',
-                  'Security incident and investigation records: retained for up to 5 years',
-                ]}
-              />
-              <Card className="bg-[#005f3a]/10 border-[#22C55E]/20 mt-3">
-                <CardContent>
-                  <p className="text-gray-200 leading-relaxed">
-                    Retained data is anonymized or pseudonymized wherever
-                    possible, and access is restricted to authorized personnel
-                    only for legal, audit, and security purposes. It will not
-                    be used to recreate your account or for marketing.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </section>
-
-          {/* ── 5. Wallet Balance ─────────────────────────────────────────── */}
-          <section className="scroll-mt-24">
-            <SectionHeading
-              number={5}
-              title="Wallet Balance"
-              Icon={Wallet}
-            />
-            <div className="mt-4 space-y-4">
-              <Card className="bg-red-950/30 border-red-500/30">
-                <CardContent>
-                  <p className="text-gray-200 leading-relaxed">
-                    <span className="text-red-300 font-semibold">
-                      Important:{' '}
-                    </span>
-                    Any remaining Smart Ride Wallet balance must be withdrawn
-                    BEFORE you request account deletion. Unclaimed balances
-                    after account deletion are{' '}
-                    <span className="text-red-300 font-semibold">
-                      permanently forfeited
-                    </span>{' '}
-                    and cannot be recovered.
-                  </p>
-                </CardContent>
-              </Card>
-              <SubHeading label="How to Withdraw Your Balance" Icon={Wallet} />
-              <NumberedList
-                items={[
-                  'Open the Smart Ride app',
-                  'Navigate to Wallet',
-                  'Tap Withdraw',
-                  'Select your preferred payout method (MTN MoMo or Airtel Money)',
-                  'Enter the amount and confirm with your PIN',
-                  'Wait for the withdrawal to process (usually within 5 minutes)',
-                  'Once balance shows 0 UGX, you may proceed with account deletion',
-                ]}
-              />
-              <p className="text-gray-300 leading-relaxed">
-                If you have issues withdrawing your balance, contact{' '}
+          {/* Table of Contents */}
+          <div className="bg-[#1A1A1F] rounded-2xl p-6 border border-white/5 mb-12">
+            <h2 className="text-lg font-semibold text-white mb-4">Table of Contents</h2>
+            <nav className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {tocSections.map((section, index) => (
                 <a
-                  href="mailto:support@smartride.ug"
-                  className="text-[#22C55E] hover:underline"
+                  key={section.id}
+                  href={`#${section.id}`}
+                  className="flex items-center gap-2 text-white/50 hover:text-[#00FF88] text-sm transition-colors duration-200 py-1"
                 >
-                  support@smartride.ug
-                </a>{' '}
-                before submitting your deletion request. Once deletion is
-                complete, we cannot process any withdrawals.
-              </p>
-            </div>
-          </section>
+                  <span className="text-[#00FF88]/60 font-mono text-xs w-5">{index + 1}.</span>
+                  {section.label}
+                </a>
+              ))}
+            </nav>
+          </div>
 
-          {/* ── 6. Active Rides/Orders ────────────────────────────────────── */}
-          <section className="scroll-mt-24">
-            <SectionHeading
-              number={6}
-              title="Active Rides & Orders"
-              Icon={AlertTriangle}
-            />
-            <div className="mt-4 space-y-4">
-              <Card className="bg-[#005f3a]/10 border-[#22C55E]/20">
-                <CardContent>
-                  <p className="text-gray-200 leading-relaxed">
-                    You cannot delete your account while you have active rides,
-                    orders, or pending transactions. You must complete or
-                    cancel these first.
-                  </p>
-                </CardContent>
-              </Card>
-              <p className="text-gray-300 leading-relaxed">
-                The system will check for active services when you submit a
-                deletion request. If any are found, you will see a message
-                listing them and asking you to resolve them first.
-              </p>
-              <BulletList
-                items={[
-                  'Active rides: complete the ride or cancel it (subject to cancellation policies)',
-                  'Active food/grocery orders: wait for delivery or cancel before processing',
-                  'Active parcel deliveries: wait for delivery completion',
-                  'Pending wallet withdrawals: wait for the withdrawal to complete',
-                  'Open disputes or investigations: wait for resolution',
-                  'Pending payouts (driver-partners/merchants): wait for payout to process',
-                ]}
-              />
-              <p className="text-gray-300 leading-relaxed">
-                Once all active services are resolved, you may resubmit your
-                deletion request.
-              </p>
-            </div>
-          </section>
-
-          {/* ── 7. Recovery ───────────────────────────────────────────────── */}
-          <section className="scroll-mt-24">
-            <SectionHeading
-              number={7}
-              title="Recovery"
-              Icon={RefreshCw}
-            />
-            <div className="mt-4 space-y-4">
-              <Card className="bg-[#005f3a]/10 border-[#22C55E]/20">
-                <CardContent>
-                  <p className="text-gray-200 leading-relaxed">
-                    Account deletion is{' '}
-                    <span className="text-[#22C55E] font-semibold">
-                      reversible during the 30-day grace period
-                    </span>{' '}
-                    by contacting our support team. After 30 days, the
-                    deletion is permanent and the account cannot be recovered.
-                  </p>
-                </CardContent>
-              </Card>
-              <SubHeading label="To Cancel a Deletion Request" Icon={Mail} />
-              <NumberedList
-                items={[
-                  'Email support@smartride.ug within 30 days of submitting your deletion request',
-                  'Use the subject line: "Cancel Account Deletion Request"',
-                  'Include your registered phone number and email address',
-                  'Our team will verify your identity and restore your account',
-                  'Once restored, you can log back in and continue using Smart Ride',
-                ]}
-              />
-              <p className="text-gray-300 leading-relaxed">
-                After the 30-day grace period expires, all personal data is
-                permanently deleted and the recovery process is no longer
-                possible. You would need to register a new account to use Smart
-                Ride again.
-              </p>
-            </div>
-          </section>
-
-          {/* ── 8. Impact on Connected Accounts ───────────────────────────── */}
-          <section className="scroll-mt-24">
-            <SectionHeading
-              number={8}
-              title="Impact on Connected Accounts"
-              Icon={Link2}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                Smart Ride allows a single phone number to be associated with
-                multiple account types (customer, driver-partner, merchant,
-                pharmacy partner). When you delete one account, the impact on
-                connected accounts depends on the situation:
-              </p>
-              <BulletList
-                items={[
-                  'If you delete only your customer account, your driver-partner or merchant accounts remain active',
-                  'If you request full deletion (all account types), all connected accounts are deactivated',
-                  'Driver-partner KYC documents may be retained for regulatory compliance even after deletion',
-                  'Merchant business data is transferred to the business owner if applicable',
-                  'Linked payment methods are removed across all connected accounts',
-                ]}
-              />
-              <p className="text-gray-300 leading-relaxed">
-                Please specify in your deletion request whether you want to
-                delete only one account type or all connected accounts.
-              </p>
-            </div>
-          </section>
-
-          {/* ── 9. Timeline ───────────────────────────────────────────────── */}
-          <section className="scroll-mt-24">
-            <SectionHeading
-              number={9}
-              title="Timeline"
-              Icon={Clock}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                The account deletion process follows this timeline:
-              </p>
-              <div className="space-y-4 mt-4">
-                <Card className="bg-white/5 border-white/10">
-                  <CardContent className="flex items-start gap-4">
-                    <div className="shrink-0 w-12 h-12 rounded-full bg-[#22C55E]/20 border border-[#22C55E]/40 flex items-center justify-center">
-                      <Clock className="w-6 h-6 text-[#22C55E]" />
-                    </div>
-                    <div>
-                      <p className="text-white font-semibold text-base">
-                        Step 1: Deactivation{' '}
-                        <span className="text-[#22C55E] text-sm font-normal">
-                          (Immediate)
-                        </span>
-                      </p>
-                      <p className="text-gray-400 text-sm leading-relaxed mt-1">
-                        Account is deactivated within minutes of approval. You
-                        can no longer log in or use Smart Ride services.
-                        Recovery is still possible.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-white/5 border-white/10">
-                  <CardContent className="flex items-start gap-4">
-                    <div className="shrink-0 w-12 h-12 rounded-full bg-[#22C55E]/20 border border-[#22C55E]/40 flex items-center justify-center">
-                      <Lock className="w-6 h-6 text-[#22C55E]" />
-                    </div>
-                    <div>
-                      <p className="text-white font-semibold text-base">
-                        Step 2: Permanent Deletion{' '}
-                        <span className="text-[#22C55E] text-sm font-normal">
-                          (30 days)
-                        </span>
-                      </p>
-                      <p className="text-gray-400 text-sm leading-relaxed mt-1">
-                        After the 30-day grace period, personal data is
-                        permanently deleted from active systems. Recovery is
-                        no longer possible.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card className="bg-white/5 border-white/10">
-                  <CardContent className="flex items-start gap-4">
-                    <div className="shrink-0 w-12 h-12 rounded-full bg-[#22C55E]/20 border border-[#22C55E]/40 flex items-center justify-center">
-                      <Database className="w-6 h-6 text-[#22C55E]" />
-                    </div>
-                    <div>
-                      <p className="text-white font-semibold text-base">
-                        Step 3: Data Purge{' '}
-                        <span className="text-[#22C55E] text-sm font-normal">
-                          (30&ndash;90 days)
-                        </span>
-                      </p>
-                      <p className="text-gray-400 text-sm leading-relaxed mt-1">
-                        Residual data is purged from backups and archives.
-                        Only legally retained records (see Section 4) remain,
-                        in anonymized form where possible.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+          {/* Sections */}
+          <div className="space-y-12">
+            {/* 1. Introduction */}
+            <section id="introduction" className="scroll-mt-24">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-[#00FF88]" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">1. Introduction</h2>
               </div>
-            </div>
-          </section>
+              <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
+                <p>
+                  Smart Ride respects your right to control your personal data. This Account Deletion Policy explains what happens when you request to delete your Smart Ride account, what data is removed, what data is retained for legal obligations, and how long the process takes.
+                </p>
+                <p>
+                  This policy applies to all Smart Ride users &mdash; riders, drivers, merchants, and pharmacists. By requesting account deletion, you acknowledge that you have read and understood this policy.
+                </p>
+              </div>
+            </section>
 
-          {/* ── 10. Contact Us ────────────────────────────────────────────── */}
-          <section className="scroll-mt-24">
-            <SectionHeading
-              number={10}
-              title="Contact Us"
-              Icon={Mail}
-            />
-            <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
-                If you have questions about this Account Deletion Policy, or
-                need help with any step of the deletion process, our support
-                team is available 24/7:
-              </p>
-              <Card className="bg-white/5 border-white/10">
-                <CardContent className="space-y-3">
-                  <p className="text-white font-semibold text-lg">
-                    Smart Ride Support
+            {/* 2. How to Delete */}
+            <section id="how-to-delete" className="scroll-mt-24">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <Trash2 className="w-5 h-5 text-[#00FF88]" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">2. How to Request Account Deletion</h2>
+              </div>
+              <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
+                <p>You can request account deletion using any of the following methods:</p>
+                <div className="bg-[#1A1A1F] rounded-xl p-5 border border-white/5">
+                  <p className="text-white/80 font-medium mb-2">Method 1 &mdash; In-App (Recommended)</p>
+                  <p className="text-sm">
+                    Open the Smart Ride app &rarr; go to <span className="text-white">Profile</span> &rarr; tap <span className="text-white">Delete Account</span> &rarr; confirm your password &rarr; tap <span className="text-white">Delete Permanently</span>.
                   </p>
-                  <p className="text-gray-400 text-sm">
-                    Natural Intellects Corp
+                </div>
+                <div className="bg-[#1A1A1F] rounded-xl p-5 border border-white/5">
+                  <p className="text-white/80 font-medium mb-2">Method 2 &mdash; Online</p>
+                  <p className="text-sm">
+                    Visit this page (<Link href="/delete-account" className="text-[#00FF88] hover:underline">https://smartrideug.vercel.app/delete-account</Link>) and click the delete button below, or email us at <a href="mailto:support@smartride.ug" className="text-[#00FF88] hover:underline">support@smartride.ug</a> with the subject &ldquo;Account Deletion Request&rdquo; and your registered phone number.
                   </p>
-                  <div className="flex items-center gap-3 text-gray-300 pt-2">
-                    <Mail className="w-5 h-5 text-[#22C55E] shrink-0" />
-                    <a
-                      href="mailto:support@smartride.ug"
-                      className="hover:text-[#22C55E] transition-colors"
-                    >
-                      support@smartride.ug
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-3 text-gray-300">
-                    <Globe className="w-5 h-5 text-[#22C55E] shrink-0" />
-                    <a
-                      href="https://smartrideug.vercel.app/delete-account"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="hover:text-[#22C55E] transition-colors"
-                    >
-                      smartrideug.vercel.app/delete-account
-                    </a>
-                  </div>
-                  <div className="flex items-center gap-3 text-gray-300">
-                    <MapPin className="w-5 h-5 text-[#22C55E] shrink-0" />
-                    <span>Kampala, Uganda</span>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="bg-[#005f3a]/10 border-[#22C55E]/20">
-                <CardContent>
-                  <p className="text-gray-200 leading-relaxed text-sm">
-                    <span className="text-[#22C55E] font-semibold">
-                      Tip:{' '}
-                    </span>
-                    For faster processing of your deletion request, please
-                    include your registered phone number, email address, and a
-                    clear statement that you want to delete your account.
+                </div>
+                <div className="bg-[#1A1A1F] rounded-xl p-5 border border-white/5">
+                  <p className="text-white/80 font-medium mb-2">Method 3 &mdash; By Phone</p>
+                  <p className="text-sm">
+                    Call our support line and verify your identity. A support agent will process your deletion request.
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
+            </section>
+
+            {/* 3. What Happens */}
+            <section id="what-happens" className="scroll-mt-24">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <UserX className="w-5 h-5 text-[#00FF88]" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">3. What Happens When You Delete Your Account</h2>
+              </div>
+              <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
+                <p>When you request account deletion, the following occurs immediately:</p>
+                <ul className="space-y-2 list-disc pl-5">
+                  <li>Your account is <span className="text-white">deactivated</span> &mdash; you cannot log in or use any Smart Ride services.</li>
+                  <li>Your profile information (name, email, phone number, profile photo) is scheduled for permanent deletion.</li>
+                  <li>You lose access to all Smart Ride features, including ride-hailing, delivery, shopping, health services, and wallet.</li>
+                </ul>
+                <p>Within 30 days, the following data is permanently deleted:</p>
+                <ul className="space-y-2 list-disc pl-5">
+                  <li>Ride history and trip details</li>
+                  <li>Saved addresses and favorite locations</li>
+                  <li>Payment method tokens (MTN MoMo, Airtel Money, cards via Nylon Pay)</li>
+                  <li>Chat and message history with drivers, merchants, and support</li>
+                  <li>Notification preferences and device tokens</li>
+                  <li>Search history and app usage analytics</li>
+                </ul>
+              </div>
+            </section>
+
+            {/* 4. Data Retained */}
+            <section id="data-retained" className="scroll-mt-24">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <Database className="w-5 h-5 text-[#00FF88]" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">4. Data Retained for Legal Obligations</h2>
+              </div>
+              <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
+                <p>
+                  Some data cannot be deleted immediately due to legal and regulatory obligations under Ugandan law. This data is retained in an anonymized or aggregated form and is kept secure:
+                </p>
+                <ul className="space-y-2 list-disc pl-5">
+                  <li><span className="text-white">Transaction records</span> &mdash; kept for 7 years as required by the Uganda Revenue Authority (URA) for tax audit purposes.</li>
+                  <li><span className="text-white">Fraud prevention records</span> &mdash; kept for up to 5 years to prevent abuse, chargebacks, and fraudulent re-registration.</li>
+                  <li><span className="text-white">Court-ordered records</span> &mdash; kept for the duration specified by any valid court order or law enforcement request.</li>
+                  <li><span className="text-white">Anonymized analytics</span> &mdash; aggregated, non-identifiable data used for service improvement may be retained indefinitely.</li>
+                </ul>
+                <p>
+                  Retained data is stored securely and access is restricted to authorized personnel only. It is never used for marketing or sold to third parties.
+                </p>
+              </div>
+            </section>
+
+            {/* 5. Wallet Balance */}
+            <section id="wallet-balance" className="scroll-mt-24">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <Wallet className="w-5 h-5 text-[#00FF88]" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">5. Wallet Balance</h2>
+              </div>
+              <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
+                <p>
+                  <strong className="text-white/80">Important:</strong> Any remaining Smart Ride wallet balance must be <span className="text-[#00FF88]">withdrawn BEFORE</span> you request account deletion.
+                </p>
+                <div className="bg-[#FF6B35]/10 border border-[#FF6B35]/30 rounded-xl p-5">
+                  <p className="text-[#FFB088] text-sm">
+                    <AlertTriangle className="w-4 h-4 inline mr-1" />
+                    Unclaimed wallet balances remaining after account deletion are <strong>forfeited</strong> and cannot be recovered. Please withdraw your full balance to your MTN MoMo or Airtel Money account before proceeding.
+                  </p>
+                </div>
+                <p>
+                  To withdraw: Open the app &rarr; Wallet &rarr; Withdraw &rarr; enter amount &rarr; select mobile money provider &rarr; confirm. If you cannot access your account, contact <a href="mailto:support@smartride.ug" className="text-[#00FF88] hover:underline">support@smartride.ug</a> to arrange a manual withdrawal before deletion.
+                </p>
+              </div>
+            </section>
+
+            {/* 6. Active Orders */}
+            <section id="active-orders" className="scroll-mt-24">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-[#00FF88]" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">6. Active Rides &amp; Orders</h2>
+              </div>
+              <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
+                <p>
+                  You <strong className="text-white/80">cannot</strong> delete your account if you have any active rides, pending orders, or in-progress deliveries. You must first:
+                </p>
+                <ul className="space-y-2 list-disc pl-5">
+                  <li>Complete or cancel any active rides</li>
+                  <li>Receive or cancel any pending food/shopping orders</li>
+                  <li>Wait for any in-progress deliveries to complete</li>
+                  <li>Resolve any open disputes or payment issues</li>
+                </ul>
+                <p>
+                  Once all active services are resolved, you may proceed with account deletion.
+                </p>
+              </div>
+            </section>
+
+            {/* 7. Recovery */}
+            <section id="recovery" className="scroll-mt-24">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <RotateCcw className="w-5 h-5 text-[#00FF88]" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">7. Recovery Window</h2>
+              </div>
+              <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
+                <p>
+                  Account deletion is not immediate. There is a <strong className="text-white/80">30-day recovery window</strong> during which you can cancel the deletion request and restore your account.
+                </p>
+                <p>
+                  To cancel a pending deletion, log in with your credentials (still active during the window) or contact <a href="mailto:support@smartride.ug" className="text-[#00FF88] hover:underline">support@smartride.ug</a> with your registered phone number and a valid reason for cancellation.
+                </p>
+                <p>
+                  After the 30-day window expires, the account and associated personal data are <strong className="text-white/80">permanently deleted</strong> and cannot be recovered by any means.
+                </p>
+              </div>
+            </section>
+
+            {/* 8. Connected Accounts */}
+            <section id="connected-accounts" className="scroll-mt-24">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-[#00FF88]" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">8. Impact on Connected Accounts</h2>
+              </div>
+              <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
+                <p>
+                  If your phone number is linked to multiple Smart Ride account types (e.g., a rider account and a driver/merchant account), deleting one account type may affect the others:
+                </p>
+                <ul className="space-y-2 list-disc pl-5">
+                  <li><span className="text-white">Rider account deletion</span> does not automatically delete a linked driver or merchant account, but shared data (saved addresses, payment methods) will be removed.</li>
+                  <li><span className="text-white">Driver/merchant account deletion</span> requires settling all pending payouts and resolving active orders first.</li>
+                  <li><span className="text-white">Complete deletion</span> (all account types) requires separate confirmation for each type.</li>
+                </ul>
+              </div>
+            </section>
+
+            {/* 9. Timeline */}
+            <section id="timeline" className="scroll-mt-24">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-5 h-5 text-[#00FF88]" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">9. Deletion Timeline</h2>
+              </div>
+              <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
+                <div className="overflow-hidden rounded-xl border border-white/5">
+                  <table className="w-full text-sm">
+                    <thead className="bg-[#1A1A1F]">
+                      <tr>
+                        <th className="text-left p-4 text-white/80 font-medium">Stage</th>
+                        <th className="text-left p-4 text-white/80 font-medium">Timeframe</th>
+                        <th className="text-left p-4 text-white/80 font-medium">What Happens</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      <tr>
+                        <td className="p-4 text-white/70">1. Deactivation</td>
+                        <td className="p-4 text-white">Immediate</td>
+                        <td className="p-4 text-white/50">Account disabled, login blocked</td>
+                      </tr>
+                      <tr>
+                        <td className="p-4 text-white/70">2. Recovery Window</td>
+                        <td className="p-4 text-white">Days 1&ndash;30</td>
+                        <td className="p-4 text-white/50">Account can be restored on request</td>
+                      </tr>
+                      <tr>
+                        <td className="p-4 text-white/70">3. Permanent Deletion</td>
+                        <td className="p-4 text-white">Day 30</td>
+                        <td className="p-4 text-white/50">Personal data permanently erased</td>
+                      </tr>
+                      <tr>
+                        <td className="p-4 text-white/70">4. Data Purge Complete</td>
+                        <td className="p-4 text-white">Days 30&ndash;90</td>
+                        <td className="p-4 text-white/50">Backups and cache fully purged</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </section>
+
+            {/* 10. Contact */}
+            <section id="contact" className="scroll-mt-24">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="w-5 h-5 text-[#00FF88]" />
+                </div>
+                <h2 className="text-2xl font-bold text-white">10. Contact Us</h2>
+              </div>
+              <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
+                <p>
+                  If you have any questions about account deletion, our privacy practices, or need help with the deletion process, our support team is here to help.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <a
+                    href="mailto:support@smartride.ug"
+                    className="flex items-center gap-3 bg-[#1A1A1F] rounded-xl p-4 border border-white/5 hover:border-[#00FF88]/30 transition-colors duration-200"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-5 h-5 text-[#00FF88]" />
+                    </div>
+                    <div>
+                      <p className="text-white/40 text-xs">Email</p>
+                      <p className="text-white text-sm font-medium">support@smartride.ug</p>
+                    </div>
+                  </a>
+                  <a
+                    href="https://smartrideug.vercel.app"
+                    className="flex items-center gap-3 bg-[#1A1A1F] rounded-xl p-4 border border-white/5 hover:border-[#00FF88]/30 transition-colors duration-200"
+                  >
+                    <div className="w-10 h-10 rounded-lg bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                      <Globe className="w-5 h-5 text-[#00FF88]" />
+                    </div>
+                    <div>
+                      <p className="text-white/40 text-xs">Website</p>
+                      <p className="text-white text-sm font-medium">smartrideug.vercel.app</p>
+                    </div>
+                  </a>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          {/* Bottom Back to Home */}
+          <div className="mt-16 pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p className="text-white/30 text-sm">
+              Effective Date: June 2025 &middot; &copy; {new Date().getFullYear()} Smart Ride Uganda Limited
+            </p>
+            <div className="flex items-center gap-6">
+              <Link href="/privacy" className="text-white/40 hover:text-[#00FF88] text-sm transition-colors duration-200">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-white/40 hover:text-[#00FF88] text-sm transition-colors duration-200">
+                Terms of Service
+              </Link>
+              <Link href="/" className="inline-flex items-center gap-2 text-white/60 hover:text-[#00FF88] text-sm font-medium transition-colors duration-200">
+                <ArrowLeft className="w-4 h-4" />
+                Back to Home
+              </Link>
             </div>
-          </section>
+          </div>
         </div>
       </main>
 
-      {/* ═══════ STICKY FOOTER ═══════ */}
-      <footer className="mt-auto bg-[#0a0f1a] border-t border-white/10">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <Logo variant="dark" />
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-              <Link
-                href="/privacy"
-                className="text-gray-400 hover:text-[#22C55E] transition-colors"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                href="/terms"
-                className="text-gray-400 hover:text-[#22C55E] transition-colors"
-              >
-                Terms of Service
-              </Link>
-              <Link
-                href="/delete-account"
-                className="text-gray-400 hover:text-[#22C55E] transition-colors"
-              >
-                Account Deletion
-              </Link>
+      {/* Sticky Footer */}
+      <footer className="mt-auto bg-[#0A0A0F] border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Logo size="sm" showText={false} />
+              <span className="text-white/30 text-sm">&copy; {new Date().getFullYear()} Smart Ride Uganda. All rights reserved.</span>
             </div>
-          </div>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-4">
-            <Mail className="w-4 h-4 text-[#22C55E]" />
-            <a
-              href="mailto:support@smartride.ug"
-              className="hover:text-[#22C55E] transition-colors"
-            >
-              support@smartride.ug
-            </a>
-          </div>
-          <div className="pt-6 border-t border-white/10 text-center">
-            <p className="text-gray-500 text-sm">
-              &copy; 2025 Smart Ride. All rights reserved.
-            </p>
+            <div className="flex items-center gap-6 text-sm">
+              <Link href="/privacy" className="text-white/40 hover:text-white transition-colors duration-200">Privacy Policy</Link>
+              <Link href="/terms" className="text-white/40 hover:text-white transition-colors duration-200">Terms</Link>
+              <Link href="/delete-account" className="text-white/40 hover:text-white transition-colors duration-200">Delete Account</Link>
+              <Link href="/" className="text-white/40 hover:text-white transition-colors duration-200">Home</Link>
+            </div>
           </div>
         </div>
       </footer>

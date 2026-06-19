@@ -1,21 +1,15 @@
 # ============================================
-# Smart Ride — ProGuard / R8 Rules
+# Smart Ride — ProGuard / R8 Rules (reference copy)
 # ============================================
-# These rules tell R8 not to fail the build when it encounters
-# "missing classes" that are referenced by Expo/React Native
-# modules but not present on the compile classpath.
+# The ACTUAL rules used at build time are auto-generated
+# by plugins/withProguardRules.js into android/app/proguard-rules.pro
+# during `npx expo prebuild`.
 #
-# Even though we FORCE minifyEnabled false in build.gradle via
-# the withAbiSplits config plugin, these rules are here as a
-# fallback so the build can NEVER fail with the
-# "minifyReleaseWithR8 FAILED" / "Missing class expo.modules.kotlin.types.*"
-# error.
+# This root-level file is kept for reference and for any
+# manual Gradle builds that reference it directly.
 # ============================================
 
 # ---- Expo Modules Kotlin (the #1 source of R8 failures) ----
-# expo-image-picker references internal expo-modules-kotlin types
-# that aren't shipped in the published AAR. R8 sees these as
-# "missing classes" and fails the build. Tell it to ignore them.
 -dontwarn expo.modules.kotlin.types.AnyTypeCache
 -dontwarn expo.modules.kotlin.types.OptimizedRecord
 -dontwarn expo.modules.kotlin.types.descriptors.RawTypeDescriptor
@@ -24,13 +18,11 @@
 -dontwarn expo.modules.kotlin.types.descriptors.TypeDescriptorOfKt
 -dontwarn expo.modules.kotlin.types.**
 
-# Keep all expo modules — don't strip any expo-module-kotlin classes
 -keep class expo.modules.kotlin.** { *; }
 -keep class expo.modules.** { *; }
 -keepclassmembers class expo.modules.** { *; }
 
 # ---- Mapbox (@rnmapbox/maps) ----
-# Mapbox SDK is heavily obfuscated internally; R8 strips too aggressively.
 -keep class com.mapbox.** { *; }
 -keep class com.rnmapbox.rnmbx.** { *; }
 -dontwarn com.mapbox.**
@@ -66,14 +58,14 @@
 -dontwarn com.swmansion.reanimated.**
 -dontwarn com.swmansion.worklets.**
 
-# ---- Generic Kotlin metadata — R8 sometimes strips these ----
+# ---- Generic Kotlin metadata ----
 -keepattributes *Annotation*
 -keepattributes Signature
 -keepattributes SourceFile,LineNumberTable
 -keepattributes InnerClasses
 -keepattributes EnclosingMethod
 
-# ---- Keep enum values (often referenced by reflection) ----
+# ---- Keep enum values ----
 -keepclassmembers enum * {
     public static **[] values();
     public static ** valueOf(java.lang.String);
