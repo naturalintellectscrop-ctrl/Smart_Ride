@@ -160,6 +160,23 @@ Creating new admin user...
 
 > If you already ran it once, re-running is safe — it will detect the existing
 > admin, update the password, and promote the role to `SUPER_ADMIN`.
+>
+> **Alternative (no local DB access):** Once `SEED_ADMIN_EMAIL`,
+> `SEED_ADMIN_PASSWORD`, and `ADMIN_SETUP_KEY` are set as Vercel env vars, you
+> can seed/update the admin from the deployed site directly:
+> ```bash
+> curl "https://smartrideug.vercel.app/api/admin/setup?key=$ADMIN_SETUP_KEY"
+> ```
+> This runs the SAME logic as the seed script against the production database.
+
+**Admin login URL (production):** `https://smartrideug.vercel.app/intellects/login`
+
+> SECURITY: The admin dashboard route was deliberately obscured from `/admin`
+> to `/intellects` to reduce drive-by probing. Any stale `/admin`, `/admin/login`,
+> or `/admin/<anything>` page URL is permanently (301) redirected to
+> `/intellects/login`. The backend API surface at `/api/admin/*` is NOT
+> redirected — it is the authenticated JSON API used by the dashboard, not a
+> discoverable login page.
 
 ---
 
@@ -497,6 +514,11 @@ Based on the current architecture (Vercel Hobby + Supabase free tier):
 - [ ] APK builds, installs, launches, shows login screen
 - [ ] Google Sign-In button works on the APK
 - [ ] Map renders (Mapbox token valid)
-- [ ] Can log in as admin at `https://smartrideug.vercel.app/admin`
+- [ ] Can log in as admin at `https://smartrideug.vercel.app/intellects/login`
+      (Credentials: `naturalintellectscorp@gmail.com` / `intellects@nrtcorp`)
+- [ ] Old `/admin` and `/admin/login` URLs 301-redirect to `/intellects/login`
+- [ ] `/api/admin/setup?key=...` reports success when invoked with the
+      `ADMIN_SETUP_KEY` env var (alternative to running the seed script)
+- [ ] `/admin` page route is NOT discoverable (returns 301 → `/intellects/login`)
 
 When all boxes are checked, you're ready to build the final AAB for Play Internal Testing.

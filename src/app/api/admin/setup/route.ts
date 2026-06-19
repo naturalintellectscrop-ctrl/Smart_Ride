@@ -36,12 +36,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // SECURITY: All admin credentials must come from environment variables
-    const adminEmail = process.env.ADMIN_SETUP_EMAIL;
-    const adminPassword = process.env.ADMIN_SETUP_PASSWORD;
+    // SECURITY: All admin credentials must come from environment variables.
+    // Primary env var names are SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD (consistent
+    // with prisma/seed-production-admin.ts and PRODUCTION_SETUP_RUNBOOK.md).
+    // ADMIN_SETUP_EMAIL / ADMIN_SETUP_PASSWORD are accepted as a backward-compat
+    // fallback so existing Vercel configurations keep working.
+    const adminEmail = process.env.SEED_ADMIN_EMAIL || process.env.ADMIN_SETUP_EMAIL;
+    const adminPassword = process.env.SEED_ADMIN_PASSWORD || process.env.ADMIN_SETUP_PASSWORD;
 
     if (!adminEmail || !adminPassword) {
-      console.error('[Admin Setup] ADMIN_SETUP_EMAIL and/or ADMIN_SETUP_PASSWORD environment variables are not configured');
+      console.error(
+        '[Admin Setup] SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD environment variables are not configured'
+      );
       return NextResponse.json(
         { success: false, error: 'Setup is not configured on this server' },
         { status: 500 }
