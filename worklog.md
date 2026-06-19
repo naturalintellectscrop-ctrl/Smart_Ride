@@ -3362,3 +3362,39 @@ Stage Summary:
 - NOTHING LOST: All code (including the 25-fix f3f236c batch from June 16) is present in main and pushed to origin/main (fb0a1b2). 2 backup branches retained as safety net.
 - APK BUILD: FIXED — assembleRelease succeeds in 1m 40s, proguard/R8 fix works, release APK installs on Samsung S21.
 - APK CRASH: Runtime crash (not build). Needs `adb logcat` output from the phone to diagnose. Provided user with exact adb logcat commands and a diagnostic prompt to gather: (1) crash screen text, (2) build command used, (3) APK file size, (4) whether prebuild --clean was run.
+
+---
+Task ID: VERCEL-CRON-FIX
+Agent: Main Agent
+Task: Fix Vercel not deploying — root cause was Hobby plan cron job limit violation
+
+Work Log:
+- Analyzed 2 user-uploaded screenshots via VLM (vision model):
+  1. Vercel Cron Jobs docs page (vercel.com/docs/cron-jobs/usage-and-pricing) showing critical warning: "Hobby accounts are limited to cron jobs that run once per day. Cron expressions that would run more frequently will fail during deployment."
+  2. GitHub deployments page for naturalintellectscrop-ctrl/Smart_Ride showing last successful deployment was 5 days ago (commit a4322f3 "DIRECT_URL Supabase pooler")
+
+- Confirmed our vercel.json had 3 cron jobs ALL violating Hobby plan limits:
+  - dispatch-timeout:  */1 * * * *  (every minute)   — violates "once per day"
+  - cleanup-sessions:  0 */6 * * *  (every 6 hours)  — violates "once per day"  
+  - cleanup-otp:       0 */1 * * *  (every hour)      — violates "once per day"
+
+- This is why every Vercel deployment in the last 5 days silently failed during config validation — Vercel rejects the cron config before the build even starts.
+
+- FIXED vercel.json:
+  - Removed dispatch-timeout cron entirely (needs per-minute, impossible on Hobby)
+  - Changed cleanup-sessions to 0 0 * * * (daily at midnight UTC) — Hobby compliant
+  - Changed cleanup-otp to 0 1 * * * (daily at 1 AM UTC) — Hobby compliant
+
+- Created .github/workflows/cron-dispatch-timeout.yml — free GitHub Actions workflow that runs every minute and pings the dispatch-timeout endpoint with CRON_SECRET header. Replaces the removed Vercel cron at zero cost.
+
+- Confirmed the "3 deployments" the user saw on GitHub are normal historical records (Preview 2 weeks ago, Production 2 weeks ago, Production 5 days ago) — nothing wrong, just stale because new deployments were failing.
+
+- User also reported 'adb: command not found' — adb is not in GitBash PATH on Windows. Provided full-path instructions using Android SDK platform-tools location.
+
+- Committed (38e07c1) and pushed to origin/main. Vercel should auto-deploy this commit successfully since the cron violation is now fixed.
+
+Stage Summary:
+- ROOT CAUSE: Vercel Hobby plan rejects cron jobs running more than once per day. All 3 crons in vercel.json violated this, causing silent deployment failures for 5 days.
+- FIX: vercel.json now has 2 Hobby-compliant daily crons + 1 free GitHub Actions workflow for the per-minute dispatch-timeout.
+- REQUIRED USER ACTION: Set CRON_SECRET as a GitHub repository secret (Settings → Secrets and variables → Actions) so the GitHub Actions cron can authenticate to the dispatch-timeout endpoint.
+- After Vercel auto-deploys commit 38e07c1, all recent work (admin login fix, legal pages, APK crash fixes, Nylon Pay integration) will finally go live.
