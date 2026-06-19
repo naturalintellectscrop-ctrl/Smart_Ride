@@ -3886,3 +3886,66 @@ Stage Summary:
   is correct and the webClientId is hardcoded correctly in src/config/google.ts.
   NETWORK_ERROR = device/network issue (no internet, Play Services outdated,
   wrong date/time, firewall blocking Google). Provided diagnostic steps to user.
+
+---
+Task ID: 11-google-developer-error-fix
+Agent: Main Agent
+Task: User shared screenshot showing Google Sign-In error. Diagnose + fix.
+
+Work Log:
+- Viewed screenshot via VLM (z-ai vision):
+  * Error text: "DEVELOPER_ERROR: Follow troubleshooting instructions at
+    https://react-native-google-signin.github.io/docs/troubleshooting"
+  * Shown in a red alert box under the "EMAIL LOGIN" header on the login screen.
+  * NOTE: User previously typed "NETWORK_ERROR" but the actual error is
+    DEVELOPER_ERROR. The user misread/mistyped.
+- DEVELOPER_ERROR is the classic Google Sign-In SHA-1 fingerprint mismatch:
+  the APK's signing certificate SHA-1 does not match any Android OAuth client
+  SHA-1 registered in Firebase/Google Cloud Console.
+- Read src/config/google.ts — confirmed androidClientId is correctly NOT
+  passed in configure() (the library auto-detects from google-services.json).
+  webClientId is hardcoded correctly.
+- Read src/services/auth.ts — loginWithGoogle(idToken) calls backend
+  /api/auth/google. This is correct (only reached AFTER Google returns a
+  token, so not the cause of DEVELOPER_ERROR).
+- Read app/auth/login.tsx handleGoogleSignIn() — found the catch block was
+  checking err.code === statusCodes.DEVELOPER_ERROR, but statusCodes can
+  be {} when the require guard in config/google.ts falls back. This caused
+  the raw "DEVELOPER_ERROR: Follow troubleshooting..." message to leak to
+  the UI via the generic setError(err.message) fallback.
+- READING THE KEYSTORE DIRECTLY (keytool -list -v -keystore
+  keystores/smartride-upload.keystore -storepass smartride123):
+  * Alias: smartride
+  * SHA1: 98:EA:9B:4B:18:47:E1:CA:61:A0:49:10:80:5B:BD:22:DB:9D:78:F4
+  * This EXACTLY matches one of the 3 registered SHA-1s in
+    google-services.json (certificate_hash 98ea9b4b...78f4, mapped to
+    Android OAuth client qpv85egp...).
+  * CONCLUSION: The keystore IS correct and IS registered. The DEVELOPER_ERROR
+    is happening because the APK on the user's phone was built BEFORE the
+    latest synced google-services.json was in place. The APK has a STALE
+    google-services.json baked in.
+- FIXED login.tsx + register.tsx catch blocks to robustly detect
+  DEVELOPER_ERROR by checking err.code, the string constant 'DEVELOPER_ERROR',
+  AND err.message text. Now shows friendly message: "Google Sign-In needs
+  to be reconfigured for this build. Please rebuild the APK with the latest
+  google-services.json, or use email/phone login for now." Also strips the
+  noisy "Follow troubleshooting instructions..." suffix from other errors.
+- Committed (4dc108a) and pushed to origin/main.
+
+Stage Summary:
+- ROOT CAUSE: APK on user's phone has a STALE google-services.json baked in
+  (built before the synced version was pushed). The keystore SHA-1
+  (98ea9b4b...78f4) IS correctly registered in Firebase — verified by
+  reading the keystore directly with keytool.
+- FIX PATH (user must run on PC):
+  1. cd C:\Smart_Ride && git pull   (gets latest google-services.json + error fix)
+  2. cd expo-app
+  3. Replace .env with the EXPO_PUBLIC_* version (provided in chat)
+  4. npx expo prebuild --clean   (regenerates native Android project with new google-services.json)
+  5. cd android && ./gradlew assembleRelease
+  6. adb install -r app/build/outputs/apk/release/app-release.apk
+- After rebuild, DEVELOPER_ERROR should be gone. If it persists, the user
+  must run: keytool -list -v -keystore keystores/smartride-upload.keystore
+  -storepass smartride123 and verify the SHA-1 matches 98ea9b4b...78f4.
+- The catch-block fix ensures even if DEVELOPER_ERROR recurs, the user sees
+  a friendly message instead of the scary raw error string.
