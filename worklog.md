@@ -4007,3 +4007,84 @@ Stage Summary:
   install → launch.
 - IMPORTANT: The user must git pull FIRST to get the fix before rebuilding,
   or the build will fail again with the same error.
+
+---
+Task ID: 14-fix-signing-config-lost-after-prebuild
+Agent: Main Agent
+Task: User rebuilt APK but DEVELOPER_ERROR persists. Screenshot shows friendly error message (from Task 11 fix), confirming the catch block works but the underlying DEVELOPER_ERROR is still happening.
+
+Work Log:
+- Viewed screenshot via VLM: shows "Google Sign-In needs to be reconfigured
+  for this build. Please rebuild the APK with the latest google-services.json,
+  or use email/phone login for now." — this is MY friendly error message
+  from commit 4dc108a. Confirms:
+  * The APK was successfully built and installed (the build worked!)
+  * My error-handling fix IS in the APK (catch block detected DEVELOPER_ERROR)
+  * BUT Google Sign-In is STILL throwing DEVELOPER_ERROR
+- User also re-uploaded google-services (3).json — verified it's correct
+  (3 Android OAuth SHA-1s + web client + iOS client, package ug.smartride.app).
+- ROOT CAUSE ANALYSIS:
+  The google-services.json is correct. The webClientId in src/config/google.ts
+  is correct. The keystore SHA-1 (98:EA:9B:4B:...:78:F4) IS registered.
+  So why DEVELOPER_ERROR?
+
+  The answer: `expo prebuild --clean` WIPES the entire android/ folder,
+  including android/gradle.properties which contains the SMART_RIDE_UPLOAD_*
+  signing config vars. Without these vars, the release build's signingConfig
+  block is empty, and Gradle falls back to signing the APK with the PC's
+  DEBUG keystore (~/.android/debug.keystore).
+
+  The debug keystore is MACHINE-SPECIFIC — it's generated automatically by
+  Android Studio on first use, and has a DIFFERENT SHA-1 on every machine.
+  The SHA-1 f28c61cc...0ae1 registered in Firebase is the SERVER's debug
+  keystore, NOT the user's PC debug keystore. So the user's APK is signed
+  with an unregistered SHA-1 → DEVELOPER_ERROR.
+
+  Confirmed by reading APK_BUILD_COMMANDS.md:
+    "Set passwords in expo-app/android/gradle.properties:
+     SMART_RIDE_UPLOAD_STORE_PASSWORD=your_keystore_password
+     SMART_RIDE_UPLOAD_KEY_ALIAS=smartride-upload
+     SMART_RIDE_UPLOAD_KEY_PASSWORD=your_key_password"
+  And: "DEVELOPER_ERROR on Google Sign-In → You created a new keystore
+  instead of using keystores/smartride-upload.keystore"
+
+- FIXED build-and-install.sh (commit ff3f129):
+  1. After expo prebuild --clean, INJECTS the SMART_RIDE_UPLOAD_* vars
+     into android/gradle.properties, pointing to
+     keystores/smartride-upload.keystore with alias 'smartride'.
+  2. Reads keystore password from:
+     a. $SMART_RIDE_KEYSTORE_PASSWORD env var, OR
+     b. expo-app/keystore.properties file (gitignored), OR
+     c. interactive prompt (read -s)
+  3. Verifies the password works (keytool -list) BEFORE building, so
+     the user doesn't waste 40 min on a build that will fail.
+  4. After build, EXTRACTS the APK's signing cert SHA-1 using
+     `keytool -printcert -jarfile app-release.apk` and compares to
+     the expected 98:EA:9B:4B:18:47:E1:CA:61:A0:49:10:80:5B:BD:22:DB:9D:78:F4.
+  5. If SHA-1 MISMATCH: prints the actual SHA-1 + instructions to
+     register it in Firebase Console, so the user knows exactly what to do.
+  6. If SHA-1 MATCH: confirms Google Sign-In will work.
+
+- CREATED keystore.properties.template — documents the password file format.
+  User creates expo-app/keystore.properties (gitignored) with:
+    KEYSTORE_PASSWORD=their_password
+  so they don't have to type it every build.
+
+- UPDATED expo-app/.gitignore — added 'keystore.properties' so the password
+  file NEVER gets committed. The .template IS committed (no secrets).
+
+- The keystore password is 'smartride123' (verified earlier with keytool).
+  The user knows this — it's their keystore. The build script will prompt
+  for it if keystore.properties doesn't exist.
+
+Stage Summary:
+- PERSISTENT DEVELOPER_ERROR ROOT CAUSE: expo prebuild --clean wipes
+  android/gradle.properties, causing the release APK to be signed with
+  the PC's debug keystore (unregistered SHA-1) instead of the upload
+  keystore (registered SHA-1 98ea9b4b...78f4).
+- FIX: build-and-install.sh now injects signing config AFTER prebuild
+  and VERIFIES the APK's signing cert SHA-1 matches Firebase before
+  declaring success.
+- User must: git pull → create keystore.properties (or type password
+  when prompted) → run build-and-install.sh. The script will verify
+  the SHA-1 and tell them if it matches or not.
