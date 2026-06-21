@@ -4396,3 +4396,49 @@ Stage Summary:
 - User can either do the quick fix (edit gradle.properties + re-run
   assembleRelease, ~5 min) or the full rebuild (pull + build-and-install.sh,
   ~48 min). Quick fix is strongly recommended.
+
+---
+Task ID: 21-signing-verified-success
+Agent: Main Agent
+Task: User ran apksigner after the quick path fix. Verify the SHA-1 matches and confirm Google Sign-In will work.
+
+Work Log:
+- User ran apksigner on the re-signed APK. Output:
+    Signer #1 certificate DN: CN=Smart Ride, OU=Engineering,
+      O=Smart Ride Uganda, L=Kampala, ST=Central, C=UG
+    Signer #1 certificate SHA-256 digest: 0d8fb26706a927e060ffa382...
+    Signer #1 certificate SHA-1 digest: 98ea9b4b1847e1ca61a04910805bbd22db9d78f4
+    Signer #1 certificate MD5 digest: f5642353f222bcdfb1446260e1b2bf60
+
+- VERIFIED MATCH:
+  Expected: 98:EA:9B:4B:18:47:E1:CA:61:A0:49:10:80:5B:BD:22:DB:9D:78:F4
+  Actual:   98ea9b4b1847e1ca61a04910805bbd22db9d78f4
+  (same value, different formatting — lowercase, no colons)
+
+- The certificate DN confirms it's the upload keystore (not debug):
+  "CN=Smart Ride, OU=Engineering, O=Smart Ride Uganda, L=Kampala"
+  vs the previous "CN=Android Debug, OU=Android, O=Unknown"
+
+- CONCLUSION: The APK is now correctly signed with the upload keystore
+  whose SHA-1 is registered in Firebase. Google Sign-In will authenticate
+  without DEVELOPER_ERROR.
+
+- Instructed user to:
+  1. Install the APK: adb install -r app-release.apk
+  2. Launch: adb shell am start -n ug.smartride.app/.MainActivity
+  3. Test Google Sign-In (should show account picker, no DEVELOPER_ERROR)
+  4. Test email login (must REGISTER first — backend verified working
+     in Task 15; the email login issue was almost certainly because the
+     user tried to login without an account)
+
+Stage Summary:
+- FOUR bugs were fixed across this session to get here:
+  1. EBUSY file lock (Task 16) — kill java.exe + retry prebuild
+  2. Signing config eval order (Task 17) — inline maybeCreate()
+  3. Signing config targeting wrong build type (Task 19) — brace-match
+     the release block
+  4. MINGW path in gradle.properties (Task 20) — cygpath -m conversion
+- The APK is now signed with SHA-1 98:EA:9B:4B:...:78:F4 which matches
+  the google-services.json registered fingerprint. Google Sign-In will
+  work.
+- User is installing + testing now. Awaiting confirmation.
