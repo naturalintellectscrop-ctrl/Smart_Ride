@@ -229,25 +229,52 @@ if [ -z "$APK_PATH" ]; then
 fi
 echo -e "${GREEN}  APK: ${APK_PATH}${NC}"
 
-# Extract signing cert SHA-1 from the APK.
-# Try apksigner first (reads v2/v3 signatures), fall back to keytool (v1 only).
-APKSIGNER=""
-if command -v apksigner &> /dev/null; then
-  APKSIGNER="apksigner"
-elif [ -f "/c/Users/GODWIN/AppData/Local/Android/Sdk/build-tools/36.0.0/apksigner.bat" ]; then
-  APKSIGNER="/c/Users/GODWIN/AppData/Local/Android/Sdk/build-tools/36.0.0/apksigner.bat"
-else
-  # Find apksigner in any build-tools version
-  APKSIGNER=$(find /c/Users/GODWIN/AppData/Local/Android/Sdk/build-tools -name "apksigner*" -type f 2>/dev/null | sort -V | tail -1)
-fi
-
+# Extract signing cert SHA-1 from the APK using apksigner.
+# We use the apksigner.JAR directly via 'java -jar' because the .bat wrapper
+# doesn't execute reliably under GitBash/MINGW on Windows. The .jar is always
+# at <sdk>/build-tools/<version>/lib/apksigner.jar.
+#
+# apksigner reads v2/v3 signature schemes (keytool only reads v1/JAR sigs).
 APK_SHA1=""
-if [ -n "$APKSIGNER" ]; then
-  # apksigner verify --print-certs outputs: "SHA-1 digest: XX:XX:XX:..."
-  APK_SHA1=$("$APKSIGNER" verify --print-certs "$APK_PATH" 2>/dev/null | grep "^SHA-1 digest:" | head -1 | sed 's/SHA-1 digest: //' | tr -d ' ')
+
+# Locate the Android SDK build-tools directory
+BUILD_TOOLS_DIR=""
+if [ -n "$ANDROID_HOME" ] && [ -d "$ANDROID_HOME/build-tools" ]; then
+  BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools"
+elif [ -n "$ANDROID_SDK_ROOT" ] && [ -d "$ANDROID_SDK_ROOT/build-tools" ]; then
+  BUILD_TOOLS_DIR="$ANDROID_SDK_ROOT/build-tools"
+elif [ -d "/c/Users/GODWIN/AppData/Local/Android/Sdk/build-tools" ]; then
+  BUILD_TOOLS_DIR="/c/Users/GODWIN/AppData/Local/Android/Sdk/build-tools"
+elif [ -d "/c/android-sdk/build-tools" ]; then
+  BUILD_TOOLS_DIR="/c/android-sdk/build-tools"
 fi
 
-# If apksigner failed, try keytool (only works for v1 signatures)
+APKSIGNER_JAR=""
+if [ -n "$BUILD_TOOLS_DIR" ]; then
+  # Find the latest apksigner.jar across all build-tools versions
+  APKSIGNER_JAR=$(find "$BUILD_TOOLS_DIR" -name "apksigner.jar" -type f 2>/dev/null | sort -V | tail -1)
+fi
+
+if [ -n "$APKSIGNER_JAR" ] && [ -f "$APKSIGNER_JAR" ]; then
+  echo -e "${CYAN}  Using apksigner: ${APKSIGNER_JAR}${NC}"
+  # apksigner verify --print-certs outputs: "SHA-1 digest: XX:XX:XX:..."
+  APK_SHA1=$(java -jar "$APKSIGNER_JAR" verify --print-certs "$APK_PATH" 2>/dev/null | grep "^SHA-1 digest:" | head -1 | sed 's/SHA-1 digest: //' | tr -d ' ')
+fi
+
+# If apksigner.jar approach failed, try the .bat directly (some MINGW setups work)
+if [ -z "$APK_SHA1" ]; then
+  APKSIGNER_BAT=""
+  if [ -n "$BUILD_TOOLS_DIR" ]; then
+    APKSIGNER_BAT=$(find "$BUILD_TOOLS_DIR" -name "apksigner.bat" -type f 2>/dev/null | sort -V | tail -1)
+  fi
+  if [ -n "$APKSIGNER_BAT" ] && [ -f "$APKSIGNER_BAT" ]; then
+    echo -e "${CYAN}  Using apksigner.bat: ${APKSIGNER_BAT}${NC}"
+    APK_SHA1=$(cmd //c "$APKSIGNER_BAT" verify --print-certs "$APK_PATH" 2>/dev/null | grep "^SHA-1 digest:" | head -1 | sed 's/SHA-1 digest: //' | tr -d ' ')
+  fi
+fi
+
+# Last resort: keytool (only works for v1/JAR signatures — will be empty for
+# modern v2/v3-signed APKs, but worth trying)
 if [ -z "$APK_SHA1" ]; then
   APK_SHA1=$(keytool -printcert -jarfile "$APK_PATH" 2>/dev/null | grep "SHA1:" | head -1 | awk '{print $2}')
 fi
