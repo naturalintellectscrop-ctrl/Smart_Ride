@@ -7,9 +7,9 @@
 // PC's debug keystore. Without this, Google Sign-In throws DEVELOPER_ERROR.
 //
 // HOW IT WORKS:
-//   Inside buildTypes.release { ... }, we replace the default
-//     signingConfig signingConfigs.debug
-//   with an inline block that:
+//   Locates buildTypes { release { ... } } by counting braces, then
+//   replaces the `signingConfig signingConfigs.debug` line INSIDE THAT
+//   BLOCK ONLY with an inline block that:
 //     1. Creates a 'release' signing config on the fly via maybeCreate()
 //        (safe — won't fail even if it already exists)
 //     2. Configures it from gradle.properties vars:
@@ -19,16 +19,14 @@
 //          SMART_RIDE_UPLOAD_KEY_PASSWORD
 //     3. Assigns it to the release build type
 //     4. Falls back to signingConfigs.debug if vars are not set
-//        (e.g. EAS cloud build, debug build)
 //
-// WHY INLINE (not a separate signingConfigs { } block):
-//   A separate signingConfigs { release { } } block must be ordered
-//   BEFORE buildTypes { } and the reference signingConfigs.release is
-//   evaluated lazily. Across Expo SDK versions the template structure
-//   varies, and a misplaced block causes:
-//     "Could not get unknown property 'release' for SigningConfig container"
-//   Creating + referencing the config at the same call site avoids this
-//   ordering problem entirely.
+// WHY BRACE-COUNTING (not a regex on the whole file):
+//   Expo's template has `signingConfig signingConfigs.debug` in BOTH the
+//   debug build type and the release build type. A global regex replaces
+//   only the FIRST match (the debug one), leaving release untouched →
+//   APK still signed with debug keystore. By locating the release block
+//   via brace-matching and only modifying within it, we guarantee the
+//   release build type is the one that gets the upload keystore.
 // ============================================
 
 const { withAppBuildGradle } = require('expo/config-plugins');
@@ -58,45 +56,65 @@ function withSigningConfig(config) {
       '        }',
     ].join('\n');
 
-    let modified = false;
-
-    // CASE 1: The template has an explicit
-    //   `signingConfig signingConfigs.debug`
-    // line inside buildTypes.release. Replace it with our block.
-    // This is the common case for Expo/RN templates.
-    const signingRefRe = /([ \t]*)signingConfig[ \t]+signingConfigs\.(debug|release)[ \t]*\n/;
-    if (signingRefRe.test(contents)) {
-      contents = contents.replace(signingRefRe, releaseBlock + '\n');
-      modified = true;
-    }
-
-    // CASE 2: No explicit signingConfig line found. Find the release block
-    // inside buildTypes { ... } and inject our block right after the
-    // opening brace of `release {`.
-    if (!modified) {
-      const buildTypesIdx = contents.indexOf('buildTypes');
-      if (buildTypesIdx !== -1) {
-        const afterBuildTypes = contents.slice(buildTypesIdx);
-        const releaseMatch = afterBuildTypes.match(/release[ \t]*\{/);
-        if (releaseMatch) {
-          const releaseBraceIdx =
-            buildTypesIdx + releaseMatch.index + releaseMatch[0].length;
-          contents =
-            contents.slice(0, releaseBraceIdx) +
-            '\n' + releaseBlock +
-            contents.slice(releaseBraceIdx);
-          modified = true;
-        }
-      }
-    }
-
-    if (!modified) {
+    // Locate buildTypes { ... }
+    const buildTypesIdx = contents.indexOf('buildTypes');
+    if (buildTypesIdx === -1) {
       console.warn(
-        '[withSigningConfig] WARNING: could not find a place to inject ' +
-          'signing config. The release APK will be signed with the debug ' +
-          'keystore and Google Sign-In will fail with DEVELOPER_ERROR.'
+        '[withSigningConfig] WARNING: buildTypes block not found. ' +
+          'Release APK will be signed with debug keystore.'
       );
+      config.modResults.contents = contents;
+      return config;
     }
+
+    // Find 'release {' after buildTypes (the release build type)
+    const afterBuildTypes = contents.slice(buildTypesIdx);
+    const releaseMatch = afterBuildTypes.match(/release\s*\{/);
+    if (!releaseMatch) {
+      console.warn(
+        '[withSigningConfig] WARNING: release block not found in buildTypes. ' +
+          'Release APK will be signed with debug keystore.'
+      );
+      config.modResults.contents = contents;
+      return config;
+    }
+
+    // releaseStart = index of the character right after 'release {'
+    const releaseStart = buildTypesIdx + releaseMatch.index + releaseMatch[0].length;
+
+    // Find the matching closing brace of the release block by counting.
+    // Start at depth 1 (we're already inside the release { opening brace).
+    let depth = 1;
+    let i = releaseStart;
+    while (i < contents.length && depth > 0) {
+      const ch = contents[i];
+      if (ch === '{') depth++;
+      else if (ch === '}') depth--;
+      i++;
+    }
+    // i is now positioned just AFTER the closing brace of the release block.
+    // releaseEnd = index of the closing brace itself.
+    const releaseEnd = i - 1;
+
+    // Extract just the release block's inner content
+    const releaseContent = contents.slice(releaseStart, releaseEnd);
+
+    // Within the release block ONLY, replace the signingConfig line.
+    // This avoids touching the debug build type's signingConfig line.
+    const signingRefRe = /[ \t]*signingConfig[ \t]+signingConfigs\.(debug|release)[ \t]*\n/;
+    let newReleaseContent;
+    if (signingRefRe.test(releaseContent)) {
+      newReleaseContent = releaseContent.replace(signingRefRe, releaseBlock + '\n');
+    } else {
+      // No existing signingConfig line in the release block — inject at the top
+      newReleaseContent = '\n' + releaseBlock + releaseContent;
+    }
+
+    // Reassemble: everything before release block + new release content + everything after
+    contents =
+      contents.slice(0, releaseStart) +
+      newReleaseContent +
+      contents.slice(releaseEnd);
 
     config.modResults.contents = contents;
     return config;
