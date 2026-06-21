@@ -4501,3 +4501,60 @@ Stage Summary:
 - User can reset their password RIGHT NOW by calling the new endpoint
   with curl, once Vercel redeploys with the new code.
 - For production, user should configure Resend email service.
+
+---
+Task ID: 23-rider-onboarding-escape-hatch
+Agent: Main Agent
+Task: User reports being automatically redirected to "Become a Rider" screen after Google login. They don't want to be a rider. Diagnose and fix.
+
+Work Log:
+- ROOT CAUSE: User's account in the database has role=RIDER (probably set
+  during a previous test or accidentally selected during role selection).
+  When they log in with Google:
+  1. Backend finds existing account → returns role: 'RIDER'
+  2. App's navigateByRole('RIDER') sends them to /rider/onboarding
+  3. The "Become a Rider" screen requires completing full rider onboarding
+     (personal info, document uploads, vehicle info, review) with no escape
+  4. The back button on step 1 called router.back(), which did nothing
+     because they landed here via router.replace (no back history)
+  - Confirmed by reading login.tsx navigateByRole() and rider/onboarding.tsx.
+  - Backend code (src/app/api/auth/google/route.ts) creates NEW Google users
+    with role=CLIENT, so the user's account must have existed before with
+    role=RIDER.
+
+- FIX 1 (immediate, for current stuck user): Created /api/admin/set-role
+  endpoint (commit bcfbd43) protected by ADMIN_SETUP_KEY.
+  - Accepts { key, email, role } in POST body
+  - Validates role against all valid UserRole values
+  - Anti-escalation: cannot grant admin roles to non-admin users
+  - Creates audit log entry (ADMIN_ROLE_CHANGE)
+  - User can fix their stuck account via curl:
+    curl -X POST https://smartrideug.vercel.app/api/admin/set-role \
+      -H "Content-Type: application/json" \
+      -d '{"key":"ADMIN_SETUP_KEY","email":"user@email","role":"CLIENT"}'
+
+- FIX 2 (UX, for future): Added escape hatch on rider onboarding screen.
+  - Added "Not a rider?" button in the header (right side, replaces the
+    empty View)
+  - Back button on step 1 now triggers the switch role dialog (was
+    router.back() which did nothing)
+  - Tapping shows confirmation: "Switch to Client role and go to main app?"
+  - On confirm: calls api.updateUserRole('CLIENT') then router.replace('/(tabs)')
+  - This prevents anyone from being trapped on this screen in the future
+
+- NOTE: Both fixes are on the BACKEND and EXPO APP. The backend change
+  (admin/set-role endpoint) deploys automatically on Vercel. The expo app
+  change (escape hatch button) requires a rebuild to take effect on the
+  phone. For the immediate fix, the user should use the curl command above
+  (no rebuild needed).
+
+Stage Summary:
+- User's account has role=RIDER, trapping them on the rider onboarding
+  screen after login.
+- Immediate fix: admin set-role endpoint (use curl to change role to CLIENT)
+- UX fix: escape hatch button on rider onboarding screen (requires rebuild)
+- User should:
+  1. Run the curl command to set their role back to CLIENT (takes effect
+     immediately, no rebuild needed)
+  2. Log out of the app and log back in → will go to main app (tabs)
+  3. For future protection, rebuild the app to get the escape hatch button
