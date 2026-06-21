@@ -4164,3 +4164,37 @@ Stage Summary:
 - User must: git pull → create keystore.properties → rebuild. The new plugin
   will automatically configure signing. SHA-1 verification will now use
   apksigner (correct for v2/v3 signatures).
+
+---
+Task ID: 16-windows-ebusy-fix
+Agent: Main Agent
+Task: User ran build-and-install.sh but it failed with "EBUSY: resource busy or locked, unlink '...mergeDexRelease/classes2.dex'" during expo prebuild --clean. Fix and re-push.
+
+Work Log:
+- Root cause: Windows holds file locks on android/app/build/*.dex files
+  even after gradlew finishes, because the Gradle daemon and Kotlin daemon
+  keep running in the background as java.exe processes. When expo prebuild
+  --clean tries to delete android/app/build/, Windows refuses with EBUSY.
+
+- Fix applied to build-and-install.sh (commit 6b3241d):
+  * NEW Step [2b/9] before prebuild:
+    - ./gradlew --stop (graceful daemon stop, all platforms)
+    - taskkill //F //IM java.exe //T on Windows/MINGW (force-kill all Java)
+    - taskkill //F //IM kotlin-daemon.exe //T on Windows/MINGW
+    - pkill gradle + pkill kotlin-daemon on Unix
+    - sleep 2 (let OS release file handles)
+    - rm -rf android/app/build android/build android/.gradle
+  * NEW Step [3/9] retry loop:
+    - Up to 3 attempts at npx expo prebuild --platform android --clean
+    - Between attempts: kill java.exe again + sleep 5
+    - On total failure: print actionable instructions
+      (taskkill //F //IM java.exe then re-run)
+
+- Pushed to origin/main as commit 6b3241d.
+
+Stage Summary:
+- The EBUSY error was caused by lingering Gradle/Kotlin daemons holding
+  file locks on Windows. The build script now proactively kills all
+  java.exe processes and force-deletes the locked build dirs before
+  running expo prebuild --clean, with a 3-attempt retry loop as backup.
+- User action: git pull origin main, then re-run bash build-and-install.sh.
