@@ -4634,3 +4634,25 @@ Stage Summary:
 - Manual logins (Google/Apple/email/OTP) still always show the role-selection screen first so users can choose/confirm their role.
 - Net code change: -88 lines (replaced 5 duplicated if/else chains with one shared helper).
 - Changes pushed to GitHub. User needs to: (1) rebuild the APK for mobile changes, (2) run db:push on Vercel production DB to add DRIVER to the production enum.
+
+---
+Task ID: 25
+Agent: Main Agent
+Task: Fix "Failed to authenticate with Google" production error and push
+
+Work Log:
+- Diagnosed root cause: in Task 24 I changed prisma/schema.prisma provider from postgresql -> sqlite so local db:push would work. That change was pushed to Vercel, where the postinstall step ran `prisma generate` with provider=sqlite. This generated a Prisma Client that can ONLY connect to SQLite databases. At runtime, every db.* call against the Supabase PostgreSQL DATABASE_URL failed immediately. This broke ALL API endpoints, including /api/auth/google -> 500 "Failed to authenticate with Google".
+- Fix applied:
+  1. Reverted prisma/schema.prisma provider back to "postgresql" (matches production Supabase). The committed schema MUST be postgresql because that's what Vercel builds and deploys with.
+  2. Created scripts/db-push-local.sh — temporarily swaps provider postgresql -> sqlite, runs prisma db push against the local SQLite file DB, then restores postgresql automatically (bash trap ensures restore even on failure). Validates the swap worked before running push.
+  3. Updated package.json: "db:push" now runs the local swap script (bun run db:push still works for local SQLite dev). "db:push:prod" (existing) pushes to production PostgreSQL using DATABASE_URL env var.
+  4. Verified the local script works: ran `bun run db:push` successfully — it swapped to sqlite, pushed to local SQLite ("already in sync"), and restored postgresql. Confirmed schema is back to postgresql after the run.
+- Committed: 6b31ec4 "fix(critical): revert schema provider to postgresql — breaks production DB"
+- Pushed to origin/main. Vercel will auto-rebuild and regenerate the Prisma Client with the correct PostgreSQL provider, restoring all DB connectivity.
+
+Stage Summary:
+- ROOT CAUSE: provider=sqlite in committed schema broke Vercel production build (Prisma Client couldn't connect to PostgreSQL)
+- FIX: schema committed with provider=postgresql; local SQLite dev handled via swap script (db-push-local.sh) that temporarily swaps and auto-restores
+- Rule established: committed prisma/schema.prisma MUST have provider=postgresql (production truth). Local dev mismatch is handled by script, not by editing the committed schema.
+- Google auth (and all other DB-dependent endpoints) will work again once Vercel finishes rebuilding (usually 2-3 minutes after push).
+- Local dev workflow unchanged: `bun run db:push` still pushes to local SQLite via the swap script.
