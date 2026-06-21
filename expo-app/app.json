@@ -104,6 +104,7 @@
       "./plugins/withAgoraPermissions",
       "./plugins/withAbiSplits",
       "./plugins/withProguardRules",
+      "./plugins/withSigningConfig",
       "@sentry/react-native/expo"
     ],
     "experiments": {

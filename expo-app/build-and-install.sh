@@ -119,6 +119,8 @@ if ! keytool -list -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" > 
 fi
 
 # Append signing config to gradle.properties (file is gitignored, safe to write secrets)
+# IMPORTANT: The storeFile path must be relative to the android/ folder OR absolute.
+# We use an absolute path so Gradle can find it regardless of working directory.
 cat >> gradle.properties << EOF
 
 # ─── Smart Ride signing config (auto-injected by build-and-install.sh) ───
@@ -131,6 +133,7 @@ EOF
 
 echo -e "${GREEN}✓ Signing config injected into android/gradle.properties${NC}"
 echo -e "${GREEN}  Keystore: $KEYSTORE_PATH${NC}"
+echo -e "${GREEN}  Key alias: smartride${NC}"
 echo -e "${GREEN}  Expected SHA-1: $EXPECTED_SHA1${NC}"
 echo ""
 
@@ -170,13 +173,38 @@ if [ -z "$APK_PATH" ]; then
 fi
 echo -e "${GREEN}  APK: ${APK_PATH}${NC}"
 
-# Extract signing cert SHA-1 from the APK
-APK_SHA1=$(keytool -printcert -jarfile "$APK_PATH" 2>/dev/null | grep "SHA1:" | head -1 | awk '{print $2}')
-echo -e "${CYAN}  APK signing cert SHA-1:    ${APK_SHA1}${NC}"
-echo -e "${CYAN}  Expected (Firebase-registered): ${EXPECTED_SHA1}${NC}"
+# Extract signing cert SHA-1 from the APK.
+# Try apksigner first (reads v2/v3 signatures), fall back to keytool (v1 only).
+APKSIGNER=""
+if command -v apksigner &> /dev/null; then
+  APKSIGNER="apksigner"
+elif [ -f "/c/Users/GODWIN/AppData/Local/Android/Sdk/build-tools/36.0.0/apksigner.bat" ]; then
+  APKSIGNER="/c/Users/GODWIN/AppData/Local/Android/Sdk/build-tools/36.0.0/apksigner.bat"
+else
+  # Find apksigner in any build-tools version
+  APKSIGNER=$(find /c/Users/GODWIN/AppData/Local/Android/Sdk/build-tools -name "apksigner*" -type f 2>/dev/null | sort -V | tail -1)
+fi
 
-if [ "$APK_SHA1" = "$EXPECTED_SHA1" ]; then
+APK_SHA1=""
+if [ -n "$APKSIGNER" ]; then
+  # apksigner verify --print-certs outputs: "SHA-1 digest: XX:XX:XX:..."
+  APK_SHA1=$("$APKSIGNER" verify --print-certs "$APK_PATH" 2>/dev/null | grep "^SHA-1 digest:" | head -1 | sed 's/SHA-1 digest: //' | tr -d ' ')
+fi
+
+# If apksigner failed, try keytool (only works for v1 signatures)
+if [ -z "$APK_SHA1" ]; then
+  APK_SHA1=$(keytool -printcert -jarfile "$APK_PATH" 2>/dev/null | grep "SHA1:" | head -1 | awk '{print $2}')
+fi
+
+echo -e "${CYAN}  APK signing cert SHA-1:    ${APK_SHA1:-<unable to extract>}${NC}"
+echo -e "${CYAN}  Expected (Firebase):       ${EXPECTED_SHA1}${NC}"
+
+if [ -n "$APK_SHA1" ] && [ "$APK_SHA1" = "$EXPECTED_SHA1" ]; then
   echo -e "${GREEN}✓ SHA-1 MATCHES — Google Sign-In will work!${NC}"
+elif [ -z "$APK_SHA1" ]; then
+  echo -e "${YELLOW}⚠  Could not extract SHA-1 (apksigner not found).${NC}"
+  echo -e "${YELLOW}  To verify manually, run:${NC}"
+  echo -e "${YELLOW}  apksigner verify --print-certs $APK_PATH | grep SHA-1${NC}"
 else
   echo -e "${RED}✗ SHA-1 MISMATCH!${NC}"
   echo -e "${RED}  The APK is signed with a different keystore than what's registered in Firebase.${NC}"
@@ -184,7 +212,6 @@ else
   echo -e "${YELLOW}  Fix: Register this SHA-1 in Firebase Console → Project Settings → Android app → Add fingerprint:${NC}"
   echo -e "${YELLOW}    ${APK_SHA1}${NC}"
   echo -e "${YELLOW}  Then re-download google-services.json and rebuild.${NC}"
-  # Don't abort — let the user decide whether to install anyway
 fi
 echo ""
 
