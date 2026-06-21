@@ -279,20 +279,11 @@ export default function VerifyOTPScreen() {
         }
 
         setTimeout(() => {
-          // Navigate based on user role — if no role, show role selection
-          const userRole = user?.role;
-          if (userRole === 'RIDER') {
-            router.replace('/rider/onboarding');
-          } else if (userRole === 'MERCHANT') {
-            router.replace('/merchant/register');
-          } else if (userRole === 'DRIVER') {
-            router.replace('/driver/index');
-          } else if (userRole === 'CLIENT') {
-            router.replace('/(tabs)');
-          } else {
-            // No role set — show role selection
-            router.replace('/auth/role-selection');
-          }
+          // Always show role-selection after phone OTP login so the user
+          // can choose or change what kind of user they are. The screen
+          // pre-selects their current role and has a Skip button, so
+          // returning users can proceed quickly.
+          router.replace('/auth/role-selection');
         }, 500);
       } else {
         const errorMsg = response.error || 'Verification failed';

@@ -4558,3 +4558,37 @@ Stage Summary:
      immediately, no rebuild needed)
   2. Log out of the app and log back in → will go to main app (tabs)
   3. For future protection, rebuild the app to get the escape hatch button
+
+---
+Task ID: 23
+Agent: Main Agent
+Task: Fix post-login routing — users should see role-selection screen instead of being sent directly to "Become a rider" screen
+
+Work Log:
+- Investigated Expo app post-login routing flow across all auth screens
+- Found root cause: `navigateByRole()` in login.tsx routes users based on their DB `role` field. User's account has role='RIDER' (from previous registration), so Google login → /rider/onboarding ("Become a rider" screen), bypassing the role-selection screen entirely
+- The role-selection screen (/auth/role-selection) only appeared when role was undefined/null — but backend always sets role (CLIENT for new Google users, existing role for returning users)
+- Fixed by separating auto-login routing from manual-login routing:
+  * Auto-login (checkAuth on app open): keeps role-based routing via `navigateHomeByRole()` — returning users go directly to their role's home screen without seeing role-selection every time
+  * Manual login (Google/Apple/email/OTP): ALWAYS shows role-selection screen via `goToRoleSelection()` — lets user choose or change their role. Screen pre-selects current role and has Skip button
+- Files modified:
+  1. expo-app/app/auth/login.tsx:
+     - Renamed `navigateByRole` → `navigateHomeByRole` (used by checkAuth/auto-login)
+     - Added `goToRoleSelection()` helper (always routes to /auth/role-selection)
+     - Updated 3 manual login handlers (Google, Apple, email) to call `goToRoleSelection()` instead of `navigateByRole(userData?.role)`
+     - checkAuth still calls `navigateHomeByRole(user.role)` for auto-login
+  2. expo-app/app/auth/register.tsx:
+     - Updated Google sign-in handler to `router.replace('/auth/role-selection')` instead of `navigateByRole(userData?.role)`
+     - Email registration handler unchanged (user already selected role in the form)
+     - checkAuth auto-login unchanged
+  3. expo-app/app/auth/verify-otp.tsx:
+     - Replaced post-OTP-verification role-based routing with `router.replace('/auth/role-selection')`
+     - Auto-login useEffect unchanged (still uses role-based routing)
+- phone-login.tsx auto-login useEffect left unchanged (it's auto-login, not manual login)
+
+Stage Summary:
+- After ANY manual login (Google, Apple, email, phone OTP), users now ALWAYS see the role-selection screen where they can choose what kind of user they are (Client, Rider/Boda, Driver, Merchant, Pharmacist)
+- The role-selection screen pre-selects the user's current role and has a Skip button, so returning users can proceed quickly
+- The role-selection screen calls `api.updateUserRole()` to persist any role change, then routes to the appropriate home screen
+- Auto-login (app open while already authenticated) still routes directly to the role's home screen — no extra screen for returning users
+- User needs to rebuild the APK for these changes to take effect on the physical device

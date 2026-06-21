@@ -79,11 +79,14 @@ export default function LoginScreen() {
       if (!user) {
         return;
       }
-      navigateByRole(user.role);
+      navigateHomeByRole(user.role);
     }
   };
 
-  const navigateByRole = (role?: string) => {
+  // Used by checkAuth (auto-login on app open) — routes returning users
+  // directly to their role's home screen so they don't see role-selection
+  // every time they open the app.
+  const navigateHomeByRole = (role?: string) => {
     if (role === 'RIDER') {
       router.replace('/rider/onboarding');
     } else if (role === 'MERCHANT') {
@@ -97,6 +100,14 @@ export default function LoginScreen() {
       // No role set — show role selection so user can choose
       router.replace('/auth/role-selection');
     }
+  };
+
+  // Used after a MANUAL login (Google/Apple/email). ALWAYS show the
+  // role-selection screen so the user can choose or change what kind of
+  // user they are. The screen pre-selects their current role and has a
+  // Skip button, so returning users can proceed quickly.
+  const goToRoleSelection = () => {
+    router.replace('/auth/role-selection');
   };
 
   // ─── Phone Continue ────────────────────────────
@@ -160,7 +171,8 @@ export default function LoginScreen() {
               role: userData.role,
             }, token);
           }
-          navigateByRole(userData?.role);
+          // Always show role-selection after manual Google login
+          goToRoleSelection();
         } else {
           setError(result.error || 'Google Sign-In failed. Please try again.');
         }
@@ -280,7 +292,8 @@ export default function LoginScreen() {
             role: userData.role,
           }, token);
         }
-        navigateByRole(userData?.role);
+        // Always show role-selection after manual Apple login
+        goToRoleSelection();
       } else {
         setError(result.error || 'Apple Sign-In failed. Please try again.');
       }
@@ -325,7 +338,8 @@ export default function LoginScreen() {
             role: userData.role,
           }, token);
         }
-        navigateByRole(userData?.role);
+        // Always show role-selection after manual email login
+        goToRoleSelection();
       } else {
         setError(result.error || 'Login failed');
       }
