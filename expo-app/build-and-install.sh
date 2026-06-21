@@ -75,9 +75,65 @@ git pull origin main
 echo -e "${GREEN}✓ Code up to date${NC}"
 echo ""
 
-# ─── Step 2: expo prebuild ────────────────────
+# ─── Step 1b: Kill stale Gradle/Java daemons ──
+# Windows frequently holds locks on android/app/build/*.dex files even after
+# gradlew finishes, because the Gradle daemon and Kotlin daemon keep running
+# in the background. These locks cause EBUSY errors during expo prebuild --clean.
+# We kill them BEFORE prebuild so the clean can succeed.
+echo -e "${CYAN}[2b/9] Stopping stale Gradle/Java daemons (Windows file lock fix)...${NC}"
+# Stop the Gradle daemon gracefully (works on all platforms)
+if [ -f "android/gradlew" ]; then
+  (cd android && ./gradlew --stop > /dev/null 2>&1) || true
+fi
+# Kill any lingering java processes that look like Gradle/Kotlin daemons.
+# On Windows/MINGW, taskkill is more reliable than kill for this.
+if command -v taskkill &> /dev/null; then
+  # /F = force, /IM = image name. Kill gradle daemons + kotlin daemons.
+  taskkill //F //IM "java.exe" //T > /dev/null 2>&1 || true
+  taskkill //F //IM "kotlin-daemon.exe" //T > /dev/null 2>&1 || true
+else
+  pkill -f "gradle" 2>/dev/null || true
+  pkill -f "kotlin-daemon" 2>/dev/null || true
+fi
+# Give the OS a moment to release file handles
+sleep 2
+
+# Force-delete the android/build dirs that commonly get locked.
+# This is a best-effort cleanup — if it fails, expo prebuild will retry.
+rm -rf android/app/build 2>/dev/null || true
+rm -rf android/build 2>/dev/null || true
+rm -rf android/.gradle 2>/dev/null || true
+echo -e "${GREEN}✓ Daemons stopped, build dirs cleared${NC}"
+echo ""
+
+# ─── Step 2: expo prebuild (with retry) ───────
+# On Windows, even after killing daemons, some file locks take a second to
+# release. We retry up to 3 times with a delay if prebuild fails with EBUSY.
 echo -e "${CYAN}[3/9] Regenerating native Android project...${NC}"
-npx expo prebuild --platform android --clean
+PREBUILD_OK=0
+for ATTEMPT in 1 2 3; do
+  echo -e "${YELLOW}  Attempt ${ATTEMPT}/3...${NC}"
+  if npx expo prebuild --platform android --clean; then
+    PREBUILD_OK=1
+    break
+  fi
+  echo -e "${YELLOW}  Attempt ${ATTEMPT} failed. Retrying in 5s...${NC}"
+  # Kill any daemon that may have re-spawned during the failed attempt
+  if command -v taskkill &> /dev/null; then
+    taskkill //F //IM "java.exe" //T > /dev/null 2>&1 || true
+  else
+    pkill -f "gradle" 2>/dev/null || true
+  fi
+  sleep 5
+done
+if [ "$PREBUILD_OK" -ne 1 ]; then
+  echo -e "${RED}✗ expo prebuild failed after 3 attempts.${NC}"
+  echo -e "${YELLOW}  This is almost always a Windows file-lock issue.${NC}"
+  echo -e "${YELLOW}  FIX: Close Android Studio and any running Java processes, then re-run:${NC}"
+  echo -e "${YELLOW}    taskkill //F //IM java.exe${NC}"
+  echo -e "${YELLOW}    bash build-and-install.sh${NC}"
+  exit 1
+fi
 echo -e "${GREEN}✓ Native project regenerated${NC}"
 echo ""
 
