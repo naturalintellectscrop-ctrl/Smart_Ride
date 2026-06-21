@@ -4294,3 +4294,54 @@ Stage Summary:
   existing APK to determine if signing is correct. This will tell us
   whether to debug the signing config further or investigate other
   causes of DEVELOPER_ERROR.
+
+---
+Task ID: 19-signing-plugin-target-release-block
+Agent: Main Agent
+Task: apksigner output showed APK signed with DEBUG keystore (CN=Android Debug, SHA-1 5e8f16062ea3cd2c4a0d547876baa6f38cabf625). Signing config plugin didn't take effect. Diagnose and fix.
+
+Work Log:
+- CRITICAL DIAGNOSIS: User ran apksigner on the built APK and got:
+    Signer #1 certificate DN: CN=Android Debug, OU=Android, O=Unknown
+    SHA-1: 5e8f16062ea3cd2c4a0d547876baa6f38cabf625
+  This is the PC's DEBUG keystore, NOT the upload keystore
+  (expected 98:EA:9B:4B:...:78:F4). So the signing config plugin
+  did NOT take effect on the release build type.
+
+- ROOT CAUSE: withSigningConfig.js used a global regex:
+    /signingConfig\s+signingConfigs\.(debug|release)/
+  JavaScript's String.replace with a non-global regex replaces only
+  the FIRST match. Expo's build.gradle template has
+  'signingConfig signingConfigs.debug' in BOTH:
+    - buildTypes.debug { signingConfig signingConfigs.debug }
+    - buildTypes.release { signingConfig signingConfigs.debug }
+  The first match is in the DEBUG build type, so the plugin injected
+  its upload-keystore block into the debug build type and left the
+  release build type untouched. Result: release APK still signed with
+  debug keystore.
+
+- Fix (commit f2b566e): Rewrote withSigningConfig.js to target the
+  release build type specifically via brace-matching:
+  1. Find 'buildTypes' in the file
+  2. Find 'release {' after buildTypes
+  3. Count braces { and } starting from depth 1 to find the matching
+     closing brace of the release block
+  4. Extract only the release block's inner content
+  5. Replace the signingConfig line ONLY within that extracted content
+  6. Reassemble the file with the modified release block
+  This guarantees the release build type (not debug) gets the upload
+  keystore signing config.
+
+- Also added a CASE 2: if no signingConfig line exists in the release
+  block, inject the block at the top of the release block.
+
+Stage Summary:
+- The signing config plugin was modifying the WRONG build type (debug
+  instead of release) because of a first-match-only regex replacement.
+- The new version uses brace-counting to isolate the release block and
+  only modifies within it.
+- User action: git pull origin main, then bash build-and-install.sh.
+  After rebuild, the apksigner output should show:
+    Signer #1 certificate DN: CN=Smart Ride, OU=Smart Ride
+    SHA-1: 98:EA:9B:4B:18:47:E1:CA:61:A0:49:10:80:5B:BD:22:DB:9D:78:F4
+  and Google Sign-In should work.
