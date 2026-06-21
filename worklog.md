@@ -4345,3 +4345,54 @@ Stage Summary:
     Signer #1 certificate DN: CN=Smart Ride, OU=Smart Ride
     SHA-1: 98:EA:9B:4B:18:47:E1:CA:61:A0:49:10:80:5B:BD:22:DB:9D:78:F4
   and Google Sign-In should work.
+
+---
+Task ID: 20-cygpath-keystore-path-fix
+Agent: Main Agent
+Task: Build failed at validateSigningRelease with mangled keystore path: 'C:\Smart_Ride\expo-app\android\app\c\Smart_Ride\expo-app\keystores\smartride-upload.keystore'. Fix the path issue.
+
+Work Log:
+- CRITICAL PROGRESS: The withSigningConfig plugin fix (Task 19) WORKED.
+  The build got all the way to the validateSigningRelease task (which is
+  near the end of assembleRelease, after compilation). This means:
+  * The signing config block IS now in the release build type (not debug)
+  * The upload keystore config IS being read from gradle.properties
+  * The only problem is the keystore FILE PATH is wrong
+
+- ROOT CAUSE of the path issue:
+  The build script wrote the keystore path as a MINGW path:
+    /c/Smart_Ride/expo-app/keystores/smartride-upload.keystore
+  into android/gradle.properties. But Gradle runs on the Windows JVM
+  and does NOT understand /c/... paths. It treated the path as RELATIVE
+  and prepended the project directory (android/app/), producing:
+    C:\Smart_Ride\expo-app\android\app\c\Smart_Ride\expo-app\keystores\...
+  which doesn't exist → "Keystore file not found" at validateSigningRelease.
+
+- Fix (commit 86a5469):
+  Added cygpath -m conversion before writing to gradle.properties:
+    KEYSTORE_PATH_FOR_GRADLE="$KEYSTORE_PATH"
+    if command -v cygpath &> /dev/null; then
+      KEYSTORE_PATH_FOR_GRADLE=$(cygpath -m "$KEYSTORE_PATH")
+    fi
+  cygpath -m converts /c/Smart_Ride/... → C:/Smart_Ride/... (mixed mode
+  with forward slashes), which Gradle's file() function handles correctly
+  on Windows. Falls back to original path if cygpath not available.
+
+- IMPORTANT FOR USER: The 48-minute compilation ALREADY SUCCEEDED. The
+  build failed only at the signing step. The user does NOT need to
+  rebuild from scratch. They can:
+  1. Fix the path in android/gradle.properties manually:
+     sed -i 's|SMART_RIDE_UPLOAD_STORE_FILE=/c/|SMART_RIDE_UPLOAD_STORE_FILE=C:/|' gradle.properties
+  2. Re-run just assembleRelease (skips compilation, takes 2-5 min):
+     ./gradlew assembleRelease
+  3. Verify the SHA-1 with apksigner
+
+Stage Summary:
+- The signing config plugin is confirmed working (build reached
+  validateSigningRelease, which means the release build type has the
+  upload keystore config).
+- The only remaining issue was the MINGW path in gradle.properties.
+- Fixed in the build script via cygpath -m.
+- User can either do the quick fix (edit gradle.properties + re-run
+  assembleRelease, ~5 min) or the full rebuild (pull + build-and-install.sh,
+  ~48 min). Quick fix is strongly recommended.
