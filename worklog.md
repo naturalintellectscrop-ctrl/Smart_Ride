@@ -4198,3 +4198,49 @@ Stage Summary:
   java.exe processes and force-deletes the locked build dirs before
   running expo prebuild --clean, with a 3-attempt retry loop as backup.
 - User action: git pull origin main, then re-run bash build-and-install.sh.
+
+---
+Task ID: 17-signing-config-plugin-eval-order-fix
+Agent: Main Agent
+Task: After EBUSY fix worked, build now fails at gradlew clean + assembleRelease with "Could not get unknown property 'release' for SigningConfig container" at build.gradle line 141. Fix the withSigningConfig plugin.
+
+Work Log:
+- Root cause: withSigningConfig.js (previous version) added a separate
+  signingConfigs { release { } } block AND a reference to
+  signingConfigs.release inside buildTypes.release. The creation block
+  and the reference had an evaluation-order dependency — the creation
+  block had to be ordered before buildTypes AND had a guard check
+  `if (!contents.includes('signingConfigs {'))` that could skip creation
+  while still injecting the reference. Result: signingConfigs.release
+  was referenced but never created → "unknown property 'release'" error.
+
+- Fix (commit cf58995): Rewrote withSigningConfig.js completely.
+  * REMOVED the separate signingConfigs { release { } } block
+  * NEW approach: replace the existing `signingConfig signingConfigs.debug`
+    line inside buildTypes.release with an INLINE block that:
+      1. Creates the signing config via signingConfigs.maybeCreate("release")
+         — idempotent, creates if not exists, returns it either way
+      2. Configures storeFile/storePassword/keyAlias/keyPassword from
+         SMART_RIDE_UPLOAD_* gradle.properties vars
+      3. Assigns via `signingConfig sc` (DSL method call)
+      4. Falls back to signingConfigs.debug if vars not set
+  * Creating + referencing at the same call site eliminates the ordering
+    problem entirely.
+  * Added CASE 2 fallback: if no explicit signingConfig line is found,
+    inject into the release { opening brace directly.
+  * Added console.warn if neither injection point is found.
+
+- The build script (build-and-install.sh) was NOT the problem — its
+  `set -e` + `||` fallback correctly continued past the gradlew clean
+  failure. Both clean and assembleRelease failed at the same point
+  (build.gradle line 141, the signing config reference) because the
+  build.gradle is evaluated during both tasks.
+
+Stage Summary:
+- The signing config plugin now creates + references the release signing
+  config at the same call site using maybeCreate(), eliminating the
+  evaluation-order bug.
+- User action: git pull origin main, then bash build-and-install.sh.
+  This time gradlew clean + assembleRelease should proceed past the
+  signing config evaluation, and the APK should be signed with the
+  upload keystore (SHA-1 98:EA:9B:4B:...:78:F4).
