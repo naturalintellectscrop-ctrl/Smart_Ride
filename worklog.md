@@ -4442,3 +4442,62 @@ Stage Summary:
   the google-services.json registered fingerprint. Google Sign-In will
   work.
 - User is installing + testing now. Awaiting confirmation.
+
+---
+Task ID: 22-forgot-password-fix-and-force-reset
+Agent: Main Agent
+Task: User reports email login works but forgot password doesn't work, and they don't remember their password. Diagnose and fix.
+
+Work Log:
+- ROOT CAUSE FOUND: The forgot password feature does NOT actually send
+  emails because RESEND_API_KEY is not configured on Vercel.
+  In src/lib/email/index.ts:
+    const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+    if (!isConfigured()) {
+      logger.warn(UNAVAILABLE_MESSAGE);
+      return { success: true, id: `dev_${Date.now()}` }; // silently "succeeds"
+    }
+  So when the user taps "Send Reset Link":
+  1. App calls POST /api/auth/forgot-password with email
+  2. Backend finds user, generates reset token, stores in DB
+  3. Backend calls sendEmail() which silently returns success (no email sent)
+  4. Backend returns success to app
+  5. App shows "Check Your Email"
+  6. User never receives email → locked out
+
+- The existing /api/auth/forgot-password and /api/auth/reset-password
+  endpoints both work correctly — the only missing piece is the email
+  service configuration.
+
+- The web reset page at /reset-password?token=... also works correctly
+  (verified by reading the code).
+
+- IMMEDIATE FIX: Created /api/admin/force-reset-password endpoint
+  (commit 26239ad) that allows the admin to directly reset any user's
+  password WITHOUT requiring an email link.
+  * Protected by ADMIN_SETUP_KEY (same as /api/admin/setup)
+  * Accepts { key, email, newPassword } in POST body
+  * Validates password strength (8+ chars, upper+lower+number)
+  * Finds user by email, hashes new password, updates directly in DB
+  * Invalidates all existing sessions (clears refresh token)
+  * Cleans up pending reset tokens
+  * Records action in audit log (ADMIN_FORCE_PASSWORD_RESET)
+  * Returns 404 if user not found, 400 if account has no password
+
+- PROPER PRODUCTION FIX: User needs to configure Resend email service:
+  1. Create account at https://resend.com (free tier: 3000 emails/month)
+  2. Get API key from dashboard
+  3. (Optional) Verify sending domain (smartride.ug) for production
+  4. Add RESEND_API_KEY to Vercel → Settings → Environment Variables
+  5. (Optional) Set EMAIL_FROM to verified sender address
+  6. Redeploy (Vercel auto-redeploys on env var change for new requests)
+  After this, forgot password will actually send emails with reset links.
+
+Stage Summary:
+- Forgot password "doesn't work" because RESEND_API_KEY is not set on
+  Vercel. The backend silently succeeds without sending any email.
+- Created /api/admin/force-reset-password for immediate password reset
+  without email (protected by ADMIN_SETUP_KEY).
+- User can reset their password RIGHT NOW by calling the new endpoint
+  with curl, once Vercel redeploys with the new code.
+- For production, user should configure Resend email service.
