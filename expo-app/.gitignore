@@ -9,3 +9,7 @@ expo-env.d.ts
 .env*
 # ...but ALLOW the example template to be committed (no real secrets in it)
 !.env.example
+
+# Keystore password file (LOCAL ONLY — contains the keystore password)
+# The template (.template) IS committed; the actual file is NOT.
+keystore.properties
