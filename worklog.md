@@ -4244,3 +4244,53 @@ Stage Summary:
   This time gradlew clean + assembleRelease should proceed past the
   signing config evaluation, and the APK should be signed with the
   upload keystore (SHA-1 98:EA:9B:4B:...:78:F4).
+
+---
+Task ID: 18-apksigner-jar-fix
+Agent: Main Agent
+Task: Build succeeded (44 min) but SHA-1 verification showed "unable to extract" because apksigner wasn't found/usable. Google Sign-In still shows DEVELOPER_ERROR. Fix SHA-1 verification + give user a manual check command.
+
+Work Log:
+- Root cause of SHA-1 extraction failure: the build script tried to run
+  apksigner.bat directly via "$APKSIGNER" verify ..., but .bat files
+  don't execute reliably under GitBash/MINGW on Windows. The script's
+  `command -v apksigner` failed (not on PATH), and the fallback .bat
+  path check + find returned a .bat file that couldn't be executed
+  directly in MINGW. Result: APK_SHA1 stayed empty.
+
+- Fix (commit 21d3f54): Rewrote the SHA-1 verification to use the
+  apksigner.JAR directly via 'java -jar':
+  1. Locate Android SDK build-tools dir via ANDROID_HOME,
+     ANDROID_SDK_ROOT, or /c/Users/GODWIN/AppData/Local/Android/Sdk/build-tools
+  2. Find apksigner.jar in build-tools/<version>/lib/apksigner.jar
+  3. Run: java -jar apksigner.jar verify --print-certs <apk>
+     → outputs "SHA-1 digest: XX:XX:XX:..."
+  4. Fall back to apksigner.bat via 'cmd //c' if JAR approach fails
+  5. Fall back to keytool (v1 only) as last resort
+
+- IMPORTANT: The APK is ALREADY BUILT. User does NOT need to rebuild
+  (44 min) to check the SHA-1. They can run the manual command below
+  on the existing APK right now.
+
+- Manual verification command for the user to run RIGHT NOW:
+    cd /c/Smart_Ride/expo-app/android
+    java -jar "/c/Users/GODWIN/AppData/Local/Android/Sdk/build-tools/36.0.0/lib/apksigner.jar" verify --print-certs app/build/outputs/apk/release/app-release.apk
+
+  The output will show "SHA-1 digest: XX:XX:XX:...". If it matches
+  98:EA:9B:4B:18:47:E1:CA:61:A0:49:10:80:5B:BD:22:DB:9D:78:F4 then
+  the signing is correct and DEVELOPER_ERROR has a different cause
+  (package name mismatch, web client ID, etc.). If it does NOT match,
+  the withSigningConfig plugin didn't take effect and we need to
+  inspect the generated build.gradle.
+
+Stage Summary:
+- The signing config plugin was fixed in Task 17 and the build succeeded,
+  which means build.gradle was valid. But we don't yet know if the APK
+  was actually signed with the upload keystore because SHA-1 extraction
+  failed.
+- The build script now uses apksigner.jar via java -jar (reliable on
+  GitBash/MINGW) instead of the .bat wrapper.
+- CRITICAL NEXT STEP: User must run the manual apksigner command on the
+  existing APK to determine if signing is correct. This will tell us
+  whether to debug the signing config further or investigate other
+  causes of DEVELOPER_ERROR.
