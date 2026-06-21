@@ -26,6 +26,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { navigateToRoleHome } from '@/src/utils/roleRouting';
 
 // Uganda phone number validation
 const UGANDAN_PHONE_REGEX = /^(\+256|0)(7\d|4\d)\d{7}$/;
@@ -85,22 +86,11 @@ export default function PhoneLoginScreen() {
     ? 'Enter your phone number to receive a verification code'
     : 'Enter your phone number to create an account';
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (auto-login)
   useEffect(() => {
     if (isAuthenticated) {
       const { user } = useAuthStore.getState();
-      const role = user?.role;
-      if (role === 'RIDER') {
-        router.replace('/rider/onboarding');
-      } else if (role === 'MERCHANT') {
-        router.replace('/merchant/register');
-      } else if (role === 'DRIVER') {
-        router.replace('/driver/index');
-      } else if (role === 'CLIENT') {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/auth/role-selection');
-      }
+      navigateToRoleHome(user?.role);
     }
   }, [isAuthenticated, router]);
 

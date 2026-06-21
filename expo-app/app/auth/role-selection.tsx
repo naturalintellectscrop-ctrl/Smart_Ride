@@ -25,6 +25,7 @@ import { api } from '../../src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
 import { GradientButton } from '../../src/components/GradientButton';
 import { LinearGradient } from 'expo-linear-gradient';
+import { navigateToRoleHome } from '@/src/utils/roleRouting';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -109,27 +110,8 @@ export default function RoleSelectionScreen() {
 
     setIsSubmitting(false);
 
-    // Navigate based on role
-    switch (selectedRole) {
-      case 'RIDER':
-        // Check if rider has completed onboarding — for now go to rider onboarding
-        router.replace('/rider/onboarding');
-        break;
-      case 'DRIVER':
-        router.replace('/driver/index');
-        break;
-      case 'MERCHANT':
-        // Check if merchant has completed registration — for now go to merchant register
-        router.replace('/merchant/register');
-        break;
-      case 'PHARMACIST':
-        router.replace('/pharmacist/index');
-        break;
-      case 'CLIENT':
-      default:
-        router.replace('/(tabs)');
-        break;
-    }
+    // Navigate to the role's home route (single source of truth)
+    navigateToRoleHome(selectedRole);
   };
 
   const handleSkip = () => {
@@ -137,7 +119,7 @@ export default function RoleSelectionScreen() {
     if (user) {
       setUser({ ...user, role: 'CLIENT' });
     }
-    router.replace('/(tabs)');
+    navigateToRoleHome('CLIENT');
   };
 
   return (

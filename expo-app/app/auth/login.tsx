@@ -34,6 +34,7 @@ import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constant
 import { IconInput } from '../../src/components/IconInput';
 import { GradientButton } from '../../src/components/GradientButton';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
+import { navigateToRoleHome } from '../../src/utils/roleRouting';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -79,26 +80,7 @@ export default function LoginScreen() {
       if (!user) {
         return;
       }
-      navigateHomeByRole(user.role);
-    }
-  };
-
-  // Used by checkAuth (auto-login on app open) — routes returning users
-  // directly to their role's home screen so they don't see role-selection
-  // every time they open the app.
-  const navigateHomeByRole = (role?: string) => {
-    if (role === 'RIDER') {
-      router.replace('/rider/onboarding');
-    } else if (role === 'MERCHANT') {
-      router.replace('/merchant/register');
-    } else if (role === 'DRIVER') {
-      router.replace('/driver/index');
-    } else if (role === 'CLIENT') {
-      // Existing client with role set — go to tabs
-      router.replace('/(tabs)');
-    } else {
-      // No role set — show role selection so user can choose
-      router.replace('/auth/role-selection');
+      navigateToRoleHome(user.role);
     }
   };
 

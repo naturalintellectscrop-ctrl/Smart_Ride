@@ -31,6 +31,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { navigateToRoleHome } from '@/src/utils/roleRouting';
 
 // OTP Configuration
 const OTP_LENGTH = 6;
@@ -72,22 +73,11 @@ export default function VerifyOTPScreen() {
   const phone = params.phone || '';
   const purpose = (params.purpose as 'login' | 'register') || 'login';
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated (auto-login)
   useEffect(() => {
     if (isAuthenticated) {
       const { user } = useAuthStore.getState();
-      const role = user?.role;
-      if (role === 'RIDER') {
-        router.replace('/rider/onboarding');
-      } else if (role === 'MERCHANT') {
-        router.replace('/merchant/register');
-      } else if (role === 'DRIVER') {
-        router.replace('/driver/index');
-      } else if (role === 'CLIENT') {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/auth/role-selection');
-      }
+      navigateToRoleHome(user?.role);
     }
   }, [isAuthenticated, router]);
 

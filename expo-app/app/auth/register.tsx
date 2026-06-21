@@ -33,6 +33,7 @@ import { COLORS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../../src/constant
 import { IconInput } from '../../src/components/IconInput';
 import { GradientButton } from '../../src/components/GradientButton';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
+import { navigateToRoleHome } from '../../src/utils/roleRouting';
 
 const { width, height } = Dimensions.get('window');
 
@@ -97,34 +98,8 @@ export default function RegisterScreen() {
     const authenticated = await isAuthenticated();
     const { isAuthenticated: storeAuth, user } = useAuthStore.getState();
     if (authenticated || storeAuth) {
-      const role = user?.role;
-      if (role === 'RIDER') {
-        router.replace('/rider/onboarding');
-      } else if (role === 'MERCHANT') {
-        router.replace('/merchant/register');
-      } else if (role === 'DRIVER') {
-        router.replace('/driver/index');
-      } else if (role === 'CLIENT') {
-        router.replace('/(tabs)');
-      } else {
-        router.replace('/auth/role-selection');
-      }
-    }
-  };
-
-  // Navigate based on user role
-  const navigateByRole = (role?: string) => {
-    if (role === 'RIDER') {
-      router.replace('/rider/onboarding');
-    } else if (role === 'MERCHANT') {
-      router.replace('/merchant/register');
-    } else if (role === 'DRIVER') {
-      router.replace('/driver/index');
-    } else if (role === 'CLIENT') {
-      router.replace('/(tabs)');
-    } else {
-      // No role set — show role selection
-      router.replace('/auth/role-selection');
+      // Route returning users to their role's home screen
+      navigateToRoleHome(user?.role);
     }
   };
 
@@ -333,16 +308,8 @@ export default function RegisterScreen() {
             role: userData.role || selectedRole,
           }, token);
         }
-        // Navigate based on role
-        if (selectedRole === 'RIDER') {
-          router.replace('/rider/onboarding');
-        } else if (selectedRole === 'MERCHANT') {
-          router.replace('/merchant/register');
-        } else if (selectedRole === 'DRIVER') {
-          router.replace('/driver/index');
-        } else {
-          router.replace('/(tabs)');
-        }
+        // Navigate based on the role the user just selected in the form
+        navigateToRoleHome(selectedRole);
       } else {
         setError(result.error || 'Registration failed');
       }
