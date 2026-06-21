@@ -7,7 +7,7 @@
     "postbuild": "npx --yes tsx scripts/postbuild-seed-admin.ts || echo 'postbuild-seed skipped (non-blocking)'",
     "start": "next start",
     "lint": "eslint .",
-    "db:push": "prisma db push",
+    "db:push": "bash scripts/db-push-local.sh",
     "db:push:prod": "bash scripts/db-push-prod.sh",
     "db:generate": "prisma generate",
     "db:seed": "bun prisma/seed-admin.ts",
