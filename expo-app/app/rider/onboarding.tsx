@@ -114,7 +114,50 @@ export default function RiderOnboardingScreen() {
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSwitchingRole, setIsSwitchingRole] = useState(false);
   const [existingOnboarding, setExistingOnboarding] = useState<any>(null);
+
+  // ─── Switch Role (escape hatch) ───────────────
+  // If a user landed here by accident (e.g., their account has role=RIDER
+  // but they actually want to be a client), this lets them switch back to
+  // CLIENT role and go straight to the main app without completing the
+  // rider onboarding flow.
+  const handleSwitchRole = () => {
+    Alert.alert(
+      'Not a Rider?',
+      'You can switch your account back to Client role and go to the main app. You can always become a rider later from your Profile settings.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Switch to Client',
+          style: 'default',
+          onPress: async () => {
+            setIsSwitchingRole(true);
+            try {
+              await api.updateUserRole('CLIENT');
+              Alert.alert(
+                'Role Updated',
+                'You are now a Client. Taking you to the main app.',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => router.replace('/(tabs)'),
+                  },
+                ]
+              );
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                'Could not switch role. Please check your connection and try again, or contact support.'
+              );
+            } finally {
+              setIsSwitchingRole(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   // Step 1: Personal Info
   const [personalInfo, setPersonalInfo] = useState({
@@ -391,12 +434,25 @@ export default function RiderOnboardingScreen() {
               <Text style={styles.backText}>←</Text>
             </TouchableOpacity>
           ) : (
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <TouchableOpacity
+              onPress={handleSwitchRole}
+              disabled={isSwitchingRole}
+              style={styles.backBtn}
+            >
               <Text style={styles.backText}>←</Text>
             </TouchableOpacity>
           )}
           <Text style={styles.headerTitle}>Become a Rider</Text>
-          <View style={{ width: 40 }} />
+          <TouchableOpacity
+            onPress={handleSwitchRole}
+            disabled={isSwitchingRole}
+            style={styles.switchRoleBtn}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Text style={styles.switchRoleText}>
+              {isSwitchingRole ? '…' : 'Not a rider?'}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Progress Bar */}
@@ -793,6 +849,21 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.headlineMd,
     fontWeight: 'bold',
     color: COLORS.onSurface,
+  },
+  switchRoleBtn: {
+    paddingHorizontal: SPACING.xs,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.DEFAULT,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    minWidth: 40,
+    alignItems: 'center',
+  },
+  switchRoleText: {
+    ...TYPOGRAPHY.labelSm,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   progressContainer: {
     marginTop: SPACING.xs,
