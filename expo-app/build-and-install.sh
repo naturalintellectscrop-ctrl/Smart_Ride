@@ -174,21 +174,33 @@ if ! keytool -list -keystore "$KEYSTORE_PATH" -storepass "$KEYSTORE_PASSWORD" > 
   exit 1
 fi
 
+# Convert the keystore path to a Windows-style path for Gradle.
+# Gradle runs on the JVM (Windows) and does NOT understand MINGW paths
+# like /c/Smart_Ride/... — it treats them as relative paths and prepends
+# the project dir, producing garbage like:
+#   C:\...\android\app\c\Smart_Ride\...\smartride-upload.keystore
+# cygpath -m converts to mixed-mode (forward slashes): C:/Smart_Ride/...
+# which Gradle's file() function handles correctly on Windows.
+KEYSTORE_PATH_FOR_GRADLE="$KEYSTORE_PATH"
+if command -v cygpath &> /dev/null; then
+  KEYSTORE_PATH_FOR_GRADLE=$(cygpath -m "$KEYSTORE_PATH")
+fi
+
 # Append signing config to gradle.properties (file is gitignored, safe to write secrets)
-# IMPORTANT: The storeFile path must be relative to the android/ folder OR absolute.
-# We use an absolute path so Gradle can find it regardless of working directory.
+# IMPORTANT: The storeFile path MUST be a Windows-style absolute path (C:/...)
+# so Gradle's file() resolves it correctly. MINGW paths (/c/...) break Gradle.
 cat >> gradle.properties << EOF
 
 # ─── Smart Ride signing config (auto-injected by build-and-install.sh) ───
 # DO NOT COMMIT — gradle.properties is gitignored
-SMART_RIDE_UPLOAD_STORE_FILE=$KEYSTORE_PATH
+SMART_RIDE_UPLOAD_STORE_FILE=$KEYSTORE_PATH_FOR_GRADLE
 SMART_RIDE_UPLOAD_STORE_PASSWORD=$KEYSTORE_PASSWORD
 SMART_RIDE_UPLOAD_KEY_ALIAS=smartride
 SMART_RIDE_UPLOAD_KEY_PASSWORD=$KEYSTORE_PASSWORD
 EOF
 
 echo -e "${GREEN}✓ Signing config injected into android/gradle.properties${NC}"
-echo -e "${GREEN}  Keystore: $KEYSTORE_PATH${NC}"
+echo -e "${GREEN}  Keystore: $KEYSTORE_PATH_FOR_GRADLE${NC}"
 echo -e "${GREEN}  Key alias: smartride${NC}"
 echo -e "${GREEN}  Expected SHA-1: $EXPECTED_SHA1${NC}"
 echo ""
