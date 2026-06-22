@@ -438,7 +438,7 @@ export default function RideRequestScreen() {
 // ============================================
 // PICKUP STEP
 // ============================================
-// Single tappable place row (name + secondary address line)
+// Single tappable place row (name + secondary address line + ↗ jump icon)
 function PlaceRow({ place, icon, onPress }: { place: PlaceResult; icon: keyof typeof Ionicons.glyphMap; onPress: () => void }) {
   const primary = place.name || place.place_name || 'Location';
   const secondary = place.address || place.fullAddress || place.place_name || '';
@@ -453,6 +453,7 @@ function PlaceRow({ place, icon, onPress }: { place: PlaceResult; icon: keyof ty
           <Text style={styles.searchResultSubtext} numberOfLines={1}>{secondary}</Text>
         ) : null}
       </View>
+      <Ionicons name="arrow-forward" size={16} color={COLORS.onSurfaceVariant} style={styles.resultJumpIcon} />
     </TouchableOpacity>
   );
 }
@@ -695,6 +696,16 @@ function ConfirmStep({
 }) {
   const etaLabel = duration != null ? `~${duration} min drive` : '...';
 
+  // SafeBoda-style fare range: bracket the exact fare to a tidy UGX window.
+  // The precise amount is computed from real road distance; the range simply
+  // communicates that traffic/time can move it a little, like Bolt/SafeBoda.
+  const fareRange = (fare: number | null): string | null => {
+    if (fare == null) return null;
+    const low = Math.floor(fare / 500) * 500;
+    const high = low + 1000;
+    return `UGX ${low.toLocaleString()} ~ ${high.toLocaleString()}`;
+  };
+
   return (
     <View>
       {/* Route Summary Card */}
@@ -723,56 +734,55 @@ function ConfirmStep({
         )}
       </GlassCard>
 
-      {/* Available Rides header */}
-      <View style={styles.availableRidesHeader}>
-        <Text style={styles.sectionLabel}>Available Rides</Text>
+      {/* Estimated cost header */}
+      <View style={styles.estCostHeader}>
+        <View style={styles.estCostLeft}>
+          <Ionicons name="information-circle-outline" size={16} color={COLORS.onSurfaceVariant} />
+          <Text style={styles.estCostText}>ESTIMATED COST</Text>
+        </View>
         {isCalculating && <ActivityIndicator size="small" color={COLORS.primary} />}
       </View>
 
       {/* Ride option: Smart Boda */}
       <TouchableOpacity
-        style={[styles.rideCard, selectedVehicle === 'BODA' && styles.rideCardSelected]}
+        style={[styles.rideRow, selectedVehicle === 'BODA' && styles.rideRowSelected]}
         onPress={() => setSelectedVehicle('BODA')}
         activeOpacity={0.75}
       >
         <View style={[styles.rideIconCircle, selectedVehicle === 'BODA' && styles.rideIconCircleActive]}>
-          <Ionicons name="bicycle" size={24} color={selectedVehicle === 'BODA' ? COLORS.onPrimary : COLORS.primary} />
+          <Ionicons name="bicycle" size={22} color={selectedVehicle === 'BODA' ? COLORS.onPrimary : COLORS.primary} />
         </View>
         <View style={styles.rideCardContent}>
           <Text style={[styles.rideCardName, selectedVehicle === 'BODA' && styles.rideCardNameActive]}>Smart Boda</Text>
-          <Text style={styles.rideCardDesc}>Motorcycle · 1 passenger</Text>
+          <Text style={styles.rideCardDesc}>Fast & affordable · 1 seat</Text>
         </View>
         <View style={styles.rideCardRight}>
           {isCalculating ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
           ) : (
-            <Text style={styles.rideCardPrice}>
-              {bodaFare != null ? `UGX ${bodaFare.toLocaleString()}` : '---'}
-            </Text>
+            <Text style={styles.rideCardPrice}>{fareRange(bodaFare) ?? '---'}</Text>
           )}
         </View>
       </TouchableOpacity>
 
       {/* Ride option: Smart Car */}
       <TouchableOpacity
-        style={[styles.rideCard, selectedVehicle === 'CAR' && styles.rideCardSelected]}
+        style={[styles.rideRow, selectedVehicle === 'CAR' && styles.rideRowSelected]}
         onPress={() => setSelectedVehicle('CAR')}
         activeOpacity={0.75}
       >
         <View style={[styles.rideIconCircle, selectedVehicle === 'CAR' && styles.rideIconCircleActive]}>
-          <Ionicons name="car" size={24} color={selectedVehicle === 'CAR' ? COLORS.onPrimary : COLORS.primary} />
+          <Ionicons name="car" size={22} color={selectedVehicle === 'CAR' ? COLORS.onPrimary : COLORS.primary} />
         </View>
         <View style={styles.rideCardContent}>
           <Text style={[styles.rideCardName, selectedVehicle === 'CAR' && styles.rideCardNameActive]}>Smart Car</Text>
-          <Text style={styles.rideCardDesc}>Sedan · AC · up to 4</Text>
+          <Text style={styles.rideCardDesc}>Comfort · AC · up to 4 seats</Text>
         </View>
         <View style={styles.rideCardRight}>
           {isCalculating ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
           ) : (
-            <Text style={styles.rideCardPrice}>
-              {carFare != null ? `UGX ${carFare.toLocaleString()}` : '---'}
-            </Text>
+            <Text style={styles.rideCardPrice}>{fareRange(carFare) ?? '---'}</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -1103,6 +1113,47 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.bodyMd,
     fontWeight: '700',
     color: COLORS.onSurface,
+  },
+  // SafeBoda-style estimated-cost header
+  estCostHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.sm,
+  },
+  estCostLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  estCostText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurfaceVariant,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  // SafeBoda-style ride rows (left accent border when selected)
+  rideRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    borderLeftWidth: 4,
+    borderLeftColor: 'transparent',
+    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.sm,
+    gap: SPACING.md,
+    ...SHADOWS.card,
+  },
+  rideRowSelected: {
+    borderLeftColor: COLORS.primary,
+    backgroundColor: COLORS.primaryFixed,
+  },
+  resultJumpIcon: {
+    transform: [{ rotate: '-45deg' }],
+    marginLeft: SPACING.sm,
   },
   routeMeta: {
     ...TYPOGRAPHY.labelMd,
