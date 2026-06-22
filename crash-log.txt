@@ -1,0 +1,96 @@
+--------- beginning of system
+06-19 14:45:03.829  1631  1656 E ActivityTaskManager: Checking for the Active launch getApplicationEnabledSetting
+--------- beginning of main
+06-19 14:45:03.830  3435 16841 E pageboostd: alp start : app inplaysimplewordtrip
+06-19 14:45:03.875  1406  3384 E NativeCustomFrequencyManager: [NativeCFMS] BpCustomFrequencyManager::acquire()
+06-19 14:45:03.930  3435  3435 E pageboostd: Received HALT command code 2
+06-19 14:45:03.930  3435 16841 E pageboostd: inplaysimplewordtrip, amt 37748736 scnt 1 fcnt 1
+06-19 14:45:03.930  3435 16841 E pageboostd: alp end : app inplaysimplewordtrip data_amount 37748736
+06-19 14:45:03.930  3435 16841 E pageboostd: alp halted inplaysimplewordtrip
+06-19 14:45:05.172  3435 16852 E pageboostd: alp start : app ugsmartrideapp
+06-19 14:45:05.173  3435 16852 E pageboostd: ugsmartrideapp, amt 37477736 scnt 3 fcnt 0
+06-19 14:45:05.173  3435 16852 E pageboostd: ugsmartrideapp, amt 0 scnt 0 fcnt 0
+06-19 14:45:05.173  3435 16852 E pageboostd: alp end : app ugsmartrideapp data_amount 37477736
+06-19 14:45:05.272  3435  3435 E pageboostd: Received HALT command code 2
+06-19 14:45:05.296  3435  3435 E pageboostd: Received HALT command code 2
+06-19 14:45:05.300 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:05.308 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:05.364  1406  1406 E SurfaceFlinger: alpha changed 1.000 -> 0.000 - Surface(name=Task=4439)/@0x185b152_transition-leash#6559
+06-19 14:45:05.383  1406  3384 E NativeCustomFrequencyManager: [NativeCFMS] BpCustomFrequencyManager::acquire()
+--------- beginning of crash
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: FATAL EXCEPTION: pool-12-thread-1
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: Process: ug.smartride.app, PID: 16855
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: java.lang.NoClassDefFoundError: Failed resolution of: Lexpo/modules/kotlin/types/AnyTypeCache;
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at expo.modules.imagepicker.ImagePickerModule.definition(ImagePickerModule.kt:330)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at expo.modules.kotlin.ModuleHolder.<init>(ModuleHolder.kt:22)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at expo.modules.kotlin.ModuleRegistry.register(ModuleRegistry.kt:29)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at expo.modules.kotlin.ModuleRegistry.register(ModuleRegistry.kt:45)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at expo.modules.kotlin.AppContext.<init>(AppContext.kt:129)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at expo.modules.kotlin.KotlinInteropModuleRegistry.<init>(KotlinInteropModuleRegistry.kt:23)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at expo.modules.adapters.react.NativeModulesProxy.<init>(NativeModulesProxy.java:45)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at expo.modules.adapters.react.ModuleRegistryAdapter.getOrCreateNativeModulesProxy(ModuleRegistryAdapter.java:135)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at expo.modules.adapters.react.ModuleRegistryAdapter.createNativeModules(ModuleRegistryAdapter.java:64)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at expo.modules.ExpoModulesPackage.createNativeModules(ExpoModulesPackage.kt:35)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.ReactPackageTurboModuleManagerDelegate.initialize(ReactPackageTurboModuleManagerDelegate.kt:87)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.ReactPackageTurboModuleManagerDelegate.<init>(ReactPackageTurboModuleManagerDelegate.kt:45)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.defaults.DefaultTurboModuleManagerDelegate.<init>(DefaultTurboModuleManagerDelegate.kt:35)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.defaults.DefaultTurboModuleManagerDelegate.<init>(DefaultTurboModuleManagerDelegate.kt:0)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.defaults.DefaultTurboModuleManagerDelegate$Builder.build(DefaultTurboModuleManagerDelegate.kt:63)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.defaults.DefaultTurboModuleManagerDelegate$Builder.build(DefaultTurboModuleManagerDelegate.kt:43)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.ReactPackageTurboModuleManagerDelegate$Builder.build(ReactPackageTurboModuleManagerDelegate.kt:247)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.ReactInstance.<init>(ReactInstance.kt:174)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.ReactHostImpl.getOrCreateReactInstanceTask$lambda$44$lambda$40(ReactHostImpl.kt:1039)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.ReactHostImpl.$r8$lambda$kGNcmxBxZbp8b1wWTaqIXDdkV8g(ReactHostImpl.kt:0)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.ReactHostImpl$$ExternalSyntheticLambda23.then(D8$$SyntheticClass:0)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.completeImmediately$lambda$3(Task.kt:360)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.$r8$lambda$b7MTC0ufkn_2TjF4BGcNqGR9qK0(Task.kt:0)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion$$ExternalSyntheticLambda3.run(D8$$SyntheticClass:0)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Executors$ImmediateExecutor.execute(Executors.kt:41)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.completeImmediately(Task.kt:358)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.access$completeImmediately(Task.kt:254)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task.continueWith(Task.kt:133)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task.continueWith$default(Task.kt:117)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task.onSuccess$lambda$12(Task.kt:176)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task.$r8$lambda$l0wwo5AvbHxlwfI1R7CH_codxoo(Task.kt:0)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$$ExternalSyntheticLambda2.then(D8$$SyntheticClass:0)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.completeAfterTask$lambda$5(Task.kt:394)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion.$r8$lambda$IPpysnehFwANEiW061YzapkMdoE(Task.kt:0)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at com.facebook.react.runtime.internal.bolts.Task$Companion$$ExternalSyntheticLambda4.run(D8$$SyntheticClass:0)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1100)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	at java.lang.Thread.run(Thread.java:1572)
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: Caused by: java.lang.ClassNotFoundException: expo.modules.kotlin.types.AnyTypeCache
+06-19 14:45:05.393 16855 16897 E AndroidRuntime: 	... 38 more
+06-19 14:45:05.400  1406  1406 E SurfaceFlinger: alpha changed 0.000 -> 0.047 - Surface(name=Task=4439)/@0x185b152_transition-leash#6559
+06-19 14:45:05.404 16855 16855 E g.smartride.app: Unable to open libpenguin.so: dlopen failed: library "libpenguin.so" not found.
+06-19 14:45:05.931 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:06.023 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:06.076 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:06.108  1406  1406 E SurfaceFlinger: alpha changed 0.000 -> 0.000 - Surface(name=Task=4439)/@0x185b152_transition-leash#6559
+06-19 14:45:07.304  1231  1370 E ANDR-PERF-UTIL: Failed to update node /proc/16855/sched_boost with value 0
+06-19 14:45:07.304  1231  1370 E ANDR-PERF-OPTSHANDLER: can't reset task 16855
+06-19 14:45:07.304  1231  1370 E ANDR-PERF-RESOURCEQS: Failed to reset optimization [3, 32]
+06-19 14:45:08.522  1202  1202 E sensors-hal: is_restrict_mode:138, fread fail
+06-19 14:45:08.523  1168  1281 E minksocket: MinkIPC_QRTR_Service: client with node 1 port 7ecc went down
+06-19 14:45:08.524  1168  1281 E minksocket: MinkIPC_QRTR_Service: client with node 1 port 7ecd went down
+06-19 14:45:08.524  1168  1281 E minksocket: MinkIPC_QRTR_Service: client with node 1 port 7ece went down
+06-19 14:45:08.525  1168  1281 E minksocket: MinkIPC_QRTR_Service: client with node 1 port 7ecf went down
+06-19 14:45:08.528  1631  4922 E SemContext.CaeProvider: setAttribute() : attribute is null!
+06-19 14:45:08.529  1631  4922 E SensorService: BigData:Pakage) 5 already enabled. 
+06-19 14:45:08.757  1168  1281 E minksocket: MinkIPC_QRTR_Service: client with node 1 port 7ed0 went down
+06-19 14:45:08.792  1631  3872 E TaskPersister: File error accessing recents directory (directory doesn't exist?).
+06-19 14:45:10.306  1631  2550 E Pageboost: StopRecording Failed
+06-19 14:45:10.307  1631  2550 E Pageboost: captureFinished fail
+06-19 14:45:10.514  1631 11230 E SensorService: BigData:Pakage) 5 already disabled. 
+06-19 14:45:12.517 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:12.521 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:13.598 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:14.105 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:14.193  1631  3530 E SemWifiService: getCurrentNetworkScore - invalid score data
+06-19 14:45:14.193  1631  3530 E WifiProfileShare.Caster: failed to generate qos array, need to check network score data
+06-19 14:45:14.532 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:19.746 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:19.752 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:20.546 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:20.603 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname
+06-19 14:45:20.811 13652 13811 E msys    : E[N mns:DGWClient]_LogError(304)=>Failed to resolve using system DNS resolver, getaddrinfo(): No address associated with hostname

@@ -68,6 +68,20 @@ function isValidMapboxToken(token: string | undefined): token is string {
   if (token.length <= 10) return false;
   if (!token.startsWith('pk.')) return false;
   if (token.includes('your-token-here') || token.includes('xxxx')) return false;
+  // A valid Mapbox token is a JWT: header.payload.signature
+  // The signature (3rd segment) must be ~43 base64 chars for a 256-bit HMAC.
+  // Rejecting truncated tokens here lets the runtime fetch fallback kick in,
+  // preventing a silently black/empty map with no error message.
+  const parts = token.split('.');
+  if (parts.length !== 3) return false;
+  if (parts[2].length < 40) {
+    console.warn(
+      '[SmartRideMap] Mapbox token signature looks truncated ' +
+      `(got ${parts[2].length} chars, expected ~43). ` +
+      'Falling back to runtime token fetch.'
+    );
+    return false;
+  }
   return true;
 }
 

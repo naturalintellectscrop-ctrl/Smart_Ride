@@ -74,68 +74,95 @@ export const useLocationStore = create<LocationState>()(
     }
   },
 
-  getCurrentLocation: async () => {
+    getCurrentLocation: async () => {
     if (get().isLocating) return;
-    
+
     set({ isLocating: true, error: null });
-    
+
     try {
-      // Request permission if not granted
+      // 1. Request permission if not granted
       let hasPermission = get().hasPermission;
       if (!hasPermission) {
         hasPermission = await get().requestPermission();
       }
-      
+
       if (!hasPermission) {
-        set({ 
+        // Distinguish "denied once" from "blocked permanently" so we can
+        // tell the user to open Settings instead of silently failing.
+        const { status } = await Location.getForegroundPermissionsAsync();
+        const deniedPermanently = status === 'undetermined' || status === 'blocked';
+        set({
           isLocating: false,
-          error: 'Location permission denied',
+          error: deniedPermanently
+            ? 'Location permission was denied. Please enable it in Settings → Apps → Smart Ride → Permissions.'
+            : 'Location permission denied',
         });
         return;
       }
 
-      // Get current position
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.Balanced,
-      });
+      // 2. Check that location services are actually enabled at the OS level.
+      // Even with permission granted, the user may have turned off Location
+      // in system settings — getCurrentPositionAsync would hang or fail silently.
+      const servicesEnabled = await Location.hasServicesEnabledAsync();
+      if (!servicesEnabled) {
+        set({
+          isLocating: false,
+          error: 'Location services are turned off. Please enable them in Settings → Location.',
+        });
+        return;
+      }
+
+      // 3. Get current position — try High accuracy first, fall back to
+      // Balanced if High fails (some devices without Play Services reject High).
+      let location: Location.LocationObject;
+      try {
+        location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+      } catch (highErr) {
+        console.warn('[LOCATION] High accuracy failed, retrying with Balanced:', highErr);
+        location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.Balanced,
+        });
+      }
 
       const { latitude, longitude } = location.coords;
 
-      // Reverse geocode to get address
+      // 4. Reverse geocode to get address
       try {
         const [addressResult] = await Location.reverseGeocodeAsync({
           latitude,
           longitude,
         });
-        
-        const address = addressResult 
+
+        const address = addressResult
           ? `${addressResult.street || ''}, ${addressResult.city || ''}, ${addressResult.country || ''}`.replace(/^,\s*/, '').replace(/,\s*$/, '')
           : `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
-        
-        set({ 
-          latitude, 
-          longitude, 
+
+        set({
+          latitude,
+          longitude,
           address,
           isLocating: false,
           error: null,
         });
       } catch (geocodeError) {
         // Still update coordinates even if geocoding fails
-        set({ 
-          latitude, 
-          longitude, 
+        set({
+          latitude,
+          longitude,
           address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
           isLocating: false,
           error: null,
         });
       }
-      
+
       console.log('[LOCATION] Updated:', latitude, longitude);
     } catch (error) {
       console.error('[LOCATION] Error:', error);
-      set({ 
-        isLocating: false, 
-        error: 'Failed to get location',
+      set({
+        isLocating: false,
+        error: 'Failed to get location. Check that location services are enabled.',
       });
     }
   },
