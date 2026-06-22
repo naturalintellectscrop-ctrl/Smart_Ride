@@ -113,7 +113,12 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-const THEME_STORAGE_KEY = 'smart_ride_theme';
+// Storage key bumped to _v2 to invalidate any previously-saved 'dark'
+// preference that used the OLD broken palette (neon green #00FF88 + blue
+// #3B82F6). Users who had that saved will get reset to the default 'light'
+// theme, which matches the Stitch MD3 palette and app.json userInterfaceStyle.
+const THEME_STORAGE_KEY = 'smart_ride_theme_v2';
+const LEGACY_THEME_KEY = 'smart_ride_theme';
 
 // ============================================
 // PROVIDER
@@ -123,10 +128,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>('light');
   const [isReady, setIsReady] = useState(false);
 
-  // Load saved theme on mount
+  // Load saved theme on mount + migrate from legacy key
   useEffect(() => {
     (async () => {
       try {
+        // Migrate: clear the legacy key if it exists. The old key may have
+        // stored 'dark' with the broken neon-green/blue palette, so we
+        // intentionally do NOT restore its value — start fresh with 'light'.
+        const legacy = await AsyncStorage.getItem(LEGACY_THEME_KEY);
+        if (legacy !== null) {
+          await AsyncStorage.removeItem(LEGACY_THEME_KEY);
+          console.log('[ThemeProvider] Cleared legacy theme key');
+        }
+
         const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
         if (savedTheme === 'light' || savedTheme === 'dark') {
           setThemeState(savedTheme);
