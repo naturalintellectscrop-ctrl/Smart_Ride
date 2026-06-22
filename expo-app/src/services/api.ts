@@ -790,14 +790,24 @@ class ApiService {
   }
 
   /**
-   * Request a wallet top-up via MTN MoMo / Airtel Money.
-   * In demo mode the top-up is auto-completed by the backend.
+   * Request a wallet top-up.
+   * Routes to the correct backend based on payment method:
+   *   NYLON_PAY  → /payments/nylonpay/initiate  (NylonPay STK push)
+   *   MTN_MOMO / AIRTEL_MONEY → /wallet/topup  (legacy MoMo direct)
    */
   async requestTopUp(data: {
     amount: number;
     paymentMethod: string;
     phoneNumber: string;
   }): Promise<ApiResponse<any>> {
+    if (data.paymentMethod === 'NYLON_PAY') {
+      return this.request<any>('/payments/nylonpay/initiate', 'POST', {
+        amount: Math.round(data.amount),
+        currency: 'UGX',
+        customerPhone: data.phoneNumber,
+        description: 'Smart Ride Wallet Top-up',
+      });
+    }
     return this.request<any>('/wallet/topup', 'POST', data);
   }
 

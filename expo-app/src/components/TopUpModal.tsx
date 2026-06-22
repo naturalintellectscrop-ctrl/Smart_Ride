@@ -121,21 +121,24 @@ export function TopUpModal({
       });
 
       if (response.success) {
-        const newBalance = (response.data as any)?.newBalance;
-        Alert.alert(
-          'Top-up Successful',
-          `UGX ${numericAmount.toLocaleString()} has been added to your wallet.`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                reset();
-                onClose();
-                onSuccess?.(newBalance);
-              },
+        const rawData = response.data as any;
+        // NylonPay returns { success, payment } — the balance updates later via webhook.
+        const isNylonPay = provider === 'NYLON_PAY';
+        const newBalance = isNylonPay ? undefined : rawData?.newBalance;
+        const title = isNylonPay ? 'Payment Initiated' : 'Top-up Successful';
+        const message = isNylonPay
+          ? `Your phone (${phoneNumber.trim()}) will receive a payment prompt. Your wallet balance will update once confirmed.`
+          : `UGX ${numericAmount.toLocaleString()} has been added to your wallet.`;
+        Alert.alert(title, message, [
+          {
+            text: 'OK',
+            onPress: () => {
+              reset();
+              onClose();
+              if (!isNylonPay) onSuccess?.(newBalance);
             },
-          ]
-        );
+          },
+        ]);
       } else {
         setError(response.error || 'Failed to process top-up');
       }
