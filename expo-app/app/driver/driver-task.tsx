@@ -232,13 +232,11 @@ export default function DriverTaskScreen() {
 
   const handleCallClient = () => {
     if (task?.clientId) {
-      // Navigate to in-app VoIP call screen (Agora)
       router.push(
-        `/call/${task.clientId}?name=${encodeURIComponent(task.client?.name || 'Customer')}&phone=${encodeURIComponent(task.client?.phone || '')}`
+        `/call/${task.clientId}?name=${encodeURIComponent(task.client?.name || 'Customer')}`
       );
-    } else if (task?.client?.phone) {
-      // Fallback to phone dialer if no user ID
-      Linking.openURL(`tel:${task.client.phone}`);
+    } else {
+      Alert.alert('Unavailable', 'Customer contact is not available yet.');
     }
   };
 
@@ -393,7 +391,7 @@ export default function DriverTaskScreen() {
                 </View>
                 <View style={styles.clientInfo}>
                   <Text style={styles.clientName}>{task.client?.name ?? 'Customer'}</Text>
-                  <Text style={styles.clientPhone}>{task.client?.phone ?? ''}</Text>
+                  <Text style={styles.clientPhone}>Tap to call in-app</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.callButton}

@@ -280,7 +280,23 @@ export default function CallScreen() {
     }
   }, [callState === 'incoming']);
 
-  // Initiate call via API for outgoing calls
+  // For INCOMING calls: populate callInfo from URL params (no API call needed)
+  useEffect(() => {
+    if (isIncoming && params.sessionId && params.channelId && !callInfo) {
+      setCallInfo({
+        sessionId: params.sessionId,
+        channelId: params.channelId,
+        recipientId,
+        recipientName,
+        recipientPhone: undefined,
+        conversationId,
+        agoraAppId: '',
+        isAgoraAvailable: agoraCall.isSdkAvailable,
+      });
+    }
+  }, [isIncoming, params.sessionId, params.channelId]);
+
+  // For OUTGOING calls: initiate via API
   useEffect(() => {
     if (!isIncoming && !callInfo && !isInitiating) {
       initiateCall();

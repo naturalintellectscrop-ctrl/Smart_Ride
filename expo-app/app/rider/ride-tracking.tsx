@@ -10,7 +10,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Linking,
   StyleSheet
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -87,57 +86,29 @@ export default function RideTrackingScreen() {
     }
   };
 
-  // Handle ride completion - show fare summary + rating prompt
+  // Handle ride completion — navigate to trip summary screen
   const handleRideCompleted = (completedTask: Task) => {
-    // Stop polling immediately
     stopPolling();
-    
-    // Clear pending task
     clearPendingTask();
-    
-    // Extract payment details
-    const paymentDetails = (completedTask as any).paymentDetails || {
-      fare: completedTask.totalAmount,
-      currency: 'UGX',
-      paymentMethod: completedTask.paymentMethod || 'CASH',
-      paymentStatus: 'PENDING',
-    };
-    
-    // Format payment method for display
-    const paymentMethodLabel: Record<string, string> = {
-      'CASH': 'Cash',
-      'MTN_MOMO': 'MTN MoMo',
-      'AIRTEL_MONEY': 'Airtel Money',
-      'VISA': 'Visa',
-      'MASTERCARD': 'Mastercard',
-    };
 
-    const displayMethod = paymentMethodLabel[paymentDetails.paymentMethod ?? 'CASH'] ?? paymentDetails.paymentMethod ?? 'Cash';
-    const fareDisplay = paymentDetails.fare?.toLocaleString() ?? completedTask.totalAmount?.toLocaleString() ?? 'N/A';
-    
-    const submitRating = async (stars: number) => {
-      if (completedTask.id) {
-        try {
-          await api.rateTask(completedTask.id, stars);
-        } catch (e) {
-          console.error('Rating failed:', e);
-        }
-      }
-      router.replace('/(tabs)');
-    };
+    const paymentDetails = (completedTask as any).paymentDetails || {};
+    const totalAmount = paymentDetails.fare ?? completedTask.totalAmount ?? 0;
+    const paymentMethod = paymentDetails.paymentMethod ?? completedTask.paymentMethod ?? 'CASH';
+    const driverName = (completedTask as any).rider?.fullName || '';
 
-    // Show completion alert with star-rating buttons
-    Alert.alert(
-      'Ride Completed!',
-      `Total Fare: UGX ${fareDisplay}\nPayment: ${displayMethod}\n\n${paymentDetails.paymentMethod === 'CASH' ? 'Please pay the driver in cash.' : 'Payment will be processed automatically.'}`,
-      [
-        { text: '★★★★★ (5 stars)', onPress: () => submitRating(5) },
-        { text: '★★★★ (4 stars)', onPress: () => submitRating(4) },
-        { text: '★★★ (3 stars)', onPress: () => submitRating(3) },
-        { text: 'Skip', style: 'cancel', onPress: () => router.replace('/(tabs)') },
-      ],
-      { cancelable: false }
-    );
+    router.replace({
+      pathname: '/rider/trip-summary',
+      params: {
+        taskId: completedTask.id,
+        totalAmount: String(Math.round(totalAmount)),
+        paymentMethod,
+        pickupAddress: completedTask.pickupAddress || '',
+        dropoffAddress: completedTask.dropoffAddress || '',
+        distanceKm: String((completedTask as any).distanceKm ?? 0),
+        durationMin: String((completedTask as any).estimatedDuration ?? 0),
+        driverName,
+      },
+    });
   };
 
   // Start polling
@@ -288,13 +259,11 @@ export default function RideTrackingScreen() {
 
   const handleCallDriver = () => {
     if (task?.riderId) {
-      // Navigate to in-app VoIP call screen (Agora)
       router.push(
-        `/call/${task.riderId}?name=${encodeURIComponent(task.rider?.fullName || 'Driver')}&phone=${encodeURIComponent(task.rider?.phone || '')}`
+        `/call/${task.riderId}?name=${encodeURIComponent(task.rider?.fullName || 'Driver')}`
       );
-    } else if (task?.rider?.phone) {
-      // Fallback to phone dialer if no user ID
-      Linking.openURL(`tel:${task.rider.phone}`);
+    } else {
+      Alert.alert('Driver Unavailable', 'No driver has been assigned yet.');
     }
   };
 

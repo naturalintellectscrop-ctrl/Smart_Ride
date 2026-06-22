@@ -207,6 +207,16 @@ class SocketService {
     channel.on('broadcast', { event: 'notification' }, (payload) => {
       this.emitLocal('notification', payload.payload);
     });
+
+    // Incoming call — caller initiated a session, this user is the recipient
+    channel.on('broadcast', { event: 'call:incoming' }, (payload) => {
+      this.emitLocal('call:incoming', payload.payload);
+    });
+
+    // Remote call ended (caller hung up or cancelled)
+    channel.on('broadcast', { event: 'call:ended' }, (payload) => {
+      this.emitLocal('call:ended', payload.payload);
+    });
   }
 
   /** Create a Supabase Realtime channel and track it */

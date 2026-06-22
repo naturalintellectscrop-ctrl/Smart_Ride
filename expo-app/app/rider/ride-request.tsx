@@ -89,13 +89,19 @@ export default function RideRequestScreen() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [phoneNumber, setPhoneNumber] = useState('');
 
-  // Pricing
-  const [distance, setDistance] = useState<number | null>(null);
-  const [estimatedFare, setEstimatedFare] = useState<number>(rideType.baseFare);
+  // Route + pricing state (all from real APIs)
+  const [distance, setDistance] = useState<number | null>(null);      // road km
+  const [duration, setDuration] = useState<number | null>(null);      // drive minutes
+  const [routeCoordinates, setRouteCoordinates] = useState<Array<{ latitude: number; longitude: number }>>([]);
+  const [bodaFare, setBodaFare] = useState<number | null>(null);
+  const [carFare, setCarFare]   = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
   // Loading
   const [isRequesting, setIsRequesting] = useState(false);
+
+  // Derived fare for the currently selected vehicle
+  const estimatedFare = selectedVehicle === 'CAR' ? carFare : bodaFare;
 
   // Get current ride type config based on selected vehicle
   const currentRideType = selectedVehicle === 'CAR' ? RIDE_TYPES.CAR : RIDE_TYPES.BODA;
@@ -136,44 +142,72 @@ export default function RideRequestScreen() {
       setDropoffLatitude(place.center[1]);
       setDropoffLongitude(place.center[0]);
       setStep('confirm');
-      calculateFare(place.center[1], place.center[0]);
+      fetchRouteAndFares(place.center[1], place.center[0]);
     }
     setSearchQuery('');
     setSearchResults([]);
   };
 
-  // Calculate fare estimate
-  const calculateFare = async (destLat: number, destLng: number) => {
+  /**
+   * Fetch driving route from Mapbox and then get accurate fares from backend.
+   * Called when the user confirms their dropoff location.
+   */
+  const fetchRouteAndFares = async (destLat: number, destLng: number) => {
+    if (!pickupLatitude || !pickupLongitude) return;
     setIsCalculating(true);
     try {
-      const dist = calculateDistance(
-        pickupLatitude,
-        pickupLongitude,
-        destLat,
-        destLng
+      // 1 — Get actual driving route (road distance + duration + polyline)
+      const dirRes = await api.getDirections(
+        { latitude: pickupLatitude, longitude: pickupLongitude },
+        { latitude: destLat, longitude: destLng },
       );
-      setDistance(dist);
 
-      const fare = currentRideType.baseFare + (dist * currentRideType.perKm);
-      setEstimatedFare(Math.round(fare));
+      let roadKm: number;
+      let driveMin: number;
+
+      if (dirRes.success && dirRes.data) {
+        roadKm  = dirRes.data.distanceKm;
+        driveMin = dirRes.data.durationMin;
+        setDistance(roadKm);
+        setDuration(driveMin);
+        setRouteCoordinates(dirRes.data.geometry);
+      } else {
+        // Fallback to Haversine if directions API fails
+        roadKm  = haversineKm(pickupLatitude, pickupLongitude, destLat, destLng);
+        driveMin = Math.round(roadKm * 3); // rough estimate: 3 min/km urban
+        setDistance(roadKm);
+        setDuration(driveMin);
+        setRouteCoordinates([]);
+      }
+
+      // 2 — Get backend fare estimates (same logic as task creation)
+      const fareRes = await api.getFareEstimate(roadKm, driveMin);
+      if (fareRes.success && fareRes.data?.estimates) {
+        const { estimates } = fareRes.data;
+        setBodaFare(estimates['SMART_BODA_RIDE']?.totalAmount ?? null);
+        setCarFare(estimates['SMART_CAR_RIDE']?.totalAmount ?? null);
+      } else {
+        // Fallback: local calculation using backend rates
+        setBodaFare(Math.max(Math.round(2000 + roadKm * 150 * 1.05), 3000));
+        setCarFare(Math.max(Math.round(5000 + roadKm * 300 * 1.05), 8000));
+      }
     } catch (error) {
-      console.error('Fare calculation error:', error);
+      console.error('[ride-request] fetchRouteAndFares error:', error);
     } finally {
       setIsCalculating(false);
     }
   };
 
-  // Calculate distance between two points (Haversine formula)
-  const calculateDistance = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  // Haversine fallback (straight-line distance)
+  const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLng = (lng2 - lng1) * Math.PI / 180;
     const a =
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-      Math.sin(dLng/2) * Math.sin(dLng/2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
+      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
 
   // Request ride
@@ -189,11 +223,11 @@ export default function RideRequestScreen() {
       return;
     }
 
-    const distanceKm = distance || calculateDistance(
+    const distanceKm = distance || haversineKm(
       pickupLatitude,
       pickupLongitude,
       dropoffLatitude,
-      dropoffLongitude
+      dropoffLongitude,
     );
 
     setIsRequesting(true);
@@ -242,6 +276,7 @@ export default function RideRequestScreen() {
               ? { latitude: dropoffLatitude, longitude: dropoffLongitude, title: dropoffAddress || 'Destination' }
               : undefined
           }
+          routeCoordinates={routeCoordinates.length > 0 ? routeCoordinates : undefined}
           showUserLocation
         />
 
@@ -300,19 +335,13 @@ export default function RideRequestScreen() {
           {step === 'confirm' && (
             <ConfirmStep
               selectedVehicle={selectedVehicle}
-              setSelectedVehicle={(v) => {
-                setSelectedVehicle(v);
-                // Recalculate fare when vehicle changes
-                if (dropoffLatitude && dropoffLongitude) {
-                  const rt = v === 'CAR' ? RIDE_TYPES.CAR : RIDE_TYPES.BODA;
-                  const dist = distance || calculateDistance(pickupLatitude, pickupLongitude, dropoffLatitude, dropoffLongitude);
-                  setEstimatedFare(Math.round(rt.baseFare + (dist * rt.perKm)));
-                }
-              }}
+              setSelectedVehicle={setSelectedVehicle}
               pickupAddress={pickupAddress}
               dropoffAddress={dropoffAddress}
               distance={distance}
-              estimatedFare={estimatedFare}
+              duration={duration}
+              bodaFare={bodaFare}
+              carFare={carFare}
               isCalculating={isCalculating}
               paymentMethod={paymentMethod}
               setPaymentMethod={setPaymentMethod}
@@ -500,7 +529,9 @@ function ConfirmStep({
   pickupAddress,
   dropoffAddress,
   distance,
-  estimatedFare,
+  duration,
+  bodaFare,
+  carFare,
   isCalculating,
   paymentMethod,
   setPaymentMethod,
@@ -515,7 +546,9 @@ function ConfirmStep({
   pickupAddress: string;
   dropoffAddress: string;
   distance: number | null;
-  estimatedFare: number;
+  duration: number | null;
+  bodaFare: number | null;
+  carFare: number | null;
   isCalculating: boolean;
   paymentMethod: PaymentMethod;
   setPaymentMethod: (method: PaymentMethod) => void;
@@ -525,6 +558,8 @@ function ConfirmStep({
   isRequesting: boolean;
   currentRideType: RideTypeConfig;
 }) {
+  const etaLabel = duration != null ? `~${duration} min drive` : '...';
+
   return (
     <View>
       {/* Route Summary Card */}
@@ -546,15 +581,17 @@ function ConfirmStep({
             </View>
           </View>
         </View>
+        {distance != null && (
+          <Text style={styles.routeMeta}>
+            {distance.toFixed(1)} km · {etaLabel}
+          </Text>
+        )}
       </GlassCard>
 
       {/* Available Rides header */}
       <View style={styles.availableRidesHeader}>
         <Text style={styles.sectionLabel}>Available Rides</Text>
-        <View style={styles.etaBadge}>
-          <Ionicons name="time-outline" size={12} color={COLORS.primary} />
-          <Text style={styles.etaBadgeText}>3 mins away</Text>
-        </View>
+        {isCalculating && <ActivityIndicator size="small" color={COLORS.primary} />}
       </View>
 
       {/* Ride option: Smart Boda */}
@@ -568,16 +605,14 @@ function ConfirmStep({
         </View>
         <View style={styles.rideCardContent}>
           <Text style={[styles.rideCardName, selectedVehicle === 'BODA' && styles.rideCardNameActive]}>Smart Boda</Text>
-          <Text style={styles.rideCardDesc}>Safe &amp; Fast · 2 mins</Text>
+          <Text style={styles.rideCardDesc}>Motorcycle · 1 passenger</Text>
         </View>
         <View style={styles.rideCardRight}>
-          {isCalculating && selectedVehicle === 'BODA' ? (
+          {isCalculating ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
           ) : (
             <Text style={styles.rideCardPrice}>
-              UGX {selectedVehicle === 'BODA'
-                ? estimatedFare.toLocaleString()
-                : Math.round(RIDE_TYPES.BODA.baseFare + ((distance || 1) * RIDE_TYPES.BODA.perKm)).toLocaleString()}
+              {bodaFare != null ? `UGX ${bodaFare.toLocaleString()}` : '---'}
             </Text>
           )}
         </View>
@@ -594,24 +629,18 @@ function ConfirmStep({
         </View>
         <View style={styles.rideCardContent}>
           <Text style={[styles.rideCardName, selectedVehicle === 'CAR' && styles.rideCardNameActive]}>Smart Car</Text>
-          <Text style={styles.rideCardDesc}>Comfort · AC · 5 mins</Text>
+          <Text style={styles.rideCardDesc}>Sedan · AC · up to 4</Text>
         </View>
         <View style={styles.rideCardRight}>
-          {isCalculating && selectedVehicle === 'CAR' ? (
+          {isCalculating ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
           ) : (
             <Text style={styles.rideCardPrice}>
-              UGX {selectedVehicle === 'CAR'
-                ? estimatedFare.toLocaleString()
-                : Math.round(RIDE_TYPES.CAR.baseFare + ((distance || 1) * RIDE_TYPES.CAR.perKm)).toLocaleString()}
+              {carFare != null ? `UGX ${carFare.toLocaleString()}` : '---'}
             </Text>
           )}
         </View>
       </TouchableOpacity>
-
-      {distance && (
-        <Text style={styles.distanceNote}>~{distance.toFixed(1)} km total distance</Text>
-      )}
 
       {/* Payment Method — single bar with Change */}
       <View style={styles.paymentBar}>
@@ -874,21 +903,6 @@ const styles = StyleSheet.create({
     ...TYPOGRAPHY.labelLg,
     color: COLORS.onSurfaceVariant,
   },
-  etaBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.primaryFixed,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
-    gap: 4,
-  },
-  etaBadgeText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-
   // Ride list cards (Stitch vertical layout)
   rideCard: {
     flexDirection: 'row',
@@ -941,11 +955,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: COLORS.onSurface,
   },
-  distanceNote: {
+  routeMeta: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
+    marginTop: SPACING.sm,
+    textAlign: 'right',
   },
 
   // Payment bar (Stitch single-row with Change)

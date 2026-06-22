@@ -253,6 +253,16 @@ class RealtimeService {
     channel.on('broadcast', { event: 'notification' }, (payload) => {
       this.emitLocal('notification', payload.payload);
     });
+
+    // Incoming call — caller initiated a session, recipient must answer or decline
+    channel.on('broadcast', { event: 'call:incoming' }, (payload) => {
+      this.emitLocal('call:incoming', payload.payload);
+    });
+
+    // Call ended remotely (caller cancelled or other participant ended)
+    channel.on('broadcast', { event: 'call:ended' }, (payload) => {
+      this.emitLocal('call:ended', payload.payload);
+    });
   }
 
   /** Create a Supabase Realtime channel and track it */

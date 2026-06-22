@@ -47,7 +47,6 @@ export async function GET(
             id: true,
             name: true,
             avatarUrl: true,
-            phone: true,
           },
         },
         recipient: {
@@ -55,7 +54,6 @@ export async function GET(
             id: true,
             name: true,
             avatarUrl: true,
-            phone: true,
           },
         },
         task: {

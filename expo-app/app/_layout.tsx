@@ -48,6 +48,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, useTheme } from '../src/context/theme-context';
 import { useRealtime } from '@/src/hooks/useRealtime';
+import { useIncomingCall } from '@/src/hooks/useIncomingCall';
 import { useAuthStore } from '@/src/store/authStore';
 import { OfflineBanner } from '@/src/components/OfflineBanner';
 
@@ -119,6 +120,9 @@ function ThemedRootLayout() {
 
   // Connect to Supabase Realtime when authenticated
   useRealtime();
+
+  // Global incoming call listener — navigates to call screen on call:incoming event
+  useIncomingCall();
 
   // ============================================
   // ROOT AUTH GUARD (CB12)

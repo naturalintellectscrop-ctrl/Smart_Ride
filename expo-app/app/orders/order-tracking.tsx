@@ -200,37 +200,28 @@ export default function OrderTrackingScreen() {
 
   const handleCallMerchant = () => {
     if (order?.merchantId) {
-      // Navigate to in-app VoIP call screen (Agora)
       router.push(
-        `/call/${order.merchantId}?name=${encodeURIComponent(order.merchant?.name || 'Merchant')}&phone=${encodeURIComponent(order.merchant?.phone || '')}`
+        `/call/${order.merchantId}?name=${encodeURIComponent(order.merchant?.name || 'Merchant')}`
       );
-    } else if (order?.merchant?.phone) {
-      // Fallback to phone dialer if no user ID
-      Linking.openURL(`tel:${order.merchant.phone}`);
+    } else {
+      Alert.alert('Unavailable', 'Merchant contact is not available for this order yet.');
     }
   };
 
   const handleCallDriver = () => {
-    // The order may have a related task with a rider assigned.
-    // Backend includes `task.rider` with id/fullName/phone in the order response.
     const task = (order as any)?.task;
     const rider = task?.rider;
     const riderId = rider?.id || task?.riderId;
     const riderName = rider?.fullName || 'Driver';
-    const riderPhone = rider?.phone;
 
     if (riderId) {
-      // Navigate to in-app VoIP call screen (Agora)
       router.push(
-        `/call/${riderId}?name=${encodeURIComponent(riderName)}&phone=${encodeURIComponent(riderPhone || '')}`
+        `/call/${riderId}?name=${encodeURIComponent(riderName)}`
       );
-    } else if (riderPhone) {
-      // Fallback to phone dialer if no user/rider ID
-      Linking.openURL(`tel:${riderPhone}`);
     } else {
       Alert.alert(
         'Driver Unavailable',
-        'Driver contact information is not available for this order yet.'
+        'No driver has been assigned to this order yet.'
       );
     }
   };
@@ -410,7 +401,7 @@ export default function OrderTrackingScreen() {
                     {(order as any).task.rider.fullName || 'Driver'}
                   </Text>
                   <Text style={styles.merchantAddress}>
-                    {(order as any).task.rider.phone || 'Contact via in-app call'}
+                    Contact via in-app call
                   </Text>
                 </View>
                 <TouchableOpacity 
