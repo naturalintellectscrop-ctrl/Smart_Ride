@@ -249,7 +249,8 @@ function resolveMapboxToken(): string {
   ) {
     // A valid Mapbox token is a JWT with 3 dot-separated segments.
     // The 3rd segment (signature) is ~43 base64 chars for a 256-bit HMAC.
-    // Reject truncated tokens so the runtime fetch fallback can kick in.
+    // Reject truncated tokens so the runtime fetch fallback can kick in,
+    // preventing a silently black/empty map with no error message.
     const parts = envToken.split('.');
     if (parts.length === 3 && parts[2].length >= 40) {
       return envToken;
