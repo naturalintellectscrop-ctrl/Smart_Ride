@@ -15,6 +15,8 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -184,6 +186,7 @@ export default function ProfileEditScreen() {
   };
 
   return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
     <View style={[styles.screen, { backgroundColor: COLORS.surface }]}>
       {/* Header */}
       <Animated.View
@@ -305,6 +308,7 @@ export default function ProfileEditScreen() {
       </ScrollView>
       )}
     </View>
+    </KeyboardAvoidingView>
   );
 }
 

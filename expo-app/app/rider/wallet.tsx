@@ -15,6 +15,8 @@ import {
   RefreshControl,
   Alert,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -319,6 +321,7 @@ export default function RiderWalletScreen() {
 
       {/* Withdraw Modal */}
       <Modal visible={withdrawModalVisible} animationType="slide" transparent>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Withdraw Funds</Text>
@@ -405,6 +408,7 @@ export default function RiderWalletScreen() {
             </View>
           </View>
         </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Top Up Modal (shared component) */}

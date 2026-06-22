@@ -557,55 +557,53 @@ function StepType({
         Choose vehicle based on your package
       </Text>
 
-      <View style={styles.serviceTypeRow}>
-        {DELIVERY_OPTIONS.map((option) => {
+      {DELIVERY_OPTIONS.map((option, index) => {
           const isSelected = deliveryType === option.id;
+          const isRecommended = option.id === 'BODA';
+          const fareEstimate = option.id === 'BODA'
+            ? `UGX ${DELIVERY_FARE.BASE_FARE.toLocaleString()}`
+            : option.id === 'CAR'
+            ? `UGX ${(DELIVERY_FARE.BASE_FARE + 7000).toLocaleString()}`
+            : `UGX ${(DELIVERY_FARE.BASE_FARE + 15000).toLocaleString()}`;
           return (
             <Animated.View
               key={option.id}
-              entering={ZoomIn.delay(100).duration(300)}
-              style={styles.serviceTypeWrapper}
+              entering={FadeInUp.delay(index * 80).duration(300)}
             >
               <TouchableOpacity
                 onPress={() => onSelectType(option.id)}
-                activeOpacity={0.7}
+                activeOpacity={0.75}
                 style={[
-                  styles.serviceTypeCard,
-                  isSelected && styles.serviceTypeCardSelected,
-                  isSelected && { borderColor: option.iconColor },
+                  styles.serviceListCard,
+                  isSelected && styles.serviceListCardSelected,
                 ]}
               >
-                {/* Icon Circle */}
-                <View
-                  style={[
-                    styles.serviceTypeIconCircle,
-                    { backgroundColor: `${option.iconColor}${isSelected ? '20' : '10'}` },
-                  ]}
-                >
-                  <Ionicons
-                    name={option.icon}
-                    size={24}
-                    color={isSelected ? option.iconColor : COLORS.onSurfaceVariant}
-                  />
+                <View style={[
+                  styles.serviceListIcon,
+                  { backgroundColor: isSelected ? COLORS.primary : COLORS.primaryFixed },
+                ]}>
+                  <Ionicons name={option.icon} size={22} color={isSelected ? COLORS.onPrimary : COLORS.primary} />
                 </View>
-                <Text
-                  style={[
-                    styles.serviceTypeName,
-                    isSelected && { color: option.iconColor },
-                  ]}
-                >
-                  {option.name}
+                <View style={styles.serviceListContent}>
+                  <View style={styles.serviceListNameRow}>
+                    <Text style={[styles.serviceListName, isSelected && styles.serviceListNameActive]}>
+                      {option.name === 'Motorcycle' ? 'Smart Boda' : option.name === 'Car' ? 'Smart Car' : 'Van / Truck'}
+                    </Text>
+                    {isRecommended && (
+                      <View style={styles.recommendedBadge}>
+                        <Text style={styles.recommendedText}>RECOMMENDED</Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text style={styles.serviceListDesc}>{option.description}</Text>
+                </View>
+                <Text style={[styles.serviceListFare, isSelected && styles.serviceListFareActive]}>
+                  {fareEstimate}
                 </Text>
-                <Text style={styles.serviceTypeTime}>{option.estimatedTime}</Text>
-                {/* Selection indicator */}
-                {isSelected && (
-                  <View style={[styles.selectedDot, { backgroundColor: option.iconColor }]} />
-                )}
               </TouchableOpacity>
             </Animated.View>
           );
         })}
-      </View>
 
       {/* Package Size Selector */}
       <Text style={styles.sectionTitle}>Package Size</Text>
@@ -1107,50 +1105,72 @@ const styles = StyleSheet.create({
   // ==========================================
   // STEP 1: Service Type
   // ==========================================
-  serviceTypeRow: {
+  // Service list cards (Stitch vertical layout)
+  serviceListCard: {
     flexDirection: 'row',
-    gap: SPACING.sm,
-    marginBottom: SPACING.sm,
-  },
-  serviceTypeWrapper: {
-    flex: 1,
-  },
-  serviceTypeCard: {
+    alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: RADIUS.xl,
-    padding: SPACING.md,
-    alignItems: 'center',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: COLORS.outlineVariant,
+    padding: SPACING.md,
+    marginBottom: SPACING.sm,
+    gap: SPACING.md,
     ...SHADOWS.card,
   },
-  serviceTypeCardSelected: {
-    backgroundColor: `${COLORS.primary}08`,
+  serviceListCardSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: COLORS.surfaceContainerLow,
   },
-  serviceTypeIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: RADIUS.full,
+  serviceListIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.sm,
   },
-  serviceTypeName: {
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '700',
+  serviceListContent: {
+    flex: 1,
+  },
+  serviceListNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    flexWrap: 'wrap',
+  },
+  serviceListName: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '600',
     color: COLORS.onSurface,
-    textAlign: 'center',
   },
-  serviceTypeTime: {
+  serviceListNameActive: {
+    color: COLORS.primary,
+  },
+  serviceListDesc: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
     marginTop: 2,
   },
-  selectedDot: {
-    width: 8,
-    height: 8,
+  serviceListFare: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    textAlign: 'right',
+  },
+  serviceListFareActive: {
+    color: COLORS.primary,
+  },
+  recommendedBadge: {
+    backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
-    marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+  },
+  recommendedText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onPrimary,
+    fontWeight: '700',
+    fontSize: 9,
   },
 
   // Package Size

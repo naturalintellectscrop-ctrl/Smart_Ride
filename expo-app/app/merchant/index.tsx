@@ -328,7 +328,7 @@ export default function MerchantDashboardScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Order Tabs with Badges */}
+        {/* Order Tabs — count above label (Stitch style) */}
         <View style={styles.tabsContainer}>
           {ORDER_TABS.map((tab) => {
             const isActive = activeTab === tab.key;
@@ -336,40 +336,30 @@ export default function MerchantDashboardScreen() {
             return (
               <TouchableOpacity
                 key={tab.key}
-                style={[
-                  styles.tab,
-                  isActive && styles.tabActive,
-                ]}
+                style={[styles.tab, isActive && styles.tabActive]}
                 onPress={() => setActiveTab(tab.key)}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={tab.icon}
-                  size={18}
-                  color={isActive ? COLORS.onPrimary : COLORS.onSurfaceVariant}
-                />
-                <Text style={[
-                  styles.tabLabel,
-                  isActive && styles.tabLabelActive,
-                ]}>
+                <Text style={[styles.tabCount, isActive && styles.tabCountActive]}>
+                  {count}
+                </Text>
+                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
                   {tab.label}
                 </Text>
-                {count > 0 && (
-                  <View style={[
-                    styles.tabBadge,
-                    isActive ? styles.tabBadgeActive : styles.tabBadgeInactive,
-                  ]}>
-                    <Text style={[
-                      styles.tabBadgeText,
-                      isActive && styles.tabBadgeTextActive,
-                    ]}>
-                      {count}
-                    </Text>
-                  </View>
-                )}
               </TouchableOpacity>
             );
           })}
+        </View>
+
+        {/* Section label with auto-refresh indicator */}
+        <View style={styles.ordersHeaderRow}>
+          <Text style={styles.ordersHeaderLabel}>
+            {activeTab === 'NEW' ? 'New Incoming Orders' : `${activeTab.charAt(0) + activeTab.slice(1).toLowerCase()} Orders`}
+          </Text>
+          <View style={styles.autoRefreshBadge}>
+            <Ionicons name="refresh-outline" size={11} color={COLORS.onSurfaceVariant} />
+            <Text style={styles.autoRefreshText}>Auto-refresh: 30s</Text>
+          </View>
         </View>
 
         {/* Orders Loading State */}
@@ -522,64 +512,62 @@ function OrderCard({
   const isNew = ['NEW', 'PENDING'].includes(order.status);
   const itemCount = order.items?.length || 0;
 
+  const paymentLabel = (order as any).paymentMethod === 'CASH'
+    ? 'Pay on Delivery'
+    : (order as any).paymentMethod === 'MTN_MOMO'
+    ? 'Mobile Money Paid'
+    : (order as any).paymentMethod === 'AIRTEL_MONEY'
+    ? 'Airtel Money Paid'
+    : statusLabel;
+
   return (
     <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.orderCard}>
       <TouchableOpacity onPress={onTap} activeOpacity={0.7} disabled={isUpdating}>
         <View style={styles.orderCardInner}>
-          {/* Order header row */}
+          {/* Order header: number + time left, amount + payment badge */}
           <View style={styles.orderHeaderRow}>
             <View style={styles.orderHeaderLeft}>
-              <View style={[styles.orderStatusDot, { backgroundColor: statusColor }]} />
-              <Text style={styles.orderNumber}>{order.orderNumber || `#${order.id.slice(-6)}`}</Text>
+              <Text style={styles.orderNumber}>{order.orderNumber || `ORDER #SR-${order.id.slice(-4).toUpperCase()}`}</Text>
+              {order.createdAt ? (
+                <View style={styles.orderTimeRow}>
+                  <Ionicons name="time-outline" size={12} color={COLORS.onSurfaceVariant} />
+                  <Text style={styles.orderTime}>Estimated pickup: {isNew ? '15 mins' : formatRelativeTime(order.createdAt)}</Text>
+                </View>
+              ) : null}
             </View>
-            <View style={styles.orderStatusBadge}>
-              <Text style={[styles.orderStatusText, { color: statusColor }]}>{statusLabel}</Text>
-            </View>
-          </View>
-
-          {/* Customer & Items */}
-          <View style={styles.orderDetailsRow}>
-            <View style={styles.customerInfo}>
-              <View style={styles.customerIconCircle}>
-                <Ionicons name="person-outline" size={14} color={COLORS.primary} />
-              </View>
-              <Text style={styles.customerName}>{order.customerName || 'Customer'}</Text>
-            </View>
-            <View style={styles.orderMeta}>
-              <View style={styles.itemCountBadge}>
-                <Ionicons name="bag-outline" size={12} color={COLORS.onSurfaceVariant} />
-                <Text style={styles.itemCountText}>{itemCount} item{itemCount !== 1 ? 's' : ''}</Text>
-              </View>
+            <View style={styles.orderAmountBlock}>
               <Text style={styles.orderTotal}>UGX {(order.totalAmount || 0).toLocaleString()}</Text>
+              <View style={[styles.paymentBadge, { backgroundColor: isNew ? COLORS.primaryFixed : COLORS.surfaceContainerHigh }]}>
+                <Text style={[styles.paymentBadgeText, { color: isNew ? COLORS.primary : COLORS.onSurfaceVariant }]}>
+                  {paymentLabel}
+                </Text>
+              </View>
             </View>
           </View>
 
-          {/* Time */}
-          {order.createdAt ? (
-            <View style={styles.orderTimeRow}>
-              <Ionicons name="time-outline" size={12} color={COLORS.onSurfaceVariant} />
-              <Text style={styles.orderTime}>{formatRelativeTime(order.createdAt)}</Text>
+          {/* Items list */}
+          {order.items && order.items.length > 0 ? (
+            <View style={styles.itemsList}>
+              {order.items.slice(0, 3).map((item, idx) => (
+                <View key={idx} style={styles.itemRow}>
+                  <View style={styles.itemQtyBadge}>
+                    <Text style={styles.itemQtyText}>{item.quantity}x</Text>
+                  </View>
+                  <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                </View>
+              ))}
+              {order.items.length > 3 && (
+                <Text style={styles.moreItems}>+{order.items.length - 3} more items</Text>
+              )}
             </View>
-          ) : null}
+          ) : (
+            <Text style={styles.noItemsText}>{itemCount} item{itemCount !== 1 ? 's' : ''}</Text>
+          )}
 
           {/* Action buttons for NEW orders */}
           {isNew && (
             <View style={styles.orderActions}>
-              <TouchableOpacity
-                style={[styles.rejectButton, isUpdating && styles.actionDisabled]}
-                onPress={onReject}
-                activeOpacity={0.7}
-                disabled={isUpdating}
-              >
-                {isUpdating ? (
-                  <ActivityIndicator size="small" color={COLORS.error} />
-                ) : (
-                  <>
-                    <Ionicons name="close" size={16} color={COLORS.error} />
-                    <Text style={styles.rejectButtonText}>Reject</Text>
-                  </>
-                )}
-              </TouchableOpacity>
+              {/* Accept Order — full width primary */}
               <TouchableOpacity
                 style={[styles.acceptButton, isUpdating && styles.actionDisabled]}
                 onPress={onAccept}
@@ -590,11 +578,32 @@ function OrderCard({
                   <ActivityIndicator size="small" color={COLORS.onPrimary} />
                 ) : (
                   <>
-                    <Ionicons name="checkmark" size={16} color={COLORS.onPrimary} />
-                    <Text style={styles.acceptButtonText}>Accept</Text>
+                    <Ionicons name="checkmark-circle-outline" size={18} color={COLORS.onPrimary} />
+                    <Text style={styles.acceptButtonText}>Accept Order</Text>
                   </>
                 )}
               </TouchableOpacity>
+              {/* Secondary row: Reject (outline error) + Call (outline) */}
+              <View style={styles.secondaryActions}>
+                <TouchableOpacity
+                  style={[styles.callButton, isUpdating && styles.actionDisabled]}
+                  onPress={onTap}
+                  activeOpacity={0.7}
+                  disabled={isUpdating}
+                >
+                  <Ionicons name="call-outline" size={16} color={COLORS.primary} />
+                  <Text style={styles.callButtonText}>In-app Call</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.rejectButton, isUpdating && styles.actionDisabled]}
+                  onPress={onReject}
+                  activeOpacity={0.7}
+                  disabled={isUpdating}
+                >
+                  <Ionicons name="close-circle-outline" size={16} color={COLORS.error} />
+                  <Text style={styles.rejectButtonText}>Reject</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
         </View>
@@ -742,52 +751,36 @@ const styles = StyleSheet.create({
   // Tabs
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: COLORS.surfaceContainerHigh,
-    borderRadius: RADIUS.xl,
-    padding: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.outlineVariant,
     marginBottom: SPACING.md,
   },
   tab: {
     flex: 1,
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
     paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.lg,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
   tabActive: {
-    backgroundColor: COLORS.primary,
+    borderBottomColor: COLORS.primary,
+  },
+  tabCount: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: COLORS.onSurfaceVariant,
+    lineHeight: 24,
+  },
+  tabCountActive: {
+    color: COLORS.primary,
   },
   tabLabel: {
     ...TYPOGRAPHY.labelMd,
-    fontWeight: '600',
     color: COLORS.onSurfaceVariant,
   },
   tabLabelActive: {
-    color: COLORS.onPrimary,
-  },
-  tabBadge: {
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  tabBadgeActive: {
-    backgroundColor: COLORS.onPrimary,
-  },
-  tabBadgeInactive: {
-    backgroundColor: COLORS.outlineVariant,
-  },
-  tabBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.onSurfaceVariant,
-  },
-  tabBadgeTextActive: {
     color: COLORS.primary,
+    fontWeight: '600',
   },
 
   // Orders loading
@@ -847,7 +840,7 @@ const styles = StyleSheet.create({
 
   // Order card
   orderCard: {
-    marginBottom: SPACING.sm,
+    marginBottom: SPACING.md,
     overflow: 'hidden',
   },
   orderCardInner: {
@@ -856,33 +849,18 @@ const styles = StyleSheet.create({
   orderHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
+    alignItems: 'flex-start',
+    marginBottom: SPACING.md,
   },
   orderHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  orderStatusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    flex: 1,
+    marginRight: SPACING.md,
   },
   orderNumber: {
-    ...TYPOGRAPHY.labelLg,
-    fontWeight: '600',
-    color: COLORS.onSurface,
-  },
-  orderStatusBadge: {
-    backgroundColor: COLORS.surfaceContainerHigh,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-  },
-  orderStatusText: {
     ...TYPOGRAPHY.labelMd,
     fontWeight: '600',
+    color: COLORS.onSurfaceVariant,
+    letterSpacing: 0.5,
   },
   orderTimeRow: {
     flexDirection: 'row',
@@ -891,64 +869,111 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
   },
   orderTime: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '600',
+    color: COLORS.onSurface,
+  },
+  orderAmountBlock: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  orderTotal: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+  },
+  paymentBadge: {
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+  },
+  paymentBadgeText: {
     ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
+    fontSize: 10,
+    fontWeight: '600',
   },
-  orderDetailsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+
+  // Items list
+  itemsList: {
+    gap: 4,
+    marginBottom: SPACING.sm,
   },
-  customerInfo: {
+  itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
   },
-  customerIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.primaryFixed,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  customerName: {
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '500',
-    color: COLORS.onSurface,
-  },
-  orderMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-  },
-  itemCountBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
+  itemQtyBadge: {
     backgroundColor: COLORS.surfaceContainerHigh,
-    borderRadius: RADIUS.full,
+    borderRadius: RADIUS.sm,
     paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
+    paddingVertical: 2,
+    minWidth: 28,
+    alignItems: 'center',
   },
-  itemCountText: {
+  itemQtyText: {
     ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-  },
-  orderTotal: {
-    ...TYPOGRAPHY.bodySm,
     fontWeight: '700',
     color: COLORS.onSurface,
+  },
+  itemName: {
+    flex: 1,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurface,
+  },
+  moreItems: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: 2,
+    marginLeft: 36,
+  },
+  noItemsText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.sm,
   },
 
   // Order actions
   orderActions: {
-    flexDirection: 'row',
     gap: SPACING.sm,
     marginTop: SPACING.md,
     paddingTop: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.outlineVariant,
+  },
+  acceptButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.xl,
+    paddingVertical: SPACING.md,
+  },
+  acceptButtonText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onPrimary,
+    fontWeight: '700',
+  },
+  secondaryActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  callButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+    borderRadius: RADIUS.xl,
+    paddingVertical: SPACING.sm + 2,
+  },
+  callButtonText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   rejectButton: {
     flex: 1,
@@ -956,32 +981,45 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.xs,
-    backgroundColor: COLORS.errorContainer,
-    borderRadius: RADIUS.lg,
+    borderWidth: 1.5,
+    borderColor: COLORS.error,
+    borderRadius: RADIUS.xl,
     paddingVertical: SPACING.sm + 2,
   },
   rejectButtonText: {
     ...TYPOGRAPHY.labelLg,
-    color: COLORS.onErrorContainer,
-    fontWeight: '600',
-  },
-  acceptButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.sm + 2,
-  },
-  acceptButtonText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onPrimary,
+    color: COLORS.error,
     fontWeight: '600',
   },
   actionDisabled: {
     opacity: 0.6,
+  },
+
+  // Orders section header
+  ordersHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: SPACING.sm,
+  },
+  ordersHeaderLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+    fontWeight: '700',
+  },
+  autoRefreshBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
+  },
+  autoRefreshText: {
+    ...TYPOGRAPHY.labelMd,
+    fontSize: 10,
+    color: COLORS.onSurfaceVariant,
   },
 
   // Section label

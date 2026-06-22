@@ -548,128 +548,100 @@ function ConfirmStep({
         </View>
       </GlassCard>
 
-      {/* Vehicle Type Selection */}
-      <Text style={styles.sectionLabel}>Choose Ride Type</Text>
-      <View style={styles.vehicleRow}>
-        {/* Boda */}
-        <TouchableOpacity
-          style={[
-            styles.vehicleCard,
-            selectedVehicle === 'BODA' && styles.vehicleCardActive,
-          ]}
-          onPress={() => setSelectedVehicle('BODA')}
-          activeOpacity={0.7}
-        >
-          <View style={[
-            styles.vehicleIconCircle,
-            selectedVehicle === 'BODA' && styles.vehicleIconCircleActive,
-          ]}>
-            <Ionicons name="bicycle" size={22} color={
-              selectedVehicle === 'BODA' ? COLORS.onPrimaryFixed : COLORS.primary
-            } />
-          </View>
-          <Text style={[
-            styles.vehicleName,
-            selectedVehicle === 'BODA' && styles.vehicleNameActive,
-          ]}>
-            Smart Boda
-          </Text>
-          <Text style={styles.vehicleDesc}>Motorcycle</Text>
-          <Text style={styles.vehiclePrice}>
-            UGX {RIDE_TYPES.BODA.baseFare.toLocaleString()}+
-          </Text>
-        </TouchableOpacity>
-
-        {/* Car */}
-        <TouchableOpacity
-          style={[
-            styles.vehicleCard,
-            selectedVehicle === 'CAR' && styles.vehicleCardActive,
-          ]}
-          onPress={() => setSelectedVehicle('CAR')}
-          activeOpacity={0.7}
-        >
-          <View style={[
-            styles.vehicleIconCircle,
-            selectedVehicle === 'CAR' && styles.vehicleIconCircleActive,
-          ]}>
-            <Ionicons name="car" size={22} color={
-              selectedVehicle === 'CAR' ? COLORS.onPrimaryFixed : COLORS.primary
-            } />
-          </View>
-          <Text style={[
-            styles.vehicleName,
-            selectedVehicle === 'CAR' && styles.vehicleNameActive,
-          ]}>
-            Smart Car
-          </Text>
-          <Text style={styles.vehicleDesc}>4 seats</Text>
-          <Text style={styles.vehiclePrice}>
-            UGX {RIDE_TYPES.CAR.baseFare.toLocaleString()}+
-          </Text>
-        </TouchableOpacity>
+      {/* Available Rides header */}
+      <View style={styles.availableRidesHeader}>
+        <Text style={styles.sectionLabel}>Available Rides</Text>
+        <View style={styles.etaBadge}>
+          <Ionicons name="time-outline" size={12} color={COLORS.primary} />
+          <Text style={styles.etaBadgeText}>3 mins away</Text>
+        </View>
       </View>
 
-      {/* Fare Estimate Card */}
-      <GlassCard variant="accent" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.fareCard}>
-        <View style={styles.fareRow}>
-          <View>
-            <Text style={styles.fareLabel}>Estimated Fare</Text>
-            {distance && (
-              <Text style={styles.fareDistance}>~{distance.toFixed(1)} km</Text>
-            )}
-          </View>
-          {isCalculating ? (
+      {/* Ride option: Smart Boda */}
+      <TouchableOpacity
+        style={[styles.rideCard, selectedVehicle === 'BODA' && styles.rideCardSelected]}
+        onPress={() => setSelectedVehicle('BODA')}
+        activeOpacity={0.75}
+      >
+        <View style={[styles.rideIconCircle, selectedVehicle === 'BODA' && styles.rideIconCircleActive]}>
+          <Ionicons name="bicycle" size={24} color={selectedVehicle === 'BODA' ? COLORS.onPrimary : COLORS.primary} />
+        </View>
+        <View style={styles.rideCardContent}>
+          <Text style={[styles.rideCardName, selectedVehicle === 'BODA' && styles.rideCardNameActive]}>Smart Boda</Text>
+          <Text style={styles.rideCardDesc}>Safe &amp; Fast · 2 mins</Text>
+        </View>
+        <View style={styles.rideCardRight}>
+          {isCalculating && selectedVehicle === 'BODA' ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
           ) : (
-            <Text style={styles.fareAmount}>
-              UGX {estimatedFare.toLocaleString()}
+            <Text style={styles.rideCardPrice}>
+              UGX {selectedVehicle === 'BODA'
+                ? estimatedFare.toLocaleString()
+                : Math.round(RIDE_TYPES.BODA.baseFare + ((distance || 1) * RIDE_TYPES.BODA.perKm)).toLocaleString()}
             </Text>
           )}
         </View>
-      </GlassCard>
+      </TouchableOpacity>
 
-      {/* Payment Method Tray */}
-      <Text style={styles.sectionLabel}>Payment Method</Text>
-      <View style={styles.paymentRow}>
-        {PAYMENT_METHODS.slice(0, 3).map((method) => {
-          const isActive = paymentMethod === method.id;
-          return (
-            <TouchableOpacity
-              key={method.id}
-              style={[
-                styles.paymentChip,
-                isActive && styles.paymentChipActive,
-              ]}
-              onPress={() => setPaymentMethod(method.id as PaymentMethod)}
-              activeOpacity={0.7}
-            >
-              <View style={[
-                styles.paymentIconCircle,
-                isActive && styles.paymentIconCircleActive,
-              ]}>
-                <Ionicons
-                  name={method.icon as any}
-                  size={16}
-                  color={isActive ? COLORS.onPrimary : COLORS.primary}
-                />
-              </View>
-              <Text style={[
-                styles.paymentChipText,
-                isActive && styles.paymentChipTextActive,
-              ]}>
-                {method.name}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+      {/* Ride option: Smart Car */}
+      <TouchableOpacity
+        style={[styles.rideCard, selectedVehicle === 'CAR' && styles.rideCardSelected]}
+        onPress={() => setSelectedVehicle('CAR')}
+        activeOpacity={0.75}
+      >
+        <View style={[styles.rideIconCircle, selectedVehicle === 'CAR' && styles.rideIconCircleActive]}>
+          <Ionicons name="car" size={24} color={selectedVehicle === 'CAR' ? COLORS.onPrimary : COLORS.primary} />
+        </View>
+        <View style={styles.rideCardContent}>
+          <Text style={[styles.rideCardName, selectedVehicle === 'CAR' && styles.rideCardNameActive]}>Smart Car</Text>
+          <Text style={styles.rideCardDesc}>Comfort · AC · 5 mins</Text>
+        </View>
+        <View style={styles.rideCardRight}>
+          {isCalculating && selectedVehicle === 'CAR' ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <Text style={styles.rideCardPrice}>
+              UGX {selectedVehicle === 'CAR'
+                ? estimatedFare.toLocaleString()
+                : Math.round(RIDE_TYPES.CAR.baseFare + ((distance || 1) * RIDE_TYPES.CAR.perKm)).toLocaleString()}
+            </Text>
+          )}
+        </View>
+      </TouchableOpacity>
+
+      {distance && (
+        <Text style={styles.distanceNote}>~{distance.toFixed(1)} km total distance</Text>
+      )}
+
+      {/* Payment Method — single bar with Change */}
+      <View style={styles.paymentBar}>
+        <View style={styles.paymentBarLeft}>
+          <View style={styles.paymentBarBadge}>
+            <Text style={styles.paymentBarBadgeText}>
+              {paymentMethod === 'CASH' ? 'CASH' : paymentMethod === 'MTN_MOMO' ? 'MTN' : 'AIRTEL'}
+            </Text>
+          </View>
+          <Text style={styles.paymentBarLabel}>
+            {PAYMENT_METHODS.find(m => m.id === paymentMethod)?.name ?? paymentMethod}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => {
+            const options: PaymentMethod[] = ['CASH', 'MTN_MOMO', 'AIRTEL_MONEY'];
+            const idx = options.indexOf(paymentMethod);
+            setPaymentMethod(options[(idx + 1) % options.length]);
+          }}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Text style={styles.paymentChangeText}>Change</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Phone Number for Mobile Money */}
+      {/* Phone number for mobile money */}
       {paymentMethod !== 'CASH' && (
         <View style={styles.phoneInputContainer}>
           <IconInput
-            placeholder="Phone number"
+            placeholder="Phone number for mobile money"
             value={phoneNumber}
             onChangeText={setPhoneNumber}
             icon="phone-portrait-outline"
@@ -890,123 +862,127 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Vehicle selection
-  sectionLabel: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurfaceVariant,
+  // Available rides header
+  availableRidesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginTop: SPACING.lg,
     marginBottom: SPACING.sm,
   },
-  vehicleRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
+  sectionLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurfaceVariant,
   },
-  vehicleCard: {
-    flex: 1,
+  etaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primaryFixed,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
+    gap: 4,
+  },
+  etaBadgeText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+
+  // Ride list cards (Stitch vertical layout)
+  rideCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerLowest,
     borderRadius: RADIUS.xl,
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: COLORS.outlineVariant,
     padding: SPACING.md,
-    alignItems: 'center',
+    marginBottom: SPACING.sm,
+    gap: SPACING.md,
     ...SHADOWS.card,
   },
-  vehicleCardActive: {
+  rideCardSelected: {
     borderColor: COLORS.primary,
-    backgroundColor: COLORS.surfaceContainerLowest,
+    backgroundColor: COLORS.surfaceContainerLow,
   },
-  vehicleIconCircle: {
+  rideIconCircle: {
     width: 48,
     height: 48,
     borderRadius: 24,
     backgroundColor: COLORS.primaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.sm,
   },
-  vehicleIconCircleActive: {
+  rideIconCircleActive: {
     backgroundColor: COLORS.primary,
   },
-  vehicleName: {
+  rideCardContent: {
+    flex: 1,
+  },
+  rideCardName: {
     ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
     color: COLORS.onSurface,
   },
-  vehicleNameActive: {
+  rideCardNameActive: {
     color: COLORS.primary,
   },
-  vehicleDesc: {
+  rideCardDesc: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
     marginTop: 2,
   },
-  vehiclePrice: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.primary,
-    marginTop: SPACING.sm,
+  rideCardRight: {
+    alignItems: 'flex-end',
+  },
+  rideCardPrice: {
+    ...TYPOGRAPHY.bodyMd,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+  },
+  distanceNote: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    marginBottom: SPACING.md,
   },
 
-  // Fare card
-  fareCard: {
-    marginTop: SPACING.lg,
-  },
-  fareRow: {
+  // Payment bar (Stitch single-row with Change)
+  paymentBar: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  fareLabel: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-  },
-  fareDistance: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    marginTop: 2,
-  },
-  fareAmount: {
-    ...TYPOGRAPHY.headlineLg,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-
-  // Payment
-  paymentRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  paymentChip: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1.5,
-    borderColor: COLORS.outlineVariant,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.sm + 2,
-    gap: SPACING.sm,
-  },
-  paymentChipActive: {
-    borderColor: COLORS.primary,
     backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.xl,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.md,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
-  paymentIconCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.primaryFixed,
+  paymentBarLeft: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: SPACING.sm,
   },
-  paymentIconCircleActive: {
-    backgroundColor: COLORS.primary,
+  paymentBarBadge: {
+    backgroundColor: '#FFC107',
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
   },
-  paymentChipText: {
+  paymentBarBadgeText: {
     ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
+    color: '#000',
+    fontWeight: '700',
   },
-  paymentChipTextActive: {
+  paymentBarLabel: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    fontWeight: '500',
+  },
+  paymentChangeText: {
+    ...TYPOGRAPHY.labelLg,
     color: COLORS.primary,
     fontWeight: '600',
   },
