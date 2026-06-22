@@ -122,6 +122,13 @@ export const COLORS = {
   get warning() { return '#F59E0B'; },
   get info() { return this.tertiary; },
   get accent() { return this.secondaryFixed; },
+
+  // Aliases used by some screens (e.g. location-picker.tsx) that were
+  // previously missing and returned undefined, causing invisible text.
+  // Map them to the closest Stitch Design System equivalents.
+  get onSurfaceMuted() { return this.outline; },
+  get onSurfaceSecondary() { return this.onSurfaceVariant; },
+  get onSurfaceDim() { return this.outlineVariant; },
 };
 
 // ============================================

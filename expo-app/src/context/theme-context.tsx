@@ -2,8 +2,10 @@
 // SMART RIDE MOBILE - THEME CONTEXT
 // ============================================
 // Provides light/dark theme switching with persistence.
-// Default: dark mode. Persists choice via AsyncStorage.
+// Default: light mode (matches userInterfaceStyle in app.json).
+// Persists choice via AsyncStorage.
 // New code should use useTheme().colors instead of COLORS.
+// Brand color is green (#005f3a) — NO blue anywhere.
 // ============================================
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
@@ -14,46 +16,50 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 // ============================================
 
 export const DarkColors = {
-  primary: '#00FF88',
-  primaryLight: '#10B981',
-  primaryDark: '#059669',
-  secondary: '#3B82F6',
-  secondaryLight: '#60A5FA',
-  secondaryDark: '#1D4ED8',
-  background: '#0D0D12',
-  backgroundElevated: '#1A1A24',
-  backgroundSurface: '#252530',
-  backgroundSecondary: '#1A1A24',
-  text: '#FFFFFF',
-  textSecondary: 'rgba(255, 255, 255, 0.7)',
-  textMuted: 'rgba(255, 255, 255, 0.5)',
-  textDisabled: 'rgba(255, 255, 255, 0.3)',
-  border: 'rgba(255, 255, 255, 0.08)',
-  borderLight: 'rgba(255, 255, 255, 0.05)',
-  borderStrong: 'rgba(255, 255, 255, 0.15)',
-  success: '#00FF88',
-  error: '#EF4444',
-  warning: '#F59E0B',
-  info: '#3B82F6',
+  // Primary — brand green, brightened for dark backgrounds
+  primary: '#7cd9a4',
+  primaryLight: '#98f6be',
+  primaryDark: '#0e7a4d',
+  // Secondary — deeper green (NOT blue)
+  secondary: '#4ae176',
+  secondaryLight: '#6bff8f',
+  secondaryDark: '#006e2f',
+  background: '#191c1d',
+  backgroundElevated: '#2e3132',
+  backgroundSurface: '#3f4941',
+  backgroundSecondary: '#2e3132',
+  text: '#f0f1f2',
+  textSecondary: 'rgba(240, 241, 242, 0.7)',
+  textMuted: 'rgba(240, 241, 242, 0.5)',
+  textDisabled: 'rgba(240, 241, 242, 0.3)',
+  border: 'rgba(240, 241, 242, 0.12)',
+  borderLight: 'rgba(240, 241, 242, 0.06)',
+  borderStrong: 'rgba(240, 241, 242, 0.2)',
+  success: '#4ae176',
+  error: '#f2b8b5',
+  warning: '#f9cd8e',
+  info: '#7cd9a4',
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
-  textDim: 'rgba(255, 255, 255, 0.3)',
-  accent: '#F59E0B',
+  textDim: 'rgba(240, 241, 242, 0.3)',
+  accent: '#f9cd8e',
   // Glass
-  glassBackground: 'rgba(19, 19, 26, 0.7)',
-  glassBorder: 'rgba(255, 255, 255, 0.05)',
-  glassShadow: 'rgba(0, 0, 0, 0.3)',
-  glassElevated: 'rgba(30, 30, 40, 0.8)',
+  glassBackground: 'rgba(30, 49, 50, 0.7)',
+  glassBorder: 'rgba(124, 217, 164, 0.12)',
+  glassShadow: 'rgba(0, 0, 0, 0.4)',
+  glassElevated: 'rgba(46, 49, 50, 0.85)',
 };
 
 export const LightColors = {
+  // Primary — brand green
   primary: '#005f3a',
   primaryLight: '#0e7a4d',
   primaryDark: '#00522f',
-  secondary: '#3B82F6',
-  secondaryLight: '#60A5FA',
-  secondaryDark: '#1D4ED8',
+  // Secondary — deeper green (NOT blue — Smart Ride is a green brand)
+  secondary: '#006e2f',
+  secondaryLight: '#4ae176',
+  secondaryDark: '#005321',
   background: '#f8f9fa',
   backgroundElevated: '#ffffff',
   backgroundSurface: '#f3f4f5',
@@ -65,15 +71,15 @@ export const LightColors = {
   border: '#bec9bf',
   borderLight: '#d9dadb',
   borderStrong: '#6f7a71',
-  success: '#22C55E',
-  error: '#EF4444',
+  success: '#006e2f',
+  error: '#ba1a1a',
   warning: '#F59E0B',
-  info: '#3B82F6',
+  info: '#0e7a4d',
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
   textDim: 'rgba(25, 28, 29, 0.3)',
-  accent: '#F59E0B',
+  accent: '#0e7a4d',
   // Glass - light mode
   glassBackground: 'rgba(255, 255, 255, 0.8)',
   glassBorder: 'rgba(0, 95, 58, 0.08)',
