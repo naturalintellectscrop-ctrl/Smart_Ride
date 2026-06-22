@@ -247,7 +247,19 @@ function resolveMapboxToken(): string {
     !envToken.includes('xxxx') &&
     envToken.startsWith('pk.')
   ) {
-    return envToken;
+    // A valid Mapbox token is a JWT with 3 dot-separated segments.
+    // The 3rd segment (signature) is ~43 base64 chars for a 256-bit HMAC.
+    // Reject truncated tokens so the runtime fetch fallback can kick in,
+    // preventing a silently black/empty map with no error message.
+    const parts = envToken.split('.');
+    if (parts.length === 3 && parts[2].length >= 40) {
+      return envToken;
+    }
+    console.warn(
+      '[constants] EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN looks truncated ' +
+      `(signature is ${parts[2]?.length || 0} chars, expected ~43). ` +
+      'Map will fall back to runtime token fetch from backend.'
+    );
   }
   return ''; // empty → runtime fetch will populate it
 }
