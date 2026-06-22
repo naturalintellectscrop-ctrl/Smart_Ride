@@ -4656,3 +4656,84 @@ Stage Summary:
 - Rule established: committed prisma/schema.prisma MUST have provider=postgresql (production truth). Local dev mismatch is handled by script, not by editing the committed schema.
 - Google auth (and all other DB-dependent endpoints) will work again once Vercel finishes rebuilding (usually 2-3 minutes after push).
 - Local dev workflow unchanged: `bun run db:push` still pushes to local SQLite via the swap script.
+
+---
+Task ID: 26
+Agent: Main Agent
+Task: Production readiness — Phase 1-5 critical and high issues resolved
+
+Work Log:
+- PHASE 1 (Maps): Verified Mapbox token validation fix is already in place (commit 77e343a).
+  - Regex /^(pk|sk)\.eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}$/ correctly accepts
+    22-char Mapbox signature (real token: BjXK5YvBtQNJOWUdwehz7Q).
+  - The "Map unavailable" on the June 19 APK was caused by an OLD validation check
+    (`parts[2].length < 40`) that rejected valid Mapbox tokens. That check is gone.
+  - A clean rebuild with current code renders maps correctly.
+  - No code changes needed for this phase.
+
+- PHASE 4 (Environment Cleanup): Fixed expo-app/.env and .env.example.
+  - Root problem: .env had TWO duplicate blocks. The second block had a different
+    EXPO_PUBLIC_FIREBASE_API_KEY (AIzaSyDSpbC4ejGRoD7OQlThlOTa46UMUCmySOI) which
+    overrides the correct key (AIzaSyB6d8SCey9MX_fJy6nXx9ycqtNmPw6fuGg from
+    google-services.json). This would cause Google Sign-In to fail on builds
+    that use the app as the canonical Firebase key for validation.
+  - Consolidated both .env and .env.example into a single authoritative block.
+  - Canonical Firebase API key is AIzaSyB6d8SCey9MX_fJy6nXx9ycqtNmPw6fuGg (matches
+    google-services.json client[0].api_key[0].current_key).
+  - Added inline documentation for MAPBOX_DOWNLOAD_TOKEN (secret, different from
+    EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN), AGORA, and SENTRY with clear opt-in comments.
+  - .env is gitignored (correct — contains real Supabase anon key, Mapbox token).
+  - Commits: fb9a8cd (fix(env): clean up .env.example)
+
+- PHASE 2 (Build Stability): Removed conflicting packages.
+  - Removed react-native-worklets@0.7.4 — this is the Reanimated 3.x worklet runtime.
+    react-native-reanimated@4.2.1 (Reanimated 4) ships its own embedded worklet runtime.
+    Having both native modules loaded means two separate Hermes worklet contexts, which
+    causes unpredictable runtime crashes and undefined behavior in animated code.
+    Neither source file imported react-native-worklets directly (safe to remove).
+  - Removed react-native-web@0.21.0 — Smart Ride has no web build target. The package
+    added ~1MB to the dependency tree with no benefit. react-dom remains (needed by React).
+  - Ran `bun install` to update lockfile. 2 packages removed. Confirmed no source imports.
+  - Commit: 993e13e (fix(deps): remove react-native-worklets and react-native-web)
+
+- PHASE 3 (Play Store Readiness): Fixed EAS build profile.
+  - The `production` profile in eas.json had `buildType: "apk"`. Google Play Store no
+    longer accepts APK submissions for new apps — only AAB (Android App Bundle) format.
+    AAB enables Play Store to serve per-device optimized APKs and is required for 2024+.
+  - Changed production: buildType "apk" → "aab", distribution "internal" → "store".
+  - The apk, preview, and development profiles remain APK (correct for sideloading/testing).
+  - Commit: 95b569d (fix(build): EAS production profile outputs AAB for Google Play Store)
+
+- PHASE 5 (Production Hardening): Verified existing hardening is correct.
+  - Apple JWT: Already fully implemented in src/app/api/auth/apple/route.ts using
+    jose.jwtVerify + createRemoteJWKSet(https://appleid.apple.com/auth/keys). Validates
+    signature (JWKS), issuer (https://appleid.apple.com), audience (APPLE_BUNDLE_ID), and
+    expiry. Forged tokens fail here. No code change needed.
+  - JWT access token expiry: session-service.ts line 47 hardcodes `accessTokenExpirySeconds:
+    15 * 60` (15 minutes). Not dependent on environment variables. .env.example JWT_EXPIRES_IN=15m
+    matches. Correct and secure.
+  - ProGuard/R8: intentionally disabled via withAbiSplits.js (forces minifyEnabled false in
+    release buildType) + app.json (enableProguardInReleaseBuilds: false). This is the correct
+    setting — re-enabling R8 caused the June 19 runtime crash (NoClassDefFoundError: AnyTypeCache).
+    withProguardRules.js has comprehensive -keep rules ready for when R8 can be safely re-enabled
+    (after expo-modules-core updates its AAPT2 metadata).
+
+External blockers (cannot fix without credentials — proven external):
+  - Africa's Talking SMS OTP: needs AFRICASTALKING_API_KEY + AFRICASTALKING_USERNAME
+  - Resend email: needs RESEND_API_KEY + EMAIL_FROM
+  - MTN MoMo / Airtel Money / Flutterwave: need payment gateway registration
+  - Sentry: needs EXPO_PUBLIC_SENTRY_DSN + NEXT_PUBLIC_SENTRY_DSN
+  - Agora VoIP: needs AGORA_APP_ID + AGORA_APP_CERTIFICATE
+  - Vercel production env: JWT_SECRET, DATABASE_URL, CORS_ALLOWED_ORIGINS must be set in
+    Vercel project settings (not in code — correctly excluded from committed files)
+
+Stage Summary:
+- Mapbox token validation: already fixed in 77e343a — no further action needed
+- expo-app/.env: consolidated, correct Firebase key, no duplicates
+- expo-app/.env.example: consolidated, documented, no duplicates
+- react-native-worklets removed: eliminates Reanimated worklet context conflict
+- react-native-web removed: eliminates unused ~1MB dep
+- EAS production profile: now outputs AAB for Play Store submission
+- JWT 15m expiry and Apple JWKS verification: already correct
+- ProGuard disabled: intentional (crash protection), withProguardRules.js ready for future
+- All Critical and High issues resolved or proven external
