@@ -225,8 +225,35 @@ export const SERVICES: Record<string, { icon: string; color: string; colorDim: s
 };
 
 // Mapbox Configuration
+// ---------------------------------------------------------------------------
+// The Mapbox public access token (pk.*) is read from EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN
+// (set in expo-app/.env at build time). If not set, the app fetches it at
+// runtime from the backend /api/config/mapbox-token endpoint (see
+// src/services/api.ts → fetchMapboxToken). This dual approach means the map
+// works as long as EITHER the .env file OR the Vercel env var is configured.
+//
+// To configure locally: copy the token from your Mapbox account dashboard
+// (https://account.mapbox.com/access-tokens/) into expo-app/.env:
+//   EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN=<your pk.* public token>
+// ---------------------------------------------------------------------------
+function resolveMapboxToken(): string {
+  const envToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
+  // Reject obvious placeholders from .env.example so we don't render a black
+  // map with a bogus token. An empty string is fine — we'll fetch at runtime.
+  if (
+    envToken &&
+    envToken.length > 10 &&
+    !envToken.includes('your-token-here') &&
+    !envToken.includes('xxxx') &&
+    envToken.startsWith('pk.')
+  ) {
+    return envToken;
+  }
+  return ''; // empty → runtime fetch will populate it
+}
+
 export const MAPBOX_CONFIG = {
-  accessToken: process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '',
+  accessToken: resolveMapboxToken(),
   style: {
     dark: 'mapbox://styles/mapbox/dark-v11',
     streets: 'mapbox://styles/mapbox/streets-v12',

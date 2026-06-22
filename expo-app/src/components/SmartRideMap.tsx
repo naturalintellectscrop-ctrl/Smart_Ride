@@ -57,18 +57,64 @@ export interface SmartRideMapProps {
 
 let MapboxGL: any = null;
 let mapboxAvailable = false;
+let runtimeTokenFetchStarted = false;
+
+/**
+ * Validate the Mapbox token. Rejects obvious placeholders from .env.example
+ * (e.g. "your-token-here") so we don't render a black map with a bogus token.
+ */
+function isValidMapboxToken(token: string | undefined): token is string {
+  if (!token) return false;
+  if (token.length <= 10) return false;
+  if (!token.startsWith('pk.')) return false;
+  if (token.includes('your-token-here') || token.includes('xxxx')) return false;
+  return true;
+}
+
+/**
+ * If the token wasn't baked in at build time (empty), fetch it at runtime
+ * from the backend /api/config/mapbox-token endpoint. This runs once.
+ * After fetching, it sets the token on the native Mapbox SDK and marks the
+ * map as available so subsequent renders show the real map.
+ */
+async function ensureRuntimeToken() {
+  if (runtimeTokenFetchStarted) return;
+  runtimeTokenFetchStarted = true;
+  try {
+    const { api } = require('../services/api');
+    const response = await api.fetchMapboxToken();
+    if (response.success && response.data?.token && isValidMapboxToken(response.data.token)) {
+      if (MapboxGL) {
+        MapboxGL.setAccessToken(response.data.token);
+        mapboxAvailable = true;
+        console.log('[SmartRideMap] Mapbox token fetched at runtime — map enabled');
+        // Notify any mounted maps to re-render
+        runtimeTokenListeners.forEach((cb) => cb());
+      }
+    } else {
+      console.warn('[SmartRideMap] Runtime token fetch returned no valid token');
+    }
+  } catch (e) {
+    console.warn('[SmartRideMap] Runtime token fetch failed:', e);
+  }
+}
+
+// Listeners that fire when the runtime token becomes available
+const runtimeTokenListeners: Array<() => void> = [];
 
 try {
   // Only import and initialize Mapbox on native platforms
   if (Platform.OS !== 'web') {
     MapboxGL = require('@rnmapbox/maps').default;
     const token = MAPBOX_CONFIG.accessToken;
-    if (token && token.length > 10 && MapboxGL) {
+    if (isValidMapboxToken(token) && MapboxGL) {
       MapboxGL.setAccessToken(token);
       mapboxAvailable = true;
-      console.log('[SmartRideMap] Mapbox GL initialized successfully');
+      console.log('[SmartRideMap] Mapbox GL initialized with build-time token');
     } else {
-      console.warn('[SmartRideMap] No Mapbox token — map features disabled');
+      console.warn('[SmartRideMap] No build-time Mapbox token — will fetch at runtime');
+      // Kick off the runtime fetch immediately
+      ensureRuntimeToken();
     }
   } else {
     console.log('[SmartRideMap] Web platform — map disabled');
@@ -319,10 +365,24 @@ class MapErrorBoundary extends Component<
 
 function SmartRideMapImpl(props: SmartRideMapProps) {
   const [ready, setReady] = useState(false);
+  // Re-render trigger for when the runtime token becomes available
+  const [, setTokenTick] = useState(0);
 
   useEffect(() => {
     const timer = setTimeout(() => setReady(true), 100);
     return () => clearTimeout(timer);
+  }, []);
+
+  // Subscribe to runtime token availability. If the token wasn't baked in at
+  // build time, it's fetched async from the backend. When it arrives, this
+  // listener fires and we re-render to show the real map instead of the fallback.
+  useEffect(() => {
+    const cb = () => setTokenTick((t) => t + 1);
+    runtimeTokenListeners.push(cb);
+    return () => {
+      const idx = runtimeTokenListeners.indexOf(cb);
+      if (idx >= 0) runtimeTokenListeners.splice(idx, 1);
+    };
   }, []);
 
   if (!ready) {

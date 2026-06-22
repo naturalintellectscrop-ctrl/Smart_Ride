@@ -5,7 +5,7 @@
 // GradientButton, design-system constants, Reanimated
 // ============================================
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ import Animated, { FadeIn, FadeInUp, SlideInRight, ZoomIn } from 'react-native-r
 import { useAuthStore, useLocationStore } from '@/src/store';
 import { COLORS, SERVICES, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { GlowHeader, GlassCard, GradientButton, ServiceIcon } from '@/src/components';
+import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { Ionicons } from '@expo/vector-icons';
 
 // Local service data for the home grid (maps to SERVICES keys + custom entries)
@@ -41,9 +42,18 @@ export default function HomeScreen() {
   const router = useRouter();
   const user = useAuthStore(s => s.user);
   const address = useLocationStore(s => s.address);
+  const latitude = useLocationStore(s => s.latitude);
+  const longitude = useLocationStore(s => s.longitude);
   const getCurrentLocation = useLocationStore(s => s.getCurrentLocation);
   const isLocating = useLocationStore(s => s.isLocating);
   const [refreshing, setRefreshing] = useState(false);
+
+  // Auto-fetch the user's location on mount so the home screen shows their
+  // real address (and so the map screens have coords ready). Previously this
+  // only happened on tap/refresh, so geolocation appeared "broken".
+  useEffect(() => {
+    getCurrentLocation().catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -133,6 +143,48 @@ export default function HomeScreen() {
               <Text style={styles.searchPlaceholder}>Where do you want to go?</Text>
             </TouchableOpacity>
           </GlassCard>
+        </Animated.View>
+
+        {/* Mini Map Preview — shows the user's current location and makes the
+            home screen feel like a real ride app. Also serves as a visual
+            confirmation that the map (Mapbox) is rendering correctly. */}
+        <Animated.View entering={FadeInUp.duration(400).delay(250)} style={styles.section}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            onPress={() => router.push('/location-picker?type=pickup')}
+            style={styles.mapPreviewCard}
+          >
+            <SmartRideMap
+              style={styles.mapPreview}
+              initialLatitude={latitude}
+              initialLongitude={longitude}
+              showUserLocation
+            />
+            {/* Gradient overlay so the "Set destination" pill is readable */}
+            <View style={styles.mapOverlay} />
+            <View style={styles.mapBadgeRow}>
+              <View style={styles.mapBadge}>
+                <Ionicons name="location" size={12} color={COLORS.onPrimary} />
+                <Text style={styles.mapBadgeText} numberOfLines={1}>
+                  {address || 'Tap to set location'}
+                </Text>
+              </View>
+              {isLocating ? (
+                <View style={styles.mapLocatingBadge}>
+                  <ActivityIndicator size="small" color={COLORS.onPrimary} />
+                  <Text style={styles.mapBadgeText}>Locating…</Text>
+                </View>
+              ) : (
+                <View style={styles.mapLocateButton}>
+                  <Ionicons name="locate" size={14} color={COLORS.onPrimary} />
+                </View>
+              )}
+            </View>
+            <View style={styles.mapCtaPill}>
+              <Ionicons name="navigate-outline" size={16} color={COLORS.onPrimary} />
+              <Text style={styles.mapCtaText}>Set destination</Text>
+            </View>
+          </TouchableOpacity>
         </Animated.View>
 
         {/* Services */}
@@ -307,6 +359,91 @@ const styles = StyleSheet.create({
     fontSize: TYPOGRAPHY.bodyLg.fontSize,
     fontWeight: '700' as const,
     marginBottom: SPACING.md,
+  },
+  // ---- Mini Map Preview ----
+  mapPreviewCard: {
+    height: 200,
+    borderRadius: RADIUS.lg,
+    overflow: 'hidden',
+    backgroundColor: COLORS.surfaceContainerLow,
+    ...SHADOWS.card,
+  },
+  mapPreview: {
+    flex: 1,
+  },
+  mapOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 90,
+    backgroundColor: 'transparent',
+  },
+  mapBadgeRow: {
+    position: 'absolute',
+    top: SPACING.sm,
+    left: SPACING.sm,
+    right: SPACING.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+  },
+  mapBadge: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 95, 58, 0.92)',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm + SPACING.xs,
+    paddingVertical: SPACING.xs + 2,
+    gap: SPACING.xs,
+    ...SHADOWS.card,
+  },
+  mapBadgeText: {
+    color: COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    fontWeight: '600' as const,
+    flexShrink: 1,
+  },
+  mapLocatingBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 95, 58, 0.92)',
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm + SPACING.xs,
+    paddingVertical: SPACING.xs + 2,
+    gap: SPACING.xs,
+    ...SHADOWS.card,
+  },
+  mapLocateButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(0, 95, 58, 0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.card,
+  },
+  mapCtaPill: {
+    position: 'absolute',
+    bottom: SPACING.sm + SPACING.xs,
+    left: '50%',
+    transform: [{ translateX: -80 }],
+    width: 160,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.primary,
+    borderRadius: RADIUS.full,
+    paddingVertical: SPACING.sm + 2,
+    ...SHADOWS.active,
+  },
+  mapCtaText: {
+    color: COLORS.onPrimary,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    fontWeight: '700' as const,
   },
   // ---- Services Grid ----
   servicesGrid: {

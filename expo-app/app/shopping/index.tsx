@@ -78,7 +78,7 @@ export default function ShoppingScreen() {
   const [error, setError] = useState<string | null>(null);
   const totalItems = useCartStore(s => s.totalItems);
 
-  const loadMerchants = useCallback(async () => {
+  const loadMerchants = useCallback(async (isRetry = false) => {
     setIsLoading(true);
     setError(null);
     try {
@@ -94,10 +94,20 @@ export default function ShoppingScreen() {
       if (response.success && response.data) {
         setMerchants(response.data);
       } else {
+        // If the first attempt failed (but didn't throw), retry once before
+        // giving up — handles transient network/backend hiccups gracefully.
+        if (!isRetry) {
+          await new Promise((r) => setTimeout(r, 800));
+          return loadMerchants(true);
+        }
         setMerchants([]);
       }
     } catch (error) {
       console.error('Failed to load merchants:', error);
+      if (!isRetry) {
+        await new Promise((r) => setTimeout(r, 800));
+        return loadMerchants(true);
+      }
       setError('Failed to load data. Please try again.');
       setMerchants([]);
     } finally {
@@ -144,10 +154,10 @@ export default function ShoppingScreen() {
   if (error && merchants.length === 0) {
     return (
       <View style={styles.loadingContainer}>
-        <Ionicons name="cloud-offline-outline" size={48} color={COLORS.outline} />
-        <Text style={styles.errorTitle}>Something went wrong</Text>
+        <Ionicons name="storefront-outline" size={48} color={COLORS.outline} />
+        <Text style={styles.errorTitle}>Couldn't load stores</Text>
         <Text style={styles.errorMessage}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadMerchants} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.retryButton} onPress={() => loadMerchants()} activeOpacity={0.7}>
           <Text style={styles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
       </View>

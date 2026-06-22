@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
+import { getMapboxToken } from '@/lib/mapbox-token';
 
 const MAPBOX_API_BASE = 'https://api.mapbox.com';
 
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
   const limit = searchParams.get('limit') || '10';
   const country = searchParams.get('country') || COUNTRY_CODE;
 
-  const token = process.env.MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+  const token = getMapboxToken();
 
   if (!token) {
     return NextResponse.json({ success: false, error: 'Mapbox access token not configured' },

@@ -666,6 +666,16 @@ class ApiService {
   // MAPBOX / GEOCODING
   // ==========================================
 
+  /**
+   * Fetch the Mapbox PUBLIC access token from the backend at runtime.
+   * Used when the token wasn't baked in at build time (no .env file).
+   * The backend reads it from its own env vars and returns it here.
+   * Public tokens (pk.*) are safe to expose to clients.
+   */
+  async fetchMapboxToken(): Promise<ApiResponse<{ token: string }>> {
+    return this.request<{ token: string }>('/config/mapbox-token');
+  }
+
   async searchPlaces(query: string): Promise<ApiResponse<any[]>> {
     return this.request<any[]>(`/mapbox/geocoding?search=${encodeURIComponent(query)}`);
   }

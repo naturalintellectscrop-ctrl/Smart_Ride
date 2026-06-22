@@ -13,12 +13,33 @@ import 'react-native-reanimated';
 import { initSentry } from '../src/lib/sentry';
 initSentry();
 
+// ---------------------------------------------------------------------------
+// Set Mapbox access token as early as possible, before ANY map renders.
+// The token is a public token (pk.*) baked into the build via constants —
+// safe to ship in the APK. This is a belt-and-suspenders call alongside the
+// module-scope init in SmartRideMap.tsx, to guarantee the native Mapbox SDK
+// has the token before the first MapView mounts (prevents a black map).
+// ---------------------------------------------------------------------------
+import { Platform } from 'react-native';
+import { MAPBOX_CONFIG } from '../src/constants';
+try {
+  if (Platform.OS !== 'web' && MAPBOX_CONFIG.accessToken) {
+    const MapboxGL = require('@rnmapbox/maps').default;
+    if (MapboxGL && MAPBOX_CONFIG.accessToken.startsWith('pk.')) {
+      MapboxGL.setAccessToken(MAPBOX_CONFIG.accessToken);
+      console.log('[App] Mapbox access token set at root layout');
+    }
+  }
+} catch (e) {
+  console.warn('[App] Mapbox token init failed (non-fatal):', e);
+}
+
 // NOTE: global.css (NativeWind) removed - was causing style recalculation
 // on every render, contributing to jumpy cursor in TextInput fields.
 // All styles use StyleSheet.create() directly instead.
 
 import React, { Component, ReactNode, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, LogBox, Platform } from 'react-native';
+import { View, Text, StyleSheet, LogBox } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { Stack, router, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';

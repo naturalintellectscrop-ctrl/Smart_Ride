@@ -8,6 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
+import { getMapboxToken } from '@/lib/mapbox-token';
 
 // GET /api/mapbox/reverse - Reverse geocode coordinates
 // No auth required — location picking happens before login
@@ -48,10 +49,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get Mapbox access token
-    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN ||
-                        process.env.NEXT_PUBLIC_MAPBOX_TOKEN ||
-                        process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN;
+    // Get Mapbox access token (from env vars, with baked-in public fallback)
+    const mapboxToken = getMapboxToken();
 
     if (!mapboxToken) {
       return NextResponse.json(
