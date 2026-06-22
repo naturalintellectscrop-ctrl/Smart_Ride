@@ -30,6 +30,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeIn, FadeInUp, withRepeat, withTiming, useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
 import { useChatStore, Conversation, Message } from '@/src/store/chatStore';
+import { firstName } from '@/src/utils/formatName';
 import { useAuthStore, useLocationStore } from '@/src/store';
 import { socketService } from '@/src/services/socket.service';
 import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
@@ -435,7 +436,7 @@ export default function ChatDetailScreen() {
 
   const handleCall = useCallback(() => {
     if (conversation?.otherUser?.id) {
-      router.push(`/call/${conversation.otherUser.id}?name=${encodeURIComponent(conversation.otherUser.name)}&conversationId=${conversationId}` as any);
+      router.push(`/call/${conversation.otherUser.id}?name=${encodeURIComponent(firstName(conversation.otherUser.name, 'User'))}&conversationId=${conversationId}` as any);
     }
   }, [conversation, conversationId]);
 
@@ -556,12 +557,12 @@ export default function ChatDetailScreen() {
       </View>
       <Text style={styles.emptyTitle}>Start the conversation</Text>
       <Text style={styles.emptySubtitle}>
-        Send a message to {conversation?.otherUser?.name || 'get started'}
+        Send a message to {conversation?.otherUser?.name ? firstName(conversation.otherUser.name) : 'get started'}
       </Text>
     </Animated.View>
   );
 
-  const otherUserName = conversation?.otherUser?.name || 'Chat';
+  const otherUserName = firstName(conversation?.otherUser?.name, 'Chat');
   const otherUserOnline = isTyping;
 
   return (

@@ -12,10 +12,10 @@
 // UserRole enum in prisma/schema.prisma):
 //
 //   CLIENT      → /(tabs)              (main app: rides, orders, wallet…)
-//   RIDER       → /rider/onboarding    (boda / bike / scooter onboarding)
-//   DRIVER      → /driver/index        (professional driver dashboard)
+//   RIDER       → /driver              (boda / bike / scooter dashboard)
+//   DRIVER      → /driver              (professional driver dashboard)
 //   MERCHANT    → /merchant/register   (restaurant / shop / pharmacy setup)
-//   PHARMACIST  → /pharmacist/index    (medicine catalog & prescriptions)
+//   PHARMACIST  → /pharmacist          (medicine catalog & prescriptions)
 //   (none)      → /auth/role-selection (let the user choose)
 //
 // Admin roles (ADMIN, SUPER_ADMIN, *_ADMIN) are not selectable from the
@@ -36,11 +36,13 @@ export function getHomeRouteForRole(role?: string | null): string {
       return '/(tabs)';
     case 'RIDER':
     case 'DRIVER':
-      return '/driver/index';
+      // Expo Router: app/driver/index.tsx is reached at "/driver", NOT
+      // "/driver/index" (that path is unmatched → "Unmatched Route" screen).
+      return '/driver';
     case 'MERCHANT':
       return '/merchant/register';
     case 'PHARMACIST':
-      return '/pharmacist/index';
+      return '/pharmacist';
     default:
       // No role set, or an admin role not meant for the mobile app flow.
       return '/auth/role-selection';

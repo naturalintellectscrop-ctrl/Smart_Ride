@@ -21,6 +21,7 @@ import { useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { Order } from '@/src/types';
+import { firstName } from '@/src/utils/formatName';
 import { Ionicons } from '@expo/vector-icons';
 
 // Terminal states where polling should stop
@@ -201,7 +202,7 @@ export default function OrderTrackingScreen() {
   const handleCallMerchant = () => {
     if (order?.merchantId) {
       router.push(
-        `/call/${order.merchantId}?name=${encodeURIComponent(order.merchant?.name || 'Merchant')}`
+        `/call/${order.merchantId}?name=${encodeURIComponent(firstName(order.merchant?.name, 'Merchant'))}`
       );
     } else {
       Alert.alert('Unavailable', 'Merchant contact is not available for this order yet.');
@@ -212,7 +213,7 @@ export default function OrderTrackingScreen() {
     const task = (order as any)?.task;
     const rider = task?.rider;
     const riderId = rider?.id || task?.riderId;
-    const riderName = rider?.fullName || 'Driver';
+    const riderName = firstName(rider?.fullName, 'Driver');
 
     if (riderId) {
       router.push(
@@ -398,7 +399,7 @@ export default function OrderTrackingScreen() {
                 </View>
                 <View style={styles.merchantInfo}>
                   <Text style={styles.merchantName}>
-                    {(order as any).task.rider.fullName || 'Driver'}
+                    {firstName((order as any).task.rider.fullName, 'Driver')}
                   </Text>
                   <Text style={styles.merchantAddress}>
                     Contact via in-app call

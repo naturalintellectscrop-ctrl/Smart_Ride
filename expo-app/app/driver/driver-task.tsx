@@ -40,6 +40,7 @@ import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Task, TaskStatus } from '@/src/types';
+import { firstName } from '@/src/utils/formatName';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -233,7 +234,7 @@ export default function DriverTaskScreen() {
   const handleCallClient = () => {
     if (task?.clientId) {
       router.push(
-        `/call/${task.clientId}?name=${encodeURIComponent(task.client?.name || 'Customer')}`
+        `/call/${task.clientId}?name=${encodeURIComponent(firstName(task.client?.name, 'Customer'))}`
       );
     } else {
       Alert.alert('Unavailable', 'Customer contact is not available yet.');
@@ -390,7 +391,7 @@ export default function DriverTaskScreen() {
                   <Ionicons name="person" size={22} color={COLORS.onSurfaceVariant} />
                 </View>
                 <View style={styles.clientInfo}>
-                  <Text style={styles.clientName}>{task.client?.name ?? 'Customer'}</Text>
+                  <Text style={styles.clientName}>{firstName(task.client?.name, 'Customer')}</Text>
                   <Text style={styles.clientPhone}>Tap to call in-app</Text>
                 </View>
                 <TouchableOpacity

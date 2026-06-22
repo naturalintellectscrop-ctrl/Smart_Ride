@@ -18,6 +18,7 @@ import { useTaskStore, useAuthStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { COLORS, TASK_STATUS_LABELS, TASK_STATUS_COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { Task, TaskStatus } from '@/src/types';
+import { firstName } from '@/src/utils/formatName';
 import { Ionicons } from '@expo/vector-icons';
 
 // Polling intervals (in ms)
@@ -94,7 +95,7 @@ export default function RideTrackingScreen() {
     const paymentDetails = (completedTask as any).paymentDetails || {};
     const totalAmount = paymentDetails.fare ?? completedTask.totalAmount ?? 0;
     const paymentMethod = paymentDetails.paymentMethod ?? completedTask.paymentMethod ?? 'CASH';
-    const driverName = (completedTask as any).rider?.fullName || '';
+    const driverName = firstName((completedTask as any).rider?.fullName, '');
 
     router.replace({
       pathname: '/rider/trip-summary',
@@ -260,7 +261,7 @@ export default function RideTrackingScreen() {
   const handleCallDriver = () => {
     if (task?.riderId) {
       router.push(
-        `/call/${task.riderId}?name=${encodeURIComponent(task.rider?.fullName || 'Driver')}`
+        `/call/${task.riderId}?name=${encodeURIComponent(firstName(task.rider?.fullName, 'Driver'))}`
       );
     } else {
       Alert.alert('Driver Unavailable', 'No driver has been assigned yet.');
@@ -367,7 +368,7 @@ export default function RideTrackingScreen() {
               <Ionicons name="person" size={24} color={COLORS.onSurfaceVariant} />
             </View>
             <View style={styles.driverInfo}>
-              <Text style={styles.driverName}>{task.rider.fullName}</Text>
+              <Text style={styles.driverName}>{firstName(task.rider.fullName, 'Driver')}</Text>
               <View style={styles.driverRatingRow}>
                 <Ionicons name="star" size={14} color="#F59E0B" />
                 <Text style={styles.driverRating}>{(task.rider?.rating ?? 0).toFixed(1)}</Text>
