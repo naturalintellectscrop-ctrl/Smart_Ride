@@ -6,7 +6,7 @@
 // selection, payment tray, Request Ride CTA
 // ============================================
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,10 +43,20 @@ import { IconInput } from '@/src/components/IconInput';
 // Types for search results
 interface PlaceResult {
   id: string;
-  place_name: string;
-  center: [number, number];
+  // Unified shape from the backend: canonical fields + Mapbox-compatible aliases
+  name?: string;
+  address?: string;
+  fullAddress?: string;
+  lat?: number;
+  lng?: number;
+  place_name: string;          // = fullAddress
+  center: [number, number];    // [lng, lat]
+  category?: string;
+  source?: 'curated' | 'mapbox';
   text?: string;
 }
+
+const RECENT_PLACES_KEY = 'smart-ride-recent-destinations';
 
 // Types for ride type
 interface RideTypeConfig {
@@ -82,8 +93,11 @@ export default function RideRequestScreen() {
 
   // Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<PlaceResult[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [popularPlaces, setPopularPlaces] = useState<PlaceResult[]>([]);
+  const [recentPlaces, setRecentPlaces] = useState<PlaceResult[]>([]);
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Payment
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
@@ -108,41 +122,99 @@ export default function RideRequestScreen() {
 
   useEffect(() => {
     getCurrentLocation();
+    loadRecentPlaces();
+    loadPopularPlaces();
   }, []);
 
-  // Search for places
-  const searchPlaces = async (query: string) => {
-    if (query.length < 3) {
+  // Load recently used destinations from device storage
+  const loadRecentPlaces = async () => {
+    try {
+      const raw = await AsyncStorage.getItem(RECENT_PLACES_KEY);
+      if (raw) setRecentPlaces(JSON.parse(raw));
+    } catch {
+      // non-fatal
+    }
+  };
+
+  // Load curated popular places (proximity-sorted to the user when available)
+  const loadPopularPlaces = async () => {
+    try {
+      const prox = latitude && longitude ? { latitude, longitude } : undefined;
+      const res = await api.getPopularPlaces(prox);
+      if (res.success && res.data) setPopularPlaces(res.data as PlaceResult[]);
+    } catch {
+      // non-fatal — empty state just won't show suggestions
+    }
+  };
+
+  // Persist a chosen destination to the recents list (max 5, de-duplicated)
+  const saveRecentPlace = async (place: PlaceResult) => {
+    try {
+      const next = [place, ...recentPlaces.filter((p) => p.id !== place.id)].slice(0, 5);
+      setRecentPlaces(next);
+      await AsyncStorage.setItem(RECENT_PLACES_KEY, JSON.stringify(next));
+    } catch {
+      // non-fatal
+    }
+  };
+
+  // Debounced place search (fires 350ms after the user stops typing)
+  const searchPlaces = (query: string) => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+
+    if (query.trim().length < 2) {
       setSearchResults([]);
+      setIsSearching(false);
       return;
     }
 
     setIsSearching(true);
-    try {
-      const response = await api.searchPlaces(query);
-      if (response.success && response.data) {
-        setSearchResults(response.data);
+    searchDebounceRef.current = setTimeout(async () => {
+      try {
+        const prox = latitude && longitude ? { latitude, longitude } : undefined;
+        const response = await api.searchPlaces(query, prox);
+        if (response.success && Array.isArray(response.data)) {
+          setSearchResults(response.data as PlaceResult[]);
+        } else {
+          setSearchResults([]);
+        }
+      } catch (error) {
+        console.error('Search error:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
       }
-    } catch (error) {
-      console.error('Search error:', error);
-    } finally {
-      setIsSearching(false);
-    }
+    }, 350);
   };
 
-  // Select a place from search results
-  const selectPlace = (place: any) => {
+  // Resolve coordinates + label from a unified place (robust to either shape)
+  const resolvePlace = (place: PlaceResult) => {
+    const lat = place.lat ?? place.center?.[1];
+    const lng = place.lng ?? place.center?.[0];
+    const label = place.place_name || place.fullAddress || place.name || 'Selected location';
+    return { lat, lng, label };
+  };
+
+  // Select a place from search results / suggestions
+  const selectPlace = (place: PlaceResult) => {
+    const { lat, lng, label } = resolvePlace(place);
+    if (lat == null || lng == null) {
+      Alert.alert('Error', 'This location is missing coordinates. Please pick another.');
+      return;
+    }
+
     if (step === 'pickup') {
-      setPickupAddress(place.place_name);
-      setPickupLatitude(place.center[1]);
-      setPickupLongitude(place.center[0]);
+      setPickupAddress(label);
+      setPickupLatitude(lat);
+      setPickupLongitude(lng);
       setStep('dropoff');
     } else {
-      setDropoffAddress(place.place_name);
-      setDropoffLatitude(place.center[1]);
-      setDropoffLongitude(place.center[0]);
+      setDropoffAddress(label);
+      setDropoffLatitude(lat);
+      setDropoffLongitude(lng);
       setStep('confirm');
-      fetchRouteAndFares(place.center[1], place.center[0]);
+      saveRecentPlace(place);
+      fetchRouteAndFares(lat, lng);
     }
     setSearchQuery('');
     setSearchResults([]);
@@ -243,6 +315,7 @@ export default function RideRequestScreen() {
         dropoffLongitude,
         paymentMethod: PAYMENT_METHOD_MAP[paymentMethod] || paymentMethod,
         distanceKm,
+        durationMin: duration ?? undefined,
       });
 
       if (response.success && response.data) {
@@ -312,6 +385,8 @@ export default function RideRequestScreen() {
               searchResults={searchResults}
               isSearching={isSearching}
               onSelectPlace={selectPlace}
+              popularPlaces={popularPlaces}
+              recentPlaces={recentPlaces}
               onUseCurrentLocation={() => {
                 setPickupAddress(address);
                 setPickupLatitude(latitude);
@@ -329,6 +404,8 @@ export default function RideRequestScreen() {
               searchResults={searchResults}
               isSearching={isSearching}
               onSelectPlace={selectPlace}
+              popularPlaces={popularPlaces}
+              recentPlaces={recentPlaces}
             />
           )}
 
@@ -361,6 +438,66 @@ export default function RideRequestScreen() {
 // ============================================
 // PICKUP STEP
 // ============================================
+// Single tappable place row (name + secondary address line)
+function PlaceRow({ place, icon, onPress }: { place: PlaceResult; icon: keyof typeof Ionicons.glyphMap; onPress: () => void }) {
+  const primary = place.name || place.place_name || 'Location';
+  const secondary = place.address || place.fullAddress || place.place_name || '';
+  return (
+    <TouchableOpacity style={styles.searchResultItem} onPress={onPress} activeOpacity={0.7}>
+      <View style={styles.resultIconCircle}>
+        <Ionicons name={icon} size={16} color={COLORS.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.searchResultText} numberOfLines={1}>{primary}</Text>
+        {secondary && secondary !== primary ? (
+          <Text style={styles.searchResultSubtext} numberOfLines={1}>{secondary}</Text>
+        ) : null}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// Empty-state suggestions: recent destinations + popular places
+function PlaceSuggestions({
+  recentPlaces,
+  popularPlaces,
+  onSelectPlace,
+}: {
+  recentPlaces: PlaceResult[];
+  popularPlaces: PlaceResult[];
+  onSelectPlace: (p: PlaceResult) => void;
+}) {
+  if (recentPlaces.length === 0 && popularPlaces.length === 0) return null;
+  return (
+    <View style={{ marginTop: SPACING.md }}>
+      {recentPlaces.length > 0 && (
+        <>
+          <Text style={styles.suggestionHeader}>Recent</Text>
+          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.resultsCard}>
+            {recentPlaces.map((p, i) => (
+              <View key={`recent-${p.id}-${i}`} style={i < recentPlaces.length - 1 ? styles.searchResultDivider : undefined}>
+                <PlaceRow place={p} icon="time-outline" onPress={() => onSelectPlace(p)} />
+              </View>
+            ))}
+          </GlassCard>
+        </>
+      )}
+      {popularPlaces.length > 0 && (
+        <>
+          <Text style={styles.suggestionHeader}>Popular places</Text>
+          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.resultsCard}>
+            {popularPlaces.map((p, i) => (
+              <View key={`pop-${p.id}-${i}`} style={i < popularPlaces.length - 1 ? styles.searchResultDivider : undefined}>
+                <PlaceRow place={p} icon="star-outline" onPress={() => onSelectPlace(p)} />
+              </View>
+            ))}
+          </GlassCard>
+        </>
+      )}
+    </View>
+  );
+}
+
 function PickupStep({
   pickupAddress,
   searchQuery,
@@ -368,6 +505,8 @@ function PickupStep({
   searchResults,
   isSearching,
   onSelectPlace,
+  popularPlaces,
+  recentPlaces,
   onUseCurrentLocation,
 }: {
   pickupAddress: string;
@@ -376,6 +515,8 @@ function PickupStep({
   searchResults: PlaceResult[];
   isSearching: boolean;
   onSelectPlace: (place: PlaceResult) => void;
+  popularPlaces: PlaceResult[];
+  recentPlaces: PlaceResult[];
   onUseCurrentLocation: () => void;
 }) {
   return (
@@ -420,24 +561,19 @@ function PickupStep({
         <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.md }} />
       )}
 
-      {searchResults.length > 0 && (
+      {!isSearching && searchResults.length > 0 && (
         <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.resultsCard}>
           {searchResults.map((place, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.searchResultItem, index < searchResults.length - 1 && styles.searchResultDivider]}
-              onPress={() => onSelectPlace(place)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.resultIconCircle}>
-                <Ionicons name="location-outline" size={16} color={COLORS.primary} />
-              </View>
-              <Text style={styles.searchResultText} numberOfLines={2}>
-                {place.place_name}
-              </Text>
-            </TouchableOpacity>
+            <View key={`${place.id}-${index}`} style={index < searchResults.length - 1 ? styles.searchResultDivider : undefined}>
+              <PlaceRow place={place} icon="location-outline" onPress={() => onSelectPlace(place)} />
+            </View>
           ))}
         </GlassCard>
+      )}
+
+      {/* Empty state: recent + popular suggestions */}
+      {!isSearching && searchResults.length === 0 && searchQuery.trim().length < 2 && (
+        <PlaceSuggestions recentPlaces={recentPlaces} popularPlaces={popularPlaces} onSelectPlace={onSelectPlace} />
       )}
     </View>
   );
@@ -453,6 +589,8 @@ function DropoffStep({
   searchResults,
   isSearching,
   onSelectPlace,
+  popularPlaces,
+  recentPlaces,
 }: {
   pickupAddress: string;
   searchQuery: string;
@@ -460,6 +598,8 @@ function DropoffStep({
   searchResults: PlaceResult[];
   isSearching: boolean;
   onSelectPlace: (place: PlaceResult) => void;
+  popularPlaces: PlaceResult[];
+  recentPlaces: PlaceResult[];
 }) {
   return (
     <View>
@@ -497,24 +637,19 @@ function DropoffStep({
         <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.md }} />
       )}
 
-      {searchResults.length > 0 && (
+      {!isSearching && searchResults.length > 0 && (
         <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.resultsCard}>
           {searchResults.map((place, index) => (
-            <TouchableOpacity
-              key={index}
-              style={[styles.searchResultItem, index < searchResults.length - 1 && styles.searchResultDivider]}
-              onPress={() => onSelectPlace(place)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.resultIconCircle}>
-                <Ionicons name="location-outline" size={16} color={COLORS.primary} />
-              </View>
-              <Text style={styles.searchResultText} numberOfLines={2}>
-                {place.place_name}
-              </Text>
-            </TouchableOpacity>
+            <View key={`${place.id}-${index}`} style={index < searchResults.length - 1 ? styles.searchResultDivider : undefined}>
+              <PlaceRow place={place} icon="location-outline" onPress={() => onSelectPlace(place)} />
+            </View>
           ))}
         </GlassCard>
+      )}
+
+      {/* Empty state: recent + popular suggestions */}
+      {!isSearching && searchResults.length === 0 && searchQuery.trim().length < 2 && (
+        <PlaceSuggestions recentPlaces={recentPlaces} popularPlaces={popularPlaces} onSelectPlace={onSelectPlace} />
       )}
     </View>
   );
@@ -852,6 +987,20 @@ const styles = StyleSheet.create({
     flex: 1,
     ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurface,
+    fontWeight: '600',
+  },
+  searchResultSubtext: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: 1,
+  },
+  suggestionHeader: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurfaceVariant,
+    fontWeight: '700',
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+    marginLeft: SPACING.xs,
   },
 
   // Route summary

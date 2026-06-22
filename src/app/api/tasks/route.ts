@@ -137,6 +137,9 @@ const createTaskSchema = z.object({
 
   // Distance (calculated or provided)
   distanceKm: z.number(),
+  // Drive duration in minutes (from Directions API) — used for time fare so the
+  // charged amount matches the estimate shown to the rider before booking.
+  durationMin: z.number().optional(),
 
   // Payment
   paymentMethod: z.enum(['CASH', 'MTN_MOMO', 'AIRTEL_MONEY', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD', 'WALLET']),
@@ -207,11 +210,20 @@ export async function POST(request: NextRequest) {
       return notFoundResponse('Client');
     }
 
-    // Calculate pricing
+    // Calculate pricing — MUST mirror /api/tasks/fare-estimate so the amount
+    // charged equals the estimate the rider saw. That means including drive
+    // duration (time fare) and the same night/peak surcharge windows.
+    const nowHour = new Date().getHours();
+    const isNightTime = nowHour >= 22 || nowHour < 6;
+    const isPeakHours = (nowHour >= 7 && nowHour <= 9) || (nowHour >= 17 && nowHour <= 19);
+
     const pricing = calculatePricing({
       taskType: validatedData.taskType as TaskType,
       distanceKm: validatedData.distanceKm,
+      durationMinutes: validatedData.durationMin,
       itemWeight: validatedData.itemWeight,
+      isNightTime,
+      isPeakHours,
     });
 
     // Create task

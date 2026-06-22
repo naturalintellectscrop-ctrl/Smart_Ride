@@ -1,31 +1,36 @@
 /**
- * Mapbox Geocoding API Route
- * 
- * Server-side proxy for Mapbox Geocoding API to keep access token secure.
- * Searches for places in Uganda with specific types (POI, addresses, etc.)
- * 
- * SECURITY: Rate limited to prevent Mapbox quota exhaustion
- * 
- * Endpoint: /api/mapbox/geocoding?search=bugolobi
+ * Mapbox Geocoding API Route (with curated Kampala POI merge)
+ *
+ * Server-side proxy for Mapbox Geocoding that ALSO merges a curated Kampala
+ * POI database. Mapbox geocoding has poor POI coverage for Uganda — searches
+ * like "Acacia Mall" or "Garden City" return zero results from Mapbox alone.
+ * We rank curated matches first, then append Mapbox results (deduped).
+ *
+ * All results use the UnifiedPlace shape (name/lat/lng + place_name/center
+ * aliases) so the frontend never branches on data source.
+ *
+ * SECURITY: Rate limited to prevent Mapbox quota exhaustion.
+ *
+ * GET /api/mapbox/geocoding?search=acacia            → forward search
+ * GET /api/mapbox/geocoding?search=&popular=true     → popular places (empty state)
+ * GET /api/mapbox/geocoding?lat=0.34&lng=32.58       → reverse geocode
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 import { getMapboxToken } from '@/lib/mapbox-token';
+import {
+  searchKampalaPlaces,
+  getPopularKampalaPlaces,
+  type UnifiedPlace,
+} from '@/lib/geo/kampala-places';
 
 const MAPBOX_API_BASE = 'https://api.mapbox.com';
-
-// Uganda country code
 const COUNTRY_CODE = 'ug';
-
-// Place types for comprehensive search
 const PLACE_TYPES = 'poi,address,place,locality,neighborhood,poi.landmark';
-
-// Kampala center for proximity bias [lng, lat]
-const KAMPALA_CENTER = '32.58,0.34';
+const KAMPALA_CENTER = '32.58,0.34'; // [lng,lat] proximity bias
 
 export async function GET(request: NextRequest) {
-  // Rate limiting to prevent Mapbox quota exhaustion
   const rateResult = checkRateLimit(request, RATE_LIMITS.api.search);
   if (!rateResult.success) {
     return rateLimitResponse(rateResult, RATE_LIMITS.api.search);
@@ -36,48 +41,44 @@ export async function GET(request: NextRequest) {
   const lat = searchParams.get('lat');
   const lng = searchParams.get('lng');
   const types = searchParams.get('types');
-  const limit = searchParams.get('limit') || '10';
+  const limit = parseInt(searchParams.get('limit') || '10');
   const country = searchParams.get('country') || COUNTRY_CODE;
+  const popular = searchParams.get('popular') === 'true';
+  const proximity = searchParams.get('proximity') || KAMPALA_CENTER;
 
   const token = getMapboxToken();
-
   if (!token) {
-    return NextResponse.json({ success: false, error: 'Mapbox access token not configured' },
-      { status: 500 }
+    return NextResponse.json(
+      { success: false, error: 'Mapbox access token not configured' },
+      { status: 500 },
     );
   }
 
-  // If lat/lng provided, do reverse geocoding
+  // Reverse geocoding when coordinates are supplied
   if (lat && lng) {
     return handleReverseGeocode(parseFloat(lat), parseFloat(lng), token);
   }
 
-  // Otherwise, do forward geocoding (search)
-  if (!query) {
-    return NextResponse.json({ success: false, error: 'Search query required' },
-      { status: 400 }
-    );
+  // Empty query: return curated popular places for the search empty-state
+  if (!query || query.trim().length === 0) {
+    if (popular) {
+      return NextResponse.json({ success: true, places: getPopularKampalaPlaces(8) });
+    }
+    return NextResponse.json({ success: false, error: 'Search query required' }, { status: 400 });
   }
 
-  return handleForwardGeocode(query, {
-    token,
-    types: types || PLACE_TYPES,
-    limit: parseInt(limit),
-    country,
-    proximity: searchParams.get('proximity') || KAMPALA_CENTER,
-  });
+  return handleForwardGeocode(query, { token, types: types || PLACE_TYPES, limit, country, proximity });
 }
 
 async function handleForwardGeocode(
   query: string,
-  options: {
-    token: string;
-    types: string;
-    limit: number;
-    country: string;
-    proximity: string;
-  }
+  options: { token: string; types: string; limit: number; country: string; proximity: string },
 ) {
+  // 1. Curated Kampala POIs first (Mapbox lacks Uganda POI coverage)
+  const curated = searchKampalaPlaces(query, 6);
+
+  // 2. Mapbox results (neighborhoods, roads, addresses Mapbox does cover)
+  let mapboxPlaces: UnifiedPlace[] = [];
   try {
     const params = new URLSearchParams({
       access_token: options.token,
@@ -88,86 +89,87 @@ async function handleForwardGeocode(
       autocomplete: 'true',
       fuzzyMatch: 'true',
     });
-
     const url = `${MAPBOX_API_BASE}/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params}`;
-    
     const response = await fetch(url);
-    
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('Mapbox geocoding error:', error);
-      return NextResponse.json({ success: false, error: 'Failed to geocode location' },
-        { status: response.status }
-      );
+
+    if (response.ok) {
+      const data = await response.json();
+      mapboxPlaces = (data.features || []).map((f: {
+        id: string; text: string; address?: string; properties?: { address?: string };
+        place_name: string; center: number[]; place_type: string[]; relevance: number;
+      }): UnifiedPlace => ({
+        id: f.id,
+        name: f.text,
+        address: f.address || f.properties?.address || '',
+        fullAddress: f.place_name,
+        lat: f.center[1],
+        lng: f.center[0],
+        place_name: f.place_name,
+        center: [f.center[0], f.center[1]],
+        type: f.place_type,
+        source: 'mapbox',
+        relevance: f.relevance ?? 0.5,
+      } as UnifiedPlace));
+    } else {
+      console.error('Mapbox geocoding error:', await response.text());
     }
-
-    const data = await response.json();
-    
-    // Transform response to simplified format
-    const places = data.features?.map((feature: { id: string; text: string; address?: string; properties?: { address?: string }; place_name: string; center: number[]; place_type: string[]; relevance: number }) => ({
-      id: feature.id,
-      name: feature.text,
-      address: feature.address || feature.properties?.address || '',
-      fullAddress: feature.place_name,
-      lat: feature.center[1],
-      lng: feature.center[0],
-      type: feature.place_type,
-      relevance: feature.relevance,
-    })) || [];
-
-    return NextResponse.json({
-      success: true,
-      places,
-      query: data.query,
-      attribution: data.attribution,
-    });
   } catch (error) {
-    console.error('Geocoding error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to search for places' },
-      { status: 500 }
-    );
+    // Mapbox failure is non-fatal — we still return curated results
+    console.error('Geocoding fetch error:', error);
   }
+
+  // 3. Merge + dedup (curated wins on near-duplicate names)
+  const merged: UnifiedPlace[] = [...curated];
+  const seen = new Set(curated.map((p) => p.name.toLowerCase()));
+  for (const mp of mapboxPlaces) {
+    const key = mp.name.toLowerCase();
+    if (!seen.has(key)) {
+      merged.push(mp);
+      seen.add(key);
+    }
+  }
+
+  return NextResponse.json({
+    success: true,
+    places: merged.slice(0, options.limit + 6),
+    query,
+  });
 }
 
 async function handleReverseGeocode(lat: number, lng: number, token: string) {
+  if (isNaN(lat) || isNaN(lng)) {
+    return NextResponse.json({ success: false, error: 'Invalid coordinates' }, { status: 400 });
+  }
   try {
-    const params = new URLSearchParams({
-      access_token: token,
-      types: PLACE_TYPES,
-    });
-
-    // Mapbox expects [lng, lat] format
+    const params = new URLSearchParams({ access_token: token, types: PLACE_TYPES, limit: '1' });
+    // Mapbox expects [lng,lat]; correct endpoint is mapbox.places
     const url = `${MAPBOX_API_BASE}/geocoding/v5/mapbox.places/${lng},${lat}.json?${params}`;
-    
     const response = await fetch(url);
-    
+
     if (!response.ok) {
-      return NextResponse.json({ success: false, error: 'Failed to reverse geocode' },
-        { status: response.status }
-      );
+      return NextResponse.json({ success: false, error: 'Failed to reverse geocode' }, { status: 502 });
     }
 
     const data = await response.json();
-    
-    const places = data.features?.map((feature: { id: string; text: string; address?: string; properties?: { address?: string }; place_name: string; center: number[]; place_type: string[] }) => ({
-      id: feature.id,
-      name: feature.text,
-      address: feature.address || feature.properties?.address || '',
-      fullAddress: feature.place_name,
-      lat: feature.center[1],
-      lng: feature.center[0],
-      type: feature.place_type,
-    })) || [];
+    const places: UnifiedPlace[] = (data.features || []).map((f: {
+      id: string; text: string; address?: string; properties?: { address?: string };
+      place_name: string; center: number[]; place_type: string[];
+    }): UnifiedPlace => ({
+      id: f.id,
+      name: f.text,
+      address: f.address || f.properties?.address || '',
+      fullAddress: f.place_name,
+      lat: f.center[1],
+      lng: f.center[0],
+      place_name: f.place_name,
+      center: [f.center[0], f.center[1]],
+      source: 'mapbox',
+      relevance: 1,
+    } as UnifiedPlace));
 
-    return NextResponse.json({
-      success: true,
-      places,
-      coordinates: { lat, lng },
-    });
+    return NextResponse.json({ success: true, places, coordinates: { lat, lng } });
   } catch (error) {
     console.error('Reverse geocoding error:', error);
-    return NextResponse.json({ success: false, error: 'Failed to reverse geocode' },
-      { status: 500 }
-    );
+    return NextResponse.json({ success: false, error: 'Failed to reverse geocode' }, { status: 500 });
   }
 }

@@ -743,12 +743,89 @@ class ApiService {
     return this.request<{ token: string }>('/config/mapbox-token');
   }
 
-  async searchPlaces(query: string): Promise<ApiResponse<any[]>> {
-    return this.request<any[]>(`/mapbox/geocoding?search=${encodeURIComponent(query)}`);
+  /**
+   * Search places. Backend merges a curated Kampala POI database with Mapbox
+   * geocoding (Mapbox alone has poor Uganda POI coverage). The endpoint returns
+   * { success, places: [...] }; request() wraps that into data, so the real
+   * array lives at data.places. We unwrap it here so callers get a clean array.
+   * Each item has both name/lat/lng and place_name/center (Mapbox-compatible).
+   */
+  async searchPlaces(
+    query: string,
+    proximity?: { latitude: number; longitude: number },
+  ): Promise<ApiResponse<any[]>> {
+    let url = `/mapbox/geocoding?search=${encodeURIComponent(query)}`;
+    if (proximity) url += `&proximity=${proximity.longitude},${proximity.latitude}`;
+    const res = await this.request<any>(url);
+    const payload: any = res.data;
+    const places = Array.isArray(payload) ? payload : payload?.places || [];
+    return { success: res.success, data: places, error: res.error };
   }
 
+  /**
+   * Popular curated places — shown in the search empty-state (like Uber/Bolt
+   * "saved/popular" rows) before the user types anything.
+   */
+  async getPopularPlaces(
+    proximity?: { latitude: number; longitude: number },
+  ): Promise<ApiResponse<any[]>> {
+    let url = `/mapbox/kampala-places?popular=true&limit=8`;
+    if (proximity) url += `&lat=${proximity.latitude}&lng=${proximity.longitude}`;
+    const res = await this.request<any>(url);
+    const payload: any = res.data;
+    const places = Array.isArray(payload) ? payload : payload?.places || [];
+    return { success: res.success, data: places, error: res.error };
+  }
+
+  /**
+   * Reverse geocode coordinates to an address. Returns a normalized array of
+   * places plus a convenience `placeName` on the first result.
+   */
   async reverseGeocode(latitude: number, longitude: number): Promise<ApiResponse<any>> {
-    return this.request<any>(`/mapbox/reverse?lat=${latitude}&lng=${longitude}`);
+    const res = await this.request<any>(`/mapbox/reverse?lat=${latitude}&lng=${longitude}`);
+    return res;
+  }
+
+  /**
+   * Get driving route between two coordinates.
+   * Returns route geometry (polyline waypoints), road distance, and duration.
+   */
+  async getDirections(
+    pickup: { latitude: number; longitude: number },
+    dropoff: { latitude: number; longitude: number },
+  ): Promise<ApiResponse<{
+    geometry: Array<{ latitude: number; longitude: number }>;
+    distanceKm: number;
+    durationMin: number;
+  }>> {
+    return this.request(
+      `/mapbox/directions?pickupLat=${pickup.latitude}&pickupLng=${pickup.longitude}` +
+      `&dropoffLat=${dropoff.latitude}&dropoffLng=${dropoff.longitude}`,
+    );
+  }
+
+  /**
+   * Get accurate fare estimates for all ride types.
+   * Uses the same calculatePricing() as task creation — guaranteed to match.
+   */
+  async getFareEstimate(
+    distanceKm: number,
+    durationMin: number,
+  ): Promise<ApiResponse<{
+    estimates: Record<string, {
+      totalAmount: number;
+      baseFare: number;
+      distanceFare: number;
+      serviceFee: number;
+      surcharges: number;
+      minimumApplied: boolean;
+    }>;
+    distanceKm: number;
+    durationMin: number;
+    isNightTime: boolean;
+    isPeakHours: boolean;
+  }>> {
+    return this.request(`/tasks/fare-estimate?distanceKm=${distanceKm}&durationMin=${durationMin}`);
   }
 
   // ==========================================
