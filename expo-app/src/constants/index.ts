@@ -122,6 +122,13 @@ export const COLORS = {
   get warning() { return '#F59E0B'; },
   get info() { return this.tertiary; },
   get accent() { return this.secondaryFixed; },
+
+  // Aliases used by some screens (e.g. location-picker.tsx) that were
+  // previously missing and returned undefined, causing invisible text.
+  // Map them to the closest Stitch Design System equivalents.
+  get onSurfaceMuted() { return this.outline; },
+  get onSurfaceSecondary() { return this.onSurfaceVariant; },
+  get onSurfaceDim() { return this.outlineVariant; },
 };
 
 // ============================================
@@ -238,29 +245,39 @@ export const SERVICES: Record<string, { icon: string; color: string; colorDim: s
 // ---------------------------------------------------------------------------
 function resolveMapboxToken(): string {
   const envToken = process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
+  if (!envToken) return '';
+
+  const trimmed = envToken.trim();
+
   // Reject obvious placeholders from .env.example so we don't render a black
-  // map with a bogus token. An empty string is fine — we'll fetch at runtime.
-  if (
-    envToken &&
-    envToken.length > 10 &&
-    !envToken.includes('your-token-here') &&
-    !envToken.includes('xxxx') &&
-    envToken.startsWith('pk.')
-  ) {
-    // A valid Mapbox token is a JWT with 3 dot-separated segments.
-    // The 3rd segment (signature) is ~43 base64 chars for a 256-bit HMAC.
-    // Reject truncated tokens so the runtime fetch fallback can kick in,
-    // preventing a silently black/empty map with no error message.
-    const parts = envToken.split('.');
-    if (parts.length === 3 && parts[2].length >= 40) {
-      return envToken;
-    }
-    console.warn(
-      '[constants] EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN looks truncated ' +
-      `(signature is ${parts[2]?.length || 0} chars, expected ~43). ` +
-      'Map will fall back to runtime token fetch from backend.'
-    );
+  // map with a bogus token.
+  if (trimmed.includes('your-token-here') || trimmed.includes('xxxx')) {
+    return '';
   }
+
+  // IMPORTANT: Mapbox tokens are NOT standard JWTs.
+  //
+  // Format:  pk.<base64url-header>.<base64url-signature>
+  //
+  //   - Header always starts with "eyJ" (base64 of '{"') and decodes to JSON
+  //     containing at least a "u" (username) field.
+  //   - Signature is ~16 bytes → ~22 base64url chars.
+  //     This is SHORTER than a standard JWT HS256 signature (~43 chars).
+  //
+  // DO NOT reject tokens based on signature length >= 40 — that incorrectly
+  // rejects valid Mapbox public tokens (whose signatures are ~22 chars) and
+  // forces the map into its "Map unavailable" fallback. This was the root
+  // cause of the blank-map bug.
+  const mapboxTokenRegex = /^(pk|sk)\.eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}$/;
+  if (mapboxTokenRegex.test(trimmed)) {
+    return trimmed;
+  }
+
+  console.warn(
+    '[constants] EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN does not match the Mapbox ' +
+    'token format (pk.eyJ...<sig>). Map will fall back to runtime token ' +
+    'fetch from backend /api/config/mapbox-token.'
+  );
   return ''; // empty → runtime fetch will populate it
 }
 

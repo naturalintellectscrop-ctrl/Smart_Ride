@@ -62,27 +62,24 @@ let runtimeTokenFetchStarted = false;
 /**
  * Validate the Mapbox token. Rejects obvious placeholders from .env.example
  * (e.g. "your-token-here") so we don't render a black map with a bogus token.
+ *
+ * IMPORTANT: Mapbox tokens are NOT standard JWTs.
+ *   Format:  pk.<base64url-header>.<base64url-signature>
+ *   - Header starts with "eyJ" (base64 of '{"').
+ *   - Signature is ~22 base64url chars (NOT ~43 like standard JWT HS256).
+ *
+ * Do NOT reject based on signature length >= 40 — that incorrectly rejects
+ * valid Mapbox public tokens and forces the "Map unavailable" fallback.
+ * This was the root cause of the blank-map bug.
  */
 function isValidMapboxToken(token: string | undefined): token is string {
   if (!token) return false;
   if (token.length <= 10) return false;
-  if (!token.startsWith('pk.')) return false;
+  if (!token.startsWith('pk.') && !token.startsWith('sk.')) return false;
   if (token.includes('your-token-here') || token.includes('xxxx')) return false;
-  // A valid Mapbox token is a JWT: header.payload.signature
-  // The signature (3rd segment) must be ~43 base64 chars for a 256-bit HMAC.
-  // Rejecting truncated tokens here lets the runtime fetch fallback kick in,
-  // preventing a silently black/empty map with no error message.
-  const parts = token.split('.');
-  if (parts.length !== 3) return false;
-  if (parts[2].length < 40) {
-    console.warn(
-      '[SmartRideMap] Mapbox token signature looks truncated ' +
-      `(got ${parts[2].length} chars, expected ~43). ` +
-      'Falling back to runtime token fetch.'
-    );
-    return false;
-  }
-  return true;
+  // pk.<header>.<signature> where header starts with "eyJ"
+  const mapboxTokenRegex = /^(pk|sk)\.eyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}$/;
+  return mapboxTokenRegex.test(token);
 }
 
 /**

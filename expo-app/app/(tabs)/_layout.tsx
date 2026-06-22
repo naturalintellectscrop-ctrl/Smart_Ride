@@ -6,19 +6,20 @@
 
 import React from 'react';
 import { Tabs, Redirect } from 'expo-router';
-import { View, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/src/context/theme-context';
 import { useAuthStore } from '@/src/store';
 
 export default function TabsLayout() {
   const { isAuthenticated } = useAuthStore();
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
 
   if (!isAuthenticated) {
     return <Redirect href="/auth/login" />;
@@ -41,8 +42,10 @@ export default function TabsLayout() {
           borderTopWidth: 1,
           borderTopColor: colors.border,
           paddingTop: 8,
-          paddingBottom: 8,
-          height: 60,
+          // Add bottom safe-area inset so the tab bar isn't cut off by
+          // the iPhone home indicator or Android gesture nav bar.
+          paddingBottom: 8 + insets.bottom,
+          height: 60 + insets.bottom,
         },
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
@@ -55,6 +58,10 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
+          // Home screen renders its own GlowHeader inside a ScrollView,
+          // so we MUST hide the default navigation header here — otherwise
+          // the user sees two headers stacked (nav header + GlowHeader).
+          headerShown: false,
           title: 'Smart Ride',
           tabBarIcon: ({ focused, color, size }) => (
             <AnimatedTabIcon focused={focused}>
