@@ -118,17 +118,7 @@ export default function PhoneLoginScreen() {
       const response = await api.sendOTP(normalizedPhone, purpose);
 
       if (response.success) {
-        // Test mode: Show OTP in alert for testing (no SMS required)
-        const otp = response.data?.otp;
-        if (otp) {
-          Alert.alert(
-            'Test OTP',
-            `Your verification code is: ${otp}`,
-            [{ text: 'OK', onPress: () => {} }]
-          );
-        } else {
-          Alert.alert('OTP Sent', 'Check your phone for the verification code');
-        }
+        Alert.alert('OTP Sent', 'Check your phone for the verification code');
 
         // Navigate to OTP verification screen
         router.push({

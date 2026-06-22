@@ -89,21 +89,17 @@ async function processMtnMoMo(
 
   // Check if credentials are configured
   if (!process.env.MTN_MOMO_API_USER || !process.env.MTN_MOMO_API_KEY) {
-    // Simulate successful payment in development
     await db.payment.update({
       where: { id: paymentId },
       data: {
-        status: PaymentStatus.COMPLETED,
-        transactionId: `MOCK_MTN_${Date.now()}`,
-        providerResponse: JSON.stringify({ simulated: true }),
+        status: PaymentStatus.FAILED,
+        failureReason: 'MTN MoMo payment service is not configured',
       },
     });
-    
     return {
-      success: true,
+      success: false,
       paymentId,
-      referenceId: paymentId,
-      status: PaymentStatus.COMPLETED,
+      error: 'MTN MoMo payment service is currently unavailable. Please try another payment method.',
     };
   }
 
@@ -160,21 +156,17 @@ async function processAirtelMoney(
 
   // Check if credentials are configured
   if (!process.env.AIRTEL_MONEY_CLIENT_ID || !process.env.AIRTEL_MONEY_CLIENT_SECRET) {
-    // Simulate successful payment in development
     await db.payment.update({
       where: { id: paymentId },
       data: {
-        status: PaymentStatus.COMPLETED,
-        transactionId: `MOCK_AIRTEL_${Date.now()}`,
-        providerResponse: JSON.stringify({ simulated: true }),
+        status: PaymentStatus.FAILED,
+        failureReason: 'Airtel Money payment service is not configured',
       },
     });
-    
     return {
-      success: true,
+      success: false,
       paymentId,
-      referenceId: paymentId,
-      status: PaymentStatus.COMPLETED,
+      error: 'Airtel Money payment service is currently unavailable. Please try another payment method.',
     };
   }
 

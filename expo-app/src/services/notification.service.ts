@@ -8,16 +8,23 @@
 
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 import { api } from './api';
 
 let isAvailable = false;
+
+const EAS_PROJECT_ID =
+  Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
 
 // Check if we're in a development build (not Expo Go)
 async function checkAvailability(): Promise<boolean> {
   try {
     if (Platform.OS === 'android') {
-      // This will throw in Expo Go since push notifications were removed in SDK 53
-      await Notifications.getExpoPushTokenAsync({ projectId: 'test' });
+      // In Expo Go (SDK 53+) this throws — intentionally used to detect the environment.
+      // We pass the real EAS project ID so it works correctly in dev/production builds.
+      await Notifications.getExpoPushTokenAsync(
+        EAS_PROJECT_ID ? { projectId: EAS_PROJECT_ID } : undefined
+      );
     }
     isAvailable = true;
     return true;

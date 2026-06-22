@@ -11,6 +11,16 @@ import { hash } from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
+  // PRODUCTION GUARD: Refuse to seed demo accounts in production.
+  // This seed creates demo users with known credentials — safe for local dev only.
+  if (process.env.NODE_ENV === 'production') {
+    console.error(
+      'ABORT: Refusing to run dev seed in NODE_ENV=production. ' +
+        'Use prisma/seeds/seed-production-admin.ts for production admin creation.'
+    );
+    process.exit(1);
+  }
+
   console.log('🌱 Starting database seed...\n');
 
   // ==========================================

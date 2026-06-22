@@ -496,7 +496,7 @@ class ApiService {
     phone: string, 
     purpose: 'login' | 'register' | 'reset_password' = 'login'
   ): Promise<ApiResponse<{ expiresIn: number; otp?: string }>> {
-    console.log('[API] Send OTP request for:', phone);
+    console.log('[API] Send OTP request for: [REDACTED_PHONE]');
     
     // Validate phone format BEFORE making request
     if (!phone || phone.length < 10) {
@@ -529,7 +529,7 @@ class ApiService {
     deviceName?: string;
     deviceType?: 'ios' | 'android';
   }): Promise<ApiResponse<{ user: User; accessToken: string; refreshToken: string }>> {
-    console.log('[API] Verify OTP request for:', data.phone);
+    console.log('[API] Verify OTP request for: [REDACTED_PHONE]');
     
     // Validate OTP format BEFORE making request
     if (!data.otp || data.otp.length !== 6 || !/^\d{6}$/.test(data.otp)) {
