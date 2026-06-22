@@ -624,7 +624,7 @@ export default function RiderOnboardingScreen() {
                   onPress={() => setVehicleInfo(p => ({ ...p, vehicleType: vt.id }))}
                   activeOpacity={0.7}
                 >
-                  <Ionicons name={vt.icon} size={28} color={vehicleInfo.vehicleType === vt.id ? COLORS.primary : COLORS.onSurface} />
+                  <Ionicons name={vt.icon as any} size={28} color={vehicleInfo.vehicleType === vt.id ? COLORS.primary : COLORS.onSurface} />
                   <Text style={[
                     styles.vehicleTypeLabel,
                     vehicleInfo.vehicleType === vt.id && styles.vehicleTypeLabelActive,
@@ -861,7 +861,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   switchRoleText: {
-    ...TYPOGRAPHY.labelSm,
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.primary,
     fontWeight: '600',
   },

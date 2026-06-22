@@ -334,6 +334,7 @@ class ApiService {
     longitude: number;
     heading?: number | null;
     speed?: number | null;
+    accuracy?: number | null;
     task_id?: string;
     battery_level?: number;
   }): Promise<ApiResponse<void>> {
@@ -506,15 +507,8 @@ class ApiService {
   // RIDER EARNINGS
   // ==========================================
 
-  async getRiderEarnings(period: string = 'week'): Promise<ApiResponse<{
-    totalEarnings: number;
-    todayEarnings: number;
-    weekEarnings: number;
-    monthEarnings: number;
-    completedTrips: number;
-    pendingPayout: number;
-  }>> {
-    return this.request(`/riders/earnings?period=${period}`);
+  async getRiderEarnings(period: string = 'week'): Promise<ApiResponse<any>> {
+    return this.request<any>(`/riders/earnings?period=${period}`);
   }
 
   async requestRiderWithdrawal(amount: number, phone: string, provider: string): Promise<ApiResponse<any>> {
@@ -625,6 +619,20 @@ class ApiService {
     return this.request<any>(endpoint);
   }
 
+  async getMerchantOrder(orderId: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/merchants/orders/${orderId}`);
+  }
+
+  async registerMerchant(data: {
+    name: string;
+    type: string;
+    description?: string;
+    phone: string;
+    address: string;
+  }): Promise<ApiResponse<any>> {
+    return this.request<any>('/merchants/register', 'POST', data);
+  }
+
   async getMerchantOrders(merchantId: string, status?: string, page: number = 1): Promise<ApiResponse<any>> {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
@@ -646,6 +654,18 @@ class ApiService {
     return this.request<any>(`/merchants/${merchantId}/availability`, 'PATCH', { isOpen });
   }
 
+  async createMenuItem(merchantId: string, data: any): Promise<ApiResponse<any>> {
+    return this.request<any>(`/merchants/${merchantId}/menu`, 'POST', data);
+  }
+
+  async updateMenuItem(merchantId: string, itemId: string, data: any): Promise<ApiResponse<any>> {
+    return this.request<any>(`/merchants/${merchantId}/menu/${itemId}`, 'PATCH', data);
+  }
+
+  async deleteMenuItem(merchantId: string, itemId: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/merchants/${merchantId}/menu/${itemId}`, 'DELETE');
+  }
+
   async requestMerchantPayout(merchantId: string, amount?: number): Promise<ApiResponse<any>> {
     return this.request<any>(`/merchants/${merchantId}/payout`, 'POST', { amount });
   }
@@ -660,6 +680,53 @@ class ApiService {
 
   async getPharmacies(): Promise<ApiResponse<Merchant[]>> {
     return this.request<Merchant[]>('/merchants?type=PHARMACY');
+  }
+
+  async getHealthProviderOrders(status?: string): Promise<ApiResponse<any>> {
+    const query = status ? `?status=${status}` : '';
+    return this.request<any>(`/health/orders${query}`);
+  }
+
+  async getHealthProviderStatus(): Promise<ApiResponse<any>> {
+    return this.request<any>('/health/status');
+  }
+
+  async updateHealthProviderStatus(data: boolean | { status: string }): Promise<ApiResponse<any>> {
+    const payload = typeof data === 'boolean' ? { isOpen: data } : data;
+    return this.request<any>('/health/status', 'PATCH', payload);
+  }
+
+  async getHealthOrders(statusOrPage?: string | number): Promise<ApiResponse<any>> {
+    if (typeof statusOrPage === 'string') {
+      return this.request<any>(`/health/orders?status=${statusOrPage}`);
+    }
+    const page = statusOrPage ?? 1;
+    return this.request<any>(`/health/orders?page=${page}`);
+  }
+
+  async getHealthOrder(orderId: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/health/orders/${orderId}`);
+  }
+
+  async updateHealthOrderStatus(orderId: string, status: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/health/orders/${orderId}/status`, 'PATCH', { status });
+  }
+
+  async getHealthProviderCatalog(): Promise<ApiResponse<any>> {
+    return this.request<any>('/health/catalog');
+  }
+
+  async addMedicineToCatalog(data: any): Promise<ApiResponse<any>> {
+    return this.request<any>('/health/catalog', 'POST', data);
+  }
+
+  async updateMedicineCatalog(itemId: string, data: any): Promise<ApiResponse<any>> {
+    return this.request<any>(`/health/catalog/${itemId}`, 'PATCH', data);
+  }
+
+  async updateMedicineAvailability(itemId: string, data: { isAvailable: boolean } | boolean): Promise<ApiResponse<any>> {
+    const payload = typeof data === 'boolean' ? { available: data } : data;
+    return this.request<any>(`/health/catalog/${itemId}/availability`, 'PATCH', payload);
   }
 
   // ==========================================
@@ -714,8 +781,8 @@ class ApiService {
     return this.request<{ balance: number }>('/wallet/balance');
   }
 
-  async getWalletTransactions(page: number = 1, limit: number = 20): Promise<ApiResponse<{ data: any[] }>> {
-    return this.request<{ data: any[] }>(`/wallet/transactions?page=${page}&limit=${limit}`);
+  async getWalletTransactions(page: number = 1, limit: number = 20): Promise<ApiResponse<{ data: any[]; transactions?: any[] }>> {
+    return this.request<{ data: any[]; transactions?: any[] }>(`/wallet/transactions?page=${page}&limit=${limit}`);
   }
 
   async requestWithdrawal(amount: number, phone: string, provider: string): Promise<ApiResponse<any>> {
@@ -767,6 +834,7 @@ class ApiService {
     latitude: number;
     longitude: number;
     locationAddress?: string;
+    emergencyType?: string;
   }): Promise<ApiResponse<{ success: boolean; alert: any }>> {
     return this.request<{ success: boolean; alert: any }>('/sos', 'POST', data);
   }

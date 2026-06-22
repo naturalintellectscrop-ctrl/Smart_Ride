@@ -321,20 +321,36 @@ export default function DriverHomeScreen() {
 
   // Show error state if rider profile failed to load
   if (profileError && !rider) {
+    const isRiderRole = user?.role === 'RIDER';
     return (
       <View style={styles.errorContainer}>
         <View style={styles.errorIconCircle}>
-          <Ionicons name="alert-circle-outline" size={40} color={COLORS.error} />
+          <Ionicons name={isRiderRole ? 'bicycle-outline' : 'alert-circle-outline'} size={40} color={isRiderRole ? COLORS.primary : COLORS.error} />
         </View>
-        <Text style={styles.errorTitle}>Profile Load Error</Text>
-        <Text style={styles.errorSubtitle}>{profileError}</Text>
-        <GradientButton
-          title="Retry"
-          onPress={loadRiderProfile}
-          variant="primary"
-          size="md"
-          style={{ marginTop: 24, width: 180 }}
-        />
+        <Text style={styles.errorTitle}>{isRiderRole ? 'Complete Your Profile' : 'Profile Load Error'}</Text>
+        <Text style={styles.errorSubtitle}>
+          {isRiderRole
+            ? 'You need to complete rider onboarding before you can go online and accept trips.'
+            : profileError}
+        </Text>
+        {isRiderRole ? (
+          <GradientButton
+            title="Start Onboarding"
+            onPress={() => router.replace('/rider/onboarding')}
+            variant="primary"
+            size="md"
+            style={{ marginTop: 24, width: 200 }}
+            icon={<Ionicons name="arrow-forward" size={18} color={COLORS.onPrimary} />}
+          />
+        ) : (
+          <GradientButton
+            title="Retry"
+            onPress={loadRiderProfile}
+            variant="primary"
+            size="md"
+            style={{ marginTop: 24, width: 180 }}
+          />
+        )}
       </View>
     );
   }

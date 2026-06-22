@@ -90,7 +90,7 @@ export const useLocationStore = create<LocationState>()(
         // Distinguish "denied once" from "blocked permanently" so we can
         // tell the user to open Settings instead of silently failing.
         const { status } = await Location.getForegroundPermissionsAsync();
-        const deniedPermanently = status === 'undetermined' || status === 'blocked';
+        const deniedPermanently = status === 'undetermined' || (status as string) === 'blocked';
         set({
           isLocating: false,
           error: deniedPermanently

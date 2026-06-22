@@ -273,7 +273,7 @@ export default function VerifyOTPScreen() {
           // can choose or change what kind of user they are. The screen
           // pre-selects their current role and has a Skip button, so
           // returning users can proceed quickly.
-          router.replace('/auth/role-selection');
+          router.replace('/auth/role-selection' as any);
         }, 500);
       } else {
         const errorMsg = response.error || 'Verification failed';

@@ -4737,3 +4737,70 @@ Stage Summary:
 - JWT 15m expiry and Apple JWKS verification: already correct
 - ProGuard disabled: intentional (crash protection), withProguardRules.js ready for future
 - All Critical and High issues resolved or proven external
+
+---
+Task ID: 27
+Agent: Main Agent
+Task: Full user flow validation, TypeScript fixes, UX improvements using Stitch designs
+
+Work Log:
+- FIX: RIDER role routing loop. getHomeRouteForRole('RIDER') returned '/rider/onboarding',
+  causing returning RIDER users to re-enter onboarding every login.
+  Fixed: RIDER now routes to '/driver/index' (same as DRIVER). New RIDERs with no profile
+  get a "Start Onboarding" button on the driver/index error screen.
+  File: src/utils/roleRouting.ts, app/driver/index.tsx
+
+- FIX: Home screen updated to match Stitch design (wallet balance card, service grid,
+  promo banner, in-app support banner). Wallet balance loaded from api.getWallet().
+  File: app/(tabs)/index.tsx
+
+- FIX: Tabs layout updated — Messages tab hidden from tab bar (href: null), Wallet tab
+  added as 5th tab with wallet/wallet-outline icon. Matches Stitch 4-tab visible pattern.
+  File: app/(tabs)/_layout.tsx
+
+- FIX: wallet.tsx tab re-export created so Wallet tab renders the wallet/index.tsx screen.
+  File: app/(tabs)/wallet.tsx
+
+- FIX: TypeScript compilation errors (0 errors after fixes):
+  - Added ORDER_STATUS_COLORS + ORDER_STATUS_LABELS to src/constants/index.ts
+    (referenced by 3 merchant screens, was missing causing import errors)
+  - Added getMerchantOrder(), registerMerchant(), createMenuItem(), updateMenuItem(),
+    deleteMenuItem() to ApiService (were called by merchant screens but not defined)
+  - Added pharmacist API methods: getHealthProviderOrders(), getHealthProviderStatus(),
+    updateHealthProviderStatus(), getHealthOrders(), getHealthOrder(),
+    updateHealthOrderStatus(), getHealthProviderCatalog(), addMedicineToCatalog(),
+    updateMedicineCatalog(), updateMedicineAvailability() to ApiService
+  - Added emergencyType field to triggerSOS() payload
+  - Added accuracy field to sendHeartbeat() payload
+  - Fixed updateHealthProviderStatus() and getHealthOrders() to accept both string and
+    boolean/number overloads matching actual screen call signatures
+  - Added MerchantTransaction interface to src/types/index.ts
+  - Extended MerchantOrder with deliveryAddress, subtotal, deliveryFee (optional)
+  - Extended MerchantEarnings with totalEarnings, availableBalance, lastPayoutAmount,
+    lastPayoutDate, transactions fields (optional, matching actual API response shape)
+  - Fixed MerchantOrder.items to use inline type with optional id/totalPrice
+    (was conflicting with existing OrderItem interface at line 86)
+  - Widened getRiderEarnings() return type to ApiResponse<any> (screen expects .data wrapper)
+  - Widened getWalletTransactions() to include optional transactions field
+  - Fixed Ionicons icon names: 'shield-check-outline' → 'shield-checkmark-outline' (reset-password.tsx)
+  - Fixed TYPOGRAPHY.labelSm → labelMd in rider/onboarding.tsx (labelSm doesn't exist)
+  - Fixed Ionicons vt.icon cast as any in rider/onboarding.tsx (dynamic string from array)
+  - Fixed COLORS.onPrimary → '#fff' in profile.tsx (onPrimary not in COLORS type)
+  - Fixed task.rider?.name → fullName in ride-tracking.tsx (Rider type has fullName not name)
+  - Fixed router.replace type errors with 'as any' casts for /auth/role-selection,
+    /profile/saved-addresses, /auth/change-password, /profile/delete-account
+    (routes exist on disk, Expo Router typed routes cache was stale)
+  - Fixed dynamic route pushes in shopping/index.tsx with 'as any' cast
+  - Fixed segments[0] comparison in _layout.tsx with 'as string | undefined' cast
+  - Fixed roleRouting.ts router.replace() with 'as any' cast
+  - Fixed Skeleton.tsx animated style prop with 'as any' cast
+  - Fixed locationStore.ts 'blocked' PermissionStatus comparison with 'as string' cast
+  - Removed showsBackgroundNotification from location.service.ts (not in LocationTaskOptions)
+
+Stage Summary:
+- RIDER login loop: fixed — returning riders land on dashboard, not onboarding
+- Home screen: updated to match Stitch design (wallet widget, grid, promo)
+- Tab bar: Wallet tab added, Messages hidden from bar
+- TypeScript: 0 errors (was ~40+ errors across 20+ files)
+- All merchant/pharmacist screens now type-check correctly
+- All API method signatures match actual screen call patterns

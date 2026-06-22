@@ -69,12 +69,11 @@ class LocationService {
         accuracy: Location.Accuracy.High,
         timeInterval: 10000, // 10 seconds
         distanceInterval: 50, // 50 meters
-        showsBackgroundNotification: true,
         foregroundService: {
           notificationTitle: 'Smart Ride',
           notificationBody: 'Tracking your location for active rides',
         },
-      });
+      } as any);
       this.isTracking = true;
       console.log('[LOCATION] Background tracking started');
       return true;

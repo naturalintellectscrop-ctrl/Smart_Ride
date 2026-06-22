@@ -138,7 +138,7 @@ function ThemedRootLayout() {
     // Navigation must be ready before we can redirect.
     if (!navigationState?.key) return;
 
-    const firstSegment = segments[0];
+    const firstSegment = segments[0] as string | undefined;
     const inAuthGroup = firstSegment === 'auth';
     const isPublicRoute = inAuthGroup || firstSegment === 'index' || firstSegment === undefined;
 

@@ -220,8 +220,11 @@ export interface MerchantOrder {
   orderNumber: string;
   status: string;
   customerName: string;
-  items: { name: string; quantity: number; price: number }[];
+  items: Array<{ id?: string; name: string; quantity: number; price: number; totalPrice?: number; unitPrice?: number }>;
   totalAmount: number;
+  subtotal?: number;
+  deliveryFee?: number;
+  deliveryAddress?: string;
   createdAt: string;
   paymentMethod: string;
   paymentStatus: string;
@@ -242,4 +245,19 @@ export interface MerchantEarnings {
   thisMonth: number;
   total: number;
   pendingPayout: number;
+  totalEarnings?: number;
+  availableBalance?: number;
+  lastPayoutAmount?: number;
+  lastPayoutDate?: string;
+  transactions?: MerchantTransaction[];
+}
+
+export interface MerchantTransaction {
+  id: string;
+  type: string;
+  amount: number;
+  description?: string;
+  createdAt: string;
+  status?: string;
+  orderId?: string;
 }

@@ -89,7 +89,7 @@ export default function LoginScreen() {
   // user they are. The screen pre-selects their current role and has a
   // Skip button, so returning users can proceed quickly.
   const goToRoleSelection = () => {
-    router.replace('/auth/role-selection');
+    router.replace('/auth/role-selection' as any);
   };
 
   // ─── Phone Continue ────────────────────────────
@@ -257,9 +257,15 @@ export default function LoginScreen() {
       }
 
       console.log('[LOGIN] Apple: Got identityToken, sending to backend...');
+      const appleFullName = appleCredential.fullName
+        ? {
+            givenName: appleCredential.fullName.givenName ?? undefined,
+            familyName: appleCredential.fullName.familyName ?? undefined,
+          }
+        : null;
       const result = await loginWithApple(
         appleCredential.identityToken,
-        appleCredential.fullName
+        appleFullName
       );
 
       if (result.success) {

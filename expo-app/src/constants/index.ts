@@ -349,6 +349,34 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
   FAILED: 'Failed',
 };
 
+// Order Status Colors (food/shopping/delivery orders)
+export const ORDER_STATUS_COLORS: Record<string, string> = {
+  PENDING: '#F59E0B',
+  CONFIRMED: '#006e2f',
+  PREPARING: '#0e7a4d',
+  READY: '#005f3a',
+  PICKED_UP: '#0e7a4d',
+  DELIVERED: '#006e2f',
+  COMPLETED: '#005f3a',
+  CANCELLED: '#ba1a1a',
+  FAILED: '#93000a',
+  NEW: '#F59E0B',
+};
+
+// Order Status Labels (food/shopping/delivery orders)
+export const ORDER_STATUS_LABELS: Record<string, string> = {
+  PENDING: 'Pending',
+  CONFIRMED: 'Confirmed',
+  PREPARING: 'Preparing',
+  READY: 'Ready for pickup',
+  PICKED_UP: 'Picked up',
+  DELIVERED: 'Delivered',
+  COMPLETED: 'Completed',
+  CANCELLED: 'Cancelled',
+  FAILED: 'Failed',
+  NEW: 'New order',
+};
+
 // Payment Methods
 export const PAYMENT_METHODS = [
   { id: 'MTN_MOMO', name: 'MTN MoMo', icon: 'phone', color: '#FFCC00' },

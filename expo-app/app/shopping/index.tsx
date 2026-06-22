@@ -294,7 +294,7 @@ export default function ShoppingScreen() {
                       const detailRoute = isPharmacy
                         ? `/health/pharmacy/${merchant.id}`
                         : `/orders/merchant/${merchant.id}`;
-                      router.push(detailRoute);
+                      router.push(detailRoute as any);
                     }}
                   />
                 </Animated.View>
@@ -332,7 +332,7 @@ export default function ShoppingScreen() {
               >
                 <MerchantCard
                   merchant={merchant}
-                  onPress={() => router.push(detailRoute)}
+                  onPress={() => router.push(detailRoute as any)}
                 />
               </Animated.View>
             );

@@ -35,7 +35,6 @@ export function getHomeRouteForRole(role?: string | null): string {
     case 'CLIENT':
       return '/(tabs)';
     case 'RIDER':
-      return '/rider/onboarding';
     case 'DRIVER':
       return '/driver/index';
     case 'MERCHANT':
@@ -58,5 +57,5 @@ export function getHomeRouteForRole(role?: string | null): string {
  * directly instead of this helper.
  */
 export function navigateToRoleHome(role?: string | null): void {
-  router.replace(getHomeRouteForRole(role));
+  router.replace(getHomeRouteForRole(role) as any);
 }

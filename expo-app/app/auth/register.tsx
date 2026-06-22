@@ -169,7 +169,7 @@ export default function RegisterScreen() {
           // Always show role-selection after Google sign-in so the user can
           // choose or change what kind of user they are. (Email registration
           // skips this because the user already picked a role in the form.)
-          router.replace('/auth/role-selection');
+          router.replace('/auth/role-selection' as any);
         } else {
           setError(result.error || 'Google sign-in failed');
         }

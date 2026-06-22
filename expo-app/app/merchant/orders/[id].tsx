@@ -234,7 +234,7 @@ export default function MerchantOrderDetailScreen() {
                   <Text style={styles.itemName}>{item.name}</Text>
                   <Text style={styles.itemQty}>x{item.quantity}</Text>
                 </View>
-                <Text style={styles.itemPrice}>{formatCurrency(item.totalPrice)}</Text>
+                <Text style={styles.itemPrice}>{formatCurrency(item.totalPrice ?? item.price * item.quantity)}</Text>
               </View>
             ))}
           </View>
@@ -244,8 +244,8 @@ export default function MerchantOrderDetailScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Order Summary</Text>
           <View style={styles.summaryCard}>
-            <SummaryRow label="Subtotal" value={formatCurrency(order.subtotal)} />
-            <SummaryRow label="Delivery Fee" value={formatCurrency(order.deliveryFee)} />
+            <SummaryRow label="Subtotal" value={formatCurrency(order.subtotal ?? 0)} />
+            <SummaryRow label="Delivery Fee" value={formatCurrency(order.deliveryFee ?? 0)} />
             <View style={styles.summaryDivider} />
             <SummaryRow label="Total" value={formatCurrency(order.totalAmount)} isBold />
           </View>

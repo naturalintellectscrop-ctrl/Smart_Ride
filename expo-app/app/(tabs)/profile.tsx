@@ -177,12 +177,12 @@ export default function ProfileScreen() {
       section: 'Account',
       items: [
         { icon: 'person-outline', label: 'Edit Profile', onPress: () => router.push('/profile/edit') },
-        { icon: 'refresh-outline', label: `Switch Role (${user?.role || 'Client'})`, onPress: () => router.push('/auth/role-selection') },
-        { icon: 'location-outline', label: 'Saved Addresses', onPress: () => router.push('/profile/saved-addresses') },
+        { icon: 'refresh-outline', label: `Switch Role (${user?.role || 'Client'})`, onPress: () => router.push('/auth/role-selection' as any) },
+        { icon: 'location-outline', label: 'Saved Addresses', onPress: () => router.push('/profile/saved-addresses' as any) },
         { icon: 'card-outline', label: 'Payment Methods', onPress: () => router.push('/wallet') },
         { icon: 'people-outline', label: 'Emergency Contacts', onPress: () => router.push('/sos') },
-        { icon: 'key-outline', label: 'Change Password', onPress: () => router.push('/auth/change-password') },
-        { icon: 'trash-outline', label: 'Delete Account', onPress: () => router.push('/profile/delete-account'), danger: true },
+        { icon: 'key-outline', label: 'Change Password', onPress: () => router.push('/auth/change-password' as any) },
+        { icon: 'trash-outline', label: 'Delete Account', onPress: () => router.push('/profile/delete-account' as any), danger: true },
       ],
     },
     {
@@ -245,7 +245,7 @@ export default function ProfileScreen() {
                     <Ionicons name="person" size={32} color={colors.primary} />
                   )}
                   <View style={styles.avatarBadge}>
-                    <Ionicons name="camera-outline" size={12} color={colors.onPrimary} />
+                    <Ionicons name="camera-outline" size={12} color="#fff" />
                   </View>
                 </Animated.View>
               </TouchableOpacity>

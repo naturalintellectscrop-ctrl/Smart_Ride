@@ -99,12 +99,26 @@ export default function TabsLayout() {
         name="messages"
         options={{
           title: 'Messages',
+          href: null, // hidden from tab bar — accessible via ride/order chat buttons
           tabBarIcon: ({ focused, color, size }) => (
             <AnimatedTabIcon focused={focused}>
               <Ionicons name="chatbubble" size={size} color={color} />
             </AnimatedTabIcon>
           ),
           tabBarLabel: 'Messages',
+        }}
+      />
+      <Tabs.Screen
+        name="wallet"
+        options={{
+          title: 'Wallet',
+          tabBarIcon: ({ focused, color, size }) => (
+            <AnimatedTabIcon focused={focused}>
+              <Ionicons name={focused ? 'wallet' : 'wallet-outline'} size={size} color={color} />
+            </AnimatedTabIcon>
+          ),
+          tabBarLabel: 'Wallet',
+          headerShown: false,
         }}
       />
       <Tabs.Screen

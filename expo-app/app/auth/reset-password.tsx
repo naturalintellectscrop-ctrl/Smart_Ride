@@ -243,7 +243,7 @@ export default function ResetPasswordScreen() {
     return (
       <>
         <View style={styles.shieldContainer}>
-          <Ionicons name="shield-check-outline" size={24} color={COLORS.primary} />
+          <Ionicons name="shield-checkmark-outline" size={24} color={COLORS.primary} />
         </View>
         <Text style={styles.formTitle}>New Password</Text>
         <Text style={styles.formSubtitle}>

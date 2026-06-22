@@ -263,8 +263,8 @@ export default function MerchantEarningsScreen() {
                           {tx.type === 'PAYOUT' || tx.type === 'REFUND' ? '-' : '+'}
                           {formatCurrency(tx.amount)}
                         </Text>
-                        <View style={[styles.txStatusBadge, { backgroundColor: `${getStatusColor(tx.status)}20` }]}>
-                          <Text style={[styles.txStatusText, { color: getStatusColor(tx.status) }]}>
+                        <View style={[styles.txStatusBadge, { backgroundColor: `${getStatusColor(tx.status ?? '')}20` }]}>
+                          <Text style={[styles.txStatusText, { color: getStatusColor(tx.status ?? '') }]}>
                             {tx.status}
                           </Text>
                         </View>

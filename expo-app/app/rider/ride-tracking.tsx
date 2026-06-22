@@ -290,7 +290,7 @@ export default function RideTrackingScreen() {
     if (task?.riderId) {
       // Navigate to in-app VoIP call screen (Agora)
       router.push(
-        `/call/${task.riderId}?name=${encodeURIComponent(task.rider?.fullName || task.rider?.name || 'Driver')}&phone=${encodeURIComponent(task.rider?.phone || '')}`
+        `/call/${task.riderId}?name=${encodeURIComponent(task.rider?.fullName || 'Driver')}&phone=${encodeURIComponent(task.rider?.phone || '')}`
       );
     } else if (task?.rider?.phone) {
       // Fallback to phone dialer if no user ID
