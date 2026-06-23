@@ -10,7 +10,7 @@
 // - Empty state with illustration
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -33,7 +33,9 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { useTaskStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Task } from '@/src/types';
 import { GlowHeader } from '@/src/components/GlowHeader';
 import { GlassCard } from '@/src/components/GlassCard';
@@ -58,6 +60,9 @@ const FILTER_TABS: { key: RideFilter; label: string }[] = [
 
 export default function RidesScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const { taskHistory, setTaskHistory } = useTaskStore();
   
   const [isLoading, setIsLoading] = useState(false);
@@ -125,10 +130,12 @@ export default function RidesScreen() {
         entering={SlideInRight.duration(400).delay(index * 80).springify()}
         layout={Layout.springify()}
       >
-        <RideCard 
-          item={item} 
-          statusColor={statusColor} 
+        <RideCard
+          item={item}
+          statusColor={statusColor}
           onPress={() => router.push(`/rider/ride-tracking?taskId=${item.id}`)}
+          COLORS={COLORS}
+          styles={styles}
         />
       </Animated.View>
     );
@@ -209,6 +216,7 @@ export default function RidesScreen() {
             label={tab.label}
             isActive={activeFilter === tab.key}
             onPress={() => setActiveFilter(tab.key)}
+            styles={styles}
           />
         ))}
       </Animated.View>
@@ -223,14 +231,16 @@ export default function RidesScreen() {
 // FILTER TAB COMPONENT
 // ============================================
 
-function FilterTab({ 
-  isActive, 
-  onPress, 
-  label, 
-}: { 
-  isActive: boolean; 
-  onPress: () => void; 
+function FilterTab({
+  isActive,
+  onPress,
+  label,
+  styles,
+}: {
+  isActive: boolean;
+  onPress: () => void;
   label: string;
+  styles: any;
 }) {
   const scale = useSharedValue(1);
 
@@ -269,7 +279,7 @@ function FilterTab({
 // RIDE CARD COMPONENT
 // ============================================
 
-function RideCard({ item, statusColor, onPress }: { item: Task; statusColor: string; onPress: () => void }) {
+function RideCard({ item, statusColor, onPress, COLORS, styles }: { item: Task; statusColor: string; onPress: () => void; COLORS: ThemedColors; styles: any }) {
   const formatDate = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
@@ -297,7 +307,7 @@ function RideCard({ item, statusColor, onPress }: { item: Task; statusColor: str
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
-      <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl}>
+      <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={{ backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border }}>
         <View style={styles.rideCardContent}>
           {/* Header: Ride type icon + number + status */}
           <View style={styles.rideHeader}>
@@ -355,7 +365,7 @@ function RideCard({ item, statusColor, onPress }: { item: Task; statusColor: str
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

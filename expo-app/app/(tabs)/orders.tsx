@@ -10,7 +10,7 @@
 // - Empty state with illustration
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -33,7 +33,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, TASK_STATUS_COLORS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, TASK_STATUS_COLORS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Order } from '@/src/types';
 import { GlowHeader } from '@/src/components/GlowHeader';
 import { GlassCard } from '@/src/components/GlassCard';
@@ -59,6 +61,9 @@ const ORDER_TABS: { key: OrderFilter; label: string }[] = [
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -134,11 +139,13 @@ export default function OrdersScreen() {
       entering={SlideInRight.duration(400).delay(index * 80).springify()}
       layout={Layout.springify()}
     >
-      <OrderCard 
-        item={item} 
+      <OrderCard
+        item={item}
         onPress={() => router.push(`/orders/order-tracking?orderId=${item.id}`)}
         getStatusColor={getStatusColor}
         formatDate={formatDate}
+        COLORS={COLORS}
+        styles={styles}
       />
     </Animated.View>
   );
@@ -156,6 +163,7 @@ export default function OrdersScreen() {
             label={tab.label}
             isActive={activeFilter === tab.key}
             onPress={() => setActiveFilter(tab.key)}
+            styles={styles}
           />
         ))}
       </Animated.View>
@@ -167,24 +175,28 @@ export default function OrdersScreen() {
           label="Food"
           color={COLORS.primary}
           onPress={() => router.push('/orders/restaurants')}
+          styles={styles}
         />
         <QuickServiceAction
           icon="bag"
           label="Shop"
           color={COLORS.secondary}
           onPress={() => router.push('/shopping')}
+          styles={styles}
         />
         <QuickServiceAction
           icon="cube"
           label="Delivery"
           color={COLORS.tertiary}
           onPress={() => router.push('/delivery')}
+          styles={styles}
         />
         <QuickServiceAction
           icon="medkit"
           label="Health"
           color={COLORS.error}
           onPress={() => router.push('/health')}
+          styles={styles}
         />
       </Animated.View>
 
@@ -238,14 +250,16 @@ export default function OrdersScreen() {
 // ORDER FILTER TAB COMPONENT
 // ============================================
 
-function OrderFilterTab({ 
-  isActive, 
-  onPress, 
-  label, 
-}: { 
-  isActive: boolean; 
-  onPress: () => void; 
+function OrderFilterTab({
+  isActive,
+  onPress,
+  label,
+  styles,
+}: {
+  isActive: boolean;
+  onPress: () => void;
   label: string;
+  styles: any;
 }) {
   const scale = useSharedValue(1);
 
@@ -281,16 +295,18 @@ function OrderFilterTab({
 // QUICK SERVICE ACTION COMPONENT
 // ============================================
 
-function QuickServiceAction({ 
-  icon, 
-  label, 
-  color, 
-  onPress 
-}: { 
-  icon: string; 
-  label: string; 
-  color: string; 
+function QuickServiceAction({
+  icon,
+  label,
+  color,
+  onPress,
+  styles,
+}: {
+  icon: string;
+  label: string;
+  color: string;
   onPress: () => void;
+  styles: any;
 }) {
   const scale = useSharedValue(1);
 
@@ -328,7 +344,7 @@ function QuickServiceAction({
 // ORDER CARD COMPONENT
 // ============================================
 
-function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order; onPress: () => void; getStatusColor: (s: string) => string; formatDate: (d: string) => string }) {
+function OrderCard({ item, onPress, getStatusColor, formatDate, COLORS, styles }: { item: Order; onPress: () => void; getStatusColor: (s: string) => string; formatDate: (d: string) => string; COLORS: ThemedColors; styles: any }) {
   const scale = useSharedValue(1);
 
   const handlePressIn = () => {
@@ -357,7 +373,7 @@ function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order;
       activeOpacity={0.9}
     >
       <Animated.View style={animatedStyle}>
-        <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl}>
+        <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={{ backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border }}>
           <View style={styles.orderCardContent}>
             {/* Header: icon + order info + status */}
             <View style={styles.orderHeader}>
@@ -412,7 +428,7 @@ function OrderCard({ item, onPress, getStatusColor, formatDate }: { item: Order;
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

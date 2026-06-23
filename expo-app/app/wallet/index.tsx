@@ -10,7 +10,7 @@
 // - Security footer note with lock icon
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -31,7 +31,9 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, GRADIENTS, PAYMENT_METHODS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, GRADIENTS, PAYMENT_METHODS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
 import { GlowHeader } from '@/src/components/GlowHeader';
@@ -68,6 +70,10 @@ interface Transaction {
 export default function WalletScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
   const [walletData, setWalletData] = useState<WalletData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -269,7 +275,7 @@ export default function WalletScreen() {
           contentContainerStyle={styles.paymentMethodsRow}
         >
           {/* VISA card */}
-          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
+          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={cardBg}>
             <View style={styles.paymentMethodContent}>
               <View style={[styles.paymentIconCircle, { backgroundColor: '#1A1F7115' }]}>
                 <Ionicons name="card" size={20} color="#1A1F71" />
@@ -279,7 +285,7 @@ export default function WalletScreen() {
           </GlassCard>
 
           {/* MTN MoMo */}
-          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
+          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={cardBg}>
             <View style={styles.paymentMethodContent}>
               <View style={[styles.paymentIconCircle, { backgroundColor: `${COLORS.mtnYellow}20` }]}>
                 <Ionicons name="phone-portrait" size={20} color={COLORS.mtnYellow} />
@@ -289,7 +295,7 @@ export default function WalletScreen() {
           </GlassCard>
 
           {/* Airtel Money */}
-          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
+          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={cardBg}>
             <View style={styles.paymentMethodContent}>
               <View style={[styles.paymentIconCircle, { backgroundColor: `${COLORS.airtelRed}20` }]}>
                 <Ionicons name="phone-portrait" size={20} color={COLORS.airtelRed} />
@@ -299,7 +305,7 @@ export default function WalletScreen() {
           </GlassCard>
 
           {/* Cash */}
-          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
+          <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={cardBg}>
             <View style={styles.paymentMethodContent}>
               <View style={[styles.paymentIconCircle, { backgroundColor: `${COLORS.primary}15` }]}>
                 <Ionicons name="cash" size={20} color={COLORS.primary} />
@@ -326,7 +332,7 @@ export default function WalletScreen() {
         <Text style={styles.sectionTitle}>Recent Transactions</Text>
 
         {walletData?.transactions?.length ? (
-          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} noBorder>
+          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} noBorder style={cardBg}>
             {walletData.transactions.map((tx, index) => (
               <React.Fragment key={tx.id}>
                 <Animated.View entering={SlideInRight.duration(300).delay(index * 50)}>
@@ -335,6 +341,8 @@ export default function WalletScreen() {
                     formatCurrency={formatCurrency}
                     formatDate={formatDate}
                     isLast={index === walletData.transactions!.length - 1}
+                    COLORS={COLORS}
+                    styles={styles}
                   />
                 </Animated.View>
                 {!tx && index < walletData.transactions!.length - 1 && (
@@ -401,11 +409,15 @@ function TransactionItem({
   formatCurrency,
   formatDate,
   isLast,
+  COLORS,
+  styles,
 }: {
   transaction: Transaction;
   formatCurrency: (a: number) => string;
   formatDate: (d: string) => string;
   isLast: boolean;
+  COLORS: ThemedColors;
+  styles: any;
 }) {
   const isCredit = transaction.type === 'CREDIT';
 
@@ -477,7 +489,7 @@ function TransactionItem({
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   // Screen
   screen: {
     flex: 1,

@@ -12,7 +12,7 @@
 //   Promo banner
 // ============================================
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,7 +25,9 @@ import {
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeInUp, ZoomIn } from 'react-native-reanimated';
 import { useAuthStore, useLocationStore } from '@/src/store';
-import { COLORS, SERVICES, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { SERVICES, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlowHeader, GlassCard, GradientButton, ServiceIcon } from '@/src/components';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,7 +41,7 @@ const HOME_SERVICES: {
   iconName?: string;
   customColor?: string;
 }[] = [
-  { id: 'ride', name: 'Ride', serviceKey: 'custom', iconName: 'bicycle', customColor: COLORS.primary },
+  { id: 'ride', name: 'Ride', serviceKey: 'custom', iconName: 'bicycle', customColor: '#005f3a' },
   { id: 'food', name: 'Food', serviceKey: 'FOOD' },
   { id: 'shopping', name: 'Shop', serviceKey: 'SHOPPING' },
   { id: 'delivery', name: 'Parcel', serviceKey: 'DELIVERY' },
@@ -48,6 +50,9 @@ const HOME_SERVICES: {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const user = useAuthStore(s => s.user);
   const address = useLocationStore(s => s.address);
   const latitude = useLocationStore(s => s.latitude);
@@ -346,7 +351,7 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: COLORS.surface,
