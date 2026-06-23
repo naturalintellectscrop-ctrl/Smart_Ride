@@ -20,7 +20,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 import { getMapboxToken } from '@/lib/mapbox-token';
 import {
-  searchKampalaPlaces,
   getPopularKampalaPlaces,
   type UnifiedPlace,
 } from '@/lib/geo/kampala-places';
@@ -70,14 +69,64 @@ export async function GET(request: NextRequest) {
   return handleForwardGeocode(query, { token, types: types || PLACE_TYPES, limit, country, proximity });
 }
 
+const PHOTON_BASE = 'https://photon.komoot.io';
+
 async function handleForwardGeocode(
   query: string,
   options: { token: string; types: string; limit: number; country: string; proximity: string },
 ) {
-  // 1. Curated Kampala POIs first (Mapbox lacks Uganda POI coverage)
-  const curated = searchKampalaPlaces(query, 6);
+  // proximity is "lng,lat" — Photon wants lat/lon separately.
+  const [pLng, pLat] = options.proximity.split(',').map(Number);
 
-  // 2. Mapbox results (neighborhoods, roads, addresses Mapbox does cover)
+  // 1. Photon (OpenStreetMap) — the POI source. Real businesses, cafes, malls,
+  //    hospitals, fuel, pharmacies, landmarks across Uganda. No key, no hardcoding.
+  let photonPlaces: UnifiedPlace[] = [];
+  try {
+    const params = new URLSearchParams({
+      q: query,
+      limit: '10',
+      lang: 'en',
+    });
+    if (!Number.isNaN(pLat) && !Number.isNaN(pLng)) {
+      params.set('lat', String(pLat));
+      params.set('lon', String(pLng));
+    }
+    const res = await fetch(`${PHOTON_BASE}/api/?${params}`, {
+      headers: { 'User-Agent': 'SmartRide/1.0 (smartrideug.vercel.app)' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      photonPlaces = (data.features || [])
+        .filter((f: any) => f?.properties?.countrycode === 'UG' && Array.isArray(f?.geometry?.coordinates))
+        .map((f: any): UnifiedPlace => {
+          const p = f.properties || {};
+          const [lng, lat] = f.geometry.coordinates;
+          const name = p.name || p.street || p.city || 'Unknown place';
+          const streetLine = p.housenumber && p.street ? `${p.street} ${p.housenumber}` : p.street;
+          const addr = [streetLine, p.district, p.city, p.state].filter(Boolean).join(', ');
+          const fullAddress = addr ? `${name}, ${addr}` : `${name}, Uganda`;
+          return {
+            id: `photon-${p.osm_type || 'x'}${p.osm_id || Math.random().toString(36).slice(2)}`,
+            name,
+            address: addr,
+            fullAddress,
+            lat,
+            lng,
+            place_name: fullAddress,
+            center: [lng, lat],
+            category: p.osm_value || p.osm_key,
+            source: 'osm',
+            relevance: 1,
+          } as UnifiedPlace;
+        });
+    } else {
+      console.error('[geocoding] Photon error', res.status);
+    }
+  } catch (error) {
+    console.error('[geocoding] Photon fetch failed:', error);
+  }
+
+  // 2. Mapbox geocoding — supplements with any roads/addresses Photon missed.
   let mapboxPlaces: UnifiedPlace[] = [];
   try {
     const params = new URLSearchParams({
@@ -91,13 +140,9 @@ async function handleForwardGeocode(
     });
     const url = `${MAPBOX_API_BASE}/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?${params}`;
     const response = await fetch(url);
-
     if (response.ok) {
       const data = await response.json();
-      mapboxPlaces = (data.features || []).map((f: {
-        id: string; text: string; address?: string; properties?: { address?: string };
-        place_name: string; center: number[]; place_type: string[]; relevance: number;
-      }): UnifiedPlace => ({
+      mapboxPlaces = (data.features || []).map((f: any): UnifiedPlace => ({
         id: f.id,
         name: f.text,
         address: f.address || f.properties?.address || '',
@@ -106,21 +151,17 @@ async function handleForwardGeocode(
         lng: f.center[0],
         place_name: f.place_name,
         center: [f.center[0], f.center[1]],
-        type: f.place_type,
         source: 'mapbox',
         relevance: f.relevance ?? 0.5,
       } as UnifiedPlace));
-    } else {
-      console.error('Mapbox geocoding error:', await response.text());
     }
   } catch (error) {
-    // Mapbox failure is non-fatal — we still return curated results
-    console.error('Geocoding fetch error:', error);
+    console.error('[geocoding] Mapbox fetch failed:', error);
   }
 
-  // 3. Merge + dedup (curated wins on near-duplicate names)
-  const merged: UnifiedPlace[] = [...curated];
-  const seen = new Set(curated.map((p) => p.name.toLowerCase()));
+  // 3. Photon (POIs) first, then Mapbox extras (deduped by name).
+  const merged: UnifiedPlace[] = [...photonPlaces];
+  const seen = new Set(photonPlaces.map((p) => p.name.toLowerCase()));
   for (const mp of mapboxPlaces) {
     const key = mp.name.toLowerCase();
     if (!seen.has(key)) {
