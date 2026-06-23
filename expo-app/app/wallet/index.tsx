@@ -268,13 +268,13 @@ export default function WalletScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.paymentMethodsRow}
         >
-          {/* NylonPay (NEW — unified gateway) */}
+          {/* VISA card */}
           <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
             <View style={styles.paymentMethodContent}>
-              <View style={[styles.paymentIconCircle, { backgroundColor: `${COLORS.primary}15` }]}>
-                <Ionicons name="wallet" size={20} color={COLORS.primary} />
+              <View style={[styles.paymentIconCircle, { backgroundColor: '#1A1F7115' }]}>
+                <Ionicons name="card" size={20} color="#1A1F71" />
               </View>
-              <Text style={styles.paymentMethodName}>NylonPay</Text>
+              <Text style={styles.paymentMethodName}>VISA</Text>
             </View>
           </GlassCard>
 

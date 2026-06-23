@@ -379,9 +379,10 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
 
 // Payment Methods
 export const PAYMENT_METHODS = [
+  { id: 'CASH', name: 'Cash', icon: 'banknote', color: '#005f3a' },
   { id: 'MTN_MOMO', name: 'MTN MoMo', icon: 'phone', color: '#FFCC00' },
   { id: 'AIRTEL_MONEY', name: 'Airtel Money', icon: 'phone', color: '#FF0000' },
-  { id: 'CASH', name: 'Cash', icon: 'banknote', color: '#005f3a' },
+  { id: 'VISA', name: 'VISA', icon: 'card', color: '#1A1F71' },
 ];
 
 // Ride Types

@@ -25,6 +25,10 @@ import { useTheme, ThemeColors } from '@/src/context/theme-context';
 
 const HELP_URL = 'https://smartrideug.vercel.app/help';
 const CONTACT_URL = 'https://smartrideug.vercel.app/contact';
+// Support line. Local format for the dialer; international (256…) for WhatsApp.
+const SUPPORT_PHONE = '0785710818';
+const SUPPORT_WHATSAPP = '256785710818';
+const WHATSAPP_TEXT = 'Hello Smart Ride Support, I need help with';
 
 const CATEGORIES = [
   { icon: 'car-outline', label: 'Rides', topic: 'rides' },
@@ -56,7 +60,27 @@ export default function HelpCenterScreen() {
 
   const openHelp = (topic?: string) =>
     Linking.openURL(topic ? `${HELP_URL}?topic=${topic}` : HELP_URL).catch(() => {});
-  const openContact = () => Linking.openURL(CONTACT_URL).catch(() => {});
+  void CONTACT_URL; // retained for reference; primary support is phone + WhatsApp
+
+  // Call us → open the phone dialer with the support number.
+  const callSupport = () => {
+    Linking.openURL(`tel:${SUPPORT_PHONE}`).catch(() => {});
+  };
+
+  // Chat with Support → WhatsApp message to the support number. Falls back to
+  // the WhatsApp web link (which the WhatsApp app intercepts) if the app's
+  // custom scheme isn't available.
+  const chatSupport = async () => {
+    const text = encodeURIComponent(WHATSAPP_TEXT);
+    const appUrl = `whatsapp://send?phone=${SUPPORT_WHATSAPP}&text=${text}`;
+    const webUrl = `https://wa.me/${SUPPORT_WHATSAPP}?text=${text}`;
+    try {
+      const canOpen = await Linking.canOpenURL(appUrl);
+      await Linking.openURL(canOpen ? appUrl : webUrl);
+    } catch {
+      Linking.openURL(webUrl).catch(() => {});
+    }
+  };
 
   return (
     <View style={styles.screen}>
@@ -90,11 +114,11 @@ export default function HelpCenterScreen() {
 
         {/* Support shortcuts */}
         <View style={styles.shortcutRow}>
-          <TouchableOpacity style={[styles.shortcut, styles.shortcutPrimary]} onPress={openContact} activeOpacity={0.85}>
-            <Ionicons name="chatbubble-ellipses" size={28} color={colors.white} />
+          <TouchableOpacity style={[styles.shortcut, styles.shortcutPrimary]} onPress={chatSupport} activeOpacity={0.85}>
+            <Ionicons name="logo-whatsapp" size={28} color={colors.white} />
             <Text style={styles.shortcutPrimaryText}>Chat with Support</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.shortcut, styles.shortcutOutline]} onPress={openContact} activeOpacity={0.85}>
+          <TouchableOpacity style={[styles.shortcut, styles.shortcutOutline]} onPress={callSupport} activeOpacity={0.85}>
             <Ionicons name="call" size={28} color={colors.primary} />
             <Text style={styles.shortcutOutlineText}>Call us</Text>
           </TouchableOpacity>
@@ -132,7 +156,7 @@ export default function HelpCenterScreen() {
         </View>
 
         {/* Still need help banner */}
-        <TouchableOpacity style={styles.banner} onPress={openContact} activeOpacity={0.9}>
+        <TouchableOpacity style={styles.banner} onPress={chatSupport} activeOpacity={0.9}>
           <View style={styles.bannerIcon}>
             <Ionicons name="headset" size={26} color={colors.white} />
           </View>

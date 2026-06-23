@@ -845,14 +845,14 @@ function ConfirmStep({
           <Ionicons name="bicycle" size={22} color={selectedVehicle === 'BODA' ? COLORS.onPrimary : COLORS.primary} />
         </View>
         <View style={styles.rideCardContent}>
-          <Text style={[styles.rideCardName, selectedVehicle === 'BODA' && styles.rideCardNameActive]}>Smart Boda</Text>
-          <Text style={styles.rideCardDesc}>Fast & affordable · 1 seat</Text>
+          <Text numberOfLines={1} style={[styles.rideCardName, selectedVehicle === 'BODA' && styles.rideCardNameActive]}>Smart Boda</Text>
+          <Text numberOfLines={1} style={styles.rideCardDesc}>Fast &amp; affordable</Text>
         </View>
         <View style={styles.rideCardRight}>
           {isCalculating ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
           ) : (
-            <Text style={styles.rideCardPrice}>{fareRange(bodaFare) ?? '---'}</Text>
+            <Text numberOfLines={1} style={styles.rideCardPrice}>{fareRange(bodaFare) ?? '---'}</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -867,14 +867,14 @@ function ConfirmStep({
           <Ionicons name="car" size={22} color={selectedVehicle === 'CAR' ? COLORS.onPrimary : COLORS.primary} />
         </View>
         <View style={styles.rideCardContent}>
-          <Text style={[styles.rideCardName, selectedVehicle === 'CAR' && styles.rideCardNameActive]}>Smart Car</Text>
-          <Text style={styles.rideCardDesc}>Comfort · AC · up to 4 seats</Text>
+          <Text numberOfLines={1} style={[styles.rideCardName, selectedVehicle === 'CAR' && styles.rideCardNameActive]}>Smart Car</Text>
+          <Text numberOfLines={1} style={styles.rideCardDesc}>Comfort · AC · up to 4</Text>
         </View>
         <View style={styles.rideCardRight}>
           {isCalculating ? (
             <ActivityIndicator size="small" color={COLORS.primary} />
           ) : (
-            <Text style={styles.rideCardPrice}>{fareRange(carFare) ?? '---'}</Text>
+            <Text numberOfLines={1} style={styles.rideCardPrice}>{fareRange(carFare) ?? '---'}</Text>
           )}
         </View>
       </TouchableOpacity>
@@ -884,7 +884,10 @@ function ConfirmStep({
         <View style={styles.paymentBarLeft}>
           <View style={styles.paymentBarBadge}>
             <Text style={styles.paymentBarBadgeText}>
-              {paymentMethod === 'CASH' ? 'CASH' : paymentMethod === 'MTN_MOMO' ? 'MTN' : 'AIRTEL'}
+              {paymentMethod === 'CASH' ? 'CASH'
+                : paymentMethod === 'MTN_MOMO' ? 'MTN'
+                : paymentMethod === 'AIRTEL_MONEY' ? 'AIRTEL'
+                : 'VISA'}
             </Text>
           </View>
           <Text style={styles.paymentBarLabel}>
@@ -893,7 +896,7 @@ function ConfirmStep({
         </View>
         <TouchableOpacity
           onPress={() => {
-            const options: PaymentMethod[] = ['CASH', 'MTN_MOMO', 'AIRTEL_MONEY'];
+            const options: PaymentMethod[] = ['CASH', 'MTN_MOMO', 'AIRTEL_MONEY', 'VISA'];
             const idx = options.indexOf(paymentMethod);
             setPaymentMethod(options[(idx + 1) % options.length]);
           }}
@@ -903,8 +906,8 @@ function ConfirmStep({
         </TouchableOpacity>
       </View>
 
-      {/* Phone number for mobile money */}
-      {paymentMethod !== 'CASH' && (
+      {/* Phone number for mobile money (MTN / Airtel only) */}
+      {(paymentMethod === 'MTN_MOMO' || paymentMethod === 'AIRTEL_MONEY') && (
         <View style={styles.phoneInputContainer}>
           <IconInput
             placeholder="Phone number for mobile money"
@@ -1201,6 +1204,8 @@ const styles = StyleSheet.create({
   },
   rideCardContent: {
     flex: 1,
+    minWidth: 0, // allow text to ellipsize instead of forcing the row to wrap
+    flexShrink: 1,
   },
   rideCardName: {
     ...TYPOGRAPHY.bodyMd,
@@ -1217,9 +1222,11 @@ const styles = StyleSheet.create({
   },
   rideCardRight: {
     alignItems: 'flex-end',
+    flexShrink: 0, // keep the price on one line; content column shrinks instead
+    paddingLeft: SPACING.sm,
   },
   rideCardPrice: {
-    ...TYPOGRAPHY.bodyMd,
+    ...TYPOGRAPHY.bodySm,
     fontWeight: '700',
     color: COLORS.onSurface,
   },
