@@ -4,7 +4,7 @@
 // Prescription verification screen
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -36,13 +38,17 @@ const PRESCRIPTION_TABS: { key: PrescriptionTab; label: string }[] = [
 ];
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: COLORS.warning,
-  VERIFIED: COLORS.success,
-  REJECTED: COLORS.error,
-  EXPIRED: COLORS.outline,
+  PENDING: '#F59E0B',
+  VERIFIED: '#006e2f',
+  REJECTED: '#ba1a1a',
+  EXPIRED: '#6f7a71',
 };
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function PrescriptionsScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<PrescriptionTab>('PENDING');
@@ -414,7 +420,7 @@ export default function PrescriptionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

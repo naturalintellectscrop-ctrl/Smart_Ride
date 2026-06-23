@@ -117,6 +117,7 @@ export default function RideRequestScreen() {
   const [routeCoordinates, setRouteCoordinates] = useState<Array<{ latitude: number; longitude: number }>>([]);
   const [bodaFare, setBodaFare] = useState<number | null>(null);
   const [carFare, setCarFare]   = useState<number | null>(null);
+  const [estimates, setEstimates] = useState<Record<string, any> | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
   // Nearby drivers (live dots + nearest ETA)
@@ -324,6 +325,7 @@ export default function RideRequestScreen() {
       const fareRes = await api.getFareEstimate(roadKm, driveMin);
       if (fareRes.success && fareRes.data?.estimates) {
         const { estimates } = fareRes.data;
+        setEstimates(estimates);
         setBodaFare(estimates['SMART_BODA_RIDE']?.totalAmount ?? null);
         setCarFare(estimates['SMART_CAR_RIDE']?.totalAmount ?? null);
       } else {
@@ -503,6 +505,7 @@ export default function RideRequestScreen() {
               isRequesting={isRequesting}
               currentRideType={currentRideType}
               nearestEtaMin={nearestEtaMin}
+              fareBreakdown={estimates ? estimates[selectedVehicle === 'CAR' ? 'SMART_CAR_RIDE' : 'SMART_BODA_RIDE'] : null}
               COLORS={COLORS}
               styles={styles}
             />
@@ -786,6 +789,7 @@ function ConfirmStep({
   isRequesting,
   currentRideType,
   nearestEtaMin,
+  fareBreakdown,
   COLORS,
   styles,
 }: {
@@ -806,6 +810,7 @@ function ConfirmStep({
   isRequesting: boolean;
   currentRideType: RideTypeConfig;
   nearestEtaMin: number | null;
+  fareBreakdown: { baseFare: number; distanceFare: number; serviceFee: number; surcharges: number; totalAmount: number; minimumApplied: boolean } | null;
   COLORS: ThemedColors;
   styles: any;
 }) {
@@ -909,6 +914,37 @@ function ConfirmStep({
           )}
         </View>
       </TouchableOpacity>
+
+      {/* Fare breakdown for the selected vehicle */}
+      {fareBreakdown && !isCalculating && (
+        <View style={styles.fareBreakdown}>
+          <View style={styles.fareRow}>
+            <Text style={styles.fareRowLabel}>Base fare</Text>
+            <Text style={styles.fareRowValue}>UGX {fareBreakdown.baseFare.toLocaleString()}</Text>
+          </View>
+          <View style={styles.fareRow}>
+            <Text style={styles.fareRowLabel}>Distance{distance != null ? ` (${distance.toFixed(1)} km)` : ''}</Text>
+            <Text style={styles.fareRowValue}>UGX {fareBreakdown.distanceFare.toLocaleString()}</Text>
+          </View>
+          {fareBreakdown.surcharges > 0 && (
+            <View style={styles.fareRow}>
+              <Text style={styles.fareRowLabel}>Peak / night surcharge</Text>
+              <Text style={styles.fareRowValue}>UGX {fareBreakdown.surcharges.toLocaleString()}</Text>
+            </View>
+          )}
+          <View style={styles.fareRow}>
+            <Text style={styles.fareRowLabel}>Service fee</Text>
+            <Text style={styles.fareRowValue}>UGX {fareBreakdown.serviceFee.toLocaleString()}</Text>
+          </View>
+          <View style={[styles.fareRow, styles.fareTotalRow]}>
+            <Text style={styles.fareTotalLabel}>Estimated total</Text>
+            <Text style={styles.fareTotalValue}>UGX {fareBreakdown.totalAmount.toLocaleString()}</Text>
+          </View>
+          {fareBreakdown.minimumApplied && (
+            <Text style={styles.fareNote}>Minimum fare applied</Text>
+          )}
+        </View>
+      )}
 
       {/* Payment Method — single bar with Change */}
       <View style={styles.paymentBar}>
@@ -1280,6 +1316,30 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
+  fareBreakdown: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginTop: SPACING.sm,
+    gap: 4,
+  },
+  fareRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  fareRowLabel: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant },
+  fareRowValue: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurface },
+  fareTotalRow: {
+    borderTopWidth: 1,
+    borderTopColor: COLORS.outlineVariant,
+    marginTop: 4,
+    paddingTop: 6,
+  },
+  fareTotalLabel: { ...TYPOGRAPHY.bodyMd, color: COLORS.onSurface, fontWeight: '700' },
+  fareTotalValue: { ...TYPOGRAPHY.bodyMd, color: COLORS.primary, fontWeight: '700' },
+  fareNote: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, fontStyle: 'italic', marginTop: 2 },
   driverEtaBadge: {
     flexDirection: 'row',
     alignItems: 'center',

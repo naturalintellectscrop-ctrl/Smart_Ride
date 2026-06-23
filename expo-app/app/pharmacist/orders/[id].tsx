@@ -4,7 +4,7 @@
 // Detailed view of a health order with actions
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,19 +17,21 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS } from '@/src/constants';
+import {  } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: COLORS.warning,
-  ORDER_CREATED: COLORS.info,
+  PENDING: '#F59E0B',
+  ORDER_CREATED: '#4b5264',
   PROCESSING: '#F97316',
   PREPARING: '#F97316',
-  COMPLETED: COLORS.success,
-  DELIVERED: COLORS.success,
-  READY_FOR_PICKUP: COLORS.primary,
-  CANCELLED: COLORS.error,
+  COMPLETED: '#006e2f',
+  DELIVERED: '#006e2f',
+  READY_FOR_PICKUP: '#005f3a',
+  CANCELLED: '#ba1a1a',
 };
 
 const STATUS_TIMELINE: Record<string, number> = {
@@ -45,7 +47,11 @@ const STATUS_TIMELINE: Record<string, number> = {
   CANCELLED: 0,
 };
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function OrderDetailScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -287,7 +293,7 @@ export default function OrderDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

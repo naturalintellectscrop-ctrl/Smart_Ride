@@ -5,7 +5,7 @@
 // GlowHeader, Category cards, Pharmacy list, SOS
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -27,7 +27,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import {
   GlowHeader,
   GlassCard,
@@ -55,9 +57,9 @@ interface Pharmacy {
 // ============================================
 
 const HEALTH_CATEGORIES = [
-  { key: 'prescriptions', label: 'Prescriptions', emoji: 'document-text-outline', icon: 'document-text' as const, color: COLORS.primary },
-  { key: 'pharmacy', label: 'Pharmacy', emoji: 'medkit-outline', icon: 'medkit' as const, color: COLORS.secondary },
-  { key: 'delivery', label: 'Health Delivery', emoji: 'car-outline', icon: 'car' as const, color: COLORS.tertiary },
+  { key: 'prescriptions', label: 'Prescriptions', emoji: 'document-text-outline', icon: 'document-text' as const, color: '#005f3a' },
+  { key: 'pharmacy', label: 'Pharmacy', emoji: 'medkit-outline', icon: 'medkit' as const, color: '#006e2f' },
+  { key: 'delivery', label: 'Health Delivery', emoji: 'car-outline', icon: 'car' as const, color: '#4b5264' },
 ];
 
 // ============================================
@@ -76,7 +78,11 @@ const HEALTH_FILTERS: { key: HealthFilter; label: string; icon: keyof typeof Ion
 // MAIN COMPONENT
 // ============================================
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function HealthScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -473,7 +479,7 @@ function PharmacyCard({
 // ============================================
 // STYLES
 // ============================================
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.surface,

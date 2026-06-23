@@ -5,7 +5,7 @@
 // StatusBadge, and Reanimated animations
 // ============================================
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -35,7 +35,9 @@ import * as Location from 'expo-location';
 import { useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { locationService } from '@/src/services/location.service';
-import { COLORS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
+import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
 import { StatusBadge } from '@/src/components/StatusBadge';
@@ -63,6 +65,9 @@ const TASK_FLOW: Record<TaskStatus, TaskStatus | null> = {
 
 export default function DriverTaskScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const params = useLocalSearchParams<{ taskId: string }>();
   const { latitude, longitude } = useLocationStore();
 
@@ -583,7 +588,7 @@ export default function DriverTaskScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

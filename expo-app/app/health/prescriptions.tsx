@@ -5,7 +5,7 @@
 // Stitch Design System — Material Design 3 (light theme, primary #005f3a)
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -26,7 +26,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { pickImage, ImagePickerResult } from '@/src/utils/imagePicker';
 
@@ -53,11 +55,11 @@ interface Prescription {
 // ============================================
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: COLORS.warning,
-  VERIFIED: COLORS.success,
-  REJECTED: COLORS.error,
-  EXPIRED: COLORS.outline,
-  UNKNOWN: COLORS.outline,
+  PENDING: '#F59E0B',
+  VERIFIED: '#006e2f',
+  REJECTED: '#ba1a1a',
+  EXPIRED: '#6f7a71',
+  UNKNOWN: '#6f7a71',
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -71,7 +73,11 @@ const STATUS_LABELS: Record<string, string> = {
 // MAIN COMPONENT
 // ============================================
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function PrescriptionsScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -540,7 +546,7 @@ function PrescriptionCard({ prescription, onImagePress, formatDate }: Prescripti
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

@@ -8,7 +8,7 @@
 // CONNECTED TO BACKEND API — No mock data
 // ============================================
 
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -39,7 +39,9 @@ import Animated, {
   cancelAnimation,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard, GradientButton } from '@/src/components';
 import { api } from '@/src/services/api';
 import { useAuthStore } from '@/src/store/authStore';
@@ -171,7 +173,7 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded, disab
             end={{ x: 1, y: 1 }}
             style={styles.sosButtonGradient}
           >
-            <Ionicons name="alert" size={40} color={COLORS.onError} />
+            <Ionicons name="alert" size={40} color={'#ffffff'} />
             <Text style={styles.sosButtonText}>SOS</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -184,7 +186,11 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded, disab
 // MAIN COMPONENT
 // ============================================
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function SosScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
@@ -752,7 +758,7 @@ export default function SosScreen() {
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

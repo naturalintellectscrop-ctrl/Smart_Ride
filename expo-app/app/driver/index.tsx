@@ -7,7 +7,7 @@
 // glass/gradient, Ride request cards, Accept/Decline
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -38,24 +38,20 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import {
-  COLORS,
-  GRADIENTS,
-  TASK_STATUS_COLORS,
-  TASK_STATUS_LABELS,
-  DEFAULT_LOCATION,
-  TYPOGRAPHY,
-  SPACING,
-  RADIUS,
-  SHADOWS,
-} from '@/src/constants';
+import { GRADIENTS, TASK_STATUS_COLORS, TASK_STATUS_LABELS, DEFAULT_LOCATION, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
 import { GlowHeader } from '@/src/components/GlowHeader';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Task, Rider } from '@/src/types';
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function DriverHomeScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const { user } = useAuthStore();
   const { incomingRequest, setIncomingRequest, clearIncomingRequest } = useTaskStore();
@@ -705,7 +701,7 @@ function AnimatedPressable({ children, onPress, disabled }: { children: React.Re
 // STYLESHEET
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   // Root
   root: {
     flex: 1,

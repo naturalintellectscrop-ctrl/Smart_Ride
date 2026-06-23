@@ -4,7 +4,7 @@
 // Health order management with status tabs
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,17 +35,21 @@ const ORDER_TABS: { key: OrderTab; label: string }[] = [
 ];
 
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: COLORS.warning,
-  ORDER_CREATED: COLORS.info,
+  PENDING: '#F59E0B',
+  ORDER_CREATED: '#4b5264',
   PROCESSING: '#F97316',
   PREPARING: '#F97316',
-  COMPLETED: COLORS.success,
-  DELIVERED: COLORS.success,
-  READY_FOR_PICKUP: COLORS.primary,
-  CANCELLED: COLORS.error,
+  COMPLETED: '#006e2f',
+  DELIVERED: '#006e2f',
+  READY_FOR_PICKUP: '#005f3a',
+  CANCELLED: '#ba1a1a',
 };
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function PharmacistOrdersScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<OrderTab>('ALL');
@@ -186,7 +192,7 @@ export default function PharmacistOrdersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

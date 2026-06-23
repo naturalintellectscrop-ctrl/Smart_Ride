@@ -32,7 +32,9 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
 import { useLocationStore } from '@/src/store/locationStore';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 
 // ============================================
 // TYPES
@@ -57,7 +59,11 @@ const PRESET_LABELS = [
 // ============================================
 // MAIN SCREEN
 // ============================================
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function SavedAddressesScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -621,7 +627,7 @@ function AddressCard({ address, icon, onEdit, onDelete, onSetDefault }: AddressC
 // ============================================
 // STYLES
 // ============================================
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: COLORS.background,

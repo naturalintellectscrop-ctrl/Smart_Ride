@@ -6,8 +6,9 @@
 // ============================================
 
 import React from 'react';
-import { View, StyleSheet, ViewStyle } from 'react-native';
-import { COLORS, SPACING, RADIUS, SHADOWS } from '../constants';
+import { View, ViewStyle } from 'react-native';
+import { SPACING, RADIUS, SHADOWS } from '../constants';
+import { useTheme } from '../context/theme-context';
 
 interface GlassCardProps {
   children: React.ReactNode;
@@ -18,23 +19,28 @@ interface GlassCardProps {
   noBorder?: boolean;
 }
 
-export function GlassCard({ 
-  children, 
-  style, 
-  variant = 'default', 
+// Theme-aware card. In light mode it matches the old static surfaces exactly
+// (no regression); in dark mode it uses dark surfaces so any screen's themed
+// text stays readable on the card without needing per-card overrides.
+export function GlassCard({
+  children,
+  style,
+  variant = 'default',
   padding = SPACING.md,
   borderRadius = RADIUS.xl,
   noBorder = false,
 }: GlassCardProps) {
-  const variantStyle = getVariantStyle(variant);
+  const { colors } = useTheme();
+  // light: backgroundElevated=#ffffff, backgroundSecondary=#edeeef (== old values)
+  const backgroundColor = variant === 'accent' || variant === 'cyan'
+    ? colors.backgroundSecondary
+    : colors.backgroundElevated;
 
   return (
     <View
       style={[
-        styles.card,
-        { padding, borderRadius },
-        variantStyle,
-        noBorder && styles.noBorder,
+        variant === 'elevated' ? SHADOWS.active : SHADOWS.card,
+        { backgroundColor, padding, borderRadius, borderWidth: noBorder ? 0 : 1, borderColor: colors.border },
         style,
       ]}
     >
@@ -42,41 +48,3 @@ export function GlassCard({
     </View>
   );
 }
-
-function getVariantStyle(variant: string): ViewStyle {
-  switch (variant) {
-    case 'elevated':
-      return {
-        backgroundColor: COLORS.surfaceContainerLowest,
-        ...SHADOWS.active,
-        borderColor: COLORS.outlineVariant,
-        borderWidth: 1,
-      };
-    case 'accent':
-      return {
-        backgroundColor: COLORS.surfaceContainerLow,
-        borderColor: COLORS.outlineVariant,
-        borderWidth: 1,
-      };
-    case 'cyan':
-      return {
-        backgroundColor: COLORS.surfaceContainerLow,
-        borderColor: COLORS.outlineVariant,
-        borderWidth: 1,
-      };
-    default:
-      return {};
-  }
-}
-
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
-  },
-  noBorder: {
-    borderWidth: 0,
-  },
-});

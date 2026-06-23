@@ -6,7 +6,7 @@
 // Package size selector, Price estimate card, CTA button
 // ============================================
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -27,7 +27,9 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useLocationStore, useTaskStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, GRADIENTS } from '@/src/constants';
+import { PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, GRADIENTS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { PaymentMethod } from '@/src/types';
 import { GlowHeader, GlassCard, GradientButton, IconInput } from '@/src/components';
 
@@ -77,7 +79,7 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
     vehicleLabel: 'Motorcycle',
     estimatedTime: '15-30 min',
     icon: 'bicycle',
-    iconColor: COLORS.primary,
+    iconColor: '#005f3a',
   },
   {
     id: 'CAR',
@@ -87,7 +89,7 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
     vehicleLabel: 'Car',
     estimatedTime: '30-45 min',
     icon: 'car',
-    iconColor: COLORS.primaryContainer,
+    iconColor: '#0e7a4d',
   },
   {
     id: 'STANDARD',
@@ -97,7 +99,7 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
     vehicleLabel: 'Van/Truck',
     estimatedTime: '1-3 hours',
     icon: 'bus',
-    iconColor: COLORS.tertiary,
+    iconColor: '#4b5264',
   },
 ];
 
@@ -140,7 +142,11 @@ function calculateFare(distanceKm: number): number {
 // MAIN COMPONENT
 // ============================================
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function DeliveryScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const { user } = useAuthStore();
   const { latitude, longitude, address, getCurrentLocation } = useLocationStore();
@@ -1035,7 +1041,7 @@ function StepConfirm({
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

@@ -6,7 +6,7 @@
 // Wired to real API via useMerchantStore
 // ============================================
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -23,13 +23,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useMerchantStore } from '@/src/store';
 import { MerchantOrder } from '@/src/types';
-import {
-  COLORS,
-  TYPOGRAPHY,
-  SPACING,
-  RADIUS,
-  SHADOWS,
-} from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
 import { GlowHeader } from '@/src/components/GlowHeader';
@@ -48,15 +44,15 @@ const ORDER_TABS: { key: OrderTab; label: string; icon: keyof typeof Ionicons.gl
 ];
 
 const ORDER_STATUS_COLORS: Record<string, string> = {
-  PENDING: COLORS.tertiary,
+  PENDING: '#4b5264',
   NEW: '#F59E0B',
-  CONFIRMED: COLORS.primary,
-  PREPARING: COLORS.primaryContainer,
-  READY: COLORS.secondary,
-  COMPLETED: COLORS.primary,
-  DELIVERED: COLORS.primary,
-  CANCELLED: COLORS.error,
-  REJECTED: COLORS.error,
+  CONFIRMED: '#005f3a',
+  PREPARING: '#0e7a4d',
+  READY: '#006e2f',
+  COMPLETED: '#005f3a',
+  DELIVERED: '#005f3a',
+  CANCELLED: '#ba1a1a',
+  REJECTED: '#ba1a1a',
 };
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
@@ -105,7 +101,11 @@ function formatRelativeTime(dateStr: string): string {
 // MAIN SCREEN
 // ============================================
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function MerchantDashboardScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
@@ -616,7 +616,7 @@ function OrderCard({
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.surface,

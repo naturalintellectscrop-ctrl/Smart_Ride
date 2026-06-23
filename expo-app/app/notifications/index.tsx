@@ -6,7 +6,7 @@
 // Connected to real API
 // ============================================
 
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,7 +29,9 @@ import Animated, {
   Layout,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { COLORS, GRADIENTS, NOTIFICATION_TYPES, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { GRADIENTS, NOTIFICATION_TYPES, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { api } from '@/src/services';
 import { GlassCard, GradientButton, StatusBadge } from '@/src/components';
 
@@ -63,49 +65,49 @@ const NOTIFICATION_CONFIG: Record<string, {
 }> = {
   RIDE_UPDATE: {
     icon: 'car-outline',
-    color: COLORS.serviceBoda,
+    color: '#005f3a',
     colorDim: 'rgba(16, 185, 129, 0.1)',
     colorBorder: 'rgba(16, 185, 129, 0.2)',
     label: 'Ride',
   },
   ORDER_UPDATE: {
     icon: 'restaurant-outline',
-    color: COLORS.serviceFood,
+    color: '#006e2f',
     colorDim: 'rgba(249, 115, 22, 0.1)',
     colorBorder: 'rgba(249, 115, 22, 0.2)',
     label: 'Order',
   },
   PAYMENT: {
     icon: 'card-outline',
-    color: COLORS.serviceCar,
+    color: '#0e7a4d',
     colorDim: 'rgba(59, 130, 246, 0.1)',
     colorBorder: 'rgba(59, 130, 246, 0.2)',
     label: 'Payment',
   },
   PROMO: {
     icon: 'pricetag-outline',
-    color: COLORS.serviceShop,
+    color: '#4b5264',
     colorDim: 'rgba(139, 92, 246, 0.1)',
     colorBorder: 'rgba(139, 92, 246, 0.2)',
     label: 'Promo',
   },
   SOS: {
     icon: 'alert-circle-outline',
-    color: COLORS.error,
+    color: '#ba1a1a',
     colorDim: 'rgba(239, 68, 68, 0.1)',
     colorBorder: 'rgba(239, 68, 68, 0.2)',
     label: 'Emergency',
   },
   CHAT: {
     icon: 'chatbubble-outline',
-    color: COLORS.secondary,
+    color: '#006e2f',
     colorDim: 'rgba(0, 212, 255, 0.1)',
     colorBorder: 'rgba(0, 212, 255, 0.2)',
     label: 'Chat',
   },
   SYSTEM: {
     icon: 'settings-outline',
-    color: COLORS.warning,
+    color: '#F59E0B',
     colorDim: 'rgba(245, 158, 11, 0.1)',
     colorBorder: 'rgba(245, 158, 11, 0.2)',
     label: 'System',
@@ -161,7 +163,11 @@ function mapApiNotification(raw: any): AppNotification {
 // MAIN COMPONENT
 // ============================================
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function NotificationsScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -483,7 +489,7 @@ function NotificationCard({
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

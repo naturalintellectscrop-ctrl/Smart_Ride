@@ -6,7 +6,7 @@
 // DESIGN: Dark theme with StyleSheet, GlassCard, GlowHeader
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,7 +29,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS, GRADIENTS, SPACING, RADIUS } from '@/src/constants';
+import { GRADIENTS, SPACING, RADIUS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { useCartStore, CartItem } from '@/src/store';
 import { GlassCard, GradientButton, ServiceIcon, StatusBadge } from '@/src/components';
 
@@ -59,7 +61,11 @@ interface Product {
   inStock: boolean;
 }
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function PharmacyDetailScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -447,7 +453,7 @@ function ProductCard({
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.surface,

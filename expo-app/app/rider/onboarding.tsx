@@ -5,7 +5,7 @@
 // Step 2 (Documents) now supports real image uploads via /uploads/documents.
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,7 +21,9 @@ import {
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,7 +78,7 @@ function DocumentUploadCard({
       </Text>
       {uploading ? (
         <View style={styles.docUploading}>
-          <ActivityIndicator size="small" color={COLORS.primary} />
+          <ActivityIndicator size="small" color={'#005f3a'} />
           <Text style={styles.docUploadingText}>Uploading...</Text>
         </View>
       ) : imageUrl ? (
@@ -84,18 +86,18 @@ function DocumentUploadCard({
           <Image source={{ uri: imageUrl }} style={styles.docImage} resizeMode="cover" />
           <View style={styles.docActions}>
               <TouchableOpacity onPress={onUpload} style={styles.docRetakeBtn}>
-              <Ionicons name="camera-outline" size={16} color={COLORS.primary} />
+              <Ionicons name="camera-outline" size={16} color={'#005f3a'} />
                 <Text style={styles.docRetakeText}>Retake</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={onRemove} style={styles.docRemoveBtn}>
-              <Ionicons name="trash-outline" size={16} color={COLORS.error} />
+              <Ionicons name="trash-outline" size={16} color={'#ba1a1a'} />
                 <Text style={styles.docRemoveText}>Remove</Text>
               </TouchableOpacity>
           </View>
         </View>
       ) : (
         <TouchableOpacity onPress={onUpload} style={styles.docUploadBtn} activeOpacity={0.7}>
-          <Ionicons name="cloud-upload-outline" size={32} color={COLORS.outline} />
+          <Ionicons name="cloud-upload-outline" size={32} color={'#6f7a71'} />
           <Text style={styles.docUploadText}>Tap to upload</Text>
           <Text style={styles.docUploadHint}>{hint || 'JPG, PNG up to 5MB'}</Text>
         </TouchableOpacity>
@@ -108,7 +110,12 @@ function DocumentUploadCard({
 // MAIN COMPONENT
 // ============================================
 
+let COLORS: ThemedColors;
+let styles: any;
+let reviewStyles: any;
+
 export default function RiderOnboardingScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); reviewStyles = createReviewStyles(COLORS); }
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [currentStep, setCurrentStep] = useState(1);
@@ -785,7 +792,7 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const reviewStyles = StyleSheet.create({
+const createReviewStyles = (COLORS: ThemedColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -810,7 +817,7 @@ const reviewStyles = StyleSheet.create({
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

@@ -5,7 +5,7 @@
 // GlowHeader, Category scroll, Store cards, Deals grid
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -25,7 +25,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { useCartStore } from '@/src/store';
 import { GlowHeader, GlassCard, GradientButton, IconInput } from '@/src/components';
 
@@ -57,18 +59,22 @@ interface CategoryItem {
 // ============================================
 
 const CATEGORIES: CategoryItem[] = [
-  { label: 'Groceries', emoji: 'nutrition', serviceKey: 'SHOPPING', customColor: COLORS.primary, apiType: 'GROCERY', icon: 'nutrition' },
+  { label: 'Groceries', emoji: 'nutrition', serviceKey: 'SHOPPING', customColor: '#005f3a', apiType: 'GROCERY', icon: 'nutrition' },
   { label: 'Electronics', emoji: 'phone-portrait', serviceKey: 'custom', customColor: '#3B82F6', apiType: 'RETAIL_STORE', icon: 'phone-portrait' },
   { label: 'Fashion', emoji: 'shirt', serviceKey: 'custom', customColor: '#EC4899', apiType: undefined, icon: 'shirt' },
   { label: 'Home', emoji: 'home', serviceKey: 'custom', customColor: '#F59E0B', apiType: 'GROCERY', icon: 'home' },
-  { label: 'More', emoji: '⋯', serviceKey: 'custom', customColor: COLORS.tertiary, apiType: undefined, icon: 'ellipsis-horizontal' },
+  { label: 'More', emoji: '⋯', serviceKey: 'custom', customColor: '#4b5264', apiType: undefined, icon: 'ellipsis-horizontal' },
 ];
 
 // ============================================
 // MAIN COMPONENT
 // ============================================
 
+let COLORS: ThemedColors;
+let styles: any;
+
 export default function ShoppingScreen() {
+  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -474,7 +480,7 @@ function MerchantCard({ merchant, onPress }: { merchant: Merchant; onPress: () =
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.surface,
