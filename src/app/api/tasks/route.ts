@@ -9,8 +9,8 @@ import {
   getPaginationParams 
 } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
-import { 
-  calculatePricing, 
+import {
+  calculatePricingAsync,
 } from '@/lib/api/pricing';
 import { 
   generateTaskNumber,
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
     const isNightTime = nowHour >= 22 || nowHour < 6;
     const isPeakHours = (nowHour >= 7 && nowHour <= 9) || (nowHour >= 17 && nowHour <= 19);
 
-    const pricing = calculatePricing({
+    const pricing = await calculatePricingAsync({
       taskType: validatedData.taskType as TaskType,
       distanceKm: validatedData.distanceKm,
       durationMinutes: validatedData.durationMin,

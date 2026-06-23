@@ -12,7 +12,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limit';
-import { calculatePricing } from '@/lib/api/pricing';
+import { calculatePricingAsync } from '@/lib/api/pricing';
+import { getSlaMinutes } from '@/lib/api/sla';
 import { TaskType } from '@prisma/client';
 
 const RIDE_TASK_TYPES: TaskType[] = ['SMART_BODA_RIDE', 'SMART_CAR_RIDE'];
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
   }> = {};
 
   for (const taskType of RIDE_TASK_TYPES) {
-    const breakdown = calculatePricing({
+    const breakdown = await calculatePricingAsync({
       taskType,
       distanceKm,
       durationMinutes: durationMin,
@@ -75,10 +76,17 @@ export async function GET(request: NextRequest) {
     };
   }
 
+  // SLA targets per ride type (admin-configurable via SLAConfig).
+  const sla: Record<string, number> = {};
+  for (const taskType of RIDE_TASK_TYPES) {
+    sla[taskType] = await getSlaMinutes(taskType);
+  }
+
   return NextResponse.json({
     success: true,
     data: {
       estimates,
+      sla,
       distanceKm,
       durationMin,
       isNightTime,

@@ -1,4 +1,5 @@
 import { TaskType } from '@prisma/client';
+import { db } from '@/lib/db';
 
 interface PricingInput {
   taskType: TaskType;
@@ -79,12 +80,93 @@ const PRICING_CONFIG = {
   },
 };
 
+type RateConfig = {
+  baseFare: number;
+  perKmRate: number;
+  perMinuteRate: number;
+  perKgRate?: number;
+  minimumFare: number;
+  maximumFare?: number;
+  platformCommissionPercent: number;
+  serviceFeePercent: number;
+  nightSurchargePercent: number;
+  peakSurchargePercent: number;
+};
+
+// ---- Admin-configurable pricing (DB PricingConfig) with hardcoded fallback ----
+// calculatePricing() stays synchronous and uses the hardcoded defaults (safe,
+// used by tests / any sync caller). calculatePricingAsync() merges the
+// admin-editable PricingConfig rows over those defaults so changing fares in the
+// dashboard actually changes what riders are charged. Results are cached briefly
+// to avoid a DB hit on every fare calculation.
+
+const CONFIG_TTL_MS = 60_000;
+let configCache: { map: Record<string, Partial<RateConfig>>; expires: number } | null = null;
+
+// Percent fields may be stored as a fraction (0.15) or a whole number (15).
+const normPct = (v: number | null | undefined): number | undefined =>
+  v == null ? undefined : v > 1 ? v / 100 : v;
+
+async function loadDbPricing(): Promise<Record<string, Partial<RateConfig>>> {
+  if (configCache && configCache.expires > Date.now()) return configCache.map;
+  const map: Record<string, Partial<RateConfig>> = {};
+  try {
+    const rows = await db.pricingConfig.findMany();
+    for (const r of rows) {
+      map[r.serviceType] = {
+        baseFare: Number(r.baseFare),
+        perKmRate: Number(r.perKmRate),
+        perMinuteRate: r.perMinuteRate != null ? Number(r.perMinuteRate) : undefined,
+        minimumFare: Number(r.minimumFare),
+        maximumFare: r.maximumFare != null ? Number(r.maximumFare) : undefined,
+        platformCommissionPercent: normPct(r.platformCommissionPercent),
+        serviceFeePercent: normPct(r.serviceFeePercent),
+        nightSurchargePercent: normPct(r.nightSurchargePercent),
+        peakSurchargePercent: normPct(r.peakSurchargePercent),
+      };
+    }
+  } catch (e) {
+    // DB unavailable / table missing → fall back to hardcoded defaults only.
+    console.warn('[pricing] PricingConfig load failed, using defaults:', (e as Error).message);
+  }
+  configCache = { map, expires: Date.now() + CONFIG_TTL_MS };
+  return map;
+}
+
+/** Merge admin DB overrides over the hardcoded defaults for a task type. */
+function mergeConfig(taskType: TaskType, dbMap: Record<string, Partial<RateConfig>>): RateConfig {
+  const base = PRICING_CONFIG[taskType] as RateConfig;
+  const override = dbMap[taskType] || {};
+  const merged: RateConfig = { ...base };
+  for (const [k, v] of Object.entries(override)) {
+    if (v != null && !Number.isNaN(v as number)) (merged as any)[k] = v;
+  }
+  return merged;
+}
+
+/** Force the next fare calc to reload config from the DB (e.g., after admin edit). */
+export function invalidatePricingCache(): void {
+  configCache = null;
+}
+
 /**
- * Calculate pricing for a task based on type and parameters
+ * Admin-aware pricing: uses DB PricingConfig (cached) merged over defaults.
+ * Prefer this in API routes so admin fare settings take effect.
+ */
+export async function calculatePricingAsync(input: PricingInput): Promise<PricingBreakdown> {
+  const dbMap = await loadDbPricing();
+  return computePricing(input, mergeConfig(input.taskType, dbMap));
+}
+
+/**
+ * Calculate pricing for a task based on type and parameters (synchronous,
+ * hardcoded defaults). Kept for backward compatibility / sync callers.
  */
 export function calculatePricing(input: PricingInput): PricingBreakdown {
-  const config = PRICING_CONFIG[input.taskType];
-  
+  return computePricing(input, PRICING_CONFIG[input.taskType] as RateConfig);
+}
+
+function computePricing(input: PricingInput, config: RateConfig): PricingBreakdown {
   // Base calculations
   const baseFare = config.baseFare;
   const distanceFare = Math.round(input.distanceKm * config.perKmRate);
@@ -116,9 +198,12 @@ export function calculatePricing(input: PricingInput): PricingBreakdown {
   // Calculate total
   let totalAmount = totalBeforeFees + serviceFee;
   
-  // Apply minimum fare
+  // Apply minimum fare (and optional admin-configured maximum cap)
   totalAmount = Math.max(totalAmount, config.minimumFare);
-  
+  if (config.maximumFare && config.maximumFare > 0) {
+    totalAmount = Math.min(totalAmount, config.maximumFare);
+  }
+
   // Calculate commission and rider earnings
   const platformCommission = Math.round(totalAmount * config.platformCommissionPercent);
   const riderEarnings = totalAmount - platformCommission;
