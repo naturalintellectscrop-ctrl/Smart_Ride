@@ -70,61 +70,103 @@ export async function GET(request: NextRequest) {
 }
 
 const PHOTON_BASE = 'https://photon.komoot.io';
+const GEOAPIFY_BASE = 'https://api.geoapify.com/v1/geocode/autocomplete';
+
+/** fetch with an abort timeout so a slow provider can't hang the request. */
+async function fetchWithTimeout(url: string, opts: RequestInit = {}, ms = 6000): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+/** Photon (komoot public instance) — free, no key. Default POI provider. */
+async function searchPhoton(query: string, pLat: number, pLng: number): Promise<UnifiedPlace[]> {
+  const params = new URLSearchParams({ q: query, limit: '10', lang: 'en' });
+  if (!Number.isNaN(pLat) && !Number.isNaN(pLng)) {
+    params.set('lat', String(pLat));
+    params.set('lon', String(pLng));
+  }
+  const res = await fetchWithTimeout(`${PHOTON_BASE}/api/?${params}`, {
+    headers: { 'User-Agent': 'SmartRide/1.0 (smartrideug.vercel.app)' },
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.features || [])
+    .filter((f: any) => f?.properties?.countrycode === 'UG' && Array.isArray(f?.geometry?.coordinates))
+    .map((f: any): UnifiedPlace => {
+      const p = f.properties || {};
+      const [lng, lat] = f.geometry.coordinates;
+      const name = p.name || p.street || p.city || 'Unknown place';
+      const streetLine = p.housenumber && p.street ? `${p.street} ${p.housenumber}` : p.street;
+      const addr = [streetLine, p.district, p.city, p.state].filter(Boolean).join(', ');
+      const fullAddress = addr ? `${name}, ${addr}` : `${name}, Uganda`;
+      return {
+        id: `osm-${p.osm_type || 'x'}${p.osm_id || Math.random().toString(36).slice(2)}`,
+        name, address: addr, fullAddress, lat, lng,
+        place_name: fullAddress, center: [lng, lat],
+        category: p.osm_value || p.osm_key, source: 'osm', relevance: 1,
+      } as UnifiedPlace;
+    });
+}
+
+/** Geoapify — production OSM search (free tier + key, has an SLA). */
+async function searchGeoapify(query: string, pLat: number, pLng: number, key: string): Promise<UnifiedPlace[]> {
+  const params = new URLSearchParams({
+    text: query, limit: '10', apiKey: key, filter: 'countrycode:ug', format: 'geojson',
+  });
+  if (!Number.isNaN(pLat) && !Number.isNaN(pLng)) params.set('bias', `proximity:${pLng},${pLat}`);
+  const res = await fetchWithTimeout(`${GEOAPIFY_BASE}?${params}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.features || [])
+    .filter((f: any) => Array.isArray(f?.geometry?.coordinates))
+    .map((f: any): UnifiedPlace => {
+      const p = f.properties || {};
+      const [lng, lat] = f.geometry.coordinates;
+      const name = p.name || p.address_line1 || p.formatted || 'Unknown place';
+      const fullAddress = p.formatted || name;
+      return {
+        id: `geoapify-${p.place_id || Math.random().toString(36).slice(2)}`,
+        name, address: p.address_line2 || '', fullAddress, lat, lng,
+        place_name: fullAddress, center: [lng, lat],
+        category: p.category, source: 'osm', relevance: 1,
+      } as UnifiedPlace;
+    });
+}
+
+/**
+ * POI search via OpenStreetMap. Uses Geoapify when GEOAPIFY_API_KEY is set
+ * (production, SLA-backed); otherwise the free public Photon instance. Either
+ * failure falls back to Photon, then to an empty list — never throws.
+ */
+async function fetchOsmPois(query: string, pLat: number, pLng: number): Promise<UnifiedPlace[]> {
+  const key = process.env.GEOAPIFY_API_KEY;
+  try {
+    if (key) {
+      const r = await searchGeoapify(query, pLat, pLng, key);
+      if (r.length > 0) return r;
+    }
+    return await searchPhoton(query, pLat, pLng);
+  } catch (e) {
+    console.error('[geocoding] OSM POI provider failed:', (e as Error).message);
+    try { return await searchPhoton(query, pLat, pLng); } catch { return []; }
+  }
+}
 
 async function handleForwardGeocode(
   query: string,
   options: { token: string; types: string; limit: number; country: string; proximity: string },
 ) {
-  // proximity is "lng,lat" — Photon wants lat/lon separately.
+  // proximity is "lng,lat"; providers want lat/lng separately.
   const [pLng, pLat] = options.proximity.split(',').map(Number);
 
-  // 1. Photon (OpenStreetMap) — the POI source. Real businesses, cafes, malls,
-  //    hospitals, fuel, pharmacies, landmarks across Uganda. No key, no hardcoding.
-  let photonPlaces: UnifiedPlace[] = [];
-  try {
-    const params = new URLSearchParams({
-      q: query,
-      limit: '10',
-      lang: 'en',
-    });
-    if (!Number.isNaN(pLat) && !Number.isNaN(pLng)) {
-      params.set('lat', String(pLat));
-      params.set('lon', String(pLng));
-    }
-    const res = await fetch(`${PHOTON_BASE}/api/?${params}`, {
-      headers: { 'User-Agent': 'SmartRide/1.0 (smartrideug.vercel.app)' },
-    });
-    if (res.ok) {
-      const data = await res.json();
-      photonPlaces = (data.features || [])
-        .filter((f: any) => f?.properties?.countrycode === 'UG' && Array.isArray(f?.geometry?.coordinates))
-        .map((f: any): UnifiedPlace => {
-          const p = f.properties || {};
-          const [lng, lat] = f.geometry.coordinates;
-          const name = p.name || p.street || p.city || 'Unknown place';
-          const streetLine = p.housenumber && p.street ? `${p.street} ${p.housenumber}` : p.street;
-          const addr = [streetLine, p.district, p.city, p.state].filter(Boolean).join(', ');
-          const fullAddress = addr ? `${name}, ${addr}` : `${name}, Uganda`;
-          return {
-            id: `photon-${p.osm_type || 'x'}${p.osm_id || Math.random().toString(36).slice(2)}`,
-            name,
-            address: addr,
-            fullAddress,
-            lat,
-            lng,
-            place_name: fullAddress,
-            center: [lng, lat],
-            category: p.osm_value || p.osm_key,
-            source: 'osm',
-            relevance: 1,
-          } as UnifiedPlace;
-        });
-    } else {
-      console.error('[geocoding] Photon error', res.status);
-    }
-  } catch (error) {
-    console.error('[geocoding] Photon fetch failed:', error);
-  }
+  // 1. OpenStreetMap POIs (Geoapify if keyed, else Photon) — real businesses,
+  //    cafes, malls, hospitals, fuel, pharmacies, landmarks. No hardcoding.
+  const photonPlaces: UnifiedPlace[] = await fetchOsmPois(query, pLat, pLng);
 
   // 2. Mapbox geocoding — supplements with any roads/addresses Photon missed.
   let mapboxPlaces: UnifiedPlace[] = [];
