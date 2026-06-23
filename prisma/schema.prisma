@@ -165,6 +165,7 @@ model Rider {
   isOnline           Boolean          @default(false)
   currentLatitude    Float?
   currentLongitude   Float?
+  geohash            String?
   lastLocationUpdate DateTime?
   rating             Float            @default(5.0)
   totalTrips         Int              @default(0)
@@ -197,6 +198,7 @@ model Rider {
   @@index([status])
   @@index([isOnline])
   @@index([currentLatitude, currentLongitude])
+  @@index([geohash])
 }
 
 model Vehicle {

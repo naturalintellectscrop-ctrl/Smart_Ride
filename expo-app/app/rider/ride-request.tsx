@@ -413,13 +413,7 @@ export default function RideRequestScreen() {
               : undefined
           }
           routeCoordinates={routeCoordinates.length > 0 ? routeCoordinates : undefined}
-          markers={nearbyDrivers.map((d) => ({
-            id: d.id,
-            latitude: d.latitude,
-            longitude: d.longitude,
-            color: COLORS.primary,
-            icon: selectedVehicle === 'CAR' ? 'car' : 'bicycle',
-          }))}
+          driverPoints={nearbyDrivers.map((d) => ({ latitude: d.latitude, longitude: d.longitude }))}
           showUserLocation
         />
 

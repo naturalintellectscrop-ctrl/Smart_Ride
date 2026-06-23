@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
+import { encodeGeohash, geohashNeighbors } from '@/lib/geo/geohash';
 import type { Prisma, VehicleType } from '@prisma/client';
 
 const AVG_URBAN_SPEED_KMH = 22; // Kampala mixed boda/car average
@@ -66,29 +67,85 @@ export async function GET(request: NextRequest) {
   };
   if (vehicleType) where.vehicleType = vehicleType;
 
+  const toDriver = (latitude: number, longitude: number, distanceKm: number, i: number) => ({
+    id: `drv-${i}`, // anonymous key only — never the real rider id
+    latitude,
+    longitude,
+    distanceKm: Math.round(distanceKm * 10) / 10,
+    etaMin: Math.max(1, Math.round((distanceKm / AVG_URBAN_SPEED_KMH) * 60)),
+  });
+
   await setServiceRoleContext();
   try {
-    const riders = await db.rider.findMany({
-      where,
-      select: { currentLatitude: true, currentLongitude: true },
-      take: 50,
-    });
+    let drivers: Array<ReturnType<typeof toDriver>> = [];
 
-    const drivers = riders
-      .filter((r) => r.currentLatitude != null && r.currentLongitude != null)
-      .map((r, i) => {
-        const distanceKm = haversineKm(lat, lng, r.currentLatitude!, r.currentLongitude!);
-        return {
-          id: `drv-${i}`, // anonymous key only — never the real rider id
-          latitude: r.currentLatitude!,
-          longitude: r.currentLongitude!,
-          distanceKm: Math.round(distanceKm * 10) / 10,
-          etaMin: Math.max(1, Math.round((distanceKm / AVG_URBAN_SPEED_KMH) * 60)),
-        };
-      })
-      .filter((d) => d.distanceKm <= radiusKm)
-      .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, 8);
+    // ---- Primary path: PostGIS ST_DWithin (accurate + index-backed) ----
+    // Falls back to a bounding-box scan if PostGIS isn't enabled yet.
+    try {
+      const radiusMeters = radiusKm * 1000;
+      const vehicleFilter = vehicleType ? `AND "vehicleType" = $4` : '';
+      const sql = `
+        SELECT "currentLatitude" AS lat, "currentLongitude" AS lng,
+          ST_Distance(
+            ST_SetSRID(ST_MakePoint("currentLongitude","currentLatitude"),4326)::geography,
+            ST_SetSRID(ST_MakePoint($1,$2),4326)::geography
+          ) AS dist_m
+        FROM "Rider"
+        WHERE "isOnline" = true AND "status" = 'APPROVED'
+          AND "currentLatitude" IS NOT NULL AND "currentLongitude" IS NOT NULL
+          ${vehicleFilter}
+          AND ST_DWithin(
+            ST_SetSRID(ST_MakePoint("currentLongitude","currentLatitude"),4326)::geography,
+            ST_SetSRID(ST_MakePoint($1,$2),4326)::geography,
+            $3
+          )
+        ORDER BY dist_m ASC
+        LIMIT 8;`;
+      const params: any[] = [lng, lat, radiusMeters];
+      if (vehicleType) params.push(vehicleType);
+
+      const rows = await db.$queryRawUnsafe<Array<{ lat: number; lng: number; dist_m: number }>>(sql, ...params);
+      drivers = rows.map((r, i) => toDriver(r.lat, r.lng, r.dist_m / 1000, i));
+    } catch (postgisErr) {
+      // Shared refinement: exact haversine sort/limit on a candidate set.
+      const refine = (
+        rows: Array<{ currentLatitude: number | null; currentLongitude: number | null }>,
+      ) =>
+        rows
+          .filter((r) => r.currentLatitude != null && r.currentLongitude != null)
+          .map((r) => ({ r, d: haversineKm(lat, lng, r.currentLatitude!, r.currentLongitude!) }))
+          .filter((x) => x.d <= radiusKm)
+          .sort((a, b) => a.d - b.d)
+          .slice(0, 8)
+          .map((x, i) => toDriver(x.r.currentLatitude!, x.r.currentLongitude!, x.d, i));
+
+      // ---- Tier 2: geohash-prefix pre-filter (uses the geohash index) ----
+      try {
+        const precision = radiusKm <= 1.2 ? 6 : 5;
+        const neighbors = geohashNeighbors(encodeGeohash(lat, lng, precision));
+        const ghRiders = await db.rider.findMany({
+          where: {
+            isOnline: true,
+            status: 'APPROVED',
+            ...(vehicleType ? { vehicleType } : {}),
+            OR: neighbors.map((g) => ({ geohash: { startsWith: g } })),
+          },
+          select: { currentLatitude: true, currentLongitude: true },
+          take: 100,
+        });
+        drivers = refine(ghRiders);
+        if (drivers.length === 0) throw new Error('geohash returned none — try bbox');
+      } catch {
+        // ---- Tier 3: bounding-box scan (always works, no special columns) ----
+        console.warn('[riders/nearby] using bounding-box fallback');
+        const riders = await db.rider.findMany({
+          where,
+          select: { currentLatitude: true, currentLongitude: true },
+          take: 50,
+        });
+        drivers = refine(riders);
+      }
+    }
 
     return NextResponse.json({
       success: true,

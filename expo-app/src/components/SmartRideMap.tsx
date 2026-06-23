@@ -54,6 +54,9 @@ export interface SmartRideMapProps {
   onMapIdle?: (center: { latitude: number; longitude: number }) => void;
   showCenterPin?: boolean;
   centerPinType?: 'pickup' | 'dropoff';
+  // Driver points rendered as a CLUSTERED Mapbox source (dots merge into a
+  // numbered bubble when zoomed out / dense). Use for live nearby drivers.
+  driverPoints?: Array<{ latitude: number; longitude: number }>;
 }
 
 // ============================================
@@ -246,7 +249,21 @@ function MapboxMapImpl(props: SmartRideMapProps) {
     onMapIdle,
     showCenterPin,
     centerPinType = 'pickup',
+    driverPoints,
   } = props;
+
+  // GeoJSON for clustered driver points
+  const driverGeoJSON = driverPoints && driverPoints.length > 0
+    ? {
+        type: 'FeatureCollection' as const,
+        features: driverPoints.map((d, i) => ({
+          type: 'Feature' as const,
+          id: `drv-${i}`,
+          properties: {},
+          geometry: { type: 'Point' as const, coordinates: [d.longitude, d.latitude] },
+        })),
+      }
+    : null;
 
   const cameraRef = useRef<any>(null);
 
@@ -373,6 +390,52 @@ function MapboxMapImpl(props: SmartRideMapProps) {
           <SimpleMarker color={marker.color} icon={marker.icon} />
         </MapboxGL.PointAnnotation>
       ))}
+
+      {/* Clustered live driver points (turf-style clustering via Mapbox GL) */}
+      {driverGeoJSON && (
+        <MapboxGL.ShapeSource
+          id="driversSource"
+          shape={driverGeoJSON}
+          cluster
+          clusterRadius={50}
+          clusterMaxZoomLevel={14}
+        >
+          {/* Cluster bubble */}
+          <MapboxGL.CircleLayer
+            id="driverClusters"
+            filter={['has', 'point_count']}
+            style={{
+              circleColor: COLORS.primary,
+              circleOpacity: 0.85,
+              circleRadius: ['step', ['get', 'point_count'], 16, 5, 20, 10, 26],
+              circleStrokeWidth: 2,
+              circleStrokeColor: '#FFFFFF',
+            }}
+          />
+          {/* Cluster count label */}
+          <MapboxGL.SymbolLayer
+            id="driverClusterCount"
+            filter={['has', 'point_count']}
+            style={{
+              textField: ['get', 'point_count_abbreviated'],
+              textSize: 12,
+              textColor: '#FFFFFF',
+              textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
+            }}
+          />
+          {/* Individual driver dot */}
+          <MapboxGL.CircleLayer
+            id="driverPoint"
+            filter={['!', ['has', 'point_count']]}
+            style={{
+              circleColor: COLORS.primary,
+              circleRadius: 7,
+              circleStrokeWidth: 2,
+              circleStrokeColor: '#FFFFFF',
+            }}
+          />
+        </MapboxGL.ShapeSource>
+      )}
     </MapboxGL.MapView>
 
       {/* Uber-style fixed center pin (sits above the map, points at map center) */}

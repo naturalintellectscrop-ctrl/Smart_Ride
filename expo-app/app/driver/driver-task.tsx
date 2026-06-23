@@ -41,6 +41,7 @@ import { GradientButton } from '@/src/components/GradientButton';
 import { StatusBadge } from '@/src/components/StatusBadge';
 import { Task, TaskStatus } from '@/src/types';
 import { firstName } from '@/src/utils/formatName';
+import { isWithinGeofence, ARRIVAL_RADIUS_M } from '@/src/utils/geofence';
 import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -68,6 +69,8 @@ export default function DriverTaskScreen() {
   const [task, setTask] = useState<Task | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [nearDestination, setNearDestination] = useState(false);
+  const arrivalFiredRef = useRef<Set<string>>(new Set());
 
   // Reanimated shared values
   const pulseScale = useSharedValue(1);
@@ -141,6 +144,60 @@ export default function DriverTaskScreen() {
       locationService.stopTracking();
     };
   }, [task?.status]);
+
+  // Geofencing: watch the driver's live position and auto-detect arrival at the
+  // pickup (ACCEPTED → ARRIVED) and reaching the destination (banner while
+  // IN_TRANSIT). Foreground watch — pairs with the background heartbeat above.
+  useEffect(() => {
+    if (!task) return;
+    const watchStatuses = ['ACCEPTED', 'IN_TRANSIT'];
+    if (!watchStatuses.includes(task.status)) {
+      setNearDestination(false);
+      return;
+    }
+
+    let sub: Location.LocationSubscription | null = null;
+    let cancelled = false;
+
+    (async () => {
+      const { status } = await Location.getForegroundPermissionsAsync();
+      if (status !== 'granted' || cancelled) return;
+      sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, distanceInterval: 15, timeInterval: 5000 },
+        (loc) => {
+          if (cancelled || !task) return;
+          const here = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+
+          if (task.status === 'ACCEPTED' && task.pickupLatitude != null && task.pickupLongitude != null) {
+            const atPickup = isWithinGeofence(
+              here,
+              { latitude: task.pickupLatitude, longitude: task.pickupLongitude },
+              ARRIVAL_RADIUS_M,
+            );
+            if (atPickup && !arrivalFiredRef.current.has(`pickup-${task.id}`)) {
+              arrivalFiredRef.current.add(`pickup-${task.id}`);
+              updateStatus('ARRIVED' as TaskStatus); // auto-arrival like Uber
+            }
+          }
+
+          if (task.status === 'IN_TRANSIT' && task.dropoffLatitude != null && task.dropoffLongitude != null) {
+            setNearDestination(
+              isWithinGeofence(
+                here,
+                { latitude: task.dropoffLatitude, longitude: task.dropoffLongitude },
+                ARRIVAL_RADIUS_M,
+              ),
+            );
+          }
+        },
+      );
+    })();
+
+    return () => {
+      cancelled = true;
+      sub?.remove();
+    };
+  }, [task?.status, task?.id]);
 
   // Animated style for the pulsing dot
   const pulseAnimatedStyle = useAnimatedStyle(() => ({
@@ -464,6 +521,14 @@ export default function DriverTaskScreen() {
               </Animated.View>
             )}
 
+            {/* Geofence: reached destination banner */}
+            {nearDestination && task.status === 'IN_TRANSIT' && (
+              <View style={styles.arrivalBanner}>
+                <Ionicons name="flag" size={16} color={COLORS.primary} />
+                <Text style={styles.arrivalBannerText}>You've reached the destination — complete the trip.</Text>
+              </View>
+            )}
+
             {/* Actions */}
             <Animated.View
               entering={FadeInUp.duration(300).delay(500)}
@@ -729,6 +794,22 @@ const styles = StyleSheet.create({
   },
   actionButtonWrapper: {
     flex: 1.5,
+  },
+  arrivalBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0, 95, 58, 0.12)',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginTop: 12,
+  },
+  arrivalBannerText: {
+    flex: 1,
+    color: COLORS.primary,
+    fontSize: 13,
+    fontWeight: '600',
   },
 
   // Completed

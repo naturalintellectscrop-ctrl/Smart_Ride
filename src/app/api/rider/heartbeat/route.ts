@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
+import { encodeGeohash } from '@/lib/geo/geohash';
 import { z } from 'zod';
 
 // Heartbeat configuration
@@ -139,6 +140,20 @@ export async function POST(request: NextRequest) {
 
       return { rider: updatedRider, task: updatedTask, heartbeatLog };
     });
+
+    // Best-effort geohash update (separate from the transaction so it can't
+    // break heartbeats if the `geohash` column hasn't been added yet via
+    // `prisma db push`). Once the column exists, this populates it for the
+    // geohash-prefix proximity path in /api/riders/nearby.
+    try {
+      await db.$executeRawUnsafe(
+        `UPDATE "Rider" SET "geohash" = $1 WHERE "id" = $2`,
+        encodeGeohash(latitude, longitude, 7),
+        riderId,
+      );
+    } catch {
+      // column not present yet — ignore
+    }
 
     // Broadcast location update via realtime if a task is associated
     if (task_id && result.task) {
