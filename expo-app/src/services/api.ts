@@ -828,6 +828,24 @@ class ApiService {
     return this.request(`/tasks/fare-estimate?distanceKm=${distanceKm}&durationMin=${durationMin}`);
   }
 
+  /**
+   * Nearby online drivers around a point (for live dots + "nearest driver ETA").
+   * Returns anonymized positions only — no driver PII.
+   */
+  async getNearbyDrivers(
+    latitude: number,
+    longitude: number,
+    taskType?: string,
+  ): Promise<ApiResponse<{
+    drivers: Array<{ id: string; latitude: number; longitude: number; distanceKm: number; etaMin: number }>;
+    count: number;
+    nearestEtaMin: number | null;
+  }>> {
+    let url = `/riders/nearby?lat=${latitude}&lng=${longitude}`;
+    if (taskType) url += `&taskType=${taskType}`;
+    return this.request(url);
+  }
+
   // ==========================================
   // WALLET
   // ==========================================

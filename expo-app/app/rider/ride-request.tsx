@@ -72,7 +72,10 @@ export default function RideRequestScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ type?: 'BODA' | 'CAR' }>();
   const insets = useSafeAreaInsets();
-  const { latitude, longitude, address, getCurrentLocation } = useLocationStore();
+  const {
+    latitude, longitude, address, getCurrentLocation,
+    pickupLocation, dropoffLocation, clearPickupLocation, clearDropoffLocation,
+  } = useLocationStore();
   const { setPendingTask } = useTaskStore();
   const { user } = useAuthStore();
 
@@ -111,6 +114,10 @@ export default function RideRequestScreen() {
   const [carFare, setCarFare]   = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
+  // Nearby drivers (live dots + nearest ETA)
+  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{ id: string; latitude: number; longitude: number; etaMin: number }>>([]);
+  const [nearestEtaMin, setNearestEtaMin] = useState<number | null>(null);
+
   // Loading
   const [isRequesting, setIsRequesting] = useState(false);
 
@@ -125,6 +132,55 @@ export default function RideRequestScreen() {
     loadRecentPlaces();
     loadPopularPlaces();
   }, []);
+
+  // Apply a pickup chosen on the map (location-picker writes it to the store).
+  useEffect(() => {
+    if (!pickupLocation) return;
+    setPickupAddress(pickupLocation.address);
+    setPickupLatitude(pickupLocation.latitude);
+    setPickupLongitude(pickupLocation.longitude);
+    clearPickupLocation();
+    // If a destination already exists, refresh route + fares with the new origin.
+    if (dropoffLatitude != null && dropoffLongitude != null) {
+      fetchRouteAndFares(dropoffLatitude, dropoffLongitude, pickupLocation.latitude, pickupLocation.longitude);
+    } else if (step === 'pickup') {
+      setStep('dropoff');
+    }
+  }, [pickupLocation]);
+
+  // Fetch nearby online drivers around the pickup, refreshed when the rider
+  // changes vehicle type (boda vs car have different pools / ETAs).
+  const fetchNearbyDrivers = async (lat: number, lng: number, vehicle: 'BODA' | 'CAR') => {
+    try {
+      const taskType = vehicle === 'CAR' ? 'SMART_CAR_RIDE' : 'SMART_BODA_RIDE';
+      const res = await api.getNearbyDrivers(lat, lng, taskType);
+      if (res.success && res.data) {
+        setNearbyDrivers(res.data.drivers.map((d) => ({
+          id: d.id, latitude: d.latitude, longitude: d.longitude, etaMin: d.etaMin,
+        })));
+        setNearestEtaMin(res.data.nearestEtaMin);
+      }
+    } catch {
+      // non-fatal — dots/ETA just won't show
+    }
+  };
+
+  useEffect(() => {
+    if (pickupLatitude && pickupLongitude) {
+      fetchNearbyDrivers(pickupLatitude, pickupLongitude, selectedVehicle);
+    }
+  }, [pickupLatitude, pickupLongitude, selectedVehicle]);
+
+  // Apply a destination chosen on the map.
+  useEffect(() => {
+    if (!dropoffLocation) return;
+    setDropoffAddress(dropoffLocation.address);
+    setDropoffLatitude(dropoffLocation.latitude);
+    setDropoffLongitude(dropoffLocation.longitude);
+    clearDropoffLocation();
+    setStep('confirm');
+    fetchRouteAndFares(dropoffLocation.latitude, dropoffLocation.longitude);
+  }, [dropoffLocation]);
 
   // Load recently used destinations from device storage
   const loadRecentPlaces = async () => {
@@ -224,13 +280,20 @@ export default function RideRequestScreen() {
    * Fetch driving route from Mapbox and then get accurate fares from backend.
    * Called when the user confirms their dropoff location.
    */
-  const fetchRouteAndFares = async (destLat: number, destLng: number) => {
-    if (!pickupLatitude || !pickupLongitude) return;
+  const fetchRouteAndFares = async (
+    destLat: number,
+    destLng: number,
+    originLat?: number,
+    originLng?: number,
+  ) => {
+    const oLat = originLat ?? pickupLatitude;
+    const oLng = originLng ?? pickupLongitude;
+    if (!oLat || !oLng) return;
     setIsCalculating(true);
     try {
       // 1 — Get actual driving route (road distance + duration + polyline)
       const dirRes = await api.getDirections(
-        { latitude: pickupLatitude, longitude: pickupLongitude },
+        { latitude: oLat, longitude: oLng },
         { latitude: destLat, longitude: destLng },
       );
 
@@ -245,7 +308,7 @@ export default function RideRequestScreen() {
         setRouteCoordinates(dirRes.data.geometry);
       } else {
         // Fallback to Haversine if directions API fails
-        roadKm  = haversineKm(pickupLatitude, pickupLongitude, destLat, destLng);
+        roadKm  = haversineKm(oLat, oLng, destLat, destLng);
         driveMin = Math.round(roadKm * 3); // rough estimate: 3 min/km urban
         setDistance(roadKm);
         setDuration(driveMin);
@@ -350,6 +413,13 @@ export default function RideRequestScreen() {
               : undefined
           }
           routeCoordinates={routeCoordinates.length > 0 ? routeCoordinates : undefined}
+          markers={nearbyDrivers.map((d) => ({
+            id: d.id,
+            latitude: d.latitude,
+            longitude: d.longitude,
+            color: COLORS.primary,
+            icon: selectedVehicle === 'CAR' ? 'car' : 'bicycle',
+          }))}
           showUserLocation
         />
 
@@ -387,6 +457,7 @@ export default function RideRequestScreen() {
               onSelectPlace={selectPlace}
               popularPlaces={popularPlaces}
               recentPlaces={recentPlaces}
+              onPickOnMap={() => router.push('/location-picker?type=pickup' as any)}
               onUseCurrentLocation={() => {
                 setPickupAddress(address);
                 setPickupLatitude(latitude);
@@ -406,6 +477,7 @@ export default function RideRequestScreen() {
               onSelectPlace={selectPlace}
               popularPlaces={popularPlaces}
               recentPlaces={recentPlaces}
+              onPickOnMap={() => router.push('/location-picker?type=dropoff' as any)}
             />
           )}
 
@@ -427,6 +499,7 @@ export default function RideRequestScreen() {
               onRequestRide={handleRequestRide}
               isRequesting={isRequesting}
               currentRideType={currentRideType}
+              nearestEtaMin={nearestEtaMin}
             />
           )}
         </ScrollView>
@@ -508,6 +581,7 @@ function PickupStep({
   onSelectPlace,
   popularPlaces,
   recentPlaces,
+  onPickOnMap,
   onUseCurrentLocation,
 }: {
   pickupAddress: string;
@@ -518,6 +592,7 @@ function PickupStep({
   onSelectPlace: (place: PlaceResult) => void;
   popularPlaces: PlaceResult[];
   recentPlaces: PlaceResult[];
+  onPickOnMap: () => void;
   onUseCurrentLocation: () => void;
 }) {
   return (
@@ -557,6 +632,12 @@ function PickupStep({
         </View>
       </GlassCard>
 
+      {/* Set pickup on map (Uber-style center-pin picker) */}
+      <TouchableOpacity style={styles.setOnMapRow} onPress={onPickOnMap} activeOpacity={0.7}>
+        <Ionicons name="map-outline" size={18} color={COLORS.primary} />
+        <Text style={styles.setOnMapText}>Set pickup on map</Text>
+      </TouchableOpacity>
+
       {/* Search Results */}
       {isSearching && (
         <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.md }} />
@@ -592,6 +673,7 @@ function DropoffStep({
   onSelectPlace,
   popularPlaces,
   recentPlaces,
+  onPickOnMap,
 }: {
   pickupAddress: string;
   searchQuery: string;
@@ -601,6 +683,7 @@ function DropoffStep({
   onSelectPlace: (place: PlaceResult) => void;
   popularPlaces: PlaceResult[];
   recentPlaces: PlaceResult[];
+  onPickOnMap: () => void;
 }) {
   return (
     <View>
@@ -632,6 +715,12 @@ function DropoffStep({
           </View>
         </View>
       </GlassCard>
+
+      {/* Set destination on map (Uber-style center-pin picker) */}
+      <TouchableOpacity style={styles.setOnMapRow} onPress={onPickOnMap} activeOpacity={0.7}>
+        <Ionicons name="map-outline" size={18} color={COLORS.primary} />
+        <Text style={styles.setOnMapText}>Set destination on map</Text>
+      </TouchableOpacity>
 
       {/* Search Results */}
       {isSearching && (
@@ -676,6 +765,7 @@ function ConfirmStep({
   onRequestRide,
   isRequesting,
   currentRideType,
+  nearestEtaMin,
 }: {
   selectedVehicle: 'BODA' | 'CAR';
   setSelectedVehicle: (v: 'BODA' | 'CAR') => void;
@@ -693,6 +783,7 @@ function ConfirmStep({
   onRequestRide: () => void;
   isRequesting: boolean;
   currentRideType: RideTypeConfig;
+  nearestEtaMin: number | null;
 }) {
   const etaLabel = duration != null ? `~${duration} min drive` : '...';
 
@@ -740,7 +831,14 @@ function ConfirmStep({
           <Ionicons name="information-circle-outline" size={16} color={COLORS.onSurfaceVariant} />
           <Text style={styles.estCostText}>ESTIMATED COST</Text>
         </View>
-        {isCalculating && <ActivityIndicator size="small" color={COLORS.primary} />}
+        {isCalculating ? (
+          <ActivityIndicator size="small" color={COLORS.primary} />
+        ) : nearestEtaMin != null ? (
+          <View style={styles.driverEtaBadge}>
+            <Ionicons name="time-outline" size={12} color={COLORS.primary} />
+            <Text style={styles.driverEtaText}>Driver ~{nearestEtaMin} min away</Text>
+          </View>
+        ) : null}
       </View>
 
       {/* Ride option: Smart Boda */}
@@ -969,6 +1067,23 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.md - 2,
   },
 
+  // "Set on map" entry point
+  setOnMapRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+    paddingVertical: SPACING.sm + 2,
+    borderRadius: RADIUS.lg,
+    backgroundColor: COLORS.primaryFixed,
+  },
+  setOnMapText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
+
   // Results
   resultsCard: {
     marginTop: SPACING.sm,
@@ -1132,6 +1247,20 @@ const styles = StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  driverEtaBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.primaryFixed,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
+  },
+  driverEtaText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
   // SafeBoda-style ride rows (left accent border when selected)
   rideRow: {

@@ -1,10 +1,13 @@
 // ============================================
-// SMART RIDE MOBILE - LOCATION PICKER SCREEN
+// SMART RIDE MOBILE - LOCATION PICKER (Uber-style center pin)
 // ============================================
-// Full-screen map for picking a location
-// Search bar with places autocomplete (Mapbox geocoding API)
-// Confirm button stores selected location in useLocationStore (pickupLocation/dropoffLocation)
-// then calls router.back() — the calling screen reads from the store
+// The pin stays fixed at the screen center. The user MOVES THE MAP under it.
+// As the map settles, the center coordinate is reverse-geocoded and the
+// address updates. A search bar (Mapbox autocomplete + curated POIs) lets the
+// user jump the map to a place. Confirm writes the chosen point to the store.
+//
+// No hardcoded/sample locations. Everything comes from GPS, map gestures,
+// the geocoding API, and the search API.
 // ============================================
 
 import { useState, useEffect, useCallback, useRef } from 'react';
@@ -25,7 +28,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useLocationStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, DEFAULT_LOCATION, KAMPALA_POPULAR_PLACES } from '@/src/constants';
+import { COLORS, DEFAULT_LOCATION } from '@/src/constants';
 
 interface PlaceResult {
   id: string;
@@ -37,10 +40,8 @@ interface PlaceResult {
 
 export default function LocationPickerScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{
-    type: 'pickup' | 'dropoff';
-    currentLocation?: string;
-  }>();
+  const params = useLocalSearchParams<{ type: 'pickup' | 'dropoff' }>();
+  const isPickup = params.type === 'pickup';
 
   const {
     latitude: userLat,
@@ -50,175 +51,146 @@ export default function LocationPickerScreen() {
     setDropoffLocation,
   } = useLocationStore();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<PlaceResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{
-    latitude: number;
-    longitude: number;
-  } | null>(null);
-  const [selectedAddress, setSelectedAddress] = useState('');
+  // Camera target (only changes on mount/search — drives flyTo)
   const [mapCenter, setMapCenter] = useState({
     latitude: userLat || DEFAULT_LOCATION.latitude,
     longitude: userLng || DEFAULT_LOCATION.longitude,
   });
+  // Live center under the pin (updated by map gestures)
+  const centerRef = useRef({ ...mapCenter });
+  const [address, setAddress] = useState('');
+  const [isMoving, setIsMoving] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
 
+  // Search
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<PlaceResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const searchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reverseSeq = useRef(0);
 
-  // Get current location on mount
+  // Center the map on the user's real GPS position on mount.
   useEffect(() => {
     getCurrentLocation().catch(() => {});
   }, []);
 
-  // Search places with debounce
+  useEffect(() => {
+    // When GPS resolves after mount, recenter (only if user hasn't moved yet).
+    if (userLat && userLng && !address) {
+      setMapCenter({ latitude: userLat, longitude: userLng });
+    }
+  }, [userLat, userLng]);
+
+  // Reverse-geocode the current map center (called when the map settles).
+  const resolveCenter = useCallback(async (coords: { latitude: number; longitude: number }) => {
+    const seq = ++reverseSeq.current;
+    setIsResolving(true);
+    try {
+      const response = await api.reverseGeocode(coords.latitude, coords.longitude);
+      if (seq !== reverseSeq.current) return; // a newer move superseded this one
+      const places = (response.data as any)?.places || [];
+      const resolved =
+        places[0]?.fullAddress ||
+        places[0]?.name ||
+        `${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`;
+      setAddress(resolved);
+    } catch {
+      if (seq !== reverseSeq.current) return;
+      setAddress(`${coords.latitude.toFixed(5)}, ${coords.longitude.toFixed(5)}`);
+    } finally {
+      if (seq === reverseSeq.current) setIsResolving(false);
+    }
+  }, []);
+
+  // Map gesture: user is dragging — hide the stale address.
+  const handleCameraChanged = useCallback((c: { latitude: number; longitude: number }) => {
+    centerRef.current = c;
+    setIsMoving(true);
+  }, []);
+
+  // Map settled — lock in the center and reverse-geocode it.
+  const handleMapIdle = useCallback(
+    (c: { latitude: number; longitude: number }) => {
+      centerRef.current = c;
+      setIsMoving(false);
+      resolveCenter(c);
+    },
+    [resolveCenter],
+  );
+
+  // Search autocomplete (debounced) — proximity-biased to the current center.
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
-
-    // Clear previous timeout
-    if (searchTimeout.current) {
-      clearTimeout(searchTimeout.current);
-    }
-
-    if (!query.trim() || query.length < 2) {
+    if (searchTimeout.current) clearTimeout(searchTimeout.current);
+    if (!query.trim() || query.trim().length < 2) {
       setSearchResults([]);
       return;
     }
-
-    // Debounce search
     searchTimeout.current = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const response = await api.searchPlaces(query.trim());
-        if (response.success && response.data) {
-          // Backend returns { success: true, places: [...] }
-          const places = (response.data as any).places || (response.data as any[]);
-          const results: PlaceResult[] = (Array.isArray(places) ? places : []).map(
-            (place: any, index: number) => ({
-              id: place.id || `place-${index}`,
-              name: place.name || place.text || place.fullAddress || 'Unknown',
-              address: place.fullAddress || place.address || place.place_name || '',
-              latitude: place.lat || place.center?.[1] || 0,
-              longitude: place.lng || place.center?.[0] || 0,
-            })
-          );
-          setSearchResults(results);
-        } else {
-          setSearchResults([]);
-        }
-      } catch (error) {
-        console.error('[LocationPicker] Search error:', error);
+        const response = await api.searchPlaces(query.trim(), centerRef.current);
+        const places = Array.isArray(response.data) ? response.data : [];
+        const results: PlaceResult[] = places.map((p: any, i: number) => ({
+          id: p.id || `place-${i}`,
+          name: p.name || p.text || p.fullAddress || 'Unknown',
+          address: p.fullAddress || p.address || p.place_name || '',
+          latitude: p.lat ?? p.center?.[1] ?? 0,
+          longitude: p.lng ?? p.center?.[0] ?? 0,
+        }));
+        setSearchResults(results);
+      } catch {
         setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
-    }, 400);
+    }, 350);
   }, []);
 
-  // Handle place selection from search results
+  // Pick a search result — fly the map there; onMapIdle will refine the address.
   const handlePlaceSelect = useCallback((place: PlaceResult) => {
-    setSelectedLocation({ latitude: place.latitude, longitude: place.longitude });
-    setSelectedAddress(place.address);
+    if (!place.latitude || !place.longitude) return;
     setMapCenter({ latitude: place.latitude, longitude: place.longitude });
+    centerRef.current = { latitude: place.latitude, longitude: place.longitude };
+    setAddress(place.address || place.name);
     setSearchResults([]);
-    setSearchQuery(place.name);
+    setSearchQuery('');
     Keyboard.dismiss();
   }, []);
 
-  // Handle map tap for location selection
-  const handleMapLocationSelect = useCallback(
-    async (coords: { latitude: number; longitude: number }) => {
-      setSelectedLocation(coords);
-      setMapCenter(coords);
-
-      // Reverse geocode to get address
-      try {
-        const response = await api.reverseGeocode(coords.latitude, coords.longitude);
-        if (response.success && response.data) {
-          // Backend returns { success: true, places: [...] }
-          const places = (response.data as any).places || [];
-          const address = places[0]?.fullAddress || places[0]?.name
-            || `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`;
-          setSelectedAddress(address);
-          setSearchQuery(address);
-        } else {
-          const fallback = `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`;
-          setSelectedAddress(fallback);
-          setSearchQuery(fallback);
-        }
-      } catch {
-        const fallback = `${coords.latitude.toFixed(4)}, ${coords.longitude.toFixed(4)}`;
-        setSelectedAddress(fallback);
-        setSearchQuery(fallback);
-      }
-    },
-    []
-  );
-
-  // Confirm location and go back
   const handleConfirm = useCallback(() => {
-    if (!selectedLocation) return;
-
-    // Store the selected location in the location store so the calling
-    // screen can read it after we navigate back
-    const locationData = {
-      latitude: selectedLocation.latitude,
-      longitude: selectedLocation.longitude,
-      address: selectedAddress,
-    };
-
-    if (params.type === 'pickup') {
-      setPickupLocation(locationData);
-    } else {
-      setDropoffLocation(locationData);
-    }
-
+    const c = centerRef.current;
+    const data = { latitude: c.latitude, longitude: c.longitude, address: address || `${c.latitude.toFixed(5)}, ${c.longitude.toFixed(5)}` };
+    if (isPickup) setPickupLocation(data);
+    else setDropoffLocation(data);
     router.back();
-  }, [selectedLocation, selectedAddress, router, params.type, setPickupLocation, setDropoffLocation]);
-
-  const isPickup = params.type === 'pickup';
-  const headerTitle = isPickup ? 'Select Pickup' : 'Select Dropoff';
+  }, [address, isPickup, setPickupLocation, setDropoffLocation, router]);
 
   return (
     <View style={styles.container}>
-      {/* Map - Full Screen */}
+      {/* Full-screen map with fixed center pin */}
       <SmartRideMap
         style={StyleSheet.absoluteFillObject}
         initialLatitude={mapCenter.latitude}
         initialLongitude={mapCenter.longitude}
-        pickup={
-          selectedLocation && isPickup
-            ? { ...selectedLocation, title: 'Pickup' }
-            : undefined
-        }
-        dropoff={
-          selectedLocation && !isPickup
-            ? { ...selectedLocation, title: 'Dropoff' }
-            : undefined
-        }
         showUserLocation
-        onLocationSelect={handleMapLocationSelect}
-        isPickupSelectionMode
+        showCenterPin
+        centerPinType={isPickup ? 'pickup' : 'dropoff'}
+        onCameraChanged={handleCameraChanged}
+        onMapIdle={handleMapIdle}
       />
 
-      {/* Search Bar - Top */}
+      {/* Search bar */}
       <View style={styles.searchContainer}>
         <View style={styles.searchBar}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
           </TouchableOpacity>
           <View style={styles.searchInputContainer}>
-            <Ionicons
-              name="search"
-              size={18}
-              color={COLORS.onSurfaceMuted}
-              style={styles.searchIcon}
-            />
+            <Ionicons name="search" size={18} color={COLORS.onSurfaceMuted} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
-              placeholder={`Search ${isPickup ? 'pickup' : 'dropoff'} location...`}
+              placeholder={`Search ${isPickup ? 'pickup' : 'destination'}…`}
               placeholderTextColor={COLORS.onSurfaceMuted}
               value={searchQuery}
               onChangeText={handleSearch}
@@ -226,20 +198,14 @@ export default function LocationPickerScreen() {
               autoCorrect={false}
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  setSearchQuery('');
-                  setSearchResults([]);
-                }}
-              >
+              <TouchableOpacity onPress={() => { setSearchQuery(''); setSearchResults([]); }}>
                 <Ionicons name="close-circle" size={18} color={COLORS.onSurfaceMuted} />
               </TouchableOpacity>
             )}
           </View>
         </View>
 
-        {/* Search Results */}
-        {searchResults.length > 0 && (
+        {(searchResults.length > 0 || isSearching) && (
           <View style={styles.searchResultsContainer}>
             {isSearching && (
               <View style={styles.searchingIndicator}>
@@ -249,138 +215,58 @@ export default function LocationPickerScreen() {
             <FlatList
               data={searchResults}
               keyExtractor={(item) => item.id}
+              keyboardShouldPersistTaps="handled"
+              style={styles.searchResultsList}
               renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.searchResultItem}
-                  onPress={() => handlePlaceSelect(item)}
-                >
+                <TouchableOpacity style={styles.searchResultItem} onPress={() => handlePlaceSelect(item)}>
                   <View style={styles.searchResultIcon}>
-                    <Ionicons
-                      name="location-outline"
-                      size={20}
-                      color={COLORS.primary}
-                    />
+                    <Ionicons name="location-outline" size={20} color={COLORS.primary} />
                   </View>
                   <View style={styles.searchResultText}>
-                    <Text style={styles.searchResultName} numberOfLines={1}>
-                      {item.name}
-                    </Text>
-                    <Text style={styles.searchResultAddress} numberOfLines={1}>
-                      {item.address}
-                    </Text>
+                    <Text style={styles.searchResultName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.searchResultAddress} numberOfLines={1}>{item.address}</Text>
                   </View>
                 </TouchableOpacity>
               )}
-              keyboardShouldPersistTaps="handled"
-              style={styles.searchResultsList}
             />
           </View>
         )}
       </View>
 
-      {/* Popular Kampala Places (when not searching) */}
-      {!searchQuery && (
-        <View style={styles.popularContainer}>
-          <Text style={styles.popularTitle}>Popular in Kampala</Text>
-          <FlatList
-            data={KAMPALA_POPULAR_PLACES.slice(0, 8)}
-            keyExtractor={(item) => item.id}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.popularChip}
-                onPress={() => {
-                  setSelectedLocation({ latitude: item.latitude, longitude: item.longitude });
-                  setSelectedAddress(item.address);
-                  setMapCenter({ latitude: item.latitude, longitude: item.longitude });
-                  setSearchQuery(item.name);
-                }}
-                activeOpacity={0.7}
-              >
-                <Ionicons name={item.icon as any} size={14} color={COLORS.primary} />
-                <Text style={styles.popularChipText}>{item.name}</Text>
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.popularList}
-          />
-        </View>
-      )}
-
-      {/* Selected Location Pin Center Indicator */}
-      {!selectedLocation && (
-        <View style={styles.pinContainer} pointerEvents="none">
-          <View style={styles.pinIcon}>
-            <Ionicons
-              name={isPickup ? 'location' : 'flag'}
-              size={28}
-              color={isPickup ? COLORS.secondary : COLORS.primary}
-            />
-          </View>
-          <View style={styles.pinShadow} />
-        </View>
-      )}
-
-      {/* Bottom Confirmation Card */}
+      {/* Bottom confirmation card */}
       <View style={styles.bottomCard}>
-        {/* Selected Address Display */}
-        {selectedLocation ? (
-          <View style={styles.selectedInfo}>
-            <View style={styles.selectedDotRow}>
-              <View
-                style={[
-                  styles.selectedDot,
-                  {
-                    backgroundColor: isPickup ? COLORS.secondary : COLORS.primary,
-                  },
-                ]}
-              />
-              <Text style={styles.selectedLabel}>
-                {isPickup ? 'Pickup Location' : 'Dropoff Location'}
-              </Text>
-            </View>
-            <Text style={styles.selectedAddress} numberOfLines={2}>
-              {selectedAddress}
-            </Text>
-            <Text style={styles.selectedCoords}>
-              {selectedLocation.latitude.toFixed(6)}, {selectedLocation.longitude.toFixed(6)}
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.selectedInfo}>
-            <Text style={styles.tapHint}>
-              Tap on the map to select a {isPickup ? 'pickup' : 'dropoff'} location
-            </Text>
-          </View>
-        )}
+        <View style={styles.selectedDotRow}>
+          <View style={[styles.selectedDot, { backgroundColor: isPickup ? COLORS.secondary : COLORS.primary }]} />
+          <Text style={styles.selectedLabel}>{isPickup ? 'Pickup location' : 'Destination'}</Text>
+        </View>
 
-        {/* Confirm Button */}
+        <View style={styles.addressRow}>
+          {isMoving || isResolving ? (
+            <View style={styles.movingRow}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+              <Text style={styles.movingText}>{isMoving ? 'Move the map to set location…' : 'Finding address…'}</Text>
+            </View>
+          ) : (
+            <Text style={styles.selectedAddress} numberOfLines={2}>
+              {address || 'Move the map to set location'}
+            </Text>
+          )}
+        </View>
+
         <TouchableOpacity
-          style={[
-            styles.confirmButton,
-            !selectedLocation && styles.confirmButtonDisabled,
-          ]}
+          style={[styles.confirmButton, (isMoving || !address) && styles.confirmButtonDisabled]}
           onPress={handleConfirm}
-          disabled={!selectedLocation}
-          activeOpacity={0.8}
+          disabled={isMoving || !address}
+          activeOpacity={0.85}
         >
           <LinearGradient
-            colors={
-              selectedLocation
-                ? [COLORS.primary, '#00CC6A']
-                : [COLORS.onSurfaceDim, COLORS.onSurfaceDim]
-            }
+            colors={!isMoving && address ? [COLORS.primary, '#00CC6A'] : [COLORS.onSurfaceDim, COLORS.onSurfaceDim]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.confirmGradient}
           >
-            <Text
-              style={[
-                styles.confirmText,
-                !selectedLocation && styles.confirmTextDisabled,
-              ]}
-            >
-              {selectedLocation ? 'Confirm Location' : 'Select a Location First'}
+            <Text style={styles.confirmText}>
+              {isPickup ? 'Confirm Pickup' : 'Confirm Destination'}
             </Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -390,248 +276,58 @@ export default function LocationPickerScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
+  container: { flex: 1, backgroundColor: COLORS.surface },
   searchContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
+    position: 'absolute', top: 0, left: 0, right: 0,
     paddingTop: Platform.OS === 'ios' ? 48 : 24,
-    paddingHorizontal: 16,
-    zIndex: 10,
+    paddingHorizontal: 16, zIndex: 10,
   },
   searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    paddingLeft: 8,
-    paddingRight: 12,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    borderRadius: 16, borderWidth: 1, borderColor: COLORS.outlineVariant,
+    paddingLeft: 8, paddingRight: 12, elevation: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 20,
-  },
-  searchInputContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 48,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: COLORS.onSurface,
-    fontSize: 15,
-    paddingVertical: 0,
-  },
+  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
+  searchInputContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', height: 48 },
+  searchIcon: { marginRight: 8 },
+  searchInput: { flex: 1, color: COLORS.onSurface, fontSize: 15, paddingVertical: 0 },
   searchResultsContainer: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: 16,
-    marginTop: 8,
-    maxHeight: 300,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    overflow: 'hidden',
+    backgroundColor: COLORS.surfaceContainerLowest, borderRadius: 16, marginTop: 8, maxHeight: 300,
+    borderWidth: 1, borderColor: COLORS.outlineVariant, elevation: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, overflow: 'hidden',
   },
-  searchingIndicator: {
-    paddingVertical: 8,
-    alignItems: 'center',
-  },
-  searchResultsList: {
-    maxHeight: 280,
-  },
+  searchingIndicator: { paddingVertical: 8, alignItems: 'center' },
+  searchResultsList: { maxHeight: 280 },
   searchResultItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
+    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: COLORS.outlineVariant,
   },
   searchResultIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.primaryFixedDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
+    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primaryFixedDim,
+    alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
-  searchResultText: {
-    flex: 1,
-  },
-  searchResultName: {
-    color: COLORS.onSurface,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  searchResultAddress: {
-    color: COLORS.outline,
-    fontSize: 12,
-    marginTop: 2,
-  },
-  pinContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    marginLeft: -18,
-    marginTop: -36,
-    alignItems: 'center',
-  },
-  pinIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: COLORS.outlineVariant,
-    elevation: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-  },
-  pinShadow: {
-    width: 12,
-    height: 4,
-    borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.2)',
-    marginTop: 4,
-  },
+  searchResultText: { flex: 1 },
+  searchResultName: { color: COLORS.onSurface, fontWeight: '600', fontSize: 14 },
+  searchResultAddress: { color: COLORS.outline, fontSize: 12, marginTop: 2 },
   bottomCard: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: COLORS.surfaceContainerLowest,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 36,
-    borderWidth: 1,
-    borderBottomWidth: 0,
-    borderColor: COLORS.outlineVariant,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingHorizontal: 20, paddingTop: 20, paddingBottom: 36,
+    borderWidth: 1, borderBottomWidth: 0, borderColor: COLORS.outlineVariant, elevation: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.4, shadowRadius: 8,
   },
-  selectedInfo: {
-    marginBottom: 16,
-  },
-  selectedDotRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  selectedDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  selectedLabel: {
-    color: COLORS.onSurfaceSecondary,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  selectedAddress: {
-    color: COLORS.onSurface,
-    fontSize: 16,
-    fontWeight: '600',
-    lineHeight: 22,
-  },
-  selectedCoords: {
-    color: COLORS.outline,
-    fontSize: 12,
-    marginTop: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  tapHint: {
-    color: COLORS.outline,
-    fontSize: 15,
-    textAlign: 'center',
-    paddingVertical: 8,
-  },
-  confirmButton: {
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  confirmButtonDisabled: {
-    opacity: 0.6,
-  },
-  confirmGradient: {
-    paddingVertical: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  confirmText: {
-    color: COLORS.onPrimary,
-    fontSize: 17,
-    fontWeight: '700',
-  },
-  confirmTextDisabled: {
-    color: COLORS.outline,
-  },
-  // Popular Places
-  popularContainer: {
-    position: 'absolute',
-    top: Platform.OS === 'ios' ? 108 : 84,
-    left: 0,
-    right: 0,
-    zIndex: 9,
-    paddingHorizontal: 16,
-  },
-  popularTitle: {
-    fontSize: 12,
-    color: COLORS.onSurfaceDim,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 8,
-  },
-  popularList: {
-    gap: 8,
-  },
-  popularChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 6,
-  },
-  popularChipText: {
-    fontSize: 13,
-    color: COLORS.onSurfaceSecondary,
-    fontWeight: '500',
-  },
+  selectedDotRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  selectedDot: { width: 10, height: 10, borderRadius: 5, marginRight: 8 },
+  selectedLabel: { color: COLORS.onSurfaceSecondary, fontSize: 12, fontWeight: '500' },
+  addressRow: { minHeight: 44, justifyContent: 'center', marginBottom: 16 },
+  movingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  movingText: { color: COLORS.onSurfaceVariant, fontSize: 14 },
+  selectedAddress: { color: COLORS.onSurface, fontSize: 16, fontWeight: '600', lineHeight: 22 },
+  confirmButton: { borderRadius: 16, overflow: 'hidden' },
+  confirmButtonDisabled: { opacity: 0.6 },
+  confirmGradient: { paddingVertical: 18, alignItems: 'center', justifyContent: 'center' },
+  confirmText: { color: COLORS.onPrimary, fontSize: 17, fontWeight: '700' },
 });

@@ -46,6 +46,14 @@ export interface SmartRideMapProps {
     icon?: string;
   }>;
   onMapPress?: (coords: { latitude: number; longitude: number }) => void;
+  // Uber-style center-pin picker support:
+  // - onCameraChanged fires continuously while the user drags the map
+  // - onMapIdle fires once the map settles (use this to reverse-geocode)
+  // - showCenterPin renders a fixed pin at the screen center
+  onCameraChanged?: (center: { latitude: number; longitude: number }) => void;
+  onMapIdle?: (center: { latitude: number; longitude: number }) => void;
+  showCenterPin?: boolean;
+  centerPinType?: 'pickup' | 'dropoff';
 }
 
 // ============================================
@@ -234,9 +242,37 @@ function MapboxMapImpl(props: SmartRideMapProps) {
     routeCoordinates,
     markers,
     onMapPress,
+    onCameraChanged,
+    onMapIdle,
+    showCenterPin,
+    centerPinType = 'pickup',
   } = props;
 
   const cameraRef = useRef<any>(null);
+
+  // Center-pin picker: report the map center as the camera moves / settles.
+  // Mapbox state shape: { properties: { center: [lng, lat], zoom, ... } }
+  const handleCameraChanged = useCallback(
+    (state: any) => {
+      if (!onCameraChanged) return;
+      const c = state?.properties?.center;
+      if (Array.isArray(c) && c.length >= 2) {
+        onCameraChanged({ latitude: c[1], longitude: c[0] });
+      }
+    },
+    [onCameraChanged],
+  );
+
+  const handleMapIdle = useCallback(
+    (state: any) => {
+      if (!onMapIdle) return;
+      const c = state?.properties?.center;
+      if (Array.isArray(c) && c.length >= 2) {
+        onMapIdle({ latitude: c[1], longitude: c[0] });
+      }
+    },
+    [onMapIdle],
+  );
 
   const routeGeoJSON = routeCoordinates && routeCoordinates.length > 1
     ? {
@@ -279,11 +315,14 @@ function MapboxMapImpl(props: SmartRideMapProps) {
   }
 
   return (
+    <View style={[styles.map, style]}>
     <MapboxGL.MapView
-      style={[styles.map, style]}
+      style={StyleSheet.absoluteFill}
       styleURL={MAPBOX_CONFIG.style.streets}
       compassEnabled={false}
       onPress={handleMapPress}
+      onCameraChanged={onCameraChanged ? handleCameraChanged : undefined}
+      onMapIdle={onMapIdle ? handleMapIdle : undefined}
       logoEnabled={false}
       attributionEnabled={false}
     >
@@ -335,6 +374,22 @@ function MapboxMapImpl(props: SmartRideMapProps) {
         </MapboxGL.PointAnnotation>
       ))}
     </MapboxGL.MapView>
+
+      {/* Uber-style fixed center pin (sits above the map, points at map center) */}
+      {showCenterPin && (
+        <View style={styles.centerPinWrap} pointerEvents="none">
+          <View style={styles.centerPinIcon}>
+            <Ionicons
+              name={centerPinType === 'dropoff' ? 'flag' : 'location'}
+              size={28}
+              color={centerPinType === 'dropoff' ? COLORS.primary : COLORS.secondary}
+            />
+          </View>
+          <View style={styles.centerPinStem} />
+          <View style={styles.centerPinDot} />
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -424,6 +479,30 @@ function SmartRideMapImpl(props: SmartRideMapProps) {
 
 const styles = StyleSheet.create({
   map: { flex: 1 },
+  // Center pin overlay — the icon tip + dot land on the exact map center.
+  centerPinWrap: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  centerPinIcon: {
+    // lift the icon so its bottom tip rests on the geometric center
+    marginBottom: 28,
+  },
+  centerPinStem: {
+    position: 'absolute',
+    width: 2,
+    height: 14,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+  },
+  centerPinDot: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+  },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.backgroundSurface },
   mapFallback: { flex: 1, backgroundColor: COLORS.backgroundSurface, alignItems: 'center', justifyContent: 'center' },
   mapFallbackText: { color: COLORS.textMuted, fontSize: 16, marginTop: 12 },
