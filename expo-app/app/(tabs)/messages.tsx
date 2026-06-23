@@ -5,7 +5,7 @@
 // Reuses the same chat store and design patterns
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -20,12 +20,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useChatStore } from '@/src/store/chatStore';
 import { socketService } from '@/src/services/socket.service';
-import { COLORS, GRADIENTS } from '@/src/constants';
+import { GRADIENTS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Conversation } from '@/src/store/chatStore';
 import { ConversationSkeleton } from '@/src/components/Skeleton';
 
 export default function MessagesTabScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const {
     conversations,
     isLoadingConversations,
@@ -238,7 +243,7 @@ export default function MessagesTabScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

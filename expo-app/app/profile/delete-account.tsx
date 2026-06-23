@@ -5,7 +5,7 @@
 // Stitch MD3 Design System — Danger theme (red)
 // ============================================
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -29,7 +29,9 @@ import Animated, {
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 
 // Consequences list
 const CONSEQUENCES = [
@@ -42,6 +44,9 @@ const CONSEQUENCES = [
 
 export default function DeleteAccountScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const insets = useSafeAreaInsets();
   const { logout } = useAuthStore();
 
@@ -326,7 +331,7 @@ export default function DeleteAccountScreen() {
 // ============================================
 // STYLES
 // ============================================
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: COLORS.background,

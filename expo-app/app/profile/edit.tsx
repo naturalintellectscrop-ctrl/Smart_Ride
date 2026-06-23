@@ -5,7 +5,7 @@
 // PURPOSE: Edit user profile information
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,7 +28,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, API_CONFIG } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, API_CONFIG } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Ionicons } from '@expo/vector-icons';
 import { pickImage } from '@/src/utils/imagePicker';
 
@@ -42,6 +44,9 @@ interface UserProfile {
 
 export default function ProfileEditScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const { user, setUser } = useAuthStore();
   const [profile, setProfile] = useState<UserProfile>({
     name: '',
@@ -312,7 +317,7 @@ export default function ProfileEditScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   screen: {
     flex: 1,
     backgroundColor: COLORS.surface,

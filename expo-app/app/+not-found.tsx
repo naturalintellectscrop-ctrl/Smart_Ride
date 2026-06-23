@@ -6,16 +6,21 @@
 // their role after a short beat, with a manual button as a fallback.
 // ============================================
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/src/store/authStore';
 import { getHomeRouteForRole } from '@/src/utils/roleRouting';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 
 export default function NotFoundScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const { isAuthenticated, user } = useAuthStore();
 
   const goHome = () => {
@@ -47,7 +52,7 @@ export default function NotFoundScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

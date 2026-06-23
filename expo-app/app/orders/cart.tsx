@@ -4,7 +4,7 @@
 // FIXED: Connected to cartStore instead of mock data
 // ============================================
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -18,12 +18,17 @@ import {
 import { useRouter } from 'expo-router';
 import { useLocationStore, useCartStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { PaymentMethod } from '@/src/types';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function CartScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const { address, latitude, longitude, setAddress } = useLocationStore();
   const { items, removeItem, updateQuantity, clearCart, totalPrice, merchantId, merchantName } = useCartStore();
   const { user } = useAuthStore();
@@ -327,7 +332,7 @@ export default function CartScreen() {
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
