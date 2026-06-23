@@ -296,9 +296,9 @@ export interface DispatchConfig {
 export const DEFAULT_DISPATCH_CONFIG: DispatchConfig = {
   defaultSearchRadiusKm: 5,
   maxSearchRadiusKm: 20,
-  offerTimeoutMs: 15000, // 15 seconds
-  matchingTimeoutMs: 300000, // 5 minutes
-  searchExpansionIntervalMs: 30000, // 30 seconds
+  offerTimeoutMs: 15000, // 15 seconds per provider
+  matchingTimeoutMs: 120000, // 120 seconds MAX total wait (hard product cap)
+  searchExpansionIntervalMs: 30000, // expand radius every 30s (5→...→20km)
   maxConcurrentOffers: 3,
   maxDispatchAttempts: 5,
   scoringWeights: DEFAULT_SCORING_WEIGHTS,
