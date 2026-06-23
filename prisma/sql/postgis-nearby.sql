@@ -15,9 +15,11 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 -- 2. GiST index on the rider's live position as a geography point.
 --    Partial index on online riders keeps it small and hot. This is what makes
 --    ST_DWithin fast at scale instead of a full-table scan.
+-- Note the DOUBLE parentheses around the expression — Postgres requires a
+-- functional-index expression containing a cast (::) to be parenthesized.
 CREATE INDEX IF NOT EXISTS rider_geog_gist
   ON "Rider"
-  USING gist (ST_SetSRID(ST_MakePoint("currentLongitude", "currentLatitude"), 4326)::geography)
+  USING gist ((ST_SetSRID(ST_MakePoint("currentLongitude", "currentLatitude"), 4326)::geography))
   WHERE "isOnline" = true
     AND "currentLatitude" IS NOT NULL
     AND "currentLongitude" IS NOT NULL;

@@ -209,7 +209,7 @@ export default function ProfileScreen() {
     {
       section: 'Support',
       items: [
-        { icon: 'help-circle-outline', label: 'Help Center', onPress: () => Linking.openURL('https://smartrideug.vercel.app') },
+        { icon: 'help-circle-outline', label: 'Help Center', onPress: () => router.push('/help-center' as any) },
         { icon: 'chatbubble-outline', label: 'Contact Support', onPress: () => Linking.openURL('https://smartrideug.vercel.app/contact') },
         { icon: 'document-text-outline', label: 'Terms of Service', onPress: () => Linking.openURL('https://smartrideug.vercel.app/terms') },
         { icon: 'lock-closed-outline', label: 'Privacy Policy', onPress: () => Linking.openURL('https://smartrideug.vercel.app/privacy') },
@@ -499,6 +499,10 @@ function createStyles(colors: ThemeColors) {
     },
     statsCard: {
       padding: 16,
+      // Theme-aware so the card is dark in dark mode (GlassCard's default is a
+      // static white surface, which made light text invisible in dark mode).
+      backgroundColor: colors.backgroundElevated,
+      borderColor: colors.border,
     },
     statsRow: {
       flexDirection: 'row',
@@ -521,6 +525,10 @@ function createStyles(colors: ThemeColors) {
     },
     menuCard: {
       overflow: 'hidden',
+      // Theme-aware background (see statsCard note) — fixes invisible menu
+      // labels in dark mode.
+      backgroundColor: colors.backgroundElevated,
+      borderColor: colors.border,
     },
     version: {
       textAlign: 'center',
