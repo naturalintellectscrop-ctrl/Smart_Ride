@@ -4,7 +4,7 @@
 // FIXED: Added polling fallback, fixed event name
 // ============================================
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -19,7 +19,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Order } from '@/src/types';
 import { firstName } from '@/src/utils/formatName';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,6 +43,9 @@ const ORDER_STATUS_FLOW = [
 
 export default function OrderTrackingScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const params = useLocalSearchParams<{ orderId: string }>();
   const { address } = useLocationStore();
 
@@ -503,7 +508,7 @@ export default function OrderTrackingScreen() {
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surfaceContainerLowest,

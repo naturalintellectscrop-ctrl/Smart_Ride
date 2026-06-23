@@ -6,7 +6,7 @@
 // selection, payment tray, Request Ride CTA
 // ============================================
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,7 +24,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocationStore, useTaskStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import {
-  COLORS,
   RIDE_TYPES,
   PAYMENT_METHODS,
   PAYMENT_METHOD_MAP,
@@ -34,6 +33,8 @@ import {
   SHADOWS,
   GRADIENTS,
 } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { PaymentMethod } from '@/src/types';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { GlassCard } from '@/src/components/GlassCard';
@@ -70,6 +71,10 @@ interface RideTypeConfig {
 
 export default function RideRequestScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
   const params = useLocalSearchParams<{ type?: 'BODA' | 'CAR' }>();
   const insets = useSafeAreaInsets();
   const {
@@ -458,6 +463,8 @@ export default function RideRequestScreen() {
                 setPickupLongitude(longitude);
                 setStep('dropoff');
               }}
+              COLORS={COLORS}
+              styles={styles}
             />
           )}
 
@@ -472,6 +479,8 @@ export default function RideRequestScreen() {
               popularPlaces={popularPlaces}
               recentPlaces={recentPlaces}
               onPickOnMap={() => router.push('/location-picker?type=dropoff' as any)}
+              COLORS={COLORS}
+              styles={styles}
             />
           )}
 
@@ -494,6 +503,8 @@ export default function RideRequestScreen() {
               isRequesting={isRequesting}
               currentRideType={currentRideType}
               nearestEtaMin={nearestEtaMin}
+              COLORS={COLORS}
+              styles={styles}
             />
           )}
         </ScrollView>
@@ -506,7 +517,7 @@ export default function RideRequestScreen() {
 // PICKUP STEP
 // ============================================
 // Single tappable place row (name + secondary address line + ↗ jump icon)
-function PlaceRow({ place, icon, onPress }: { place: PlaceResult; icon: keyof typeof Ionicons.glyphMap; onPress: () => void }) {
+function PlaceRow({ place, icon, onPress, COLORS, styles }: { place: PlaceResult; icon: keyof typeof Ionicons.glyphMap; onPress: () => void; COLORS: ThemedColors; styles: any }) {
   const primary = place.name || place.place_name || 'Location';
   const secondary = place.address || place.fullAddress || place.place_name || '';
   return (
@@ -530,21 +541,26 @@ function PlaceSuggestions({
   recentPlaces,
   popularPlaces,
   onSelectPlace,
+  COLORS,
+  styles,
 }: {
   recentPlaces: PlaceResult[];
   popularPlaces: PlaceResult[];
   onSelectPlace: (p: PlaceResult) => void;
+  COLORS: ThemedColors;
+  styles: any;
 }) {
   if (recentPlaces.length === 0 && popularPlaces.length === 0) return null;
+  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
   return (
     <View style={{ marginTop: SPACING.md }}>
       {recentPlaces.length > 0 && (
         <>
           <Text style={styles.suggestionHeader}>Recent</Text>
-          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.resultsCard}>
+          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={[styles.resultsCard, cardBg]}>
             {recentPlaces.map((p, i) => (
               <View key={`recent-${p.id}-${i}`} style={i < recentPlaces.length - 1 ? styles.searchResultDivider : undefined}>
-                <PlaceRow place={p} icon="time-outline" onPress={() => onSelectPlace(p)} />
+                <PlaceRow place={p} icon="time-outline" onPress={() => onSelectPlace(p)} COLORS={COLORS} styles={styles} />
               </View>
             ))}
           </GlassCard>
@@ -553,10 +569,10 @@ function PlaceSuggestions({
       {popularPlaces.length > 0 && (
         <>
           <Text style={styles.suggestionHeader}>Popular places</Text>
-          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.resultsCard}>
+          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={[styles.resultsCard, cardBg]}>
             {popularPlaces.map((p, i) => (
               <View key={`pop-${p.id}-${i}`} style={i < popularPlaces.length - 1 ? styles.searchResultDivider : undefined}>
-                <PlaceRow place={p} icon="star-outline" onPress={() => onSelectPlace(p)} />
+                <PlaceRow place={p} icon="star-outline" onPress={() => onSelectPlace(p)} COLORS={COLORS} styles={styles} />
               </View>
             ))}
           </GlassCard>
@@ -577,6 +593,8 @@ function PickupStep({
   recentPlaces,
   onPickOnMap,
   onUseCurrentLocation,
+  COLORS,
+  styles,
 }: {
   pickupAddress: string;
   searchQuery: string;
@@ -588,11 +606,14 @@ function PickupStep({
   recentPlaces: PlaceResult[];
   onPickOnMap: () => void;
   onUseCurrentLocation: () => void;
+  COLORS: ThemedColors;
+  styles: any;
 }) {
+  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
   return (
     <View>
       {/* Destination search floating card */}
-      <GlassCard variant="elevated" padding={0} borderRadius={RADIUS.xl}>
+      <GlassCard variant="elevated" padding={0} borderRadius={RADIUS.xl} style={cardBg}>
         <View style={styles.searchCardInner}>
           <View style={styles.searchIconRow}>
             <View style={styles.pickupDot} />
@@ -638,10 +659,10 @@ function PickupStep({
       )}
 
       {!isSearching && searchResults.length > 0 && (
-        <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.resultsCard}>
+        <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={[styles.resultsCard, cardBg]}>
           {searchResults.map((place, index) => (
             <View key={`${place.id}-${index}`} style={index < searchResults.length - 1 ? styles.searchResultDivider : undefined}>
-              <PlaceRow place={place} icon="location-outline" onPress={() => onSelectPlace(place)} />
+              <PlaceRow place={place} icon="location-outline" onPress={() => onSelectPlace(place)} COLORS={COLORS} styles={styles} />
             </View>
           ))}
         </GlassCard>
@@ -649,7 +670,7 @@ function PickupStep({
 
       {/* Empty state: recent + popular suggestions */}
       {!isSearching && searchResults.length === 0 && searchQuery.trim().length < 2 && (
-        <PlaceSuggestions recentPlaces={recentPlaces} popularPlaces={popularPlaces} onSelectPlace={onSelectPlace} />
+        <PlaceSuggestions recentPlaces={recentPlaces} popularPlaces={popularPlaces} onSelectPlace={onSelectPlace} COLORS={COLORS} styles={styles} />
       )}
     </View>
   );
@@ -668,6 +689,8 @@ function DropoffStep({
   popularPlaces,
   recentPlaces,
   onPickOnMap,
+  COLORS,
+  styles,
 }: {
   pickupAddress: string;
   searchQuery: string;
@@ -678,11 +701,14 @@ function DropoffStep({
   popularPlaces: PlaceResult[];
   recentPlaces: PlaceResult[];
   onPickOnMap: () => void;
+  COLORS: ThemedColors;
+  styles: any;
 }) {
+  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
   return (
     <View>
       {/* Pickup summary + destination search */}
-      <GlassCard variant="elevated" padding={0} borderRadius={RADIUS.xl}>
+      <GlassCard variant="elevated" padding={0} borderRadius={RADIUS.xl} style={cardBg}>
         <View style={styles.searchCardInner}>
           <View style={styles.searchIconRow}>
             <View style={styles.pickupDot} />
@@ -722,10 +748,10 @@ function DropoffStep({
       )}
 
       {!isSearching && searchResults.length > 0 && (
-        <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.resultsCard}>
+        <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={[styles.resultsCard, cardBg]}>
           {searchResults.map((place, index) => (
             <View key={`${place.id}-${index}`} style={index < searchResults.length - 1 ? styles.searchResultDivider : undefined}>
-              <PlaceRow place={place} icon="location-outline" onPress={() => onSelectPlace(place)} />
+              <PlaceRow place={place} icon="location-outline" onPress={() => onSelectPlace(place)} COLORS={COLORS} styles={styles} />
             </View>
           ))}
         </GlassCard>
@@ -733,7 +759,7 @@ function DropoffStep({
 
       {/* Empty state: recent + popular suggestions */}
       {!isSearching && searchResults.length === 0 && searchQuery.trim().length < 2 && (
-        <PlaceSuggestions recentPlaces={recentPlaces} popularPlaces={popularPlaces} onSelectPlace={onSelectPlace} />
+        <PlaceSuggestions recentPlaces={recentPlaces} popularPlaces={popularPlaces} onSelectPlace={onSelectPlace} COLORS={COLORS} styles={styles} />
       )}
     </View>
   );
@@ -760,6 +786,8 @@ function ConfirmStep({
   isRequesting,
   currentRideType,
   nearestEtaMin,
+  COLORS,
+  styles,
 }: {
   selectedVehicle: 'BODA' | 'CAR';
   setSelectedVehicle: (v: 'BODA' | 'CAR') => void;
@@ -778,7 +806,10 @@ function ConfirmStep({
   isRequesting: boolean;
   currentRideType: RideTypeConfig;
   nearestEtaMin: number | null;
+  COLORS: ThemedColors;
+  styles: any;
 }) {
+  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
   const etaLabel = duration != null ? `~${duration} min drive` : '...';
 
   // SafeBoda-style fare range: bracket the exact fare to a tidy UGX window.
@@ -794,7 +825,7 @@ function ConfirmStep({
   return (
     <View>
       {/* Route Summary Card */}
-      <GlassCard variant="elevated" padding={SPACING.md} borderRadius={RADIUS.xl}>
+      <GlassCard variant="elevated" padding={SPACING.md} borderRadius={RADIUS.xl} style={cardBg}>
         <View style={styles.routeRow}>
           <View style={styles.routeDotsColumn}>
             <View style={[styles.routeCircle, { backgroundColor: COLORS.secondaryFixed }]} />
@@ -940,7 +971,7 @@ function ConfirmStep({
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,

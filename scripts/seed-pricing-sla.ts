@@ -8,6 +8,7 @@
  * Requires DATABASE_URL in the root .env (use the SESSION pooler, port 5432).
  */
 
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 
 const db = new PrismaClient();

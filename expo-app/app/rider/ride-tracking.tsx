@@ -3,7 +3,7 @@
 // FIXED: Added polling fallback for when socket fails
 // ============================================
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useTaskStore, useAuthStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import { COLORS, TASK_STATUS_LABELS, TASK_STATUS_COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TASK_STATUS_LABELS, TASK_STATUS_COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Task, TaskStatus } from '@/src/types';
 import { firstName } from '@/src/utils/formatName';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +29,9 @@ const POLL_INTERVAL_SLOW = 10000; // 10 seconds for searching/matching
 
 export default function RideTrackingScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const params = useLocalSearchParams<{ taskId: string }>();
   const { pendingTask, setCurrentTask, updateTaskStatus, clearPendingTask } = useTaskStore();
   const { user, accessToken } = useAuthStore();
@@ -432,7 +437,7 @@ export default function RideTrackingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

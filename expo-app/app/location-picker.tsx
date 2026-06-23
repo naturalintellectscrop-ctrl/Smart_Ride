@@ -10,7 +10,7 @@
 // the geocoding API, and the search API.
 // ============================================
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,7 +28,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useLocationStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, DEFAULT_LOCATION } from '@/src/constants';
+import { DEFAULT_LOCATION } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 
 interface PlaceResult {
   id: string;
@@ -40,6 +42,9 @@ interface PlaceResult {
 
 export default function LocationPickerScreen() {
   const router = useRouter();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const params = useLocalSearchParams<{ type: 'pickup' | 'dropoff' }>();
   const isPickup = params.type === 'pickup';
 
@@ -275,7 +280,7 @@ export default function LocationPickerScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.surface },
   searchContainer: {
     position: 'absolute', top: 0, left: 0, right: 0,
