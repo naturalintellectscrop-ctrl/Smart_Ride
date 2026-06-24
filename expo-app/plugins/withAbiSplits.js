@@ -49,12 +49,22 @@ const AGORA_EXCLUDES = [
   'libvideo_dec.so',
 ];
 
+// ABIs are configurable so a Play Store AAB can include 32-bit devices:
+//   SMARTRIDE_ANDROID_ABIS="arm64-v8a,armeabi-v7a" npx expo prebuild -p android
+//   cd android && ./gradlew bundleRelease   # per-device delivery, small downloads
+// Default arm64-only keeps the direct-install APK small (~106 MB).
+const ABIS = (process.env.SMARTRIDE_ANDROID_ABIS || 'arm64-v8a').trim();
+// R8 code shrink + resource shrink. OFF by default (previously stripped native
+// module classes → runtime crashes). The keep-rules live in withProguardRules.
+// Enable + smoke-test every flow before shipping:  SMARTRIDE_ENABLE_R8=true
+const ENABLE_R8 = process.env.SMARTRIDE_ENABLE_R8 === 'true';
+
 function withArm64Only(config) {
   return withGradleProperties(config, (config) => {
     const props = config.modResults;
     const existing = props.find((p) => p.type === 'property' && p.key === 'reactNativeArchitectures');
-    if (existing) existing.value = 'arm64-v8a';
-    else props.push({ type: 'property', key: 'reactNativeArchitectures', value: 'arm64-v8a' });
+    if (existing) existing.value = ABIS;
+    else props.push({ type: 'property', key: 'reactNativeArchitectures', value: ABIS });
     return config;
   });
 }
@@ -63,11 +73,12 @@ function withBuildGradleSize(config) {
   return withAppBuildGradle(config, (config) => {
     let contents = config.modResults.contents;
 
-    // 1. ndk abiFilters arm64-only + multiDex
+    // 1. ndk abiFilters (matches ABIS) + multiDex
+    const abiFiltersStr = ABIS.split(',').map((a) => `"${a.trim()}"`).join(', ');
     if (!contents.includes('ndk {')) {
-      contents = contents.replace(/defaultConfig\s*\{/, `defaultConfig {\n        ndk {\n            abiFilters "arm64-v8a"\n        }`);
+      contents = contents.replace(/defaultConfig\s*\{/, `defaultConfig {\n        ndk {\n            abiFilters ${abiFiltersStr}\n        }`);
     } else {
-      contents = contents.replace(/abiFilters[^\n]*/, 'abiFilters "arm64-v8a"');
+      contents = contents.replace(/abiFilters[^\n]*/, `abiFilters ${abiFiltersStr}`);
     }
     if (!contents.includes('multiDexEnabled')) {
       contents = contents.replace(/defaultConfig\s*\{/, `defaultConfig {\n        multiDexEnabled true`);
@@ -76,10 +87,15 @@ function withBuildGradleSize(config) {
     // 2. Remove any per-ABI splits block (we want a single app-release.apk)
     contents = contents.replace(/\n\s*splits\s*\{[\s\S]*?\n\s*\}\n/, '\n');
 
-    // 3. Force minify + shrink OFF in buildTypes.release (idempotent)
-    if (!/minifyEnabled\s+false/.test(contents)) {
-      contents = contents.replace(/(release\s*\{)/, `$1\n            minifyEnabled false\n            shrinkResources false`);
-    }
+    // 3. Set minify + resource shrink in buildTypes.release per ENABLE_R8.
+    //    Remove any prior values first so this is idempotent + toggleable.
+    contents = contents
+      .replace(/\n\s*minifyEnabled\s+(true|false)/g, '')
+      .replace(/\n\s*shrinkResources\s+(true|false)/g, '');
+    contents = contents.replace(
+      /(release\s*\{)/,
+      `$1\n            minifyEnabled ${ENABLE_R8}\n            shrinkResources ${ENABLE_R8}`,
+    );
 
     // 4. packagingOptions with Agora excludes
     const excludeList = AGORA_EXCLUDES.map((l) => `                '**/${l}'`).join(',\n');
