@@ -33,7 +33,9 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import { api } from '@/src/services/api';
-import { COLORS, GRADIENTS } from '@/src/constants';
+import { GRADIENTS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { isAgoraConfigured, AGORA_CONFIG } from '@/src/config/agora';
 import { useAgoraCall } from '@/src/hooks/useAgoraCall';
 
@@ -95,7 +97,7 @@ function PulseRing({ delay: delayMs }: { delay: number }) {
   return <Animated.View style={[pulseStyles.ring, animatedStyle]} />;
 }
 
-const pulseStyles = StyleSheet.create({
+const create_pulseStyles = (COLORS: ThemedColors) => StyleSheet.create({
   ring: {
     position: 'absolute',
     width: 120,
@@ -131,7 +133,7 @@ function CallAvatar({ isRinging, isConnected }: { isRinging: boolean; isConnecte
   );
 }
 
-const avatarStyles = StyleSheet.create({
+const create_avatarStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     width: 120,
     height: 120,
@@ -186,6 +188,7 @@ function CallTimer({ startTime }: { startTime: number }) {
 // ============================================
 
 export default function CallScreen() {
+  { const __t = useTheme(); COLORS = makeThemedColors(__t.isDark); pulseStyles = create_pulseStyles(COLORS); avatarStyles = create_avatarStyles(COLORS); styles = create_styles(COLORS); }
   const router = useRouter();
   const params = useLocalSearchParams<{
     id: string;
@@ -915,7 +918,7 @@ export default function CallScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

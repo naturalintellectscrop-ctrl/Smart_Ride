@@ -33,7 +33,9 @@ import { useChatStore, Conversation, Message } from '@/src/store/chatStore';
 import { firstName } from '@/src/utils/formatName';
 import { useAuthStore, useLocationStore } from '@/src/store';
 import { socketService } from '@/src/services/socket.service';
-import { COLORS, GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard } from '@/src/components/GlassCard';
 import { pickImage } from '@/src/utils/imagePicker';
 
@@ -82,7 +84,7 @@ function TypingIndicator() {
   );
 }
 
-const typingStyles = StyleSheet.create({
+const create_typingStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -205,7 +207,7 @@ function StitchChatBubble({
   );
 }
 
-const bubbleStyles = StyleSheet.create({
+const create_bubbleStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     marginBottom: SPACING.md,
     maxWidth: '78%',
@@ -328,6 +330,7 @@ const bubbleStyles = StyleSheet.create({
 // ============================================
 
 export default function ChatDetailScreen() {
+  { const __t = useTheme(); COLORS = makeThemedColors(__t.isDark); typingStyles = create_typingStyles(COLORS); bubbleStyles = create_bubbleStyles(COLORS); styles = create_styles(COLORS); }
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -730,7 +733,7 @@ export default function ChatDetailScreen() {
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

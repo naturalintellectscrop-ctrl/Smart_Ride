@@ -26,7 +26,9 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
-import { COLORS, RADIUS, SHADOWS, SPACING, TYPOGRAPHY } from '@/src/constants';
+import { RADIUS, SHADOWS, SPACING, TYPOGRAPHY } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { useCartStore, CartItem } from '@/src/store';
 
 interface Merchant {
@@ -55,6 +57,7 @@ interface Product {
 }
 
 export default function MerchantDetailScreen() {
+  { const __t = useTheme(); COLORS = makeThemedColors(__t.isDark); styles = create_styles(COLORS); }
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const cart = useCartStore();
@@ -449,7 +452,7 @@ function ProductCard({
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: COLORS.surface,

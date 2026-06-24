@@ -18,7 +18,9 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMerchantStore } from '@/src/store';
 import { api } from '@/src/services';
-import { COLORS, ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/src/constants';
+import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { MerchantOrder, OrderItem } from '@/src/types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -33,6 +35,7 @@ const STATUS_FLOW = [
 ];
 
 export default function MerchantOrderDetailScreen() {
+  { const __t = useTheme(); COLORS = makeThemedColors(__t.isDark); styles = create_styles(COLORS); infoStyles = create_infoStyles(COLORS); summaryStyles = create_summaryStyles(COLORS); }
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
@@ -336,7 +339,7 @@ function SummaryRow({ label, value, isBold }: { label: string; value: string; is
 // STYLES
 // ============================================
 
-const styles = StyleSheet.create({
+const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
@@ -621,7 +624,7 @@ const styles = StyleSheet.create({
   },
 });
 
-const infoStyles = StyleSheet.create({
+const create_infoStyles = (COLORS: ThemedColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -643,7 +646,7 @@ const infoStyles = StyleSheet.create({
   },
 });
 
-const summaryStyles = StyleSheet.create({
+const create_summaryStyles = (COLORS: ThemedColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
