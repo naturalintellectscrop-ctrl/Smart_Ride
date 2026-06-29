@@ -38,7 +38,7 @@ try {
 // on every render, contributing to jumpy cursor in TextInput fields.
 // All styles use StyleSheet.create() directly instead.
 
-import React, { Component, ReactNode, useCallback, useEffect } from 'react';
+import React, { Component, ReactNode, useCallback, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, LogBox } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { Stack, router, useSegments, useRootNavigationState } from 'expo-router';
@@ -117,6 +117,12 @@ function ThemedRootLayout() {
   const { isAuthenticated, setAccessToken, user } = useAuthStore();
   const segments = useSegments();
   const navigationState = useRootNavigationState();
+  // True once we've attempted to rehydrate the access token from SecureStore.
+  // The auth guard must NOT redirect to login before this — on app restart the
+  // persisted `user` loads but the token (SecureStore-only) is restored async,
+  // so isAuthenticated is briefly false. Redirecting in that window is the
+  // "register/relogin sometimes bounces back to login" bug.
+  const [hydrationDone, setHydrationDone] = useState(false);
 
   // Connect to Supabase Realtime when authenticated
   useRealtime();
@@ -146,30 +152,37 @@ function ThemedRootLayout() {
     const inAuthGroup = firstSegment === 'auth';
     const isPublicRoute = inAuthGroup || firstSegment === 'index' || firstSegment === undefined;
 
-    if (!isAuthenticated && !isPublicRoute) {
+    // Wait for the token-rehydration attempt to finish before bouncing to
+    // login, otherwise a restart on a protected route redirects during the
+    // brief window where the token hasn't been restored yet.
+    if (hydrationDone && !isAuthenticated && !isPublicRoute) {
       // Use replace so the user can't press "back" into the protected screen.
       router.replace('/auth/login');
     }
-  }, [isAuthenticated, segments, navigationState?.key]);
+  }, [isAuthenticated, segments, navigationState?.key, hydrationDone]);
 
   // Rehydrate access token from SecureStore on app start.
   // Since accessToken is no longer persisted in AsyncStorage,
   // we need to load it from SecureStore and set it in the store.
   useEffect(() => {
-    if (!isAuthenticated && user) {
-      (async () => {
-        try {
+    (async () => {
+      try {
+        if (!isAuthenticated && user) {
           const { secureStorage } = require('../src/utils/secureStorage');
           const token = await secureStorage.getAccessToken();
           if (token) {
             setAccessToken(token);
             console.log('[App] Access token rehydrated from SecureStore');
           }
-        } catch (e) {
-          console.warn('[App] Failed to rehydrate token from SecureStore:', e);
         }
-      })();
-    }
+      } catch (e) {
+        console.warn('[App] Failed to rehydrate token from SecureStore:', e);
+      } finally {
+        // Always mark hydration complete so the guard can act (redirect a truly
+        // logged-out user, or allow a rehydrated one through).
+        setHydrationDone(true);
+      }
+    })();
   }, []); // Run once on mount
 
   // Register push notifications with backend when authenticated
