@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { hashPassword } from '@/lib/auth/password';
-import { generateTokenPair } from '@/lib/auth/jwt';
+import { generateTokenPair, verifyAccessToken } from '@/lib/auth/jwt';
 import { UserRole, UserStatus, RiderRole, RiderStatus, VehicleType } from '@prisma/client';
 import { DocumentType } from '@prisma/client';
 
@@ -54,7 +54,16 @@ export async function POST(request: NextRequest) {
   await setServiceRoleContext();
   try {
     const body = await request.json();
-    
+
+    // The normal app flow is /auth/register (creates the User) → onboarding →
+    // this endpoint. In that case the caller is AUTHENTICATED and we must
+    // attach the rider profile to the EXISTING user, not create a new account
+    // (which collides on phone/email). Standalone signup (no token) keeps the
+    // create-user path below.
+    const bearer = request.headers.get('authorization')?.replace('Bearer ', '');
+    const decoded = bearer ? verifyAccessToken(bearer) : null;
+    const authedUserId = decoded?.userId || null;
+
     const {
       // Personal Info
       email,
@@ -124,21 +133,24 @@ export async function POST(request: NextRequest) {
         ? `+256${resolvedPhone.slice(1)}`
         : `+256${resolvedPhone}`;
 
-    // Check if user already exists
-    const existingUser = await db.user.findFirst({
-      where: {
-        OR: [
-          { phone: normalizedPhone },
-          { email: email || `${resolvedPhone}@smartride.temp` },
-        ],
-      },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { success: false, error: 'User with this phone number already exists' },
-        { status: 400 }
-      );
+    // For STANDALONE signup only (no auth token): reject duplicate phone/email.
+    // Authenticated callers are attaching a rider profile to their own account,
+    // so a "matching" user is expected (themselves) and must not be blocked.
+    if (!authedUserId) {
+      const existingUser = await db.user.findFirst({
+        where: {
+          OR: [
+            { phone: normalizedPhone },
+            { email: email || `${resolvedPhone}@smartride.temp` },
+          ],
+        },
+      });
+      if (existingUser) {
+        return NextResponse.json(
+          { success: false, error: 'User with this phone number already exists' },
+          { status: 400 }
+        );
+      }
     }
 
     // Hash password if provided
@@ -156,6 +168,88 @@ export async function POST(request: NextRequest) {
             ? VehicleType.CAR
             : null);
 
+    // Shared document writer used by both flows.
+    const writeDocs = (tx: any, riderId: string) => {
+      const createDoc = (docType: DocumentType, fileName: string, fileUrl?: string | null) => {
+        if (!fileUrl) return null;
+        const isData = isDataUrl(fileUrl);
+        return tx.document.create({
+          data: {
+            riderId, documentType: docType, fileName, fileUrl,
+            fileSize: dataUrlByteSize(fileUrl) || null,
+            mimeType: isData ? (fileUrl.match(/^data:(.*?);/)?.[1] || 'image/jpeg') : 'image/jpeg',
+          },
+        });
+      };
+      return Promise.all([
+        createDoc(DocumentType.FACE_PHOTO, 'face_photo.jpg', resolvedFacePhoto),
+        createDoc(DocumentType.NATIONAL_ID_FRONT, 'national_id_front.jpg', resolvedNationalIdFront),
+        createDoc(DocumentType.NATIONAL_ID_BACK, 'national_id_back.jpg', resolvedNationalIdBack),
+        createDoc(DocumentType.DRIVERS_LICENSE, 'drivers_license.jpg', resolvedDriversLicense),
+      ].filter(Boolean));
+    };
+
+    // ---- AUTHENTICATED FLOW: attach rider to the existing logged-in user ----
+    if (authedUserId) {
+      const existingUser = await db.user.findUnique({ where: { id: authedUserId } });
+      if (!existingUser) {
+        return NextResponse.json({ success: false, error: 'Authenticated user not found' }, { status: 401 });
+      }
+      const authedResult = await db.$transaction(async (tx) => {
+        await tx.user.update({
+          where: { id: authedUserId },
+          data: { role: UserRole.RIDER, name: fullName || existingUser.name || undefined },
+        });
+        const riderData = {
+          fullName,
+          phone: normalizedPhone,
+          email: existingUser.email,
+          physicalAddress: resolvedAddress,
+          riderRole: RIDER_ROLE_MAP[resolvedRiderRoleType] || RiderRole.DELIVERY_PERSONNEL,
+          vehicleType: resolvedVehicleType,
+          status: RiderStatus.PENDING_APPROVAL,
+          facePhotoUrl: resolvedFacePhoto || null,
+          nationalIdFrontUrl: resolvedNationalIdFront || null,
+          nationalIdBackUrl: resolvedNationalIdBack || null,
+          driverLicenseUrl: resolvedDriversLicense || null,
+          vehiclePhotoUrl: resolvedVehiclePhoto || null,
+        };
+        const rider = await tx.rider.upsert({
+          where: { userId: authedUserId },
+          create: { userId: authedUserId, ...riderData },
+          update: riderData,
+        });
+        if (resolvedVehicleType && resolvedPlate) {
+          await tx.vehicle.upsert({
+            where: { riderId: rider.id },
+            create: {
+              riderId: rider.id, make: resolvedMake, model: resolvedModel || 'Unknown',
+              year: year ? Number(year) : null, color: resolvedColor || 'Unknown',
+              plateNumber: resolvedPlate.toUpperCase(),
+            },
+            update: {
+              make: resolvedMake, model: resolvedModel || 'Unknown',
+              year: year ? Number(year) : null, color: resolvedColor || 'Unknown',
+              plateNumber: resolvedPlate.toUpperCase(),
+            },
+          });
+        }
+        await writeDocs(tx, rider.id);
+        return rider;
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: 'Application submitted! Your account is pending admin approval.',
+        rider: {
+          id: authedResult.id,
+          status: authedResult.status,
+          riderRole: authedResult.riderRole,
+        },
+      });
+    }
+
+    // ---- STANDALONE FLOW: create a fresh user + rider ----
     // Create user with rider profile in a transaction
     const result = await db.$transaction(async (tx) => {
       // 1. Create user (if not already authenticated — for logged-in riders we still
