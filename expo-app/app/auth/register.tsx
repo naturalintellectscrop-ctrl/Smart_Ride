@@ -491,7 +491,12 @@ export default function RegisterScreen() {
             {/* Role Selection */}
             <View style={styles.roleSection}>
               <Text style={styles.roleLabel}>I want to use Smart Ride as:</Text>
-              <View style={styles.roleGrid}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.roleGrid}
+                keyboardShouldPersistTaps="handled"
+              >
                 {ROLES.map((role) => {
                   const isSelected = selectedRole === role.id;
                   return (
@@ -504,17 +509,20 @@ export default function RegisterScreen() {
                       onPress={() => setSelectedRole(role.id)}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name={role.icon as any} size={16} color={isSelected ? COLORS.onPrimary : COLORS.onSurfaceVariant} />
-                      <Text style={[
-                        styles.roleChipLabel,
-                        isSelected && styles.roleChipLabelSelected,
-                      ]}>
+                      <View style={[styles.roleChipIconWrap, isSelected && styles.roleChipIconWrapSelected]}>
+                        <Ionicons name={role.icon as any} size={22} color={isSelected ? COLORS.onPrimary : COLORS.onSurfaceVariant} />
+                      </View>
+                      <Text
+                        style={[styles.roleChipLabel, isSelected && styles.roleChipLabelSelected]}
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                      >
                         {role.label}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
-              </View>
+              </ScrollView>
               <Text style={styles.roleHint}>
                 {selectedRole === 'RIDER'
                   ? 'You\'ll complete rider onboarding after registration'
@@ -808,14 +816,18 @@ const styles = StyleSheet.create({
   roleGrid: {
     flexDirection: 'row',
     gap: SPACING.sm,
+    paddingVertical: 2,
+    paddingRight: SPACING.md, // last card not flush to the edge when scrolled
   },
   roleChip: {
-    flex: 1,
+    width: 92,
+    minHeight: 96,
     alignItems: 'center',
+    justifyContent: 'flex-start',
     backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.lg,
     paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
     borderWidth: 2,
     borderColor: 'transparent',
   },
@@ -823,13 +835,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 95, 58, 0.06)',
     borderColor: COLORS.primary,
   },
-  roleChipIcon: {
-    fontSize: 24,
-    marginBottom: SPACING.xs,
+  roleChipIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.surfaceContainerHigh,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.sm,
+  },
+  roleChipIconWrapSelected: {
+    backgroundColor: COLORS.primary,
   },
   roleChipLabel: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    lineHeight: 15,
   },
   roleChipLabelSelected: {
     color: COLORS.primary,

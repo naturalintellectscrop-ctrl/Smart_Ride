@@ -480,8 +480,11 @@ class ApiService {
       const response = await fetch(`${this.baseUrl}/uploads/documents`, {
         method: 'POST',
         headers: {
+          // IMPORTANT: do NOT set Content-Type here. React Native sets
+          // "multipart/form-data; boundary=..." automatically when the body is
+          // FormData. Hardcoding it omits the boundary, so the server can't
+          // parse the body → "Upload of images failed".
           Authorization: token ? `Bearer ${token}` : '',
-          'Content-Type': 'multipart/form-data',
         },
         body: formData as any,
         signal: controller.signal,

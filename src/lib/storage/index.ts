@@ -17,6 +17,7 @@ import {
   DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 // ============================================
 // TYPES
@@ -179,6 +180,58 @@ class S3StorageProvider implements StorageProvider {
 }
 
 // ============================================
+// SUPABASE STORAGE PROVIDER
+// ============================================
+// Uses Supabase Storage (the project's existing infra) via the service-role
+// key — no extra credentials. Works on Vercel where the filesystem is
+// read-only. The bucket is created (public) on first use if missing.
+
+class SupabaseStorageProvider implements StorageProvider {
+  private client: SupabaseClient;
+  private bucket: string;
+  private url: string;
+  private ensured = false;
+
+  constructor() {
+    this.url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+    this.bucket = process.env.SUPABASE_STORAGE_BUCKET || 'uploads';
+    this.client = createClient(this.url, serviceKey, { auth: { persistSession: false } });
+  }
+
+  private async ensureBucket(): Promise<void> {
+    if (this.ensured) return;
+    try {
+      const { data } = await this.client.storage.getBucket(this.bucket);
+      if (!data) {
+        await this.client.storage.createBucket(this.bucket, { public: true });
+      }
+    } catch {
+      // createBucket throws if it already exists in a race — safe to ignore
+      try { await this.client.storage.createBucket(this.bucket, { public: true }); } catch { /* exists */ }
+    }
+    this.ensured = true;
+  }
+
+  async upload(key: string, data: Buffer, contentType: string): Promise<string> {
+    await this.ensureBucket();
+    const { error } = await this.client.storage
+      .from(this.bucket)
+      .upload(key, data, { contentType, upsert: true });
+    if (error) throw new Error(`Supabase storage upload failed: ${error.message}`);
+    return this.getUrl(key);
+  }
+
+  getUrl(key: string): string {
+    return `${this.url.replace(/\/$/, '')}/storage/v1/object/public/${this.bucket}/${key}`;
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.client.storage.from(this.bucket).remove([key]);
+  }
+}
+
+// ============================================
 // STORAGE PROVIDER FACTORY
 // ============================================
 
@@ -187,9 +240,17 @@ let _storageProvider: StorageProvider | null = null;
 export function getStorageProvider(): StorageProvider {
   if (_storageProvider) return _storageProvider;
 
-  const type = process.env.STORAGE_TYPE || 'local';
+  // Auto-select Supabase in production (service-role key present) — the local
+  // filesystem provider does NOT work on Vercel (read-only). Explicit
+  // STORAGE_TYPE always wins.
+  const hasSupabase = !!process.env.SUPABASE_SERVICE_ROLE_KEY &&
+    !!(process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const type = process.env.STORAGE_TYPE || (hasSupabase ? 'supabase' : 'local');
 
-  if (type === 's3') {
+  if (type === 'supabase') {
+    console.log('[STORAGE] Using Supabase storage provider');
+    _storageProvider = new SupabaseStorageProvider();
+  } else if (type === 's3') {
     console.log('[STORAGE] Using S3 storage provider');
     _storageProvider = new S3StorageProvider();
   } else {

@@ -41,7 +41,10 @@ export async function pickImage(options?: {
   const asset = result.assets[0];
   const uri = asset.uri;
   const name = uri.split('/').pop() || 'photo.jpg';
-  const type = `image/${name.split('.').pop()?.toLowerCase() || 'jpeg'}`;
+  // Prefer the asset's real mimeType; normalize "jpg" → "jpeg" so the backend
+  // allow-list accepts it.
+  const ext = (name.split('.').pop() || 'jpeg').toLowerCase();
+  const type = (asset as any).mimeType || `image/${ext === 'jpg' ? 'jpeg' : ext}`;
 
   return { uri, type, name, size: asset.fileSize };
 }
@@ -66,6 +69,8 @@ export async function takePhoto(): Promise<ImagePickerResult | null> {
   const asset = result.assets[0];
   const uri = asset.uri;
   const name = uri.split('/').pop() || 'photo.jpg';
+  const ext = (name.split('.').pop() || 'jpeg').toLowerCase();
+  const type = (asset as any).mimeType || `image/${ext === 'jpg' ? 'jpeg' : ext}`;
 
-  return { uri, type: `image/${name.split('.').pop()?.toLowerCase() || 'jpeg'}`, name, size: asset.fileSize };
+  return { uri, type, name, size: asset.fileSize };
 }

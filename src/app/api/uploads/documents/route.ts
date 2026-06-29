@@ -36,9 +36,12 @@ export async function POST(request: NextRequest) {
     // Validate file type
     const allowedTypes = [
       'image/jpeg',
+      'image/jpg', // some clients send image/jpg for .jpg files
       'image/png',
       'image/gif',
       'image/webp',
+      'image/heic',
+      'image/heif',
       'application/pdf',
     ];
     if (!allowedTypes.includes(file.type)) {
