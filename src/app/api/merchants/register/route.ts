@@ -3,7 +3,7 @@ import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import bcrypt from 'bcryptjs';
 import { generateAccessToken, generateRefreshToken, verifyAccessToken } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
-import { DocumentType, DocumentStatus, MerchantStatus, UserRole, UserStatus } from '@prisma/client';
+import { DocumentType, DocumentStatus, MerchantStatus, UserRole, UserStatus, PharmacyStatus } from '@prisma/client';
 
 /**
  * POST /api/merchants/register
@@ -28,6 +28,11 @@ export async function POST(request: NextRequest) {
       bankAccountName,
       bankAccountNumber,
       documents,
+      // Pharmacy-specific (only when type === 'PHARMACY')
+      pharmacyLicense,
+      pharmacistInCharge,
+      pharmacistLicense,
+      operatingHours,
     } = body;
 
     // Normal app flow: /auth/register (User created) → onboarding → here, so the
@@ -65,6 +70,18 @@ export async function POST(request: NextRequest) {
       if (!existingUser) {
         return NextResponse.json({ success: false, error: 'Authenticated user not found' }, { status: 401 });
       }
+
+      // A pharmacy is a Merchant(type=PHARMACY) with a linked Pharmacy record and
+      // a PHARMACIST user role (so the app routes to the pharmacist dashboard).
+      const isPharmacy = type === 'PHARMACY';
+      if (isPharmacy && (!pharmacyLicense || !pharmacistInCharge || !pharmacistLicense)) {
+        return NextResponse.json(
+          { success: false, error: 'Pharmacy requires pharmacyLicense, pharmacistInCharge and pharmacistLicense' },
+          { status: 400 }
+        );
+      }
+      const targetRole = isPharmacy ? UserRole.PHARMACIST : UserRole.MERCHANT;
+
       const merchantData = {
         name, type: type as any, phone, email, address, city,
         latitude: latitude ? parseFloat(latitude) : null,
@@ -75,7 +92,7 @@ export async function POST(request: NextRequest) {
         logoUrl: documents?.logo || null,
       };
       const merchant = await db.$transaction(async (tx) => {
-        await tx.user.update({ where: { id: authedUserId }, data: { role: UserRole.MERCHANT } });
+        await tx.user.update({ where: { id: authedUserId }, data: { role: targetRole } });
         const m = await tx.merchant.upsert({
           where: { userId: authedUserId },
           create: { userId: authedUserId, ...merchantData },
@@ -94,11 +111,31 @@ export async function POST(request: NextRequest) {
         addDoc(DocumentType.NATIONAL_ID_BACK, 'national_id_back.jpg', documents?.nationalIdBack);
         addDoc(DocumentType.OTHER, 'logo.jpg', documents?.logo, 'Merchant logo');
         await Promise.all(docs);
+
+        if (isPharmacy) {
+          const pharmacyData = {
+            pharmacyLicense,
+            pharmacyLicenseUrl: documents?.businessLicense || null,
+            pharmacistInCharge,
+            pharmacistLicense,
+            operatingHours: operatingHours || (openingTime && closingTime ? `${openingTime} - ${closingTime}` : null),
+            status: PharmacyStatus.PENDING_APPROVAL,
+            isOpen: false,
+          };
+          await tx.pharmacy.upsert({
+            where: { merchantId: m.id },
+            create: { merchantId: m.id, ...pharmacyData },
+            update: pharmacyData,
+          });
+        }
         return m;
       });
       return NextResponse.json({
         success: true,
-        message: 'Application submitted! Your store is pending admin approval.',
+        role: targetRole,
+        message: isPharmacy
+          ? 'Application submitted! Your pharmacy is pending admin approval.'
+          : 'Application submitted! Your store is pending admin approval.',
         merchant: { id: merchant.id, name: merchant.name, type: merchant.type, status: merchant.status },
       });
     }
