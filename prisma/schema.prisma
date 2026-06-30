@@ -45,6 +45,7 @@ model User {
   ratingsGiven             Rating[]                  @relation("RatingFromUser")
   ratingsReceived          Rating[]                  @relation("RatingToUser")
   rider                    Rider?
+  merchant                 Merchant?
   savedAddresses           SavedAddress[]
   sessions                 Session[]
   sosAlerts                SOSAlert[]                @relation("UserSOSAlerts")
@@ -222,6 +223,8 @@ model Vehicle {
 
 model Merchant {
   id                 String         @id @default(cuid())
+  userId             String?        @unique
+  user               User?          @relation(fields: [userId], references: [id])
   name               String
   type               MerchantType
   description        String?

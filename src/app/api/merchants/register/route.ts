@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import bcrypt from 'bcryptjs';
-import { generateAccessToken, generateRefreshToken } from '@/lib/auth/jwt';
+import { generateAccessToken, generateRefreshToken, verifyAccessToken } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { DocumentType, DocumentStatus, MerchantStatus, UserRole, UserStatus } from '@prisma/client';
 
@@ -30,6 +30,13 @@ export async function POST(request: NextRequest) {
       documents,
     } = body;
 
+    // Normal app flow: /auth/register (User created) → onboarding → here, so the
+    // caller is AUTHENTICATED. Attach the merchant to the existing user instead
+    // of creating a new account (which collides on phone).
+    const bearer = request.headers.get('authorization')?.replace('Bearer ', '');
+    const decoded = bearer ? verifyAccessToken(bearer) : null;
+    const authedUserId = decoded?.userId || null;
+
     // Validate required fields
     if (!name || !type || !phone || !address) {
       return NextResponse.json(
@@ -38,24 +45,65 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user already exists with this phone
-    const existingUser = await db.user.findFirst({
-      where: {
-        OR: [
-          { phone },
-          ...(email ? [{ email }] : []),
-        ],
-      },
-    });
-
-    if (existingUser) {
-      return NextResponse.json(
-        { success: false, error: 'User already exists with this phone or email' },
-        { status: 400 }
-      );
+    // Duplicate-user check only for STANDALONE signup (no token). An
+    // authenticated caller is attaching a merchant to their own account.
+    if (!authedUserId) {
+      const existingUser = await db.user.findFirst({
+        where: { OR: [{ phone }, ...(email ? [{ email }] : [])] },
+      });
+      if (existingUser) {
+        return NextResponse.json(
+          { success: false, error: 'User already exists with this phone or email' },
+          { status: 400 }
+        );
+      }
     }
 
-    // Check if merchant with same name exists
+    // ---- AUTHENTICATED FLOW: attach merchant to the existing user ----
+    if (authedUserId) {
+      const existingUser = await db.user.findUnique({ where: { id: authedUserId } });
+      if (!existingUser) {
+        return NextResponse.json({ success: false, error: 'Authenticated user not found' }, { status: 401 });
+      }
+      const merchantData = {
+        name, type: type as any, phone, email, address, city,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
+        openingTime, closingTime, bankName, bankAccountName, bankAccountNumber,
+        status: MerchantStatus.PENDING_APPROVAL, isOpen: false,
+        businessLicenseUrl: documents?.businessLicense || null,
+        logoUrl: documents?.logo || null,
+      };
+      const merchant = await db.$transaction(async (tx) => {
+        await tx.user.update({ where: { id: authedUserId }, data: { role: UserRole.MERCHANT } });
+        const m = await tx.merchant.upsert({
+          where: { userId: authedUserId },
+          create: { userId: authedUserId, ...merchantData },
+          update: merchantData,
+        });
+        const docs: Promise<unknown>[] = [];
+        const addDoc = (dt: DocumentType, fn: string, url?: string, desc?: string) => {
+          if (!url) return;
+          docs.push(tx.document.create({ data: {
+            merchantId: m.id, documentType: dt, fileName: fn, fileUrl: url,
+            mimeType: 'image/jpeg', status: DocumentStatus.PENDING, ...(desc ? { description: desc } : {}),
+          }}));
+        };
+        addDoc(DocumentType.BUSINESS_LICENSE, 'business_license.jpg', documents?.businessLicense);
+        addDoc(DocumentType.NATIONAL_ID_FRONT, 'national_id_front.jpg', documents?.nationalIdFront);
+        addDoc(DocumentType.NATIONAL_ID_BACK, 'national_id_back.jpg', documents?.nationalIdBack);
+        addDoc(DocumentType.OTHER, 'logo.jpg', documents?.logo, 'Merchant logo');
+        await Promise.all(docs);
+        return m;
+      });
+      return NextResponse.json({
+        success: true,
+        message: 'Application submitted! Your store is pending admin approval.',
+        merchant: { id: merchant.id, name: merchant.name, type: merchant.type, status: merchant.status },
+      });
+    }
+
+    // Check if merchant with same name exists (standalone only)
     const existingMerchant = await db.merchant.findFirst({
       where: { name },
     });
