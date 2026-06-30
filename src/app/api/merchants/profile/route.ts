@@ -18,7 +18,6 @@ export async function GET(request: NextRequest) {
   try {
     const merchant = await db.merchant.findUnique({
       where: { userId: decoded.userId },
-      include: { documents: true },
     });
 
     if (!merchant) {
@@ -26,7 +25,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, data: null, registered: false });
     }
 
-    return NextResponse.json({ success: true, data: merchant, registered: true });
+    // Document has merchantId but Merchant has no inverse relation field, so
+    // fetch the docs separately rather than via include.
+    const documents = await db.document.findMany({ where: { merchantId: merchant.id } });
+
+    return NextResponse.json({ success: true, data: { ...merchant, documents }, registered: true });
   } catch (error) {
     console.error('[merchants/profile] error:', error);
     return NextResponse.json({ success: false, error: 'Failed to load merchant profile' }, { status: 500 });
