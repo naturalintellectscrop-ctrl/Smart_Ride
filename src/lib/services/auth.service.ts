@@ -16,7 +16,9 @@ export const registerSchema = z.object({
   email: z.string().email('Invalid email address'),
   phone: z.string().min(10, 'Invalid phone number').optional(),
   password: z.string().min(8, 'Password must be at least 8 characters'),
-  role: z.enum(['CLIENT', 'RIDER', 'MERCHANT', 'PHARMACIST']).default('CLIENT'),
+  // DRIVER = Smart Car driver. Delivery Personnel register as RIDER and pick a
+  // delivery vehicle during onboarding (riderRole = DELIVERY_PERSONNEL).
+  role: z.enum(['CLIENT', 'RIDER', 'DRIVER', 'MERCHANT', 'PHARMACIST']).default('CLIENT'),
 });
 
 export const loginSchema = z.object({
