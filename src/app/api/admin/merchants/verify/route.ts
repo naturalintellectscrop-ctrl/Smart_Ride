@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
-import { MerchantStatus, DocumentStatus, Prisma } from '@prisma/client';
+import { MerchantStatus, DocumentStatus, PharmacyStatus, Prisma } from '@prisma/client';
 
 // GET - Fetch pending merchants
 export async function GET(request: NextRequest) {
@@ -142,6 +142,19 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Cascade to the linked Pharmacy record (a PHARMACY merchant is a pharmacist).
+    // Without this the mobile pharmacist gate would stay "under review" forever.
+    if (merchant.type === 'PHARMACY') {
+      const pharmacyStatus =
+        action === 'reject' ? PharmacyStatus.REJECTED
+        : action === 'suspend' ? PharmacyStatus.SUSPENDED
+        : PharmacyStatus.APPROVED;
+      await db.pharmacy.updateMany({
+        where: { merchantId },
+        data: { status: pharmacyStatus, isOpen: pharmacyStatus === PharmacyStatus.APPROVED },
+      });
+    }
+
     // Create audit log
     await db.auditLog.create({
       data: {
@@ -156,13 +169,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create notification for merchant user
-    const merchantUser = await db.user.findFirst({
-      where: {
-        phone: merchant.phone,
-        role: 'MERCHANT',
-      },
-    });
+    // Create notification for the owner. Prefer the linked userId (works for
+    // both MERCHANT and PHARMACIST); fall back to phone for legacy records.
+    const merchantUser = merchant.userId
+      ? await db.user.findUnique({ where: { id: merchant.userId } })
+      : await db.user.findFirst({ where: { phone: merchant.phone } });
 
     if (merchantUser) {
       await db.notification.create({

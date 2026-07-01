@@ -57,12 +57,27 @@ export default function RegisterScreen() {
   const [selectedRole, setSelectedRole] = useState<string>('CLIENT');
 
   const ROLES = [
-    { id: 'CLIENT', label: 'Client', icon: 'car-outline', desc: 'Book rides & order' },
-    { id: 'RIDER', label: 'Rider / Boda', icon: 'bicycle-outline', desc: 'Earn on the road' },
-    { id: 'DRIVER', label: 'Driver', icon: 'bus-outline', desc: 'Professional driver' },
+    { id: 'CLIENT', label: 'Client', icon: 'person-outline', desc: 'Book rides & order' },
+    { id: 'RIDER', label: 'Smart Boda', icon: 'bicycle-outline', desc: 'Boda rider' },
+    { id: 'DRIVER', label: 'Smart Car', icon: 'car-outline', desc: 'Car driver' },
+    { id: 'DELIVERY', label: 'Delivery', icon: 'cube-outline', desc: 'Delivery personnel' },
     { id: 'MERCHANT', label: 'Merchant', icon: 'storefront-outline', desc: 'Sell & deliver' },
-    { id: 'PHARMACIST', label: 'Pharmacist', icon: 'medkit-outline', desc: 'Medicine & healthcare' },
+    { id: 'PHARMACIST', label: 'Pharmacist', icon: 'medkit-outline', desc: 'Medicine & health' },
   ];
+
+  // Map a selected UI role to the backend UserRole + where onboarding starts.
+  // Delivery Personnel are RIDERs who pick a delivery vehicle in onboarding.
+  const backendRoleFor = (r: string) => (r === 'DELIVERY' ? 'RIDER' : r);
+  const routeAfterRegister = (r: string) => {
+    switch (r) {
+      case 'RIDER': return '/rider/onboarding?vehicle=MOTORCYCLE';
+      case 'DRIVER': return '/rider/onboarding?vehicle=CAR';
+      case 'DELIVERY': return '/rider/onboarding?vehicle=BICYCLE';
+      case 'MERCHANT': return '/merchant/register';
+      case 'PHARMACIST': return '/merchant/register?type=PHARMACY';
+      default: return '/(tabs)';
+    }
+  };
 
   // Animation for initial entrance — switches to plain View after completion
   // to prevent Animated transforms from interfering with TextInput cursor on Android
@@ -292,7 +307,7 @@ export default function RegisterScreen() {
         email: email.trim().toLowerCase(),
         phone: formattedPhone,
         password,
-        role: selectedRole,
+        role: backendRoleFor(selectedRole),
       });
 
       if (result.success) {
@@ -305,11 +320,12 @@ export default function RegisterScreen() {
             email: userData.email,
             name: userData.name,
             phone: userData.phone,
-            role: userData.role || selectedRole,
+            role: userData.role || backendRoleFor(selectedRole),
           }, token);
         }
-        // Navigate based on the role the user just selected in the form
-        navigateToRoleHome(selectedRole);
+        // Client goes straight into the app; providers go to onboarding
+        // (pre-selecting the vehicle/type implied by their chosen role).
+        router.replace(routeAfterRegister(selectedRole) as any);
       } else {
         setError(result.error || 'Registration failed');
       }

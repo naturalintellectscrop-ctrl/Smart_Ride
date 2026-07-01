@@ -18,7 +18,7 @@ import {
   Dimensions,
   Image,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
@@ -188,9 +188,14 @@ export default function RiderOnboardingScreen() {
   // Track which document field is currently uploading
   const [uploadingField, setUploadingField] = useState<string | null>(null);
 
-  // Step 3: Vehicle Info
+  // Step 3: Vehicle Info — pre-select the vehicle implied by the role the user
+  // chose at registration (?vehicle=MOTORCYCLE|CAR|BICYCLE), still editable.
+  const { vehicle: vehicleParam } = useLocalSearchParams<{ vehicle?: string }>();
+  const initialVehicleType = ['MOTORCYCLE', 'CAR', 'BICYCLE', 'SCOOTER'].includes(vehicleParam || '')
+    ? (vehicleParam as string)
+    : '';
   const [vehicleInfo, setVehicleInfo] = useState({
-    vehicleType: '',
+    vehicleType: initialVehicleType,
     make: '',
     model: '',
     year: '',

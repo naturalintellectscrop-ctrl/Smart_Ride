@@ -22,6 +22,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useMerchantStore } from '@/src/store';
+import { useProviderApprovalGate } from '@/src/hooks/useProviderApprovalGate';
 import { MerchantOrder } from '@/src/types';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
@@ -109,6 +110,8 @@ export default function MerchantDashboardScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
+  // Approval gate: a merchant can't use the dashboard until an admin approves.
+  const approvalGate = useProviderApprovalGate('MERCHANT');
   const {
     merchant,
     orders,
@@ -226,6 +229,9 @@ export default function MerchantDashboardScreen() {
     const tabConfig = ORDER_TABS.find(t => t.key === tab);
     return tabConfig ? orders.filter(o => tabConfig.statuses.includes(o.status)).length : 0;
   };
+
+  // Not approved yet → show the approval-status screen instead of the dashboard.
+  if (approvalGate) return approvalGate;
 
   // Loading state (profile loading with no merchant)
   if (isLoadingProfile && !merchant) {

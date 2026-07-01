@@ -24,6 +24,7 @@ import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useProviderApprovalGate } from '@/src/hooks/useProviderApprovalGate';
 
 interface OrderSummary {
   pending: number;
@@ -44,6 +45,8 @@ export default function PharmacistDashboard() {
   { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  // Approval gate: a pharmacist can't use the dashboard until an admin approves.
+  const approvalGate = useProviderApprovalGate('PHARMACIST');
   const [orderSummary, setOrderSummary] = useState<OrderSummary>({ pending: 0, processing: 0, completed: 0, total: 0 });
   const [pendingPrescriptions, setPendingPrescriptions] = useState(0);
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>({ isOpen: false });
@@ -112,6 +115,9 @@ export default function PharmacistDashboard() {
   };
 
   const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
+
+  // Not approved yet → show the approval-status screen instead of the dashboard.
+  if (approvalGate) return approvalGate;
 
   if (isLoading) {
     return (

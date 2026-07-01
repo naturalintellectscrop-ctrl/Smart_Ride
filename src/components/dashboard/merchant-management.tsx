@@ -487,10 +487,23 @@ export function MerchantManagement() {
                         : doc.status === 'REJECTED' 
                           ? 'bg-red-500/10 border-red-500/20' 
                           : 'bg-amber-500/10 border-amber-500/20';
+                      const isPdf = doc.fileUrl?.toLowerCase().endsWith('.pdf');
                       return (
-                        <div key={doc.id} className={`flex items-center justify-between p-3 rounded-xl border ${docStyle}`}>
-                          <span className="text-sm text-white">{doc.documentType.replace(/_/g, ' ')}</span>
-                          <Badge variant="outline" className="border-white/10 text-gray-300">{doc.status}</Badge>
+                        <div key={doc.id} className={`p-3 rounded-xl border ${docStyle}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-white">{doc.documentType.replace(/_/g, ' ')}</span>
+                            <Badge variant="outline" className="border-white/10 text-gray-300">{doc.status}</Badge>
+                          </div>
+                          {doc.fileUrl && (isPdf ? (
+                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-sky-400 underline">
+                              View document (PDF)
+                            </a>
+                          ) : (
+                            <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" title="Open full size">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img src={doc.fileUrl} alt={doc.documentType} className="h-40 w-full rounded-lg border border-white/10 object-cover" />
+                            </a>
+                          ))}
                         </div>
                       );
                     })}

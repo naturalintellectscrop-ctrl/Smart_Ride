@@ -632,6 +632,17 @@ class ApiService {
     description?: string;
     phone: string;
     address: string;
+    documents?: {
+      businessLicense?: string;
+      nationalIdFront?: string;
+      nationalIdBack?: string;
+      logo?: string;
+    };
+    // Pharmacy-specific (only when type === 'PHARMACY')
+    pharmacyLicense?: string;
+    pharmacistInCharge?: string;
+    pharmacistLicense?: string;
+    operatingHours?: string;
   }): Promise<ApiResponse<any>> {
     return this.request<any>('/merchants/register', 'POST', data);
   }
