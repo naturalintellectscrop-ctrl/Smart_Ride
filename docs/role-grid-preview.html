@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Register role selector — before / after</title>
+<style>
+  body { font-family: -apple-system, Roboto, Segoe UI, sans-serif; background:#f3f4f6; margin:0; padding:24px; color:#111; }
+  h1 { font-size:18px; } h2 { font-size:14px; margin:18px 0 6px; color:#374151; }
+  .row { display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; }
+  .phone { background:#fff; border:1px solid #d1d5db; border-radius:12px; overflow:hidden; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+  .phone .cap { font-size:11px; color:#6b7280; padding:6px 10px; border-bottom:1px solid #eee; background:#fafafa; }
+  .content { padding:24px; }           /* mirrors form horizontal padding (lg=24) */
+  .label { font-size:13px; color:#4b5563; font-weight:600; margin-bottom:8px; }
+
+  /* ---- BEFORE: horizontal ScrollView, fixed 92px cards ---- */
+  .before .grid { display:flex; gap:8px; overflow-x:auto; }
+  .before .chip { flex:0 0 92px; width:92px; }
+
+  /* ---- AFTER: wrap grid, width computed = (rowW - gap*(cols-1))/cols ---- */
+  .after .grid { display:flex; flex-wrap:wrap; gap:8px; }
+
+  .chip { min-height:92px; box-sizing:border-box; background:#f1f5f4; border:2px solid transparent;
+          border-radius:16px; padding:16px 4px; display:flex; flex-direction:column; align-items:center; }
+  .chip.sel { background:rgba(0,95,58,.06); border-color:#005f3a; }
+  .ico { width:40px; height:40px; border-radius:20px; background:#e2e8e6; display:flex; align-items:center; justify-content:center; margin-bottom:8px; font-size:18px; }
+  .chip.sel .ico { background:#005f3a; }
+  .cap2 { font-size:11px; text-align:center; line-height:15px; color:#4b5563; }
+  .overflow-note { color:#b91c1c; font-size:11px; margin-top:4px; }
+</style>
+</head>
+<body>
+<h1>Smart Ride — register role selector: before vs after</h1>
+<p style="font-size:12px;color:#6b7280">6 roles: Client · Smart Boda · Smart Car · Delivery · Merchant · Pharmacist. Frames use device widths; content padding 24px each side (matches the form).</p>
+<div id="app"></div>
+<script>
+const ROLES = [
+  ['Client','👤'],['Smart Boda','🏍️'],['Smart Car','🚗'],['Delivery','📦'],['Merchant','🏪'],['Pharmacist','⚕️']
+];
+const WIDTHS = [320,360,390,412,768];
+const GAP=8;
+const colsFor = w => w>=700?6 : w>=600?4 : 3;
+
+function chip(label, icon, sel, styleExtra){
+  return `<div class="chip${sel?' sel':''}" style="${styleExtra||''}">
+    <div class="ico">${icon}</div><div class="cap2">${label}</div></div>`;
+}
+function frame(w, mode){
+  const rowW = w - 48; // content width after 24px padding each side
+  let grid='';
+  if(mode==='before'){
+    grid = ROLES.map((r,i)=>chip(r[0],r[1],i===0)).join('');
+    // 6 * 92 + 5*8 = 552 + 40 = 592 > rowW → overflows / horizontal scroll
+    const total = 6*92 + 5*GAP;
+    var note = total>rowW ? `<div class="overflow-note">↔ needs horizontal scroll (content ${total}px &gt; ${rowW}px)</div>`:'';
+  } else {
+    const cols = colsFor(w);
+    const cw = Math.floor((rowW - GAP*(cols-1))/cols);
+    grid = ROLES.map((r,i)=>chip(r[0],r[1],i===0,`width:${cw}px`)).join('');
+    var note = `<div style="color:#15803d;font-size:11px;margin-top:4px">✓ ${cols} cols · card ${cw}px · fits ${cw*cols+GAP*(cols-1)}/${rowW}px</div>`;
+  }
+  return `<div class="phone ${mode}" style="width:${w}px">
+     <div class="cap">${w}px — ${mode.toUpperCase()}</div>
+     <div class="content"><div class="label">I want to use Smart Ride as:</div>
+     <div class="grid">${grid}</div>${note}</div></div>`;
+}
+let html='';
+for(const mode of ['before','after']){
+  html += `<h2>${mode==='before'?'BEFORE — fixed 92px cards in a horizontal scroll':'AFTER — responsive wrap grid'}</h2><div class="row">`;
+  html += WIDTHS.map(w=>frame(w,mode)).join('');
+  html += `</div>`;
+}
+document.getElementById('app').innerHTML = html;
+</script>
+</body>
+</html>
