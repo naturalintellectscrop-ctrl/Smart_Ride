@@ -78,7 +78,17 @@ export async function GET(request: NextRequest) {
       db.rider.count({ where }),
     ]);
 
-    return paginatedResponse(riders, page, limit, total);
+    // For admins, attach each rider's KYC documents (National ID, licence,
+    // vehicle photos) so the admin dashboard can display them for review.
+    // Document has a scalar riderId (no Prisma relation), so fetch separately.
+    let ridersOut: unknown[] = riders;
+    if (isAdmin(user.role) && riders.length) {
+      const riderIds = riders.map((r) => r.id);
+      const docs = await db.document.findMany({ where: { riderId: { in: riderIds } } });
+      ridersOut = riders.map((r) => ({ ...r, documents: docs.filter((d) => d.riderId === r.id) }));
+    }
+
+    return paginatedResponse(ridersOut, page, limit, total);
   } catch (error) {
     console.error('Error fetching riders:', error);
     return serverErrorResponse('Failed to fetch riders');

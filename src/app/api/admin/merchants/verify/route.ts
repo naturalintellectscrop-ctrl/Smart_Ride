@@ -29,11 +29,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'PENDING_APPROVAL';
 
     const merchants = await db.merchant.findMany({
-      where: {
-        status: status as MerchantStatus,
-      },
+      // status=all returns every merchant/pharmacy (admin list with filters).
+      where: status === 'all' ? {} : { status: status as MerchantStatus },
       include: {
-        documents: true,
         _count: {
           select: { orders: true },
         },
@@ -41,7 +39,20 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ merchants });
+    // Document has no Prisma relation to Merchant (scalar merchantId), so fetch
+    // documents + pharmacy records separately and attach them for the admin UI.
+    const ids = merchants.map((m) => m.id);
+    const [docs, pharmacies] = await Promise.all([
+      db.document.findMany({ where: { merchantId: { in: ids } } }),
+      db.pharmacy.findMany({ where: { merchantId: { in: ids } } }),
+    ]);
+    const withDocs = merchants.map((m) => ({
+      ...m,
+      documents: docs.filter((d) => d.merchantId === m.id),
+      pharmacy: pharmacies.find((p) => p.merchantId === m.id) || null,
+    }));
+
+    return NextResponse.json({ merchants: withDocs });
   } catch (error) {
     console.error('Error fetching merchants:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch merchants' },

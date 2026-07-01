@@ -103,7 +103,8 @@ export function RiderManagement() {
       }
       
       const data = await response.json();
-      setRiders(data.riders || []);
+      // /api/riders uses paginatedResponse → { success, data: [...] }.
+      setRiders(data.data || data.riders || []);
     } catch (err) {
       console.error('Error fetching riders:', err);
       setError('Failed to load riders. Please try again.');

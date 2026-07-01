@@ -82,16 +82,18 @@ export function MerchantManagement() {
     
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('/api/merchants', {
+      // Admin-gated endpoint returns merchants/pharmacies WITH their KYC
+      // documents + pharmacy record (the public /api/merchants omits documents).
+      const response = await fetch('/api/admin/merchants/verify?status=all', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch merchants');
       }
-      
+
       const data = await response.json();
       setMerchants(data.merchants || []);
     } catch (err) {
