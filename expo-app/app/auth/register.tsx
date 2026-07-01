@@ -20,6 +20,7 @@ import {
   Animated,
   Easing,
   Dimensions,
+  useWindowDimensions,
   Image,
   Linking,
 } from 'react-native';
@@ -52,6 +53,16 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  // Responsive role grid: tile the role cards to the measured row width so they
+  // never overflow or need horizontal scrolling on any screen (320px → tablet).
+  const { width: winWidth } = useWindowDimensions();
+  const [roleGridW, setRoleGridW] = useState(0);
+  const ROLE_GAP = SPACING.sm;
+  const roleCols = winWidth >= 700 ? 6 : winWidth >= 600 ? 4 : 3;
+  const roleChipW = roleGridW > 0
+    ? Math.floor((roleGridW - ROLE_GAP * (roleCols - 1)) / roleCols)
+    : undefined;
 
   // Role selection
   const [selectedRole, setSelectedRole] = useState<string>('CLIENT');
@@ -507,11 +518,9 @@ export default function RegisterScreen() {
             {/* Role Selection */}
             <View style={styles.roleSection}>
               <Text style={styles.roleLabel}>I want to use Smart Ride as:</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.roleGrid}
-                keyboardShouldPersistTaps="handled"
+              <View
+                style={styles.roleGrid}
+                onLayout={(e) => setRoleGridW(e.nativeEvent.layout.width)}
               >
                 {ROLES.map((role) => {
                   const isSelected = selectedRole === role.id;
@@ -520,6 +529,7 @@ export default function RegisterScreen() {
                       key={role.id}
                       style={[
                         styles.roleChip,
+                        roleChipW ? { width: roleChipW } : null,
                         isSelected && styles.roleChipSelected,
                       ]}
                       onPress={() => setSelectedRole(role.id)}
@@ -532,19 +542,22 @@ export default function RegisterScreen() {
                         style={[styles.roleChipLabel, isSelected && styles.roleChipLabelSelected]}
                         numberOfLines={2}
                         adjustsFontSizeToFit
+                        minimumFontScale={0.85}
                       >
                         {role.label}
                       </Text>
                     </TouchableOpacity>
                   );
                 })}
-              </ScrollView>
+              </View>
               <Text style={styles.roleHint}>
-                {selectedRole === 'RIDER'
-                  ? 'You\'ll complete rider onboarding after registration'
+                {selectedRole === 'CLIENT'
+                  ? 'Book rides, order food, shop & more'
                   : selectedRole === 'MERCHANT'
                   ? 'You\'ll set up your business after registration'
-                  : 'Book rides, order food, shop & more'}
+                  : selectedRole === 'PHARMACIST'
+                  ? 'You\'ll set up your pharmacy after registration'
+                  : 'You\'ll complete onboarding after registration'}
               </Text>
             </View>
 
@@ -831,13 +844,13 @@ const styles = StyleSheet.create({
   },
   roleGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: SPACING.sm,
     paddingVertical: 2,
-    paddingRight: SPACING.md, // last card not flush to the edge when scrolled
   },
   roleChip: {
-    width: 92,
-    minHeight: 96,
+    // width is set responsively at runtime (measured row width / columns)
+    minHeight: 92,
     alignItems: 'center',
     justifyContent: 'flex-start',
     backgroundColor: COLORS.surfaceContainerLow,
