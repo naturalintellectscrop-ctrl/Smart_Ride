@@ -349,11 +349,6 @@ export async function GET(request: NextRequest) {
 
     const merchant = await db.merchant.findUnique({
       where: { id: merchantId },
-      include: {
-        documents: {
-          where: { merchantId },
-        },
-      },
     });
 
     if (!merchant) {
@@ -363,10 +358,14 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Document has no Prisma relation to Merchant (scalar merchantId) — an
+    // include:{documents} throws, so fetch them separately.
+    const documents = await db.document.findMany({ where: { merchantId } });
+
     return NextResponse.json({
       registered: true,
       merchant,
-      documents: merchant.documents,
+      documents,
     });
   } catch (error) {
     console.error('Error fetching merchant registration:', error);
