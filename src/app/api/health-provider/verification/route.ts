@@ -128,7 +128,8 @@ export async function PATCH(request: NextRequest) {
         entityType: 'HealthProvider',
         entityId: providerId,
         description: `Provider verification action: ${action} for ${provider.businessName}`,
-        metadata: JSON.stringify({
+        // AuditLog has no `metadata` column — use newValues (unknown-arg → 500).
+        newValues: JSON.stringify({
           previousStatus: provider.verificationStatus,
           newStatus: updateData.verificationStatus,
           notes,
