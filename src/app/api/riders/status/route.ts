@@ -80,7 +80,9 @@ export async function POST(request: NextRequest) {
         riderId: rider.id,
         description: `Driver went ${isOnline ? 'online' : 'offline'}${isOnline && latitude && longitude ? ` at (${latitude}, ${longitude})` : ''}`,
         source: 'MOBILE_APP',
-        metadata: JSON.stringify({
+        // AuditLog has no `metadata` column — use newValues (this passing an
+        // unknown `metadata` arg was throwing and 500-ing every go-online call).
+        newValues: JSON.stringify({
           previousStatus: rider.isOnline,
           newStatus: isOnline,
           locationUpdated: isOnline && typeof latitude === 'number' && typeof longitude === 'number',
