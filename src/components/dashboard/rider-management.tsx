@@ -34,6 +34,7 @@ import {
   Ban,
   Clock,
   Loader2,
+  Download,
   AlertCircle,
   RefreshCw,
   Bike,
@@ -117,6 +118,26 @@ export function RiderManagement() {
   useEffect(() => {
     fetchRiders();
   }, []);
+
+  // Download a rider document to the admin's machine (KYC record keeping).
+  // Fetches the file as a blob so the browser saves it (Supabase URLs are
+  // cross-origin, so the anchor `download` attr alone wouldn't force a save).
+  const downloadDocument = async (url: string, fileName: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(url, '_blank'); // fallback: open in a new tab
+    }
+  };
 
   const filteredRiders = riders.filter(rider => {
     const matchesSearch = 
@@ -468,7 +489,7 @@ export function RiderManagement() {
 
       {/* Rider Details Dialog */}
       <Dialog open={!!selectedRider} onOpenChange={() => setSelectedRider(null)}>
-        <DialogContent className="max-w-2xl glass-card border-white/10 text-white">
+        <DialogContent className="max-w-2xl glass-card border-white/10 text-white max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white">Rider Details</DialogTitle>
           </DialogHeader>
@@ -541,7 +562,21 @@ export function RiderManagement() {
                         <div key={doc.id} className={`p-3 rounded-xl border ${docStyle}`}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm text-white">{doc.documentType.replace(/_/g, ' ')}</span>
-                            <Badge variant="outline" className="border-white/10 text-gray-300">{doc.status}</Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="border-white/10 text-gray-300">{doc.status}</Badge>
+                              {doc.fileUrl && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 gap-1 px-2 text-sky-300 hover:text-sky-200 hover:bg-sky-500/10"
+                                  onClick={() => downloadDocument(doc.fileUrl, `${selectedRider.fullName.replace(/\s+/g, '_')}_${doc.documentType}.${(doc.fileUrl.split('.').pop() || 'jpg').split('?')[0]}`)}
+                                  title="Download"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  <span className="text-xs">Download</span>
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           {doc.fileUrl && (isPdf ? (
                             <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-sky-400 underline">

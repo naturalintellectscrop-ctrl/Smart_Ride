@@ -34,6 +34,7 @@ import {
   Ban,
   Clock,
   Loader2,
+  Download,
   AlertCircle,
   RefreshCw,
   Store,
@@ -108,6 +109,25 @@ export function MerchantManagement() {
   useEffect(() => {
     fetchMerchants();
   }, []);
+
+  // Download a business/pharmacy document (KYC record keeping). Fetches as a
+  // blob so the browser saves it (Supabase URLs are cross-origin).
+  const downloadDocument = async (url: string, fileName: string) => {
+    try {
+      const res = await fetch(url);
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      window.open(url, '_blank');
+    }
+  };
 
   const filteredMerchants = merchants.filter(merchant => {
     const matchesSearch = 
@@ -458,7 +478,7 @@ export function MerchantManagement() {
 
       {/* Merchant Details Dialog */}
       <Dialog open={!!selectedMerchant} onOpenChange={() => setSelectedMerchant(null)}>
-        <DialogContent className="max-w-2xl glass-card border-white/10 text-white">
+        <DialogContent className="max-w-2xl glass-card border-white/10 text-white max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white">Merchant Details</DialogTitle>
           </DialogHeader>
@@ -515,7 +535,21 @@ export function MerchantManagement() {
                         <div key={doc.id} className={`p-3 rounded-xl border ${docStyle}`}>
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm text-white">{doc.documentType.replace(/_/g, ' ')}</span>
-                            <Badge variant="outline" className="border-white/10 text-gray-300">{doc.status}</Badge>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="border-white/10 text-gray-300">{doc.status}</Badge>
+                              {doc.fileUrl && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 gap-1 px-2 text-sky-300 hover:text-sky-200 hover:bg-sky-500/10"
+                                  onClick={() => downloadDocument(doc.fileUrl, `${selectedMerchant.name.replace(/\s+/g, '_')}_${doc.documentType}.${(doc.fileUrl.split('.').pop() || 'jpg').split('?')[0]}`)}
+                                  title="Download"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  <span className="text-xs">Download</span>
+                                </Button>
+                              )}
+                            </div>
                           </div>
                           {doc.fileUrl && (isPdf ? (
                             <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-sky-400 underline">
