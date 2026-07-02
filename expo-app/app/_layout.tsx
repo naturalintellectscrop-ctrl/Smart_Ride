@@ -51,6 +51,7 @@ import { useRealtime } from '@/src/hooks/useRealtime';
 import { useIncomingCall } from '@/src/hooks/useIncomingCall';
 import { useAuthStore } from '@/src/store/authStore';
 import { OfflineBanner } from '@/src/components/OfflineBanner';
+import { FeedbackHost } from '@/src/components/feedback';
 
 // Suppress known benign warnings in production
 LogBox.ignoreLogs([
@@ -323,6 +324,8 @@ function ThemedRootLayout() {
           <Stack.Screen name="pharmacist/earnings" options={{ headerShown: false }} />
         </Stack>
       </ProviderErrorBoundary>
+      {/* Global branded feedback (modals + toasts) — replaces native Alert.alert */}
+      <FeedbackHost />
     </>
   );
 }

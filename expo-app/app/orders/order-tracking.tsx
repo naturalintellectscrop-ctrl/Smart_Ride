@@ -10,11 +10,11 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   ScrollView,
   Linking,
   StyleSheet,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useLocationStore } from '@/src/store';

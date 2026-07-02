@@ -14,9 +14,9 @@ import {
   TouchableOpacity,
   Switch,
   ActivityIndicator,
-  Alert,
   StyleSheet,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import * as Location from 'expo-location';

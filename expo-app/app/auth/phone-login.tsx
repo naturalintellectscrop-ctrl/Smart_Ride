@@ -17,9 +17,9 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
-  Alert,
   Linking,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';

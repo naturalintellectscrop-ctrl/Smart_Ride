@@ -14,9 +14,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
-  Alert,
   StyleSheet,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

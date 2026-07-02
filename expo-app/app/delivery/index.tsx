@@ -15,9 +15,9 @@ import {
   TextInput,
   ActivityIndicator,
   StyleSheet,
-  Alert,
   Keyboard,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import Animated, {
   FadeIn,

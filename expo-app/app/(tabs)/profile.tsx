@@ -10,13 +10,13 @@ import {
   Text, 
   ScrollView, 
   TouchableOpacity, 
-  Alert,
   Switch,
   Linking,
   Image,
   ActivityIndicator,
   StyleSheet
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import Animated, {
   FadeIn,

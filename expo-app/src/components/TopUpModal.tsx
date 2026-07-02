@@ -15,12 +15,12 @@ import {
   TouchableOpacity,
   Modal,
   ActivityIndicator,
-  Alert,
   StyleSheet,
   ScrollView,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
 import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
