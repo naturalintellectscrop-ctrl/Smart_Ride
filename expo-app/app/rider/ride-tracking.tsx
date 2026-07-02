@@ -122,6 +122,10 @@ export default function RideTrackingScreen() {
     const totalAmount = paymentDetails.fare ?? completedTask.totalAmount ?? 0;
     const paymentMethod = paymentDetails.paymentMethod ?? completedTask.paymentMethod ?? 'CASH';
     const driverName = firstName((completedTask as any).rider?.fullName, '');
+    // Waiting charge settled at completion (0 when the driver waited within the
+    // free grace window) — passed through so the receipt can itemise it.
+    const waitingCharge = Math.round(Number((completedTask as any).waitingCharge ?? 0));
+    const waitingMinutes = Math.round(Number((completedTask as any).waitingMinutes ?? 0));
 
     router.replace({
       pathname: '/rider/trip-summary',
@@ -133,6 +137,8 @@ export default function RideTrackingScreen() {
         dropoffAddress: completedTask.dropoffAddress || '',
         distanceKm: String((completedTask as any).distanceKm ?? 0),
         durationMin: String((completedTask as any).estimatedDuration ?? 0),
+        waitingCharge: String(waitingCharge),
+        waitingMinutes: String(waitingMinutes),
         driverName,
       },
     });
