@@ -1,26 +1,44 @@
 // ============================================
 // SMART RIDE MOBILE - RIDE TRACKING SCREEN
-// FIXED: Added polling fallback for when socket fails
+// ============================================
+// Real-time ride experience:
+//  - Live map: driver position, pickup, destination, traffic-aware route polyline
+//  - Route + ETA update in real time from the driver's streaming GPS (Directions API)
+//  - Driver card: Smart Ride avatar, first name, rating, vehicle, masked plate
+//  - Communication: internet call (Agora), in-app chat, quick replies — no phone numbers
+//  - Arrival estimation from live GPS + route distance + traffic (never hardcoded)
 // ============================================
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  StyleSheet
+  StyleSheet,
+  ScrollView,
+  Image,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useTaskStore, useAuthStore } from '@/src/store';
+import { useChatStore } from '@/src/store/chatStore';
 import { api, socketService } from '@/src/services';
 import { TASK_STATUS_LABELS, TASK_STATUS_COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Task, TaskStatus } from '@/src/types';
 import { firstName } from '@/src/utils/formatName';
+import { useLiveRoute } from '@/src/hooks/useLiveRoute';
+import {
+  Coord,
+  maskPlate,
+  vehicleSummary,
+  formatEta,
+  isBeforePickup,
+  RIDE_QUICK_REPLIES,
+} from '@/src/utils/ride';
 import { Ionicons } from '@expo/vector-icons';
 
 // Polling intervals (in ms)
@@ -35,16 +53,18 @@ export default function RideTrackingScreen() {
   const params = useLocalSearchParams<{ taskId: string }>();
   const { pendingTask, setCurrentTask, updateTaskStatus, clearPendingTask } = useTaskStore();
   const { user, accessToken } = useAuthStore();
+  const sendChatMessage = useChatStore((s) => s.sendMessage);
 
   const [task, setTask] = useState<Task | null>(pendingTask);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [sentQuickReply, setSentQuickReply] = useState<string | null>(null);
   const [driverLocation, setDriverLocation] = useState<{
     latitude: number;
     longitude: number;
     heading?: number;
   } | null>(null);
-  
+
   // Polling refs
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const socketConnectedRef = useRef(false);
@@ -53,32 +73,33 @@ export default function RideTrackingScreen() {
   // POLLING FALLBACK: Fetch task status periodically
   const pollTaskStatus = async () => {
     if (!params.taskId) return;
-    
+
     // Skip poll if a socket update happened recently (within 5 seconds)
     // This prevents stale poll data from overwriting fresh socket data
     if (Date.now() - lastUpdateTimestamp.current < 5000) {
       return;
     }
-    
+
     try {
       const response = await api.getTask(params.taskId);
       if (response.success && response.data) {
         const updatedTask = response.data;
-        
+
         // Check if status changed
         setTask(prev => {
           if (prev && prev.status !== updatedTask.status) {
             // Status changed - update store
             updateTaskStatus(params.taskId, updatedTask.status);
-            
+
             // Handle completion
             if (updatedTask.status === 'COMPLETED') {
               handleRideCompleted(updatedTask);
             }
           }
-          return updatedTask;
+          // Preserve rider details across polls (list payloads may omit them)
+          return { ...prev, ...updatedTask, rider: updatedTask.rider || prev?.rider } as Task;
         });
-        
+
         // Update driver location if available
         if (updatedTask.rider?.currentLatitude && updatedTask.rider?.currentLongitude) {
           setDriverLocation({
@@ -122,7 +143,7 @@ export default function RideTrackingScreen() {
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
     }
-    
+
     pollingIntervalRef.current = setInterval(pollTaskStatus, interval);
     console.log('[RideTracking] Started polling with interval:', interval);
   };
@@ -153,7 +174,7 @@ export default function RideTrackingScreen() {
       try {
         await socketService.connect();
         socketConnectedRef.current = socketService.isSocketConnected();
-        
+
         if (socketConnectedRef.current && params.taskId) {
           socketService.joinTaskRoom(params.taskId);
           console.log('[RideTracking] Socket connected as secondary mechanism');
@@ -162,7 +183,7 @@ export default function RideTrackingScreen() {
         console.log('[RideTracking] Socket not available, polling only');
       }
     };
-    
+
     initSocket();
 
     // Listen for task status updates (if socket connects - secondary)
@@ -172,7 +193,7 @@ export default function RideTrackingScreen() {
         lastUpdateTimestamp.current = Date.now(); // Mark socket update as most recent
         updateTaskStatus(data.taskId, data.status);
         setTask(prev => prev ? { ...prev, status: data.status as TaskStatus } : null);
-        
+
         if (data.status === 'COMPLETED') {
           // Fetch full task and handle completion
           pollTaskStatus();
@@ -220,6 +241,12 @@ export default function RideTrackingScreen() {
       if (response.success && response.data) {
         setTask(response.data);
         setCurrentTask(response.data);
+        if (response.data.rider?.currentLatitude && response.data.rider?.currentLongitude) {
+          setDriverLocation({
+            latitude: response.data.rider.currentLatitude,
+            longitude: response.data.rider.currentLongitude,
+          });
+        }
       } else {
         Alert.alert('Error', 'Failed to load ride details');
         router.back();
@@ -243,7 +270,7 @@ export default function RideTrackingScreen() {
           style: 'destructive',
           onPress: async () => {
             if (!task) return;
-            
+
             setIsCancelling(true);
             try {
               const response = await api.cancelTask(task.id, 'Cancelled by user');
@@ -263,15 +290,43 @@ export default function RideTrackingScreen() {
     );
   };
 
+  // Conversation id convention shared with the call/chat screens: conv-<taskId>
+  const conversationId = task ? `conv-${task.id}` : undefined;
+
+  // In-app internet call (Agora). NOTE: we deliberately pass NO phone number —
+  // the call screen falls back to VoIP only, so personal numbers stay private.
   const handleCallDriver = () => {
-    if (task?.riderId) {
+    if (task?.riderId && conversationId) {
       router.push(
-        `/call/${task.riderId}?name=${encodeURIComponent(firstName(task.rider?.fullName, 'Driver'))}`
+        `/call/${task.riderId}?name=${encodeURIComponent(firstName(task.rider?.fullName, 'Driver'))}&conversationId=${conversationId}`
       );
     } else {
       Alert.alert('Driver Unavailable', 'No driver has been assigned yet.');
     }
   };
+
+  const handleChatDriver = () => {
+    if (task?.riderId && conversationId) {
+      router.push(`/chat/${conversationId}` as any);
+    } else {
+      Alert.alert('Chat Unavailable', 'No driver has been assigned yet.');
+    }
+  };
+
+  const handleQuickReply = useCallback(async (message: string) => {
+    if (!conversationId || !task?.riderId) {
+      Alert.alert('Chat Unavailable', 'No driver has been assigned yet.');
+      return;
+    }
+    setSentQuickReply(message);
+    try {
+      await sendChatMessage(conversationId, { content: message, type: 'TEXT' });
+    } catch (e) {
+      console.warn('[RideTracking] Quick reply failed:', e);
+    }
+    // Clear the "sent" affordance after a short beat
+    setTimeout(() => setSentQuickReply(null), 2500);
+  }, [conversationId, task?.riderId, sendChatMessage]);
 
   const handleSOS = async () => {
     Alert.alert(
@@ -298,6 +353,30 @@ export default function RideTrackingScreen() {
     );
   };
 
+  // ============================================
+  // LIVE ROUTE + ETA (traffic-aware, never hardcoded)
+  // ============================================
+  const pickupCoord: Coord | null = task?.pickupLatitude && task?.pickupLongitude
+    ? { latitude: task.pickupLatitude, longitude: task.pickupLongitude }
+    : null;
+  const dropoffCoord: Coord | null = task?.dropoffLatitude && task?.dropoffLongitude
+    ? { latitude: task.dropoffLatitude, longitude: task.dropoffLongitude }
+    : null;
+
+  const beforePickup = task ? isBeforePickup(task.status) : true;
+  const isCarRide = task?.taskType === 'SMART_CAR_RIDE';
+
+  // Which leg are we routing?  driver→pickup (before boarding) or driver→dropoff
+  // (en route). If no driver location yet, show the pickup→dropoff overview.
+  const routeOrigin: Coord | null = driverLocation
+    ? { latitude: driverLocation.latitude, longitude: driverLocation.longitude }
+    : pickupCoord;
+  const routeTarget: Coord | null = driverLocation
+    ? (beforePickup ? pickupCoord : dropoffCoord)
+    : dropoffCoord;
+
+  const liveRoute = useLiveRoute(routeOrigin, routeTarget, isCarRide ? 20 : 24);
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -311,7 +390,7 @@ export default function RideTrackingScreen() {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.noRideText}>No active ride found</Text>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.goHomeButton}
           onPress={() => router.replace('/(tabs)')}
         >
@@ -324,69 +403,160 @@ export default function RideTrackingScreen() {
   const statusColor = TASK_STATUS_COLORS[task.status] || COLORS.primary;
   const statusLabel = TASK_STATUS_LABELS[task.status] || task.status;
 
+  // Driver-derived display values (privacy-safe)
+  const rider: any = task.rider || {};
+  const driverAvatarUrl: string | undefined = rider.avatarUrl || rider.photoUrl || rider.user?.avatarUrl;
+  const vehicleText = vehicleSummary(rider.vehicle);
+  const maskedPlate = rider.vehicle?.plateNumber ? maskPlate(rider.vehicle.plateNumber) : null;
+  const hasDriver = !!task.riderId;
+
+  // ETA hero text
+  const etaValue = formatEta(liveRoute.durationMin);
+  const etaLabel = !hasDriver
+    ? 'Estimated trip time'
+    : beforePickup
+      ? 'Driver arriving in'
+      : 'Arriving at destination in';
+  const showEta = liveRoute.durationMin != null || liveRoute.loading;
+
   return (
     <View style={styles.container}>
       {/* Map */}
       <SmartRideMap
         style={{ flex: 1 }}
-        initialLatitude={task.pickupLatitude || 0.3476}
-        initialLongitude={task.pickupLongitude || 32.5825}
-        pickup={
-          task.pickupLatitude
-            ? { latitude: task.pickupLatitude, longitude: task.pickupLongitude || 32.5825, title: 'Pickup' }
-            : undefined
-        }
-        dropoff={
-          task.dropoffLatitude && task.dropoffLongitude
-            ? { latitude: task.dropoffLatitude, longitude: task.dropoffLongitude, title: 'Dropoff' }
-            : undefined
-        }
+        initialLatitude={driverLocation?.latitude || task.pickupLatitude || 0.3476}
+        initialLongitude={driverLocation?.longitude || task.pickupLongitude || 32.5825}
+        pickup={pickupCoord ? { ...pickupCoord, title: 'Pickup' } : undefined}
+        dropoff={dropoffCoord ? { ...dropoffCoord, title: 'Destination' } : undefined}
         driverLocation={driverLocation || undefined}
+        routeCoordinates={liveRoute.routeCoordinates}
         showUserLocation
       />
 
-      {/* Status Card */}
-      <View style={styles.statusCard}>
-        {/* Status */}
+      {/* Status Card (scrollable bottom sheet) */}
+      <ScrollView
+        style={styles.statusCard}
+        contentContainerStyle={styles.statusCardContent}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {/* Grab handle */}
+        <View style={styles.grabHandle} />
+
+        {/* Status + ETA hero */}
         <View style={styles.statusRow}>
-          <View>
-            <Text 
-              style={[styles.statusLabel, { color: statusColor }]}
-            >
-              {statusLabel}
-            </Text>
-            <Text style={styles.taskNumber}>
-              {task.taskNumber}
-            </Text>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
+            <Text style={styles.taskNumber}>{task.taskNumber}</Text>
           </View>
-          <View 
-            style={[styles.statusIndicator, { backgroundColor: `${statusColor}20` }]}
-          >
+          <View style={[styles.statusIndicator, { backgroundColor: `${statusColor}20` }]}>
             <ActivityIndicator size="small" color={statusColor} />
           </View>
         </View>
 
-        {/* Driver Info */}
-        {task.rider && (
-          <View style={styles.driverCard}>
-            <View style={styles.driverAvatar}>
-              <Ionicons name="person" size={24} color={COLORS.onSurfaceVariant} />
+        {showEta && (
+          <View style={styles.etaCard}>
+            <View style={styles.etaIconWrap}>
+              <Ionicons name="time" size={20} color={COLORS.onPrimary} />
             </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.etaLabel}>{etaLabel}</Text>
+              {liveRoute.loading && liveRoute.durationMin == null ? (
+                <Text style={styles.etaValue}>Calculating…</Text>
+              ) : (
+                <Text style={styles.etaValue}>
+                  {etaValue}
+                  {liveRoute.distanceKm != null && (
+                    <Text style={styles.etaDistance}>  ·  {liveRoute.distanceKm.toFixed(1)} km</Text>
+                  )}
+                </Text>
+              )}
+            </View>
+            <View style={styles.liveBadge}>
+              <View style={styles.liveDot} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Driver Info */}
+        {hasDriver && (
+          <View style={styles.driverCard}>
+            {driverAvatarUrl ? (
+              <Image source={{ uri: driverAvatarUrl }} style={styles.driverAvatarImg} />
+            ) : (
+              <View style={styles.driverAvatar}>
+                <Ionicons name="person" size={24} color={COLORS.onSurfaceVariant} />
+              </View>
+            )}
             <View style={styles.driverInfo}>
-              <Text style={styles.driverName}>{firstName(task.rider.fullName, 'Driver')}</Text>
+              <Text style={styles.driverName}>{firstName(rider.fullName, 'Driver')}</Text>
               <View style={styles.driverRatingRow}>
                 <Ionicons name="star" size={14} color="#F59E0B" />
-                <Text style={styles.driverRating}>{(task.rider?.rating ?? 0).toFixed(1)}</Text>
+                <Text style={styles.driverRating}>{(rider.rating ?? 0).toFixed(1)}</Text>
                 <Text style={styles.driverTripsSeparator}>•</Text>
-                <Text style={styles.driverTrips}>{task.rider.totalTrips} trips</Text>
+                <Text style={styles.driverTrips}>{rider.totalTrips ?? 0} trips</Text>
               </View>
+              {(vehicleText || maskedPlate) && (
+                <View style={styles.vehicleRow}>
+                  <Ionicons
+                    name={isCarRide ? 'car' : 'bicycle'}
+                    size={13}
+                    color={COLORS.onSurfaceVariant}
+                  />
+                  {!!vehicleText && (
+                    <Text style={styles.vehicleText} numberOfLines={1}>{vehicleText}</Text>
+                  )}
+                  {!!maskedPlate && (
+                    <View style={styles.plateChip}>
+                      <Text style={styles.plateText}>{maskedPlate}</Text>
+                    </View>
+                  )}
+                </View>
+              )}
             </View>
-            <TouchableOpacity 
-              style={styles.callButton}
-              onPress={handleCallDriver}
+            <View style={styles.driverActions}>
+              <TouchableOpacity style={styles.callButton} onPress={handleCallDriver}>
+                <Ionicons name="call" size={18} color={COLORS.onPrimary} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.chatButton} onPress={handleChatDriver}>
+                <Ionicons name="chatbubble-ellipses" size={18} color={COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Quick replies (privacy-safe canned messages) */}
+        {hasDriver && (
+          <View style={styles.quickReplySection}>
+            <Text style={styles.quickReplyHeading}>Quick messages</Text>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickReplyRow}
             >
-              <Ionicons name="call-outline" size={20} color={COLORS.onPrimary} />
-            </TouchableOpacity>
+              {RIDE_QUICK_REPLIES.map((msg) => {
+                const isSent = sentQuickReply === msg;
+                return (
+                  <TouchableOpacity
+                    key={msg}
+                    style={[styles.quickReplyChip, isSent && styles.quickReplyChipSent]}
+                    onPress={() => handleQuickReply(msg)}
+                    activeOpacity={0.7}
+                    disabled={isSent}
+                  >
+                    <Ionicons
+                      name={isSent ? 'checkmark-circle' : 'chatbox-ellipses-outline'}
+                      size={14}
+                      color={isSent ? COLORS.onPrimary : COLORS.primary}
+                    />
+                    <Text style={[styles.quickReplyText, isSent && styles.quickReplyTextSent]}>
+                      {isSent ? 'Sent' : msg}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
           </View>
         )}
 
@@ -401,7 +571,7 @@ export default function RideTrackingScreen() {
         <View style={styles.routeSection}>
           <View style={styles.routePoint}>
             <View style={styles.routeDotPrimary} />
-            <Text style={styles.routePointLabel}>Dropoff</Text>
+            <Text style={styles.routePointLabel}>Destination</Text>
           </View>
           <Text style={styles.routePointAddress} numberOfLines={1}>{task.dropoffAddress}</Text>
         </View>
@@ -411,6 +581,14 @@ export default function RideTrackingScreen() {
           <Text style={styles.fareLabel}>Estimated Fare</Text>
           <Text style={styles.fareAmount}>
             UGX {(task.totalAmount ?? 0).toLocaleString()}
+          </Text>
+        </View>
+
+        {/* Privacy note */}
+        <View style={styles.privacyNote}>
+          <Ionicons name="lock-closed" size={12} color={COLORS.onSurfaceVariant} />
+          <Text style={styles.privacyText}>
+            Your contact details stay private. Chat & calls are in-app only.
           </Text>
         </View>
 
@@ -425,14 +603,12 @@ export default function RideTrackingScreen() {
               {isCancelling ? 'Cancelling...' : 'Cancel Ride'}
             </Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.sosButton}
-            onPress={handleSOS}
-          >
+          <TouchableOpacity style={styles.sosButton} onPress={handleSOS}>
+            <Ionicons name="warning" size={16} color={COLORS.onError} />
             <Text style={styles.sosButtonText}>SOS</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -475,13 +651,24 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    maxHeight: '64%',
     backgroundColor: COLORS.surfaceContainerLowest,
     borderTopLeftRadius: RADIUS.xl,
     borderTopRightRadius: RADIUS.xl,
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.xl,
     ...SHADOWS.active,
+  },
+  statusCardContent: {
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    paddingBottom: SPACING.xl,
+  },
+  grabHandle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.outlineVariant,
+    marginBottom: SPACING.sm,
   },
   statusRow: {
     flexDirection: 'row',
@@ -504,6 +691,60 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  // ETA hero card
+  etaCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.primaryContainer,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  etaIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  etaLabel: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onPrimaryContainer,
+    fontWeight: '600',
+  },
+  etaValue: {
+    ...TYPOGRAPHY.headlineMd,
+    color: COLORS.onPrimaryContainer,
+    fontWeight: 'bold',
+  },
+  etaDistance: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onPrimaryContainer,
+    fontWeight: '500',
+  },
+  liveBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
+    borderRadius: RADIUS.full,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.error,
+  },
+  liveText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    letterSpacing: 0.5,
+  },
   // Driver card
   driverCard: {
     flexDirection: 'row',
@@ -522,8 +763,12 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     justifyContent: 'center',
     marginRight: SPACING.md,
   },
-  driverAvatarEmoji: {
-    fontSize: 24,
+  driverAvatarImg: {
+    width: 56,
+    height: 56,
+    borderRadius: RADIUS.full,
+    marginRight: SPACING.md,
+    backgroundColor: COLORS.surfaceContainer,
   },
   driverInfo: {
     flex: 1,
@@ -536,14 +781,12 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   driverRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  driverRatingStar: {
-    ...TYPOGRAPHY.bodySm,
-    marginRight: SPACING.xs,
+    marginTop: 2,
   },
   driverRating: {
     ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurfaceVariant,
+    marginLeft: SPACING.xs,
   },
   driverTripsSeparator: {
     ...TYPOGRAPHY.bodySm,
@@ -554,13 +797,87 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurfaceVariant,
   },
+  vehicleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginTop: 4,
+  },
+  vehicleText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    flexShrink: 1,
+  },
+  plateChip: {
+    backgroundColor: COLORS.surfaceContainerHighest,
+    borderRadius: RADIUS.sm,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 1,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+  },
+  plateText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.onSurface,
+    letterSpacing: 1,
+  },
+  driverActions: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
   callButton: {
     width: 40,
     height: 40,
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  chatButton: {
+    width: 40,
+    height: 40,
+    backgroundColor: COLORS.primaryFixed,
+    borderRadius: RADIUS.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Quick replies
+  quickReplySection: {
+    marginBottom: SPACING.md,
+  },
+  quickReplyHeading: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginBottom: SPACING.sm,
+    fontWeight: '600',
+  },
+  quickReplyRow: {
+    gap: SPACING.sm,
+    paddingRight: SPACING.md,
+  },
+  quickReplyChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderWidth: 1,
+    borderColor: COLORS.primaryFixed,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+  },
+  quickReplyChipSent: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  quickReplyText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  quickReplyTextSent: {
+    color: COLORS.onPrimary,
   },
   // Route section
   routeSection: {
@@ -614,6 +931,18 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.primary,
   },
+  // Privacy note
+  privacyNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+    marginBottom: SPACING.md,
+  },
+  privacyText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    flex: 1,
+  },
   // Actions
   actionsRow: {
     flexDirection: 'row',
@@ -641,6 +970,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: SPACING.xs,
   },
   sosButtonText: {
     ...TYPOGRAPHY.bodyMd,

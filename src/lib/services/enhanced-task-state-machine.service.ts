@@ -14,6 +14,7 @@ import { TaskAnalyticsUpdater } from './analytics-updater.service';
 import { FinanceLedgerService } from './finance-ledger.service';
 import { sendTaskUpdateNotification } from './notification.service';
 import { SocketReliabilityService } from '@/lib/realtime/socket-reliability.service';
+import { computeWaitingCharge, getPricingConfig } from '@/lib/api/pricing';
 
 // ============================================
 // UTILITY FUNCTIONS (consolidated from state-machine.ts)
@@ -166,6 +167,59 @@ interface TransitionConfig {
   afterTransition?: (task: any, context?: any) => Promise<void>;
 }
 
+/**
+ * Settle the waiting charge for a ride at completion.
+ *
+ * Waiting time is the gap between the driver ARRIVING at pickup
+ * (arrivedAtPickupAt) and the passenger boarding (pickedUpAt). If that exceeds
+ * the service's free grace window, the waiting charge is ADDED on top of the
+ * already-stored fare — we never recompute distance/surge retroactively, so the
+ * customer is only ever charged more for time actually spent waiting, and the
+ * booked quote is never silently changed.
+ *
+ * The extra amount is split between platform and rider using the service's
+ * commission rate so earnings stay consistent. Runs as a `beforeTransition`
+ * hook so the new fare is written atomically with the COMPLETED status (before
+ * the finance ledger reads the task), and is fully best-effort: any failure is
+ * logged and the completion proceeds with the unmodified fare.
+ */
+async function applyRideWaitingSettlement(task: any, context: TransitionContext): Promise<void> {
+  try {
+    const taskType = task.taskType as TaskType;
+    if (taskType !== TaskType.SMART_BODA_RIDE && taskType !== TaskType.SMART_CAR_RIDE) return;
+    if (!task.arrivedAtPickupAt || !task.pickedUpAt) return;
+
+    const waitMs = new Date(task.pickedUpAt).getTime() - new Date(task.arrivedAtPickupAt).getTime();
+    if (!(waitMs > 0)) return;
+
+    const waitingMinutes = Math.round(waitMs / 60000);
+    const waitingCharge = computeWaitingCharge(taskType, waitingMinutes);
+    if (waitingCharge <= 0) return; // within the free grace window — nothing to bill
+
+    const commissionPct = getPricingConfig(taskType)?.platformCommissionPercent ?? 0;
+    const addedCommission = Math.round(waitingCharge * commissionPct);
+
+    const prevTotal = Number(task.totalAmount ?? 0);
+    const prevCommission = Number(task.platformCommission ?? 0);
+    const prevEarnings = Number(task.riderEarnings ?? 0);
+
+    context.additionalTaskData = {
+      ...(context.additionalTaskData || {}),
+      waitingMinutes,
+      waitingCharge,
+      totalAmount: prevTotal + waitingCharge,
+      platformCommission: prevCommission + addedCommission,
+      riderEarnings: prevEarnings + (waitingCharge - addedCommission),
+    };
+
+    console.log(
+      `[waiting-settlement] task ${task.id}: +${waitingCharge} UGX for ${waitingMinutes} min wait (${taskType})`
+    );
+  } catch (e) {
+    console.error('[waiting-settlement] failed (non-blocking):', e);
+  }
+}
+
 // Ride lifecycle: REQUESTED → SEARCHING → ASSIGNED → ARRIVING → PICKED_UP → IN_PROGRESS → COMPLETED → PAID → CLOSED
 const RIDE_TRANSITIONS: TransitionConfig[] = [
   { from: TaskStatus.CREATED, to: TaskStatus.MATCHING },
@@ -184,9 +238,9 @@ const RIDE_TRANSITIONS: TransitionConfig[] = [
   { from: TaskStatus.ARRIVING, to: TaskStatus.ARRIVED },
   { from: TaskStatus.ARRIVED, to: TaskStatus.PICKED_UP },
   { from: TaskStatus.PICKED_UP, to: TaskStatus.IN_PROGRESS },
-  { from: TaskStatus.IN_PROGRESS, to: TaskStatus.COMPLETED },
-  { 
-    from: TaskStatus.COMPLETED, 
+  { from: TaskStatus.IN_PROGRESS, to: TaskStatus.COMPLETED, beforeTransition: applyRideWaitingSettlement },
+  {
+    from: TaskStatus.COMPLETED,
     to: TaskStatus.PAID,
     requiredFields: ['paymentStatus'],
   },

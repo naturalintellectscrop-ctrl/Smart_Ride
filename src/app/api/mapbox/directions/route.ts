@@ -42,17 +42,36 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Mapbox Directions v5 — driving profile
-  const url =
-    `https://api.mapbox.com/directions/v5/mapbox/driving/` +
+  // Build the Mapbox Directions v5 URL for a given routing profile.
+  const buildUrl = (profile: 'driving-traffic' | 'driving') =>
+    `https://api.mapbox.com/directions/v5/mapbox/${profile}/` +
     `${pickupLng},${pickupLat};${dropoffLng},${dropoffLat}` +
     `?geometries=geojson&overview=full&steps=false&access_token=${token}`;
 
+  // Prefer the traffic-aware profile so the ETA reflects current road
+  // conditions (congestion, closures) rather than free-flow speed. If it
+  // fails (coverage gaps / rate limits), fall back to the plain driving
+  // profile so we still return a real route + ETA.
+  const fetchRoute = async (profile: 'driving-traffic' | 'driving'): Promise<Response> =>
+    fetch(buildUrl(profile));
+
   let mapboxRes: Response;
+  let profileUsed: 'driving-traffic' | 'driving' = 'driving-traffic';
   try {
-    mapboxRes = await fetch(url);
+    mapboxRes = await fetchRoute('driving-traffic');
+    if (!mapboxRes.ok) {
+      console.warn('[mapbox/directions] driving-traffic returned', mapboxRes.status, '— falling back to driving');
+      profileUsed = 'driving';
+      mapboxRes = await fetchRoute('driving');
+    }
   } catch (err) {
-    return NextResponse.json({ success: false, error: 'Failed to reach Mapbox' }, { status: 502 });
+    // Network error on the first attempt — try the plain profile once.
+    try {
+      profileUsed = 'driving';
+      mapboxRes = await fetchRoute('driving');
+    } catch {
+      return NextResponse.json({ success: false, error: 'Failed to reach Mapbox' }, { status: 502 });
+    }
   }
 
   if (!mapboxRes.ok) {
@@ -87,6 +106,7 @@ export async function GET(request: NextRequest) {
       geometry,
       distanceKm,
       durationMin,
+      trafficAware: profileUsed === 'driving-traffic',
     },
   });
 }

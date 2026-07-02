@@ -810,7 +810,7 @@ function ConfirmStep({
   isRequesting: boolean;
   currentRideType: RideTypeConfig;
   nearestEtaMin: number | null;
-  fareBreakdown: { baseFare: number; distanceFare: number; serviceFee: number; surcharges: number; totalAmount: number; minimumApplied: boolean } | null;
+  fareBreakdown: { baseFare: number; distanceFare: number; timeFare?: number; waitingCharge?: number; serviceFee: number; surcharges: number; totalAmount: number; minimumApplied: boolean } | null;
   COLORS: ThemedColors;
   styles: any;
 }) {
@@ -926,6 +926,18 @@ function ConfirmStep({
             <Text style={styles.fareRowLabel}>Distance{distance != null ? ` (${distance.toFixed(1)} km)` : ''}</Text>
             <Text style={styles.fareRowValue}>UGX {fareBreakdown.distanceFare.toLocaleString()}</Text>
           </View>
+          {!!fareBreakdown.timeFare && fareBreakdown.timeFare > 0 && (
+            <View style={styles.fareRow}>
+              <Text style={styles.fareRowLabel}>Time{duration != null ? ` (${duration} min)` : ''}</Text>
+              <Text style={styles.fareRowValue}>UGX {fareBreakdown.timeFare.toLocaleString()}</Text>
+            </View>
+          )}
+          {!!fareBreakdown.waitingCharge && fareBreakdown.waitingCharge > 0 && (
+            <View style={styles.fareRow}>
+              <Text style={styles.fareRowLabel}>Waiting</Text>
+              <Text style={styles.fareRowValue}>UGX {fareBreakdown.waitingCharge.toLocaleString()}</Text>
+            </View>
+          )}
           {fareBreakdown.surcharges > 0 && (
             <View style={styles.fareRow}>
               <Text style={styles.fareRowLabel}>Peak / night surcharge</Text>

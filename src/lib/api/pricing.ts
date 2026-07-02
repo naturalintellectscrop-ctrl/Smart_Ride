@@ -5,6 +5,7 @@ interface PricingInput {
   taskType: TaskType;
   distanceKm: number;
   durationMinutes?: number;
+  waitingMinutes?: number;
   itemWeight?: number;
   itemValue?: number;
   passengerCount?: number;
@@ -16,6 +17,7 @@ interface PricingBreakdown {
   baseFare: number;
   distanceFare: number;
   timeFare: number;
+  waitingCharge: number;
   deliveryFee: number;
   serviceFee: number;
   nightSurcharge: number;
@@ -32,6 +34,9 @@ const PRICING_CONFIG = {
     perKmRate: 150,
     perMinuteRate: 50,
     minimumFare: 3000,
+    // Waiting charge: after 3 free minutes, 100 UGX/min while the rider waits.
+    freeWaitingMin: 3,
+    waitingChargePerMin: 100,
     platformCommissionPercent: 0.15,
     serviceFeePercent: 0.05,
     nightSurchargePercent: 0.20,
@@ -42,6 +47,9 @@ const PRICING_CONFIG = {
     perKmRate: 300,
     perMinuteRate: 100,
     minimumFare: 8000,
+    // Waiting charge: after 5 free minutes, 200 UGX/min while the driver waits.
+    freeWaitingMin: 5,
+    waitingChargePerMin: 200,
     platformCommissionPercent: 0.20,
     serviceFeePercent: 0.05,
     nightSurchargePercent: 0.20,
@@ -85,6 +93,8 @@ type RateConfig = {
   perKmRate: number;
   perMinuteRate: number;
   perKgRate?: number;
+  freeWaitingMin?: number;
+  waitingChargePerMin?: number;
   minimumFare: number;
   maximumFare?: number;
   platformCommissionPercent: number;
@@ -170,18 +180,27 @@ function computePricing(input: PricingInput, config: RateConfig): PricingBreakdo
   // Base calculations
   const baseFare = config.baseFare;
   const distanceFare = Math.round(input.distanceKm * config.perKmRate);
-  const timeFare = input.durationMinutes 
-    ? Math.round(input.durationMinutes * config.perMinuteRate) 
+  const timeFare = input.durationMinutes
+    ? Math.round(input.durationMinutes * config.perMinuteRate)
     : 0;
-  
+
+  // Waiting charge: billed only for waiting time beyond the free grace window,
+  // at the service's per-minute waiting rate. Defaults to 0 when the caller
+  // doesn't supply waitingMinutes (e.g. up-front estimates), so it never
+  // inflates a quote silently — it applies at settlement when wait is known.
+  const freeWaitingMin = config.freeWaitingMin ?? 0;
+  const waitingChargePerMin = config.waitingChargePerMin ?? 0;
+  const billableWaitMin = Math.max(0, (input.waitingMinutes ?? 0) - freeWaitingMin);
+  const waitingCharge = Math.round(billableWaitMin * waitingChargePerMin);
+
   // Item delivery specific: weight-based pricing
   let deliveryFee = 0;
   if (input.taskType === 'ITEM_DELIVERY' && input.itemWeight) {
     deliveryFee = Math.round(input.itemWeight * (config.perKgRate || 50));
   }
-  
+
   // Calculate subtotal before surcharges
-  let subtotal = baseFare + distanceFare + timeFare + deliveryFee;
+  let subtotal = baseFare + distanceFare + timeFare + waitingCharge + deliveryFee;
   
   // Apply surcharges
   const nightSurcharge = input.isNightTime 
@@ -212,6 +231,7 @@ function computePricing(input: PricingInput, config: RateConfig): PricingBreakdo
     baseFare,
     distanceFare,
     timeFare,
+    waitingCharge,
     deliveryFee,
     serviceFee,
     nightSurcharge,
@@ -257,4 +277,22 @@ export function estimateFare(
  */
 export function getPricingConfig(taskType: TaskType) {
   return PRICING_CONFIG[taskType];
+}
+
+/**
+ * Waiting charge for a service, given the total minutes the rider/driver waited
+ * at pickup. Bills only the minutes beyond the service's free grace window at
+ * its per-minute waiting rate. Returns 0 for services without a waiting rate.
+ *
+ *   BODA: 3 free min, then 100 UGX/min   →  computeWaitingCharge('SMART_BODA_RIDE', 8) = 500
+ *   CAR : 5 free min, then 200 UGX/min   →  computeWaitingCharge('SMART_CAR_RIDE', 4)  = 0
+ */
+export function computeWaitingCharge(taskType: TaskType, waitingMinutes: number): number {
+  const cfg = PRICING_CONFIG[taskType] as RateConfig | undefined;
+  if (!cfg) return 0;
+  const freeWaitingMin = cfg.freeWaitingMin ?? 0;
+  const waitingChargePerMin = cfg.waitingChargePerMin ?? 0;
+  if (waitingChargePerMin <= 0) return 0;
+  const billableWaitMin = Math.max(0, (waitingMinutes ?? 0) - freeWaitingMin);
+  return Math.round(billableWaitMin * waitingChargePerMin);
 }

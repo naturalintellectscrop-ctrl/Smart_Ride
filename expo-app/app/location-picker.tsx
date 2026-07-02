@@ -123,6 +123,18 @@ export default function LocationPickerScreen() {
     [resolveCenter],
   );
 
+  // Tap-to-select: tapping anywhere on the map jumps the pin to that point and
+  // reverse-geocodes it (complements the drag-the-map-under-the-pin gesture).
+  const handleMapPress = useCallback(
+    (c: { latitude: number; longitude: number }) => {
+      setMapCenter(c);
+      centerRef.current = c;
+      setIsMoving(false);
+      resolveCenter(c);
+    },
+    [resolveCenter],
+  );
+
   // Search autocomplete (debounced) — proximity-biased to the current center.
   const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
@@ -183,6 +195,7 @@ export default function LocationPickerScreen() {
         centerPinType={isPickup ? 'pickup' : 'dropoff'}
         onCameraChanged={handleCameraChanged}
         onMapIdle={handleMapIdle}
+        onMapPress={handleMapPress}
       />
 
       {/* Search bar */}
