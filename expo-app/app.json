@@ -57,7 +57,10 @@
               "pathPrefix": "/reset-password"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -105,7 +108,8 @@
       "./plugins/withAbiSplits",
       "./plugins/withProguardRules",
       "./plugins/withSigningConfig",
-      "@sentry/react-native/expo"
+      "@sentry/react-native/expo",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true
