@@ -337,8 +337,21 @@ export default function RiderOnboardingScreen() {
       Alert.alert('Error', 'Please select a vehicle type');
       return false;
     }
+    if (!vehicleInfo.make.trim()) {
+      Alert.alert('Error', 'Vehicle make is required');
+      return false;
+    }
+    if (!vehicleInfo.model.trim()) {
+      Alert.alert('Error', 'Vehicle model is required');
+      return false;
+    }
     if (!vehicleInfo.plateNumber.trim()) {
       Alert.alert('Error', 'Plate number is required');
+      return false;
+    }
+    // Boda / car drivers must also provide their licence number.
+    if ((vehicleInfo.vehicleType === 'MOTORCYCLE' || vehicleInfo.vehicleType === 'CAR') && !documents.licenseNumber.trim()) {
+      Alert.alert('Error', 'Driving licence number is required for motorcycle and car drivers');
       return false;
     }
     return true;
@@ -752,7 +765,7 @@ export default function RiderOnboardingScreen() {
                   <Text style={styles.reviewEdit}>Edit</Text>
                 </TouchableOpacity>
               </View>
-              <ReviewRow label="Vehicle Type" value={VEHICLE_TYPES.find(v => v.id === vehicleInfo.vehicleType)?.label.split(' ').slice(1).join(' ') || 'Not selected'} />
+              <ReviewRow label="Vehicle Type" value={VEHICLE_TYPES.find(v => v.id === vehicleInfo.vehicleType)?.label || 'Not selected'} />
               <ReviewRow label="Make & Model" value={`${vehicleInfo.make || 'N/A'} ${vehicleInfo.model || 'N/A'}`} />
               <ReviewRow label="Year" value={vehicleInfo.year || 'Not provided'} />
               <ReviewRow label="Color" value={vehicleInfo.color || 'Not provided'} />

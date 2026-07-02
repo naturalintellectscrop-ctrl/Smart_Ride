@@ -195,6 +195,23 @@ export async function POST(request: NextRequest) {
       if (!existingUser) {
         return NextResponse.json({ success: false, error: 'Authenticated user not found' }, { status: 401 });
       }
+
+      // Vehicle plate numbers are globally unique. Fail fast with a clear message
+      // if this plate is already registered to a DIFFERENT account, instead of
+      // letting the unique-constraint violation surface as a generic 500.
+      if (resolvedVehicleType && resolvedPlate) {
+        const clash = await db.vehicle.findUnique({
+          where: { plateNumber: resolvedPlate.toUpperCase() },
+          select: { rider: { select: { userId: true } } },
+        });
+        if (clash && clash.rider?.userId !== authedUserId) {
+          return NextResponse.json(
+            { success: false, error: 'This vehicle plate number is already registered to another account.' },
+            { status: 409 }
+          );
+        }
+      }
+
       const authedResult = await db.$transaction(async (tx) => {
         await tx.user.update({
           where: { id: authedUserId },
@@ -250,6 +267,20 @@ export async function POST(request: NextRequest) {
     }
 
     // ---- STANDALONE FLOW: create a fresh user + rider ----
+    // Reject a duplicate plate up front with a clear message (unique constraint).
+    if (resolvedVehicleType && resolvedPlate) {
+      const clash = await db.vehicle.findUnique({
+        where: { plateNumber: resolvedPlate.toUpperCase() },
+        select: { id: true },
+      });
+      if (clash) {
+        return NextResponse.json(
+          { success: false, error: 'This vehicle plate number is already registered to another account.' },
+          { status: 409 }
+        );
+      }
+    }
+
     // Create user with rider profile in a transaction
     const result = await db.$transaction(async (tx) => {
       // 1. Create user (if not already authenticated — for logged-in riders we still
