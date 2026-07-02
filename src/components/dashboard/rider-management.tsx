@@ -85,6 +85,7 @@ export function RiderManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
   const [selectedRider, setSelectedRider] = useState<Rider | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
 
   const fetchRiders = async () => {
     setIsLoading(true);
@@ -130,28 +131,45 @@ export function RiderManagement() {
   });
 
   const updateRiderStatus = async (riderId: string, action: 'approve' | 'reject' | 'suspend') => {
+    // reject / suspend require a reason
+    let reason = '';
+    if (action === 'reject' || action === 'suspend') {
+      const min = action === 'reject' ? 5 : 1;
+      const input = window.prompt(`Reason for ${action === 'reject' ? 'rejecting' : 'suspending'} this rider?`);
+      if (input === null) return; // admin cancelled
+      reason = input.trim();
+      if (reason.length < min) {
+        alert(`Please provide a reason (at least ${min} character${min > 1 ? 's' : ''}).`);
+        return;
+      }
+    }
+
+    setBusyAction(`${riderId}:${action}`);
     try {
       const token = localStorage.getItem('accessToken');
-      const endpoint = action === 'approve' ? '/api/riders/approve' : 
-                       action === 'reject' ? '/api/riders/reject' : '/api/riders/suspend';
-      
-      const response = await fetch(endpoint, {
+      const base = action === 'approve' ? '/api/riders/approve' :
+                   action === 'reject' ? '/api/riders/reject' : '/api/riders/suspend';
+      // These endpoints read riderId from the query string (not the body).
+      const response = await fetch(`${base}?riderId=${encodeURIComponent(riderId)}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ riderId }),
+        body: JSON.stringify({ riderId, reason }),
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} rider`);
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.error || `Failed to ${action} rider`);
       }
-      
+
       await fetchRiders();
     } catch (err) {
       console.error(`Error ${action}ing rider:`, err);
-      alert(`Failed to ${action} rider. Please try again.`);
+      alert(err instanceof Error ? err.message : `Failed to ${action} rider. Please try again.`);
+    } finally {
+      setBusyAction(null);
     }
   };
 
@@ -407,16 +425,20 @@ export function RiderManagement() {
                                   variant="ghost"
                                   className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
                                   onClick={() => updateRiderStatus(rider.id, 'approve')}
+                                  disabled={!!busyAction}
+                                  title="Approve"
                                 >
-                                  <CheckCircle className="h-4 w-4" />
+                                  {busyAction === `${rider.id}:approve` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                                 </Button>
                                 <Button
                                   size="icon"
                                   variant="ghost"
                                   className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
                                   onClick={() => updateRiderStatus(rider.id, 'reject')}
+                                  disabled={!!busyAction}
+                                  title="Reject"
                                 >
-                                  <XCircle className="h-4 w-4" />
+                                  {busyAction === `${rider.id}:reject` ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
                                 </Button>
                               </>
                             )}
@@ -426,8 +448,10 @@ export function RiderManagement() {
                                 variant="ghost"
                                 className="h-8 w-8 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
                                 onClick={() => updateRiderStatus(rider.id, 'suspend')}
+                                disabled={!!busyAction}
+                                title="Suspend"
                               >
-                                <Ban className="h-4 w-4" />
+                                {busyAction === `${rider.id}:suspend` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
                               </Button>
                             )}
                           </div>
