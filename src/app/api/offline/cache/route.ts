@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { CacheManager } from '@/lib/offline/cache-manager';
 import { authGuard } from '@/lib/auth/guards';
+import { redactPerson, redactBusiness } from '@/lib/privacy/public-contact';
 
 // GET /api/offline/cache - Get all critical data for offline caching
 export async function GET(request: NextRequest) {
@@ -77,7 +78,8 @@ export async function GET(request: NextRequest) {
         include: {
           items: true,
           merchant: {
-            select: { id: true, name: true, phone: true, address: true },
+            // PRIVACY: no merchant phone exposed to the customer.
+            select: { id: true, name: true, address: true },
           },
         },
       });
@@ -91,6 +93,8 @@ export async function GET(request: NextRequest) {
             vehicle: true,
           },
         });
+        // PRIVACY: cache first name only, never the rider's phone/email.
+        redactPerson(rider as Record<string, unknown> | null, 'fullName');
         cachedData.rider = rider;
 
         // Cache it
@@ -117,6 +121,8 @@ export async function GET(request: NextRequest) {
           },
           take: 50,
         });
+        // PRIVACY: no merchant phone/email/banking in the customer cache.
+        for (const m of merchants) redactBusiness(m as Record<string, unknown>);
         cachedData.nearbyMerchants = merchants;
       }
 

@@ -34,7 +34,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         name: true,
         type: true,
         description: true,
-        phone: true,
         address: true,
         city: true,
         latitude: true,

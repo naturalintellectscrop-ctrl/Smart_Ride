@@ -22,6 +22,7 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
+import { ConfirmDialog } from '@/src/components/ConfirmDialog';
 import { useTaskStore, useAuthStore } from '@/src/store';
 import { useChatStore } from '@/src/store/chatStore';
 import { api, socketService } from '@/src/services';
@@ -58,6 +59,7 @@ export default function RideTrackingScreen() {
   const [task, setTask] = useState<Task | null>(pendingTask);
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [sentQuickReply, setSentQuickReply] = useState<string | null>(null);
   const [driverLocation, setDriverLocation] = useState<{
     latitude: number;
@@ -265,35 +267,27 @@ export default function RideTrackingScreen() {
     }
   };
 
-  const handleCancel = async () => {
-    Alert.alert(
-      'Cancel Ride',
-      'Are you sure you want to cancel this ride?',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            if (!task) return;
+  // Opens the branded confirm dialog (no more bare system Alert).
+  const handleCancel = () => setShowCancelConfirm(true);
 
-            setIsCancelling(true);
-            try {
-              const response = await api.cancelTask(task.id, 'Cancelled by user');
-              if (response.success) {
-                router.replace('/(tabs)');
-              } else {
-                Alert.alert('Error', response.error || 'Failed to cancel ride');
-              }
-            } catch (error) {
-              Alert.alert('Error', 'An unexpected error occurred');
-            } finally {
-              setIsCancelling(false);
-            }
-          },
-        },
-      ]
-    );
+  const doCancel = async () => {
+    if (!task) return;
+    setIsCancelling(true);
+    try {
+      const response = await api.cancelTask(task.id, 'Cancelled by user');
+      if (response.success) {
+        setShowCancelConfirm(false);
+        router.replace('/(tabs)');
+      } else {
+        setShowCancelConfirm(false);
+        Alert.alert('Error', response.error || 'Failed to cancel ride');
+      }
+    } catch (error) {
+      setShowCancelConfirm(false);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   // Conversation id convention shared with the call/chat screens: conv-<taskId>
@@ -615,6 +609,19 @@ export default function RideTrackingScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <ConfirmDialog
+        visible={showCancelConfirm}
+        icon="close-circle-outline"
+        destructive
+        title="Cancel Ride"
+        message="Are you sure you want to cancel this ride?"
+        confirmLabel="Yes, Cancel"
+        cancelLabel="No"
+        loading={isCancelling}
+        onConfirm={doCancel}
+        onCancel={() => setShowCancelConfirm(false)}
+      />
     </View>
   );
 }

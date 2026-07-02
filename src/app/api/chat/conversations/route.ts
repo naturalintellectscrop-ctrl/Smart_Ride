@@ -7,6 +7,7 @@ import { NextRequest } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken, extractTokenFromHeader } from '@/lib/auth/jwt';
 import { successResponse, errorResponse, unauthorizedResponse, serverErrorResponse } from '@/lib/api/response';
+import { firstNameOf } from '@/lib/privacy/public-contact';
 
 export async function GET(request: NextRequest) {
   // Verify auth
@@ -105,7 +106,9 @@ export async function GET(request: NextRequest) {
         otherUser: otherUser
           ? {
               id: otherUser.id,
-              name: otherUser.name,
+              // PRIVACY: chat shows first names only.
+              name: firstNameOf(otherUser.name),
+              firstName: firstNameOf(otherUser.name),
               avatarUrl: otherUser.avatarUrl,
               role: otherUser.role,
             }

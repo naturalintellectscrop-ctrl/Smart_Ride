@@ -47,7 +47,7 @@ export function PendingApprovalScreen({ riderId, onNavigate, onApproved }: Pendi
     status: 'PENDING_APPROVAL' as RiderStatus,
     submittedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
     estimatedReviewTime: '1-3 business days',
-    phone: '+256 700 123 456',
+    phone: '+256 785 710 818',
     vehicleMake: 'Bajaj',
     vehicleModel: 'Boxer',
     vehiclePlate: 'UAX 123A',
@@ -427,7 +427,7 @@ export function PendingApprovalScreen({ riderId, onNavigate, onApproved }: Pendi
             <a href="mailto:riders@smartride.ug" className="underline">
               riders@smartride.ug
             </a>{' '}
-            or call <a href="tel:+256700123456" className="underline">+256 700 123 456</a>.
+            or call <a href="tel:+256785710818" className="underline">+256 785 710 818</a>.
           </p>
         </div>
       </div>

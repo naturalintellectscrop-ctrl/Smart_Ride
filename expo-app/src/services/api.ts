@@ -1173,6 +1173,30 @@ class ApiService {
   }
 
   // ==========================================
+  // RECEIPTS (privacy-safe: first names only, no phone numbers)
+  // ==========================================
+
+  /** Generate (idempotent) + email the receipt for a completed task. */
+  async generateReceipt(taskId: string): Promise<ApiResponse<any>> {
+    return this.request<any>('/receipts', 'POST', { taskId });
+  }
+
+  /** Fetch a receipt by id or receipt number. */
+  async getReceipt(idOrNumber: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/receipts/${encodeURIComponent(idOrNumber)}`);
+  }
+
+  /** List the current user's receipts. */
+  async getReceipts(): Promise<ApiResponse<any>> {
+    return this.request<any>('/receipts');
+  }
+
+  /** Absolute URL for the branded receipt HTML (used for PDF export). */
+  receiptHtmlUrl(idOrNumber: string): string {
+    return `${this.baseUrl}/receipts/${encodeURIComponent(idOrNumber)}?format=html`;
+  }
+
+  // ==========================================
   // TASK HISTORY (for client)
   // ==========================================
 

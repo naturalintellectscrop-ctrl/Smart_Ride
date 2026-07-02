@@ -189,10 +189,8 @@ export default function MerchantOrderDetailScreen() {
           <Text style={styles.sectionTitle}>Order Information</Text>
           <View style={styles.infoCard}>
             <InfoRow icon="calendar-outline" label="Date" value={formatDate(order.createdAt)} />
-            <InfoRow icon="person-outline" label="Customer" value={(order as any).customerName ?? 'Customer'} />
-            {(order as any).customerPhone && (
-              <InfoRow icon="call-outline" label="Phone" value={(order as any).customerPhone ?? 'N/A'} />
-            )}
+            {/* PRIVACY: first name only, never the customer's phone number. */}
+            <InfoRow icon="person-outline" label="Customer" value={String((order as any).customerName ?? 'Customer').trim().split(/\s+/)[0] || 'Customer'} />
             <InfoRow icon="location-outline" label="Delivery" value={order.deliveryAddress || 'N/A'} />
             <InfoRow icon="card-outline" label="Payment" value={order.paymentMethod || 'N/A'} />
             <InfoRow icon="wallet-outline" label="Payment Status" value={order.paymentStatus || 'N/A'} />

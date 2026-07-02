@@ -392,7 +392,7 @@ export function ProviderPendingScreen({ onBack, providerId, onNavigate, onApprov
             <a href="mailto:verification@smartride.ug" className="underline">
               verification@smartride.ug
             </a>{' '}
-            or call <a href="tel:+256700123456" className="underline">+256 700 123 456</a>.
+            or call <a href="tel:+256785710818" className="underline">+256 785 710 818</a>.
           </p>
         </div>
       </div>

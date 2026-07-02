@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TaskStatus, RiderRole, TaskType } from '@prisma/client';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
+import { redactPerson } from '@/lib/privacy/public-contact';
 import { db, resetRLSContext } from '@/lib/db';
 import { canRiderPerformTask } from '@/lib/services/enhanced-task-state-machine.service';
 
@@ -79,7 +80,6 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
-            phone: true,
           },
         },
       },
@@ -92,6 +92,8 @@ export async function GET(request: NextRequest) {
     const filteredTasks = availableTasks.filter((task) =>
       canRiderPerformTask(rider.riderRole, task.taskType)
     );
+    // PRIVACY: riders see the client's first name only, never phone.
+    for (const t of filteredTasks) redactPerson((t as { client?: Record<string, unknown> }).client, 'name');
 
     // Get total count for pagination
     const totalCount = await db.task.count({

@@ -104,7 +104,9 @@ async function runSetup(providedKey: string | null | undefined) {
       password: adminPassword,
       name: 'System Administrator',
       role: 'SUPER_ADMIN' as const,
-      phone: '+256700000000',
+      // No hardcoded placeholder number — set from env at bootstrap, else left
+      // blank for the admin to fill in from the dashboard.
+      phone: process.env.SEED_ADMIN_PHONE || null,
     };
 
     console.log('Checking admin user:', adminConfig.email);

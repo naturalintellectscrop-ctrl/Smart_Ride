@@ -312,11 +312,10 @@ async function getTransactionHistory(startDate?: string | null, endDate?: string
   });
 }
 
-// Get payout history
+// Get outstanding payouts (real data). There is no separate completed-payout
+// history model, so this returns providers with a real pending balance awaiting
+// disbursement — never fabricated figures.
 async function getPayoutHistory(providerId?: string | null) {
-  // For now, return mock payout history since we don't have a dedicated payout model for providers
-  // In production, you would have a HealthProviderPayout model
-  
   const providers = await db.healthProvider.findMany({
     where: {
       pendingPayout: { gt: 0 },

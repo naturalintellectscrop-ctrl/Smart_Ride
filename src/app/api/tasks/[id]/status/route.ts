@@ -99,7 +99,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           select: {
             id: true,
             fullName: true,
-            phone: true,
             rating: true,
             totalTrips: true,
             riderRole: true,

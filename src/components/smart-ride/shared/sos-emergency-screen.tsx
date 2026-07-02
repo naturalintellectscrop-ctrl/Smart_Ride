@@ -93,22 +93,18 @@ const SMART_RIDE_SUPPORT = {
   description: '24/7 in-app support',
 };
 
-const MOCK_EMERGENCY_CONTACTS: EmergencyContact[] = [
-  { id: 'ec-1', name: 'Sarah Nakamya', phone: '+256771234567', relationship: 'Spouse', isPrimary: true, isNotified: false },
-  { id: 'ec-2', name: 'James Okello', phone: '+256782345678', relationship: 'Brother', isPrimary: false, isNotified: false },
-  { id: 'ec-3', name: 'Grace Achieng', phone: '+256793456789', relationship: 'Friend', isPrimary: false, isNotified: false },
-];
-
-const MOCK_TRIP: TripInfo = {
-  id: 'task-001',
-  taskNumber: 'SR-2024-5678',
+// No seeded/fake contacts or trips. Real data is supplied via props
+// (initialContacts / activeTrip); these are neutral empty-state fallbacks.
+const EMPTY_TRIP: TripInfo = {
+  id: '',
+  taskNumber: '',
   taskType: 'BODA_RIDE',
-  pickupAddress: 'National Theatre, Kampala Rd',
-  dropoffAddress: 'Makerere University, Main Gate',
-  riderName: 'Emmanuel Mukiibi',
-  riderPhone: '+25677XXXXXXX',
-  vehicleInfo: 'Bajaj Boxer 150',
-  plateNumber: 'UAX 123J',
+  pickupAddress: '',
+  dropoffAddress: '',
+  riderName: '',
+  riderPhone: '',
+  vehicleInfo: '',
+  plateNumber: '',
 };
 
 // ============================================================================
@@ -148,11 +144,11 @@ export function SOSEmergencyScreen({
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showContactManager, setShowContactManager] = useState(false);
   const [contacts, setContacts] = useState<EmergencyContact[]>(
-    initialContacts || MOCK_EMERGENCY_CONTACTS
+    initialContacts || []
   );
   const [newContact, setNewContact] = useState({ name: '', phone: '', relationship: '' });
 
-  const trip = activeTrip || MOCK_TRIP;
+  const trip = activeTrip || EMPTY_TRIP;
 
   // Actions taken state
   const [actionsTaken, setActionsTaken] = useState({

@@ -45,7 +45,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         task: {
           include: {
             rider: {
-              select: { id: true, fullName: true, phone: true },
+              select: { id: true, fullName: true },
             },
           },
         },

@@ -466,7 +466,7 @@ export async function callSupport(
     callerPhone: '', // Will be fetched from user profile in production
     calleeId: 'SUPPORT_TEAM',
     calleeType: 'SUPPORT',
-    calleePhone: process.env.SUPPORT_PHONE || '+256700000000',
+    calleePhone: process.env.SUPPORT_PHONE || '+256785710818', // official support line
     taskType: 'SUPPORT',
   });
 }

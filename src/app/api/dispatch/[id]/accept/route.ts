@@ -7,6 +7,7 @@ import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
+import { firstNameOf } from '@/lib/privacy/public-contact';
 import { broadcastToUser, broadcastToTask } from '@/lib/realtime-server';
 
 interface RouteParams {
@@ -106,8 +107,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             taskId: result.taskId,
             rider: {
               id: rider.id,
-              name: rider.fullName,
-              phone: rider.phone,
+              name: firstNameOf(rider.fullName),
               rating: rider.rating,
             },
           });
@@ -122,8 +122,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             status: 'ASSIGNED',
             rider: {
               id: rider.id,
-              name: rider.fullName,
-              phone: rider.phone,
+              name: firstNameOf(rider.fullName),
               rating: rider.rating,
             },
             timestamp: new Date().toISOString(),

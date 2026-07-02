@@ -222,7 +222,8 @@ export function ClientChatDetail({ chatId, chatName, chatType, onBack }: ClientC
             <p className="text-gray-600 mb-6">{chatType === 'rider' ? "Call your rider to discuss pickup details" : "Call the merchant for order inquiries"}</p>
             <div className="flex gap-3 justify-center">
               <Button variant="outline" onClick={() => setShowCallDialog(false)} className="w-32">Cancel</Button>
-              <Button onClick={() => { window.location.href = 'tel:+256700000000'; setShowCallDialog(false); }} className="w-32 bg-emerald-600 hover:bg-emerald-700"><Phone className="h-4 w-4 mr-2" />Call Now</Button>
+              {/* PRIVACY: calls go through masked calling / Agora VoIP — never a raw number. */}
+              <Button onClick={() => { setShowCallDialog(false); }} className="w-32 bg-emerald-600 hover:bg-emerald-700"><Phone className="h-4 w-4 mr-2" />Call Now</Button>
             </div>
           </div>
         </DialogContent>

@@ -197,8 +197,18 @@ export default function TripSummaryScreen() {
 
       </ScrollView>
 
-      {/* Done button */}
+      {/* Actions */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.md }]}>
+        {params.taskId ? (
+          <TouchableOpacity
+            style={styles.receiptButton}
+            onPress={() => router.push(`/receipt/${params.taskId}?taskId=${params.taskId}` as any)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="receipt-outline" size={18} color={COLORS.primary} />
+            <Text style={styles.receiptButtonText}>View Receipt</Text>
+          </TouchableOpacity>
+        ) : null}
         <TouchableOpacity style={styles.doneButton} onPress={handleDone} activeOpacity={0.85}>
           <Text style={styles.doneButtonText}>Done</Text>
         </TouchableOpacity>
@@ -388,6 +398,22 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   doneButtonText: {
     ...TYPOGRAPHY.bodyMd,
     color: COLORS.onPrimary,
+    fontWeight: '700',
+  },
+  receiptButton: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: RADIUS.xl,
+    paddingVertical: SPACING.md,
+    marginBottom: SPACING.sm,
+    borderWidth: 1.5,
+    borderColor: COLORS.primary,
+  },
+  receiptButtonText: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.primary,
     fontWeight: '700',
   },
 });
