@@ -33,21 +33,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
             taskType: true,
             status: true,
             client: {
+              // PRIVACY: no phone/email — this endpoint is fetch-by-id.
               select: {
                 id: true,
                 name: true,
-                email: true,
-                phone: true,
               },
             },
           },
         },
         user: {
+          // PRIVACY: no phone/email — this endpoint is fetch-by-id.
           select: {
             id: true,
             name: true,
-            email: true,
-            phone: true,
           },
         },
       },
@@ -73,26 +71,24 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
                 taskType: true,
                 status: true,
                 client: {
+                  // PRIVACY: no phone/email — fetch-by-id endpoint.
                   select: {
                     id: true,
                     name: true,
-                    email: true,
-                    phone: true,
                   },
                 },
               },
             },
             user: {
+              // PRIVACY: no phone/email — fetch-by-id endpoint.
               select: {
                 id: true,
                 name: true,
-                email: true,
-                phone: true,
               },
             },
           },
         });
-        
+
         return successResponse(updatedPayment);
       }
     }

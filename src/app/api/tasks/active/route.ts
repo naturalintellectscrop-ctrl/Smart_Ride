@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { TaskStatus } from '@prisma/client';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
+import { redactPerson } from '@/lib/privacy/public-contact';
 import { db, resetRLSContext } from '@/lib/db';
 
 const ACTIVE_STATUSES: TaskStatus[] = [
@@ -53,7 +54,6 @@ export async function GET(request: NextRequest) {
             select: {
               id: true,
               fullName: true,
-              phone: true,
               rating: true,
               totalTrips: true,
               riderRole: true,
@@ -80,7 +80,6 @@ export async function GET(request: NextRequest) {
               select: {
                 id: true,
                 fullName: true,
-                phone: true,
                 rating: true,
                 totalTrips: true,
                 riderRole: true,
@@ -104,6 +103,9 @@ export async function GET(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    // PRIVACY: counterparty shown by first name only (tracking screen).
+    redactPerson((activeTask as { rider?: Record<string, unknown> }).rider, 'fullName');
 
     return NextResponse.json({
       success: true,

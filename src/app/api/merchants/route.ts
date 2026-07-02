@@ -8,6 +8,7 @@ import {
   getPaginationParams 
 } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { redactBusiness } from '@/lib/privacy/public-contact';
 import { z } from 'zod';
 
 /**
@@ -51,6 +52,9 @@ export async function GET(request: NextRequest) {
       }),
       db.merchant.count({ where }),
     ]);
+
+    // PRIVACY: customers browsing merchants never receive phone/email/banking.
+    for (const m of merchants) redactBusiness(m as Record<string, unknown>);
 
     return paginatedResponse(merchants, page, limit, total);
   } catch (error) {

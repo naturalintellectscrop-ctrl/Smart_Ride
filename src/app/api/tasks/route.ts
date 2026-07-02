@@ -9,6 +9,7 @@ import {
   getPaginationParams 
 } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
+import { redactPerson } from '@/lib/privacy/public-contact';
 import {
   calculatePricingAsync,
 } from '@/lib/api/pricing';
@@ -100,16 +101,22 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           client: {
-            select: { id: true, name: true, phone: true },
+            select: { id: true, name: true },
           },
           rider: {
-            select: { id: true, fullName: true, phone: true, riderRole: true },
+            select: { id: true, fullName: true, riderRole: true },
           },
           order: true,
         },
       }),
       db.task.count({ where }),
     ]);
+
+    // PRIVACY: counterparties shown by first name only, never phone.
+    for (const t of tasks as Array<{ client?: Record<string, unknown>; rider?: Record<string, unknown> }>) {
+      redactPerson(t.client, 'name');
+      redactPerson(t.rider, 'fullName');
+    }
 
     return paginatedResponse(tasks, page, limit, total);
   } catch (error) {

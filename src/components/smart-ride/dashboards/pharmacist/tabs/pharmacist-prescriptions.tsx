@@ -21,48 +21,18 @@ type PrescriptionFilter = 'all' | 'pending' | 'verified' | 'rejected';
 export function PharmacistPrescriptions() {
   const [activeFilter, setActiveFilter] = useState<PrescriptionFilter>('all');
 
-  const prescriptions = [
-    {
-      id: 'RX-2024-001',
-      patient: 'John Doe',
-      doctor: 'Dr. Sarah Mukasa',
-      clinic: 'Kampala Medical Centre',
-      date: '2024-01-15',
-      status: 'pending',
-      medicines: ['Amoxicillin 500mg x20', 'Paracetamol 500mg x10'],
-      notes: 'Take after meals. Complete the full course.',
-    },
-    {
-      id: 'RX-2024-002',
-      patient: 'Mary Nambuya',
-      doctor: 'Dr. Peter Kato',
-      clinic: 'Nakasero Hospital',
-      date: '2024-01-15',
-      status: 'verified',
-      medicines: ['Metformin 500mg x60', 'Glibenclamide 5mg x30'],
-      notes: 'For diabetes management. Monitor blood sugar.',
-    },
-    {
-      id: 'RX-2024-003',
-      patient: 'James Ssempala',
-      doctor: 'Dr. Grace Achieng',
-      clinic: 'Mulago Hospital',
-      date: '2024-01-14',
-      status: 'rejected',
-      medicines: ['Tramadol 50mg x30'],
-      notes: 'Prescription expired. Please get a new prescription.',
-    },
-    {
-      id: 'RX-2024-004',
-      patient: 'Sarah Namugga',
-      doctor: 'Dr. David Ochieng',
-      clinic: 'Kampala Family Clinic',
-      date: '2024-01-15',
-      status: 'pending',
-      medicines: ['Ciprofloxacin 500mg x14', 'ORS Sachets x10'],
-      notes: 'For bacterial infection. Stay hydrated.',
-    },
-  ];
+  // No seeded/fake prescriptions — real prescriptions load from the API.
+  // Empty state until wired to a live data source (never fabricated patients).
+  const prescriptions: Array<{
+    id: string;
+    patient: string;
+    doctor: string;
+    clinic: string;
+    date: string;
+    status: string;
+    medicines: string[];
+    notes: string;
+  }> = [];
 
   const filters: { id: PrescriptionFilter; label: string }[] = [
     { id: 'all', label: 'All' },

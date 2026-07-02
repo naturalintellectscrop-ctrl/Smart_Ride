@@ -10,6 +10,7 @@ import {
 import { sendOrderUpdateNotification } from '@/lib/services/notification.service';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { calculatePricing } from '@/lib/api/pricing';
+import { redactPerson, redactBusiness } from '@/lib/privacy/public-contact';
 import { TaskStatus } from '@prisma/client';
 import { z } from 'zod';
 import { broadcastEvent, broadcastToUser } from '@/lib/realtime-server';
@@ -110,14 +111,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       include: {
         merchant: true,
         client: {
-          select: { id: true, name: true, phone: true, email: true },
+          select: { id: true, name: true },
         },
         items: true,
         kot: true,
         task: {
           include: {
             rider: {
-              select: { id: true, fullName: true, phone: true, riderRole: true },
+              select: { id: true, fullName: true, riderRole: true },
             },
           },
         },
@@ -160,6 +161,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           { status: 403 }
         );
       }
+    }
+
+    // PRIVACY: non-admin callers see first names only, never phone/email.
+    if (!isAdmin(user.role)) {
+      redactPerson(order.client, 'name');
+      redactBusiness(order.merchant as Record<string, unknown>);
+      const taskRider = (order as { task?: { rider?: Record<string, unknown> } }).task?.rider;
+      if (taskRider) redactPerson(taskRider, 'fullName');
     }
 
     return successResponse(order);

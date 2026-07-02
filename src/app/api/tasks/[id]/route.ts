@@ -5,6 +5,7 @@ import { successResponse, errorResponse, notFoundResponse, serverErrorResponse }
 import { isValidTransition, canRiderPerformTask, EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
 import { z } from 'zod';
 import { requireAuth, isAdmin, AuthenticatedRequest } from '@/lib/auth/guards';
+import { redactPerson, redactBusiness } from '@/lib/privacy/public-contact';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -34,13 +35,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       where: { id },
       include: {
         client: {
-          select: { id: true, name: true, phone: true, email: true },
+          select: { id: true, name: true },
         },
         rider: {
-          select: { 
-            id: true, 
-            fullName: true, 
-            phone: true, 
+          select: {
+            id: true,
+            fullName: true,
             riderRole: true,
             currentLatitude: true,
             currentLongitude: true,
@@ -80,6 +80,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           { status: 403 }
         );
       }
+    }
+
+    // PRIVACY: non-admin callers see first names only, never phone/email.
+    if (!isAdmin(user.role)) {
+      redactPerson(task.client, 'name');
+      redactPerson(task.rider, 'fullName');
+      redactBusiness((task as { order?: { merchant?: Record<string, unknown> } }).order?.merchant);
     }
 
     return successResponse(task);
@@ -156,6 +163,11 @@ async function handleAccept(taskId: string, body: Record<string, unknown>, user:
     return errorResponse(result.error || 'Failed to accept task');
   }
 
+  // PRIVACY: never return the client's phone to the rider.
+  if (!isAdmin(user.role as any)) {
+    redactPerson((result.task as { client?: Record<string, unknown> })?.client, 'name');
+    redactPerson((result.task as { rider?: Record<string, unknown> })?.rider, 'fullName');
+  }
   return successResponse(result.task, 'Task accepted');
 }
 
@@ -224,6 +236,11 @@ async function handleStart(taskId: string, body: Record<string, unknown>, user: 
     // Non-critical: task is already IN_PROGRESS
   }
 
+  // PRIVACY: never return the client's phone to the rider.
+  if (!isAdmin(user.role as any)) {
+    redactPerson((result.task as { client?: Record<string, unknown> })?.client, 'name');
+    redactPerson((result.task as { rider?: Record<string, unknown> })?.rider, 'fullName');
+  }
   return successResponse(result.task, 'Task started');
 }
 
@@ -249,10 +266,10 @@ async function handleComplete(taskId: string, body: Record<string, unknown>, use
     include: {
       payment: true,
       client: {
-        select: { id: true, name: true, phone: true, email: true },
+        select: { id: true, name: true },
       },
       rider: {
-        select: { id: true, fullName: true, phone: true },
+        select: { id: true, fullName: true },
       },
     },
   });
@@ -331,13 +348,17 @@ async function handleComplete(taskId: string, body: Record<string, unknown>, use
     include: {
       payment: true,
       client: {
-        select: { id: true, name: true, phone: true, email: true },
+        select: { id: true, name: true },
       },
       rider: {
-        select: { id: true, fullName: true, phone: true },
+        select: { id: true, fullName: true },
       },
     },
   });
+
+  // PRIVACY: first names only, never phone/email.
+  redactPerson((updatedTask as { client?: Record<string, unknown> })?.client, 'name');
+  redactPerson((updatedTask as { rider?: Record<string, unknown> })?.rider, 'fullName');
 
   // Return payment details for frontend to display
   return successResponse({

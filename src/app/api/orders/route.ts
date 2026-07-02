@@ -13,6 +13,7 @@ import { generateOrderNumber, generateKOTNumber } from '@/lib/services/enhanced-
 import { OrderType, OrderStatus, PaymentStatus } from '@prisma/client';
 import { z } from 'zod';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
+import { redactPerson } from '@/lib/privacy/public-contact';
 import { resetRLSContext } from '@/lib/auth-utils';
 
 /**
@@ -94,7 +95,7 @@ export async function GET(request: NextRequest) {
             select: { id: true, name: true, type: true },
           },
           client: {
-            select: { id: true, name: true, phone: true },
+            select: { id: true, name: true },
           },
           items: true,
           kot: true,
@@ -105,6 +106,12 @@ export async function GET(request: NextRequest) {
       }),
       db.order.count({ where }),
     ]);
+
+    // PRIVACY: counterparties shown by first name only, never phone.
+    for (const o of orders as Array<{ client?: Record<string, unknown>; task?: { rider?: Record<string, unknown> } }>) {
+      redactPerson(o.client, 'name');
+      if (o.task?.rider) redactPerson(o.task.rider, 'fullName');
+    }
 
     return paginatedResponse(orders, page, limit, total);
   } catch (error) {

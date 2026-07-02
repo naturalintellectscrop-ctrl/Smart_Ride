@@ -30,11 +30,9 @@ interface Recipient {
   recent: boolean;
 }
 
-const recentRecipients: Recipient[] = [
-  { id: '1', name: 'Sarah Nakamya', phone: '+256 700 123 456', recent: true },
-  { id: '2', name: 'James Okello', phone: '+256 701 234 567', recent: true },
-  { id: '3', name: 'Grace Auma', phone: '+256 702 345 678', recent: true },
-];
+// No seeded recipients — the list is populated from real transfer history.
+// Empty state until a data source is wired (never fabricated contacts).
+const recentRecipients: Recipient[] = [];
 
 export function WalletTransfer({ balance, onBack, onComplete }: WalletTransferProps) {
   const [step, setStep] = useState<'select' | 'amount' | 'confirm' | 'processing' | 'success'>('select');

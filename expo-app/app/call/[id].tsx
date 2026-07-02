@@ -206,7 +206,9 @@ export default function CallScreen() {
 
   const recipientId = params.id;
   const recipientName = params.name || 'Unknown';
-  const recipientPhone = params.phone;
+  // PRIVACY: calls go through Agora VoIP only — raw phone numbers are never
+  // revealed or dialed. Ignoring any phone param disables the tel: fallback.
+  const recipientPhone = undefined as string | undefined;
   const conversationId = params.conversationId;
   const isIncoming = params.isIncoming === 'true';
 

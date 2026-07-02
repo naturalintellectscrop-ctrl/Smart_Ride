@@ -328,7 +328,7 @@ export default function BlogPage() {
                 </li>
                 <li className="text-white/50">
                   <span className="text-white">Phone:</span>{' '}
-                  <a href="tel:+256700123456" className="hover:text-[#00FF88] transition-colors duration-200">+256 700 123 456</a>
+                  <a href="tel:+256785710818" className="hover:text-[#00FF88] transition-colors duration-200">+256 785 710 818</a>
                 </li>
                 <li className="text-white/50">
                   <span className="text-white">Location:</span> Kampala, Uganda

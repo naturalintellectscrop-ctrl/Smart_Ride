@@ -28,13 +28,6 @@ import { GradientButton } from './GradientButton';
 
 const PAYMENT_PROVIDERS = [
   {
-    id: 'NYLON_PAY',
-    name: 'NylonPay',
-    color: COLORS.primary,
-    icon: 'wallet-outline' as const,
-    badge: 'NEW',
-  },
-  {
     id: 'MTN_MOMO',
     name: 'MTN MoMo',
     color: COLORS.mtnYellow,
@@ -66,7 +59,7 @@ export function TopUpModal({
 }: TopUpModalProps) {
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState(defaultPhoneNumber || '');
-  const [provider, setProvider] = useState('NYLON_PAY');
+  const [provider, setProvider] = useState('MTN_MOMO');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -83,7 +76,7 @@ export function TopUpModal({
 
   const reset = () => {
     setAmount('');
-    setProvider('NYLON_PAY');
+    setProvider('MTN_MOMO');
     setError(null);
   };
 
@@ -122,20 +115,20 @@ export function TopUpModal({
 
       if (response.success) {
         const rawData = response.data as any;
-        // NylonPay returns { success, payment } — the balance updates later via webhook.
-        const isNylonPay = provider === 'NYLON_PAY';
-        const newBalance = isNylonPay ? undefined : rawData?.newBalance;
-        const title = isNylonPay ? 'Payment Initiated' : 'Top-up Successful';
-        const message = isNylonPay
-          ? `Your phone (${phoneNumber.trim()}) will receive a payment prompt. Your wallet balance will update once confirmed.`
-          : `UGX ${numericAmount.toLocaleString()} has been added to your wallet.`;
-        Alert.alert(title, message, [
+        // Mobile money may confirm immediately (direct credit) or after a phone
+        // prompt. If a new balance is returned, the top-up already settled.
+        const newBalance = rawData?.newBalance;
+        const settled = typeof newBalance === 'number';
+        const message = settled
+          ? `UGX ${numericAmount.toLocaleString()} has been added to your wallet.`
+          : `Your phone (${phoneNumber.trim()}) will receive a payment prompt. Your wallet balance will update once confirmed.`;
+        Alert.alert(settled ? 'Top-up Successful' : 'Payment Initiated', message, [
           {
             text: 'OK',
             onPress: () => {
               reset();
               onClose();
-              if (!isNylonPay) onSuccess?.(newBalance);
+              if (settled) onSuccess?.(newBalance);
             },
           },
         ]);
@@ -184,8 +177,8 @@ export function TopUpModal({
             </View>
 
             <Text style={styles.subtitle}>
-              Add money to your Smart Ride wallet via mobile money. NylonPay
-              supports both MTN and Airtel automatically.
+              Add money to your Smart Ride wallet via mobile money — MTN and
+              Airtel are both supported.
             </Text>
 
             {/* Provider selector */}

@@ -218,8 +218,8 @@ export default function ContactPage() {
                   <div>
                     <h3 className="text-white font-semibold mb-1">Call Us</h3>
                     <p className="text-white/50 text-sm mb-2">Mon-Fri from 8am to 6pm</p>
-                    <a href="tel:+256700123456" className="text-[#00FF88] hover:underline">
-                      +256 700 123 456
+                    <a href="tel:+256785710818" className="text-[#00FF88] hover:underline">
+                      +256 785 710 818
                     </a>
                   </div>
                 </div>
@@ -319,7 +319,7 @@ export default function ContactPage() {
                 </li>
                 <li className="text-white/50">
                   <span className="text-white">Phone:</span>{' '}
-                  <a href="tel:+256700123456" className="hover:text-[#00FF88] transition-colors duration-200">+256 700 123 456</a>
+                  <a href="tel:+256785710818" className="hover:text-[#00FF88] transition-colors duration-200">+256 785 710 818</a>
                 </li>
                 <li className="text-white/50">
                   <span className="text-white">Location:</span> Kampala, Uganda
