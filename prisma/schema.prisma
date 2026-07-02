@@ -1823,6 +1823,68 @@ model PaymentStateTransition {
   @@index([createdAt])
 }
 
+// ============================================
+// RECEIPT MODELS (shared across all transaction types)
+// One Receipt per completed Task (ride/food/shop/item/pharmacy). Privacy-first:
+// stores first names only, never phone numbers. Human-readable receiptNumber.
+// ============================================
+model Receipt {
+  id             String      @id @default(cuid())
+  receiptNumber  String      @unique
+  type           ReceiptType
+  // Source linkage (scalar, like Document) — unique for idempotency
+  taskId         String?     @unique
+  orderId        String?     @unique
+  healthOrderId  String?     @unique
+  userId         String?
+  // Money (UGX, Decimal)
+  currency       String      @default("UGX")
+  subtotal       Decimal     @default(0)
+  fees           Decimal     @default(0)
+  tax            Decimal     @default(0)
+  total          Decimal     @default(0)
+  breakdown      Json? // ordered line items: [{ label, amount }]
+  paymentMethod  String?
+  paymentStatus  String?
+  // Privacy-safe display fields
+  serviceLabel   String?
+  vehicleType    String?
+  providerName   String? // FIRST NAME ONLY — never a full name or phone
+  providerRating Float?
+  pickupAddress  String?
+  dropoffAddress String?
+  distanceKm     Float?
+  durationMin    Int?
+  routeImageUrl  String? // extension point: Mapbox static route snapshot
+  issuedAt       DateTime    @default(now())
+  emailedAt      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([type])
+  @@index([receiptNumber])
+}
+
+// Atomic per-type, per-year counter for collision-free receipt numbers.
+model ReceiptSequence {
+  id        String      @id @default(cuid())
+  type      ReceiptType
+  year      Int
+  lastSeq   Int         @default(0)
+  updatedAt DateTime    @updatedAt
+
+  @@unique([type, year])
+}
+
+enum ReceiptType {
+  RIDE
+  FOOD
+  SHOP
+  ITEM_DELIVERY
+  PHARMACY
+}
+
 enum UserRole {
   CLIENT
   RIDER

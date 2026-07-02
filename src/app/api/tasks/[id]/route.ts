@@ -6,6 +6,8 @@ import { isValidTransition, canRiderPerformTask, EnhancedTaskStateMachine } from
 import { z } from 'zod';
 import { requireAuth, isAdmin, AuthenticatedRequest } from '@/lib/auth/guards';
 import { redactPerson, redactBusiness } from '@/lib/privacy/public-contact';
+import { ensureReceiptForTask } from '@/lib/receipts/receipt-service';
+import { sendReceiptEmail } from '@/lib/receipts/send-receipt-email';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -360,9 +362,23 @@ async function handleComplete(taskId: string, body: Record<string, unknown>, use
   redactPerson((updatedTask as { client?: Record<string, unknown> })?.client, 'name');
   redactPerson((updatedTask as { rider?: Record<string, unknown> })?.rider, 'fullName');
 
+  // Auto-generate the receipt for this completed transaction and email it
+  // (idempotent; email is fire-and-forget so it never blocks completion).
+  let receiptNumber: string | undefined;
+  try {
+    const receipt = await ensureReceiptForTask(taskId);
+    if (receipt) {
+      receiptNumber = receipt.receiptNumber;
+      if (!receipt.emailedAt) sendReceiptEmail(receipt.id).catch(() => {});
+    }
+  } catch (err) {
+    console.error('[Task Complete] receipt generation failed (non-blocking):', err);
+  }
+
   // Return payment details for frontend to display
   return successResponse({
     ...updatedTask,
+    receiptNumber,
     paymentDetails: {
       fare: task.totalAmount,
       currency: 'UGX',

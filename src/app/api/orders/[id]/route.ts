@@ -11,6 +11,8 @@ import { sendOrderUpdateNotification } from '@/lib/services/notification.service
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { calculatePricing } from '@/lib/api/pricing';
 import { redactPerson, redactBusiness } from '@/lib/privacy/public-contact';
+import { ensureReceiptForTask } from '@/lib/receipts/receipt-service';
+import { sendReceiptEmail } from '@/lib/receipts/send-receipt-email';
 import { TaskStatus } from '@prisma/client';
 import { z } from 'zod';
 import { broadcastEvent, broadcastToUser } from '@/lib/realtime-server';
@@ -896,6 +898,17 @@ async function handleDeliver(orderId: string, body: Record<string, unknown>, dec
     orderId: orderId,
     description: 'Order delivered to customer',
   });
+
+  // Auto-generate + email the receipt for this delivered order (idempotent,
+  // via the linked delivery task). Non-blocking.
+  if (order.task?.id) {
+    try {
+      const receipt = await ensureReceiptForTask(order.task.id);
+      if (receipt && !receipt.emailedAt) sendReceiptEmail(receipt.id).catch(() => {});
+    } catch (err) {
+      console.error('[Order] receipt generation failed (non-blocking):', err);
+    }
+  }
 
   return successResponse(updatedOrder, 'Order delivered successfully');
 }
