@@ -17,11 +17,11 @@ import {
   StyleSheet,
   Switch,
   Linking,
-  Alert,
   Vibration,
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';

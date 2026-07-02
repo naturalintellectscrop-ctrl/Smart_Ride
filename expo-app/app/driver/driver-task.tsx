@@ -11,13 +11,13 @@ import {
   Text,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   ScrollView,
   Linking,
   Platform,
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, {
   FadeInUp,

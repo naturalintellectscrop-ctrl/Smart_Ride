@@ -12,9 +12,9 @@ import {
   TouchableOpacity, 
   TextInput,
   ActivityIndicator,
-  Alert,
   StyleSheet
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { useLocationStore, useCartStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';

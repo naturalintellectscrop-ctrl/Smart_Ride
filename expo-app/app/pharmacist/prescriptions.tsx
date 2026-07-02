@@ -13,11 +13,11 @@ import {
   TextInput,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   Modal,
   Image,
   StyleSheet,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';

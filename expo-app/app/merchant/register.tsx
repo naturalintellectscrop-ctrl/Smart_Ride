@@ -20,10 +20,10 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
-  Alert,
   StyleSheet,
   Image,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
