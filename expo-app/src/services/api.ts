@@ -811,6 +811,7 @@ class ApiService {
     geometry: Array<{ latitude: number; longitude: number }>;
     distanceKm: number;
     durationMin: number;
+    trafficAware?: boolean;
   }>> {
     return this.request(
       `/mapbox/directions?pickupLat=${pickup.latitude}&pickupLng=${pickup.longitude}` +
@@ -830,6 +831,8 @@ class ApiService {
       totalAmount: number;
       baseFare: number;
       distanceFare: number;
+      timeFare: number;
+      waitingCharge: number;
       serviceFee: number;
       surcharges: number;
       minimumApplied: boolean;

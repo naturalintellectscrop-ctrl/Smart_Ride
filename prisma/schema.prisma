@@ -402,6 +402,8 @@ model Task {
   totalAmount Decimal
   platformCommission Decimal?
   riderEarnings Decimal?
+  waitingMinutes Int?
+  waitingCharge Decimal?
   paymentMethod       PaymentMethod
   paymentStatus       PaymentStatus         @default(PENDING)
   passengerCount      Int?

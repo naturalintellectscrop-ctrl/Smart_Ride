@@ -36,6 +36,8 @@ export default function TripSummaryScreen() {
     dropoffAddress: string;
     distanceKm: string;
     durationMin: string;
+    waitingCharge: string;
+    waitingMinutes: string;
     driverName: string;
   }>();
 
@@ -46,6 +48,8 @@ export default function TripSummaryScreen() {
   const totalAmount  = parseInt(params.totalAmount  || '0', 10);
   const distanceKm   = parseFloat(params.distanceKm  || '0');
   const durationMin  = parseInt(params.durationMin   || '0', 10);
+  const waitingCharge  = parseInt(params.waitingCharge  || '0', 10);
+  const waitingMinutes = parseInt(params.waitingMinutes || '0', 10);
   const paymentMethod = params.paymentMethod || 'CASH';
 
   const paymentLabel: Record<string, string> = {
@@ -53,7 +57,8 @@ export default function TripSummaryScreen() {
     MTN_MOMO: 'MTN Mobile Money',
     AIRTEL_MONEY: 'Airtel Money',
     WALLET: 'Wallet',
-    NYLON_PAY: 'NylonPay',
+    // NylonPay is an internal gateway — never surface its brand to users.
+    NYLON_PAY: 'Mobile Money',
   };
 
   const isCash = paymentMethod === 'CASH';
@@ -96,6 +101,17 @@ export default function TripSummaryScreen() {
             <Text style={styles.fareLabel}>Total Fare</Text>
             <Text style={styles.fareAmount}>UGX {totalAmount.toLocaleString()}</Text>
           </View>
+          {waitingCharge > 0 && (
+            <View style={styles.waitingRow}>
+              <View style={styles.waitingLabelWrap}>
+                <Ionicons name="time-outline" size={14} color={COLORS.onSurfaceVariant} />
+                <Text style={styles.waitingLabel}>
+                  Includes waiting{waitingMinutes > 0 ? ` (${waitingMinutes} min)` : ''}
+                </Text>
+              </View>
+              <Text style={styles.waitingValue}>UGX {waitingCharge.toLocaleString()}</Text>
+            </View>
+          )}
           <View style={styles.divider} />
           <View style={styles.metaRow}>
             <Ionicons name="card-outline" size={16} color={COLORS.onSurfaceVariant} />
@@ -246,6 +262,26 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     ...TYPOGRAPHY.headlineMd,
     color: COLORS.primary,
     fontWeight: '700',
+  },
+  waitingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.sm,
+  },
+  waitingLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  waitingLabel: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  waitingValue: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    fontWeight: '600',
   },
   divider: {
     height: 1,

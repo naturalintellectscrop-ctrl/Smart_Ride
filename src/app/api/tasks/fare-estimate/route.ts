@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
     totalAmount: number;
     baseFare: number;
     distanceFare: number;
+    timeFare: number;
+    waitingCharge: number;
     serviceFee: number;
     surcharges: number;
     minimumApplied: boolean;
@@ -63,13 +65,24 @@ export async function GET(request: NextRequest) {
       isPeakHours,
     });
 
-    // Detect whether minimum fare was the deciding factor
-    const rawTotal = breakdown.baseFare + breakdown.distanceFare + breakdown.timeFare + breakdown.serviceFee;
+    // Detect whether minimum fare was the deciding factor. rawTotal mirrors the
+    // full computed fare (every line the breakdown charges) so we only flag
+    // "minimum applied" when the floor actually lifted the price.
+    const rawTotal =
+      breakdown.baseFare +
+      breakdown.distanceFare +
+      breakdown.timeFare +
+      breakdown.waitingCharge +
+      breakdown.nightSurcharge +
+      breakdown.peakSurcharge +
+      breakdown.serviceFee;
 
     estimates[taskType] = {
       totalAmount: breakdown.totalAmount,
       baseFare: breakdown.baseFare,
       distanceFare: breakdown.distanceFare,
+      timeFare: breakdown.timeFare,
+      waitingCharge: breakdown.waitingCharge,
       serviceFee: breakdown.serviceFee,
       surcharges: breakdown.nightSurcharge + breakdown.peakSurcharge,
       minimumApplied: breakdown.totalAmount > rawTotal,
