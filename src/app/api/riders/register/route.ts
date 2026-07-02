@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
         createDoc(DocumentType.FACE_PHOTO, 'face_photo.jpg', resolvedFacePhoto),
         createDoc(DocumentType.NATIONAL_ID_FRONT, 'national_id_front.jpg', resolvedNationalIdFront),
         createDoc(DocumentType.NATIONAL_ID_BACK, 'national_id_back.jpg', resolvedNationalIdBack),
-        createDoc(DocumentType.DRIVERS_LICENSE, 'drivers_license.jpg', resolvedDriversLicense),
+        createDoc(DocumentType.DRIVER_LICENSE, 'drivers_license.jpg', resolvedDriversLicense),
       ].filter(Boolean));
     };
 
@@ -357,7 +357,7 @@ export async function POST(request: NextRequest) {
       createDoc(DocumentType.FACE_PHOTO, 'face_photo.jpg', resolvedFacePhoto);
       createDoc(DocumentType.NATIONAL_ID_FRONT, 'national_id_front.jpg', resolvedNationalIdFront);
       createDoc(DocumentType.NATIONAL_ID_BACK, 'national_id_back.jpg', resolvedNationalIdBack);
-      createDoc(DocumentType.DRIVERS_LICENSE, 'drivers_license.jpg', resolvedDriversLicense);
+      createDoc(DocumentType.DRIVER_LICENSE, 'drivers_license.jpg', resolvedDriversLicense);
 
       await Promise.all(documentPromises);
 
