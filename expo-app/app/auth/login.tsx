@@ -121,6 +121,11 @@ export default function LoginScreen() {
         return;
       }
 
+      // Clear any cached session first. A session cached by an earlier build
+      // (before webClientId was configured) is returned WITHOUT an idToken —
+      // signing out forces a fresh interactive sign-in that includes the token.
+      try { await GoogleSignin.signOut(); } catch { /* no active session — fine */ }
+
       console.log('[LOGIN] GoogleSignin: Calling signIn()...');
       // Sign in
       const userInfo = await GoogleSignin.signIn();
