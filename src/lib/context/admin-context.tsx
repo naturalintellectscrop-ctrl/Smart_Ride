@@ -50,6 +50,9 @@ export function AdminProvider({ children }: { children: ReactNode }) {
 
       const data = await response.json();
       localStorage.setItem('admin_token', data.accessToken);
+      // Management tabs read 'accessToken' — keep both in sync so their API
+      // calls are authenticated (otherwise every tab shows an empty list).
+      localStorage.setItem('accessToken', data.accessToken);
       localStorage.setItem('admin_user', JSON.stringify(data.user));
       setUser(data.user);
     } catch (error) {

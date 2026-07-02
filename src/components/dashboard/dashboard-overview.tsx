@@ -88,7 +88,7 @@ export function DashboardOverview() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch('/api/admin/stats', {
         headers: {
           'Authorization': `Bearer ${token}`,

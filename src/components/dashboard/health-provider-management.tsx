@@ -86,7 +86,7 @@ export function HealthProviderManagement() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch('/api/admin/health-providers/verify?status=PENDING', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -137,7 +137,7 @@ export function HealthProviderManagement() {
 
     setBusyAction(`${providerId}:${action}`);
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch('/api/admin/health-providers/verify', {
         method: 'POST',
         headers: {

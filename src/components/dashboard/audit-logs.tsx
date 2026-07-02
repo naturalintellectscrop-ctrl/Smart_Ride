@@ -124,7 +124,7 @@ export function AuditLogs() {
     setIsLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const params = new URLSearchParams({
         action: 'list',
         limit: '50',
@@ -162,7 +162,7 @@ export function AuditLogs() {
   const handleExportDocx = async () => {
     setIsExporting(true);
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const params = new URLSearchParams({ action: 'export-docx' });
       if (actorType && actorType !== 'all') params.set('actorType', actorType);
       if (entityType && entityType !== 'all') params.set('entityType', entityType);
@@ -194,7 +194,7 @@ export function AuditLogs() {
   const handleExportCsv = async () => {
     setIsExporting(true);
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const params = new URLSearchParams({ action: 'export' });
       if (actorType && actorType !== 'all') params.set('actorType', actorType);
       if (entityType && entityType !== 'all') params.set('entityType', entityType);
