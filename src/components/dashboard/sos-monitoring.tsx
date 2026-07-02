@@ -84,7 +84,7 @@ export function SOSMonitoring() {
 
   const fetchAlerts = async () => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch('/api/sos?limit=50', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -107,7 +107,7 @@ export function SOSMonitoring() {
 
   const updateAlertStatus = async (alertId: string, action: 'acknowledge' | 'resolve' | 'false_alarm') => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch(`/api/sos/${alertId}`, {
         method: 'PATCH',
         headers: {

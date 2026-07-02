@@ -84,7 +84,7 @@ export function OrderManagement() {
     setIsLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch('/api/orders?limit=50', {
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -72,7 +72,7 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
     setError(null);
     
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: {

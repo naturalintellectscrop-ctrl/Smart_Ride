@@ -82,7 +82,7 @@ export function MerchantManagement() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       // Admin-gated endpoint returns merchants/pharmacies WITH their KYC
       // documents + pharmacy record (the public /api/merchants omits documents).
       const response = await fetch('/api/admin/merchants/verify?status=all', {
@@ -135,7 +135,7 @@ export function MerchantManagement() {
 
     setBusyAction(`${merchantId}:${action}`);
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch('/api/admin/merchants/verify', {
         method: 'POST',
         headers: {

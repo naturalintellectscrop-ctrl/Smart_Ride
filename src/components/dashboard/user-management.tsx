@@ -114,7 +114,7 @@ export function UserManagement() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const params = new URLSearchParams();
       if (roleFilter !== 'all') params.append('role', roleFilter);
       if (statusFilter !== 'all') params.append('status', statusFilter);
@@ -156,7 +156,7 @@ export function UserManagement() {
 
   const handleUserAction = async (userId: string, action: string, role?: string) => {
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: {
@@ -181,7 +181,7 @@ export function UserManagement() {
     if (!selectedUser) return;
     setIsDeleting(true);
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch('/api/admin/users', {
         method: 'DELETE',
         headers: {
@@ -274,7 +274,7 @@ export function UserManagement() {
             onClick={async () => {
               setIsExporting(true);
               try {
-                const token = localStorage.getItem('accessToken');
+                const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
                 const headers: HeadersInit = {};
                 if (token) headers['Authorization'] = `Bearer ${token}`;
                 const params = new URLSearchParams({ action: 'export' });

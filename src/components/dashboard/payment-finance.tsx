@@ -87,7 +87,7 @@ export function PaymentFinance() {
     setIsLoading(true);
     setError(null);
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const headers = {
         'Authorization': `Bearer ${token}`,
       };
@@ -169,7 +169,7 @@ export function PaymentFinance() {
           onClick={async () => {
             setIsExporting(true);
             try {
-              const token = localStorage.getItem('accessToken');
+              const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
               const headers: HeadersInit = {};
               if (token) headers['Authorization'] = `Bearer ${token}`;
               const response = await fetch('/api/payments?action=export', { headers });

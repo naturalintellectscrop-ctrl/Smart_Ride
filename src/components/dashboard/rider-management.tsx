@@ -92,7 +92,7 @@ export function RiderManagement() {
     setError(null);
     
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const response = await fetch('/api/riders', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -146,7 +146,7 @@ export function RiderManagement() {
 
     setBusyAction(`${riderId}:${action}`);
     try {
-      const token = localStorage.getItem('accessToken');
+      const token = (localStorage.getItem("accessToken") || localStorage.getItem("admin_token"));
       const base = action === 'approve' ? '/api/riders/approve' :
                    action === 'reject' ? '/api/riders/reject' : '/api/riders/suspend';
       // These endpoints read riderId from the query string (not the body).
