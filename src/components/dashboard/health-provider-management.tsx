@@ -78,6 +78,7 @@ export function HealthProviderManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedProvider, setSelectedProvider] = useState<HealthProvider | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
 
   // Fetch health providers from API
   const fetchProviders = async () => {
@@ -126,27 +127,37 @@ export function HealthProviderManagement() {
 
   // Update provider status
   const updateProviderStatus = async (providerId: string, action: 'approve' | 'reject' | 'suspend' | 'activate') => {
+    let reason = '';
+    if (action === 'reject' || action === 'suspend') {
+      const input = window.prompt(`Reason for ${action === 'reject' ? 'rejecting' : 'suspending'} this provider?`);
+      if (input === null) return;
+      reason = input.trim();
+      if (!reason) { alert('Please provide a reason.'); return; }
+    }
+
+    setBusyAction(`${providerId}:${action}`);
     try {
       const token = localStorage.getItem('accessToken');
-      
       const response = await fetch('/api/admin/health-providers/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ providerId, action }),
+        body: JSON.stringify({ providerId, action, reason, rejectionReason: reason }),
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} health provider`);
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.error || `Failed to ${action} health provider`);
       }
-      
-      // Refresh providers list
+
       await fetchProviders();
     } catch (err) {
       console.error(`Error ${action}ing health provider:`, err);
-      alert(`Failed to ${action} health provider. Please try again.`);
+      alert(err instanceof Error ? err.message : `Failed to ${action} health provider. Please try again.`);
+    } finally {
+      setBusyAction(null);
     }
   };
 
@@ -407,16 +418,20 @@ export function HealthProviderManagement() {
                                 variant="ghost"
                                 className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
                                 onClick={() => updateProviderStatus(provider.id, 'approve')}
+                                disabled={!!busyAction}
+                                title="Approve"
                               >
-                                <CheckCircle className="h-4 w-4" />
+                                {busyAction === `${provider.id}:approve` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                               </Button>
                               <Button
                                 size="icon"
                                 variant="ghost"
                                 className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
                                 onClick={() => updateProviderStatus(provider.id, 'reject')}
+                                disabled={!!busyAction}
+                                title="Reject"
                               >
-                                <XCircle className="h-4 w-4" />
+                                {busyAction === `${provider.id}:reject` ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
                               </Button>
                             </>
                           )}
@@ -426,8 +441,10 @@ export function HealthProviderManagement() {
                               variant="ghost"
                               className="h-8 w-8 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
                               onClick={() => updateProviderStatus(provider.id, 'suspend')}
+                              disabled={!!busyAction}
+                              title="Suspend"
                             >
-                              <Ban className="h-4 w-4" />
+                              {busyAction === `${provider.id}:suspend` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
                             </Button>
                           )}
                         </div>

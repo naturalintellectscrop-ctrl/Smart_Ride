@@ -75,6 +75,7 @@ export function MerchantManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [selectedMerchant, setSelectedMerchant] = useState<Merchant | null>(null);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
 
   const fetchMerchants = async () => {
     setIsLoading(true);
@@ -121,26 +122,40 @@ export function MerchantManagement() {
   });
 
   const updateMerchantStatus = async (merchantId: string, action: 'approve' | 'reject' | 'suspend') => {
+    let rejectionReason = '';
+    if (action === 'reject' || action === 'suspend') {
+      const input = window.prompt(`Reason for ${action === 'reject' ? 'rejecting' : 'suspending'} this business?`);
+      if (input === null) return; // cancelled
+      rejectionReason = input.trim();
+      if (!rejectionReason) {
+        alert('Please provide a reason.');
+        return;
+      }
+    }
+
+    setBusyAction(`${merchantId}:${action}`);
     try {
       const token = localStorage.getItem('accessToken');
-      
       const response = await fetch('/api/admin/merchants/verify', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ merchantId, action }),
+        body: JSON.stringify({ merchantId, action, rejectionReason }),
       });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to ${action} merchant`);
+
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.success === false) {
+        throw new Error(data?.error || `Failed to ${action} merchant`);
       }
-      
+
       await fetchMerchants();
     } catch (err) {
       console.error(`Error ${action}ing merchant:`, err);
-      alert(`Failed to ${action} merchant. Please try again.`);
+      alert(err instanceof Error ? err.message : `Failed to ${action} merchant. Please try again.`);
+    } finally {
+      setBusyAction(null);
     }
   };
 
@@ -400,16 +415,20 @@ export function MerchantManagement() {
                                   variant="ghost"
                                   className="h-8 w-8 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
                                   onClick={() => updateMerchantStatus(merchant.id, 'approve')}
+                                  disabled={!!busyAction}
+                                  title="Approve"
                                 >
-                                  <CheckCircle className="h-4 w-4" />
+                                  {busyAction === `${merchant.id}:approve` ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
                                 </Button>
                                 <Button
                                   size="icon"
                                   variant="ghost"
                                   className="h-8 w-8 text-red-400 hover:text-red-300 hover:bg-red-500/10"
                                   onClick={() => updateMerchantStatus(merchant.id, 'reject')}
+                                  disabled={!!busyAction}
+                                  title="Reject"
                                 >
-                                  <XCircle className="h-4 w-4" />
+                                  {busyAction === `${merchant.id}:reject` ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
                                 </Button>
                               </>
                             )}
@@ -419,8 +438,10 @@ export function MerchantManagement() {
                                 variant="ghost"
                                 className="h-8 w-8 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
                                 onClick={() => updateMerchantStatus(merchant.id, 'suspend')}
+                                disabled={!!busyAction}
+                                title="Suspend"
                               >
-                                <Ban className="h-4 w-4" />
+                                {busyAction === `${merchant.id}:suspend` ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
                               </Button>
                             )}
                           </div>
