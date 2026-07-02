@@ -256,7 +256,7 @@ export class RiderOnboardingService {
           tx.document.create({
             data: {
               riderId: rider.id,
-              documentType: DocumentType.DRIVERS_LICENSE,
+              documentType: DocumentType.DRIVER_LICENSE,
               fileName: 'drivers_license.jpg',
               fileUrl: data.driverLicenseUrl,
               mimeType: 'image/jpeg',
