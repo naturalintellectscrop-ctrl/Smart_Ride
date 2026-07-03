@@ -15,6 +15,7 @@ import { CapabilityService } from './capability.service';
 import { sendDispatchReassignedNotification, sendSearchingNotification } from './notification.service';
 import { EnhancedTaskStateMachine } from './enhanced-task-state-machine.service';
 import { broadcastToUser } from '@/lib/realtime-server';
+import { DEFAULT_DISPATCH_CONFIG } from '@/lib/dispatch/types';
 
 // ============================================
 // DISPATCH CONFIGURATION
@@ -29,6 +30,10 @@ const DISPATCH_CONFIG = {
   
   // Number of retry attempts before auto-cancel
   maxRetryAttempts: 3,
+
+  // Hard product cap: never keep a customer searching longer than this.
+  // Reuses the single source of truth in dispatch/types (120s).
+  maxSearchMs: DEFAULT_DISPATCH_CONFIG.matchingTimeoutMs,
   
   // Time between retry attempts (seconds)
   retryDelay: 5,
@@ -886,6 +891,33 @@ export class DispatchService {
         });
 
         if (activeMatches === 0) {
+          // Hard SLA cap: if this task has been searching past the product
+          // maximum (120s) we terminate + notify, no matter how many riders
+          // we did or didn't try. This closes the "zero eligible riders ->
+          // no matches ever created -> retry forever" hole, since without
+          // matches failedMatchCount stays 0 and would otherwise re-dispatch
+          // on every cron tick indefinitely.
+          const searchedForMs = task.matchingStartedAt
+            ? Date.now() - new Date(task.matchingStartedAt).getTime()
+            : Number.POSITIVE_INFINITY;
+
+          if (searchedForMs >= DISPATCH_CONFIG.maxSearchMs) {
+            console.log(`[Dispatch] Task ${task.taskNumber} exceeded ${DISPATCH_CONFIG.maxSearchMs}ms search cap, auto-cancelling`);
+            await this.autoCancelTask(task.id, 'No available rider found within the maximum wait time');
+
+            await this.notifyClient(task.id, task.clientId, {
+              event: 'dispatch:cancelled',
+              data: {
+                taskId: task.id,
+                taskNumber: task.taskNumber,
+                message: 'Sorry, we could not find an available rider. Your request has been cancelled.',
+                reason: 'SEARCH_TIMEOUT',
+              },
+            });
+            processedCount++;
+            continue;
+          }
+
           console.log(`[Dispatch] Found stuck task ${task.taskNumber} with no active matches, re-triggering dispatch`);
 
           // Count total failed attempts
