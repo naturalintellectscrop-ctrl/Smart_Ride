@@ -142,17 +142,25 @@ export default function PharmacistDashboard() {
               {providerStatus.name || 'Dashboard'}
             </Text>
           </View>
-          <View style={styles.toggleContainer}>
-            <Text style={[styles.toggleLabel, { color: providerStatus.isOpen ? COLORS.primary : COLORS.outline }]}>
-              {providerStatus.isOpen ? 'Open' : 'Closed'}
-            </Text>
-            <Switch
-              value={providerStatus.isOpen}
-              onValueChange={toggleStatus}
-              disabled={isToggling}
-              trackColor={{ false: COLORS.surfaceContainerLow, true: `${COLORS.primary}40` }}
-              thumbColor={providerStatus.isOpen ? COLORS.primary : COLORS.outline}
-            />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
+            <TouchableOpacity onPress={() => router.push('/notifications')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="notifications-outline" size={22} color={COLORS.onSurface} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/profile/edit')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="person-circle-outline" size={24} color={COLORS.onSurface} />
+            </TouchableOpacity>
+            <View style={styles.toggleContainer}>
+              <Text style={[styles.toggleLabel, { color: providerStatus.isOpen ? COLORS.primary : COLORS.outline }]}>
+                {providerStatus.isOpen ? 'Open' : 'Closed'}
+              </Text>
+              <Switch
+                value={providerStatus.isOpen}
+                onValueChange={toggleStatus}
+                disabled={isToggling}
+                trackColor={{ false: COLORS.surfaceContainerLow, true: `${COLORS.primary}40` }}
+                thumbColor={providerStatus.isOpen ? COLORS.primary : COLORS.outline}
+              />
+            </View>
           </View>
         </View>
         <LinearGradient
