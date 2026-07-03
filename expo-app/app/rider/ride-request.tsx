@@ -187,7 +187,6 @@ export default function RideRequestScreen() {
     setStep('confirm');
     fetchRouteAndFares(dropoffLocation.latitude, dropoffLocation.longitude);
   }, [dropoffLocation]);
-
   // Load recently used destinations from device storage
   const loadRecentPlaces = async () => {
     try {

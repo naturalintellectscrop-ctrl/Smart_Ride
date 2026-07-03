@@ -46,6 +46,11 @@ import { Ionicons } from '@expo/vector-icons';
 const POLL_INTERVAL_FAST = 3000;  // 3 seconds for active rides
 const POLL_INTERVAL_SLOW = 10000; // 10 seconds for searching/matching
 
+// SLA: the customer must never wait forever. Mirrors the backend hard cap
+// (DEFAULT_DISPATCH_CONFIG.matchingTimeoutMs). After this, show a clear failure.
+const MAX_SEARCH_MS = 120_000; // 120s
+const SEARCHING_STATES = new Set(['CREATED', 'REQUESTED', 'SEARCHING', 'MATCHING']);
+
 export default function RideTrackingScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
@@ -60,6 +65,9 @@ export default function RideTrackingScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
+  const searchStartRef = useRef<number | null>(null);
+  const taskRef = useRef<Task | null>(pendingTask); // always-latest task for socket callbacks
   const [sentQuickReply, setSentQuickReply] = useState<string | null>(null);
   const [driverLocation, setDriverLocation] = useState<{
     latitude: number;
@@ -130,7 +138,7 @@ export default function RideTrackingScreen() {
     const waitingMinutes = Math.round(Number((completedTask as any).waitingMinutes ?? 0));
 
     router.replace({
-      pathname: '/rider/trip-summary',
+      pathname: '/rider/trip-summary' as never,
       params: {
         taskId: completedTask.id,
         totalAmount: String(Math.round(totalAmount)),
@@ -225,6 +233,14 @@ export default function RideTrackingScreen() {
     const unsubscribeCancel = socketService.on('task:cancelled', (data: { taskId: string; reason: string }) => {
       if (data.taskId === params.taskId) {
         stopPolling();
+        // If the system cancelled while we were still searching (no rider ever
+        // assigned), keep the customer here and show the branded "no riders"
+        // failure card instead of silently bouncing them home. They can Try
+        // Again / Change Ride Type / Cancel from there.
+        if (taskRef.current && !taskRef.current.riderId) {
+          setSearchFailed(true);
+          return;
+        }
         clearPendingTask();
         Alert.alert('Ride Cancelled', data.reason);
         router.replace('/(tabs)');
@@ -377,6 +393,37 @@ export default function RideTrackingScreen() {
 
   const liveRoute = useLiveRoute(routeOrigin, routeTarget, isCarRide ? 20 : 24);
 
+  // Keep a ref of the latest task so socket callbacks (registered once) can read
+  // current values without stale closures.
+  useEffect(() => { taskRef.current = task; }, [task]);
+
+  // SLA guard: once the task is searching (no rider yet), start a 120s window.
+  // On expiry (or a backend FAILED terminal) the customer sees a clear failure
+  // instead of an endless "searching" spinner.
+  useEffect(() => {
+    const searching = !!task && !task.riderId && SEARCHING_STATES.has(task.status);
+    if (!searching) { searchStartRef.current = null; return; }
+    if (searchStartRef.current == null) {
+      searchStartRef.current = task?.createdAt ? new Date(task.createdAt).getTime() : Date.now();
+    }
+    const check = () => {
+      if (searchStartRef.current != null && Date.now() - searchStartRef.current >= MAX_SEARCH_MS) setSearchFailed(true);
+    };
+    check();
+    const id = setInterval(check, 4000);
+    return () => clearInterval(id);
+  }, [task?.status, task?.riderId, task?.createdAt]);
+
+  const handleTryAgain = () => { searchStartRef.current = Date.now(); setSearchFailed(false); };
+  const handleChangeRideType = async () => {
+    try { if (task && !task.riderId) await api.cancelTask(task.id, 'Changing ride type'); } catch { /* best effort */ }
+    router.replace('/rider/ride-request');
+  };
+  const handleCancelSearch = async () => {
+    try { if (task) await api.cancelTask(task.id, 'Cancelled — no riders available'); } catch { /* best effort */ }
+    router.replace('/(tabs)');
+  };
+
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
@@ -395,6 +442,37 @@ export default function RideTrackingScreen() {
           onPress={() => router.replace('/(tabs)')}
         >
           <Text style={styles.goHomeButtonText}>Go Home</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // No-drivers failure state (SLA expired or backend gave up) — never a dead
+  // spinner. A terminal status while still on this screen with no rider ever
+  // assigned means the system gave up (user-initiated cancels navigate away),
+  // so surface the branded retry card in that case too.
+  const NO_SERVICE_STATES = ['FAILED', 'EXPIRED', 'CANCELLED'];
+  if (!task.riderId && (searchFailed || NO_SERVICE_STATES.includes(task.status))) {
+    return (
+      <View style={styles.loadingContainer}>
+        <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: `${COLORS.error}18`, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+          <Ionicons name="car-outline" size={44} color={COLORS.error} />
+        </View>
+        <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.onSurface, textAlign: 'center' }}>No nearby riders available</Text>
+        <Text style={{ fontSize: 14, color: COLORS.onSurfaceVariant, textAlign: 'center', marginTop: 8, paddingHorizontal: 28, lineHeight: 21 }}>
+          We couldn&apos;t find a rider for your trip right now. Try again, change your ride type, or cancel.
+        </Text>
+        <TouchableOpacity onPress={handleTryAgain} activeOpacity={0.85}
+          style={{ flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: 14, paddingHorizontal: 32, borderRadius: RADIUS.lg, marginTop: 24 }}>
+          <Ionicons name="refresh" size={18} color={COLORS.onPrimary} />
+          <Text style={{ color: COLORS.onPrimary, fontWeight: '700' }}>Try Again</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleChangeRideType} activeOpacity={0.85}
+          style={{ paddingVertical: 12, paddingHorizontal: 24, borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: COLORS.outline, marginTop: 12 }}>
+          <Text style={{ color: COLORS.onSurface, fontWeight: '600' }}>Change Ride Type</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={handleCancelSearch} style={{ padding: 12, marginTop: 8 }}>
+          <Text style={{ color: COLORS.error, fontWeight: '600' }}>Cancel</Text>
         </TouchableOpacity>
       </View>
     );

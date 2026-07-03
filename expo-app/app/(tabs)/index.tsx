@@ -61,11 +61,34 @@ export default function HomeScreen() {
   const isLocating = useLocationStore(s => s.isLocating);
   const [refreshing, setRefreshing] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
+  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{ latitude: number; longitude: number }>>([]);
 
   useEffect(() => {
     getCurrentLocation().catch(() => {});
     loadWalletBalance();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Live online drivers around the user, refreshed every 15s so the home map
+  // reflects real availability (no hardcoded markers). Boda is the default ride
+  // entry point from home. Non-fatal — an empty result just shows no dots.
+  const loadNearbyDrivers = useCallback(async () => {
+    if (latitude == null || longitude == null) return;
+    try {
+      const res = await api.getNearbyDrivers(latitude, longitude, 'SMART_BODA_RIDE');
+      if (res.success && res.data) {
+        setNearbyDrivers(res.data.drivers.map((d) => ({ latitude: d.latitude, longitude: d.longitude })));
+      }
+    } catch {
+      // non-fatal
+    }
+  }, [latitude, longitude]);
+
+  useEffect(() => {
+    if (latitude == null || longitude == null) return;
+    loadNearbyDrivers();
+    const id = setInterval(loadNearbyDrivers, 15000);
+    return () => clearInterval(id);
+  }, [latitude, longitude, loadNearbyDrivers]);
 
   const loadWalletBalance = async () => {
     try {
@@ -84,11 +107,12 @@ export default function HomeScreen() {
       await Promise.all([
         getCurrentLocation().catch(() => {}),
         loadWalletBalance(),
+        loadNearbyDrivers(),
       ]);
     } finally {
       setRefreshing(false);
     }
-  }, [getCurrentLocation]);
+  }, [getCurrentLocation, loadNearbyDrivers]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -218,6 +242,7 @@ export default function HomeScreen() {
               initialLatitude={latitude}
               initialLongitude={longitude}
               showUserLocation
+              driverPoints={nearbyDrivers}
             />
             {/* Top badge row */}
             <View style={styles.mapBadgeRow}>

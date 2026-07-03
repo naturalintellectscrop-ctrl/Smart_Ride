@@ -77,14 +77,12 @@ export default function RidesScreen() {
     try {
       const response = await api.getTaskHistory();
       if (response.success && response.data) {
-        if (Array.isArray(response.data)) {
-          setTaskHistory(response.data);
-        } else if (response.data.data && Array.isArray(response.data.data)) {
-          setTaskHistory(response.data.data);
-        } else {
-          console.warn('Unexpected task history response shape:', typeof response.data);
-          setTaskHistory([]);
-        }
+        // getTaskHistory returns Task[]; stay defensive in case a paginated
+        // envelope ({ data: Task[] }) is ever returned.
+        const list = Array.isArray(response.data)
+          ? response.data
+          : ((response.data as any)?.data ?? []);
+        setTaskHistory(list);
       } else {
         setError(response.error || 'Failed to load rides');
       }
