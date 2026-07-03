@@ -418,7 +418,7 @@ export default function DriverHomeScreen() {
           <View style={styles.toggleCardRow}>
             <View style={styles.profileRow}>
               <Animated.View entering={ZoomIn.delay(200).duration(300)}>
-                <TouchableOpacity onPress={() => router.push('/profile/edit')} activeOpacity={0.7}>
+                <TouchableOpacity onPress={() => router.push('/settings' as never)} activeOpacity={0.7}>
                   <View style={styles.avatarCircle}>
                     <Ionicons name="person" size={22} color={COLORS.primary} />
                   </View>

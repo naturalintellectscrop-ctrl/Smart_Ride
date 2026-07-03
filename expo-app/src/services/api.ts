@@ -534,8 +534,11 @@ class ApiService {
     return this.request<Task>('/tasks/active');
   }
 
-  async getTaskHistory(page: number = 1, limit: number = 20): Promise<ApiResponse<{ data: Task[] }>> {
-    return this.request<{ data: Task[] }>(`/tasks/history?page=${page}&limit=${limit}`);
+  // Returns the authenticated user's tasks (rider → assigned, client → own),
+  // paginated + privacy-redacted server-side. Note: `/tasks/history` did not
+  // exist (it matched /tasks/[id] with id="history"); /tasks is the real list.
+  async getTaskHistory(page: number = 1, limit: number = 20): Promise<ApiResponse<Task[]>> {
+    return this.request<Task[]>(`/tasks?page=${page}&limit=${limit}`);
   }
 
   async cancelTask(taskId: string, reason: string): Promise<ApiResponse<void>> {

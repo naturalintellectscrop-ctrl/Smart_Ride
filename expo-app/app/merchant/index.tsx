@@ -480,13 +480,13 @@ export default function MerchantDashboardScreen() {
 
           <TouchableOpacity
             style={styles.actionCard}
-            onPress={() => router.push('/profile/edit')}
+            onPress={() => router.push('/settings' as never)}
             activeOpacity={0.7}
           >
             <View style={[styles.actionIconCircle, { backgroundColor: COLORS.surfaceContainerHighest }]}>
-              <Ionicons name="person-outline" size={22} color={COLORS.onSurface} />
+              <Ionicons name="settings-outline" size={22} color={COLORS.onSurface} />
             </View>
-            <Text style={styles.actionLabel}>Profile</Text>
+            <Text style={styles.actionLabel}>Settings</Text>
           </TouchableOpacity>
         </View>
 

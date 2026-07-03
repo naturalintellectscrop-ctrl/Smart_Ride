@@ -85,6 +85,7 @@ export default function RiderEarningsScreen() {
   const [riderData, setRiderData] = useState<RiderData | null>(null);
   const [commissionRates, setCommissionRates] = useState<CommissionRates | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<EarningsPeriod>('today');
 
@@ -96,10 +97,13 @@ export default function RiderEarningsScreen() {
   const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   const loadData = useCallback(async () => {
+    setError(null);
     try {
       const earningsRes = await api.getRiderEarnings(selectedPeriod);
 
-      if (earningsRes.success && earningsRes.data) {
+      if (!earningsRes.success) {
+        setError(earningsRes.error || 'Failed to load earnings.');
+      } else if (earningsRes.success && earningsRes.data) {
         const d = earningsRes.data;
         // The API wraps in { success, data: { earnings, wallet, rider, commissionRates, period } }
         const payload = d.data || d;
@@ -116,8 +120,9 @@ export default function RiderEarningsScreen() {
           setCommissionRates(payload.commissionRates);
         }
       }
-    } catch (error) {
-      console.error('Failed to load earnings:', error);
+    } catch (err) {
+      console.error('Failed to load earnings:', err);
+      setError('Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -199,6 +204,46 @@ export default function RiderEarningsScreen() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Loading earnings...</Text>
+      </View>
+    );
+  }
+
+  // Error state with retry
+  if (error) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="cloud-offline-outline" size={44} color={COLORS.onSurfaceVariant} />
+        <Text style={styles.loadingText}>{error}</Text>
+        <TouchableOpacity
+          onPress={loadData}
+          style={{ flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 24, borderRadius: RADIUS.lg, marginTop: 16 }}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="refresh" size={18} color={COLORS.onPrimary} />
+          <Text style={{ color: COLORS.onPrimary, fontWeight: '600' }}>Retry</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // Empty state — the rider has genuinely earned nothing and has no balance yet.
+  const hasAnyEarnings = !!earningsData && (['today', 'week', 'month'] as const)
+    .some((p) => (earningsData[p]?.totalEarnings || 0) > 0 || (earningsData[p]?.tripCount || 0) > 0);
+  const hasWallet = (walletData?.balance || 0) > 0;
+  if (!hasAnyEarnings && !hasWallet) {
+    return (
+      <View style={styles.loadingContainer}>
+        <Ionicons name="wallet-outline" size={44} color={COLORS.onSurfaceVariant} />
+        <Text style={[styles.loadingText, { fontWeight: '700', fontSize: 18, marginTop: 12 }]}>You haven&apos;t earned anything yet.</Text>
+        <Text style={styles.loadingText}>Go online and complete trips to start earning.</Text>
+        <TouchableOpacity
+          onPress={() => router.push('/driver')}
+          style={{ flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: 12, paddingHorizontal: 28, borderRadius: RADIUS.lg, marginTop: 16 }}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="flash" size={18} color={COLORS.onPrimary} />
+          <Text style={{ color: COLORS.onPrimary, fontWeight: '700' }}>Go Online</Text>
+        </TouchableOpacity>
       </View>
     );
   }

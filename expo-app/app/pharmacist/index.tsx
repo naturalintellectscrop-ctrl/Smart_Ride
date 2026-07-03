@@ -146,8 +146,8 @@ export default function PharmacistDashboard() {
             <TouchableOpacity onPress={() => router.push('/notifications')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="notifications-outline" size={22} color={COLORS.onSurface} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/profile/edit')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="person-circle-outline" size={24} color={COLORS.onSurface} />
+            <TouchableOpacity onPress={() => router.push('/settings' as never)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="settings-outline" size={24} color={COLORS.onSurface} />
             </TouchableOpacity>
             <View style={styles.toggleContainer}>
               <Text style={[styles.toggleLabel, { color: providerStatus.isOpen ? COLORS.primary : COLORS.outline }]}>
