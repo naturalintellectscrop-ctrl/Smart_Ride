@@ -351,6 +351,44 @@ export default function DriverHomeScreen() {
     );
   }
 
+  // Waiting-for-approval gate — a rider/driver/delivery cannot operate until an
+  // admin approves them. Mirrors the merchant/pharmacist ProviderApprovalGate.
+  const riderStatus = (rider as { status?: string } | null)?.status;
+  if (rider && riderStatus && riderStatus !== 'APPROVED') {
+    const rejected = riderStatus === 'REJECTED';
+    const suspended = riderStatus === 'SUSPENDED';
+    const reason = (rider as { rejectionReason?: string }).rejectionReason;
+    return (
+      <View style={styles.errorContainer}>
+        <View style={styles.errorIconCircle}>
+          <Ionicons
+            name={rejected || suspended ? 'close-circle-outline' : 'time-outline'}
+            size={40}
+            color={rejected || suspended ? COLORS.error : COLORS.primary}
+          />
+        </View>
+        <Text style={styles.errorTitle}>
+          {rejected ? 'Application not approved' : suspended ? 'Account suspended' : 'Application under review'}
+        </Text>
+        <Text style={styles.errorSubtitle}>
+          {rejected
+            ? (reason ? `Your application was not approved. Reason: ${reason}` : 'Your application was not approved. Please contact Smart Ride support.')
+            : suspended
+              ? 'Your account has been suspended. Please contact Smart Ride support.'
+              : "Your application has been submitted and is being reviewed. You'll be able to go online and accept trips once an admin approves it."}
+        </Text>
+        <GradientButton
+          title="Check status again"
+          onPress={loadRiderProfile}
+          variant="primary"
+          size="md"
+          style={{ marginTop: 24, width: 220 }}
+          icon={<Ionicons name="refresh" size={18} color={COLORS.onPrimary} />}
+        />
+      </View>
+    );
+  }
+
   const taskStatus = incomingRequest?.task?.status as string | undefined;
 
   return (
@@ -371,22 +409,20 @@ export default function DriverHomeScreen() {
         <GlowHeader
           title={rider?.fullName || 'Driver'}
           subtitle={isOnline ? 'Online — Receiving requests' : 'Offline'}
-          rightAction={
-            isOnline
-              ? {
-                  icon: 'notifications-outline' as const,
-                  onPress: () => { router.push('/notifications'); },
-                }
-              : undefined
-          }
+          rightAction={{
+            icon: 'notifications-outline' as const,
+            onPress: () => { router.push('/notifications'); },
+          }}
         >
           {/* Online/Offline toggle pill — Stitch Design */}
           <View style={styles.toggleCardRow}>
             <View style={styles.profileRow}>
               <Animated.View entering={ZoomIn.delay(200).duration(300)}>
-                <View style={styles.avatarCircle}>
-                  <Ionicons name="person" size={22} color={COLORS.primary} />
-                </View>
+                <TouchableOpacity onPress={() => router.push('/profile/edit')} activeOpacity={0.7}>
+                  <View style={styles.avatarCircle}>
+                    <Ionicons name="person" size={22} color={COLORS.primary} />
+                  </View>
+                </TouchableOpacity>
               </Animated.View>
               <Animated.View entering={SlideInRight.delay(300).duration(300)}>
                 <View style={styles.ratingRow}>
@@ -580,17 +616,18 @@ export default function DriverHomeScreen() {
               end={{ x: 1, y: 1 }}
               style={styles.earningsGradient}
             >
-              <View style={styles.earningsRow}>
+              <TouchableOpacity style={styles.earningsRow} onPress={() => router.push('/rider/wallet')} activeOpacity={0.8}>
                 <View style={styles.earningsIconCircle}>
                   <Ionicons name="wallet" size={22} color={COLORS.onPrimary} />
                 </View>
-                <View>
-                  <Text style={styles.earningsLabel}>Today's Earnings</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.earningsLabel}>Wallet balance</Text>
                   <Text style={styles.earningsValue}>
                     UGX {(rider?.walletBalance || 0).toLocaleString()}
                   </Text>
                 </View>
-              </View>
+                <Ionicons name="chevron-forward" size={20} color={COLORS.onPrimary} />
+              </TouchableOpacity>
               <View style={styles.tripsBadge}>
                 <Ionicons name="car" size={14} color={COLORS.onPrimary} />
                 <Text style={styles.tripsBadgeText}>

@@ -270,8 +270,8 @@ export default function MerchantDashboardScreen() {
         title="Merchant Dashboard"
         subtitle={merchant?.name || user?.name || 'Merchant'}
         rightAction={{
-          icon: 'settings-outline' as const,
-          onPress: () => {},
+          icon: 'notifications-outline' as const,
+          onPress: () => router.push('/notifications'),
         }}
       >
         {/* Online/Offline toggle + Revenue summary */}
