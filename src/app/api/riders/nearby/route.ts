@@ -67,12 +67,19 @@ export async function GET(request: NextRequest) {
   };
   if (vehicleType) where.vehicleType = vehicleType;
 
-  const toDriver = (latitude: number, longitude: number, distanceKm: number, i: number) => ({
+  const toDriver = (
+    latitude: number,
+    longitude: number,
+    distanceKm: number,
+    i: number,
+    vType: VehicleType | null,
+  ) => ({
     id: `drv-${i}`, // anonymous key only — never the real rider id
     latitude,
     longitude,
     distanceKm: Math.round(distanceKm * 10) / 10,
     etaMin: Math.max(1, Math.round((distanceKm / AVG_URBAN_SPEED_KMH) * 60)),
+    vehicleType: vType, // BODA | CAR | BICYCLE | SCOOTER — lets the map pick an icon
   });
 
   await setServiceRoleContext();
@@ -85,7 +92,7 @@ export async function GET(request: NextRequest) {
       const radiusMeters = radiusKm * 1000;
       const vehicleFilter = vehicleType ? `AND "vehicleType" = $4` : '';
       const sql = `
-        SELECT "currentLatitude" AS lat, "currentLongitude" AS lng,
+        SELECT "currentLatitude" AS lat, "currentLongitude" AS lng, "vehicleType" AS vehicle_type,
           ST_Distance(
             ST_SetSRID(ST_MakePoint("currentLongitude","currentLatitude"),4326)::geography,
             ST_SetSRID(ST_MakePoint($1,$2),4326)::geography
@@ -104,12 +111,12 @@ export async function GET(request: NextRequest) {
       const params: any[] = [lng, lat, radiusMeters];
       if (vehicleType) params.push(vehicleType);
 
-      const rows = await db.$queryRawUnsafe<Array<{ lat: number; lng: number; dist_m: number }>>(sql, ...params);
-      drivers = rows.map((r, i) => toDriver(r.lat, r.lng, r.dist_m / 1000, i));
+      const rows = await db.$queryRawUnsafe<Array<{ lat: number; lng: number; dist_m: number; vehicle_type: VehicleType | null }>>(sql, ...params);
+      drivers = rows.map((r, i) => toDriver(r.lat, r.lng, r.dist_m / 1000, i, r.vehicle_type));
     } catch (postgisErr) {
       // Shared refinement: exact haversine sort/limit on a candidate set.
       const refine = (
-        rows: Array<{ currentLatitude: number | null; currentLongitude: number | null }>,
+        rows: Array<{ currentLatitude: number | null; currentLongitude: number | null; vehicleType?: VehicleType | null }>,
       ) =>
         rows
           .filter((r) => r.currentLatitude != null && r.currentLongitude != null)
@@ -117,7 +124,7 @@ export async function GET(request: NextRequest) {
           .filter((x) => x.d <= radiusKm)
           .sort((a, b) => a.d - b.d)
           .slice(0, 8)
-          .map((x, i) => toDriver(x.r.currentLatitude!, x.r.currentLongitude!, x.d, i));
+          .map((x, i) => toDriver(x.r.currentLatitude!, x.r.currentLongitude!, x.d, i, x.r.vehicleType ?? null));
 
       // ---- Tier 2: geohash-prefix pre-filter (uses the geohash index) ----
       try {
@@ -130,7 +137,7 @@ export async function GET(request: NextRequest) {
             ...(vehicleType ? { vehicleType } : {}),
             OR: neighbors.map((g) => ({ geohash: { startsWith: g } })),
           },
-          select: { currentLatitude: true, currentLongitude: true },
+          select: { currentLatitude: true, currentLongitude: true, vehicleType: true },
           take: 100,
         });
         drivers = refine(ghRiders);
@@ -140,7 +147,7 @@ export async function GET(request: NextRequest) {
         console.warn('[riders/nearby] using bounding-box fallback');
         const riders = await db.rider.findMany({
           where,
-          select: { currentLatitude: true, currentLongitude: true },
+          select: { currentLatitude: true, currentLongitude: true, vehicleType: true },
           take: 50,
         });
         drivers = refine(riders);

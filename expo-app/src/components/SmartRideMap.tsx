@@ -54,9 +54,9 @@ export interface SmartRideMapProps {
   onMapIdle?: (center: { latitude: number; longitude: number }) => void;
   showCenterPin?: boolean;
   centerPinType?: 'pickup' | 'dropoff';
-  // Driver points rendered as a CLUSTERED Mapbox source (dots merge into a
-  // numbered bubble when zoomed out / dense). Use for live nearby drivers.
-  driverPoints?: Array<{ latitude: number; longitude: number }>;
+  // Live nearby drivers, rendered as branded per-vehicle markers (boda vs car).
+  // vehicleType picks the icon; omit it to fall back to a generic dot.
+  driverPoints?: Array<{ latitude: number; longitude: number; vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null }>;
 }
 
 // ============================================
@@ -202,6 +202,21 @@ function DriverMarker({ heading, isBoda }: { heading?: number; isBoda?: boolean 
   );
 }
 
+// Branded live-driver marker for the nearby pool. Boda-class vehicles get the
+// bicycle glyph, cars get the car glyph — same Smart Ride green pill so the map
+// reads as one system (no third-party assets).
+function NearbyDriverMarker({ vehicleType }: { vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null }) {
+  const isCar = vehicleType === 'CAR';
+  const icon = isCar ? 'car-sport' : 'bicycle';
+  return (
+    <View style={markerStyles.nearbyContainer}>
+      <View style={markerStyles.nearbyPin}>
+        <Ionicons name={icon as any} size={14} color={COLORS.background} />
+      </View>
+    </View>
+  );
+}
+
 function SimpleMarker({ color, icon }: { color?: string; icon?: string }) {
   return (
     <View style={markerStyles.container}>
@@ -215,6 +230,14 @@ function SimpleMarker({ color, icon }: { color?: string; icon?: string }) {
 
 const markerStyles = StyleSheet.create({
   container: { alignItems: 'center' },
+  nearbyContainer: { alignItems: 'center', justifyContent: 'center' },
+  nearbyPin: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: COLORS.primary,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: '#FFFFFF',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.3, shadowRadius: 2, elevation: 3,
+  },
   pin: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
   pickupPin: { backgroundColor: 'rgba(0, 110, 47, 0.15)', borderColor: COLORS.secondary },
   dropoffPin: { backgroundColor: 'rgba(0, 95, 58, 0.15)', borderColor: COLORS.primary },
@@ -251,19 +274,6 @@ function MapboxMapImpl(props: SmartRideMapProps) {
     centerPinType = 'pickup',
     driverPoints,
   } = props;
-
-  // GeoJSON for clustered driver points
-  const driverGeoJSON = driverPoints && driverPoints.length > 0
-    ? {
-        type: 'FeatureCollection' as const,
-        features: driverPoints.map((d, i) => ({
-          type: 'Feature' as const,
-          id: `drv-${i}`,
-          properties: {},
-          geometry: { type: 'Point' as const, coordinates: [d.longitude, d.latitude] },
-        })),
-      }
-    : null;
 
   const cameraRef = useRef<any>(null);
 
@@ -391,51 +401,17 @@ function MapboxMapImpl(props: SmartRideMapProps) {
         </MapboxGL.PointAnnotation>
       ))}
 
-      {/* Clustered live driver points (turf-style clustering via Mapbox GL) */}
-      {driverGeoJSON && (
-        <MapboxGL.ShapeSource
-          id="driversSource"
-          shape={driverGeoJSON}
-          cluster
-          clusterRadius={50}
-          clusterMaxZoomLevel={14}
+      {/* Live nearby drivers — branded per-vehicle markers (boda vs car). The
+          pool is capped server-side (≤8) so individual annotations stay cheap. */}
+      {driverPoints?.map((d, i) => (
+        <MapboxGL.PointAnnotation
+          key={`nearby-drv-${i}`}
+          id={`nearby-drv-${i}`}
+          coordinate={[d.longitude, d.latitude]}
         >
-          {/* Cluster bubble */}
-          <MapboxGL.CircleLayer
-            id="driverClusters"
-            filter={['has', 'point_count']}
-            style={{
-              circleColor: COLORS.primary,
-              circleOpacity: 0.85,
-              circleRadius: ['step', ['get', 'point_count'], 16, 5, 20, 10, 26],
-              circleStrokeWidth: 2,
-              circleStrokeColor: '#FFFFFF',
-            }}
-          />
-          {/* Cluster count label */}
-          <MapboxGL.SymbolLayer
-            id="driverClusterCount"
-            filter={['has', 'point_count']}
-            style={{
-              textField: ['get', 'point_count_abbreviated'],
-              textSize: 12,
-              textColor: '#FFFFFF',
-              textFont: ['Open Sans Bold', 'Arial Unicode MS Bold'],
-            }}
-          />
-          {/* Individual driver dot */}
-          <MapboxGL.CircleLayer
-            id="driverPoint"
-            filter={['!', ['has', 'point_count']]}
-            style={{
-              circleColor: COLORS.primary,
-              circleRadius: 7,
-              circleStrokeWidth: 2,
-              circleStrokeColor: '#FFFFFF',
-            }}
-          />
-        </MapboxGL.ShapeSource>
-      )}
+          <NearbyDriverMarker vehicleType={d.vehicleType} />
+        </MapboxGL.PointAnnotation>
+      ))}
     </MapboxGL.MapView>
 
       {/* Uber-style fixed center pin (sits above the map, points at map center) */}

@@ -61,7 +61,7 @@ export default function HomeScreen() {
   const isLocating = useLocationStore(s => s.isLocating);
   const [refreshing, setRefreshing] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{ latitude: number; longitude: number }>>([]);
+  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{ latitude: number; longitude: number; vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null }>>([]);
 
   useEffect(() => {
     getCurrentLocation().catch(() => {});
@@ -74,9 +74,11 @@ export default function HomeScreen() {
   const loadNearbyDrivers = useCallback(async () => {
     if (latitude == null || longitude == null) return;
     try {
-      const res = await api.getNearbyDrivers(latitude, longitude, 'SMART_BODA_RIDE');
+      // No taskType filter here: the home map shows every nearby vehicle type
+      // (boda + car), each drawn with its own branded marker.
+      const res = await api.getNearbyDrivers(latitude, longitude);
       if (res.success && res.data) {
-        setNearbyDrivers(res.data.drivers.map((d) => ({ latitude: d.latitude, longitude: d.longitude })));
+        setNearbyDrivers(res.data.drivers.map((d) => ({ latitude: d.latitude, longitude: d.longitude, vehicleType: d.vehicleType })));
       }
     } catch {
       // non-fatal
