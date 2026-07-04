@@ -13,6 +13,7 @@ import { db } from '@/lib/db';
 import { DispatchMatchStatus, TaskStatus, TaskType } from '@prisma/client';
 import { CapabilityService } from './capability.service';
 import { sendDispatchReassignedNotification, sendSearchingNotification } from './notification.service';
+import { sendPushNotification } from './push-notification.service';
 import { EnhancedTaskStateMachine } from './enhanced-task-state-machine.service';
 import { broadcastToUser } from '@/lib/realtime-server';
 import { DEFAULT_DISPATCH_CONFIG } from '@/lib/dispatch/types';
@@ -323,6 +324,22 @@ export class DispatchService {
       console.log(`[Dispatch] Notification sent to rider ${match.riderId} about task ${taskId}`);
     } catch (error) {
       console.error(`[Dispatch] Broadcast failed for rider ${match.riderId}:`, error);
+    }
+
+    // ALSO send a push notification. The realtime broadcast only reaches the
+    // driver while the app is foregrounded with a live channel; a push wakes a
+    // backgrounded/closed app so drivers don't miss requests between rides.
+    // Fire-and-forget — push failure must never block dispatch.
+    if (rider?.userId) {
+      const fareText = task?.riderEarnings || task?.totalAmount
+        ? ` · UGX ${Number(task.riderEarnings || task.totalAmount).toLocaleString()}`
+        : '';
+      sendPushNotification({
+        userId: rider.userId,
+        title: 'New ride request',
+        message: `${task?.pickupAddress || 'Nearby pickup'}${fareText}`,
+        data: { type: 'driver:request', taskId, matchId: match.id },
+      }).catch((err) => console.error(`[Dispatch] Push to rider ${match.riderId} failed:`, err));
     }
 
     // Update the match record with the notification result

@@ -15,6 +15,7 @@ import {
   Switch,
   ActivityIndicator,
   StyleSheet,
+  Vibration,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
@@ -218,6 +219,10 @@ export default function DriverHomeScreen() {
 
   const handleIncomingRequest = (data: any) => {
     setIncomingRequest(data);
+
+    // Haptic alert so the driver notices a request even without looking at the
+    // screen (a distinct double-buzz). Push carries the sound when backgrounded.
+    Vibration.vibrate([0, 400, 200, 400]);
 
     const expiresAt = new Date(data.expiresAt).getTime();
     const now = Date.now();
