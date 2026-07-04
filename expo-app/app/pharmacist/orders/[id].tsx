@@ -22,6 +22,8 @@ import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
+import { firstName } from '@/src/utils/formatName';
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: '#F59E0B',
@@ -140,7 +142,7 @@ export default function OrderDetailScreen() {
       >
         <View style={styles.headerRow}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
+            <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Order #{order.orderNumber || id?.slice(-6)}</Text>
@@ -163,16 +165,11 @@ export default function OrderDetailScreen() {
         {/* Patient Info */}
         <GlassCard style={styles.card}>
           <Text style={styles.cardTitle}>Patient Information</Text>
+          {/* First name only — patient phone/full identity stays admin-only */}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Name</Text>
-            <Text style={styles.infoValue}>{order.patientName || order.customerName || order.client?.name || 'N/A'}</Text>
+            <Text style={styles.infoValue}>{firstName(order.patientName || order.customerName || order.client?.name, 'Patient')}</Text>
           </View>
-          {order.patientPhone && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Phone</Text>
-              <Text style={styles.infoValue}>{order.patientPhone}</Text>
-            </View>
-          )}
           <View style={styles.infoRow}>
             <Text style={styles.infoLabel}>Order Date</Text>
             <Text style={styles.infoValue}>{formatDate(order.createdAt)}</Text>

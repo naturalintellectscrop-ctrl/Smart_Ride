@@ -27,6 +27,16 @@ import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { firstName } from '@/src/utils/formatName';
+
+// Prescription verification checklist — the pharmacist confirms each item
+// against the uploaded prescription image before a prescription can be verified.
+const CHECKLIST_ITEMS: { key: string; label: string }[] = [
+  { key: 'nameMatch', label: 'Patient name matches prescription' },
+  { key: 'signature', label: "Doctor's signature present" },
+  { key: 'validDate', label: 'Prescription date is valid' },
+  { key: 'medicationMatch', label: 'Medications match the order' },
+];
 
 type PrescriptionTab = 'ALL' | 'PENDING' | 'VERIFIED' | 'REJECTED';
 
@@ -65,6 +75,8 @@ export default function PrescriptionsScreen() {
   const [verifyModalVisible, setVerifyModalVisible] = useState(false);
   const [verifyingPrescriptionId, setVerifyingPrescriptionId] = useState<string | null>(null);
   const [verificationNotes, setVerificationNotes] = useState('');
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
+  const allChecked = CHECKLIST_ITEMS.every((i) => checklist[i.key]);
 
   // Image viewer modal
   const [imageModalVisible, setImageModalVisible] = useState(false);
@@ -102,18 +114,29 @@ export default function PrescriptionsScreen() {
     setRefreshing(false);
   };
 
+  const closeVerifyModal = () => {
+    setVerifyModalVisible(false);
+    setVerificationNotes('');
+    setVerifyingPrescriptionId(null);
+    setChecklist({});
+  };
+
   const handleVerify = async () => {
     if (!verifyingPrescriptionId) return;
+    if (!allChecked) {
+      Alert.alert('Complete the checklist', 'Please confirm every verification item before verifying.');
+      return;
+    }
     setIsProcessing(true);
     try {
-      const response = await api.verifyPrescription(verifyingPrescriptionId, {
-        notes: verificationNotes,
-      });
+      // Record which checks the pharmacist confirmed alongside their notes,
+      // so the verification is auditable without needing an API change.
+      const checkedSummary = CHECKLIST_ITEMS.map((i) => `✓ ${i.label}`).join('\n');
+      const notes = [checkedSummary, verificationNotes.trim()].filter(Boolean).join('\n\n');
+      const response = await api.verifyPrescription(verifyingPrescriptionId, { notes });
       if (response.success) {
         Alert.alert('Success', 'Prescription verified successfully');
-        setVerifyModalVisible(false);
-        setVerificationNotes('');
-        setVerifyingPrescriptionId(null);
+        closeVerifyModal();
         await loadPrescriptions();
       } else {
         Alert.alert('Error', response.error || 'Failed to verify prescription');
@@ -217,20 +240,14 @@ export default function PrescriptionsScreen() {
                   />
                 </View>
 
-                {/* Patient Info */}
+                {/* Patient Info — first name only (privacy: never expose full
+                    identity or phone to a provider; that stays admin-only) */}
                 <View style={styles.prescriptionInfo}>
                   <Text style={styles.infoLabel}>Patient</Text>
                   <Text style={styles.infoValue}>
-                    {prescription.patientName || prescription.client?.name || 'N/A'}
+                    {firstName(prescription.patientName || prescription.client?.name, 'Patient')}
                   </Text>
                 </View>
-
-                {prescription.patientPhone && (
-                  <View style={styles.prescriptionInfo}>
-                    <Text style={styles.infoLabel}>Phone</Text>
-                    <Text style={styles.infoValue}>{prescription.patientPhone}</Text>
-                  </View>
-                )}
 
                 {/* Medicines */}
                 {prescription.medicines && Array.isArray(prescription.medicines) && prescription.medicines.length > 0 && (
@@ -316,31 +333,48 @@ export default function PrescriptionsScreen() {
         </ScrollView>
       )}
 
-      {/* Verify Modal */}
-      <Modal visible={verifyModalVisible} animationType="slide" transparent>
+      {/* Verify Modal — verification checklist + notes */}
+      <Modal visible={verifyModalVisible} animationType="slide" transparent onRequestClose={closeVerifyModal}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Verify Prescription</Text>
-            <Text style={styles.modalSubtitle}>Add any verification notes (optional)</Text>
+            <Text style={styles.modalSubtitle}>Confirm each item against the prescription image</Text>
+
+            {/* Verification checklist */}
+            <View style={styles.checklist}>
+              {CHECKLIST_ITEMS.map((item) => {
+                const checked = !!checklist[item.key];
+                return (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={styles.checkRow}
+                    activeOpacity={0.7}
+                    onPress={() => setChecklist((prev) => ({ ...prev, [item.key]: !prev[item.key] }))}
+                  >
+                    <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+                      {checked && <Ionicons name="checkmark" size={14} color={COLORS.onPrimary} />}
+                    </View>
+                    <Text style={[styles.checkLabel, checked && styles.checkLabelChecked]}>{item.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
             <TextInput
               style={styles.modalInput}
-              placeholder="Verification notes..."
+              placeholder="Additional notes (optional)..."
               placeholderTextColor={COLORS.outline}
               value={verificationNotes}
               onChangeText={setVerificationNotes}
               multiline
-              numberOfLines={3}
+              numberOfLines={2}
               textAlignVertical="top"
             />
             <View style={styles.modalButtons}>
               <GradientButton
                 title="Cancel"
                 variant="outline"
-                onPress={() => {
-                  setVerifyModalVisible(false);
-                  setVerificationNotes('');
-                  setVerifyingPrescriptionId(null);
-                }}
+                onPress={closeVerifyModal}
                 size="sm"
                 style={styles.modalBtn}
               />
@@ -348,6 +382,7 @@ export default function PrescriptionsScreen() {
                 title="Verify"
                 onPress={handleVerify}
                 loading={isProcessing}
+                disabled={!allChecked}
                 size="sm"
                 style={styles.modalBtn}
               />
@@ -643,6 +678,38 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.outline,
     marginBottom: SPACING.md,
+  },
+  checklist: {
+    marginBottom: SPACING.md,
+    gap: SPACING.xs,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    paddingVertical: SPACING.sm,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: RADIUS.sm,
+    borderWidth: 2,
+    borderColor: COLORS.outline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  checkLabel: {
+    flex: 1,
+    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    color: COLORS.onSurfaceVariant,
+  },
+  checkLabelChecked: {
+    color: COLORS.onSurface,
+    fontWeight: '600',
   },
   modalInput: {
     backgroundColor: COLORS.surfaceContainerLow,
