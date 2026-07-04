@@ -39,6 +39,13 @@ import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GlassCard } from '@/src/components/GlassCard';
 import { pickImage } from '@/src/utils/imagePicker';
 
+// Module-scoped themed styles, (re)assigned from the component on each theme
+// change so the sub-components and stylesheet factories below can reference them.
+let COLORS: ThemedColors;
+let styles: any;
+let bubbleStyles: any;
+let typingStyles: any;
+
 // ============================================
 // TYPING INDICATOR COMPONENT
 // ============================================

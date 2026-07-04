@@ -31,6 +31,11 @@ import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { useCartStore, CartItem } from '@/src/store';
 
+// Module-scoped themed styles, (re)assigned from the component on each theme
+// change so the stylesheet factory below can reference them.
+let COLORS: ThemedColors;
+let styles: any;
+
 interface Merchant {
   id: string;
   name: string;

@@ -39,6 +39,14 @@ import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { isAgoraConfigured, AGORA_CONFIG } from '@/src/config/agora';
 import { useAgoraCall } from '@/src/hooks/useAgoraCall';
 
+// Module-scoped themed styles, (re)assigned from the component on each theme
+// change. Declared here so the sub-components and stylesheet factories below
+// can reference them (mirrors the pattern used on the other screens).
+let COLORS: ThemedColors;
+let styles: any;
+let pulseStyles: any;
+let avatarStyles: any;
+
 // ============================================
 // CALL STATE TYPES
 // ============================================
