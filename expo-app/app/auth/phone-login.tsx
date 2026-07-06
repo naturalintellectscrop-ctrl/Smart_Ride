@@ -30,25 +30,37 @@ import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { navigateToRoleHome } from '@/src/utils/roleRouting';
 
-// Uganda phone number validation
-const UGANDAN_PHONE_REGEX = /^(\+256|0)(7\d|4\d)\d{7}$/;
+// Uganda phone validation. The UI shows a fixed "+256" prefix, so the user
+// normally types just the 9-digit subscriber number (e.g. 752255676). We also
+// accept a pasted 0-prefixed (0752255676) or full +256/256 number and reduce
+// them all to the same 9-digit local part before validating.
+const UG_SUBSCRIBER_REGEX = /^(7\d|4\d)\d{7}$/; // 9 digits, mobile prefixes 7x / 4x
+
+// Strip spaces/dashes and any +256 / 256 / leading-0 prefix → 9-digit local part.
+function toLocalSubscriber(phone: string): string {
+  let s = phone.replace(/[\s\-]/g, '');
+  if (s.startsWith('+256')) s = s.slice(4);
+  else if (s.startsWith('256')) s = s.slice(3);
+  else if (s.startsWith('0')) s = s.slice(1);
+  return s;
+}
 
 function validateUgandanPhone(phone: string): { valid: boolean; error?: string } {
-  const cleaned = phone.replace(/[\s\-]/g, '');
-
-  if (!cleaned) {
+  if (!phone.replace(/[\s\-]/g, '')) {
     return { valid: false, error: 'Phone number is required' };
   }
 
-  if (cleaned.length < 10) {
+  const local = toLocalSubscriber(phone);
+
+  if (local.length < 9) {
     return { valid: false, error: 'Phone number is too short' };
   }
 
-  if (cleaned.length > 13) {
+  if (local.length > 9) {
     return { valid: false, error: 'Phone number is too long' };
   }
 
-  if (!UGANDAN_PHONE_REGEX.test(cleaned)) {
+  if (!UG_SUBSCRIBER_REGEX.test(local)) {
     return { valid: false, error: 'Please enter a valid Ugandan phone number' };
   }
 
@@ -56,14 +68,7 @@ function validateUgandanPhone(phone: string): { valid: boolean; error?: string }
 }
 
 function normalizePhone(phone: string): string {
-  let normalized = phone.replace(/[\s\-]/g, '');
-  if (normalized.startsWith('0')) {
-    normalized = '+256' + normalized.substring(1);
-  }
-  if (normalized.startsWith('256') && !normalized.startsWith('+')) {
-    normalized = '+' + normalized;
-  }
-  return normalized;
+  return '+256' + toLocalSubscriber(phone);
 }
 
 export default function PhoneLoginScreen() {
