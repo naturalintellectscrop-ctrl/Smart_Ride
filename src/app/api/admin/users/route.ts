@@ -8,6 +8,7 @@ import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { UserRole, UserStatus, Prisma } from '@prisma/client';
 import { generateCSV, csvResponse } from '@/lib/export';
+import { deleteUserCascade } from '@/lib/admin/delete-user-cascade';
 import { z } from 'zod';
 
 export async function GET(request: NextRequest) {
@@ -334,72 +335,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // ============================================
-    // Cascading delete — manually delete Restrict relations first
-    // ============================================
-    // 1. Delete the user's Rider profile and its children (if exists)
-    const rider = await db.rider.findUnique({
-      where: { userId },
-      select: { id: true },
-    });
-
-    if (rider) {
-      // Delete rider's cash collections (Restrict)
-      await db.cashCollection.deleteMany({ where: { riderId: rider.id } });
-      // Delete rider's vehicle
-      await db.vehicle.deleteMany({ where: { riderId: rider.id } });
-      // Delete rider's tasks (will be handled by user task deletion below, but clean up rider-scoped ones)
-      // Delete the rider record itself
-      await db.rider.delete({ where: { id: rider.id } });
-    }
-
-    // 2. Delete user's orders and their children (Restrict on Order.client)
-    const userOrders = await db.order.findMany({
-      where: { clientId: userId },
-      select: { id: true },
-    });
-    if (userOrders.length > 0) {
-      const orderIds = userOrders.map(o => o.id);
-      // Delete order children first
-      await db.task.deleteMany({ where: { orderId: { in: orderIds } } });
-      await db.payment.deleteMany({ where: { orderId: { in: orderIds } } });
-      await db.rating.deleteMany({ where: { orderId: { in: orderIds } } });
-      await db.kOT.deleteMany({ where: { orderId: { in: orderIds } } });
-      await db.dispute.deleteMany({ where: { orderId: { in: orderIds } } });
-      await db.order.deleteMany({ where: { id: { in: orderIds } } });
-    }
-
-    // 3. Delete user's payments (Restrict on Payment.user)
-    await db.payment.deleteMany({ where: { userId } });
-
-    // 4. Delete user's tasks (Task.client uses Cascade, but delete manually for safety)
-    await db.task.deleteMany({ where: { clientId: userId } });// Also delete tasks where this user is the rider
-    if (rider) {
-      await db.task.deleteMany({ where: { riderId: rider.id } });
-    }
-
-    // 5. Delete remaining Cascade/SetNull relations (safe to delete directly)
-    await db.auditLog.deleteMany({ where: { userId } });
-    await db.notificationLog.deleteMany({ where: { userId } });
-    await db.notification.deleteMany({ where: { userId } });
-    await db.notificationPreference.deleteMany({ where: { userId } });
-    await db.expoPushToken.deleteMany({ where: { userId } });
-    await db.session.deleteMany({ where: { userId } });
-    await db.savedAddress.deleteMany({ where: { userId } });
-    await db.sOSAlert.deleteMany({ where: { userId } });
-    await db.conversationParticipant.deleteMany({ where: { userId } });
-    await db.dispute.deleteMany({ where: { userId } });
-    await db.rating.deleteMany({
-      where: { OR: [{ fromUserId: userId }, { toUserId: userId }] },
-    });
-    await db.callSession.deleteMany({
-      where: { OR: [{ callerId: userId }, { recipientId: userId }] },
-    });
-    // CashCollection.userId is SetNull (won't block), but delete for cleanliness
-    await db.cashCollection.deleteMany({ where: { userId } });
-
-    // 6. Finally, delete the user
-    await db.user.delete({ where: { id: userId } });
+    // Cascade-delete the user and every dependent record (rider/merchant/health
+    // provider profiles + their children) atomically. See deleteUserCascade.
+    await deleteUserCascade(userId);
 
     // Create audit log for the deletion (use the admin's ID, not the deleted user)
     await db.auditLog.create({

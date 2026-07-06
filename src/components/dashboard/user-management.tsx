@@ -36,6 +36,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import { 
   Users, 
@@ -92,6 +95,20 @@ interface UserStats {
   banned: number;
   admins: number;
 }
+
+// Roles an admin can assign via the row "Change Role" submenu. Must match the
+// UserRole enum accepted by PATCH /api/admin/users (change_role action).
+const ROLE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'CLIENT', label: 'Client' },
+  { value: 'RIDER', label: 'Rider' },
+  { value: 'MERCHANT', label: 'Merchant' },
+  { value: 'HEALTH_PROVIDER', label: 'Health Provider' },
+  { value: 'ADMIN', label: 'Admin' },
+  { value: 'OPERATIONS_ADMIN', label: 'Operations Admin' },
+  { value: 'COMPLIANCE_ADMIN', label: 'Compliance Admin' },
+  { value: 'FINANCE_ADMIN', label: 'Finance Admin' },
+  { value: 'SUPER_ADMIN', label: 'Super Admin' },
+];
 
 export function UserManagement() {
   const [users, setUsers] = useState<User[]>([]);
@@ -559,10 +576,24 @@ export function UserManagement() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit User
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-gray-300 focus:text-white focus:bg-white/5" onClick={() => handleUserAction(user.id, 'change_role')}>
-                                <Shield className="h-4 w-4 mr-2" />
-                                Change Role
-                              </DropdownMenuItem>
+                              <DropdownMenuSub>
+                                <DropdownMenuSubTrigger className="text-gray-300 focus:text-white focus:bg-white/5">
+                                  <Shield className="h-4 w-4 mr-2" />
+                                  Change Role
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuSubContent className="glass-card border-white/10">
+                                  {ROLE_OPTIONS.map((r) => (
+                                    <DropdownMenuItem
+                                      key={r.value}
+                                      disabled={user.role === r.value}
+                                      className="text-gray-300 focus:text-white focus:bg-white/5"
+                                      onClick={() => handleUserAction(user.id, 'change_role', r.value)}
+                                    >
+                                      {user.role === r.value ? '✓ ' : ''}{r.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuSubContent>
+                              </DropdownMenuSub>
                               <DropdownMenuSeparator className="bg-white/5" />
                               {user.status !== 'ACTIVE' && (
                                 <DropdownMenuItem className="text-emerald-400 focus:bg-emerald-500/10" onClick={() => handleUserAction(user.id, 'activate')}>

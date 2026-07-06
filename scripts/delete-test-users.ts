@@ -23,26 +23,35 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-// Test email patterns — users matching these are candidates for deletion
+// Test email patterns — users matching these are candidates for deletion.
+// Covers every pattern the seed scripts use: @demo.com, stress_test_*@test.com,
+// @example.com, @smartride.test, and generic test*/demo* local parts.
 const TEST_EMAIL_PATTERNS = [
   /@demo\.com$/i,
-  /@test\./i,
+  /@test\b/i,          // @test.com, @test.xyz
   /@example\.com$/i,
+  /@smartride\.test$/i,
+  /@smartride\.temp$/i, // generated test merchants (…@smartride.temp)
+  /@ex\.com$/i,         // synthetic QA accounts (drv_/ph_/gate_/rd_/pl_/lic_…@ex.com)
   /^test/i,
   /^demo/i,
+  /^stress_test/i,
 ];
 
-// Explicit list of known seed test users
+// Explicit list of known seed/QA test users that don't fit a domain pattern
+// (e.g. phone-based @smartride.ug riders created during onboarding testing).
 const KNOWN_TEST_EMAILS = [
   'client@demo.com',
   'rider@demo.com',
   'driver@demo.com',
   'delivery@demo.com',
+  '+25672212311@smartride.ug', // "RiderV" QA rider
+  '+2567604026@smartride.ug',  // "V Test" QA rider
 ];
 
 const ADMIN_ROLES = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN'];
 
-async function isTestUser(email: string, name: string): boolean {
+function isTestUser(email: string, name: string): boolean {
   if (KNOWN_TEST_EMAILS.includes(email.toLowerCase())) return true;
   for (const pattern of TEST_EMAIL_PATTERNS) {
     if (pattern.test(email) || pattern.test(name)) return true;
@@ -52,61 +61,121 @@ async function isTestUser(email: string, name: string): boolean {
 
 async function deleteUserCascade(userId: string): Promise<{ success: boolean; error?: string }> {
   try {
-    // 1. Delete Rider profile and its children (if exists)
-    const rider = await prisma.rider.findUnique({
-      where: { userId },
+    const [rider, merchant, healthProvider] = await Promise.all([
+      prisma.rider.findUnique({ where: { userId }, select: { id: true } }),
+      prisma.merchant.findUnique({ where: { userId }, select: { id: true } }),
+      prisma.healthProvider.findUnique({ where: { userId }, select: { id: true } }),
+    ]);
+    const riderId = rider?.id;
+    const merchantId = merchant?.id;
+
+    const orders = await prisma.order.findMany({
+      where: { OR: [{ clientId: userId }, ...(merchantId ? [{ merchantId }] : [])] },
       select: { id: true },
     });
+    const orderIds = orders.map((o) => o.id);
 
-    if (rider) {
-      await prisma.cashCollection.deleteMany({ where: { riderId: rider.id } });
-      await prisma.vehicle.deleteMany({ where: { riderId: rider.id } });
-      await prisma.task.deleteMany({ where: { riderId: rider.id } });
-      await prisma.rider.delete({ where: { id: rider.id } });
-    }
-
-    // 2. Delete user's orders and their children (Restrict on Order.client)
-    const userOrders = await prisma.order.findMany({
-      where: { clientId: userId },
+    const tasks = await prisma.task.findMany({
+      where: {
+        OR: [
+          { clientId: userId },
+          ...(riderId ? [{ riderId }] : []),
+          ...(orderIds.length ? [{ orderId: { in: orderIds } }] : []),
+        ],
+      },
       select: { id: true },
     });
-    if (userOrders.length > 0) {
-      const orderIds = userOrders.map(o => o.id);
-      await prisma.task.deleteMany({ where: { orderId: { in: orderIds } } });
-      await prisma.payment.deleteMany({ where: { orderId: { in: orderIds } } });
-      await prisma.rating.deleteMany({ where: { orderId: { in: orderIds } } });
-      await prisma.kOT.deleteMany({ where: { orderId: { in: orderIds } } });
-      await prisma.dispute.deleteMany({ where: { orderId: { in: orderIds } } });
-      await prisma.order.deleteMany({ where: { id: { in: orderIds } } });
-    }
+    const taskIds = tasks.map((t) => t.id);
 
-    // 3. Delete user's payments (Restrict on Payment.user)
-    await prisma.payment.deleteMany({ where: { userId } });
+    await prisma.$transaction(async (tx) => {
+      // DispatchMatch.taskId / Conversation.taskId reference the user's tasks
+      // and must be cleared before the tasks can be deleted.
+      if (taskIds.length) {
+        await tx.dispatchMatch.deleteMany({ where: { taskId: { in: taskIds } } });
+        await tx.conversation.deleteMany({ where: { taskId: { in: taskIds } } });
+      }
 
-    // 4. Delete user's tasks (Task.client is Cascade, but delete manually for safety)
-    await prisma.task.deleteMany({ where: { clientId: userId } });
+      // Order children (ratings/receipts cascade from tasks)
+      if (orderIds.length) {
+        await tx.task.deleteMany({ where: { orderId: { in: orderIds } } });
+        await tx.payment.deleteMany({ where: { orderId: { in: orderIds } } });
+        await tx.kOT.deleteMany({ where: { orderId: { in: orderIds } } });
+        await tx.receipt.deleteMany({ where: { orderId: { in: orderIds } } });
+        await tx.dispute.deleteMany({ where: { orderId: { in: orderIds } } });
+        await tx.transaction.deleteMany({ where: { orderId: { in: orderIds } } });
+      }
 
-    // 5. Delete remaining relations that may block (no explicit Cascade)
-    await prisma.auditLog.deleteMany({ where: { userId } });
-    await prisma.notificationLog.deleteMany({ where: { userId } });
-    await prisma.notification.deleteMany({ where: { userId } });
-    await prisma.notificationPreference.deleteMany({ where: { userId } });
-    await prisma.expoPushToken.deleteMany({ where: { userId } });
-    await prisma.session.deleteMany({ where: { userId } });
-    await prisma.savedAddress.deleteMany({ where: { userId } });
-    await prisma.sOSAlert.deleteMany({ where: { userId } });
-    await prisma.conversationParticipant.deleteMany({ where: { userId } });
-    await prisma.dispute.deleteMany({ where: { userId } });
-    await prisma.rating.deleteMany({
-      where: { OR: [{ fromUserId: userId }, { toUserId: userId }] },
-    });
-    await prisma.callSession.deleteMany({
-      where: { OR: [{ callerId: userId }, { recipientId: userId }] },
-    });
-    await prisma.cashCollection.deleteMany({ where: { userId } });
+      // Rider profile + dependents (RiderPayout/CashCollection are Restrict;
+      // DispatchMatch is required — all block a plain rider delete)
+      if (riderId) {
+        await tx.task.deleteMany({ where: { riderId } });
+        await tx.dispatchMatch.deleteMany({ where: { riderId } });
+        await tx.riderPayout.deleteMany({ where: { riderId } });
+        await tx.cashCollection.deleteMany({ where: { riderId } });
+        await tx.heartbeatLog.deleteMany({ where: { riderId } });
+        await tx.connectionAlert.deleteMany({ where: { riderId } });
+        await tx.riderMetrics.deleteMany({ where: { riderId } });
+        await tx.vehicle.deleteMany({ where: { riderId } });
+        await tx.document.deleteMany({ where: { riderId } });
+        await tx.fraudAlert.deleteMany({ where: { riderId } });
+        await tx.transaction.deleteMany({ where: { riderId } });
+        await tx.financeLog.deleteMany({ where: { riderId } });
+        await tx.dispute.deleteMany({ where: { riderId } });
+        await tx.sOSAlert.deleteMany({ where: { riderId } });
+        await tx.auditLog.deleteMany({ where: { riderId } });
+      }
 
-    // 6. Finally, delete the user
-    await prisma.user.delete({ where: { id: userId } });
+      // Merchant profile + dependents
+      if (merchantId) {
+        await tx.menuItem.deleteMany({ where: { merchantId } });
+        await tx.kOT.deleteMany({ where: { merchantId } });
+        await tx.merchantDocument.deleteMany({ where: { merchantId } });
+        await tx.document.deleteMany({ where: { merchantId } });
+        await tx.pharmacy.deleteMany({ where: { merchantId } });
+        await tx.cart.deleteMany({ where: { merchantId } });
+        await tx.transaction.deleteMany({ where: { merchantId } });
+        await tx.financeLog.deleteMany({ where: { merchantId } });
+        await tx.dispute.deleteMany({ where: { merchantId } });
+        await tx.auditLog.deleteMany({ where: { merchantId } });
+      }
+
+      if (orderIds.length) {
+        await tx.order.deleteMany({ where: { id: { in: orderIds } } });
+      }
+
+      // User-direct relations (Dispute uses clientId, NOT userId)
+      await tx.healthOrder.deleteMany({ where: { clientId: userId } });
+      await tx.prescription.deleteMany({ where: { clientId: userId } });
+      await tx.task.deleteMany({ where: { clientId: userId } });
+      await tx.payment.deleteMany({ where: { userId } });
+      await tx.cart.deleteMany({ where: { userId } });
+      await tx.receipt.deleteMany({ where: { userId } });
+      await tx.transaction.deleteMany({ where: { userId } });
+      await tx.financeLog.deleteMany({ where: { clientId: userId } });
+      await tx.dispute.deleteMany({ where: { clientId: userId } });
+      await tx.savedAddress.deleteMany({ where: { userId } });
+      await tx.notification.deleteMany({ where: { userId } });
+      await tx.notificationPreference.deleteMany({ where: { userId } });
+      await tx.notificationLog.deleteMany({ where: { userId } });
+      await tx.expoPushToken.deleteMany({ where: { userId } });
+      await tx.offlineAction.deleteMany({ where: { userId } });
+      await tx.sOSAlert.deleteMany({ where: { userId } });
+      await tx.fraudAlert.deleteMany({ where: { userId } });
+      await tx.conversationParticipant.deleteMany({ where: { userId } });
+      await tx.cashCollection.deleteMany({ where: { userId } });
+      await tx.rating.deleteMany({ where: { OR: [{ fromUserId: userId }, { toUserId: userId }] } });
+      await tx.callSession.deleteMany({ where: { OR: [{ callerId: userId }, { recipientId: userId }] } });
+      await tx.session.deleteMany({ where: { userId } });
+      await tx.auditLog.deleteMany({ where: { userId } });
+
+      // deleteMany (not delete) so a re-run or concurrent run can't trip P2025
+      // "record not found" if the row was already removed.
+      if (riderId) await tx.rider.deleteMany({ where: { id: riderId } });
+      if (merchantId) await tx.merchant.deleteMany({ where: { id: merchantId } });
+      if (healthProvider?.id) await tx.healthProvider.deleteMany({ where: { id: healthProvider.id } });
+
+      await tx.user.deleteMany({ where: { id: userId } });
+    }, { timeout: 30_000 });
 
     return { success: true };
   } catch (error) {
