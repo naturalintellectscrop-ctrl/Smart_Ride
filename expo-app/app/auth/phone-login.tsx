@@ -147,9 +147,21 @@ export default function PhoneLoginScreen() {
   const handlePhoneChange = (text: string) => {
     const filtered = text.replace(/[^\d\s\-\+]/g, '');
     setPhone(filtered);
+    // Never validate mid-typing — just clear any stale error so the user can
+    // finish entering their number in peace. Validation happens on blur/submit.
     if (error) {
       setError(null);
     }
+  };
+
+  // Validate when the field loses focus (only if the user actually typed
+  // something) so they get friendly feedback without being interrupted while
+  // typing. Matches the "validate on blur OR submit" rule.
+  const handlePhoneBlur = () => {
+    setIsFocused(false);
+    if (phone.trim().length === 0) return;
+    const validation = validateUgandanPhone(phone);
+    setError(validation.valid ? null : validation.error || 'Invalid phone number');
   };
 
   return (
@@ -220,7 +232,7 @@ export default function PhoneLoginScreen() {
               value={phone}
               onChangeText={handlePhoneChange}
               onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
+              onBlur={handlePhoneBlur}
               keyboardType="phone-pad"
               autoComplete="tel"
               textContentType="telephoneNumber"
