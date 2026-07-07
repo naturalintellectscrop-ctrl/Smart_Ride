@@ -389,10 +389,13 @@ async function handleComplete(taskId: string, body: Record<string, unknown>, use
   }, 'Task completed');
 }
 
-// Schema for cancelling task
+// Schema for cancelling task. The mobile app sends just { reason } — both
+// cancelledBy and reasonCode are derived server-side from the authenticated
+// caller when omitted (they used to be required, which made EVERY app cancel
+// throw a ZodError → HTTP 500).
 const cancelSchema = z.object({
-  cancelledBy: z.string(),
-  reasonCode: z.string(),
+  cancelledBy: z.string().optional(),
+  reasonCode: z.string().optional(),
   reason: z.string().optional(),
 });
 
@@ -442,20 +445,20 @@ async function handleCancel(taskId: string, body: Record<string, unknown>, user:
     return errorResponse(`Cannot cancel task in ${task.status} status`);
   }
 
-  // Determine actor type for SM validation
-  const cancelledByStr = validatedData.cancelledBy as string;
+  // Determine actor type for SM validation. Prefer the AUTHENTICATED caller's
+  // role — the body's cancelledBy (if present) is only a fallback hint.
+  const cancelledByStr = validatedData.cancelledBy
+    || (user.role === 'RIDER' ? 'rider' : 'client');
   let triggeredByType: 'CLIENT' | 'RIDER' | 'SYSTEM' | 'ADMIN';
   if (isAdmin(user.role as any)) {
     triggeredByType = 'ADMIN';
-  } else if (cancelledByStr.includes('rider')) {
+  } else if (user.role === 'RIDER' || cancelledByStr.includes('rider')) {
     triggeredByType = 'RIDER';
-  } else if (cancelledByStr.includes('client')) {
-    triggeredByType = 'CLIENT';
   } else {
-    triggeredByType = 'SYSTEM';
+    triggeredByType = 'CLIENT';
   }
 
-  const reasonStr = (validatedData.reason || validatedData.reasonCode) as string;
+  const reasonStr = validatedData.reason || validatedData.reasonCode || 'Cancelled';
 
   // ── Delegate to state machine ──────────────────────────────
   // SM handles: status → CANCELLED, cancelledAt, transition record, audit log,
@@ -489,7 +492,7 @@ async function handleCancel(taskId: string, body: Record<string, unknown>, user:
       data: {
         cancelledBy: cancelledByStr,
         cancellationCode: validatedData.reasonCode,
-        cancellationReason: validatedData.reason || validatedData.reasonCode,
+        cancellationReason: reasonStr,
       },
     });
   } catch (err) {
