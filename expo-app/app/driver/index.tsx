@@ -12,7 +12,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Switch,
   ActivityIndicator,
   StyleSheet,
   Vibration,
@@ -142,6 +141,10 @@ export default function DriverHomeScreen() {
   }, [user]);
 
   const toggleOnlineStatus = async (value: boolean) => {
+    // Idempotence guard: ignore no-op or duplicate/stale calls (e.g. a UI
+    // control echoing a programmatic value change). Only a real state change
+    // may hit the API — prevents accidental silent offline flips.
+    if (value === isOnline) return;
     try {
       const response = await api.setRiderOnline(value);
       if (response.success) {
@@ -444,8 +447,20 @@ export default function DriverHomeScreen() {
               </Animated.View>
             </View>
 
-            {/* Stitch Online/Offline Toggle */}
-            <View style={styles.togglePillContainer}>
+            {/* Stitch Online/Offline Toggle.
+                NOTE: this pill is a plain pressable — deliberately NOT a
+                react-native Switch. The previous hidden <Switch value={isOnline}>
+                re-fired onValueChange when its value prop changed
+                programmatically (a known Android Switch defect), which called
+                setRiderOnline(false) seconds after going online and silently
+                knocked drivers offline. Root cause of "no riders found". */}
+            <TouchableOpacity
+              style={styles.togglePillContainer}
+              activeOpacity={0.8}
+              onPress={() => toggleOnlineStatus(!isOnline)}
+              accessibilityRole="switch"
+              accessibilityState={{ checked: isOnline }}
+            >
               <Animated.View
                 style={[
                   styles.togglePillSlider,
@@ -465,14 +480,7 @@ export default function DriverHomeScreen() {
                   </Text>
                 </LinearGradient>
               </Animated.View>
-              <Switch
-                value={isOnline}
-                onValueChange={toggleOnlineStatus}
-                trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.surfaceContainerHigh }}
-                thumbColor={COLORS.surfaceContainerLowest}
-                style={styles.hiddenSwitch}
-              />
-            </View>
+            </TouchableOpacity>
           </View>
         </GlowHeader>
 
@@ -857,13 +865,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  hiddenSwitch: {
-    position: 'absolute',
-    opacity: 0,
-    width: 0,
-    height: 0,
-  },
-
   // Error banner
   errorBanner: {
     marginTop: SPACING.sm,
