@@ -45,8 +45,13 @@ export async function GET(request: NextRequest) {
         currentLongitude: true,
         lastKnownHeading: true,
         lastHeartbeatAt: true,
-        batteryLevel: true,
         currentTaskId: true,
+        // battery lives on HeartbeatLog, not Rider — take the latest reading
+        heartbeatLogs: {
+          select: { batteryLevel: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
       orderBy: { isOnline: 'desc' },
     });
@@ -76,7 +81,7 @@ export async function GET(request: NextRequest) {
         heading: r.lastKnownHeading,
         lastHeartbeatAt: r.lastHeartbeatAt,
         secondsSinceHeartbeat: hbAgeS,
-        batteryLevel: r.batteryLevel,
+        batteryLevel: r.heartbeatLogs[0]?.batteryLevel ?? null,
         taskId: r.currentTaskId,
       };
     });
