@@ -309,19 +309,24 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Auto-dispatch: Find and offer task to nearest rider
-    // This runs asynchronously - the task is already saved and response is sent.
-    // The match starts as PENDING - rider must explicitly accept via /api/dispatch/[id]/accept
-    // Only then does the task transition to ASSIGNED (handled by DispatchService.acceptMatch)
-    DispatchService.findAndAssign({
-      taskId: task.id,
-      taskType: validatedData.taskType as TaskType,
-      pickupLatitude: validatedData.pickupLatitude || 0,
-      pickupLongitude: validatedData.pickupLongitude || 0,
-    }).then(async (result) => {
+    // Auto-dispatch: find and offer the task to the nearest rider.
+    // AWAITED, deliberately: this route runs on Vercel serverless, which
+    // freezes the function as soon as the response is returned. The previous
+    // fire-and-forget promise was killed mid-flight — early steps (SEARCHING
+    // transition) survived but the match creation never ran, so client
+    // bookings never reached any driver (runtime-verified). ~1-2s extra
+    // booking latency in exchange for dispatch actually happening.
+    // The match starts as PENDING - rider must explicitly accept via
+    // /api/dispatch/[id]/accept; only then does the task become ASSIGNED.
+    try {
+      const result = await DispatchService.findAndAssign({
+        taskId: task.id,
+        taskType: validatedData.taskType as TaskType,
+        pickupLatitude: validatedData.pickupLatitude || 0,
+        pickupLongitude: validatedData.pickupLongitude || 0,
+      });
       if (result.success && result.match) {
         // Dispatch match created (PENDING) - rider has been notified via socket
-        // Do NOT transition to ASSIGNED here - wait for rider to accept
         await createAuditLog({
           action: AuditActions.DISPATCH_ASSIGNED,
           entityType: EntityTypes.DISPATCH,
@@ -341,9 +346,11 @@ export async function POST(request: NextRequest) {
           console.error(`[Tasks] Failed to transition task ${task.id} to SEARCHING:`, searchResult.error);
         }
       }
-    }).catch((error) => {
+    } catch (error) {
+      // Dispatch failure must not fail the booking — the task is saved and the
+      // cron sweep will retry matching. The client sees normal searching UI.
       console.error('Auto-dispatch error (non-blocking):', error);
-    });
+    }
 
     return successResponse(matchingTask, 'Task created and matching started', 201);
   } catch (error) {
