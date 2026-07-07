@@ -17,6 +17,7 @@ import { sendPushNotification } from './push-notification.service';
 import { EnhancedTaskStateMachine } from './enhanced-task-state-machine.service';
 import { broadcastToUser } from '@/lib/realtime-server';
 import { DEFAULT_DISPATCH_CONFIG } from '@/lib/dispatch/types';
+import { getAcceptTimeoutSeconds } from '@/lib/api/sla';
 
 // ============================================
 // DISPATCH CONFIGURATION
@@ -184,7 +185,8 @@ export class DispatchService {
         bestRider.rider.id,
         bestRider.score,
         bestRider.distanceKm,
-        bestRider.estimatedArrival
+        bestRider.estimatedArrival,
+        request.taskType
       );
 
       // Send notification to rider (would integrate with notification service)
@@ -265,11 +267,19 @@ export class DispatchService {
     riderId: string,
     matchScore: number,
     distanceKm: number,
-    estimatedArrival: number
+    estimatedArrival: number,
+    taskType?: TaskType
   ): Promise<any> {
-    const expiresAt = new Date(
-      Date.now() + DISPATCH_CONFIG.matchTimeout * 1000
-    );
+    // Rider acceptance window: admin-configurable per task type (SLAConfig
+    // .acceptTimeoutSeconds, cached ≤60s) — no hardcoded dispatch timeouts.
+    // Falls back to DISPATCH_CONFIG.matchTimeout if the lookup fails.
+    let acceptSeconds = DISPATCH_CONFIG.matchTimeout;
+    try {
+      acceptSeconds = await getAcceptTimeoutSeconds(taskType || 'SMART_BODA_RIDE');
+    } catch (e) {
+      console.warn('[Dispatch] accept-timeout lookup failed, using default:', (e as Error).message);
+    }
+    const expiresAt = new Date(Date.now() + acceptSeconds * 1000);
 
     return db.dispatchMatch.create({
       data: {

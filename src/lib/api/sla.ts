@@ -21,14 +21,25 @@ const DEFAULT_SLA_MINUTES: Record<string, number> = {
 };
 const FALLBACK_SLA_MINUTES = 30;
 
+// Default rider acceptance window per task type (seconds) when no DB row
+// configures one. Mirrors the previously hardcoded DISPATCH_CONFIG.matchTimeout.
+const DEFAULT_ACCEPT_TIMEOUT_S = 30;
+// Safety clamp so an admin typo can't make offers unacceptable or immortal.
+const MIN_ACCEPT_TIMEOUT_S = 10;
+const MAX_ACCEPT_TIMEOUT_S = 300;
+
+type SlaRow = { serviceType: string; state: string; slaMinutes: number; acceptTimeoutSeconds: number | null };
+
 const TTL_MS = 60_000;
-let cache: { rows: Array<{ serviceType: string; state: string; slaMinutes: number }>; expires: number } | null = null;
+let cache: { rows: SlaRow[]; expires: number } | null = null;
 
 async function loadSla() {
   if (cache && cache.expires > Date.now()) return cache.rows;
-  let rows: Array<{ serviceType: string; state: string; slaMinutes: number }> = [];
+  let rows: SlaRow[] = [];
   try {
-    rows = await db.sLAConfig.findMany({ select: { serviceType: true, state: true, slaMinutes: true } });
+    rows = await db.sLAConfig.findMany({
+      select: { serviceType: true, state: true, slaMinutes: true, acceptTimeoutSeconds: true },
+    });
   } catch (e) {
     console.warn('[sla] SLAConfig load failed, using defaults:', (e as Error).message);
   }
@@ -55,4 +66,23 @@ export async function getSlaMinutes(serviceType: string, state?: string): Promis
   const byType = rows.find((r) => r.serviceType === serviceType);
   if (byType) return byType.slaMinutes;
   return DEFAULT_SLA_MINUTES[serviceType] ?? FALLBACK_SLA_MINUTES;
+}
+
+/**
+ * How long a rider gets to accept a dispatch offer for this task type
+ * (seconds). Admin-configurable via SLAConfig.acceptTimeoutSeconds — the
+ * dispatch engine calls this for every offer, so edits apply within the cache
+ * TTL (≤60s) with no redeploy. Clamped to a safe range.
+ */
+export async function getAcceptTimeoutSeconds(serviceType: string, state?: string): Promise<number> {
+  const rows = await loadSla();
+  const candidates = state
+    ? [rows.find((r) => r.serviceType === serviceType && r.state === state), rows.find((r) => r.serviceType === serviceType)]
+    : [rows.find((r) => r.serviceType === serviceType)];
+  for (const row of candidates) {
+    if (row?.acceptTimeoutSeconds != null) {
+      return Math.min(MAX_ACCEPT_TIMEOUT_S, Math.max(MIN_ACCEPT_TIMEOUT_S, row.acceptTimeoutSeconds));
+    }
+  }
+  return DEFAULT_ACCEPT_TIMEOUT_S;
 }

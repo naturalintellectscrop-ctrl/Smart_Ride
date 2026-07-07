@@ -725,6 +725,10 @@ model SLAConfig {
   serviceType String
   state       String
   slaMinutes  Int
+  // How long a rider has to accept a dispatch offer for this service type
+  // (seconds). Null = built-in default. Edited from the admin dashboard;
+  // the dispatch engine reads it via lib/api/sla.ts (cached, no redeploy).
+  acceptTimeoutSeconds Int?
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
