@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
-import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext, setServiceRoleContext } from '@/lib/db';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 import { firstNameOf } from '@/lib/privacy/public-contact';
 import { broadcastToUser, broadcastToTask } from '@/lib/realtime-server';
@@ -27,8 +27,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    await setRLSContext({ userId: user.userId, role: user.role });
-
     // SECURITY: Verify user is a rider
     if (user.role !== 'RIDER') {
       return NextResponse.json(
@@ -37,9 +35,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Get rider ID from user
+    // Service-role context: DispatchMatch has no rider-read RLS policy
+    // (service_role_access only), so under the rider's context the match
+    // pre-check below always 404'd and accepts never went through
+    // (runtime-verified). Authorization is the explicit riderId comparison.
+    await setServiceRoleContext();
+
+    // Get rider ID from user (was `user.id` — undefined; authGuard returns userId)
     const rider = await db.rider.findFirst({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!rider) {
@@ -133,7 +137,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
         try {
           // 3. Notify RIDER that their acceptance was confirmed
-          await broadcastToUser(user.id, 'dispatch:assignment', {
+          await broadcastToUser(user.userId, 'dispatch:assignment', {
             taskId: result.taskId,
             taskNumber: task.taskNumber,
             status: 'ASSIGNED',
@@ -162,7 +166,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             data: {
               actorId: rider.id,
               actorType: 'RIDER',
-              userId: user.id,
+              userId: user.userId,
               taskId: result.taskId,
               action: 'DISPATCH_ACCEPTED',
               entityType: 'DispatchMatch',

@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
-import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext, setServiceRoleContext } from '@/lib/db';
 import { broadcastToTask } from '@/lib/realtime-server';
 
 interface RouteParams {
@@ -27,11 +27,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    await setRLSContext({ userId: user.userId, role: user.role });
+    // Service-role context: DispatchMatch has no rider-read RLS policy, so the
+    // rider's own context can't see the match (same runtime failure as accept).
+    // Authorization is the explicit riderId comparison below.
+    await setServiceRoleContext();
 
-    // Get rider ID from user
+    // Get rider ID from user (was `user.id` — undefined; authGuard returns userId)
     const rider = await db.rider.findFirst({
-      where: { userId: user.id },
+      where: { userId: user.userId },
     });
 
     if (!rider) {
@@ -78,7 +81,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       data: {
         actorId: rider.id,
         actorType: 'RIDER',
-        userId: user.id,
+        userId: user.userId,
         taskId: match.taskId,
         action: 'DISPATCH_REJECTED',
         entityType: 'DispatchMatch',
