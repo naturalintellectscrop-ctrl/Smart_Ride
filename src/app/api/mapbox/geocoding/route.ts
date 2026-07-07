@@ -21,6 +21,7 @@ import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/r
 import { getMapboxToken } from '@/lib/mapbox-token';
 import {
   getPopularKampalaPlaces,
+  searchKampalaPlaces,
   type UnifiedPlace,
 } from '@/lib/geo/kampala-places';
 
@@ -201,16 +202,34 @@ async function handleForwardGeocode(
     console.error('[geocoding] Mapbox fetch failed:', error);
   }
 
-  // 3. Photon (POIs) first, then Mapbox extras (deduped by name).
-  const merged: UnifiedPlace[] = [...photonPlaces];
-  const seen = new Set(photonPlaces.map((p) => p.name.toLowerCase()));
-  for (const mp of mapboxPlaces) {
-    const key = mp.name.toLowerCase();
-    if (!seen.has(key)) {
-      merged.push(mp);
-      seen.add(key);
-    }
-  }
+  // 3. Merge: curated Kampala POIs FIRST (fuzzy/substring matched — this is
+  //    what makes "aci" → Acacia Mall and "kol" → Kololo work), then OSM POIs
+  //    sorted by distance to the proximity point (Photon largely ignores its
+  //    bias param, which used to rank Mpigi villages above Kampala places),
+  //    then Mapbox extras. Deduped by normalized name.
+  const curatedPlaces = searchKampalaPlaces(query, 5);
+
+  const distTo = (p: UnifiedPlace) => {
+    if (Number.isNaN(pLat) || Number.isNaN(pLng)) return 0;
+    const dLat = ((p.lat - pLat) * Math.PI) / 180;
+    const dLng = ((p.lng - pLng) * Math.PI) / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos((pLat * Math.PI) / 180) * Math.cos((p.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+    return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
+  const osmByProximity = [...photonPlaces].sort((a, b) => distTo(a) - distTo(b));
+
+  const merged: UnifiedPlace[] = [];
+  const seen = new Set<string>();
+  const push = (p: UnifiedPlace) => {
+    const key = p.name.toLowerCase().trim();
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(p);
+  };
+  curatedPlaces.forEach(push);
+  osmByProximity.forEach(push);
+  mapboxPlaces.forEach(push);
 
   return NextResponse.json({
     success: true,
