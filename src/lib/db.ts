@@ -251,7 +251,7 @@ export async function setServiceRoleContext(): Promise<void> {
 export const db = new Proxy({} as PrismaClient, {
   get(_target, prop) {
     const client = getDb()
-    const value = (client as Record<string | symbol, unknown>)[prop]
+    const value = (client as unknown as Record<string | symbol, unknown>)[prop]
     if (typeof value === 'function') return value.bind(client)
     return value
   },

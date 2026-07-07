@@ -251,7 +251,7 @@ export async function POST(request: NextRequest) {
         dropoffAddress: validatedData.dropoffAddress,
         dropoffLatitude: validatedData.dropoffLatitude || null,
         dropoffLongitude: validatedData.dropoffLongitude || null,
-        dropoffContactName: validatedData.dropoffName || null,
+        dropoffContactName: validatedData.dropoffContactName || null,
         dropoffContactPhone: validatedData.dropoffContactPhone || null,
         
         distanceKm: validatedData.distanceKm,
