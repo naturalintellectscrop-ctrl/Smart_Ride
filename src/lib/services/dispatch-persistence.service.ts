@@ -9,7 +9,7 @@
 // - DB persistence for all dispatch attempts
 // ============================================
 
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { DispatchMatchStatus, TaskStatus, TaskType } from '@prisma/client';
 import { CapabilityService } from './capability.service';
 import { sendDispatchReassignedNotification, sendSearchingNotification } from './notification.service';
@@ -85,6 +85,14 @@ export class DispatchService {
   static async findAndAssign(
     request: DispatchRequest
   ): Promise<DispatchResult> {
+    // Dispatch is a SYSTEM operation: it must see every eligible rider, but it
+    // is triggered from CLIENT-authenticated requests (task creation), whose
+    // RLS context cannot read the Rider table (policies: service_role_access /
+    // riders_read_own / admin_read_all only). Without elevation the eligible
+    // pool is always empty and every client booking dies with "no riders
+    // available" — the production dispatch failure found by runtime testing.
+    // Route-level auth/IDOR checks have already run before we get here.
+    await setServiceRoleContext();
     try {
       // Update task status - use SEARCHING unless already in a matching state
       const currentTask = await db.task.findUnique({
@@ -178,6 +186,10 @@ export class DispatchService {
         success: false,
         error: 'An internal error occurred',
       };
+    } finally {
+      // Restore the caller's RLS context (the route's own finally also resets,
+      // but findAndAssign is often fire-and-forget after the response).
+      await resetRLSContext().catch(() => {});
     }
   }
 
@@ -373,6 +385,11 @@ export class DispatchService {
     matchId: string,
     riderId: string
   ): Promise<{ success: boolean; taskId?: string; error?: string }> {
+    // System operation under the caller's RIDER context: accepting must write
+    // the client's Task row + cancel sibling matches, which rider-scoped RLS
+    // can't fully see. The route has already verified the rider's identity,
+    // and the ownership check below (match.riderId !== riderId) still guards.
+    await setServiceRoleContext();
     try {
       const match = await db.dispatchMatch.findUnique({
         where: { id: matchId },
@@ -485,6 +502,8 @@ export class DispatchService {
     } catch (error: unknown) {
       console.error('Accept match error:', error);
       return { success: false, error: 'An internal error occurred' };
+    } finally {
+      await resetRLSContext().catch(() => {});
     }
   }
 
@@ -496,6 +515,9 @@ export class DispatchService {
     riderId: string,
     reason?: string
   ): Promise<{ success: boolean; error?: string }> {
+    // Same elevation rationale as acceptMatch — rejection cascades into
+    // findAndAssign (reassignment) which must see the full rider pool.
+    await setServiceRoleContext();
     try {
       const match = await db.dispatchMatch.findUnique({
         where: { id: matchId },
@@ -542,6 +564,8 @@ export class DispatchService {
     } catch (error: unknown) {
       console.error('Reject match error:', error);
       return { success: false, error: 'An internal error occurred' };
+    } finally {
+      await resetRLSContext().catch(() => {});
     }
   }
 
