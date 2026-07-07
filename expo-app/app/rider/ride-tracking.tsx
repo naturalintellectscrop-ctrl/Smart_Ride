@@ -507,6 +507,7 @@ export default function RideTrackingScreen() {
         pickup={pickupCoord ? { ...pickupCoord, title: 'Pickup' } : undefined}
         dropoff={dropoffCoord ? { ...dropoffCoord, title: 'Destination' } : undefined}
         driverLocation={driverLocation || undefined}
+        driverKind={isCarRide ? 'car' : 'boda'}
         routeCoordinates={liveRoute.routeCoordinates}
         showUserLocation
       />

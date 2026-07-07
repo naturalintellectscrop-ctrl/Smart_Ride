@@ -19,7 +19,7 @@ import {
   Platform,
   ViewStyle,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, MAPBOX_CONFIG, DEFAULT_LOCATION } from '../constants';
 
 // ============================================
@@ -33,6 +33,8 @@ export interface SmartRideMapProps {
   pickup?: { latitude: number; longitude: number; title?: string };
   dropoff?: { latitude: number; longitude: number; title?: string };
   driverLocation?: { latitude: number; longitude: number; heading?: number };
+  /** Which family marker the active-trip driver gets (boda / car / delivery). */
+  driverKind?: 'boda' | 'car' | 'delivery';
   showUserLocation?: boolean;
   onLocationSelect?: (coords: { latitude: number; longitude: number }) => void;
   isPickupSelectionMode?: boolean;
@@ -54,9 +56,25 @@ export interface SmartRideMapProps {
   onMapIdle?: (center: { latitude: number; longitude: number }) => void;
   showCenterPin?: boolean;
   centerPinType?: 'pickup' | 'dropoff';
-  // Live nearby drivers, rendered as branded per-vehicle markers (boda vs car).
-  // vehicleType picks the icon; omit it to fall back to a generic dot.
-  driverPoints?: Array<{ latitude: number; longitude: number; vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null }>;
+  // Live nearby drivers, rendered as branded per-vehicle markers (boda / car /
+  // delivery). riderRole beats vehicleType for kind; heading rotates the
+  // direction notch so vehicles read as moving along roads.
+  driverPoints?: Array<{
+    latitude: number;
+    longitude: number;
+    vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null;
+    riderRole?: string | null;
+    heading?: number | null;
+  }>;
+}
+
+// Which marker family member to show for a nearby provider.
+export type ProviderKind = 'boda' | 'car' | 'delivery';
+
+export function providerKindFor(d: { vehicleType?: string | null; riderRole?: string | null }): ProviderKind {
+  if (d.riderRole === 'DELIVERY_PERSONNEL') return 'delivery';
+  if (d.riderRole === 'SMART_CAR_DRIVER' || d.vehicleType === 'CAR') return 'car';
+  return 'boda';
 }
 
 // ============================================
@@ -148,34 +166,64 @@ try {
 }
 
 // ============================================
-// CUSTOM MARKER COMPONENTS
+// SMART RIDE MARKER FAMILY
 // ============================================
+// One cohesive marker system: identical proportions, borders, shadows and the
+// Smart Ride green across every member, so the whole map reads as one brand.
+// All assets are original (icon fonts already bundled — no third-party art).
+//
+// Android note: PointAnnotation children are rendered to a static texture, so
+// CSS-style animations inside markers freeze. "Pulse" is therefore a layered
+// static halo (reads as a glow), and rotation is re-rendered by keying the
+// annotation id to the data (cheap — the nearby pool is capped at 8).
 
-function PickupMarker({ title }: { title?: string }) {
+const PROVIDER_GLYPH: Record<ProviderKind, { family: 'ion' | 'mci'; name: string }> = {
+  boda: { family: 'mci', name: 'motorbike' },
+  car: { family: 'ion', name: 'car-sport' },
+  delivery: { family: 'mci', name: 'package-variant-closed' },
+};
+
+function ProviderGlyph({ kind, size }: { kind: ProviderKind; size: number }) {
+  const g = PROVIDER_GLYPH[kind];
+  return g.family === 'mci' ? (
+    <MaterialCommunityIcons name={g.name as any} size={size} color="#FFFFFF" />
+  ) : (
+    <Ionicons name={g.name as any} size={size} color="#FFFFFF" />
+  );
+}
+
+/**
+ * Nearby-provider marker: Smart Ride green chip + white vehicle glyph and a
+ * direction notch on the rim rotated to the driver's last GPS heading. The
+ * glyph itself stays upright for legibility; only the notch rotates.
+ */
+function ProviderMarker({ kind, heading }: { kind: ProviderKind; heading?: number | null }) {
   return (
-    <View style={markerStyles.container}>
-      <View style={[markerStyles.pin, markerStyles.pickupPin]}>
-        <Ionicons name="location" size={18} color={COLORS.secondary} />
-      </View>
-      <View style={markerStyles.pinArrow} />
-      {title ? (
-        <View style={markerStyles.labelContainer}>
-          <Text style={[markerStyles.labelText, { color: COLORS.secondary }]} numberOfLines={1}>
-            {title}
-          </Text>
+    <View style={markerStyles.providerWrap}>
+      {/* soft halo for separation from the basemap */}
+      <View style={markerStyles.providerHalo} />
+      {/* rotating layer: only the direction notch */}
+      {heading != null && Number.isFinite(heading) && (
+        <View style={[markerStyles.providerRotator, { transform: [{ rotate: `${Math.round(heading)}deg` }] }]}>
+          <View style={markerStyles.directionNotch} />
         </View>
-      ) : null}
+      )}
+      <View style={markerStyles.providerChip}>
+        <ProviderGlyph kind={kind} size={16} />
+      </View>
     </View>
   );
 }
 
-function DropoffMarker({ title }: { title?: string }) {
+/** Pickup: filled Smart Ride green pin with a glow halo (active/selected). */
+function PickupMarker({ title }: { title?: string }) {
   return (
     <View style={markerStyles.container}>
-      <View style={[markerStyles.pin, markerStyles.dropoffPin]}>
-        <Ionicons name="flag" size={18} color={COLORS.primary} />
+      <View style={markerStyles.pickupHalo} />
+      <View style={[markerStyles.pin, markerStyles.pickupPinSolid]}>
+        <Ionicons name="location" size={18} color="#FFFFFF" />
       </View>
-      <View style={[markerStyles.pinArrow, markerStyles.dropoffArrow]} />
+      <View style={[markerStyles.pinArrow, { borderTopColor: COLORS.primary }]} />
       {title ? (
         <View style={markerStyles.labelContainer}>
           <Text style={[markerStyles.labelText, { color: COLORS.primary }]} numberOfLines={1}>
@@ -187,31 +235,37 @@ function DropoffMarker({ title }: { title?: string }) {
   );
 }
 
-function DriverMarker({ heading, isBoda }: { heading?: number; isBoda?: boolean }) {
+/** Destination: dark square "flag" pin — clearly distinct from pickup. */
+function DropoffMarker({ title }: { title?: string }) {
   return (
-    <View style={markerStyles.driverContainer}>
-      <View style={markerStyles.driverPulse} />
-      <View style={markerStyles.driverPin}>
-        <Ionicons
-          name={isBoda ? 'bicycle' : 'car'}
-          size={18}
-          color={COLORS.background}
-        />
+    <View style={markerStyles.container}>
+      <View style={[markerStyles.pin, markerStyles.dropoffPinSolid]}>
+        <Ionicons name="flag" size={16} color="#FFFFFF" />
       </View>
+      <View style={[markerStyles.pinArrow, markerStyles.dropoffArrow]} />
+      {title ? (
+        <View style={markerStyles.labelContainer}>
+          <Text style={[markerStyles.labelText, { color: COLORS.secondary }]} numberOfLines={1}>
+            {title}
+          </Text>
+        </View>
+      ) : null}
     </View>
   );
 }
 
-// Branded live-driver marker for the nearby pool. Boda-class vehicles get the
-// bicycle glyph, cars get the car glyph — same Smart Ride green pill so the map
-// reads as one system (no third-party assets).
-function NearbyDriverMarker({ vehicleType }: { vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null }) {
-  const isCar = vehicleType === 'CAR';
-  const icon = isCar ? 'car-sport' : 'bicycle';
+/** Active-trip driver: larger family chip + halo + heading notch. */
+function DriverMarker({ heading, kind = 'car' }: { heading?: number; kind?: ProviderKind }) {
   return (
-    <View style={markerStyles.nearbyContainer}>
-      <View style={markerStyles.nearbyPin}>
-        <Ionicons name={icon as any} size={14} color={COLORS.background} />
+    <View style={markerStyles.driverContainer}>
+      <View style={markerStyles.driverPulse} />
+      {heading != null && Number.isFinite(heading) && (
+        <View style={[markerStyles.driverRotator, { transform: [{ rotate: `${Math.round(heading)}deg` }] }]}>
+          <View style={markerStyles.directionNotchLarge} />
+        </View>
+      )}
+      <View style={markerStyles.driverPin}>
+        <ProviderGlyph kind={kind} size={20} />
       </View>
     </View>
   );
@@ -230,24 +284,52 @@ function SimpleMarker({ color, icon }: { color?: string; icon?: string }) {
 
 const markerStyles = StyleSheet.create({
   container: { alignItems: 'center' },
-  nearbyContainer: { alignItems: 'center', justifyContent: 'center' },
-  nearbyPin: {
-    width: 28, height: 28, borderRadius: 14,
+
+  // ---- Nearby provider chip (32px family member) ----
+  providerWrap: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  providerHalo: {
+    position: 'absolute', width: 42, height: 42, borderRadius: 21,
+    backgroundColor: 'rgba(0, 95, 58, 0.12)',
+  },
+  providerRotator: {
+    position: 'absolute', width: 44, height: 44,
+    alignItems: 'center', justifyContent: 'flex-start',
+  },
+  directionNotch: {
+    width: 0, height: 0, borderStyle: 'solid',
+    borderLeftWidth: 5, borderRightWidth: 5, borderBottomWidth: 7,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderBottomColor: COLORS.primary,
+  },
+  providerChip: {
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: COLORS.primary,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: '#FFFFFF',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.3, shadowRadius: 2, elevation: 3,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3, elevation: 4,
   },
-  pin: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 2 },
-  pickupPin: { backgroundColor: 'rgba(0, 110, 47, 0.15)', borderColor: COLORS.secondary },
-  dropoffPin: { backgroundColor: 'rgba(0, 95, 58, 0.15)', borderColor: COLORS.primary },
-  pinArrow: { width: 0, height: 0, backgroundColor: 'transparent', borderStyle: 'solid', borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: COLORS.secondary, marginTop: -2 },
-  dropoffArrow: { borderTopColor: COLORS.primary },
+
+  // ---- Pickup / destination pins (36px family members) ----
+  pin: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3, elevation: 4 },
+  pickupHalo: { position: 'absolute', top: -4, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0, 95, 58, 0.15)' },
+  pickupPinSolid: { backgroundColor: COLORS.primary },
+  dropoffPinSolid: { backgroundColor: COLORS.secondary, borderRadius: 10 },
+  pinArrow: { width: 0, height: 0, backgroundColor: 'transparent', borderStyle: 'solid', borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: COLORS.primary, marginTop: -2 },
+  dropoffArrow: { borderTopColor: COLORS.secondary },
   labelContainer: { backgroundColor: COLORS.backgroundElevated, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, marginTop: 4, maxWidth: 120, borderWidth: 1, borderColor: COLORS.border },
   labelText: { fontSize: 10, fontWeight: '600' },
-  driverContainer: { alignItems: 'center', justifyContent: 'center' },
+
+  // ---- Active-trip driver (48px family member) ----
+  driverContainer: { width: 60, height: 60, alignItems: 'center', justifyContent: 'center' },
   driverPulse: { position: 'absolute', width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(0, 95, 58, 0.15)' },
-  driverPin: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: COLORS.background, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
+  driverRotator: { position: 'absolute', width: 60, height: 60, alignItems: 'center', justifyContent: 'flex-start' },
+  directionNotchLarge: {
+    width: 0, height: 0, borderStyle: 'solid',
+    borderLeftWidth: 6, borderRightWidth: 6, borderBottomWidth: 9,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderBottomColor: COLORS.primary,
+  },
+  driverPin: { width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#FFFFFF', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.3, shadowRadius: 4 },
 });
 
 // ============================================
@@ -262,6 +344,7 @@ function MapboxMapImpl(props: SmartRideMapProps) {
     pickup,
     dropoff,
     driverLocation,
+    driverKind = 'car',
     showUserLocation = true,
     onLocationSelect,
     isPickupSelectionMode,
@@ -375,11 +458,19 @@ function MapboxMapImpl(props: SmartRideMapProps) {
         </MapboxGL.PointAnnotation>
       )}
 
-      {driverLocation && (
-        <MapboxGL.PointAnnotation id="driver" coordinate={[driverLocation.longitude, driverLocation.latitude]}>
-          <DriverMarker heading={driverLocation.heading} isBoda={false} />
-        </MapboxGL.PointAnnotation>
-      )}
+      {driverLocation && (() => {
+        // Key by position + heading bucket so Android re-renders the texture as
+        // the driver moves/turns (see nearby markers note above).
+        const hdg = driverLocation.heading != null && Number.isFinite(driverLocation.heading)
+          ? Math.round(driverLocation.heading / 15) * 15
+          : undefined;
+        const id = `driver-${driverLocation.latitude.toFixed(4)}-${driverLocation.longitude.toFixed(4)}-${hdg ?? 'x'}`;
+        return (
+          <MapboxGL.PointAnnotation key={id} id={id} coordinate={[driverLocation.longitude, driverLocation.latitude]}>
+            <DriverMarker heading={hdg} kind={driverKind} />
+          </MapboxGL.PointAnnotation>
+        );
+      })()}
 
       {routeGeoJSON && (
         <MapboxGL.ShapeSource id="routeSource" shape={routeGeoJSON}>
@@ -401,17 +492,21 @@ function MapboxMapImpl(props: SmartRideMapProps) {
         </MapboxGL.PointAnnotation>
       ))}
 
-      {/* Live nearby drivers — branded per-vehicle markers (boda vs car). The
-          pool is capped server-side (≤8) so individual annotations stay cheap. */}
-      {driverPoints?.map((d, i) => (
-        <MapboxGL.PointAnnotation
-          key={`nearby-drv-${i}`}
-          id={`nearby-drv-${i}`}
-          coordinate={[d.longitude, d.latitude]}
-        >
-          <NearbyDriverMarker vehicleType={d.vehicleType} />
-        </MapboxGL.PointAnnotation>
-      ))}
+      {/* Live nearby providers — branded family markers (boda / car / delivery)
+          with heading notches. The pool is capped server-side (≤8) so individual
+          annotations stay cheap. The id encodes position+heading because Android
+          renders annotation children to a static texture: a changed id forces
+          the marker to re-render when the driver moves or turns. */}
+      {driverPoints?.map((d, i) => {
+        const kind = providerKindFor(d);
+        const hdg = d.heading != null && Number.isFinite(d.heading) ? Math.round(d.heading / 15) * 15 : null;
+        const id = `nearby-${i}-${kind}-${d.latitude.toFixed(4)}-${d.longitude.toFixed(4)}-${hdg ?? 'x'}`;
+        return (
+          <MapboxGL.PointAnnotation key={id} id={id} coordinate={[d.longitude, d.latitude]}>
+            <ProviderMarker kind={kind} heading={hdg} />
+          </MapboxGL.PointAnnotation>
+        );
+      })}
     </MapboxGL.MapView>
 
       {/* Uber-style fixed center pin (sits above the map, points at map center) */}

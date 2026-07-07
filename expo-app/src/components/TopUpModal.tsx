@@ -212,11 +212,6 @@ export function TopUpModal({
                     >
                       {p.name}
                     </Text>
-                    {'badge' in p && p.badge ? (
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{p.badge}</Text>
-                      </View>
-                    ) : null}
                   </TouchableOpacity>
                 );
               })}

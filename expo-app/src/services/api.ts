@@ -857,7 +857,16 @@ class ApiService {
     longitude: number,
     taskType?: string,
   ): Promise<ApiResponse<{
-    drivers: Array<{ id: string; latitude: number; longitude: number; distanceKm: number; etaMin: number; vehicleType: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null }>;
+    drivers: Array<{
+      id: string;
+      latitude: number;
+      longitude: number;
+      distanceKm: number;
+      etaMin: number;
+      vehicleType: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null;
+      riderRole: string | null;
+      heading: number | null;
+    }>;
     count: number;
     nearestEtaMin: number | null;
   }>> {

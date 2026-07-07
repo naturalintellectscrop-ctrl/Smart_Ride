@@ -121,7 +121,15 @@ export default function RideRequestScreen() {
   const [isCalculating, setIsCalculating] = useState(false);
 
   // Nearby drivers (live dots + nearest ETA)
-  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{ id: string; latitude: number; longitude: number; etaMin: number; vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null }>>([]);
+  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{
+    id: string;
+    latitude: number;
+    longitude: number;
+    etaMin: number;
+    vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null;
+    riderRole?: string | null;
+    heading?: number | null;
+  }>>([]);
   const [nearestEtaMin, setNearestEtaMin] = useState<number | null>(null);
 
   // Loading
@@ -162,7 +170,8 @@ export default function RideRequestScreen() {
       const res = await api.getNearbyDrivers(lat, lng, taskType);
       if (res.success && res.data) {
         setNearbyDrivers(res.data.drivers.map((d) => ({
-          id: d.id, latitude: d.latitude, longitude: d.longitude, etaMin: d.etaMin, vehicleType: d.vehicleType,
+          id: d.id, latitude: d.latitude, longitude: d.longitude, etaMin: d.etaMin,
+          vehicleType: d.vehicleType, riderRole: d.riderRole, heading: d.heading,
         })));
         setNearestEtaMin(res.data.nearestEtaMin);
       }
@@ -419,7 +428,10 @@ export default function RideRequestScreen() {
               : undefined
           }
           routeCoordinates={routeCoordinates.length > 0 ? routeCoordinates : undefined}
-          driverPoints={nearbyDrivers.map((d) => ({ latitude: d.latitude, longitude: d.longitude, vehicleType: d.vehicleType }))}
+          driverPoints={nearbyDrivers.map((d) => ({
+            latitude: d.latitude, longitude: d.longitude,
+            vehicleType: d.vehicleType, riderRole: d.riderRole, heading: d.heading,
+          }))}
           showUserLocation
         />
 

@@ -61,7 +61,13 @@ export default function HomeScreen() {
   const isLocating = useLocationStore(s => s.isLocating);
   const [refreshing, setRefreshing] = useState(false);
   const [walletBalance, setWalletBalance] = useState<number | null>(null);
-  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{ latitude: number; longitude: number; vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null }>>([]);
+  const [nearbyDrivers, setNearbyDrivers] = useState<Array<{
+    latitude: number;
+    longitude: number;
+    vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null;
+    riderRole?: string | null;
+    heading?: number | null;
+  }>>([]);
 
   useEffect(() => {
     getCurrentLocation().catch(() => {});
@@ -78,7 +84,13 @@ export default function HomeScreen() {
       // (boda + car), each drawn with its own branded marker.
       const res = await api.getNearbyDrivers(latitude, longitude);
       if (res.success && res.data) {
-        setNearbyDrivers(res.data.drivers.map((d) => ({ latitude: d.latitude, longitude: d.longitude, vehicleType: d.vehicleType })));
+        setNearbyDrivers(res.data.drivers.map((d) => ({
+          latitude: d.latitude,
+          longitude: d.longitude,
+          vehicleType: d.vehicleType,
+          riderRole: d.riderRole,
+          heading: d.heading,
+        })));
       }
     } catch {
       // non-fatal

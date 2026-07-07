@@ -6,13 +6,14 @@
 // ============================================
 
 import React from 'react';
-import { View, ViewStyle } from 'react-native';
+import { View, StyleProp, ViewStyle } from 'react-native';
 import { SPACING, RADIUS, SHADOWS } from '../constants';
 import { useTheme } from '../context/theme-context';
 
 interface GlassCardProps {
   children: React.ReactNode;
-  style?: ViewStyle;
+  // StyleProp (not bare ViewStyle) so callers can pass style arrays.
+  style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'elevated' | 'accent' | 'cyan';
   padding?: number;
   borderRadius?: number;
