@@ -555,7 +555,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
     const user = authResult.user!;
 
-    await setRLSContext({ userId: user.userId, role: user.role });
+    // Service role, matching the GET handler: the task RLS SELECT policies
+    // don't cover every legitimate actor here (e.g. a client cancelling their
+    // own still-searching task read as "Task not found"). Authorization is
+    // enforced explicitly inside each action handler (IDOR checks on
+    // clientId / assigned riderId) — same pattern as GET and the dispatch routes.
+    await setServiceRoleContext();
 
     const { id } = await params;
     const body = await request.json();

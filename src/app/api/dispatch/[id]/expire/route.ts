@@ -72,23 +72,24 @@ export async function POST(
 
     await DispatchService.expireMatch(matchId);
 
-    // Rotate to the next rider AFTER responding — the reporting driver's app
-    // shouldn't wait on re-dispatch. findAndAssign's rotation rules exclude
-    // this rider (EXPIRED) while fresh candidates exist.
+    // Rotate AFTER responding — the reporting driver's app shouldn't wait.
+    // rotateAfterExpiry re-dispatches (excluding this rider while fresh
+    // candidates exist) OR, after maxRetryAttempts failed offers, cancels the
+    // task and notifies the client instead of looping forever.
     const task = match.task;
     if (task?.pickupLatitude != null && task?.pickupLongitude != null) {
       const taskId = match.taskId;
       after(async () => {
         try {
           await setServiceRoleContext();
-          await DispatchService.findAndAssign({
+          await DispatchService.rotateAfterExpiry(
             taskId,
-            taskType: task.taskType,
-            pickupLatitude: task.pickupLatitude!,
-            pickupLongitude: task.pickupLongitude!,
-          });
+            task.taskType,
+            task.pickupLatitude!,
+            task.pickupLongitude!,
+          );
         } catch (e) {
-          console.error('[dispatch/expire] re-dispatch failed:', e);
+          console.error('[dispatch/expire] rotation failed:', e);
         } finally {
           await resetRLSContext().catch(() => {});
         }

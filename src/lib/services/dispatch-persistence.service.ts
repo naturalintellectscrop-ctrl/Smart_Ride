@@ -605,6 +605,49 @@ export class DispatchService {
   }
 
   /**
+   * After an offer expires, either rotate the task to the next rider or —
+   * once maxRetryAttempts offers have failed — give up: cancel the task and
+   * tell the client. Without the cap check, a small pool loops forever
+   * (verified at runtime: 8 straight offers to the same rider).
+   */
+  static async rotateAfterExpiry(
+    taskId: string,
+    taskType: TaskType,
+    pickupLatitude: number,
+    pickupLongitude: number,
+  ): Promise<void> {
+    const failedCount = await db.dispatchMatch.count({
+      where: {
+        taskId,
+        status: { in: [DispatchMatchStatus.EXPIRED, DispatchMatchStatus.REJECTED] },
+      },
+    });
+
+    if (failedCount < DISPATCH_CONFIG.maxRetryAttempts) {
+      await this.findAndAssign({ taskId, taskType, pickupLatitude, pickupLongitude });
+      return;
+    }
+
+    const task = await db.task.findUnique({
+      where: { id: taskId },
+      select: { clientId: true, taskNumber: true, status: true },
+    });
+    // Only cancel if the task is still searching — never yank an assigned trip.
+    if (!task || !['MATCHING', 'SEARCHING', 'CREATED', 'REQUESTED'].includes(task.status)) return;
+
+    await this.autoCancelTask(taskId, 'No rider accepted after maximum attempts');
+    await this.notifyClient(taskId, task.clientId, {
+      event: 'dispatch:cancelled',
+      data: {
+        taskId,
+        taskNumber: task.taskNumber,
+        message: 'Sorry, no rider accepted your request. Please try again.',
+        reason: 'MAX_ATTEMPTS',
+      },
+    });
+  }
+
+  /**
    * Handle case when no riders are available
    * Updates task status to SEARCHING (keeps it eligible for future matching)
    * and notifies the client about the delay
