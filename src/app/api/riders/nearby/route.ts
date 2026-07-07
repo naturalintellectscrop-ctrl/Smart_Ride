@@ -73,6 +73,8 @@ export async function GET(request: NextRequest) {
     distanceKm: number,
     i: number,
     vType: VehicleType | null,
+    riderRole?: string | null,
+    heading?: number | null,
   ) => ({
     id: `drv-${i}`, // anonymous key only — never the real rider id
     latitude,
@@ -80,6 +82,8 @@ export async function GET(request: NextRequest) {
     distanceKm: Math.round(distanceKm * 10) / 10,
     etaMin: Math.max(1, Math.round((distanceKm / AVG_URBAN_SPEED_KMH) * 60)),
     vehicleType: vType, // BODA | CAR | BICYCLE | SCOOTER — lets the map pick an icon
+    riderRole: riderRole ?? null, // SMART_BODA_RIDER | SMART_CAR_DRIVER | DELIVERY_PERSONNEL
+    heading: heading ?? null, // last known GPS heading (deg) for marker rotation
   });
 
   await setServiceRoleContext();
@@ -93,6 +97,7 @@ export async function GET(request: NextRequest) {
       const vehicleFilter = vehicleType ? `AND "vehicleType" = $4` : '';
       const sql = `
         SELECT "currentLatitude" AS lat, "currentLongitude" AS lng, "vehicleType" AS vehicle_type,
+          "riderRole" AS rider_role, "lastKnownHeading" AS heading,
           ST_Distance(
             ST_SetSRID(ST_MakePoint("currentLongitude","currentLatitude"),4326)::geography,
             ST_SetSRID(ST_MakePoint($1,$2),4326)::geography
@@ -111,12 +116,12 @@ export async function GET(request: NextRequest) {
       const params: any[] = [lng, lat, radiusMeters];
       if (vehicleType) params.push(vehicleType);
 
-      const rows = await db.$queryRawUnsafe<Array<{ lat: number; lng: number; dist_m: number; vehicle_type: VehicleType | null }>>(sql, ...params);
-      drivers = rows.map((r, i) => toDriver(r.lat, r.lng, r.dist_m / 1000, i, r.vehicle_type));
+      const rows = await db.$queryRawUnsafe<Array<{ lat: number; lng: number; dist_m: number; vehicle_type: VehicleType | null; rider_role: string | null; heading: number | null }>>(sql, ...params);
+      drivers = rows.map((r, i) => toDriver(r.lat, r.lng, r.dist_m / 1000, i, r.vehicle_type, r.rider_role, r.heading));
     } catch (postgisErr) {
       // Shared refinement: exact haversine sort/limit on a candidate set.
       const refine = (
-        rows: Array<{ currentLatitude: number | null; currentLongitude: number | null; vehicleType?: VehicleType | null }>,
+        rows: Array<{ currentLatitude: number | null; currentLongitude: number | null; vehicleType?: VehicleType | null; riderRole?: string | null; lastKnownHeading?: number | null }>,
       ) =>
         rows
           .filter((r) => r.currentLatitude != null && r.currentLongitude != null)
@@ -124,7 +129,7 @@ export async function GET(request: NextRequest) {
           .filter((x) => x.d <= radiusKm)
           .sort((a, b) => a.d - b.d)
           .slice(0, 8)
-          .map((x, i) => toDriver(x.r.currentLatitude!, x.r.currentLongitude!, x.d, i, x.r.vehicleType ?? null));
+          .map((x, i) => toDriver(x.r.currentLatitude!, x.r.currentLongitude!, x.d, i, x.r.vehicleType ?? null, x.r.riderRole, x.r.lastKnownHeading));
 
       // ---- Tier 2: geohash-prefix pre-filter (uses the geohash index) ----
       try {
@@ -137,7 +142,7 @@ export async function GET(request: NextRequest) {
             ...(vehicleType ? { vehicleType } : {}),
             OR: neighbors.map((g) => ({ geohash: { startsWith: g } })),
           },
-          select: { currentLatitude: true, currentLongitude: true, vehicleType: true },
+          select: { currentLatitude: true, currentLongitude: true, vehicleType: true, riderRole: true, lastKnownHeading: true },
           take: 100,
         });
         drivers = refine(ghRiders);
@@ -147,7 +152,7 @@ export async function GET(request: NextRequest) {
         console.warn('[riders/nearby] using bounding-box fallback');
         const riders = await db.rider.findMany({
           where,
-          select: { currentLatitude: true, currentLongitude: true, vehicleType: true },
+          select: { currentLatitude: true, currentLongitude: true, vehicleType: true, riderRole: true, lastKnownHeading: true },
           take: 50,
         });
         drivers = refine(riders);
