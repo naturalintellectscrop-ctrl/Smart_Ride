@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { db, setRLSContext, resetRLSContext, setServiceRoleContext } from '@/lib/db';
 import { TaskStatus } from '@prisma/client';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { isValidTransition, canRiderPerformTask, EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
@@ -30,7 +30,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
     const user = authResult.user!;
 
-    await setRLSContext({ userId: user.userId, role: user.role });
+    // Fetch under the service role and authorize MANUALLY below. Under the
+    // caller's RLS context a rider who has only a PENDING dispatch offer (not
+    // yet assigned) cannot see the task row at all, so the request card's
+    // task fetch 404'd with 'Task not found' — runtime-verified failure.
+    await setServiceRoleContext();
 
     const { id } = await params;
     const task = await db.task.findUnique({
@@ -63,17 +67,29 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return notFoundResponse('Task');
     }
 
-    // SECURITY: IDOR protection - verify ownership
+    // SECURITY: IDOR protection - verify ownership (manual, since we fetched
+    // under the service role). A rider may read the task if they are assigned
+    // OR currently hold a dispatch offer for it (PENDING/ACCEPTED match) —
+    // they need pickup/dropoff to decide on the request card.
     if (!isAdmin(user.role)) {
       const isClient = task.clientId === user.userId;
       let isRider = false;
-      
+
       if (user.role === 'RIDER') {
         const rider = await db.rider.findUnique({
           where: { userId: user.userId },
           select: { id: true },
         });
-        isRider = rider?.id === task.riderId;
+        if (rider) {
+          isRider = rider.id === task.riderId;
+          if (!isRider) {
+            const offer = await db.dispatchMatch.findFirst({
+              where: { taskId: id, riderId: rider.id, status: { in: ['PENDING', 'ACCEPTED'] } },
+              select: { id: true },
+            });
+            isRider = !!offer;
+          }
+        }
       }
 
       if (!isClient && !isRider) {
