@@ -40,7 +40,7 @@ export interface UnifiedPlace {
   place_name: string;        // alias of fullAddress (Mapbox v5 compat)
   center: [number, number];  // [lng, lat] (Mapbox v5 compat)
   category?: string;
-  source: 'curated' | 'mapbox';
+  source: 'curated' | 'mapbox' | 'osm';
   relevance: number;
 }
 
