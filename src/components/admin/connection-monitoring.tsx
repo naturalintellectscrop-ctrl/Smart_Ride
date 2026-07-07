@@ -162,6 +162,54 @@ export function ConnectionMonitoringDashboard() {
     });
   }, []);
 
+  // ==========================================
+  // HTTP source of truth: poll approved riders + live positions.
+  // The realtime listeners below stay as low-latency enhancements, but the
+  // screen must never depend on a broadcast to show data (it used to — and
+  // nothing emits `admin:active-riders` on load, so the map sat empty).
+  // ==========================================
+  const fetchLiveRiders = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('accessToken') || localStorage.getItem('admin_token');
+      if (!token) return;
+      const res = await fetch('/api/admin/riders/live', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const json = await res.json();
+      const list = json?.data?.riders;
+      if (!Array.isArray(list)) return;
+
+      const riderStatuses: RiderStatus[] = list.map((r: any) => ({
+        riderId: r.riderId,
+        riderName: r.riderName || `Rider ${r.riderId?.slice(0, 4) || '????'}`,
+        riderRole: r.riderRole || 'SMART_BODA_RIDER',
+        taskId: r.taskId ?? null,
+        taskNumber: null,
+        lastHeartbeatAt: r.lastHeartbeatAt ? new Date(r.lastHeartbeatAt) : null,
+        connectionStatus: r.connectionStatus,
+        lastKnownLocation: r.lastKnownLocation,
+        batteryLevel: r.batteryLevel,
+        secondsSinceHeartbeat: r.secondsSinceHeartbeat ?? 999,
+      }));
+
+      setRiders(riderStatuses);
+      setAlerts(currentAlerts => {
+        updateStats(riderStatuses, currentAlerts);
+        return currentAlerts;
+      });
+    } catch (e) {
+      console.warn('[Monitoring] live riders fetch failed:', e);
+    }
+  }, [updateStats]);
+
+  // Initial fetch + 15s poll
+  useEffect(() => {
+    fetchLiveRiders();
+    const id = setInterval(fetchLiveRiders, 15000);
+    return () => clearInterval(id);
+  }, [fetchLiveRiders]);
+
   // Initialize WebSocket connection
   useEffect(() => {
     // Initialize Supabase Realtime connection for heartbeat monitoring
