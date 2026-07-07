@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { db } from '@/lib/db';
 import { 
   successResponse, 
@@ -310,47 +310,49 @@ export async function POST(request: NextRequest) {
     }
 
     // Auto-dispatch: find and offer the task to the nearest rider.
-    // AWAITED, deliberately: this route runs on Vercel serverless, which
-    // freezes the function as soon as the response is returned. The previous
-    // fire-and-forget promise was killed mid-flight — early steps (SEARCHING
-    // transition) survived but the match creation never ran, so client
-    // bookings never reached any driver (runtime-verified). ~1-2s extra
-    // booking latency in exchange for dispatch actually happening.
+    // Runs via next/server after(): the booking response returns IMMEDIATELY
+    // (the customer's tracking screen opens on socket/poll updates), while
+    // Vercel keeps the lambda alive until dispatch completes. Do NOT downgrade
+    // this to a bare fire-and-forget promise — Vercel froze those mid-flight
+    // and bookings never reached any driver (runtime-verified); after() is the
+    // supported way to get both a fast response and guaranteed execution.
     // The match starts as PENDING - rider must explicitly accept via
     // /api/dispatch/[id]/accept; only then does the task become ASSIGNED.
-    try {
-      const result = await DispatchService.findAndAssign({
-        taskId: task.id,
-        taskType: validatedData.taskType as TaskType,
-        pickupLatitude: validatedData.pickupLatitude || 0,
-        pickupLongitude: validatedData.pickupLongitude || 0,
-      });
-      if (result.success && result.match) {
-        // Dispatch match created (PENDING) - rider has been notified via socket
-        await createAuditLog({
-          action: AuditActions.DISPATCH_ASSIGNED,
-          entityType: EntityTypes.DISPATCH,
-          entityId: result.match.id,
-          actorType: 'SYSTEM',
+    after(async () => {
+      try {
+        const result = await DispatchService.findAndAssign({
           taskId: task.id,
-          description: `Dispatch match created for task ${task.taskNumber}, awaiting rider acceptance`,
+          taskType: validatedData.taskType as TaskType,
+          pickupLatitude: validatedData.pickupLatitude || 0,
+          pickupLongitude: validatedData.pickupLongitude || 0,
         });
-      } else if (result.noRidersAvailable) {
-        // No riders available - transition to SEARCHING via state machine
-        const searchResult = await EnhancedTaskStateMachine.transition(
-          task.id,
-          TaskStatus.SEARCHING,
-          { triggeredByType: 'SYSTEM', reason: 'No riders available, continuing search' }
-        );
-        if (!searchResult.success) {
-          console.error(`[Tasks] Failed to transition task ${task.id} to SEARCHING:`, searchResult.error);
+        if (result.success && result.match) {
+          // Dispatch match created (PENDING) - rider has been notified via socket
+          await createAuditLog({
+            action: AuditActions.DISPATCH_ASSIGNED,
+            entityType: EntityTypes.DISPATCH,
+            entityId: result.match.id,
+            actorType: 'SYSTEM',
+            taskId: task.id,
+            description: `Dispatch match created for task ${task.taskNumber}, awaiting rider acceptance`,
+          });
+        } else if (result.noRidersAvailable) {
+          // No riders available - transition to SEARCHING via state machine
+          const searchResult = await EnhancedTaskStateMachine.transition(
+            task.id,
+            TaskStatus.SEARCHING,
+            { triggeredByType: 'SYSTEM', reason: 'No riders available, continuing search' }
+          );
+          if (!searchResult.success) {
+            console.error(`[Tasks] Failed to transition task ${task.id} to SEARCHING:`, searchResult.error);
+          }
         }
+      } catch (error) {
+        // Dispatch failure must not fail the booking — the task is saved and the
+        // cron sweep will retry matching. The client sees normal searching UI.
+        console.error('Auto-dispatch error (post-response):', error);
       }
-    } catch (error) {
-      // Dispatch failure must not fail the booking — the task is saved and the
-      // cron sweep will retry matching. The client sees normal searching UI.
-      console.error('Auto-dispatch error (non-blocking):', error);
-    }
+    });
 
     return successResponse(matchingTask, 'Task created and matching started', 201);
   } catch (error) {

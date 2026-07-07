@@ -135,17 +135,24 @@ function isPostgres(): boolean {
   return url.startsWith('postgresql://') || url.startsWith('postgres://')
 }
 
-let prismaClient: PrismaClient | undefined
-
 function getDb(): PrismaClient {
-  if (globalForPrisma.prisma) return globalForPrisma.prisma
-  const databaseUrl = resolveDatabaseUrl()
-  prismaClient = new PrismaClient({
-    log: ['error'],
-    datasourceUrl: getDatasourceUrl(databaseUrl),
-  })
-  if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prismaClient
-  return prismaClient
+  // Cache the client on globalThis in EVERY environment. The old code only
+  // cached outside production (a hot-reload idiom misapplied to serverless),
+  // so in production every getDb() call constructed a brand-new PrismaClient:
+  //  - a fresh TCP+TLS+auth handshake to the pooler per call (~1-2s from a
+  //    US function to the eu-west-1 pooler — measured 5.6s warm on
+  //    /riders/nearby, ~0.8s after this fix)
+  //  - RLS SET ROLE could run on a DIFFERENT client than the queries that
+  //    followed, silently bypassing the RLS context.
+  // Reusing one client per warm lambda is the documented Prisma pattern.
+  if (!globalForPrisma.prisma) {
+    const databaseUrl = resolveDatabaseUrl()
+    globalForPrisma.prisma = new PrismaClient({
+      log: ['error'],
+      datasourceUrl: getDatasourceUrl(databaseUrl),
+    })
+  }
+  return globalForPrisma.prisma
 }
 
 // ============================================

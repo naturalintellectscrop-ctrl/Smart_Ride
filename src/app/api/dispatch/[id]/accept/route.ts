@@ -41,10 +41,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // (runtime-verified). Authorization is the explicit riderId comparison.
     await setServiceRoleContext();
 
-    // Get rider ID from user (was `user.id` — undefined; authGuard returns userId)
-    const rider = await db.rider.findFirst({
-      where: { userId: user.userId },
-    });
+    // Rider profile + match are independent reads — fetch in parallel (accept
+    // latency is the countdown's enemy; every sequential roundtrip counts).
+    const [rider, match] = await Promise.all([
+      db.rider.findFirst({ where: { userId: user.userId } }),
+      db.dispatchMatch.findUnique({
+        where: { id: matchId },
+        select: { riderId: true, status: true },
+      }),
+    ]);
 
     if (!rider) {
       return NextResponse.json(
@@ -54,10 +59,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // SECURITY: Verify the dispatch match belongs to this rider BEFORE accepting
-    const match = await db.dispatchMatch.findUnique({
-      where: { id: matchId },
-      select: { riderId: true, status: true },
-    });
 
     if (!match) {
       return NextResponse.json(
