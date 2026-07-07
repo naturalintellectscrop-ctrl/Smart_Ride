@@ -2,7 +2,7 @@
 // SMART RIDE - DISPATCH ACCEPT API
 // ============================================
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse, after } from 'next/server';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
 import { db, setRLSContext, resetRLSContext, setServiceRoleContext } from '@/lib/db';
@@ -97,32 +97,35 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Emit real-time events via Supabase broadcast after successful acceptance
+    // LATENCY: respond the moment the acceptance is committed. Broadcasts,
+    // push notifications and audit logging happen AFTER the response via
+    // next/server after() — Vercel keeps the lambda alive for them. Awaiting
+    // them inline used to add 5-15s (cold Supabase channels), which burned
+    // most of the 30s window and made accepts look like they failed.
     if (result.taskId) {
-      const task = await db.task.findUnique({
-        where: { id: result.taskId },
-        select: { clientId: true, taskNumber: true },
-      });
-
-      if (task) {
+      const taskId = result.taskId;
+      after(async () => {
         try {
+          await setServiceRoleContext();
+          const task = await db.task.findUnique({
+            where: { id: taskId },
+            select: { clientId: true, taskNumber: true },
+          });
+          if (!task) return;
+
           // 1. Notify CLIENT that a rider was assigned
           await broadcastToUser(task.clientId, 'rider:task:matched', {
-            taskId: result.taskId,
+            taskId,
             rider: {
               id: rider.id,
               name: firstNameOf(rider.fullName),
               rating: rider.rating,
             },
-          });
-        } catch (broadcastError) {
-          console.error('Broadcast to client failed (non-blocking):', broadcastError);
-        }
+          }).catch((e) => console.error('Broadcast to client failed (non-blocking):', e));
 
-        try {
           // 2. Notify TASK ROOM that the task status changed
-          await broadcastToTask(result.taskId, 'task:status:update', {
-            taskId: result.taskId,
+          await broadcastToTask(taskId, 'task:status:update', {
+            taskId,
             status: 'ASSIGNED',
             rider: {
               id: rider.id,
@@ -130,62 +133,52 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
               rating: rider.rating,
             },
             timestamp: new Date().toISOString(),
-          });
-        } catch (broadcastError) {
-          console.error('Broadcast to task room failed (non-blocking):', broadcastError);
-        }
+          }).catch((e) => console.error('Broadcast to task room failed (non-blocking):', e));
 
-        try {
           // 3. Notify RIDER that their acceptance was confirmed
           await broadcastToUser(user.userId, 'dispatch:assignment', {
-            taskId: result.taskId,
+            taskId,
             taskNumber: task.taskNumber,
             status: 'ASSIGNED',
             matchId,
             timestamp: new Date().toISOString(),
-          });
-        } catch (broadcastError) {
-          console.error('Broadcast to rider failed (non-blocking):', broadcastError);
-        }
+          }).catch((e) => console.error('Broadcast to rider failed (non-blocking):', e));
 
-        // 4. Send DB notification to client about rider assignment
-        try {
+          // 4. Send DB notification to client about rider assignment
           await sendTaskUpdateNotification(
             task.clientId,
-            result.taskId!,
-            task.taskNumber || result.taskId!,
+            taskId,
+            task.taskNumber || taskId,
             'ASSIGNED'
-          );
-        } catch (notificationError) {
-          console.error('Notification failed (non-blocking):', notificationError);
-        }
+          ).catch((e) => console.error('Notification failed (non-blocking):', e));
 
-        // 5. Create audit log for dispatch acceptance at route level
-        try {
+          // 5. Create audit log for dispatch acceptance at route level
           await db.auditLog.create({
             data: {
               actorId: rider.id,
               actorType: 'RIDER',
               userId: user.userId,
-              taskId: result.taskId,
+              taskId,
               action: 'DISPATCH_ACCEPTED',
               entityType: 'DispatchMatch',
               entityId: matchId,
-              description: `Rider ${rider.fullName || rider.id} accepted dispatch for task ${task.taskNumber || result.taskId}`,
+              description: `Rider ${rider.fullName || rider.id} accepted dispatch for task ${task.taskNumber || taskId}`,
               source: 'MOBILE_APP',
               newValues: JSON.stringify({
                 matchId,
-                taskId: result.taskId,
+                taskId,
                 riderId: rider.id,
                 riderName: rider.fullName,
                 status: 'ASSIGNED',
               }),
             },
-          });
-        } catch (auditError) {
-          console.error('Audit log creation failed (non-blocking):', auditError);
+          }).catch((e) => console.error('Audit log creation failed (non-blocking):', e));
+        } catch (e) {
+          console.error('[dispatch/accept] post-response side effects failed:', e);
+        } finally {
+          await resetRLSContext().catch(() => {});
         }
-      }
+      });
     }
 
     return NextResponse.json({

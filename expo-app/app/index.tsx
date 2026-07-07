@@ -22,6 +22,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, TYPOGRAPHY, RADIUS } from '../src/constants';
+import { useAuthStore } from '../src/store';
+import { navigateToRoleHome } from '../src/utils/roleRouting';
 import SmartRideLogoImage from '../assets/images/smartride-logo.png';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -151,6 +153,17 @@ function AtmosphericBlobs() {
 export default function SplashScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isAuthenticated, user } = useAuthStore();
+
+  // Returning users go straight to their role home — no tapping required.
+  // The root layout rehydrates the SecureStore token async, so on a cold
+  // start isAuthenticated flips true a moment after mount; this effect fires
+  // then and replaces the splash. Signed-out users just see the CTAs.
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigateToRoleHome(user?.role);
+    }
+  }, [isAuthenticated, user?.role]);
 
   return (
     <View style={styles.container}>

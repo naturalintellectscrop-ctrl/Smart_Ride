@@ -1103,6 +1103,15 @@ class ApiService {
     return this.request<any>(`/dispatch/${matchId}/reject`, 'POST', { reason });
   }
 
+  /**
+   * Report that this rider's dispatch offer countdown ran out. The backend
+   * marks the match EXPIRED and immediately rotates the offer to the next
+   * eligible rider (instead of waiting for the cron sweep).
+   */
+  async dispatchExpire(matchId: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/dispatch/${matchId}/expire`, 'POST');
+  }
+
   async getDispatchHistory(taskId: string): Promise<ApiResponse<any>> {
     return this.request<any>(`/dispatch?taskid=${taskId}`);
   }

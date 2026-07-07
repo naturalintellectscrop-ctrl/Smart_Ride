@@ -131,10 +131,32 @@ export class DispatchService {
         }
       );
 
-      // Filter out excluded riders
-      const availableRiders = eligibleRiders.filter(
-        (r) => !request.excludeRiderIds?.includes(r.id)
+      // ROTATION: the offer must move through the pool, not bounce back to
+      // the same rider. Riders who explicitly DECLINED this task are excluded
+      // outright. Riders who let the offer TIME OUT are skipped while fresh
+      // candidates exist, but may be re-offered when they're all that's left
+      // (small pools) — the retry cap / 120s SLA still bounds the search.
+      const priorMatches = await db.dispatchMatch.findMany({
+        where: {
+          taskId: request.taskId,
+          status: { in: [DispatchMatchStatus.REJECTED, DispatchMatchStatus.EXPIRED] },
+        },
+        select: { riderId: true, status: true },
+      });
+      const declinedIds = new Set(
+        priorMatches.filter((m) => m.status === DispatchMatchStatus.REJECTED).map((m) => m.riderId)
       );
+      const timedOutIds = new Set(
+        priorMatches.filter((m) => m.status === DispatchMatchStatus.EXPIRED).map((m) => m.riderId)
+      );
+
+      let availableRiders = eligibleRiders.filter(
+        (r) => !request.excludeRiderIds?.includes(r.id) && !declinedIds.has(r.id)
+      );
+      const freshRiders = availableRiders.filter((r) => !timedOutIds.has(r.id));
+      if (freshRiders.length > 0) {
+        availableRiders = freshRiders;
+      }
 
       if (availableRiders.length === 0) {
         // No riders available - handle this case

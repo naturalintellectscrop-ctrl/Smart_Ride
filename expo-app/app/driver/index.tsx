@@ -296,13 +296,21 @@ export default function DriverHomeScreen() {
     }
   };
 
-  // Countdown timer effect
+  // Countdown timer effect. When the offer runs out locally, ALSO tell the
+  // backend so it expires the match and rotates the offer to the next rider
+  // immediately — otherwise reassignment waits for the periodic cron sweep.
   useEffect(() => {
     if (requestTimer === null || requestTimer <= 0) return;
 
     const interval = setInterval(() => {
       setRequestTimer((prev) => {
         if (prev === null || prev <= 1) {
+          const matchId = (incomingRequest as any)?.matchId;
+          if (matchId) {
+            api.dispatchExpire(matchId).catch(() => {
+              // Non-fatal: the cron sweep is the backstop for reassignment.
+            });
+          }
           clearIncomingRequest();
           return null;
         }
@@ -311,7 +319,7 @@ export default function DriverHomeScreen() {
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [requestTimer, clearIncomingRequest]);
+  }, [requestTimer, clearIncomingRequest, incomingRequest]);
 
   // Show loading state
   if (isLoading) {
