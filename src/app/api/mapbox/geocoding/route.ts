@@ -139,6 +139,65 @@ async function searchGeoapify(query: string, pLat: number, pLng: number, key: st
     });
 }
 
+// ============================================
+// CATEGORY SEARCH (Geoapify Places API)
+// ============================================
+// Text search alone fails category-style queries: "fuel station" used to
+// return a place literally NAMED "Fuel Station" in Karamoja instead of the
+// Shell 500m away (runtime-audited). When the query looks like a category,
+// we ALSO run a radius-bound Geoapify Places category search and rank those
+// results first. Keys are matched as whole words against the query.
+const CATEGORY_LEXICON: Array<{ match: RegExp; categories: string }> = [
+  { match: /\b(fuel|petrol|gas station|shell|total energies|stabex|rubis)\b/i, categories: 'service.vehicle.fuel' },
+  { match: /\b(pharmac\w*|chemist|drug ?shop)\b/i, categories: 'healthcare.pharmacy' },
+  { match: /\b(clinic|hospital|health cent\w*|medical cent\w*)\b/i, categories: 'healthcare.hospital,healthcare.clinic_or_praxis' },
+  { match: /\b(atm)\b/i, categories: 'service.financial.atm' },
+  { match: /\b(bank)\b/i, categories: 'service.financial' },
+  { match: /\b(supermarket|grocer\w*)\b/i, categories: 'commercial.supermarket' },
+  { match: /\b(restaurant|food)\b/i, categories: 'catering.restaurant,catering.fast_food' },
+  { match: /\b(cafe|café|coffee)\b/i, categories: 'catering.cafe' },
+  { match: /\b(hotel|lodge|guest ?house)\b/i, categories: 'accommodation.hotel,accommodation.guest_house' },
+  { match: /\b(school)\b/i, categories: 'education.school' },
+  { match: /\b(university|campus)\b/i, categories: 'education.university' },
+  { match: /\b(mall|shopping cent\w*)\b/i, categories: 'commercial.shopping_mall' },
+  { match: /\b(police)\b/i, categories: 'service.police' },
+];
+const CATEGORY_RADIUS_M = 10_000;
+
+/** Geoapify Places: find POIs BY KIND near the user (not by name). */
+async function searchGeoapifyCategories(
+  categories: string,
+  pLat: number,
+  pLng: number,
+  key: string,
+): Promise<UnifiedPlace[]> {
+  if (Number.isNaN(pLat) || Number.isNaN(pLng)) return [];
+  const params = new URLSearchParams({
+    categories,
+    filter: `circle:${pLng},${pLat},${CATEGORY_RADIUS_M}`,
+    bias: `proximity:${pLng},${pLat}`,
+    limit: '8',
+    apiKey: key,
+  });
+  const res = await fetchWithTimeout(`https://api.geoapify.com/v2/places?${params}`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.features || [])
+    .filter((f: any) => Array.isArray(f?.geometry?.coordinates) && f?.properties?.name)
+    .map((f: any): UnifiedPlace => {
+      const p = f.properties || {};
+      const [lng, lat] = f.geometry.coordinates;
+      const fullAddress = p.formatted || `${p.name}, Uganda`;
+      return {
+        id: `geoapify-${p.place_id || Math.random().toString(36).slice(2)}`,
+        name: p.name, address: p.address_line2 || '', fullAddress, lat, lng,
+        place_name: fullAddress, center: [lng, lat],
+        category: Array.isArray(p.categories) ? p.categories[0] : undefined,
+        source: 'osm', relevance: 1,
+      } as UnifiedPlace;
+    });
+}
+
 /**
  * POI search via OpenStreetMap. Uses Geoapify when GEOAPIFY_API_KEY is set
  * (production, SLA-backed); otherwise the free public Photon instance. Either
@@ -165,9 +224,24 @@ async function handleForwardGeocode(
   // proximity is "lng,lat"; providers want lat/lng separately.
   const [pLng, pLat] = options.proximity.split(',').map(Number);
 
-  // 1. OpenStreetMap POIs (Geoapify if keyed, else Photon) — real businesses,
-  //    cafes, malls, hospitals, fuel, pharmacies, landmarks. No hardcoding.
-  const photonPlaces: UnifiedPlace[] = await fetchOsmPois(query, pLat, pLng);
+  // 1a. Category detection: "fuel station" / "pharmacy" / "clinic"-style
+  //     queries also get a radius-bound Places-by-category search so nearby
+  //     POIs of that KIND rank first (text search only matches names).
+  const geoapifyKey = process.env.GEOAPIFY_API_KEY;
+  const lexiconHit = CATEGORY_LEXICON.find((c) => c.match.test(query));
+
+  // 1b. OpenStreetMap POIs (Geoapify if keyed, else Photon) — real businesses,
+  //     cafes, malls, hospitals, fuel, pharmacies, landmarks. No hardcoding.
+  //     Category + text searches run in parallel.
+  const [categoryPlaces, photonPlaces] = await Promise.all([
+    lexiconHit && geoapifyKey
+      ? searchGeoapifyCategories(lexiconHit.categories, pLat, pLng, geoapifyKey).catch((e) => {
+          console.warn('[geocoding] category search failed:', (e as Error).message);
+          return [] as UnifiedPlace[];
+        })
+      : Promise.resolve([] as UnifiedPlace[]),
+    fetchOsmPois(query, pLat, pLng),
+  ]);
 
   // 2. Mapbox geocoding — supplements with any roads/addresses Photon missed.
   let mapboxPlaces: UnifiedPlace[] = [];
@@ -217,7 +291,15 @@ async function handleForwardGeocode(
       Math.cos((pLat * Math.PI) / 180) * Math.cos((p.lat * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
     return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   };
-  const osmByProximity = [...photonPlaces].sort((a, b) => distTo(a) - distTo(b));
+  // Text results sorted by distance; anything farther than ~100km from the
+  // proximity point is demoted behind everything else (an exact-name match in
+  // Karamoja must not outrank a nearby partial match).
+  const FAR_KM = 100;
+  const hasProx = !Number.isNaN(pLat) && !Number.isNaN(pLng);
+  const sorted = [...photonPlaces].sort((a, b) => distTo(a) - distTo(b));
+  const osmNear = hasProx ? sorted.filter((p) => distTo(p) <= FAR_KM) : sorted;
+  const osmFar = hasProx ? sorted.filter((p) => distTo(p) > FAR_KM) : [];
+  const categoryByProximity = [...categoryPlaces].sort((a, b) => distTo(a) - distTo(b));
 
   const merged: UnifiedPlace[] = [];
   const seen = new Set<string>();
@@ -228,8 +310,10 @@ async function handleForwardGeocode(
     merged.push(p);
   };
   curatedPlaces.forEach(push);
-  osmByProximity.forEach(push);
+  categoryByProximity.forEach(push); // nearby POIs of the requested kind
+  osmNear.forEach(push);
   mapboxPlaces.forEach(push);
+  osmFar.forEach(push); // distant text matches last
 
   return NextResponse.json({
     success: true,

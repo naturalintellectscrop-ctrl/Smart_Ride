@@ -81,12 +81,16 @@ export const KAMPALA_PLACES: KampalaPlace[] = [
   { id: 'kla-freedom-city', name: 'Freedom City Mall', category: 'shopping', address: 'Entebbe Road', fullAddress: 'Freedom City Mall, Entebbe Road, Kampala, Uganda', lat: 0.2970, lng: 32.5690, description: 'Shopping on Entebbe Road', popular: true },
   { id: 'kla-village-mall', name: 'Village Mall Bugolobi', category: 'shopping', address: 'Bugolobi', fullAddress: 'Village Mall, Bugolobi, Kampala, Uganda', lat: 0.3110, lng: 32.6200, description: 'Neighborhood mall in Bugolobi', popular: true },
   { id: 'kla-oasis-mall', name: 'Oasis Mall', category: 'shopping', address: 'Kampala Road', fullAddress: 'Oasis Mall, Kampala Road, Kampala, Uganda', lat: 0.3170, lng: 32.5810, description: 'Downtown shopping mall' },
-  { id: 'kla-lugwave-mall', name: 'Lugwave Mall', category: 'shopping', address: 'Lugogo', fullAddress: 'Lugwave Mall, Lugogo, Kampala, Uganda', lat: 0.3275, lng: 32.6000, description: 'Shopping in Lugogo area' },
+  { id: 'kla-lugogo-mall', name: 'Lugogo Mall', category: 'shopping', address: 'Lugogo Bypass', fullAddress: 'Lugogo Mall, Lugogo Bypass, Kampala, Uganda', lat: 0.3308, lng: 32.5990, description: 'Mall on Lugogo Bypass (Shoprite/Game complex)', popular: true },
   { id: 'kla-capital-shoppers', name: 'Capital Shoppers', category: 'shopping', address: 'Kampala Road', fullAddress: 'Capital Shoppers, Kampala Road, Kampala, Uganda', lat: 0.3172, lng: 32.5795, description: 'Supermarket on Kampala Road' },
 
   // ---- Restaurants ----
   { id: 'kla-cafe-javas', name: 'Cafe Javas', category: 'restaurant', address: 'Kampala Road', fullAddress: 'Cafe Javas, Kampala Road, Kampala, Uganda', lat: 0.3180, lng: 32.5815, description: 'Popular restaurant chain', popular: true },
   { id: 'kla-java-house', name: 'Java House', category: 'restaurant', address: 'Kampala Road', fullAddress: 'Java House, Kampala Road, Kampala, Uganda', lat: 0.3175, lng: 32.5810, description: 'Coffee house and restaurant' },
+
+  // ---- Transport hubs ----
+  { id: 'kla-old-taxi-park', name: 'Old Taxi Park', category: 'landmark', address: 'Downtown Kampala', fullAddress: 'Old Taxi Park, Ben Kiwanuka Street, Kampala, Uganda', lat: 0.3125, lng: 32.5772, description: 'Main downtown taxi terminal', popular: true },
+  { id: 'kla-new-taxi-park', name: 'New Taxi Park', category: 'landmark', address: 'Downtown Kampala', fullAddress: 'New Taxi Park, Namirembe Road, Kampala, Uganda', lat: 0.3106, lng: 32.5741, description: 'Taxi terminal for western routes', popular: true },
 
   // ---- Landmarks ----
   { id: 'kla-parliament', name: 'Parliament of Uganda', category: 'landmark', address: 'Parliament Avenue', fullAddress: 'Parliament of Uganda, Parliament Avenue, Kampala, Uganda', lat: 0.3176, lng: 32.5825, description: 'National legislature', popular: true },
