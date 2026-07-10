@@ -56,6 +56,12 @@ interface SOSActionsScreenProps {
   onClose: () => void;
 }
 
+// SOS API routes require auth (Bearer header or accessToken cookie)
+const getAuthHeaders = (): Record<string, string> => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 // Uganda emergency numbers
 const EMERGENCY_NUMBERS = [
   { name: 'Police Emergency', number: '999', description: 'Police emergency response' },
@@ -108,7 +114,9 @@ export function SOSEmergencyScreen({ userType, userId, activeTask, onClose }: SO
   useEffect(() => {
     const fetchContacts = async () => {
       try {
-        const response = await fetch(`/api/emergency-contacts?userId=${userId}&userType=${userType}`);
+        const response = await fetch(`/api/emergency-contacts?userId=${userId}&userType=${userType}`, {
+          headers: getAuthHeaders(),
+        });
         if (response.ok) {
           const data = await response.json();
           setEmergencyContacts(data.contacts);
@@ -131,7 +139,7 @@ export function SOSEmergencyScreen({ userType, userId, activeTask, onClose }: SO
     try {
       const response = await fetch('/api/sos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           userId: userType === 'CLIENT' ? userId : null,
           riderId: userType === 'RIDER' ? userId : null,
@@ -177,7 +185,7 @@ export function SOSEmergencyScreen({ userType, userId, activeTask, onClose }: SO
       // Update actions
       await fetch(`/api/sos/${sosAlertId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({ locationShared: true }),
       });
 
@@ -242,7 +250,7 @@ export function SOSEmergencyScreen({ userType, userId, activeTask, onClose }: SO
     try {
       await fetch('/api/sos-live-location', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
         body: JSON.stringify({
           sosAlertId,
           latitude: currentLocation.lat,

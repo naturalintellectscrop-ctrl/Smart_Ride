@@ -706,9 +706,27 @@ model SOSAlert {
   rider           Rider?    @relation("RiderSOSAlerts", fields: [riderId], references: [id])
   task            Task?     @relation("TaskSOSAlerts", fields: [taskId], references: [id])
   user            User?     @relation("UserSOSAlerts", fields: [userId], references: [id])
+  locationUpdates SOSLocationUpdate[]
 
   @@index([status])
   @@index([createdAt])
+}
+
+// Live location trail streamed by the SOS reporter's device while an
+// alert is active (POST /api/sos-live-location every ~10s)
+model SOSLocationUpdate {
+  id           String   @id @default(cuid())
+  sosAlertId   String
+  latitude     Float
+  longitude    Float
+  accuracy     Float?
+  speed        Float?
+  heading      Float?
+  batteryLevel Int?
+  createdAt    DateTime @default(now())
+  sosAlert     SOSAlert @relation(fields: [sosAlertId], references: [id], onDelete: Cascade)
+
+  @@index([sosAlertId, createdAt])
 }
 
 model SystemConfig {

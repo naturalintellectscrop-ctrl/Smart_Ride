@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { db, resetRLSContext } from '@/lib/db';
+import { requireAuth } from '@/lib/auth-utils';
+import { isAdmin, JWTPayload } from '@/lib/auth/jwt';
 import { z } from 'zod';
 
 // GET /api/sos-live-location - Get live location updates for an SOS alert
+// SECURITY: Admins or the alert's owner only
 export async function GET(request: NextRequest) {
-  await setServiceRoleContext();
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+  const user = authResult as JWTPayload;
+  const userIsAdmin = isAdmin(user.role);
+
   try {
     const { searchParams } = new URL(request.url);
 
@@ -27,20 +36,25 @@ export async function GET(request: NextRequest) {
 
     const { sosAlertId, limit } = parsed.data;
 
+    const alert = await db.sOSAlert.findUnique({
+      where: { id: sosAlertId },
+      select: { userId: true, status: true, createdAt: true },
+    });
+    // 404 (not 403) for foreign alerts so non-admins can't probe alert IDs
+    if (!alert || (!userIsAdmin && alert.userId !== user.userId)) {
+      return NextResponse.json({ success: false, error: 'SOS alert not found' },
+        { status: 404 }
+      );
+    }
+
     const locationUpdates = await db.sOSLocationUpdate.findMany({
       where: { sosAlertId },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
 
-    // Get the alert status
-    const alert = await db.sOSAlert.findUnique({
-      where: { id: sosAlertId },
-      select: { status: true, severity: true, triggeredAt: true },
-    });
-
     return NextResponse.json({
-      alert,
+      alert: { status: alert.status, triggeredAt: alert.createdAt },
       locationUpdates: locationUpdates.reverse(), // Return in chronological order
     });
   } catch (error) {
@@ -54,8 +68,15 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/sos-live-location - Add new location update during SOS
+// SECURITY: Admins or the alert's owner only
 export async function POST(request: NextRequest) {
-  await setServiceRoleContext();
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+  const user = authResult as JWTPayload;
+  const userIsAdmin = isAdmin(user.role);
+
   try {
     const body = await request.json();
     const {
@@ -69,24 +90,25 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!sosAlertId || !latitude || !longitude) {
+    if (!sosAlertId || typeof latitude !== 'number' || typeof longitude !== 'number') {
       return NextResponse.json({ success: false, error: 'SOS Alert ID and location are required' },
         { status: 400 }
       );
     }
 
-    // Check if alert is still active
+    // Check if alert exists, belongs to the caller, and is still active
     const alert = await db.sOSAlert.findUnique({
       where: { id: sosAlertId },
+      select: { userId: true, status: true },
     });
 
-    if (!alert) {
+    if (!alert || (!userIsAdmin && alert.userId !== user.userId)) {
       return NextResponse.json({ success: false, error: 'SOS alert not found' },
         { status: 404 }
       );
     }
 
-    if (alert.status === 'RESOLVED' || alert.status === 'CANCELLED' || alert.status === 'FALSE_ALARM') {
+    if (alert.status === 'RESOLVED' || alert.status === 'FALSE_ALARM') {
       return NextResponse.json({ success: false, error: 'SOS alert is no longer active' },
         { status: 400 }
       );
@@ -98,21 +120,17 @@ export async function POST(request: NextRequest) {
         sosAlertId,
         latitude,
         longitude,
-        accuracy: accuracy || null,
-        speed: speed || null,
-        heading: heading || null,
-        batteryLevel: batteryLevel || null,
+        accuracy: accuracy ?? null,
+        speed: speed ?? null,
+        heading: heading ?? null,
+        batteryLevel: batteryLevel ?? null,
       },
     });
 
     // Update the alert's last known location
     await db.sOSAlert.update({
       where: { id: sosAlertId },
-      data: {
-        latitude,
-        longitude,
-        accuracy: accuracy || null,
-      },
+      data: { latitude, longitude },
     });
 
     return NextResponse.json({

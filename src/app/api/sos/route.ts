@@ -5,6 +5,7 @@ import { JWTPayload } from '@/lib/auth/jwt';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 
 // Zod schema for SOS alert creation
 const createSOSAlertSchema = z.object({
@@ -99,7 +100,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Get rider info if applicable
-    let riderInfo = null;
+    let riderInfo: Prisma.RiderGetPayload<{
+      select: { fullName: true; phone: true; vehicle: true };
+    }> | null = null;
     if (riderId) {
       riderInfo = await db.rider.findUnique({
         where: { id: riderId },
