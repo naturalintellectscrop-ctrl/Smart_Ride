@@ -8,7 +8,7 @@
 // FALLBACK: Email/Password
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,9 @@ import { statusCodes, GoogleSignin, configureGoogleSignIn } from '../../src/conf
 import { isAppleSignInAvailable, signInWithApple } from '../../src/config/apple';
 import { loginWithEmail, isAuthenticated, getAccessToken, getUserData, loginWithGoogle, loginWithApple } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
+import { useTheme } from '../../src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
 import { IconInput } from '../../src/components/IconInput';
 import { GradientButton } from '../../src/components/GradientButton';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
@@ -39,6 +41,9 @@ import { navigateToRoleHome } from '../../src/utils/roleRouting';
 export default function LoginScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
 
   // Phone input state
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -348,7 +353,7 @@ export default function LoginScreen() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.container}
     >
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={COLORS.surface} />
 
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + 24, 40) }]}
@@ -591,10 +596,10 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.surface, // #f8f9fa — Stitch light mode
+    backgroundColor: COLORS.surface,
   },
 
   scrollContent: {

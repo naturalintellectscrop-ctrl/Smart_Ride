@@ -251,8 +251,10 @@ const create_bubbleStyles = (COLORS: ThemedColors) => StyleSheet.create({
     ...TYPOGRAPHY.bodyMd,
     lineHeight: 20,
   },
+  // MD3 pairing: text on primaryContainer must be onPrimaryContainer
+  // (was onSurface — near-black on the deep green bubble, unreadable).
   ownMessage: {
-    color: COLORS.onSurface,
+    color: COLORS.onPrimaryContainer,
   },
   otherMessage: {
     color: COLORS.onSurface,

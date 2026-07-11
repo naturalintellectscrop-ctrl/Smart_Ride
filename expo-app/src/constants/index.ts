@@ -222,13 +222,17 @@ export const GLASS = {
 };
 
 // Services config
-export const SERVICES: Record<string, { icon: string; color: string; colorDim: string; colorBorder: string }> = {
-  BODA: { icon: 'bicycle', color: '#005f3a', colorDim: '#98f6be', colorBorder: 'rgba(0, 95, 58, 0.15)' },
-  CAR: { icon: 'car', color: '#0e7a4d', colorDim: '#0e7a4d', colorBorder: 'rgba(14, 122, 77, 0.15)' },
-  FOOD: { icon: 'restaurant', color: '#006e2f', colorDim: '#6bff8f', colorBorder: 'rgba(107, 255, 143, 0.15)' },
-  DELIVERY: { icon: 'cube', color: '#4b5264', colorDim: '#dce2f7', colorBorder: 'rgba(220, 226, 247, 0.15)' },
-  SHOPPING: { icon: 'bag', color: '#4b5264', colorDim: '#dce2f7', colorBorder: 'rgba(220, 226, 247, 0.15)' },
-  HEALTH: { icon: 'medkit', color: '#ba1a1a', colorDim: '#ffdad6', colorBorder: 'rgba(186, 26, 26, 0.15)' },
+// `color`/`colorDim`/`colorBorder` are the light-mode values; `colorDark` is
+// the icon color used on dark surfaces (brightened per the MD3 dark palette).
+export const SERVICES: Record<string, { icon: string; color: string; colorDim: string; colorBorder: string; colorDark: string }> = {
+  BODA: { icon: 'bicycle', color: '#005f3a', colorDim: '#98f6be', colorBorder: 'rgba(0, 95, 58, 0.15)', colorDark: '#7cd9a4' },
+  // colorDim was previously '#0e7a4d' (identical to color) which made the car
+  // icon invisible on its own tile — use the pale primaryFixed tint instead.
+  CAR: { icon: 'car', color: '#0e7a4d', colorDim: '#98f6be', colorBorder: 'rgba(14, 122, 77, 0.15)', colorDark: '#7cd9a4' },
+  FOOD: { icon: 'restaurant', color: '#006e2f', colorDim: '#6bff8f', colorBorder: 'rgba(107, 255, 143, 0.15)', colorDark: '#4ae176' },
+  DELIVERY: { icon: 'cube', color: '#4b5264', colorDim: '#dce2f7', colorBorder: 'rgba(220, 226, 247, 0.15)', colorDark: '#c0c6db' },
+  SHOPPING: { icon: 'bag', color: '#4b5264', colorDim: '#dce2f7', colorBorder: 'rgba(220, 226, 247, 0.15)', colorDark: '#c0c6db' },
+  HEALTH: { icon: 'medkit', color: '#ba1a1a', colorDim: '#ffdad6', colorBorder: 'rgba(186, 26, 26, 0.15)', colorDark: '#ffb4ab' },
 };
 
 // Mapbox Configuration

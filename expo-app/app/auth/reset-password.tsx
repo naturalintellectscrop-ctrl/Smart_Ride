@@ -7,7 +7,7 @@
 // Password strength indicator matching web admin
 // ============================================
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -25,7 +25,8 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { resetPassword } from '@/src/services/auth';
-import { COLORS } from '../../src/constants';
+import { useTheme } from '../../src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
 import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,6 +43,9 @@ const PASSWORD_REQUIREMENTS = [
 ];
 
 export default function ResetPasswordScreen() {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const { token } = useLocalSearchParams<{ token?: string }>();
 
@@ -456,7 +460,7 @@ export default function ResetPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

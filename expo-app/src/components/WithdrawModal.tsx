@@ -6,7 +6,7 @@
 // submits via api.requestWithdrawal.
 // ============================================
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -21,20 +21,23 @@ import {
 import { Alert } from '@/src/components/feedback';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { COLORS as BRAND, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GradientButton } from './GradientButton';
 
+// Carrier brand colors are theme-independent.
 const WITHDRAWAL_PROVIDERS = [
   {
     id: 'MTN_MOMO',
     name: 'MTN MoMo',
-    color: COLORS.mtnYellow,
+    color: BRAND.mtnYellow,
     icon: 'phone-portrait-outline' as const,
   },
   {
     id: 'AIRTEL_MONEY',
     name: 'Airtel Money',
-    color: COLORS.airtelRed,
+    color: BRAND.airtelRed,
     icon: 'phone-portrait-outline' as const,
   },
 ];
@@ -58,6 +61,9 @@ export function WithdrawModal({
   onSuccess,
   defaultPhoneNumber,
 }: WithdrawModalProps) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const [amount, setAmount] = useState('');
   const [phoneNumber, setPhoneNumber] = useState(defaultPhoneNumber || '');
   const [provider, setProvider] = useState('MTN_MOMO');
@@ -312,7 +318,7 @@ export function WithdrawModal({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.6)',

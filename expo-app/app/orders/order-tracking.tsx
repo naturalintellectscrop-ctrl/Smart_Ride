@@ -314,6 +314,7 @@ export default function OrderTrackingScreen() {
               latitude: order.deliveryLatitude,
               longitude: order.deliveryLongitude,
               title: 'Delivery Location',
+              poiType: 'destination',
             },
           ]}
           showUserLocation

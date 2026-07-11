@@ -5,7 +5,7 @@
 // Uses Reanimated for smooth pulse animation
 // ============================================
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -13,7 +13,9 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { COLORS, SPACING, RADIUS } from '@/src/constants';
+import { SPACING, RADIUS } from '@/src/constants';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors } from '@/src/theme/themedColors';
 
 interface SkeletonProps {
   width?: number | string;
@@ -23,6 +25,8 @@ interface SkeletonProps {
 }
 
 export function Skeleton({ width = '100%', height = 16, borderRadius = 8, style }: SkeletonProps) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const opacity = useSharedValue(0.3);
 
   useEffect(() => {
@@ -40,7 +44,7 @@ export function Skeleton({ width = '100%', height = 16, borderRadius = 8, style 
   return (
     <Animated.View
       style={[
-        styles.skeleton,
+        { backgroundColor: COLORS.surfaceContainerHigh },
         { width, height, borderRadius } as any,
         animatedStyle,
         style,
@@ -50,6 +54,16 @@ export function Skeleton({ width = '100%', height = 16, borderRadius = 8, style 
 }
 
 // Pre-built skeleton layouts
+function SkeletonCard({ children }: { children: React.ReactNode }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  return (
+    <View style={[skeletonStyles.card, { backgroundColor: COLORS.surfaceContainer }]}>
+      {children}
+    </View>
+  );
+}
+
 export function ConversationSkeleton() {
   return (
     <View style={skeletonStyles.row}>
@@ -64,7 +78,7 @@ export function ConversationSkeleton() {
 
 export function TaskSkeleton() {
   return (
-    <View style={skeletonStyles.card}>
+    <SkeletonCard>
       <View style={skeletonStyles.row}>
         <Skeleton width={40} height={40} borderRadius={8} />
         <View style={skeletonStyles.column}>
@@ -77,20 +91,20 @@ export function TaskSkeleton() {
         <Skeleton width={80} height={24} borderRadius={12} />
         <Skeleton width={60} height={20} borderRadius={10} />
       </View>
-    </View>
+    </SkeletonCard>
   );
 }
 
 export function OrderSkeleton() {
   return (
-    <View style={skeletonStyles.card}>
+    <SkeletonCard>
       <Skeleton width="50%" height={16} />
       <Skeleton width="80%" height={12} style={{ marginTop: 6 }} />
       <View style={skeletonStyles.rowBetween}>
         <Skeleton width={100} height={14} />
         <Skeleton width={60} height={20} borderRadius={10} />
       </View>
-    </View>
+    </SkeletonCard>
   );
 }
 
@@ -106,12 +120,6 @@ export function NotificationSkeleton() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  skeleton: {
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
-});
 
 const skeletonStyles = StyleSheet.create({
   row: {
@@ -131,7 +139,6 @@ const skeletonStyles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    backgroundColor: COLORS.surfaceContainer,
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.sm,

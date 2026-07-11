@@ -21,6 +21,8 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, MAPBOX_CONFIG, DEFAULT_LOCATION } from '../constants';
+import { useTheme } from '../context/theme-context';
+import { makeThemedColors } from '../theme/themedColors';
 
 // ============================================
 // TYPES
@@ -33,8 +35,10 @@ export interface SmartRideMapProps {
   pickup?: { latitude: number; longitude: number; title?: string };
   dropoff?: { latitude: number; longitude: number; title?: string };
   driverLocation?: { latitude: number; longitude: number; heading?: number };
-  /** Which family marker the active-trip driver gets (boda / car / delivery). */
-  driverKind?: 'boda' | 'car' | 'delivery';
+  /** Which family marker the active-trip driver gets. */
+  driverKind?: ProviderKind;
+  /** Active-trip driver state: 'assigned' (en route) → 'busy' (on trip). */
+  driverState?: RiderState;
   showUserLocation?: boolean;
   onLocationSelect?: (coords: { latitude: number; longitude: number }) => void;
   isPickupSelectionMode?: boolean;
@@ -46,6 +50,8 @@ export interface SmartRideMapProps {
     title?: string;
     color?: string;
     icon?: string;
+    /** Branded POI marker (restaurant / shop / pharmacy / pickup / destination). */
+    poiType?: PoiType;
   }>;
   onMapPress?: (coords: { latitude: number; longitude: number }) => void;
   // Uber-style center-pin picker support:
@@ -62,16 +68,77 @@ export interface SmartRideMapProps {
   driverPoints?: Array<{
     latitude: number;
     longitude: number;
-    vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | null;
+    vehicleType?: 'BODA' | 'CAR' | 'BICYCLE' | 'SCOOTER' | 'VAN' | 'TRUCK' | null;
     riderRole?: string | null;
     heading?: number | null;
+    /** Optional real state from the backend; defaults to available/moving. */
+    state?: RiderState;
   }>;
 }
 
 // Which marker family member to show for a nearby provider.
-export type ProviderKind = 'boda' | 'car' | 'delivery';
+// boda/car/delivery share the green rider palette; errand + parcel are distinct
+// service classes with their own colours (see Smart Ride Map Marker System).
+export type ProviderKind = 'boda' | 'car' | 'delivery' | 'errand' | 'parcel';
+
+// Rider marker states from the design system. Only 'available' and 'moving'
+// are derivable from the nearby endpoint today (it returns online riders + an
+// optional heading); the rest are honoured when the backend supplies them so
+// the system is complete without inventing data.
+export type RiderState =
+  | 'available'
+  | 'moving'
+  | 'assigned'
+  | 'busy'
+  | 'offline'
+  | 'low_battery'
+  | 'out_of_service';
+
+// ── Smart Ride Map Marker System — colour tokens (exact spec hex) ──
+export const MARKER_COLORS = {
+  rider: '#16A34A', // Boda / Car / Delivery
+  errand: '#8B5CF6', // Errand Runner
+  parcel: '#F59E0B', // Parcel / Logistics
+  yourLocation: '#3B82F6', // Your Location (blue pulse)
+  pickup: '#10B981', // Pickup Point
+  destination: '#EF4444', // Destination / Important
+  offline: '#94A3B8', // Offline / Inactive
+  restaurant: '#F59E0B',
+  shop: '#8B5CF6',
+  pharmacy: '#16A34A',
+  lowBattery: '#F59E0B',
+  outOfService: '#EF4444',
+} as const;
+
+/** #RRGGBB → rgba() so halos can share the marker's exact colour at low alpha. */
+function hexToRgba(hex: string, alpha: number): string {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Base brand colour for a vehicle/service class. */
+export function kindColor(kind: ProviderKind): string {
+  if (kind === 'errand') return MARKER_COLORS.errand;
+  if (kind === 'parcel') return MARKER_COLORS.parcel;
+  return MARKER_COLORS.rider; // boda / car / delivery
+}
+
+/** The effective marker colour once state is applied (busy/offline → grey). */
+export function stateColor(kind: ProviderKind, state: RiderState): string {
+  if (state === 'busy' || state === 'offline' || state === 'out_of_service') {
+    return state === 'out_of_service' ? kindColor(kind) : MARKER_COLORS.offline;
+  }
+  return kindColor(kind);
+}
 
 export function providerKindFor(d: { vehicleType?: string | null; riderRole?: string | null }): ProviderKind {
+  // Future service classes map to their own markers; unknown roles fall back to
+  // the green rider family so nothing ever renders a generic pin.
+  if (d.riderRole === 'ERRAND_RUNNER') return 'errand';
+  if (d.riderRole === 'PARCEL_DRIVER' || d.vehicleType === 'VAN' || d.vehicleType === 'TRUCK') return 'parcel';
   if (d.riderRole === 'DELIVERY_PERSONNEL') return 'delivery';
   if (d.riderRole === 'SMART_CAR_DRIVER' || d.vehicleType === 'CAR') return 'car';
   return 'boda';
@@ -180,91 +247,150 @@ try {
 const PROVIDER_GLYPH: Record<ProviderKind, { family: 'ion' | 'mci'; name: string }> = {
   boda: { family: 'mci', name: 'motorbike' },
   car: { family: 'ion', name: 'car-sport' },
-  delivery: { family: 'mci', name: 'package-variant-closed' },
+  delivery: { family: 'mci', name: 'moped' },
+  errand: { family: 'mci', name: 'bag-personal' },
+  parcel: { family: 'mci', name: 'truck' },
 };
 
-function ProviderGlyph({ kind, size }: { kind: ProviderKind; size: number }) {
+function ProviderGlyph({ kind, size, color = '#FFFFFF' }: { kind: ProviderKind; size: number; color?: string }) {
   const g = PROVIDER_GLYPH[kind];
   return g.family === 'mci' ? (
-    <MaterialCommunityIcons name={g.name as any} size={size} color="#FFFFFF" />
+    <MaterialCommunityIcons name={g.name as any} size={size} color={color} />
   ) : (
-    <Ionicons name={g.name as any} size={size} color="#FFFFFF" />
+    <Ionicons name={g.name as any} size={size} color={color} />
   );
 }
 
 /**
- * Nearby-provider marker: Smart Ride green chip + white vehicle glyph and a
- * direction notch on the rim rotated to the driver's last GPS heading. The
- * glyph itself stays upright for legibility; only the notch rotates.
+ * Nearby-provider marker — the core of the Smart Ride Map Marker System.
+ * A coloured chip (green riders / purple errand / orange parcel) carries the
+ * white vehicle glyph; a direction notch on the rim rotates to the last GPS
+ * heading (glyph stays upright for legibility). `state` restyles the marker:
+ *   available     → soft halo + small status dot
+ *   moving        → heading notch
+ *   assigned      → bright, enlarged glow ring
+ *   busy/offline  → grey chip (offline also dimmed)
+ *   low_battery   → orange battery badge
+ *   out_of_service→ red wrench badge
+ * `size` follows the spec size guide (24 / 32 / 40 default / 56).
  */
-function ProviderMarker({ kind, heading }: { kind: ProviderKind; heading?: number | null }) {
+function ProviderMarker({
+  kind,
+  heading,
+  state = 'available',
+  size = 40,
+}: {
+  kind: ProviderKind;
+  heading?: number | null;
+  state?: RiderState;
+  size?: number;
+}) {
+  const chip = size; // chip diameter
+  const wrap = size + 14; // room for halo + notch + badge
+  const color = stateColor(kind, state);
+  const glyphSize = Math.round(size * 0.5);
+  const showNotch = (state === 'moving' || state === 'available' || state === 'assigned') && heading != null && Number.isFinite(heading);
+  const assigned = state === 'assigned';
+  const dimmed = state === 'offline';
+
   return (
-    <View style={markerStyles.providerWrap}>
-      {/* soft halo for separation from the basemap */}
-      <View style={markerStyles.providerHalo} />
-      {/* rotating layer: only the direction notch */}
-      {heading != null && Number.isFinite(heading) && (
-        <View style={[markerStyles.providerRotator, { transform: [{ rotate: `${Math.round(heading)}deg` }] }]}>
-          <View style={markerStyles.directionNotch} />
+    <View style={[markerStyles.providerWrap, { width: wrap, height: wrap, opacity: dimmed ? 0.6 : 1 }]}>
+      {/* halo — brighter + larger when assigned to a ride */}
+      <View
+        style={[
+          markerStyles.providerHalo,
+          {
+            width: assigned ? wrap : chip + 8,
+            height: assigned ? wrap : chip + 8,
+            borderRadius: wrap / 2,
+            backgroundColor: hexToRgba(color, assigned ? 0.28 : 0.14),
+          },
+        ]}
+      />
+      {showNotch && (
+        <View style={[markerStyles.providerRotator, { width: wrap, height: wrap, transform: [{ rotate: `${Math.round(heading as number)}deg` }] }]}>
+          <View style={[markerStyles.directionNotch, { borderBottomColor: color }]} />
         </View>
       )}
-      <View style={markerStyles.providerChip}>
-        <ProviderGlyph kind={kind} size={16} />
+      <View style={[markerStyles.providerChip, { width: chip, height: chip, borderRadius: chip / 2, backgroundColor: color }]}>
+        <ProviderGlyph kind={kind} size={glyphSize} />
       </View>
+
+      {/* state badge / status dot, bottom-anchored */}
+      {state === 'available' && (
+        <View style={[markerStyles.statusDot, { backgroundColor: color }]} />
+      )}
+      {state === 'low_battery' && (
+        <View style={[markerStyles.stateBadge, { backgroundColor: MARKER_COLORS.lowBattery }]}>
+          <MaterialCommunityIcons name="battery-alert-variant-outline" size={11} color="#FFFFFF" />
+        </View>
+      )}
+      {state === 'out_of_service' && (
+        <View style={[markerStyles.stateBadge, { backgroundColor: MARKER_COLORS.outOfService }]}>
+          <MaterialCommunityIcons name="wrench" size={10} color="#FFFFFF" />
+        </View>
+      )}
     </View>
   );
 }
 
-/** Pickup: filled Smart Ride green pin with a glow halo (active/selected). */
+// Points of interest share one teardrop-pin shape; only glyph + colour change,
+// so pickup/destination/restaurant/shop/pharmacy read as one family.
+export type PoiType = 'pickup' | 'destination' | 'restaurant' | 'shop' | 'pharmacy';
+
+const POI_SPEC: Record<PoiType, { family: 'ion' | 'mci'; name: string; color: string }> = {
+  pickup: { family: 'mci', name: 'flag-variant', color: MARKER_COLORS.pickup },
+  destination: { family: 'ion', name: 'flag', color: MARKER_COLORS.destination },
+  restaurant: { family: 'ion', name: 'restaurant', color: MARKER_COLORS.restaurant },
+  shop: { family: 'ion', name: 'bag-handle', color: MARKER_COLORS.shop },
+  pharmacy: { family: 'mci', name: 'medical-bag', color: MARKER_COLORS.pharmacy },
+};
+
+/** Unified POI teardrop pin. Pickup gets a soft glow (it's the active target). */
+function PoiMarker({ type, title }: { type: PoiType; title?: string }) {
+  const spec = POI_SPEC[type];
+  return (
+    <View style={markerStyles.container}>
+      {type === 'pickup' && <View style={[markerStyles.pickupHalo, { backgroundColor: hexToRgba(spec.color, 0.15) }]} />}
+      <View style={[markerStyles.pin, { backgroundColor: spec.color }]}>
+        {spec.family === 'mci'
+          ? <MaterialCommunityIcons name={spec.name as any} size={18} color="#FFFFFF" />
+          : <Ionicons name={spec.name as any} size={16} color="#FFFFFF" />}
+      </View>
+      <View style={[markerStyles.pinArrow, { borderTopColor: spec.color }]} />
+      {title ? (
+        <View style={markerStyles.labelContainer}>
+          <Text style={[markerStyles.labelText, { color: spec.color }]} numberOfLines={1}>
+            {title}
+          </Text>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
+/** Pickup: green teardrop flag pin. */
 function PickupMarker({ title }: { title?: string }) {
-  return (
-    <View style={markerStyles.container}>
-      <View style={markerStyles.pickupHalo} />
-      <View style={[markerStyles.pin, markerStyles.pickupPinSolid]}>
-        <Ionicons name="location" size={18} color="#FFFFFF" />
-      </View>
-      <View style={[markerStyles.pinArrow, { borderTopColor: COLORS.primary }]} />
-      {title ? (
-        <View style={markerStyles.labelContainer}>
-          <Text style={[markerStyles.labelText, { color: COLORS.primary }]} numberOfLines={1}>
-            {title}
-          </Text>
-        </View>
-      ) : null}
-    </View>
-  );
+  return <PoiMarker type="pickup" title={title} />;
 }
 
-/** Destination: dark square "flag" pin — clearly distinct from pickup. */
+/** Destination: red teardrop flag pin — clearly distinct from pickup. */
 function DropoffMarker({ title }: { title?: string }) {
-  return (
-    <View style={markerStyles.container}>
-      <View style={[markerStyles.pin, markerStyles.dropoffPinSolid]}>
-        <Ionicons name="flag" size={16} color="#FFFFFF" />
-      </View>
-      <View style={[markerStyles.pinArrow, markerStyles.dropoffArrow]} />
-      {title ? (
-        <View style={markerStyles.labelContainer}>
-          <Text style={[markerStyles.labelText, { color: COLORS.secondary }]} numberOfLines={1}>
-            {title}
-          </Text>
-        </View>
-      ) : null}
-    </View>
-  );
+  return <PoiMarker type="destination" title={title} />;
 }
 
-/** Active-trip driver: larger family chip + halo + heading notch. */
-function DriverMarker({ heading, kind = 'car' }: { heading?: number; kind?: ProviderKind }) {
+/** Active-trip driver: larger family chip + halo + heading notch (56px). */
+function DriverMarker({ heading, kind = 'car', state = 'assigned' }: { heading?: number; kind?: ProviderKind; state?: RiderState }) {
+  const color = stateColor(kind, state);
   return (
     <View style={markerStyles.driverContainer}>
-      <View style={markerStyles.driverPulse} />
+      <View style={[markerStyles.driverPulse, { backgroundColor: hexToRgba(color, 0.18) }]} />
       {heading != null && Number.isFinite(heading) && (
         <View style={[markerStyles.driverRotator, { transform: [{ rotate: `${Math.round(heading)}deg` }] }]}>
-          <View style={markerStyles.directionNotchLarge} />
+          <View style={[markerStyles.directionNotchLarge, { borderBottomColor: color }]} />
         </View>
       )}
-      <View style={markerStyles.driverPin}>
+      <View style={[markerStyles.driverPin, { backgroundColor: color }]}>
         <ProviderGlyph kind={kind} size={20} />
       </View>
     </View>
@@ -274,10 +400,10 @@ function DriverMarker({ heading, kind = 'car' }: { heading?: number; kind?: Prov
 function SimpleMarker({ color, icon }: { color?: string; icon?: string }) {
   return (
     <View style={markerStyles.container}>
-      <View style={[markerStyles.pin, { backgroundColor: color || COLORS.primary }]}>
+      <View style={[markerStyles.pin, { backgroundColor: color || MARKER_COLORS.rider }]}>
         <Ionicons name={(icon as any) || 'location'} size={18} color="#FFFFFF" />
       </View>
-      <View style={markerStyles.pinArrow} />
+      <View style={[markerStyles.pinArrow, { borderTopColor: color || MARKER_COLORS.rider }]} />
     </View>
   );
 }
@@ -285,37 +411,39 @@ function SimpleMarker({ color, icon }: { color?: string; icon?: string }) {
 const markerStyles = StyleSheet.create({
   container: { alignItems: 'center' },
 
-  // ---- Nearby provider chip (32px family member) ----
-  providerWrap: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  providerHalo: {
-    position: 'absolute', width: 42, height: 42, borderRadius: 21,
-    backgroundColor: 'rgba(0, 95, 58, 0.12)',
-  },
+  // ---- Nearby provider chip (size-driven family member) ----
+  providerWrap: { alignItems: 'center', justifyContent: 'center' },
+  providerHalo: { position: 'absolute' },
   providerRotator: {
-    position: 'absolute', width: 44, height: 44,
+    position: 'absolute',
     alignItems: 'center', justifyContent: 'flex-start',
   },
   directionNotch: {
     width: 0, height: 0, borderStyle: 'solid',
     borderLeftWidth: 5, borderRightWidth: 5, borderBottomWidth: 7,
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    borderBottomColor: COLORS.primary,
+    borderBottomColor: MARKER_COLORS.rider,
   },
   providerChip: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: COLORS.primary,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: '#FFFFFF',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3, elevation: 4,
   },
+  // small "available" pulse dot, bottom-anchored
+  statusDot: {
+    position: 'absolute', bottom: 2, width: 9, height: 9, borderRadius: 5,
+    borderWidth: 1.5, borderColor: '#FFFFFF',
+  },
+  // battery / wrench state badge, bottom-right
+  stateBadge: {
+    position: 'absolute', bottom: 0, right: 2, width: 18, height: 18, borderRadius: 9,
+    alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF',
+  },
 
   // ---- Pickup / destination pins (36px family members) ----
   pin: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 3, elevation: 4 },
-  pickupHalo: { position: 'absolute', top: -4, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(0, 95, 58, 0.15)' },
-  pickupPinSolid: { backgroundColor: COLORS.primary },
-  dropoffPinSolid: { backgroundColor: COLORS.secondary, borderRadius: 10 },
-  pinArrow: { width: 0, height: 0, backgroundColor: 'transparent', borderStyle: 'solid', borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: COLORS.primary, marginTop: -2 },
-  dropoffArrow: { borderTopColor: COLORS.secondary },
+  pickupHalo: { position: 'absolute', top: -4, width: 44, height: 44, borderRadius: 22, backgroundColor: hexToRgba(MARKER_COLORS.pickup, 0.15) },
+  pinArrow: { width: 0, height: 0, backgroundColor: 'transparent', borderStyle: 'solid', borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 8, borderLeftColor: 'transparent', borderRightColor: 'transparent', borderTopColor: MARKER_COLORS.rider, marginTop: -2 },
   labelContainer: { backgroundColor: COLORS.backgroundElevated, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 2, marginTop: 4, maxWidth: 120, borderWidth: 1, borderColor: COLORS.border },
   labelText: { fontSize: 10, fontWeight: '600' },
 
@@ -345,6 +473,7 @@ function MapboxMapImpl(props: SmartRideMapProps) {
     dropoff,
     driverLocation,
     driverKind = 'car',
+    driverState = 'assigned',
     showUserLocation = true,
     onLocationSelect,
     isPickupSelectionMode,
@@ -359,6 +488,9 @@ function MapboxMapImpl(props: SmartRideMapProps) {
   } = props;
 
   const cameraRef = useRef<any>(null);
+  const { isDark } = useTheme();
+  // Route line color must stay visible on the dark map style.
+  const routeLineColor = isDark ? '#7cd9a4' : COLORS.primary;
 
   // Center-pin picker: report the map center as the camera moves / settles.
   // Mapbox state shape: { properties: { center: [lng, lat], zoom, ... } }
@@ -428,7 +560,7 @@ function MapboxMapImpl(props: SmartRideMapProps) {
     <View style={[styles.map, style]}>
     <MapboxGL.MapView
       style={StyleSheet.absoluteFill}
-      styleURL={MAPBOX_CONFIG.style.streets}
+      styleURL={isDark ? MAPBOX_CONFIG.style.dark : MAPBOX_CONFIG.style.streets}
       compassEnabled={false}
       onPress={handleMapPress}
       onCameraChanged={onCameraChanged ? handleCameraChanged : undefined}
@@ -464,10 +596,10 @@ function MapboxMapImpl(props: SmartRideMapProps) {
         const hdg = driverLocation.heading != null && Number.isFinite(driverLocation.heading)
           ? Math.round(driverLocation.heading / 15) * 15
           : undefined;
-        const id = `driver-${driverLocation.latitude.toFixed(4)}-${driverLocation.longitude.toFixed(4)}-${hdg ?? 'x'}`;
+        const id = `driver-${driverLocation.latitude.toFixed(4)}-${driverLocation.longitude.toFixed(4)}-${hdg ?? 'x'}-${driverState}`;
         return (
           <MapboxGL.PointAnnotation key={id} id={id} coordinate={[driverLocation.longitude, driverLocation.latitude]}>
-            <DriverMarker heading={hdg} kind={driverKind} />
+            <DriverMarker heading={hdg} kind={driverKind} state={driverState} />
           </MapboxGL.PointAnnotation>
         );
       })()}
@@ -476,7 +608,7 @@ function MapboxMapImpl(props: SmartRideMapProps) {
         <MapboxGL.ShapeSource id="routeSource" shape={routeGeoJSON}>
           <MapboxGL.LineLayer
             id="routeLine"
-            style={{ lineColor: COLORS.primary, lineWidth: 4, lineOpacity: 0.8, lineCap: 'round', lineJoin: 'round' }}
+            style={{ lineColor: routeLineColor, lineWidth: 4, lineOpacity: 0.8, lineCap: 'round', lineJoin: 'round' }}
           />
         </MapboxGL.ShapeSource>
       )}
@@ -488,7 +620,9 @@ function MapboxMapImpl(props: SmartRideMapProps) {
           coordinate={[marker.longitude, marker.latitude]}
           title={marker.title}
         >
-          <SimpleMarker color={marker.color} icon={marker.icon} />
+          {marker.poiType
+            ? <PoiMarker type={marker.poiType} title={marker.title} />
+            : <SimpleMarker color={marker.color} icon={marker.icon} />}
         </MapboxGL.PointAnnotation>
       ))}
 
@@ -500,10 +634,15 @@ function MapboxMapImpl(props: SmartRideMapProps) {
       {driverPoints?.map((d, i) => {
         const kind = providerKindFor(d);
         const hdg = d.heading != null && Number.isFinite(d.heading) ? Math.round(d.heading / 15) * 15 : null;
-        const id = `nearby-${i}-${kind}-${d.latitude.toFixed(4)}-${d.longitude.toFixed(4)}-${hdg ?? 'x'}`;
+        // Real state only: honour a backend-supplied state, else a rider with a
+        // heading reads as 'moving' and one without as 'available'. Offline
+        // riders are simply absent from driverPoints, so they vanish on the next
+        // update (spec: "remove immediately when a rider goes offline").
+        const state: RiderState = d.state ?? (hdg != null ? 'moving' : 'available');
+        const id = `nearby-${i}-${kind}-${state}-${d.latitude.toFixed(4)}-${d.longitude.toFixed(4)}-${hdg ?? 'x'}`;
         return (
           <MapboxGL.PointAnnotation key={id} id={id} coordinate={[d.longitude, d.latitude]}>
-            <ProviderMarker kind={kind} heading={hdg} />
+            <ProviderMarker kind={kind} heading={hdg} state={state} />
           </MapboxGL.PointAnnotation>
         );
       })}
@@ -532,11 +671,13 @@ function MapboxMapImpl(props: SmartRideMapProps) {
 // ============================================
 
 function FallbackPlaceholder({ style, initialLatitude, initialLongitude }: { style?: ViewStyle; initialLatitude: number; initialLongitude: number }) {
+  const { isDark } = useTheme();
+  const themed = makeThemedColors(isDark);
   return (
-    <View style={[styles.mapFallback, style]}>
-      <Ionicons name="map-outline" size={48} color={COLORS.textMuted} />
-      <Text style={styles.mapFallbackText}>Map unavailable</Text>
-      <Text style={styles.mapFallbackSubtext}>
+    <View style={[styles.mapFallback, { backgroundColor: themed.backgroundSurface }, style]}>
+      <Ionicons name="map-outline" size={48} color={themed.textMuted} />
+      <Text style={[styles.mapFallbackText, { color: themed.textMuted }]}>Map unavailable</Text>
+      <Text style={[styles.mapFallbackSubtext, { color: themed.textMuted }]}>
         Location: {initialLatitude.toFixed(4)}, {initialLongitude.toFixed(4)}
       </Text>
     </View>
@@ -564,6 +705,7 @@ class MapErrorBoundary extends Component<
 // ============================================
 
 function SmartRideMapImpl(props: SmartRideMapProps) {
+  const { isDark } = useTheme();
   const [ready, setReady] = useState(false);
   // Re-render trigger for when the runtime token becomes available
   const [, setTokenTick] = useState(0);
@@ -586,9 +728,10 @@ function SmartRideMapImpl(props: SmartRideMapProps) {
   }, []);
 
   if (!ready) {
+    const themed = makeThemedColors(isDark);
     return (
-      <View style={[styles.loadingContainer, props.style]}>
-        <ActivityIndicator size="small" color={COLORS.primary} />
+      <View style={[styles.loadingContainer, { backgroundColor: themed.backgroundSurface }, props.style]}>
+        <ActivityIndicator size="small" color={themed.primary} />
       </View>
     );
   }

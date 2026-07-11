@@ -5,12 +5,15 @@
 // Primary: bg-primary, rounded-xl/full, h-14
 // Secondary: bg-surface, border-outlineVariant
 // Outline: border-primary
+// Theme-aware: resolves colors for light/dark via makeThemedColors.
 // ============================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, GRADIENTS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../constants';
+import { GRADIENTS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../constants';
+import { useTheme } from '../context/theme-context';
+import { makeThemedColors, ThemedColors } from '../theme/themedColors';
 
 interface GradientButtonProps {
   title: string;
@@ -35,6 +38,9 @@ export function GradientButton({
   fullWidth = true,
   size = 'md',
 }: GradientButtonProps) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const sizeStyle = getSizeStyle(size);
   const isDisabled = disabled || loading;
 
@@ -45,6 +51,9 @@ export function GradientButton({
         onPress={onPress}
         disabled={isDisabled}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ disabled: isDisabled, busy: loading }}
       >
         {loading ? (
           <ActivityIndicator color={COLORS.primary} size="small" />
@@ -65,6 +74,9 @@ export function GradientButton({
         onPress={onPress}
         disabled={isDisabled}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={title}
+        accessibilityState={{ disabled: isDisabled, busy: loading }}
       >
         {loading ? (
           <ActivityIndicator color={COLORS.onSurface} size="small" />
@@ -87,6 +99,9 @@ export function GradientButton({
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.8}
+      accessibilityRole="button"
+      accessibilityLabel={title}
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
     >
       <LinearGradient
         colors={colors as unknown as [string, string]}
@@ -95,11 +110,11 @@ export function GradientButton({
         style={[styles.gradient, sizeStyle]}
       >
         {loading ? (
-          <ActivityIndicator color={variant === 'danger' ? '#FFFFFF' : COLORS.onPrimary} size="small" />
+          <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
           <>
             {icon}
-            <Text style={[styles.text, variant === 'danger' && styles.textWhite]}>{title}</Text>
+            <Text style={styles.text}>{title}</Text>
           </>
         )}
       </LinearGradient>
@@ -118,7 +133,7 @@ function getSizeStyle(size: string): ViewStyle {
   }
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   buttonWrapper: {
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
@@ -135,9 +150,8 @@ const styles = StyleSheet.create({
   },
   text: {
     ...TYPOGRAPHY.labelLg,
-    color: COLORS.onPrimary,
-  },
-  textWhite: {
+    // Gradient backgrounds are the same dark-green brand gradient in both
+    // themes, so the label stays white for contrast in both.
     color: '#FFFFFF',
   },
   outlineButton: {
@@ -159,7 +173,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: SPACING.sm,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.surfaceContainer,
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
     borderRadius: RADIUS.xl,

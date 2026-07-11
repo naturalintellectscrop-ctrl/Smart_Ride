@@ -15,10 +15,12 @@
 //   - borderColor is ALWAYS transparent (never changes on focus)
 // =============================================================
 
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useCallback, useMemo } from 'react';
 import { View, Text, TextInput, StyleSheet, ViewStyle, TouchableOpacity, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS } from '../constants';
+import { TYPOGRAPHY, SPACING, RADIUS } from '../constants';
+import { useTheme } from '../context/theme-context';
+import { makeThemedColors, ThemedColors } from '../theme/themedColors';
 
 interface IconInputProps {
   label?: string;
@@ -59,6 +61,12 @@ export function IconInput({
   onSubmitEditing,
   autoFocus = false,
 }: IconInputProps) {
+  // Theme colors are stable during typing (only change on theme toggle),
+  // so memoized styles preserve the no-recalculation guarantee below.
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
   // Use REF for focus tracking — does NOT cause re-renders
   // (useState causes re-renders that make the cursor jump on Android)
   const inputRef = useRef<TextInput>(null);
@@ -125,7 +133,7 @@ export function IconInput({
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     marginBottom: SPACING.md,
   },
@@ -172,7 +180,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...TYPOGRAPHY.bodySm,
-    color: COLORS.onErrorContainer,
+    color: COLORS.error,
     marginTop: SPACING.xs,
     marginLeft: SPACING.xs,
   },

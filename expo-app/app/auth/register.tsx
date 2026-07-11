@@ -8,7 +8,7 @@
 // Single fade animation for the whole form
 // ============================================
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -30,7 +30,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes, GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
 import { registerUser, isAuthenticated, loginWithGoogle, saveTokens, saveUserData, getAccessToken, getUserData } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
-import { COLORS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../../src/constants';
+import { SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../../src/constants';
+import { useTheme } from '../../src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
 import { IconInput } from '../../src/components/IconInput';
 import { GradientButton } from '../../src/components/GradientButton';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
@@ -39,6 +41,9 @@ import { navigateToRoleHome } from '../../src/utils/roleRouting';
 const { width, height } = Dimensions.get('window');
 
 export default function RegisterScreen() {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -677,7 +682,7 @@ export default function RegisterScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

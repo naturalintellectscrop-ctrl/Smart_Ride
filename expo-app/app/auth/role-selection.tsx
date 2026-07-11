@@ -6,7 +6,7 @@
 // Allows switching between Client, Rider, Merchant
 // ============================================
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -22,7 +22,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import { api } from '../../src/services';
-import { COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
+import { useTheme } from '../../src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
 import { GradientButton } from '../../src/components/GradientButton';
 import { LinearGradient } from 'expo-linear-gradient';
 import { navigateToRoleHome } from '@/src/utils/roleRouting';
@@ -84,6 +86,9 @@ const ROLES = [
 ];
 
 export default function RoleSelectionScreen() {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user, setUser } = useAuthStore();
@@ -124,7 +129,7 @@ export default function RoleSelectionScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor={COLORS.surface} />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={COLORS.surface} />
 
       {/* Subtle mesh background */}
       <View style={styles.meshBackground}>
@@ -272,7 +277,7 @@ export default function RoleSelectionScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

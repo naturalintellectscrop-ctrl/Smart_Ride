@@ -5,10 +5,12 @@
 // Pattern: w-10/w-14 rounded-xl bg-{color}-500/10 border-{color}-500/20
 // ============================================
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { COLORS, SERVICES } from '../constants';
+import { SERVICES } from '../constants';
+import { useTheme } from '../context/theme-context';
+import { makeThemedColors } from '../theme/themedColors';
 
 interface ServiceIconProps {
   service: keyof typeof SERVICES | 'custom';
@@ -27,11 +29,23 @@ export function ServiceIcon({
   customEmoji,
   style,
 }: ServiceIconProps) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const serviceConfig = service !== 'custom' ? SERVICES[service] : null;
-  const color = customColor || serviceConfig?.color || COLORS.primary;
+  const color = customColor
+    || (isDark ? serviceConfig?.colorDark : serviceConfig?.color)
+    || COLORS.primary;
   const iconSize = getIconSize(size);
   const containerSize = getContainerSize(size);
   const borderRadius = size === 'lg' ? 16 : size === 'md' ? 14 : 10;
+  // Dark mode: pastel "dim" fills would glow on dark surfaces, so use a
+  // translucent tint of the (brightened) service color instead.
+  const backgroundColor = isDark
+    ? `${color}26`
+    : serviceConfig?.colorDim || `${color}15`;
+  const borderColor = isDark
+    ? `${color}3D`
+    : serviceConfig?.colorBorder || `${color}25`;
 
   return (
     <View
@@ -41,8 +55,8 @@ export function ServiceIcon({
           width: containerSize,
           height: containerSize,
           borderRadius,
-          backgroundColor: serviceConfig?.colorDim || `${color}15`,
-          borderColor: serviceConfig?.colorBorder || `${color}25`,
+          backgroundColor,
+          borderColor,
         },
         style,
       ]}

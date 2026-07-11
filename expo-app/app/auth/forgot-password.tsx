@@ -7,7 +7,7 @@
 // Uses shared design-system components & constants
 // ============================================
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   View, 
   Text, 
@@ -24,13 +24,17 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { forgotPassword } from '@/src/services/auth';
-import { COLORS } from '../../src/constants';
+import { useTheme } from '../../src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
 import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
 
 const { height } = Dimensions.get('window');
 
 export default function ForgotPasswordScreen() {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   
   const [email, setEmail] = useState('');
@@ -371,7 +375,7 @@ export default function ForgotPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

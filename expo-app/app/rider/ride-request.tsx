@@ -661,7 +661,6 @@ function PickupStep({
         </View>
       </GlassCard>
 
-      {/* Set pickup on map (Uber-style center-pin picker) */}
       <TouchableOpacity style={styles.setOnMapRow} onPress={onPickOnMap} activeOpacity={0.7}>
         <Ionicons name="map-outline" size={18} color={COLORS.primary} />
         <Text style={styles.setOnMapText}>Set pickup on map</Text>
@@ -682,7 +681,6 @@ function PickupStep({
         </GlassCard>
       )}
 
-      {/* Empty state: recent + popular suggestions */}
       {!isSearching && searchResults.length === 0 && searchQuery.trim().length < 2 && (
         <PlaceSuggestions recentPlaces={recentPlaces} popularPlaces={popularPlaces} onSelectPlace={onSelectPlace} COLORS={COLORS} styles={styles} />
       )}

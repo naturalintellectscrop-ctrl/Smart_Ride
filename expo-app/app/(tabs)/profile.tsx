@@ -401,13 +401,13 @@ function MenuItem({ item, isLast, colors }: { item: any; isLast: boolean; colors
       <Ionicons
         name={item.icon}
         size={20}
-        color={item.danger ? colors.error || '#ba1a1a' : colors.text}
+        color={item.danger ? colors.error : colors.text}
         style={{ marginRight: 12 }}
       />
       <Text
         style={[
           itemStyles.menuLabel,
-          item.danger && { color: colors.error || '#ba1a1a' },
+          item.danger && { color: colors.error },
         ]}
       >
         {item.label}
@@ -417,8 +417,8 @@ function MenuItem({ item, isLast, colors }: { item: any; isLast: boolean; colors
           value={item.value}
           onValueChange={item.onToggle}
           disabled={item.disabled}
-          trackColor={{ false: '#374151', true: colors.primary }}
-          thumbColor={item.value ? colors.primary : '#6B7280'}
+          trackColor={{ false: colors.border, true: colors.primary }}
+          thumbColor={colors.white}
         />
       ) : item.value ? (
         <Text style={itemStyles.menuValue}>{item.value}</Text>
