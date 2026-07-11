@@ -1375,6 +1375,14 @@ export class EnhancedTaskStateMachine {
 
     // ── RIDER-initiated transitions ─────────────────────────
     const riderTransitionPairs: Array<[TaskStatus, TaskStatus]> = [
+      // Accepting a dispatch offer is itself a RIDER action that moves the task
+      // INTO the assigned state. The task is in MATCHING (or SEARCHING) when the
+      // offer is outstanding, so without these two pairs every rider accept is
+      // rejected as "Actor 'RIDER' is not authorized …" and no ride can ever be
+      // assigned (runtime-verified: 0 tasks ever reached ASSIGNED, 23 matches
+      // expired unaccepted). DispatchService.acceptMatch drives this transition.
+      [TaskStatus.MATCHING, TaskStatus.ASSIGNED],
+      [TaskStatus.SEARCHING, TaskStatus.ASSIGNED],
       [TaskStatus.ASSIGNED, TaskStatus.ACCEPTED],
       [TaskStatus.ACCEPTED, TaskStatus.ARRIVING],
       [TaskStatus.ARRIVING, TaskStatus.ARRIVED],
