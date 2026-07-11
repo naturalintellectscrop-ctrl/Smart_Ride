@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TaskStatus } from '@prisma/client';
 import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
-import { db, resetRLSContext } from '@/lib/db';
+import { db, resetRLSContext, setServiceRoleContext } from '@/lib/db';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -42,6 +42,30 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Determine the actor type based on user role
+    const triggeredByType = user.role === 'RIDER' ? 'RIDER' as const :
+                            user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? 'ADMIN' as const :
+                            'CLIENT' as const;
+
+    // Resolve rider ID. SECURITY: for a RIDER actor this MUST come from their
+    // own token, never the request body — otherwise a rider could pass another
+    // rider's id and pass the ownership check below on someone else's task.
+    let effectiveRiderId: string | undefined = triggeredByType === 'RIDER' ? undefined : riderId;
+    if (triggeredByType === 'RIDER') {
+      const rider = await db.rider.findFirst({
+        where: { userId: user.userId },
+        select: { id: true },
+      });
+      effectiveRiderId = rider?.id;
+    }
+
+    // Task status transitions are a SYSTEM operation: the state machine writes
+    // the client's Task row on behalf of a rider action, and rider-scoped RLS
+    // cannot see or update a task it doesn't own (there is no rider read/update
+    // policy on Task). Elevate to service role so the lookup + SM writes work,
+    // then enforce ownership explicitly below. Mirrors DispatchService.acceptMatch.
+    await setServiceRoleContext();
+
     // Verify task exists
     const task = await db.task.findUnique({
       where: { id: taskId },
@@ -55,21 +79,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Determine the actor type based on user role
-    const triggeredByType = user.role === 'RIDER' ? 'RIDER' as const :
-                            user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? 'ADMIN' as const :
-                            'CLIENT' as const;
-
-    // Resolve rider ID: if user is a rider, find their rider profile
-    let effectiveRiderId = riderId;
-    if (user.role === 'RIDER' && !effectiveRiderId) {
-      const rider = await db.rider.findFirst({
-        where: { userId: user.userId },
-        select: { id: true },
-      });
-      if (rider) {
-        effectiveRiderId = rider.id;
-      }
+    // IDOR guard: only the owning client, the assigned rider, or an admin may
+    // transition this task. Without this, elevation would let any authenticated
+    // user drive any task's state machine.
+    const isOwningClient = triggeredByType === 'CLIENT' && task.clientId === user.userId;
+    const isAssignedRider = triggeredByType === 'RIDER' && !!effectiveRiderId && task.riderId === effectiveRiderId;
+    const isAdmin = triggeredByType === 'ADMIN';
+    if (!isOwningClient && !isAssignedRider && !isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Not authorized to transition this task' },
+        { status: 403 }
+      );
     }
 
     // Execute transition via state machine
