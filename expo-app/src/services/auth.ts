@@ -188,8 +188,26 @@ async function apiRequest<T>(
     body: body ? JSON.stringify(body) : undefined,
   });
 
-  // Handle 401 — attempt token refresh and retry once
-  if (response.status === 401 && !isRetry) {
+  // Public auth endpoints (login, register, OTP, password reset, social sign-in)
+  // legitimately return 401 for bad credentials — that is NOT an expired
+  // session. Treating it as one force-logs-out and shows a misleading
+  // "Session expired" message (nonsensical on a fresh sign-in). For these,
+  // let the 401 fall through to normal error handling so the real message
+  // ("Invalid email or password") surfaces.
+  const PUBLIC_AUTH_PATHS = [
+    '/auth/login',
+    '/auth/register',
+    '/auth/forgot-password',
+    '/auth/reset-password',
+    '/auth/send-otp',
+    '/auth/verify-otp',
+    '/auth/google',
+    '/auth/apple',
+  ];
+  const isPublicAuthEndpoint = PUBLIC_AUTH_PATHS.some((p) => endpoint.startsWith(p));
+
+  // Handle 401 on authenticated endpoints — attempt token refresh and retry once
+  if (response.status === 401 && !isRetry && !isPublicAuthEndpoint) {
     console.log('[AUTH] Got 401, attempting token refresh...');
     const newToken = await tryRefreshAccessToken();
     if (newToken) {
