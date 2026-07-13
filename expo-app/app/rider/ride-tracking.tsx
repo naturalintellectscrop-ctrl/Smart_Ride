@@ -79,6 +79,9 @@ export default function RideTrackingScreen() {
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const socketConnectedRef = useRef(false);
   const lastUpdateTimestamp = useRef(0); // Track last state update time to prevent stale poll overwrites
+  // One-shot guard: completion can be observed by BOTH the socket and the poll.
+  // Ensure we navigate to the trip summary exactly once.
+  const completionHandledRef = useRef(false);
 
   // POLLING FALLBACK: Fetch task status periodically
   const pollTaskStatus = async () => {
@@ -125,6 +128,8 @@ export default function RideTrackingScreen() {
 
   // Handle ride completion — navigate to trip summary screen
   const handleRideCompleted = (completedTask: Task) => {
+    if (completionHandledRef.current) return; // one-shot: socket + poll may both fire
+    completionHandledRef.current = true;
     stopPolling();
     clearPendingTask();
 
@@ -211,8 +216,23 @@ export default function RideTrackingScreen() {
         setTask(prev => prev ? { ...prev, status: data.status as TaskStatus } : null);
 
         if (data.status === 'COMPLETED') {
-          // Fetch full task and handle completion
-          pollTaskStatus();
+          // Fetch the full task (final fare, waiting charge, driver) and go
+          // straight to the trip summary. We must NOT call pollTaskStatus()
+          // here: we set lastUpdateTimestamp above, so it would early-return on
+          // its 5s skip-guard, and we also just set status to COMPLETED, so its
+          // change-detection would see "no change" — both would strand the
+          // customer on the tracking sheet. Fetch + complete directly instead.
+          api.getTask(params.taskId)
+            .then((res) => {
+              if (res.success && res.data) {
+                handleRideCompleted(res.data as Task);
+              } else {
+                handleRideCompleted({ ...(taskRef.current as Task), status: 'COMPLETED' as TaskStatus });
+              }
+            })
+            .catch(() => {
+              handleRideCompleted({ ...(taskRef.current as Task), status: 'COMPLETED' as TaskStatus });
+            });
         }
       }
     });
@@ -489,13 +509,20 @@ export default function RideTrackingScreen() {
   const hasDriver = !!task.riderId;
 
   // ETA hero text
+  const isArrived = task.status === 'ARRIVED';
+  const isInTransit = ['PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT'].includes(task.status);
+  const isSettled = ['COMPLETED', 'CANCELLED', 'FAILED', 'DELIVERED'].includes(task.status);
   const etaValue = formatEta(liveRoute.durationMin);
   const etaLabel = !hasDriver
     ? 'Estimated trip time'
-    : beforePickup
-      ? 'Driver arriving in'
-      : 'Arriving at destination in';
-  const showEta = liveRoute.durationMin != null || liveRoute.loading;
+    : isArrived
+      ? 'Your driver is here'
+      : beforePickup
+        ? 'Driver arriving in'
+        : 'Arriving at destination in';
+  // Don't show a stale countdown once the ride is settled; when the driver has
+  // arrived, show a static "at your pickup" line instead of a ticking ETA.
+  const showEta = !isSettled && (isArrived || liveRoute.durationMin != null || liveRoute.loading);
 
   return (
     <View style={styles.container}>
@@ -540,7 +567,9 @@ export default function RideTrackingScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.etaLabel}>{etaLabel}</Text>
-              {liveRoute.loading && liveRoute.durationMin == null ? (
+              {isArrived ? (
+                <Text style={styles.etaValue}>At your pickup point</Text>
+              ) : liveRoute.loading && liveRoute.durationMin == null ? (
                 <Text style={styles.etaValue}>Calculating…</Text>
               ) : (
                 <Text style={styles.etaValue}>
@@ -672,21 +701,41 @@ export default function RideTrackingScreen() {
         </View>
 
         {/* Actions */}
-        <View style={styles.actionsRow}>
-          <TouchableOpacity
-            style={styles.cancelButton}
-            onPress={handleCancel}
-            disabled={isCancelling || task.status === 'COMPLETED'}
-          >
-            <Text style={styles.cancelButtonText}>
-              {isCancelling ? 'Cancelling...' : 'Cancel Ride'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.sosButton} onPress={handleSOS}>
-            <Ionicons name="warning" size={16} color={COLORS.onError} />
-            <Text style={styles.sosButtonText}>SOS</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Once the ride is in transit (passenger aboard) it can no longer be
+            cancelled — the backend rejects it too. Hide the Cancel button and
+            surface SOS as the only escalation path, with a short explainer. */}
+        {isInTransit ? (
+          <View>
+            <View style={[styles.actionsRow, { justifyContent: 'center' }]}>
+              <TouchableOpacity style={[styles.sosButton, { flex: 1 }]} onPress={handleSOS}>
+                <Ionicons name="warning" size={16} color={COLORS.onError} />
+                <Text style={styles.sosButtonText}>SOS</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.privacyNote}>
+              <Ionicons name="information-circle" size={12} color={COLORS.onSurfaceVariant} />
+              <Text style={styles.privacyText}>
+                Your ride is in progress and can no longer be cancelled. Tap SOS if you need help.
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View style={styles.actionsRow}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={handleCancel}
+              disabled={isCancelling || task.status === 'COMPLETED'}
+            >
+              <Text style={styles.cancelButtonText}>
+                {isCancelling ? 'Cancelling...' : 'Cancel Ride'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.sosButton} onPress={handleSOS}>
+              <Ionicons name="warning" size={16} color={COLORS.onError} />
+              <Text style={styles.sosButtonText}>SOS</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
 
       <ConfirmDialog
