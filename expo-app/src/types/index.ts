@@ -27,17 +27,20 @@ export type TaskType =
   | 'ITEM_DELIVERY' 
   | 'SMART_HEALTH_DELIVERY';
 
-export type TaskStatus = 
-  | 'CREATED' 
-  | 'MATCHING' 
+export type TaskStatus =
+  | 'CREATED'
+  | 'MATCHING'
   | 'SEARCHING'
-  | 'ASSIGNED' 
-  | 'ACCEPTED' 
-  | 'ARRIVED' 
-  | 'PICKED_UP' 
-  | 'IN_TRANSIT' 
-  | 'DELIVERED' 
-  | 'COMPLETED' 
+  | 'ASSIGNED'
+  | 'ACCEPTED'
+  | 'ARRIVING'
+  | 'ARRIVED'
+  | 'PICKED_UP'
+  // Rides use IN_PROGRESS as the moving state; deliveries use IN_TRANSIT.
+  | 'IN_PROGRESS'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
+  | 'COMPLETED'
   | 'CANCELLED'
   | 'FAILED';
 

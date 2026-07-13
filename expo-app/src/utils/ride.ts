@@ -43,6 +43,7 @@ const PRE_PICKUP_STATUSES: TaskStatus[] = [
   'SEARCHING',
   'ASSIGNED',
   'ACCEPTED',
+  'ARRIVING',
   'ARRIVED',
 ];
 

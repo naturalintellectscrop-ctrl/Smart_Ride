@@ -48,19 +48,38 @@ import { Ionicons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const TASK_FLOW: Record<TaskStatus, TaskStatus | null> = {
-  'CREATED': 'MATCHING',
-  'MATCHING': 'ASSIGNED',
-  'SEARCHING': 'MATCHING',
+// Driver-side task flow MUST match the backend state machine's per-task-type
+// transition graph, or the transition API rejects the tap with a 400.
+//   Rides (SMART_BODA_RIDE / SMART_CAR_RIDE):
+//     ASSIGNED → ACCEPTED → ARRIVING → ARRIVED → PICKED_UP → IN_PROGRESS → COMPLETED
+//   Deliveries (ITEM/FOOD/SHOPPING/HEALTH):
+//     ASSIGNED → ACCEPTED → ARRIVING → PICKED_UP → IN_TRANSIT → DELIVERED → COMPLETED
+// The previous single flat map used ACCEPTED→ARRIVED and PICKED_UP→IN_TRANSIT,
+// which is invalid for rides — the rider could never progress past ACCEPTED.
+const RIDE_FLOW: Partial<Record<TaskStatus, TaskStatus>> = {
   'ASSIGNED': 'ACCEPTED',
-  'ACCEPTED': 'ARRIVED',
+  'ACCEPTED': 'ARRIVING',
+  'ARRIVING': 'ARRIVED',
   'ARRIVED': 'PICKED_UP',
+  'PICKED_UP': 'IN_PROGRESS',
+  'IN_PROGRESS': 'COMPLETED',
+};
+const DELIVERY_FLOW: Partial<Record<TaskStatus, TaskStatus>> = {
+  'ASSIGNED': 'ACCEPTED',
+  'ACCEPTED': 'ARRIVING',
+  'ARRIVING': 'PICKED_UP',
   'PICKED_UP': 'IN_TRANSIT',
   'IN_TRANSIT': 'DELIVERED',
   'DELIVERED': 'COMPLETED',
-  'COMPLETED': null,
-  'CANCELLED': null,
-  'FAILED': null,
+};
+
+const isRideType = (taskType?: string): boolean =>
+  taskType === 'SMART_BODA_RIDE' || taskType === 'SMART_CAR_RIDE';
+
+const nextStatusFor = (t: { status: TaskStatus; taskType?: string } | null): TaskStatus | null => {
+  if (!t) return null;
+  const flow = isRideType(t.taskType) ? RIDE_FLOW : DELIVERY_FLOW;
+  return flow[t.status] ?? null;
 };
 
 export default function DriverTaskScreen() {
@@ -139,7 +158,7 @@ export default function DriverTaskScreen() {
 
   // Background location tracking: start when task is active, stop when terminal
   useEffect(() => {
-    const activeStatuses = ['ASSIGNED', 'ACCEPTED', 'ARRIVED', 'PICKED_UP', 'IN_TRANSIT'];
+    const activeStatuses = ['ASSIGNED', 'ACCEPTED', 'ARRIVING', 'ARRIVED', 'PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT'];
     if (task && activeStatuses.includes(task.status)) {
       locationService.startTracking();
     } else {
@@ -151,11 +170,14 @@ export default function DriverTaskScreen() {
   }, [task?.status]);
 
   // Geofencing: watch the driver's live position and auto-detect arrival at the
-  // pickup (ACCEPTED → ARRIVED) and reaching the destination (banner while
-  // IN_TRANSIT). Foreground watch — pairs with the background heartbeat above.
+  // pickup (ARRIVING → ARRIVED, rides) and reaching the destination (banner
+  // while IN_PROGRESS/IN_TRANSIT). Foreground watch — pairs with the heartbeat.
   useEffect(() => {
     if (!task) return;
-    const watchStatuses = ['ACCEPTED', 'IN_TRANSIT'];
+    // While ARRIVING → auto-detect arrival at pickup. While the trip is moving
+    // (IN_PROGRESS for rides, IN_TRANSIT for deliveries) → show the near-
+    // destination banner.
+    const watchStatuses = ['ARRIVING', 'IN_PROGRESS', 'IN_TRANSIT'];
     if (!watchStatuses.includes(task.status)) {
       setNearDestination(false);
       return;
@@ -173,7 +195,11 @@ export default function DriverTaskScreen() {
           if (cancelled || !task) return;
           const here = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
 
-          if (task.status === 'ACCEPTED' && task.pickupLatitude != null && task.pickupLongitude != null) {
+          // Auto-arrival (rides only): when the driver reaches the pickup while
+          // ARRIVING, advance ARRIVING → ARRIVED (Uber-style). Deliveries keep a
+          // manual "Confirm Pickup" since arriving ≠ having the item in hand.
+          if (task.status === 'ARRIVING' && isRideType(task.taskType) &&
+              task.pickupLatitude != null && task.pickupLongitude != null) {
             const atPickup = isWithinGeofence(
               here,
               { latitude: task.pickupLatitude, longitude: task.pickupLongitude },
@@ -185,7 +211,8 @@ export default function DriverTaskScreen() {
             }
           }
 
-          if (task.status === 'IN_TRANSIT' && task.dropoffLatitude != null && task.dropoffLongitude != null) {
+          const movingStatus = task.status === 'IN_PROGRESS' || task.status === 'IN_TRANSIT';
+          if (movingStatus && task.dropoffLatitude != null && task.dropoffLongitude != null) {
             setNearDestination(
               isWithinGeofence(
                 here,
@@ -256,7 +283,7 @@ export default function DriverTaskScreen() {
   const handleNextAction = () => {
     if (!task) return;
 
-    const nextStatus = TASK_FLOW[task.status];
+    const nextStatus = nextStatusFor(task);
     if (nextStatus) {
       updateStatus(nextStatus);
     }
@@ -334,19 +361,26 @@ export default function DriverTaskScreen() {
 
   const statusColor = TASK_STATUS_COLORS[task.status] || COLORS.primary;
   const statusLabel = TASK_STATUS_LABELS[task.status] || task.status;
-  const nextStatus = TASK_FLOW[task.status];
+  const nextStatus = nextStatusFor(task);
 
-  // Button label based on current status
+  // Button label based on current status + task type. Labels mirror the
+  // per-type flow above so the primary action always drives the next valid
+  // backend transition.
   const getButtonLabel = (): string => {
+    const ride = isRideType(task.taskType);
     switch (task.status) {
       case 'ASSIGNED':
         return 'Accept Task';
       case 'ACCEPTED':
+        return "On My Way";
+      case 'ARRIVING':
         return "I've Arrived";
       case 'ARRIVED':
-        return 'Picked Up';
+        return 'Confirm Pickup';
       case 'PICKED_UP':
-        return 'Start Delivery';
+        return ride ? 'Start Trip' : 'Start Delivery';
+      case 'IN_PROGRESS':
+        return 'Complete Trip';
       case 'IN_TRANSIT':
         return 'Mark Delivered';
       case 'DELIVERED':
@@ -356,29 +390,9 @@ export default function DriverTaskScreen() {
     }
   };
 
+  // Single source of truth: advance to the next valid status for THIS task type.
   const handleButtonPress = () => {
-    switch (task.status) {
-      case 'ASSIGNED':
-        updateStatus('ACCEPTED');
-        break;
-      case 'ACCEPTED':
-        updateStatus('ARRIVED');
-        break;
-      case 'ARRIVED':
-        updateStatus('PICKED_UP');
-        break;
-      case 'PICKED_UP':
-        updateStatus('IN_TRANSIT');
-        break;
-      case 'IN_TRANSIT':
-        updateStatus('DELIVERED');
-        break;
-      case 'DELIVERED':
-        updateStatus('COMPLETED');
-        break;
-      default:
-        if (nextStatus) updateStatus(nextStatus);
-    }
+    if (nextStatus) updateStatus(nextStatus);
   };
 
   const isTaskTerminal = task.status === 'COMPLETED' || task.status === 'CANCELLED' || task.status === 'FAILED';
@@ -505,13 +519,15 @@ export default function DriverTaskScreen() {
             </Animated.View>
 
             {/* Navigation Button (separate from status transition) */}
-            {(task.status === 'ACCEPTED' || task.status === 'ARRIVED' || task.status === 'PICKED_UP' || task.status === 'IN_TRANSIT') && (
+            {(task.status === 'ACCEPTED' || task.status === 'ARRIVING' || task.status === 'ARRIVED' || task.status === 'PICKED_UP' || task.status === 'IN_PROGRESS' || task.status === 'IN_TRANSIT') && (
               <Animated.View entering={FadeInUp.duration(300).delay(400)}>
                 <TouchableOpacity
                   style={styles.navigateButton}
                   onPress={() => {
-                    // Navigate to pickup if ACCEPTED/ARRIVED, otherwise to dropoff
-                    const isHeadingToPickup = task.status === 'ACCEPTED' || task.status === 'ARRIVED';
+                    // Heading to pickup until the passenger/item is aboard
+                    // (ACCEPTED/ARRIVING/ARRIVED); after PICKED_UP head to dropoff.
+                    const isHeadingToPickup =
+                      task.status === 'ACCEPTED' || task.status === 'ARRIVING' || task.status === 'ARRIVED';
                     const destLat = isHeadingToPickup ? task.pickupLatitude : task.dropoffLatitude;
                     const destLng = isHeadingToPickup ? task.pickupLongitude : task.dropoffLongitude;
                     if (destLat && destLng) {
@@ -527,7 +543,7 @@ export default function DriverTaskScreen() {
             )}
 
             {/* Geofence: reached destination banner */}
-            {nearDestination && task.status === 'IN_TRANSIT' && (
+            {nearDestination && (task.status === 'IN_PROGRESS' || task.status === 'IN_TRANSIT') && (
               <View style={styles.arrivalBanner}>
                 <Ionicons name="flag" size={16} color={COLORS.primary} />
                 <Text style={styles.arrivalBannerText}>You've reached the destination — complete the trip.</Text>
@@ -539,17 +555,21 @@ export default function DriverTaskScreen() {
               entering={FadeInUp.duration(300).delay(500)}
               style={styles.actionsRow}
             >
-              <View style={styles.cancelButtonWrapper}>
-                <GradientButton
-                  title="Cancel"
-                  onPress={handleCancelTask}
-                  variant="outline"
-                  loading={false}
-                  disabled={isUpdating || task.status === 'COMPLETED'}
-                  fullWidth
-                  size="md"
-                />
-              </View>
+              {/* A ride can't be cancelled once in transit (backend returns 409);
+                  hide the driver's Cancel then too — SOS/support is the path. */}
+              {!['PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT'].includes(task.status) && (
+                <View style={styles.cancelButtonWrapper}>
+                  <GradientButton
+                    title="Cancel"
+                    onPress={handleCancelTask}
+                    variant="outline"
+                    loading={false}
+                    disabled={isUpdating || task.status === 'COMPLETED'}
+                    fullWidth
+                    size="md"
+                  />
+                </View>
+              )}
               <View style={styles.actionButtonWrapper}>
                 <GradientButton
                   title={getButtonLabel()}
