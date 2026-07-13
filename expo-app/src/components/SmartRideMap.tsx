@@ -23,6 +23,8 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { COLORS, MAPBOX_CONFIG, DEFAULT_LOCATION } from '../constants';
 import { useTheme } from '../context/theme-context';
 import { makeThemedColors } from '../theme/themedColors';
+import { VehicleMarker, VehicleMarkerState } from './markers/VehicleMarker';
+import { VehicleArtKind } from './markers/VehicleArt';
 
 // ============================================
 // TYPES
@@ -144,6 +146,24 @@ export function providerKindFor(d: { vehicleType?: string | null; riderRole?: st
   return 'boda';
 }
 
+// Which illustrated vehicle a provider drives. Errand runners share the delivery
+// bike art until dedicated errand art exists.
+export function vehicleArtKindFor(d: { vehicleType?: string | null; riderRole?: string | null }): VehicleArtKind {
+  const k = providerKindFor(d);
+  return k === 'errand' ? 'delivery' : k;
+}
+
+// Map the rich RiderState onto the vehicle marker's visual states.
+function toVehicleState(s: RiderState | undefined): VehicleMarkerState {
+  switch (s) {
+    case 'assigned': return 'assigned';
+    case 'busy': return 'on_trip';
+    case 'offline': return 'offline';
+    case 'out_of_service': return 'poor_gps';
+    default: return 'available'; // available / moving / low_battery
+  }
+}
+
 // ============================================
 // SAFE MAPBOX INITIALIZATION
 // ============================================
@@ -244,96 +264,6 @@ try {
 // static halo (reads as a glow), and rotation is re-rendered by keying the
 // annotation id to the data (cheap — the nearby pool is capped at 8).
 
-const PROVIDER_GLYPH: Record<ProviderKind, { family: 'ion' | 'mci'; name: string }> = {
-  boda: { family: 'mci', name: 'motorbike' },
-  car: { family: 'ion', name: 'car-sport' },
-  delivery: { family: 'mci', name: 'moped' },
-  errand: { family: 'mci', name: 'bag-personal' },
-  parcel: { family: 'mci', name: 'truck' },
-};
-
-function ProviderGlyph({ kind, size, color = '#FFFFFF' }: { kind: ProviderKind; size: number; color?: string }) {
-  const g = PROVIDER_GLYPH[kind];
-  return g.family === 'mci' ? (
-    <MaterialCommunityIcons name={g.name as any} size={size} color={color} />
-  ) : (
-    <Ionicons name={g.name as any} size={size} color={color} />
-  );
-}
-
-/**
- * Nearby-provider marker — the core of the Smart Ride Map Marker System.
- * A coloured chip (green riders / purple errand / orange parcel) carries the
- * white vehicle glyph; a direction notch on the rim rotates to the last GPS
- * heading (glyph stays upright for legibility). `state` restyles the marker:
- *   available     → soft halo + small status dot
- *   moving        → heading notch
- *   assigned      → bright, enlarged glow ring
- *   busy/offline  → grey chip (offline also dimmed)
- *   low_battery   → orange battery badge
- *   out_of_service→ red wrench badge
- * `size` follows the spec size guide (24 / 32 / 40 default / 56).
- */
-function ProviderMarker({
-  kind,
-  heading,
-  state = 'available',
-  size = 40,
-}: {
-  kind: ProviderKind;
-  heading?: number | null;
-  state?: RiderState;
-  size?: number;
-}) {
-  const chip = size; // chip diameter
-  const wrap = size + 14; // room for halo + notch + badge
-  const color = stateColor(kind, state);
-  const glyphSize = Math.round(size * 0.5);
-  const showNotch = (state === 'moving' || state === 'available' || state === 'assigned') && heading != null && Number.isFinite(heading);
-  const assigned = state === 'assigned';
-  const dimmed = state === 'offline';
-
-  return (
-    <View style={[markerStyles.providerWrap, { width: wrap, height: wrap, opacity: dimmed ? 0.6 : 1 }]}>
-      {/* halo — brighter + larger when assigned to a ride */}
-      <View
-        style={[
-          markerStyles.providerHalo,
-          {
-            width: assigned ? wrap : chip + 8,
-            height: assigned ? wrap : chip + 8,
-            borderRadius: wrap / 2,
-            backgroundColor: hexToRgba(color, assigned ? 0.28 : 0.14),
-          },
-        ]}
-      />
-      {showNotch && (
-        <View style={[markerStyles.providerRotator, { width: wrap, height: wrap, transform: [{ rotate: `${Math.round(heading as number)}deg` }] }]}>
-          <View style={[markerStyles.directionNotch, { borderBottomColor: color }]} />
-        </View>
-      )}
-      <View style={[markerStyles.providerChip, { width: chip, height: chip, borderRadius: chip / 2, backgroundColor: color }]}>
-        <ProviderGlyph kind={kind} size={glyphSize} />
-      </View>
-
-      {/* state badge / status dot, bottom-anchored */}
-      {state === 'available' && (
-        <View style={[markerStyles.statusDot, { backgroundColor: color }]} />
-      )}
-      {state === 'low_battery' && (
-        <View style={[markerStyles.stateBadge, { backgroundColor: MARKER_COLORS.lowBattery }]}>
-          <MaterialCommunityIcons name="battery-alert-variant-outline" size={11} color="#FFFFFF" />
-        </View>
-      )}
-      {state === 'out_of_service' && (
-        <View style={[markerStyles.stateBadge, { backgroundColor: MARKER_COLORS.outOfService }]}>
-          <MaterialCommunityIcons name="wrench" size={10} color="#FFFFFF" />
-        </View>
-      )}
-    </View>
-  );
-}
-
 // Points of interest share one teardrop-pin shape; only glyph + colour change,
 // so pickup/destination/restaurant/shop/pharmacy read as one family.
 export type PoiType = 'pickup' | 'destination' | 'restaurant' | 'shop' | 'pharmacy';
@@ -377,24 +307,6 @@ function PickupMarker({ title }: { title?: string }) {
 /** Destination: red teardrop flag pin — clearly distinct from pickup. */
 function DropoffMarker({ title }: { title?: string }) {
   return <PoiMarker type="destination" title={title} />;
-}
-
-/** Active-trip driver: larger family chip + halo + heading notch (56px). */
-function DriverMarker({ heading, kind = 'car', state = 'assigned' }: { heading?: number; kind?: ProviderKind; state?: RiderState }) {
-  const color = stateColor(kind, state);
-  return (
-    <View style={markerStyles.driverContainer}>
-      <View style={[markerStyles.driverPulse, { backgroundColor: hexToRgba(color, 0.18) }]} />
-      {heading != null && Number.isFinite(heading) && (
-        <View style={[markerStyles.driverRotator, { transform: [{ rotate: `${Math.round(heading)}deg` }] }]}>
-          <View style={[markerStyles.directionNotchLarge, { borderBottomColor: color }]} />
-        </View>
-      )}
-      <View style={[markerStyles.driverPin, { backgroundColor: color }]}>
-        <ProviderGlyph kind={kind} size={20} />
-      </View>
-    </View>
-  );
 }
 
 function SimpleMarker({ color, icon }: { color?: string; icon?: string }) {
@@ -590,19 +502,21 @@ function MapboxMapImpl(props: SmartRideMapProps) {
         </MapboxGL.PointAnnotation>
       )}
 
-      {driverLocation && (() => {
-        // Key by position + heading bucket so Android re-renders the texture as
-        // the driver moves/turns (see nearby markers note above).
-        const hdg = driverLocation.heading != null && Number.isFinite(driverLocation.heading)
-          ? Math.round(driverLocation.heading / 15) * 15
-          : undefined;
-        const id = `driver-${driverLocation.latitude.toFixed(4)}-${driverLocation.longitude.toFixed(4)}-${hdg ?? 'x'}-${driverState}`;
-        return (
-          <MapboxGL.PointAnnotation key={id} id={id} coordinate={[driverLocation.longitude, driverLocation.latitude]}>
-            <DriverMarker heading={hdg} kind={driverKind} state={driverState} />
-          </MapboxGL.PointAnnotation>
-        );
-      })()}
+      {driverLocation && (
+        // Active-trip driver: a single persistent vehicle marker that glides +
+        // rotates with the live location stream. 'assigned' while en route to
+        // pickup, 'on_trip' once the trip is underway.
+        <VehicleMarker
+          key="active-driver"
+          kind={driverKind === 'errand' ? 'delivery' : driverKind}
+          latitude={driverLocation.latitude}
+          longitude={driverLocation.longitude}
+          heading={driverLocation.heading}
+          state={toVehicleState(driverState)}
+          moving
+          size={52}
+        />
+      )}
 
       {routeGeoJSON && (
         <MapboxGL.ShapeSource id="routeSource" shape={routeGeoJSON}>
@@ -631,19 +545,24 @@ function MapboxMapImpl(props: SmartRideMapProps) {
           annotations stay cheap. The id encodes position+heading because Android
           renders annotation children to a static texture: a changed id forces
           the marker to re-render when the driver moves or turns. */}
+      {/* Live nearby providers rendered as animated vehicle illustrations. Keyed
+          by slot index (nearby ids are anonymised per poll) so a marker PERSISTS
+          across updates and glides/rotates to each new fix instead of jumping.
+          Offline riders drop out of driverPoints and their marker unmounts. */}
       {driverPoints?.map((d, i) => {
-        const kind = providerKindFor(d);
-        const hdg = d.heading != null && Number.isFinite(d.heading) ? Math.round(d.heading / 15) * 15 : null;
-        // Real state only: honour a backend-supplied state, else a rider with a
-        // heading reads as 'moving' and one without as 'available'. Offline
-        // riders are simply absent from driverPoints, so they vanish on the next
-        // update (spec: "remove immediately when a rider goes offline").
-        const state: RiderState = d.state ?? (hdg != null ? 'moving' : 'available');
-        const id = `nearby-${i}-${kind}-${state}-${d.latitude.toFixed(4)}-${d.longitude.toFixed(4)}-${hdg ?? 'x'}`;
+        const artKind = vehicleArtKindFor(d);
+        const hdg = d.heading != null && Number.isFinite(d.heading) ? d.heading : null;
+        const vState = toVehicleState(d.state);
         return (
-          <MapboxGL.PointAnnotation key={id} id={id} coordinate={[d.longitude, d.latitude]}>
-            <ProviderMarker kind={kind} heading={hdg} state={state} />
-          </MapboxGL.PointAnnotation>
+          <VehicleMarker
+            key={`veh-${i}`}
+            kind={artKind}
+            latitude={d.latitude}
+            longitude={d.longitude}
+            heading={hdg}
+            state={vState}
+            moving={d.state === 'moving' || hdg != null}
+          />
         );
       })}
     </MapboxGL.MapView>
