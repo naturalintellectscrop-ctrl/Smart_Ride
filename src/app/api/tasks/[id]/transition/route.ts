@@ -11,7 +11,7 @@ import { EnhancedTaskStateMachine, TransitionContext } from '@/lib/services/enha
 import { authGuard } from '@/lib/auth/guards';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
-import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { broadcastToTask } from '@/lib/realtime-server';
 
 interface RouteParams {
@@ -62,7 +62,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    await setRLSContext({ userId: user.userId, role: user.role });
+    // Run as service role: task/rider reads happen with the app enforcing
+    // authorization below. Under user-scoped RLS the assigned RIDER cannot
+    // SELECT their own task (policy keys on clientId), so the read returned
+    // "Task not found" and no driver could progress a trip. Mirrors the
+    // service-role pattern used by POST /tasks/[id] and the dispatch routes.
+    await setServiceRoleContext();
 
     // SECURITY: Ownership validation - verify user is authorized to transition this task
     const task = await db.task.findUnique({
@@ -77,13 +82,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Determine user's rider ID (if applicable)
+    // Determine user's rider ID (if applicable).
+    // NOTE: authGuard returns `userId` (JWTPayload), not `id`.
     const userRider = user.role === 'RIDER'
-      ? await db.rider.findFirst({ where: { userId: user.id }, select: { id: true } })
+      ? await db.rider.findFirst({ where: { userId: user.userId }, select: { id: true } })
       : null;
 
     // Check authorization: user must be the client, the assigned rider, or an admin
-    const isClient = task.clientId === user.id;
+    const isClient = task.clientId === user.userId;
     const isAssignedRider = userRider && task.riderId === userRider.id;
     const userIsAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ||
                         user.role === 'OPERATIONS_ADMIN' || user.role === 'COMPLIANCE_ADMIN' ||
@@ -97,10 +103,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           entityType: EntityTypes.TASK,
           entityId: taskId,
           actorType: user.role === 'RIDER' ? 'RIDER' : user.role === 'ADMIN' ? 'ADMIN' : 'USER',
-          actorId: user.id,
-          userId: user.id,
+          actorId: user.userId,
+          userId: user.userId,
           taskId,
-          description: `UNAUTHORIZED: User ${user.id} (role: ${user.role}) attempted to transition task ${taskId} to ${toStatus}`,
+          description: `UNAUTHORIZED: User ${user.userId} (role: ${user.role}) attempted to transition task ${taskId} to ${toStatus}`,
           source: 'API',
         });
       } catch {}
@@ -139,7 +145,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       'CLIENT';
 
     const context: TransitionContext = {
-      userId: user.id,
+      userId: user.userId,
       riderId,
       triggeredByType,
       reason,
@@ -184,8 +190,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         entityType: EntityTypes.TASK,
         entityId: taskId,
         actorType,
-        actorId: user.id,
-        userId: user.id,
+        actorId: user.userId,
+        userId: user.userId,
         riderId: riderId || undefined,
         taskId,
         description: `Task ${taskId} transitioned to ${toStatus}${reason ? `: ${reason}` : ''}`,
