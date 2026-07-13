@@ -456,6 +456,24 @@ async function handleCancel(taskId: string, body: Record<string, unknown>, user:
     }
   }
 
+  // BUSINESS RULE: a ride cannot be cancelled once it is in transit.
+  // Once the passenger is aboard / the item is in the rider's custody
+  // (PICKED_UP, IN_TRANSIT, IN_PROGRESS), neither the client nor the rider may
+  // self-cancel — they must complete the trip or escalate (e.g. SOS). Only an
+  // admin can override (support/emergency). This mirrors the guard in
+  // POST /api/tasks/[id]/transition so every client cancel path is covered.
+  const IN_TRANSIT_STATES: TaskStatus[] = [
+    TaskStatus.PICKED_UP,
+    TaskStatus.IN_TRANSIT,
+    TaskStatus.IN_PROGRESS,
+  ];
+  if (!isAdmin(user.role as any) && IN_TRANSIT_STATES.includes(task.status)) {
+    return errorResponse(
+      'This ride is already in transit and can no longer be cancelled.',
+      409
+    );
+  }
+
   // Pre-check for better error message (SM also validates)
   if (!isValidTransition(task.status, 'CANCELLED')) {
     return errorResponse(`Cannot cancel task in ${task.status} status`);

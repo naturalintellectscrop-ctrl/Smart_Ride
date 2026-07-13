@@ -132,6 +132,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // BUSINESS RULE: a ride cannot be cancelled once it is in transit.
+    // Blocks both client and rider self-cancellation when the passenger is
+    // aboard / the item is in custody (PICKED_UP, IN_TRANSIT, IN_PROGRESS);
+    // only an admin may override. Mirrors the guard in the cancel handler of
+    // PATCH /api/tasks/[id] so every cancel path is covered.
+    if (toStatus === TaskStatus.CANCELLED && !userIsAdmin) {
+      const inTransit: TaskStatus[] = [
+        TaskStatus.PICKED_UP,
+        TaskStatus.IN_TRANSIT,
+        TaskStatus.IN_PROGRESS,
+      ];
+      if (inTransit.includes(task.status as TaskStatus)) {
+        return NextResponse.json(
+          { success: false, error: 'This ride is already in transit and can no longer be cancelled.' },
+          { status: 409 }
+        );
+      }
+    }
+
     // Build transition context.
     // Map all admin-tier roles (SUPER_ADMIN, OPERATIONS_ADMIN, COMPLIANCE_ADMIN,
     // FINANCE_ADMIN, ADMIN) to triggeredByType='ADMIN' so the state machine's
