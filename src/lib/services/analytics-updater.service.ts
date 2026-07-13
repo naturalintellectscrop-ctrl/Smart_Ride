@@ -99,8 +99,17 @@ export class TaskAnalyticsUpdater {
 
   /**
    * Called when a task is completed.
-   * Updates rider completedTrips, totalTrips, and totalEarnings.
+   * Updates rider completedTrips (the trip counter only).
    * Records completion analytics in FinanceLog.
+   *
+   * NOTE: This must NOT credit rider money (totalEarnings / walletBalance).
+   * FinanceLedgerService.recordTaskCompletion() is the single, idempotent
+   * source of truth for earnings — it increments totalEarnings AND
+   * walletBalance atomically alongside the immutable FinanceLog. Both run
+   * from the state machine's COMPLETED handler, so crediting totalEarnings
+   * here too double-counted lifetime earnings (2x actual) while walletBalance
+   * stayed correct. riderEarnings is retained in the signature for the
+   * analytics FinanceLog row below.
    */
   static async onTaskCompleted(
     taskType: TaskType,
@@ -112,11 +121,6 @@ export class TaskAnalyticsUpdater {
       const updateData: Record<string, any> = {
         completedTrips: { increment: 1 },
       };
-
-      // Add earnings if available
-      if (riderEarnings && riderEarnings > 0) {
-        updateData.totalEarnings = { increment: riderEarnings };
-      }
 
       await Promise.all([
         // Update rider stats
