@@ -91,6 +91,9 @@ export default function DriverTaskScreen() {
   const { latitude, longitude } = useLocationStore();
 
   const [task, setTask] = useState<Task | null>(null);
+  // Always-latest task for async callbacks (socket handlers, late refreshes).
+  const taskRef = useRef<Task | null>(null);
+  useEffect(() => { taskRef.current = task; }, [task]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [nearDestination, setNearDestination] = useState(false);
@@ -242,13 +245,19 @@ export default function DriverTaskScreen() {
       const response = await api.getTask(taskId);
       if (response.success && response.data) {
         setTask(response.data);
-      } else {
+      } else if (!taskRef.current) {
+        // Only hard-fail on the INITIAL load (no task yet). A failed *refresh* —
+        // e.g. a late 'task:status:update' socket event firing after the trip
+        // completed and we've already navigated to the dashboard — must not pop
+        // "Failed to load task details" and bounce. Keep what we have.
         Alert.alert('Error', 'Failed to load task details');
         router.back();
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
-      router.back();
+      if (!taskRef.current) {
+        Alert.alert('Error', 'An unexpected error occurred');
+        router.back();
+      }
     } finally {
       setIsLoading(false);
     }
