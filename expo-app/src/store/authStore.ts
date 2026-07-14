@@ -56,8 +56,12 @@ export const useAuthStore = create<AuthState>()(
       }),
       
       login: (user, token) => {
-        // Store the token in SecureStore (encrypted)
-        secureStorage.saveTokens(token, '').catch((e) => {
+        // Persist ONLY the access token — never overwrite the refresh token.
+        // The auth service (loginWithEmail/OTP/Google) has already saved BOTH
+        // tokens to SecureStore before this runs; using saveTokens(token, '')
+        // here would wipe that refresh token and break token refresh once the
+        // 7-day access token expires (logging the user out).
+        secureStorage.saveAccessToken(token).catch((e) => {
           console.warn('[AUTH-STORE] Failed to save token to SecureStore:', e);
         });
         set({ user, accessToken: token, isAuthenticated: true });

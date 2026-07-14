@@ -115,7 +115,7 @@ const queryClient = createQueryClient();
 // ============================================
 function ThemedRootLayout() {
   const { isDark, colors } = useTheme();
-  const { isAuthenticated, setAccessToken, user } = useAuthStore();
+  const { isAuthenticated, setAccessToken } = useAuthStore();
   const segments = useSegments();
   const navigationState = useRootNavigationState();
   // True once we've attempted to rehydrate the access token from SecureStore.
@@ -163,27 +163,46 @@ function ThemedRootLayout() {
   }, [isAuthenticated, segments, navigationState?.key, hydrationDone]);
 
   // Rehydrate access token from SecureStore on app start.
-  // Since accessToken is no longer persisted in AsyncStorage,
-  // we need to load it from SecureStore and set it in the store.
+  // accessToken is NOT persisted in AsyncStorage (SecureStore only), so it must
+  // be loaded back and set in the store, otherwise every app restart lands on
+  // the welcome/login screen even though the user is still signed in.
+  //
+  // TWO things that previously broke this and kept restarts logged out:
+  //   1. The restore was gated on `user` being present. But zustand's persist
+  //      middleware hydrates `user` from AsyncStorage ASYNCHRONOUSLY, so at mount
+  //      `user` is still null and the gate skipped the restore entirely.
+  //   2. Restoring the token before `user` finished hydrating meant role-based
+  //      routing ran with an undefined role.
+  // Fix: wait for zustand persist to finish hydrating `user`, THEN read the
+  // token from SecureStore unconditionally. SecureStore is the source of truth
+  // for the session — logout() clears it — so a token present here means a valid
+  // signed-in session to restore.
   useEffect(() => {
-    (async () => {
+    let cancelled = false;
+
+    const restoreSession = async () => {
       try {
-        if (!isAuthenticated && user) {
-          const { secureStorage } = require('../src/utils/secureStorage');
-          const token = await secureStorage.getAccessToken();
-          if (token) {
-            setAccessToken(token);
-            console.log('[App] Access token rehydrated from SecureStore');
-          }
+        const { secureStorage } = require('../src/utils/secureStorage');
+        const token = await secureStorage.getAccessToken();
+        if (!cancelled && token) {
+          setAccessToken(token);
+          console.log('[App] Access token rehydrated from SecureStore');
         }
       } catch (e) {
         console.warn('[App] Failed to rehydrate token from SecureStore:', e);
       } finally {
-        // Always mark hydration complete so the guard can act (redirect a truly
+        // Mark hydration complete so the guard can act (redirect a truly
         // logged-out user, or allow a rehydrated one through).
-        setHydrationDone(true);
+        if (!cancelled) setHydrationDone(true);
       }
-    })();
+    };
+
+    if (useAuthStore.persist.hasHydrated()) {
+      restoreSession();
+      return () => { cancelled = true; };
+    }
+    const unsub = useAuthStore.persist.onFinishHydration(() => restoreSession());
+    return () => { cancelled = true; unsub?.(); };
   }, []); // Run once on mount
 
   // Register push notifications with backend when authenticated

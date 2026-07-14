@@ -25,6 +25,17 @@ export const secureStorage = {
   },
 
   /**
+   * Save ONLY the access token, leaving the refresh token untouched. Use this
+   * when updating the access token (e.g. syncing the auth store after login)
+   * so a previously-stored refresh token is never clobbered — calling
+   * saveTokens(access, '') here would wipe the refresh token and break token
+   * refresh once the access token expires.
+   */
+  async saveAccessToken(accessToken: string): Promise<void> {
+    await SecureStore.setItemAsync(KEYS.ACCESS_TOKEN, accessToken);
+  },
+
+  /**
    * Get the stored access token.
    */
   async getAccessToken(): Promise<string | null> {
