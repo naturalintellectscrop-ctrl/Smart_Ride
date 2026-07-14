@@ -85,7 +85,14 @@ export default function RideRequestScreen() {
   const { user } = useAuthStore();
 
   const rideType = params.type === 'CAR' ? RIDE_TYPES.CAR : RIDE_TYPES.BODA;
-  const [step, setStep] = useState<'pickup' | 'dropoff' | 'confirm'>('pickup');
+  // Start on the DESTINATION step when we already know the pickup (the user's
+  // current GPS location). They arrived here via "Set destination", so the very
+  // first place they choose is their destination — not a new pickup. They can
+  // still tap the pickup chip (or the back arrow) to change pickup. Previously
+  // this always began at 'pickup', so the first selection overwrote the pickup.
+  const [step, setStep] = useState<'pickup' | 'dropoff' | 'confirm'>(
+    address && latitude != null && longitude != null ? 'dropoff' : 'pickup'
+  );
   const [selectedVehicle, setSelectedVehicle] = useState<'BODA' | 'CAR'>(
     params.type === 'CAR' ? 'CAR' : 'BODA'
   );
@@ -492,6 +499,7 @@ export default function RideRequestScreen() {
               popularPlaces={popularPlaces}
               recentPlaces={recentPlaces}
               onPickOnMap={() => router.push('/location-picker?type=dropoff' as any)}
+              onEditPickup={() => setStep('pickup')}
               COLORS={COLORS}
               styles={styles}
             />
@@ -701,6 +709,7 @@ function DropoffStep({
   popularPlaces,
   recentPlaces,
   onPickOnMap,
+  onEditPickup,
   COLORS,
   styles,
 }: {
@@ -713,6 +722,7 @@ function DropoffStep({
   popularPlaces: PlaceResult[];
   recentPlaces: PlaceResult[];
   onPickOnMap: () => void;
+  onEditPickup: () => void;
   COLORS: ThemedColors;
   styles: any;
 }) {
@@ -728,11 +738,18 @@ function DropoffStep({
             <View style={styles.dropoffDot} />
           </View>
           <View style={styles.searchInputsColumn}>
-            <View style={styles.locationChipStatic}>
-              <Text style={styles.locationChipText} numberOfLines={1}>
+            {/* Pickup is tappable so the user can change it (defaults to their
+                current location); the destination field below is auto-focused. */}
+            <TouchableOpacity
+              style={styles.locationChipStatic}
+              onPress={onEditPickup}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.locationChipText, { flex: 1 }]} numberOfLines={1}>
                 {pickupAddress}
               </Text>
-            </View>
+              <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceVariant} />
+            </TouchableOpacity>
             <View style={styles.searchInputRow}>
               <Ionicons name="search" size={18} color={COLORS.onSurfaceVariant} style={styles.searchInputIcon} />
               <TextInput
