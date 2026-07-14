@@ -258,6 +258,10 @@ export async function POST(request: NextRequest) {
         
         baseFare: validatedData.customPricing?.baseFare || pricing.baseFare,
         distanceFare: pricing.distanceFare,
+        // Persist the time component too. It's part of totalAmount but was being
+        // dropped, so the receipt breakdown couldn't itemise it (the lines then
+        // didn't sum to the total). See buildBreakdown() in receipt-service.
+        timeFare: pricing.timeFare,
         deliveryFee: pricing.deliveryFee,
         serviceFee: pricing.serviceFee,
         totalAmount: validatedData.customPricing?.totalAmount || pricing.totalAmount,

@@ -48,6 +48,7 @@ function buildBreakdown(task: {
   waitingCharge: Prisma.Decimal | null;
   serviceFee: Prisma.Decimal | null;
   discount: Prisma.Decimal | null;
+  totalAmount: Prisma.Decimal | null;
 }): ReceiptLine[] {
   const lines: ReceiptLine[] = [];
   const push = (label: string, amount: number) => {
@@ -58,6 +59,18 @@ function buildBreakdown(task: {
   push('Time Charge', num(task.timeFare));
   push('Delivery Fee', num(task.deliveryFee));
   push('Waiting Charge', num(task.waitingCharge));
+
+  // Peak/night surge is baked into totalAmount but has no dedicated Task column,
+  // so recover it as the remainder: total = (itemised charges) + surge − discount.
+  // This guarantees the breakdown always sums to the total the customer paid,
+  // instead of silently under-listing (base+distance+service < total). Matches
+  // the "Peak / night surcharge" line the client sees on the fare screen.
+  const discount = num(task.discount) > 0 ? num(task.discount) : 0;
+  const itemisedCharges =
+    lines.reduce((s, l) => s + l.amount, 0) + num(task.serviceFee);
+  const surcharge = Math.round(num(task.totalAmount) - itemisedCharges + discount);
+  if (surcharge > 0) push('Peak / night surcharge', surcharge);
+
   push('Service Fee', num(task.serviceFee));
   if (num(task.discount) > 0) push('Discount', -num(task.discount));
   return lines;
