@@ -1,44 +1,127 @@
 // ============================================
 // SMART RIDE MOBILE - REGISTER SCREEN
 // ============================================
-// Stitch Design System — Material Design 3 Green Theme
-// "Create Account" layout matching Stitch design files
-// PRIMARY: Phone OTP, SECONDARY: Email/Password, TERTIARY: Google
-// NO FadeInDown per-input animations (causes cursor jumping)
-// Single fade animation for the whole form
+// Premium, progressive-disclosure sign-up (Uber / Bolt / Material 3 feel):
+//   Step 1 — account details (name, email, phone, password) + Google / Phone
+//   Step 2 — "I want to join as": one elegant grouped selector
+//            (Client · Rider ▸ Boda/Car/Delivery · Business ▸ Merchant/Pharmacist)
+//            + Terms + Create Account
+// Step 3 (extra info per account type) is the existing onboarding flow the
+// user is routed into after registration (/rider/onboarding, /merchant/register).
+//
+// Android-cursor safety: text fields are a self-contained memoized <Field/> that
+// keeps its own focus state, so typing in one field never re-renders/!jumps the
+// others. No Animated transforms wrap inputs.
 // ============================================
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
-  Animated,
-  Easing,
-  Dimensions,
-  useWindowDimensions,
   Image,
   Linking,
+  ActivityIndicator,
+  LayoutAnimation,
+  UIManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes, GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
-import { registerUser, isAuthenticated, loginWithGoogle, saveTokens, saveUserData, getAccessToken, getUserData } from '../../src/services/auth';
+import { registerUser, isAuthenticated, loginWithGoogle, getAccessToken, getUserData } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
-import { SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../../src/constants';
+import { SPACING, RADIUS } from '../../src/constants';
 import { useTheme } from '../../src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
-import { IconInput } from '../../src/components/IconInput';
-import { GradientButton } from '../../src/components/GradientButton';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
 import { navigateToRoleHome } from '../../src/utils/roleRouting';
 
-const { width, height } = Dimensions.get('window');
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+// ── Account type model ────────────────────────────
+// Six backend roles grouped into three human-friendly choices.
+type RoleId = 'CLIENT' | 'RIDER' | 'DRIVER' | 'DELIVERY' | 'MERCHANT' | 'PHARMACIST';
+type GroupId = 'rider' | 'business';
+
+const RIDER_OPTIONS: { id: RoleId; label: string; desc: string; icon: string }[] = [
+  { id: 'RIDER', label: 'Smart Boda', desc: 'Ride with a boda', icon: 'bicycle' },
+  { id: 'DRIVER', label: 'Smart Car', desc: 'Drive with a car', icon: 'car-sport' },
+  { id: 'DELIVERY', label: 'Delivery Rider', desc: 'Deliver packages & items', icon: 'cube' },
+];
+const BUSINESS_OPTIONS: { id: RoleId; label: string; desc: string; icon: string }[] = [
+  { id: 'MERCHANT', label: 'Merchant', desc: 'Restaurant or shop', icon: 'storefront' },
+  { id: 'PHARMACIST', label: 'Pharmacist', desc: 'Medicine & health', icon: 'medkit' },
+];
+const RIDER_IDS: RoleId[] = ['RIDER', 'DRIVER', 'DELIVERY'];
+const BUSINESS_IDS: RoleId[] = ['MERCHANT', 'PHARMACIST'];
+
+// ============================================================
+// Self-contained text field (own focus state → no cursor jump)
+// ============================================================
+interface FieldProps {
+  label: string;
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder?: string;
+  icon: string;
+  COLORS: ThemedColors;
+  styles: ReturnType<typeof createStyles>;
+  keyboardType?: 'default' | 'email-address' | 'phone-pad';
+  autoCapitalize?: 'none' | 'words' | 'sentences';
+  secure?: boolean;
+  onToggleSecure?: () => void;
+  secureVisible?: boolean;
+  prefix?: string;
+  hint?: string;
+  editable?: boolean;
+  returnKeyType?: 'next' | 'done' | 'go';
+  onSubmitEditing?: () => void;
+}
+
+const Field = React.memo(function Field(props: FieldProps) {
+  const { label, value, onChangeText, placeholder, icon, COLORS, styles, keyboardType = 'default', autoCapitalize = 'none', secure, onToggleSecure, secureVisible, prefix, hint, editable = true, returnKeyType, onSubmitEditing } = props;
+  const [focused, setFocused] = useState(false);
+  return (
+    <View style={styles.field}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={[styles.inputWrap, focused && styles.inputWrapFocused]}>
+        <Ionicons name={icon as any} size={20} color={focused ? COLORS.primary : COLORS.onSurfaceVariant} style={styles.inputIcon} />
+        {prefix ? <Text style={styles.inputPrefix}>{prefix}</Text> : null}
+        <TextInput
+          style={styles.input}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={COLORS.outline}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoCorrect={false}
+          secureTextEntry={secure && !secureVisible}
+          editable={editable}
+          returnKeyType={returnKeyType}
+          onSubmitEditing={onSubmitEditing}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
+          maxFontSizeMultiplier={1.3}
+        />
+        {secure ? (
+          <TouchableOpacity onPress={onToggleSecure} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+            <Ionicons name={secureVisible ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.onSurfaceVariant} />
+          </TouchableOpacity>
+        ) : null}
+      </View>
+      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
+    </View>
+  );
+});
 
 export default function RegisterScreen() {
   const { isDark } = useTheme();
@@ -47,44 +130,27 @@ export default function RegisterScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  const [step, setStep] = useState<1 | 2>(1);
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
-  // Responsive role grid: tile the role cards to the measured row width so they
-  // never overflow or need horizontal scrolling on any screen (320px → tablet).
-  const { width: winWidth } = useWindowDimensions();
-  const [roleGridW, setRoleGridW] = useState(0);
-  const ROLE_GAP = SPACING.sm;
-  const roleCols = winWidth >= 700 ? 6 : winWidth >= 600 ? 4 : 3;
-  const roleChipW = roleGridW > 0
-    ? Math.floor((roleGridW - ROLE_GAP * (roleCols - 1)) / roleCols)
-    : undefined;
-
-  // Role selection
-  const [selectedRole, setSelectedRole] = useState<string>('CLIENT');
-
-  const ROLES = [
-    { id: 'CLIENT', label: 'Client', icon: 'person-outline', desc: 'Book rides & order' },
-    { id: 'RIDER', label: 'Smart Boda', icon: 'bicycle-outline', desc: 'Boda rider' },
-    { id: 'DRIVER', label: 'Smart Car', icon: 'car-outline', desc: 'Car driver' },
-    { id: 'DELIVERY', label: 'Delivery', icon: 'cube-outline', desc: 'Delivery personnel' },
-    { id: 'MERCHANT', label: 'Merchant', icon: 'storefront-outline', desc: 'Sell & deliver' },
-    { id: 'PHARMACIST', label: 'Pharmacist', icon: 'medkit-outline', desc: 'Medicine & health' },
-  ];
+  const [selectedRole, setSelectedRole] = useState<RoleId>('CLIENT');
+  const [openGroup, setOpenGroup] = useState<GroupId | null>(null);
 
   // Map a selected UI role to the backend UserRole + where onboarding starts.
-  // Delivery Personnel are RIDERs who pick a delivery vehicle in onboarding.
-  const backendRoleFor = (r: string) => (r === 'DELIVERY' ? 'RIDER' : r);
-  const routeAfterRegister = (r: string) => {
+  // Delivery riders are RIDERs who pick a delivery vehicle in onboarding.
+  const backendRoleFor = (r: RoleId) => (r === 'DELIVERY' ? 'RIDER' : r);
+  const routeAfterRegister = (r: RoleId) => {
     switch (r) {
       case 'RIDER': return '/rider/onboarding?vehicle=MOTORCYCLE';
       case 'DRIVER': return '/rider/onboarding?vehicle=CAR';
@@ -95,229 +161,70 @@ export default function RegisterScreen() {
     }
   };
 
-  // Animation for initial entrance — switches to plain View after completion
-  // to prevent Animated transforms from interfering with TextInput cursor on Android
-  const [animationDone, setAnimationDone] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
-
   useEffect(() => {
     configureGoogleSignIn();
     checkAuth();
-
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // After animation completes, switch to plain Views
-      // Animated.View with transforms can cause cursor jumping on Android
-      setAnimationDone(true);
-    });
   }, []);
 
   const checkAuth = async () => {
     const authenticated = await isAuthenticated();
     const { isAuthenticated: storeAuth, user } = useAuthStore.getState();
     if (authenticated || storeAuth) {
-      // Route returning users to their role's home screen
       navigateToRoleHome(user?.role);
     }
   };
 
-  // PRIMARY: Phone OTP Registration
-  const handlePhoneRegister = () => {
-    router.push({
-      pathname: '/auth/phone-login',
-      params: { purpose: 'register' },
-    });
-  };
-
-  // TERTIARY: Google Sign-In
-  const handleGoogleSignIn = async () => {
-    // Guard: if native module not available, show error
-    if (!GoogleSignin) {
-      setError('Google Sign-In is not available on this build. Please use phone or email registration.');
-      return;
-    }
-
-    setGoogleLoading(true);
-    setError(null);
-
-    try {
-      // Ensure Google Sign-In is configured (safe to call multiple times)
-      configureGoogleSignIn();
-
-      console.log('[REGISTER] GoogleSignin: Checking Play Services...');
-      const hasPlay = await GoogleSignin.hasPlayServices();
-      console.log('[REGISTER] GoogleSignin: hasPlayServices =', hasPlay);
-      if (!hasPlay) {
-        setError('Google Play Services is required. Please update your device.');
-        return;
-      }
-
-      console.log('[REGISTER] GoogleSignin: Calling signIn()...');
-      const userInfo = await GoogleSignin.signIn();
-      console.log('[REGISTER] GoogleSignin: signIn() returned:', JSON.stringify({
-        type: userInfo.type,
-        hasData: !!userInfo.data,
-        hasIdToken: !!userInfo.data?.idToken,
-        user: userInfo.data?.user ? {
-          email: userInfo.data.user.email,
-          name: userInfo.data.user.name,
-          id: userInfo.data.user.id,
-        } : null,
-      }));
-
-      // v16 API: userInfo.data contains the user info
-      if (userInfo.data?.idToken) {
-        console.log('[REGISTER] GoogleSignin: Got idToken, sending to backend...');
-        // Send the idToken to our backend
-        const result = await loginWithGoogle(userInfo.data.idToken);
-
-        if (result.success) {
-          // Sync with auth store
-          const token = await getAccessToken();
-          const userData = await getUserData();
-          if (token && userData) {
-            useAuthStore.getState().login({
-              id: userData.id,
-              email: userData.email,
-              name: userData.name,
-              phone: userData.phone,
-              role: userData.role,
-            }, token);
-          }
-          // Always show role-selection after Google sign-in so the user can
-          // choose or change what kind of user they are. (Email registration
-          // skips this because the user already picked a role in the form.)
-          router.replace('/auth/role-selection' as any);
-        } else {
-          setError(result.error || 'Google sign-in failed');
-        }
-      } else {
-        console.warn('[REGISTER] GoogleSignin: No idToken in response. Full response:', JSON.stringify(userInfo));
-        setError('Google Sign-In did not return a valid token. Please try again.');
-      }
-    } catch (err: any) {
-      console.error('[REGISTER] Google Sign-In error:', {
-        code: err.code,
-        message: err.message,
-        stack: err.stack,
-        name: err.name,
-        nativeErrorMessage: err.nativeErrorMessage,
-        allKeys: Object.keys(err),
-        stringified: JSON.stringify(err, Object.getOwnPropertyNames(err)),
-      });
-
-      // Robust error matching — see login.tsx for full rationale.
-      const errCode = (err?.code ?? '') + '';
-      const errMsg = (err?.message ?? '') + '';
-      const isCancelled =
-        errCode === statusCodes.SIGN_IN_CANCELLED ||
-        errCode === 'SIGN_IN_CANCELLED' ||
-        errMsg.includes('SIGN_IN_CANCELLED');
-      const isDeveloperError =
-        errCode === statusCodes.DEVELOPER_ERROR ||
-        errCode === 'DEVELOPER_ERROR' ||
-        errMsg.includes('DEVELOPER_ERROR');
-      const isPlayServicesMissing =
-        errCode === statusCodes.PLAY_SERVICES_NOT_AVAILABLE ||
-        errCode === 'PLAY_SERVICES_NOT_AVAILABLE' ||
-        errMsg.includes('PLAY_SERVICES_NOT_AVAILABLE');
-      const isInProgress =
-        errCode === statusCodes.IN_PROGRESS ||
-        errCode === 'IN_PROGRESS';
-
-      if (isCancelled) {
-        console.log('[REGISTER] GoogleSignin: User cancelled sign-in');
-      } else if (isInProgress) {
-        // Sign-in already in progress — silent
-      } else if (isDeveloperError) {
-        console.error('[REGISTER] DEVELOPER_ERROR: The APK signing certificate does not match any ' +
-          'OAuth client in google-services.json, OR the google-services.json bundled in the APK ' +
-          'is stale. Fix: git pull → npx expo prebuild --clean → ./gradlew assembleRelease → reinstall.', {
-          code: errCode, message: errMsg,
-        });
-        setError(
-          'Google Sign-In needs to be reconfigured for this build. ' +
-          'Please rebuild the APK with the latest google-services.json, or use email/phone registration for now.'
-        );
-      } else if (isPlayServicesMissing) {
-        setError('Google Play Services is not available on this device');
-      } else {
-        const cleanMsg = errMsg.split(': Follow troubleshooting')[0] || 'Google sign-in failed. Please try again.';
-        setError(cleanMsg);
-      }
-    } finally {
-      setGoogleLoading(false);
-    }
-  };
-
-  const validateForm = () => {
-    if (!name.trim()) {
-      setError('Please enter your full name');
-      return false;
-    }
-    if (!email.trim()) {
-      setError('Please enter your email');
-      return false;
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setError('Please enter a valid email');
-      return false;
-    }
-    if (!phone.trim()) {
-      setError('Please enter your phone number');
-      return false;
-    }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters');
-      return false;
-    }
-    if (!/[A-Z]/.test(password)) {
-      setError('Password must contain at least one uppercase letter');
-      return false;
-    }
-    if (!/[a-z]/.test(password)) {
-      setError('Password must contain at least one lowercase letter');
-      return false;
-    }
-    if (!/[0-9]/.test(password)) {
-      setError('Password must contain at least one number');
-      return false;
-    }
-    if (password !== confirmPassword) {
-      setError('Passwords do not match');
-      return false;
-    }
-    if (!agreedToTerms) {
-      setError('Please agree to the Terms of Service and Privacy Policy');
-      return false;
-    }
+  // ── Validation ───────────────────────────────
+  const validateStep1 = (): boolean => {
+    if (!name.trim()) { setError('Please enter your full name'); return false; }
+    if (!email.trim()) { setError('Please enter your email'); return false; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Please enter a valid email'); return false; }
+    if (!phone.trim()) { setError('Please enter your phone number'); return false; }
+    if (password.length < 8) { setError('Password must be at least 8 characters'); return false; }
+    if (!/[A-Z]/.test(password)) { setError('Password must contain at least one uppercase letter'); return false; }
+    if (!/[a-z]/.test(password)) { setError('Password must contain at least one lowercase letter'); return false; }
+    if (!/[0-9]/.test(password)) { setError('Password must contain at least one number'); return false; }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return false; }
     return true;
   };
 
-  // SECONDARY: Email Registration
+  const goToStep2 = () => {
+    setError(null);
+    if (!validateStep1()) return;
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setStep(2);
+  };
+
+  const goBack = () => {
+    if (step === 2) {
+      setError(null);
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setStep(1);
+    } else {
+      router.back();
+    }
+  };
+
+  // ── Role selection ───────────────────────────
+  const selectRole = useCallback((role: RoleId) => {
+    setError(null);
+    setSelectedRole(role);
+  }, []);
+
+  const toggleGroup = useCallback((group: GroupId) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setOpenGroup((cur) => (cur === group ? null : group));
+  }, []);
+
+  // ── Submit (email/password registration) ─────
   const handleRegister = async () => {
-    if (!validateForm()) return;
+    if (!validateStep1()) { setStep(1); return; }
+    if (!agreedToTerms) { setError('Please agree to the Terms of Service and Privacy Policy'); return; }
 
     setIsLoading(true);
     setError(null);
-
     try {
       const formattedPhone = phone.startsWith('+') ? phone : `+256${phone.replace(/^0+/, '')}`;
-
       const result = await registerUser({
         name: name.trim(),
         email: email.trim().toLowerCase(),
@@ -327,7 +234,6 @@ export default function RegisterScreen() {
       });
 
       if (result.success) {
-        // Sync with auth store
         const token = await getAccessToken();
         const userData = await getUserData();
         if (token && userData) {
@@ -339,8 +245,6 @@ export default function RegisterScreen() {
             role: userData.role || backendRoleFor(selectedRole),
           }, token);
         }
-        // Client goes straight into the app; providers go to onboarding
-        // (pre-selecting the vehicle/type implied by their chosen role).
         router.replace(routeAfterRegister(selectedRole) as any);
       } else {
         setError(result.error || 'Registration failed');
@@ -352,680 +256,304 @@ export default function RegisterScreen() {
     }
   };
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
-    >
-      {/* Subtle mesh gradient background */}
-      <View style={styles.meshBackground}>
-        <View style={styles.meshOrb1} />
-        <View style={styles.meshOrb2} />
-        <View style={styles.meshOrb3} />
-      </View>
+  // ── Google ───────────────────────────────────
+  const handleGoogleSignIn = async () => {
+    if (!GoogleSignin) {
+      setError('Google Sign-In is not available on this build. Please use phone or email registration.');
+      return;
+    }
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      configureGoogleSignIn();
+      const hasPlay = await GoogleSignin.hasPlayServices();
+      if (!hasPlay) { setError('Google Play Services is required. Please update your device.'); return; }
+      const userInfo = await GoogleSignin.signIn();
+      if (userInfo.data?.idToken) {
+        const result = await loginWithGoogle(userInfo.data.idToken);
+        if (result.success) {
+          const token = await getAccessToken();
+          const userData = await getUserData();
+          if (token && userData) {
+            useAuthStore.getState().login({
+              id: userData.id, email: userData.email, name: userData.name, phone: userData.phone, role: userData.role,
+            }, token);
+          }
+          router.replace('/auth/role-selection' as any);
+        } else {
+          setError(result.error || 'Google sign-in failed');
+        }
+      } else {
+        setError('Google Sign-In did not return a valid token. Please try again.');
+      }
+    } catch (err: any) {
+      const errCode = (err?.code ?? '') + '';
+      const errMsg = (err?.message ?? '') + '';
+      const isCancelled = errCode === statusCodes.SIGN_IN_CANCELLED || errCode === 'SIGN_IN_CANCELLED' || errMsg.includes('SIGN_IN_CANCELLED');
+      const isDeveloperError = errCode === statusCodes.DEVELOPER_ERROR || errCode === 'DEVELOPER_ERROR' || errMsg.includes('DEVELOPER_ERROR');
+      const isPlayServicesMissing = errCode === statusCodes.PLAY_SERVICES_NOT_AVAILABLE || errCode === 'PLAY_SERVICES_NOT_AVAILABLE' || errMsg.includes('PLAY_SERVICES_NOT_AVAILABLE');
+      const isInProgress = errCode === statusCodes.IN_PROGRESS || errCode === 'IN_PROGRESS';
+      if (isCancelled || isInProgress) { /* silent */ }
+      else if (isDeveloperError) setError('Google Sign-In needs to be reconfigured for this build. Please use email/phone registration for now.');
+      else if (isPlayServicesMissing) setError('Google Play Services is not available on this device');
+      else setError(errMsg.split(': Follow troubleshooting')[0] || 'Google sign-in failed. Please try again.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
-      {/* Fixed top app bar */}
-      <View style={[styles.appBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+  const handlePhoneRegister = () => {
+    router.push({ pathname: '/auth/phone-login', params: { purpose: 'register' } });
+  };
+
+  const busy = isLoading || googleLoading;
+
+  // ── Grouped selector row helpers ─────────────
+  const Radio = ({ on }: { on: boolean }) => (
+    <View style={[styles.radio, on && styles.radioOn]}>{on ? <View style={styles.radioDot} /> : null}</View>
+  );
+
+  const OptionRow = ({ id, label, desc, icon }: { id: RoleId; label: string; desc: string; icon: string }) => {
+    const on = selectedRole === id;
+    return (
+      <TouchableOpacity style={[styles.optionRow, on && styles.optionRowOn]} onPress={() => selectRole(id)} activeOpacity={0.8} accessibilityRole="radio" accessibilityState={{ selected: on }}>
+        <Ionicons name={icon as any} size={20} color={on ? COLORS.primary : COLORS.onSurfaceVariant} />
+        <View style={styles.optionText}>
+          <Text style={[styles.optionLabel, on && styles.optionLabelOn]}>{label}</Text>
+          <Text style={styles.optionDesc}>{desc}</Text>
+        </View>
+        <Radio on={on} />
+      </TouchableOpacity>
+    );
+  };
+
+  const GroupCard = ({ group, icon, label, desc, options }: { group: GroupId; icon: string; label: string; desc: string; options: typeof RIDER_OPTIONS }) => {
+    const ids = group === 'rider' ? RIDER_IDS : BUSINESS_IDS;
+    const groupHasSelection = ids.includes(selectedRole);
+    const open = openGroup === group;
+    return (
+      <View style={[styles.groupCard, groupHasSelection && styles.groupCardOn]}>
+        <TouchableOpacity style={styles.groupHeader} onPress={() => toggleGroup(group)} activeOpacity={0.8}>
+          <View style={[styles.groupIconWrap, groupHasSelection && styles.groupIconWrapOn]}>
+            <Ionicons name={icon as any} size={20} color={groupHasSelection ? COLORS.onPrimary : COLORS.primary} />
+          </View>
+          <View style={styles.optionText}>
+            <Text style={styles.groupLabel}>{label}</Text>
+            <Text style={styles.optionDesc}>{groupHasSelection ? options.find((o) => o.id === selectedRole)?.label : desc}</Text>
+          </View>
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={20} color={COLORS.onSurfaceVariant} />
         </TouchableOpacity>
-        <Image
-          source={SmartRideLogoImage}
-          style={styles.appBarLogo}
-          resizeMode="contain"
-        />
-        <View style={styles.appBarSpacer} />
+        {open ? (
+          <View style={styles.groupBody}>
+            {options.map((o) => <OptionRow key={o.id} {...o} />)}
+          </View>
+        ) : null}
+      </View>
+    );
+  };
+
+  return (
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
+      {/* App bar with 2-step progress */}
+      <View style={[styles.appBar, { paddingTop: Math.max(insets.top, 12) }]}>
+        <TouchableOpacity onPress={goBack} style={styles.backButton} activeOpacity={0.7} accessibilityLabel="Go back">
+          <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
+        </TouchableOpacity>
+        <View style={styles.progressTrack}>
+          <View style={styles.progressFill} />
+          <View style={[styles.progressFill, step === 2 ? styles.progressFillOn : styles.progressFillOff]} />
+        </View>
+        <Text style={styles.stepText}>{step} / 2</Text>
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + 24, 40) }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom + 24, 40) }]}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero section */}
-        {animationDone ? (
-          <View style={styles.heroSection}>
-            <Text style={styles.heroTitle}>Join the ride</Text>
-            <Text style={styles.heroSubtitle}>
-              Create your account and start moving with Smart Ride
-            </Text>
+        {/* Brand */}
+        <View style={styles.brandRow}>
+          <Image source={SmartRideLogoImage} style={styles.logo} resizeMode="contain" />
+          <View>
+            <Text style={styles.brandName}>Smart Ride</Text>
+            <Text style={styles.brandTag}>Drive. Deliver. Earn.</Text>
           </View>
-        ) : (
-          <Animated.View style={[styles.heroSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <Text style={styles.heroTitle}>Join the ride</Text>
-            <Text style={styles.heroSubtitle}>
-              Create your account and start moving with Smart Ride
-            </Text>
-          </Animated.View>
-        )}
-
-        {/* PRIMARY: Phone OTP Registration */}
-        {animationDone ? (
-          <View style={styles.phoneSection}>
-            <GradientButton
-              title="Sign Up with Phone Number"
-              onPress={handlePhoneRegister}
-              variant="primary"
-              size="lg"
-              icon={
-                <Ionicons name="call" size={20} color={COLORS.onPrimary} />
-              }
-            />
-            <Text style={styles.phoneHint}>
-              Quick sign up with OTP — no password needed
-            </Text>
-          </View>
-        ) : (
-          <Animated.View style={[styles.phoneSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <GradientButton
-              title="Sign Up with Phone Number"
-              onPress={handlePhoneRegister}
-              variant="primary"
-              size="lg"
-              icon={
-                <Ionicons name="call" size={20} color={COLORS.onPrimary} />
-              }
-            />
-            <Text style={styles.phoneHint}>
-              Quick sign up with OTP — no password needed
-            </Text>
-          </Animated.View>
-        )}
-
-        {/* Divider */}
-        <View style={styles.dividerContainer}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or register with email</Text>
-          <View style={styles.dividerLine} />
         </View>
 
-        {/* Email Registration Form — plain View after animation to prevent cursor jump */}
-        <View>
-          <View style={styles.formCard}>
-            {/* Error Display — always rendered to prevent layout shift (cursor jump) */}
-            <View style={[styles.errorContainer, !error && styles.errorHidden]}>
-              <Ionicons name="alert-circle" size={16} color={COLORS.error} />
-              <Text style={styles.errorText}>{error || ''}</Text>
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        ) : null}
+
+        {step === 1 ? (
+          <>
+            <Text style={styles.title}>Create your account</Text>
+            <Text style={styles.subtitle}>Join Smart Ride and enjoy safe, reliable rides, deliveries and more.</Text>
+
+            <Field label="Full Name" value={name} onChangeText={setName} placeholder="Enter your full name" icon="person-outline" autoCapitalize="words" COLORS={COLORS} styles={styles} editable={!busy} />
+            <Field label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com" icon="mail-outline" keyboardType="email-address" COLORS={COLORS} styles={styles} editable={!busy} />
+            <Field label="Phone Number" value={phone} onChangeText={setPhone} placeholder="700 000 000" icon="call-outline" keyboardType="phone-pad" prefix="+256" COLORS={COLORS} styles={styles} editable={!busy} />
+            <Field label="Password" value={password} onChangeText={setPassword} placeholder="Create a password" icon="lock-closed-outline" secure secureVisible={showPassword} onToggleSecure={() => setShowPassword((s) => !s)} hint="Min 8 characters, with uppercase & a number" COLORS={COLORS} styles={styles} editable={!busy} />
+            <Field label="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Re-enter your password" icon="lock-closed-outline" secure secureVisible={showConfirmPassword} onToggleSecure={() => setShowConfirmPassword((s) => !s)} COLORS={COLORS} styles={styles} editable={!busy} returnKeyType="done" onSubmitEditing={goToStep2} />
+
+            <TouchableOpacity style={styles.cta} onPress={goToStep2} activeOpacity={0.9} disabled={busy}>
+              <Text style={styles.ctaText}>Continue</Text>
+              <Ionicons name="arrow-forward" size={20} color={COLORS.onPrimary} />
+            </TouchableOpacity>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>OR</Text>
+              <View style={styles.dividerLine} />
             </View>
 
-            {/* Full Name Input */}
-            <IconInput
-              label="Full Name"
-              placeholder="Enter your full name"
-              value={name}
-              onChangeText={setName}
-              icon="person-outline"
-              autoCapitalize="words"
-              editable={!isLoading}
-              returnKeyType="next"
-            />
+            <TouchableOpacity style={[styles.socialButton, styles.googleButton]} onPress={handleGoogleSignIn} disabled={busy} activeOpacity={0.85}>
+              {googleLoading ? <ActivityIndicator color={COLORS.googleBlue} /> : (<><Ionicons name="logo-google" size={20} color={COLORS.googleBlue} /><Text style={styles.googleText}>Continue with Google</Text></>)}
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.socialButton, styles.phoneButton]} onPress={handlePhoneRegister} disabled={busy} activeOpacity={0.85}>
+              <Ionicons name="call" size={19} color={COLORS.inverseOnSurface} />
+              <Text style={styles.phoneText}>Continue with Phone</Text>
+            </TouchableOpacity>
 
-            {/* Email Input */}
-            <IconInput
-              label="Email"
-              placeholder="Enter your email"
-              value={email}
-              onChangeText={setEmail}
-              icon="mail-outline"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!isLoading}
-              returnKeyType="next"
-            />
-
-            {/* Phone Number Input */}
-            <IconInput
-              label="Phone Number"
-              placeholder="7XX XXX XXX"
-              value={phone}
-              onChangeText={setPhone}
-              icon="call-outline"
-              keyboardType="phone-pad"
-              editable={!isLoading}
-              returnKeyType="next"
-            />
-
-            {/* Password Input */}
-            <IconInput
-              label="Password"
-              placeholder="Min 8 chars, upper, lower, number"
-              value={password}
-              onChangeText={setPassword}
-              icon="lock-closed-outline"
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
-              onRightIconPress={() => setShowPassword(!showPassword)}
-              editable={!isLoading}
-              returnKeyType="next"
-            />
-
-            {/* Confirm Password Input */}
-            <IconInput
-              label="Confirm Password"
-              placeholder="Confirm your password"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              icon="lock-closed-outline"
-              secureTextEntry={!showConfirmPassword}
-              autoCapitalize="none"
-              rightIcon={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
-              onRightIconPress={() => setShowConfirmPassword(!showConfirmPassword)}
-              editable={!isLoading}
-              returnKeyType="go"
-              onSubmitEditing={handleRegister}
-            />
-
-            {/* Role Selection */}
-            <View style={styles.roleSection}>
-              <Text style={styles.roleLabel}>I want to use Smart Ride as:</Text>
-              <View
-                style={styles.roleGrid}
-                onLayout={(e) => setRoleGridW(e.nativeEvent.layout.width)}
-              >
-                {ROLES.map((role) => {
-                  const isSelected = selectedRole === role.id;
-                  return (
-                    <TouchableOpacity
-                      key={role.id}
-                      style={[
-                        styles.roleChip,
-                        roleChipW ? { width: roleChipW } : null,
-                        isSelected && styles.roleChipSelected,
-                      ]}
-                      onPress={() => setSelectedRole(role.id)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={[styles.roleChipIconWrap, isSelected && styles.roleChipIconWrapSelected]}>
-                        <Ionicons name={role.icon as any} size={22} color={isSelected ? COLORS.onPrimary : COLORS.onSurfaceVariant} />
-                      </View>
-                      <Text
-                        style={[styles.roleChipLabel, isSelected && styles.roleChipLabelSelected]}
-                        numberOfLines={2}
-                        adjustsFontSizeToFit
-                        minimumFontScale={0.85}
-                      >
-                        {role.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              <Text style={styles.roleHint}>
-                {selectedRole === 'CLIENT'
-                  ? 'Book rides, order food, shop & more'
-                  : selectedRole === 'MERCHANT'
-                  ? 'You\'ll set up your business after registration'
-                  : selectedRole === 'PHARMACIST'
-                  ? 'You\'ll set up your pharmacy after registration'
-                  : 'You\'ll complete onboarding after registration'}
-              </Text>
-            </View>
-
-            {/* Terms Checkbox */}
-            <View style={styles.termsRow}>
-              <TouchableOpacity
-                style={styles.checkboxWrap}
-                onPress={() => setAgreedToTerms(!agreedToTerms)}
-                activeOpacity={0.7}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityLabel="Agree to terms"
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: agreedToTerms }}
-              >
-                <View style={[styles.checkbox, agreedToTerms && styles.checkboxChecked]}>
-                  {agreedToTerms && (
-                    <Ionicons name="checkmark" size={14} color={COLORS.onPrimary} />
-                  )}
-                </View>
+            <View style={styles.signInRow}>
+              <Text style={styles.signInText}>Already have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/auth/login')} disabled={busy} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}>
+                <Text style={styles.signInLink}>Sign In</Text>
               </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.title}>I want to join as</Text>
+            <Text style={styles.subtitle}>Choose how you&apos;ll use Smart Ride. You can change this later.</Text>
+
+            {/* Client — direct choice */}
+            <TouchableOpacity style={[styles.groupCard, styles.clientCard, selectedRole === 'CLIENT' && styles.groupCardOn]} onPress={() => selectRole('CLIENT')} activeOpacity={0.85} accessibilityRole="radio" accessibilityState={{ selected: selectedRole === 'CLIENT' }}>
+              <View style={[styles.groupIconWrap, selectedRole === 'CLIENT' && styles.groupIconWrapOn]}>
+                <Ionicons name="person" size={20} color={selectedRole === 'CLIENT' ? COLORS.onPrimary : COLORS.primary} />
+              </View>
+              <View style={styles.optionText}>
+                <Text style={styles.groupLabel}>Client</Text>
+                <Text style={styles.optionDesc}>Ride, food, shopping & deliveries</Text>
+              </View>
+              <Radio on={selectedRole === 'CLIENT'} />
+            </TouchableOpacity>
+
+            <GroupCard group="rider" icon="bicycle" label="Rider" desc="Earn on the road" options={RIDER_OPTIONS} />
+            <GroupCard group="business" icon="storefront" label="Business" desc="Sell & manage on Smart Ride" options={BUSINESS_OPTIONS} />
+
+            {/* Terms */}
+            <TouchableOpacity style={styles.termsRow} onPress={() => setAgreedToTerms((v) => !v)} activeOpacity={0.8}>
+              <View style={[styles.checkbox, agreedToTerms && styles.checkboxOn]}>
+                {agreedToTerms ? <Ionicons name="checkmark" size={15} color={COLORS.onPrimary} /> : null}
+              </View>
               <Text style={styles.termsText}>
-                I agree to the{' '}
-                <Text
-                  style={styles.termsLink}
-                  onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}
-                >
-                  Terms of Service
-                </Text>{' '}
-                and{' '}
-                <Text
-                  style={styles.termsLink}
-                  onPress={() => Linking.openURL('https://smartrideug.vercel.app/privacy')}
-                >
-                  Privacy Policy
-                </Text>
+                By creating an account you agree to our{' '}
+                <Text style={styles.termsLink} onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}>Terms of Service</Text>
+                {' '}and{' '}
+                <Text style={styles.termsLink} onPress={() => Linking.openURL('https://smartrideug.vercel.app/privacy')}>Privacy Policy</Text>.
               </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.cta, (!agreedToTerms || busy) && styles.ctaDisabled]} onPress={handleRegister} activeOpacity={0.9} disabled={!agreedToTerms || busy}>
+              {isLoading ? <ActivityIndicator color={COLORS.onPrimary} /> : (<><Text style={styles.ctaText}>Create Account</Text><Ionicons name="arrow-forward" size={20} color={COLORS.onPrimary} /></>)}
+            </TouchableOpacity>
+
+            <View style={styles.safeNote}>
+              <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.primary} />
+              <Text style={styles.safeNoteText}>Safe. Secure. Always. Your data is protected and never shared.</Text>
             </View>
-
-            {/* Create Account CTA Button */}
-            <View style={styles.ctaButtonContainer}>
-              <GradientButton
-                title="Create Account"
-                variant="primary"
-                onPress={handleRegister}
-                loading={isLoading}
-                disabled={isLoading || !agreedToTerms}
-                size="lg"
-              />
-            </View>
-
-            {/* Google Sign-In — Hovering Circular Icon Card */}
-            <View style={styles.socialRow}>
-              <TouchableOpacity
-                style={[styles.socialCircle, (googleLoading || isLoading) && styles.socialCircleDisabled]}
-                onPress={handleGoogleSignIn}
-                disabled={googleLoading || isLoading}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel="Sign up with Google"
-              >
-                {googleLoading ? (
-                  <Ionicons name="refresh" size={26} color={COLORS.googleBlue} />
-                ) : (
-                  <Ionicons name="logo-google" size={28} color={COLORS.googleBlue} />
-                )}
-              </TouchableOpacity>
-
-              {/* Phone signup — circular hovering card */}
-              <TouchableOpacity
-                style={styles.socialCircle}
-                onPress={handlePhoneRegister}
-                disabled={googleLoading || isLoading}
-                activeOpacity={0.85}
-                accessibilityRole="button"
-                accessibilityLabel="Sign up with phone number"
-              >
-                <Ionicons name="call" size={26} color={COLORS.primary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-
-        {/* Decorative image card at bottom */}
-        <View style={styles.decorativeCard}>
-          <View style={styles.decorativeImageContainer}>
-            <View style={styles.decorativeGradientOverlay}>
-              <View style={styles.decorativeContent}>
-                <Ionicons name="car-sport" size={32} color={COLORS.onPrimary} />
-                <Text style={styles.decorativeTitle}>Start Riding Today</Text>
-                <Text style={styles.decorativeSubtitle}>
-                  Safe, affordable rides across Uganda
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Footer text */}
-        <View style={styles.footerContainer}>
-          <Text style={styles.signInText}>Already have an account? </Text>
-          <TouchableOpacity
-            onPress={() => router.push('/auth/login')}
-            disabled={isLoading || googleLoading}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.signInLink}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Security notice */}
-        <View style={styles.securityNotice}>
-          <Ionicons name="shield-checkmark-outline" size={12} color={COLORS.outline} />
-          <Text style={styles.securityText}>Secure registration  •  All data encrypted</Text>
-        </View>
+          </>
+        )}
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
-  // Subtle mesh gradient background
-  meshBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    overflow: 'hidden',
-  },
-  meshOrb1: {
-    position: 'absolute',
-    top: -80,
-    left: -60,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: 'rgba(0, 95, 58, 0.04)',
-  },
-  meshOrb2: {
-    position: 'absolute',
-    bottom: height * 0.2,
-    right: -80,
-    width: 240,
-    height: 240,
-    borderRadius: 120,
-    backgroundColor: 'rgba(14, 122, 77, 0.03)',
-  },
-  meshOrb3: {
-    position: 'absolute',
-    top: height * 0.35,
-    left: -100,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: 'rgba(107, 255, 143, 0.03)',
-  },
-  // Fixed top app bar
-  appBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    height: 56,
-    paddingHorizontal: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
-    zIndex: 10,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: RADIUS.DEFAULT,
-    marginLeft: -SPACING.xs,
-  },
-  appBarLogo: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.sm,
-  },
-  appBarSpacer: {
-    width: 40,
-  },
-  // Scroll content
-  scrollContent: {
-    flexGrow: 1,
-  },
-  // Hero section
-  heroSection: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.md,
-    alignItems: 'center',
-  },
-  heroTitle: {
-    ...TYPOGRAPHY.displayLg,
-    color: COLORS.primary,
-    textAlign: 'center',
-  },
-  heroSubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    marginTop: SPACING.xs,
-    lineHeight: 20,
-    paddingHorizontal: SPACING.md,
-  },
-  // Phone OTP section
-  phoneSection: {
-    marginHorizontal: SPACING.lg,
-    marginTop: SPACING.sm,
-  },
-  phoneHint: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.outline,
-    textAlign: 'center',
-    marginTop: SPACING.sm,
-  },
-  // Divider
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: SPACING.lg,
-    marginVertical: SPACING.md,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.outlineVariant,
-  },
-  dividerText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.outline,
-    marginHorizontal: SPACING.md,
-  },
-  // Form card — Stitch design: bg-surface, p-lg, rounded-xl, shadow
-  formCard: {
-    marginHorizontal: SPACING.lg,
-    backgroundColor: COLORS.surface,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    ...SHADOWS.card,
-  },
-  // Error
-  errorContainer: {
-    backgroundColor: COLORS.errorContainer,
-    borderColor: 'rgba(186, 26, 26, 0.2)',
-    borderWidth: 1,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  errorText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onErrorContainer,
-    flex: 1,
-    lineHeight: 18,
-  },
-  // Hidden error state — preserves layout height to prevent cursor jump
-  errorHidden: {
-    opacity: 0,
-    paddingVertical: 0,
-    marginBottom: 0,
-    borderWidth: 0,
-    height: 0,
-    overflow: 'hidden',
-  },
-  // Role selection
-  roleSection: {
-    marginTop: SPACING.md,
-  },
-  roleLabel: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurfaceVariant,
-    marginBottom: SPACING.sm,
-  },
-  roleGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.sm,
-    paddingVertical: 2,
-  },
-  roleChip: {
-    // width is set responsively at runtime (measured row width / columns)
-    minHeight: 92,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.xs,
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  roleChipSelected: {
-    backgroundColor: 'rgba(0, 95, 58, 0.06)',
-    borderColor: COLORS.primary,
-  },
-  roleChipIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.sm,
-  },
-  roleChipIconWrapSelected: {
-    backgroundColor: COLORS.primary,
-  },
-  roleChipLabel: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    lineHeight: 15,
-  },
-  roleChipLabelSelected: {
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  roleHint: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.outline,
-    marginTop: SPACING.sm,
-    textAlign: 'center',
-  },
-  // Terms checkbox
-  termsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginTop: SPACING.md,
-    gap: SPACING.sm,
-  },
-  checkboxWrap: {
-    marginTop: 1,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: RADIUS.sm,
-    borderWidth: 2,
-    borderColor: COLORS.outline,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 1,
-  },
-  checkboxChecked: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  termsText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    flex: 1,
-    lineHeight: 18,
-  },
-  termsLink: {
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  // CTA button
-  ctaButtonContainer: {
-    marginTop: SPACING.md,
-    borderRadius: RADIUS.full,
-    overflow: 'hidden',
-  },
-  // Google Sign-In button
-  // ─── Social Sign-Up — Hovering Circular Icon Cards ───
-  socialRow: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: SPACING.lg,
-    marginTop: SPACING.md,
-    paddingVertical: SPACING.sm,
-  },
-  socialCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    ...SHADOWS.active,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.14,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  socialCircleDisabled: {
-    opacity: 0.5,
-  },
-  // Decorative card at bottom
-  decorativeCard: {
-    marginHorizontal: SPACING.lg,
-    marginTop: SPACING.lg,
-    borderRadius: RADIUS.xl,
-    overflow: 'hidden',
-  },
-  decorativeImageContainer: {
-    height: 140,
-    backgroundColor: COLORS.primaryContainer,
-    borderRadius: RADIUS.xl,
-    overflow: 'hidden',
-  },
-  decorativeGradientOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 95, 58, 0.85)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  decorativeContent: {
-    alignItems: 'center',
-    gap: SPACING.xs,
-  },
-  decorativeTitle: {
-    ...TYPOGRAPHY.headlineMd,
-    color: COLORS.onPrimary,
-    fontWeight: '700',
-    marginTop: SPACING.xs,
-  },
-  decorativeSubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onPrimaryContainer,
-    opacity: 0.9,
-  },
-  // Footer
-  footerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: SPACING.xl,
-  },
-  signInText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-  },
-  signInLink: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  // Security notice
-  securityNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    marginTop: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
-  securityText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.outline,
-  },
+  container: { flex: 1, backgroundColor: COLORS.surface },
+
+  // App bar + progress
+  appBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm, gap: SPACING.md },
+  backButton: { width: 40, height: 40, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center' },
+  progressTrack: { flex: 1, flexDirection: 'row', gap: 6 },
+  progressFill: { flex: 1, height: 4, borderRadius: 2, backgroundColor: COLORS.primary },
+  progressFillOn: { backgroundColor: COLORS.primary },
+  progressFillOff: { backgroundColor: COLORS.borderLight },
+  stepText: { fontSize: 13, fontWeight: '700', color: COLORS.onSurfaceVariant },
+
+  scroll: { flexGrow: 1, paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm },
+
+  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SPACING.lg },
+  logo: { width: 40, height: 40, borderRadius: 10 },
+  brandName: { fontSize: 18, fontWeight: '800', color: COLORS.primary },
+  brandTag: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 1 },
+
+  title: { fontSize: 32, lineHeight: 38, fontWeight: '800', color: COLORS.onSurface, letterSpacing: -0.5 },
+  subtitle: { fontSize: 16, lineHeight: 23, color: COLORS.onSurfaceVariant, marginTop: 8, marginBottom: SPACING.lg },
+
+  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.errorContainer, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 10, marginBottom: SPACING.md },
+  errorText: { flex: 1, color: COLORS.error, fontSize: 13, fontWeight: '500' },
+
+  // Fields
+  field: { marginBottom: SPACING.md },
+  fieldLabel: { fontSize: 15, fontWeight: '600', color: COLORS.onSurface, marginBottom: 8 },
+  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceContainerLow, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.borderLight, paddingHorizontal: 16, height: 58 },
+  inputWrapFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.backgroundElevated },
+  inputIcon: { marginRight: 10 },
+  inputPrefix: { fontSize: 15, fontWeight: '700', color: COLORS.onSurface, marginRight: 8 },
+  input: { flex: 1, fontSize: 15, color: COLORS.onSurface, paddingVertical: 0 },
+  fieldHint: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 6, marginLeft: 4 },
+
+  // Primary CTA
+  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 58, borderRadius: 20, backgroundColor: COLORS.primary, marginTop: SPACING.md, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 5 },
+  ctaDisabled: { opacity: 0.5, shadowOpacity: 0 },
+  ctaText: { color: COLORS.onPrimary, fontSize: 18, fontWeight: '700', letterSpacing: 0.3 },
+
+  // Divider + social
+  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: SPACING.lg },
+  dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.borderLight },
+  dividerText: { fontSize: 12, fontWeight: '700', color: COLORS.onSurfaceVariant, letterSpacing: 1 },
+  socialButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 54, borderRadius: 20, marginBottom: SPACING.sm },
+  googleButton: { backgroundColor: COLORS.backgroundElevated, borderWidth: 1.5, borderColor: COLORS.border },
+  googleText: { fontSize: 15, fontWeight: '700', color: COLORS.onSurface },
+  phoneButton: { backgroundColor: COLORS.inverseSurface },
+  phoneText: { fontSize: 15, fontWeight: '700', color: COLORS.inverseOnSurface },
+
+  signInRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: SPACING.md },
+  signInText: { fontSize: 14, color: COLORS.onSurfaceVariant },
+  signInLink: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+
+  // Grouped account selector
+  clientCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 },
+  groupCard: { backgroundColor: COLORS.surfaceContainerLow, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.borderLight, paddingHorizontal: 16, marginBottom: SPACING.sm, overflow: 'hidden' },
+  groupCardOn: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryContainer + '14' },
+  groupHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 },
+  groupIconWrap: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surfaceContainerHigh },
+  groupIconWrapOn: { backgroundColor: COLORS.primary },
+  groupLabel: { fontSize: 16, fontWeight: '700', color: COLORS.onSurface },
+  optionText: { flex: 1 },
+  optionDesc: { fontSize: 13, color: COLORS.onSurfaceVariant, marginTop: 2 },
+
+  groupBody: { paddingBottom: 10, gap: 8 },
+  optionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 14, backgroundColor: COLORS.backgroundElevated, borderWidth: 1.5, borderColor: 'transparent' },
+  optionRowOn: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryContainer + '10' },
+  optionLabel: { fontSize: 15, fontWeight: '600', color: COLORS.onSurface },
+  optionLabelOn: { color: COLORS.primary },
+
+  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: COLORS.outline, alignItems: 'center', justifyContent: 'center' },
+  radioOn: { borderColor: COLORS.primary },
+  radioDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: COLORS.primary },
+
+  // Terms
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: SPACING.md, marginBottom: SPACING.xs },
+  checkbox: { width: 24, height: 24, borderRadius: 8, borderWidth: 2, borderColor: COLORS.outline, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  checkboxOn: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  termsText: { flex: 1, fontSize: 14, lineHeight: 20, color: COLORS.onSurfaceVariant },
+  termsLink: { color: COLORS.primary, fontWeight: '700' },
+
+  safeNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: SPACING.md },
+  safeNoteText: { fontSize: 12, color: COLORS.onSurfaceVariant, textAlign: 'center' },
 });
