@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { nextTaskNumber } from '@/lib/tasks/task-number';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import {
   generateKOTNumber,
-  generateTaskNumber,
   EnhancedTaskStateMachine,
 } from '@/lib/services/enhanced-task-state-machine.service';
 import { sendOrderUpdateNotification } from '@/lib/services/notification.service';
@@ -643,7 +643,7 @@ async function handleReady(orderId: string, body: Record<string, unknown>, decod
     // Create the delivery task
     task = await db.task.create({
       data: {
-        taskNumber: generateTaskNumber(),
+        taskNumber: await nextTaskNumber(db),
         taskType,
         clientId: order.clientId,
         orderId: orderId,

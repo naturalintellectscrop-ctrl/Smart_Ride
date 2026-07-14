@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, after } from 'next/server';
 import { db } from '@/lib/db';
+import { nextTaskNumber } from '@/lib/tasks/task-number';
 import { 
   successResponse, 
   errorResponse, 
@@ -13,8 +14,7 @@ import { redactPerson } from '@/lib/privacy/public-contact';
 import {
   calculatePricingAsync,
 } from '@/lib/api/pricing';
-import { 
-  generateTaskNumber,
+import {
   isValidTransition,
   canRiderPerformTask,
   CancellationReasonCode,
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
     // Create task
     const task = await db.task.create({
       data: {
-        taskNumber: generateTaskNumber(),
+        taskNumber: await nextTaskNumber(db),
         taskType: validatedData.taskType as TaskType,
         clientId: effectiveClientId,
         orderId: validatedData.orderId || null,

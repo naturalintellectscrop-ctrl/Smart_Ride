@@ -1899,6 +1899,18 @@ model ReceiptSequence {
   @@unique([type, year])
 }
 
+// Atomic per-year counter for human-readable task numbers (TASK-2026-000123),
+// mirroring ReceiptSequence. Guarantees collision-free sequential IDs instead
+// of an opaque base36 timestamp (TASK-2026-MRKBQXGC).
+model TaskSequence {
+  id        String   @id @default(cuid())
+  year      Int
+  lastSeq   Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([year])
+}
+
 enum ReceiptType {
   RIDE
   FOOD
