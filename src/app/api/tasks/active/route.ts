@@ -7,13 +7,21 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { TaskStatus } from '@prisma/client';
+import { Prisma, TaskStatus } from '@prisma/client';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { redactPerson } from '@/lib/privacy/public-contact';
 import { db, resetRLSContext } from '@/lib/db';
 
+// NOTE: there is no TaskStatus.DELIVERING in the Prisma enum — the in-flight
+// delivery state is IN_TRANSIT. This list previously included
+// TaskStatus.DELIVERING, which is `undefined` at runtime; that undefined
+// poisoned the `status: { in: [...] }` filter and made Prisma throw, so EVERY
+// call to this endpoint returned 500 and no client or rider could ever restore
+// an in-progress task. (tsc flags it, but next.config.ts sets
+// ignoreBuildErrors: true, so it shipped.)
 const ACTIVE_STATUSES: TaskStatus[] = [
   TaskStatus.CREATED,
+  TaskStatus.REQUESTED,
   TaskStatus.MATCHING,
   TaskStatus.SEARCHING,
   TaskStatus.ASSIGNED,
@@ -23,8 +31,21 @@ const ACTIVE_STATUSES: TaskStatus[] = [
   TaskStatus.PICKED_UP,
   TaskStatus.IN_PROGRESS,
   TaskStatus.IN_TRANSIT,
-  TaskStatus.DELIVERING,
 ];
+
+const ACTIVE_TASK_INCLUDE = {
+  rider: {
+    select: {
+      id: true,
+      fullName: true,
+      rating: true,
+      totalTrips: true,
+      riderRole: true,
+    },
+  },
+} satisfies Prisma.TaskInclude;
+
+type ActiveTask = Prisma.TaskGetPayload<{ include: typeof ACTIVE_TASK_INCLUDE }>;
 
 // GET /api/tasks/active - Get the current active task for the user
 export async function GET(request: NextRequest) {
@@ -40,7 +61,7 @@ export async function GET(request: NextRequest) {
   const user = authResult.user;
 
   try {
-    let activeTask = null;
+    let activeTask: ActiveTask | null = null;
 
     if (user.role === 'CLIENT') {
       // Client: find tasks where clientId = userId AND active status
@@ -49,17 +70,7 @@ export async function GET(request: NextRequest) {
           clientId: user.userId,
           status: { in: ACTIVE_STATUSES },
         },
-        include: {
-          rider: {
-            select: {
-              id: true,
-              fullName: true,
-              rating: true,
-              totalTrips: true,
-              riderRole: true,
-            },
-          },
-        },
+        include: ACTIVE_TASK_INCLUDE,
         orderBy: { createdAt: 'desc' },
       });
     } else if (user.role === 'RIDER') {
@@ -75,17 +86,7 @@ export async function GET(request: NextRequest) {
             riderId: rider.id,
             status: { in: ACTIVE_STATUSES },
           },
-          include: {
-            rider: {
-              select: {
-                id: true,
-                fullName: true,
-                rating: true,
-                totalTrips: true,
-                riderRole: true,
-              },
-            },
-          },
+          include: ACTIVE_TASK_INCLUDE,
           orderBy: { createdAt: 'desc' },
         });
       }
