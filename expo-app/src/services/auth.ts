@@ -63,14 +63,20 @@ export interface RegisterData {
 // ============================================
 
 export async function saveTokens(accessToken: string, refreshToken?: string): Promise<void> {
-  // Store tokens in SecureStore (encrypted, device-only)
-  await secureStorage.saveTokens(accessToken, refreshToken || '');
+  // Store tokens in SecureStore (encrypted, device-only).
+  // When no refresh token is supplied, update ONLY the access token — passing
+  // '' to saveTokens() would overwrite a previously-stored refresh token with
+  // an empty string, and since the backend rotates+invalidates refresh tokens
+  // on every /auth/refresh, losing it logs the user out for good once the
+  // 7-day access token expires.
+  if (refreshToken) {
+    await secureStorage.saveTokens(accessToken, refreshToken);
+  } else {
+    await secureStorage.saveAccessToken(accessToken);
+  }
   // Also keep a flag in AsyncStorage so the API service knows a token exists
   // (the actual token value is only in SecureStore)
   await AsyncStorage.setItem(STORAGE_KEYS.authToken, accessToken);
-  if (refreshToken) {
-    // Store refresh token only in SecureStore
-  }
 }
 
 export async function getAccessToken(): Promise<string | null> {

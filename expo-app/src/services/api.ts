@@ -155,10 +155,10 @@ class ApiService {
         const data = await response.json();
 
         if (data.success && data.data?.accessToken) {
-          // Save refreshed tokens to SecureStore
-          await secureStorage.saveTokens(data.data.accessToken, data.data.refreshToken || '');
-          // Also update AsyncStorage for backward compat with auth store
-          await AsyncStorage.setItem(STORAGE_KEYS.authToken, data.data.accessToken);
+          // Save refreshed tokens to SecureStore. The backend rotates the
+          // refresh token on every refresh, so the new one MUST be stored —
+          // the old one is already invalid server-side.
+          await this.persistTokens(data.data.accessToken, data.data.refreshToken);
           console.log('[API] Token refresh successful');
           return data.data.accessToken;
         }
@@ -186,41 +186,54 @@ class ApiService {
   // AUTH
   // ==========================================
 
-  async login(email: string, password: string): Promise<ApiResponse<{ user: User; accessToken: string }>> {
-    const response = await this.request<{ user: User; accessToken: string }>('/auth/login', 'POST', {
+  // NOTE: the backend issues a refresh token on login/register/google and
+  // ROTATES it on every /auth/refresh (the old one is invalidated server-side).
+  // So the refresh token must always be persisted when present — saving
+  // saveTokens(accessToken, '') here would wipe it and log the user out as
+  // soon as the 7-day access token expires. Use persistTokens() below.
+  private async persistTokens(accessToken: string, refreshToken?: string): Promise<void> {
+    if (refreshToken) {
+      await secureStorage.saveTokens(accessToken, refreshToken);
+    } else {
+      // No refresh token in this response — update ONLY the access token so a
+      // previously-stored refresh token survives.
+      await secureStorage.saveAccessToken(accessToken);
+    }
+    await AsyncStorage.setItem(STORAGE_KEYS.authToken, accessToken);
+  }
+
+  async login(email: string, password: string): Promise<ApiResponse<{ user: User; accessToken: string; refreshToken?: string }>> {
+    const response = await this.request<{ user: User; accessToken: string; refreshToken?: string }>('/auth/login', 'POST', {
       email,
       password,
     });
-    
+
     if (response.success && response.data?.accessToken) {
-      await secureStorage.saveTokens(response.data.accessToken, '');
-      await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
+      await this.persistTokens(response.data.accessToken, response.data.refreshToken);
     }
-    
+
     return response;
   }
 
-  async register(data: { name: string; email: string; phone: string; password: string }): Promise<ApiResponse<{ user: User; accessToken: string }>> {
-    const response = await this.request<{ user: User; accessToken: string }>('/auth/register', 'POST', data);
-    
+  async register(data: { name: string; email: string; phone: string; password: string }): Promise<ApiResponse<{ user: User; accessToken: string; refreshToken?: string }>> {
+    const response = await this.request<{ user: User; accessToken: string; refreshToken?: string }>('/auth/register', 'POST', data);
+
     if (response.success && response.data?.accessToken) {
-      await secureStorage.saveTokens(response.data.accessToken, '');
-      await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
+      await this.persistTokens(response.data.accessToken, response.data.refreshToken);
     }
-    
+
     return response;
   }
 
-  async googleSignIn(idToken: string): Promise<ApiResponse<{ user: User; accessToken: string }>> {
-    const response = await this.request<{ user: User; accessToken: string }>('/auth/google', 'POST', {
+  async googleSignIn(idToken: string): Promise<ApiResponse<{ user: User; accessToken: string; refreshToken?: string }>> {
+    const response = await this.request<{ user: User; accessToken: string; refreshToken?: string }>('/auth/google', 'POST', {
       idToken,
     });
-    
+
     if (response.success && response.data?.accessToken) {
-      await secureStorage.saveTokens(response.data.accessToken, '');
-      await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
+      await this.persistTokens(response.data.accessToken, response.data.refreshToken);
     }
-    
+
     return response;
   }
 
@@ -244,12 +257,11 @@ class ApiService {
     }
     
     const response = await this.request<{ user: User; accessToken: string; refreshToken?: string }>('/auth/verify-otp', 'POST', data);
-    
+
     if (response.success && response.data?.accessToken) {
-      await secureStorage.saveTokens(response.data.accessToken, response.data.refreshToken || '');
-      await AsyncStorage.setItem(STORAGE_KEYS.authToken, response.data.accessToken);
+      await this.persistTokens(response.data.accessToken, response.data.refreshToken);
     }
-    
+
     return response;
   }
 
