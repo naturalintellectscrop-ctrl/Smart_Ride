@@ -11,9 +11,14 @@
 import React, { useMemo } from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GRADIENTS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY } from '../constants';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { GRADIENTS, SPACING, RADIUS, SHADOWS, TYPOGRAPHY, MOTION } from '../constants';
 import { useTheme } from '../context/theme-context';
 import { makeThemedColors, ThemedColors } from '../theme/themedColors';
+
+// Every button shares one press language with cards (MOTION.spring.press),
+// so a tap feels the same everywhere in the app.
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface GradientButtonProps {
   title: string;
@@ -44,13 +49,22 @@ export function GradientButton({
   const sizeStyle = getSizeStyle(size);
   const isDisabled = disabled || loading;
 
+  // Shared press-scale so buttons animate like Cards do.
+  const scale = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+  const pressProps = {
+    onPressIn: () => { if (!isDisabled) scale.value = withSpring(MOTION.pressScale, MOTION.spring.press); },
+    onPressOut: () => { scale.value = withSpring(1, MOTION.spring.press); },
+  };
+
   if (variant === 'outline') {
     return (
-      <TouchableOpacity
-        style={[styles.outlineButton, sizeStyle, isDisabled && styles.disabled, style]}
+      <AnimatedTouchable
+        style={[styles.outlineButton, sizeStyle, isDisabled && styles.disabled, pressStyle, style]}
         onPress={onPress}
         disabled={isDisabled}
-        activeOpacity={0.7}
+        activeOpacity={0.85}
+        {...pressProps}
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ disabled: isDisabled, busy: loading }}
@@ -63,17 +77,18 @@ export function GradientButton({
             <Text style={styles.outlineText}>{title}</Text>
           </>
         )}
-      </TouchableOpacity>
+      </AnimatedTouchable>
     );
   }
 
   if (variant === 'secondary') {
     return (
-      <TouchableOpacity
-        style={[styles.secondaryButton, sizeStyle, isDisabled && styles.disabled, style]}
+      <AnimatedTouchable
+        style={[styles.secondaryButton, sizeStyle, isDisabled && styles.disabled, pressStyle, style]}
         onPress={onPress}
         disabled={isDisabled}
-        activeOpacity={0.7}
+        activeOpacity={0.85}
+        {...pressProps}
         accessibilityRole="button"
         accessibilityLabel={title}
         accessibilityState={{ disabled: isDisabled, busy: loading }}
@@ -86,7 +101,7 @@ export function GradientButton({
             <Text style={styles.secondaryText}>{title}</Text>
           </>
         )}
-      </TouchableOpacity>
+      </AnimatedTouchable>
     );
   }
 
@@ -94,11 +109,12 @@ export function GradientButton({
   const colors = variant === 'danger' ? GRADIENTS.danger : GRADIENTS.primary;
 
   return (
-    <TouchableOpacity
-      style={[styles.buttonWrapper, fullWidth && styles.fullWidth, isDisabled && styles.disabled, style]}
+    <AnimatedTouchable
+      style={[styles.buttonWrapper, fullWidth && styles.fullWidth, isDisabled && styles.disabled, pressStyle, style]}
       onPress={onPress}
       disabled={isDisabled}
-      activeOpacity={0.8}
+      activeOpacity={0.9}
+      {...pressProps}
       accessibilityRole="button"
       accessibilityLabel={title}
       accessibilityState={{ disabled: isDisabled, busy: loading }}
@@ -118,7 +134,7 @@ export function GradientButton({
           </>
         )}
       </LinearGradient>
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 }
 
