@@ -4,6 +4,8 @@
 // Reusable components matching admin dashboard design
 // ============================================
 
+export { Card } from './Card';
+export type { CardProps, CardVariant } from './Card';
 export { GlassCard } from './GlassCard';
 export { GradientButton } from './GradientButton';
 export { ServiceIcon } from './ServiceIcon';

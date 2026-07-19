@@ -1,18 +1,21 @@
 // ============================================
-// SMART RIDE MOBILE - GLASS CARD COMPONENT
+// SMART RIDE MOBILE - GLASS CARD (compat wrapper)
 // ============================================
-// Stitch Design System — Material Design 3
-// Light mode surface container cards with shadow
+// DEPRECATED name — kept so existing call sites keep working. It now delegates
+// to the canonical <Card> primitive so every card in the app renders through
+// one system. New code should import { Card } from './Card' directly.
+//
+// The old 'default'/'elevated'/'accent'/'cyan' variants map onto Card's
+// 'raised'/'elevated'/'accent' with identical visuals (no regression).
 // ============================================
 
 import React from 'react';
-import { View, StyleProp, ViewStyle } from 'react-native';
-import { SPACING, RADIUS, SHADOWS } from '../constants';
-import { useTheme } from '../context/theme-context';
+import { StyleProp, ViewStyle } from 'react-native';
+import { SPACING, RADIUS } from '../constants';
+import { Card, CardVariant } from './Card';
 
 interface GlassCardProps {
   children: React.ReactNode;
-  // StyleProp (not bare ViewStyle) so callers can pass style arrays.
   style?: StyleProp<ViewStyle>;
   variant?: 'default' | 'elevated' | 'accent' | 'cyan';
   padding?: number;
@@ -20,9 +23,13 @@ interface GlassCardProps {
   noBorder?: boolean;
 }
 
-// Theme-aware card. In light mode it matches the old static surfaces exactly
-// (no regression); in dark mode it uses dark surfaces so any screen's themed
-// text stays readable on the card without needing per-card overrides.
+const VARIANT_MAP: Record<NonNullable<GlassCardProps['variant']>, CardVariant> = {
+  default: 'raised',
+  elevated: 'elevated',
+  accent: 'accent',
+  cyan: 'accent',
+};
+
 export function GlassCard({
   children,
   style,
@@ -31,21 +38,9 @@ export function GlassCard({
   borderRadius = RADIUS.xl,
   noBorder = false,
 }: GlassCardProps) {
-  const { colors } = useTheme();
-  // light: backgroundElevated=#ffffff, backgroundSecondary=#edeeef (== old values)
-  const backgroundColor = variant === 'accent' || variant === 'cyan'
-    ? colors.backgroundSecondary
-    : colors.backgroundElevated;
-
   return (
-    <View
-      style={[
-        variant === 'elevated' ? SHADOWS.active : SHADOWS.card,
-        { backgroundColor, padding, borderRadius, borderWidth: noBorder ? 0 : 1, borderColor: colors.border },
-        style,
-      ]}
-    >
+    <Card variant={VARIANT_MAP[variant]} padding={padding} radius={borderRadius} noBorder={noBorder} style={style}>
       {children}
-    </View>
+    </Card>
   );
 }
