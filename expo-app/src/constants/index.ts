@@ -221,6 +221,45 @@ export const GLASS = {
   },
 };
 
+// ============================================
+// MOTION — Smart Ride Design Language
+// ============================================
+// One shared motion vocabulary so every animation across the app reads as
+// the same product: short, meaningful, elegant. Import these instead of
+// hand-picking durations/springs per screen.
+//
+//   Reanimated:  withTiming(1, { duration: MOTION.duration.base, easing: MOTION.easing.standard })
+//                withSpring(1, MOTION.spring.press)
+//   Layout:      LayoutAnimation.configureNext(MOTION.layout.easeInOut)
+//
+// Timing scale (ms). Interactions stay ≤ ~250ms so the UI feels instant;
+// larger surfaces (sheets, screens) get a touch more room to breathe.
+export const MOTION = {
+  duration: {
+    instant: 90,   // toggles, chips, press feedback
+    fast: 150,     // small state changes, fades
+    base: 220,     // default: buttons, cards, list items
+    slow: 320,     // bottom sheets, expansions
+    slower: 480,   // full-screen / hero entrances
+  },
+  // Reanimated Easing bezier tuples — kept as raw control points so this file
+  // stays dependency-free. Wrap with Easing.bezier(...MOTION.easing.standard).
+  easing: {
+    standard: [0.2, 0, 0, 1] as const,     // enter + move (Material "standard")
+    decelerate: [0, 0, 0, 1] as const,     // elements entering the screen
+    accelerate: [0.3, 0, 1, 1] as const,   // elements leaving the screen
+    emphasized: [0.2, 0, 0, 1] as const,   // expressive, still calm
+  },
+  // Reanimated withSpring configs.
+  spring: {
+    press: { damping: 18, stiffness: 260, mass: 0.6 },   // button / card press
+    gentle: { damping: 20, stiffness: 160, mass: 0.9 },  // sheets settling
+    bouncy: { damping: 12, stiffness: 180, mass: 0.8 },  // playful accents (use sparingly)
+  },
+  // Press-feedback scale for tappable surfaces (buttons, cards, tiles).
+  pressScale: 0.97,
+} as const;
+
 // Services config
 // `color`/`colorDim`/`colorBorder` are the light-mode values; `colorDark` is
 // the icon color used on dark surfaces (brightened per the MD3 dark palette).

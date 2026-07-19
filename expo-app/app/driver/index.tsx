@@ -44,7 +44,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import { GRADIENTS, DEFAULT_LOCATION, SPACING, RADIUS } from '@/src/constants';
+import { GRADIENTS, DEFAULT_LOCATION, SPACING, RADIUS, MOTION } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GradientButton } from '@/src/components/GradientButton';
@@ -676,8 +676,8 @@ function AnimatedPressable({ children, onPress, disabled }: { children: React.Re
       <TouchableOpacity
         activeOpacity={0.9}
         disabled={disabled}
-        onPressIn={() => { scale.value = withSpring(0.96); }}
-        onPressOut={() => { scale.value = withSpring(1); }}
+        onPressIn={() => { scale.value = withSpring(MOTION.pressScale, MOTION.spring.press); }}
+        onPressOut={() => { scale.value = withSpring(1, MOTION.spring.press); }}
         onPress={onPress}
       >
         {children}
