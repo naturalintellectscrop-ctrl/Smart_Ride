@@ -2,6 +2,8 @@
 
 **Status:** Source of truth · **Scope:** Every Smart Ride surface (mobile app, rider/driver, merchant, pharmacist, admin companion) · **Audience:** designers, engineers, and AI assistants building Smart Ride.
 
+> **Engineering blueprint:** [`SMART_RIDE_DESIGN_SYSTEM_SPEC.md`](SMART_RIDE_DESIGN_SYSTEM_SPEC.md) translates this Design Language into concrete tokens, component contracts, naming, rules, migration order and governance. This document is the *why*; the spec is the *what/how*.
+
 This document is a **specification, not code**. It defines what Smart Ride should look like, how it should behave, and *why*. Where it states a concrete value (a hex code, a duration, a radius) that value is the one already implemented in the app's token layer (`expo-app/src/constants`, `expo-app/src/theme/themedColors.ts`) — the system described here is real, not aspirational. The short quick-reference lives in `expo-app/DESIGN_LANGUAGE.md`; this is the long form.
 
 > **Golden rule:** Premium is achieved by *removing friction*, not by adding effects. Every decision below should be defensible by "this makes the product calmer, clearer, faster, or more trustworthy." If a choice only makes it *prettier*, question it.
