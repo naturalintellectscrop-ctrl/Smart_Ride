@@ -1,4 +1,6 @@
-# Smart Ride — Design Language
+# Smart Ride — Design Language (quick reference)
+
+> **Full source of truth:** [`../SMART_RIDE_DESIGN_SYSTEM.md`](../SMART_RIDE_DESIGN_SYSTEM.md) — the complete Product Design System (philosophy, DNA, brand, motion, interaction, components, map, architecture, accessibility, roadmap). This file is the fast token/primitive lookup.
 
 The single source of truth for how Smart Ride looks and feels. Every screen and
 every service must pull from the foundations below — no per-screen colours,
