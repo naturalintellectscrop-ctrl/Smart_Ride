@@ -253,11 +253,16 @@ export default function RiderOnboardingScreen() {
     }
   };
 
-  const saveStep = async (step: string, data: any) => {
+  // Returns true only if the step was accepted by the backend. Callers MUST
+  // NOT advance the wizard on a false result — otherwise a rider can walk the
+  // whole flow while nothing persists and lose their entered data.
+  const saveStep = async (step: string, data: any): Promise<boolean> => {
     try {
-      await api.updateRiderOnboarding(step, data);
+      const res = await api.updateRiderOnboarding(step, data);
+      return !!res?.success;
     } catch (error) {
       console.error('Failed to save step:', error);
+      return false;
     }
   };
 
@@ -362,15 +367,26 @@ export default function RiderOnboardingScreen() {
   // ----------------------------------------
 
   const handleNext = async () => {
+    // Persist the current step BEFORE advancing. If the save is rejected (e.g.
+    // a flaky connection), stay on the step and tell the user, rather than
+    // silently walking forward on unsaved data.
+    let saved = true;
     if (currentStep === 1) {
       if (!validateStep1()) return;
-      await saveStep('personal', personalInfo);
+      saved = await saveStep('personal', personalInfo);
     } else if (currentStep === 2) {
       if (!validateStep2()) return;
-      await saveStep('documents', documents);
+      saved = await saveStep('documents', documents);
     } else if (currentStep === 3) {
       if (!validateStep3()) return;
-      await saveStep('vehicle', vehicleInfo);
+      saved = await saveStep('vehicle', vehicleInfo);
+    }
+    if (!saved) {
+      Alert.alert(
+        'Could not save',
+        'We couldn\'t save this step. Please check your connection and try again.'
+      );
+      return;
     }
     setCurrentStep(prev => Math.min(prev + 1, TOTAL_STEPS));
   };

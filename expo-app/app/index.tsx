@@ -18,7 +18,7 @@
 // skyline, the road and the rider together.
 // ============================================
 
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,7 +29,7 @@ import {
   Image,
   Dimensions,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -75,11 +75,24 @@ export default function WelcomeScreen() {
   const { isAuthenticated, user } = useAuthStore();
 
   // Returning users skip the welcome and go straight to their role home.
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigateToRoleHome(user?.role);
-    }
-  }, [isAuthenticated, user?.role]);
+  //
+  // This MUST only run while the welcome screen is actually focused. Expo
+  // Router keeps `index` mounted as the Stack root even when other screens
+  // (e.g. rider onboarding) are pushed on top, so a plain useEffect keyed on
+  // isAuthenticated re-fires whenever the auth store changes — most commonly a
+  // token refresh on a slow connection flipping isAuthenticated false→true.
+  // That re-fire calls navigateToRoleHome() and yanks a rider out of the
+  // middle of onboarding back to the /driver "Complete Your Profile" gate,
+  // losing their in-progress form. useFocusEffect scopes the redirect to when
+  // the welcome screen is genuinely on top, so it can never hijack another
+  // screen's navigation.
+  useFocusEffect(
+    useCallback(() => {
+      if (isAuthenticated) {
+        navigateToRoleHome(user?.role);
+      }
+    }, [isAuthenticated, user?.role])
+  );
 
   return (
     <View style={styles.container}>
