@@ -35,7 +35,7 @@ import {
 export const metadata: Metadata = {
   title: 'Privacy Policy | Smart Ride',
   description:
-    'Smart Ride Privacy Policy — how we collect, use, share, store, and protect your personal information across our Ugandan ride-hailing and services super-app.',
+    'Smart Ride Privacy Policy: how we collect, use, share, store, and protect your personal information.',
   alternates: {
     canonical: 'https://smartrideug.vercel.app/privacy',
   },
@@ -47,8 +47,7 @@ export const metadata: Metadata = {
   },
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-
+// Helpers
 function BulletList({ items }: { items: string[] }) {
   return (
     <ul className="space-y-2.5 ml-1 mt-3">
@@ -57,7 +56,7 @@ function BulletList({ items }: { items: string[] }) {
           key={i}
           className="flex items-start gap-3 text-gray-300 text-[15px] leading-relaxed"
         >
-          <CheckCircle2 className="shrink-0 w-5 h-5 text-[#22C55E] mt-0.5" />
+          <CheckCircle2 className="shrink-0 w-5 h-5 text-[#00FF88] mt-0.5" />
           <span>{item}</span>
         </li>
       ))}
@@ -77,11 +76,11 @@ function SectionHeading({
   return (
     <h2
       id={`section-${number}`}
-      className="border-l-4 border-[#22C55E] pl-4 flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white scroll-mt-24"
+      className="border-l-4 border-[#00FF88] pl-4 flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white scroll-mt-24"
     >
-      <Icon className="w-6 h-6 text-[#22C55E] shrink-0" />
+      <Icon className="w-6 h-6 text-[#00FF88] shrink-0" />
       <span>
-        <span className="text-[#22C55E] mr-2">{number}.</span>
+        <span className="text-[#00FF88] mr-2">{number}.</span>
         {title}
       </span>
     </h2>
@@ -90,19 +89,18 @@ function SectionHeading({
 
 function SubHeading({ label }: { label: string }) {
   return (
-    <h3 className="text-base sm:text-lg font-semibold text-[#22C55E] mt-6 mb-1 flex items-center gap-2">
+    <h3 className="text-base sm:text-lg font-semibold text-[#00FF88] mt-6 mb-1 flex items-center gap-2">
       <ChevronRight className="w-4 h-4" />
       {label}
     </h3>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
-
+// Page
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-[#111827] text-white flex flex-col">
-      {/* ═══════ STICKY HEADER ═══════ */}
+      {/* Sticky header */}
       <header className="sticky top-0 z-50 bg-[#111827]/85 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -117,18 +115,13 @@ export default function PrivacyPage() {
         </div>
       </header>
 
-      {/* ═══════ HERO ═══════ */}
-      <section className="relative overflow-hidden py-16 px-4">
-        <div className="absolute inset-0 -z-10 pointer-events-none">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-[#22C55E]/10 rounded-full blur-[120px]" />
-          <div className="absolute bottom-0 right-1/4 w-[300px] h-[300px] bg-[#005f3a]/20 rounded-full blur-[100px]" />
-        </div>
-
+      {/* Hero */}
+      <section className="py-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
           <div className="flex justify-center mb-6">
             <Badge
               variant="outline"
-              className="bg-[#22C55E]/10 border-[#22C55E]/30 text-[#22C55E] px-4 py-1.5 text-sm gap-2"
+              className="bg-[#00FF88]/10 border-[#00FF88]/30 text-[#00FF88] px-4 py-1.5 text-sm gap-2"
             >
               <Shield className="w-4 h-4" />
               Privacy Policy
@@ -141,19 +134,19 @@ export default function PrivacyPage() {
 
           <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm text-gray-400">
             <span className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#22C55E]" />
+              <Calendar className="w-4 h-4 text-[#00FF88]" />
               Effective Date:{' '}
               <span className="text-white font-medium">June 18, 2026</span>
             </span>
             <span className="hidden sm:inline w-px h-4 bg-white/20" />
             <span className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-[#22C55E]" />
+              <RefreshCw className="w-4 h-4 text-[#00FF88]" />
               Last Updated:{' '}
               <span className="text-white font-medium">June 18, 2026</span>
             </span>
           </div>
 
-          <Card className="bg-[#005f3a]/15 border-[#22C55E]/20 text-left">
+          <Card className="bg-[#005f3a]/15 border-[#00FF88]/20 text-left">
             <CardContent className="space-y-4">
               <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
                 Smart Ride (&ldquo;Smart Ride&rdquo;, &ldquo;we&rdquo;,
@@ -171,7 +164,7 @@ export default function PrivacyPage() {
                 application, website ({' '}
                 <a
                   href="https://smartrideug.vercel.app"
-                  className="text-[#22C55E] hover:underline"
+                  className="text-[#00FF88] hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -188,10 +181,10 @@ export default function PrivacyPage() {
         </div>
       </section>
 
-      {/* ═══════ MAIN CONTENT ═══════ */}
+      {/* Main content */}
       <main className="flex-1 px-4 pb-20">
         <div className="max-w-3xl mx-auto space-y-12">
-          {/* ── 1. Introduction ────────────────────────────────────────────── */}
+          {/* 1. Introduction */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={1}
@@ -219,7 +212,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* ── 2. Information We Collect ──────────────────────────────────── */}
+          {/* 2. Information We Collect */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={2}
@@ -269,7 +262,7 @@ export default function PrivacyPage() {
                 items={[
                   'Mobile money account details (MTN MoMo, Airtel Money)',
                   'Nylon Pay wallet identifiers',
-                  'Card information (processed securely via payment partners — we do not store full card numbers)',
+                  'Card information (processed by our payment partners; we do not store full card numbers)',
                   'Wallet top-up and withdrawal history',
                   'Transaction records and receipts',
                 ]}
@@ -307,7 +300,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* ── 3. How We Use Your Information ────────────────────────────── */}
+          {/* 3. How We Use Your Information */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={3}
@@ -336,7 +329,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* ── 4. Information Sharing ────────────────────────────────────── */}
+          {/* 4. Information Sharing */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={4}
@@ -415,7 +408,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* ── 5. Data Security ──────────────────────────────────────────── */}
+          {/* 5. Data Security */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={5}
@@ -430,7 +423,7 @@ export default function PrivacyPage() {
               <div className="grid sm:grid-cols-3 gap-4 mt-4">
                 <Card className="bg-white/5 border-white/10">
                   <CardHeader>
-                    <Lock className="w-5 h-5 text-[#22C55E]" />
+                    <Lock className="w-5 h-5 text-[#00FF88]" />
                     <CardTitle className="text-white text-base">
                       Encryption
                     </CardTitle>
@@ -444,7 +437,7 @@ export default function PrivacyPage() {
                 </Card>
                 <Card className="bg-white/5 border-white/10">
                   <CardHeader>
-                    <Database className="w-5 h-5 text-[#22C55E]" />
+                    <Database className="w-5 h-5 text-[#00FF88]" />
                     <CardTitle className="text-white text-base">
                       Secure Storage
                     </CardTitle>
@@ -458,7 +451,7 @@ export default function PrivacyPage() {
                 </Card>
                 <Card className="bg-white/5 border-white/10">
                   <CardHeader>
-                    <Shield className="w-5 h-5 text-[#22C55E]" />
+                    <Shield className="w-5 h-5 text-[#00FF88]" />
                     <CardTitle className="text-white text-base">
                       Access Controls
                     </CardTitle>
@@ -480,7 +473,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* ── 6. Data Retention ─────────────────────────────────────────── */}
+          {/* 6. Data Retention */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={6}
@@ -508,7 +501,7 @@ export default function PrivacyPage() {
                 it can no longer be associated with you. See our{' '}
                 <Link
                   href="/delete-account"
-                  className="text-[#22C55E] hover:underline"
+                  className="text-[#00FF88] hover:underline"
                 >
                   Account Deletion Policy
                 </Link>{' '}
@@ -517,7 +510,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* ── 7. Your Rights ────────────────────────────────────────────── */}
+          {/* 7. Your Rights */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={7}
@@ -544,7 +537,7 @@ export default function PrivacyPage() {
                 To exercise any of these rights, contact us at{' '}
                 <a
                   href="mailto:support@smartride.ug"
-                  className="text-[#22C55E] hover:underline"
+                  className="text-[#00FF88] hover:underline"
                 >
                   support@smartride.ug
                 </a>
@@ -553,7 +546,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* ── 8. Cookies & Tracking ─────────────────────────────────────── */}
+          {/* 8. Cookies & Tracking */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={8}
@@ -583,7 +576,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* ── 9. Children's Privacy ─────────────────────────────────────── */}
+          {/* 9. Children's Privacy */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={9}
@@ -591,11 +584,11 @@ export default function PrivacyPage() {
               Icon={Baby}
             />
             <div className="mt-4 space-y-4">
-              <Card className="bg-[#005f3a]/10 border-[#22C55E]/20">
+              <Card className="bg-[#005f3a]/10 border-[#00FF88]/20">
                 <CardContent>
                   <p className="text-gray-200 leading-relaxed">
                     Smart Ride is not intended for children under{' '}
-                    <span className="text-[#22C55E] font-semibold">13 years</span>{' '}
+                    <span className="text-[#00FF88] font-semibold">13 years</span>{' '}
                     of age. We do not knowingly collect personal information
                     from children under 13.
                   </p>
@@ -611,7 +604,7 @@ export default function PrivacyPage() {
                 13, please contact us at{' '}
                 <a
                   href="mailto:support@smartride.ug"
-                  className="text-[#22C55E] hover:underline"
+                  className="text-[#00FF88] hover:underline"
                 >
                   support@smartride.ug
                 </a>{' '}
@@ -620,7 +613,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* ── 10. Changes to This Policy ────────────────────────────────── */}
+          {/* 10. Changes to This Policy */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={10}
@@ -647,7 +640,7 @@ export default function PrivacyPage() {
             </div>
           </section>
 
-          {/* ── 11. Contact Us ────────────────────────────────────────────── */}
+          {/* 11. Contact Us */}
           <section className="scroll-mt-24">
             <SectionHeading
               number={11}
@@ -669,27 +662,27 @@ export default function PrivacyPage() {
                     Operator of Smart Ride Uganda
                   </p>
                   <div className="flex items-center gap-3 text-gray-300 pt-2">
-                    <Mail className="w-5 h-5 text-[#22C55E] shrink-0" />
+                    <Mail className="w-5 h-5 text-[#00FF88] shrink-0" />
                     <a
                       href="mailto:support@smartride.ug"
-                      className="hover:text-[#22C55E] transition-colors"
+                      className="hover:text-[#00FF88] transition-colors"
                     >
                       support@smartride.ug
                     </a>
                   </div>
                   <div className="flex items-center gap-3 text-gray-300">
-                    <Globe className="w-5 h-5 text-[#22C55E] shrink-0" />
+                    <Globe className="w-5 h-5 text-[#00FF88] shrink-0" />
                     <a
                       href="https://smartrideug.vercel.app"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:text-[#22C55E] transition-colors"
+                      className="hover:text-[#00FF88] transition-colors"
                     >
                       smartrideug.vercel.app
                     </a>
                   </div>
                   <div className="flex items-center gap-3 text-gray-300">
-                    <MapPin className="w-5 h-5 text-[#22C55E] shrink-0" />
+                    <MapPin className="w-5 h-5 text-[#00FF88] shrink-0" />
                     <span>Kampala, Uganda</span>
                   </div>
                 </CardContent>
@@ -699,7 +692,7 @@ export default function PrivacyPage() {
         </div>
       </main>
 
-      {/* ═══════ STICKY FOOTER ═══════ */}
+      {/* Sticky footer */}
       <footer className="mt-auto bg-[#0a0f1a] border-t border-white/10">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
@@ -707,29 +700,29 @@ export default function PrivacyPage() {
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
               <Link
                 href="/privacy"
-                className="text-gray-400 hover:text-[#22C55E] transition-colors"
+                className="text-gray-400 hover:text-[#00FF88] transition-colors"
               >
                 Privacy Policy
               </Link>
               <Link
                 href="/terms"
-                className="text-gray-400 hover:text-[#22C55E] transition-colors"
+                className="text-gray-400 hover:text-[#00FF88] transition-colors"
               >
                 Terms of Service
               </Link>
               <Link
                 href="/delete-account"
-                className="text-gray-400 hover:text-[#22C55E] transition-colors"
+                className="text-gray-400 hover:text-[#00FF88] transition-colors"
               >
                 Account Deletion
               </Link>
             </div>
           </div>
           <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-4">
-            <Mail className="w-4 h-4 text-[#22C55E]" />
+            <Mail className="w-4 h-4 text-[#00FF88]" />
             <a
               href="mailto:support@smartride.ug"
-              className="hover:text-[#22C55E] transition-colors"
+              className="hover:text-[#00FF88] transition-colors"
             >
               support@smartride.ug
             </a>

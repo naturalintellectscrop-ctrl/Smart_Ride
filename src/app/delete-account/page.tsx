@@ -58,20 +58,14 @@ export default function DeleteAccountPage() {
       </nav>
 
       {/* Hero */}
-      <section className="relative pt-24 pb-12 overflow-hidden">
-        <div className="absolute inset-0 opacity-10" style={{ background: 'linear-gradient(135deg, #00FF88 0%, #00FFF3 100%)' }} />
-        <div className="absolute top-1/3 left-1/4 w-96 h-96 bg-[#00FF88] rounded-full blur-[128px] opacity-15" />
-        <div className="absolute bottom-1/3 right-1/4 w-96 h-96 bg-[#00FFF3] rounded-full blur-[128px] opacity-15" />
-        <div className="relative z-10 text-center px-4">
+      <section className="pt-24 pb-12">
+        <div className="text-center px-4">
           <div className="inline-flex items-center gap-2 bg-[#1A1A1F] border border-white/10 rounded-full px-4 py-2 mb-6">
             <Trash2 className="w-4 h-4 text-[#00FF88]" />
             <span className="text-white/60 text-sm">Legal Document</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight max-w-4xl mx-auto">
-            Account{' '}
-            <span className="bg-clip-text text-transparent" style={{ backgroundImage: 'linear-gradient(135deg, #00FF88 0%, #00FFF3 100%)' }}>
-              Deletion Policy
-            </span>
+            Account Deletion Policy
           </h1>
           <p className="mt-4 text-white/50 text-base max-w-2xl mx-auto">
             Last updated: June 2025 &middot; Smart Ride Uganda Limited

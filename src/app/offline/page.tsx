@@ -5,17 +5,17 @@ import { Button } from "@/components/ui/button";
 
 export default function OfflinePage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#0D0D12] p-4">
       <div className="text-center max-w-md">
-        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-blue-100 flex items-center justify-center">
-          <WifiOff className="w-12 h-12 text-blue-600" />
+        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[#00FF88]/10 flex items-center justify-center">
+          <WifiOff className="w-12 h-12 text-[#00FF88]" />
         </div>
-        
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+
+        <h1 className="text-2xl font-bold text-white mb-2">
           You&apos;re Offline
         </h1>
-        
-        <p className="text-gray-600 mb-6">
+
+        <p className="text-white/60 mb-6">
           It looks like you&apos;ve lost your internet connection. 
           Please check your network settings and try again.
         </p>

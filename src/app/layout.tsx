@@ -28,10 +28,10 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://smartride.ug"),
   title: {
-    default: "Smart Ride - Multi-Service Mobility Platform",
+    default: "Smart Ride: rides, food and deliveries in Uganda",
     template: "%s | Smart Ride",
   },
-  description: "Uganda's premier mobility platform for rides, food delivery, shopping, and more. Book Smart Boda, Smart Car, order food, and get items delivered.",
+  description: "Book a boda or car, order food, send a parcel and refill a prescription from one app. Pay with MTN MoMo, Airtel Money or cash.",
   keywords: [
     "Smart Ride",
     "Uganda",
@@ -79,8 +79,8 @@ export const metadata: Metadata = {
     locale: "en_UG",
     url: "https://smartride.ug",
     siteName: "Smart Ride",
-    title: "Smart Ride - Multi-Service Mobility Platform",
-    description: "Uganda's premier mobility platform for rides, food delivery, shopping, and more.",
+    title: "Smart Ride: rides, food and deliveries in Uganda",
+    description: "Book a boda or car, order food, send a parcel and refill a prescription from one app.",
     images: [
       {
         url: "/smartride-logo-new.png",
@@ -94,8 +94,8 @@ export const metadata: Metadata = {
   // Twitter
   twitter: {
     card: "summary_large_image",
-    title: "Smart Ride - Multi-Service Mobility Platform",
-    description: "Uganda's premier mobility platform for rides, food delivery, shopping, and more.",
+    title: "Smart Ride: rides, food and deliveries in Uganda",
+    description: "Book a boda or car, order food, send a parcel and refill a prescription from one app.",
     images: ["/smartride-logo-new.png"],
   },
   

@@ -59,10 +59,12 @@ export const MOBILE_APP_CONFIG = {
   // Admin roles - NEVER shown in mobile app
   adminRoles: ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN'] as const,
   
-  // Mobile app store links
+  // Mobile app store links. Package id matches app.json and capacitor.config.ts.
+  // appStore stays null until the iOS build is actually listed — callers must
+  // render an unavailable state rather than a dead link.
   storeLinks: {
-    playStore: 'https://play.google.com/store/apps/details?id=com.smartride.app',
-    appStore: '#', // Coming soon
+    playStore: 'https://play.google.com/store/apps/details?id=ug.smartride.app',
+    appStore: null as string | null,
   },
 };
 
