@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
+import { RecoveryService } from '@/lib/services/recovery-service';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 /**
@@ -59,11 +60,20 @@ export async function GET(request: NextRequest) {
     const startTime = Date.now();
     console.log('[Cron:DispatchTimeout] Starting expired dispatch match processing...');
 
+    // Sweep stale "ghost" riders offline FIRST, so the expired-match reassignment
+    // below re-dispatches to genuinely-online riders instead of ghosts. Without
+    // this, isOnline stays true forever after a rider closes the app and dispatch
+    // keeps offering to riders who can never accept (client never matches).
+    const sweptRiders = await RecoveryService.sweepStaleOnlineRiders();
+    if (sweptRiders > 0) {
+      console.log(`[Cron:DispatchTimeout] Swept ${sweptRiders} stale online rider(s) offline`);
+    }
+
     // Run the expired match processing
     const processedCount = await DispatchService.processExpiredMatches();
 
     const durationMs = Date.now() - startTime;
-    console.log(`[Cron:DispatchTimeout] Processed ${processedCount} expired/stuck entries in ${durationMs}ms`);
+    console.log(`[Cron:DispatchTimeout] Swept ${sweptRiders} stale riders, processed ${processedCount} expired/stuck entries in ${durationMs}ms`);
 
     // Log the processing run for monitoring
     try {
@@ -73,9 +83,10 @@ export async function GET(request: NextRequest) {
           action: 'CRON_DISPATCH_TIMEOUT',
           entityType: 'System',
           entityId: 'dispatch-timeout-cron',
-          description: `Cron: Processed ${processedCount} expired/stuck dispatch entries in ${durationMs}ms`,
+          description: `Cron: Swept ${sweptRiders} stale riders, processed ${processedCount} expired/stuck dispatch entries in ${durationMs}ms`,
           source: 'CRON',
           newValues: JSON.stringify({
+            sweptRiders,
             processedCount,
             durationMs,
             triggeredBy: 'vercel-cron',
@@ -88,6 +99,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      sweptRiders,
       processed: processedCount,
       durationMs,
       timestamp: new Date().toISOString(),

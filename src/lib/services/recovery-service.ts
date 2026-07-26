@@ -20,6 +20,7 @@ import {
 import { EnhancedTaskStateMachine } from './enhanced-task-state-machine.service';
 import { sendTaskUpdateNotification } from './notification.service';
 import { broadcastEvent, broadcastToUser } from '@/lib/realtime-server';
+import { RIDER_HEARTBEAT_STALE_MS } from './capability.service';
 
 // ============================================
 // RECOVERY CONFIGURATION
@@ -81,6 +82,45 @@ export interface RecoverySummary {
 }
 
 export class RecoveryService {
+  // ============================================
+  // 0. STALE ONLINE-RIDER SWEEP
+  // ============================================
+  // Nothing else flips isOnline=false for an IDLE rider who closes the app or
+  // loses connection — recoverRiderDisconnects only handles riders that already
+  // hold an active task. Without this sweep, "ghost" riders (app closed, flag
+  // stuck online) accumulate; dispatch keeps offering them tasks they can never
+  // accept, so the offer expires, rotates, and the client searches forever and
+  // never matches. This sweep marks idle stale riders offline + DISCONNECTED so
+  // both dispatch eligibility AND the admin monitoring view reflect reality.
+  //
+  // Scope: only idle riders (currentTaskId = null). Riders on an active task
+  // are deliberately left to recoverRiderDisconnects, which reassigns their
+  // task before releasing them — blanket-marking them offline here would orphan
+  // the task. Returns the number of riders swept.
+  static async sweepStaleOnlineRiders(): Promise<number> {
+    try {
+      const staleCutoff = new Date(Date.now() - RIDER_HEARTBEAT_STALE_MS);
+      const result = await db.rider.updateMany({
+        where: {
+          isOnline: true,
+          currentTaskId: null,
+          OR: [
+            { lastHeartbeatAt: { lt: staleCutoff } },
+            { lastHeartbeatAt: null },
+          ],
+        },
+        data: {
+          isOnline: false,
+          connectionStatus: ConnectionStatus.DISCONNECTED,
+        },
+      });
+      return result.count;
+    } catch (error) {
+      console.error('[Recovery] sweepStaleOnlineRiders failed:', error);
+      return 0;
+    }
+  }
+
   // ============================================
   // 1. DISPATCH TIMEOUT RECOVERY
   // ============================================

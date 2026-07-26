@@ -11,6 +11,20 @@ import { db } from '@/lib/db';
 import { RiderRole, TaskType, Rider } from '@prisma/client';
 
 // ============================================
+// HEARTBEAT FRESHNESS
+// ============================================
+// `isOnline` alone is a STALE flag — nothing flips it back to false when a
+// rider closes the app or loses connection (recovery only handles riders that
+// already hold an active task, and no cron sweeps idle riders). So dispatch
+// would offer tasks to "ghost" riders whose app is closed but whose flag is
+// stuck online; they can't accept, the offer expires, rotates, and the client
+// never matches. The app heartbeats every 5-10s while genuinely online, and
+// going online sets lastHeartbeatAt immediately, so a heartbeat older than 90s
+// (≈9-18 missed beats) reliably means the rider is gone. Eligibility must
+// require a fresh heartbeat, not just isOnline=true.
+export const RIDER_HEARTBEAT_STALE_MS = 90_000;
+
+// ============================================
 // CAPABILITY DEFINITIONS
 // ============================================
 
@@ -184,12 +198,17 @@ export class CapabilityService {
       return [];
     }
 
-    // Build query for eligible riders
+    // Build query for eligible riders.
+    // NOTE: isOnline=true is necessary but NOT sufficient — it can be stale.
+    // Require a heartbeat within RIDER_HEARTBEAT_STALE_MS so we never dispatch
+    // to a rider who isn't actually connected (the "ghost rider" that made the
+    // client search forever without ever matching). See the constant above.
     const whereClause: any = {
       riderRole: { in: eligibleRoles },
       status: 'APPROVED',
       isOnline: true,
       currentTaskId: null,
+      lastHeartbeatAt: { gte: new Date(Date.now() - RIDER_HEARTBEAT_STALE_MS) },
     };
 
     // Add location filter if provided
