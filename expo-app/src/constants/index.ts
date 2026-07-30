@@ -1,15 +1,4 @@
-// ============================================
 // SMART RIDE MOBILE - CONSTANTS
-// ============================================
-// Stitch Design System — Material Design 3 Green Theme
-// Applied from stitch_smart_ride_super_app_ui_ux design files
-// ============================================
-
-// ============================================
-// STITCH DESIGN SYSTEM COLORS (MD3 Green Theme)
-// This is the OFFICIAL design system from the Stitch files.
-// All screens should use these colors.
-// ============================================
 
 export const COLORS = {
   // Primary
@@ -56,7 +45,7 @@ export const COLORS = {
   surfaceDim: '#d9dadb',
   surfaceBright: '#f8f9fa',
   surfaceVariant: '#e1e3e4',
-  surfaceTint: '#006d43',
+  surfaceTint: '#014f31',
 
   // Surface Containers
   surfaceContainerLowest: '#ffffff',
@@ -157,6 +146,8 @@ export const SPACING = {
   containerMargin: 16,
   lg: 24,
   xl: 32,
+  xxl: 40, // editorial rhythm (welcome, trip complete, receipt)
+  xxxl: 48,
 };
 
 // ============================================
@@ -258,6 +249,40 @@ export const MOTION = {
   },
   // Press-feedback scale for tappable surfaces (buttons, cards, tiles).
   pressScale: 0.97,
+} as const;
+
+// ============================================
+// OPACITY / BORDER / ICON / AVATAR scales (design-system tokens)
+// ============================================
+// Promote the informal values the components were hardcoding into tokens so
+// screens and primitives stop inventing them (DS spec §1.8/§1.6/§1.11/§1.12).
+export const OPACITY = {
+  disabled: 0.5,
+  pressed: 0.85, // TouchableOpacity activeOpacity
+  scrimLight: 0.28,
+  scrim: 0.45,
+  scrimHeavy: 0.6,
+} as const;
+
+export const BORDER = {
+  hairline: 1,
+  emphasis: 1.5, // outline buttons / focus / selection
+} as const;
+
+export const ICON = {
+  xs: 14,
+  sm: 16,
+  md: 20, // default
+  lg: 24,
+  xl: 28,
+  hero: 40,
+} as const;
+
+export const AVATAR = {
+  sm: 32,
+  md: 40,
+  lg: 48,
+  xl: 64,
 } as const;
 
 // Services config
