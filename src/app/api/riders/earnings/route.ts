@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth-utils';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { toNumber } from '@/lib/decimal-utils';
 
 // Commission rates by service type
@@ -50,6 +50,16 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof NextResponse) {
       return authResult;
     }
+
+    // This route established NO RLS context at all, so it ran against whatever
+    // session state the pooled connection happened to be left in by the
+    // previous request. Under a leftover smart_ride_api role the rider's own
+    // tasks are invisible — there is no rider SELECT policy on Task — so every
+    // period, including lifetime, came back 0 and the app's earnings card read
+    // "UGX 0 · 0 trips today" for a rider who had completed trips that day.
+    // Reading a rider's own completed tasks is a system read: elevate, then
+    // scope strictly by the rider resolved from the caller's own token below.
+    await setServiceRoleContext();
 
     const userId = authResult.userId;
     const { searchParams } = new URL(request.url);
@@ -159,5 +169,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching rider earnings:', error);
     return serverErrorResponse('Failed to fetch rider earnings');
+  } finally {
+    await resetRLSContext();
   }
 }
