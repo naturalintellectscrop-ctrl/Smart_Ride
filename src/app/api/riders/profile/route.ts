@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, setServiceRoleContext } from '@/lib/db';
 import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 
@@ -18,6 +18,15 @@ export async function GET(request: NextRequest) {
     }
     
     const userId = authResult.userId;
+
+    // requireAuth() leaves the RIDER's own RLS context in place, under which
+    // this route's aggregates read nothing that belongs to someone else:
+    // Rating is filtered to fromUserId = caller (the *client* writes the
+    // rating, never the rider, so ratingCount came back 0 and every rider
+    // looked unrated), and there is no rider SELECT policy on Task, so the
+    // earnings aggregates below were empty too. Elevate — every query here is
+    // already scoped to the rider resolved from the caller's own token.
+    await setServiceRoleContext();
 
     // Get rider profile for this user
     const rider = await db.rider.findFirst({
