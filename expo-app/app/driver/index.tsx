@@ -13,7 +13,7 @@
 // screen. Earnings/stats use REAL /riders/earnings + profile data (no mocks).
 // ============================================
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -56,6 +56,13 @@ let styles: any;
 
 interface PeriodEarnings { totalEarnings: number; tripCount: number }
 
+/**
+ * How often an online rider reports in. Must stay comfortably under the
+ * server's RIDER_HEARTBEAT_STALE_MS (90s) or dispatch stops considering this
+ * rider eligible for offers.
+ */
+const HEARTBEAT_INTERVAL_MS = 30_000;
+
 function greetingFor(): string {
   const h = new Date().getHours();
   if (h < 12) return 'Good morning';
@@ -82,6 +89,9 @@ export default function DriverHomeScreen() {
 
   // Location tracking
   const [locationSubscription, setLocationSubscription] = useState<Location.LocationSubscription | null>(null);
+  // Last known coords, kept in a ref so the heartbeat timer below always has
+  // something to send without re-subscribing or re-rendering.
+  const lastCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
 
   // Load rider profile on mount - NON-BLOCKING
   useEffect(() => {
@@ -117,6 +127,35 @@ export default function DriverHomeScreen() {
       stopLocationTracking();
     }
   }, [isOnline]);
+
+  // Keep-alive heartbeat.
+  //
+  // Dispatch only offers rides to riders whose lastHeartbeatAt is within
+  // RIDER_HEARTBEAT_STALE_MS (90s) — that check is what stops offers going to
+  // "ghost" riders whose app is closed but whose isOnline flag is stuck. But
+  // the ONLY heartbeat we sent came from the watchPositionAsync callback,
+  // which fires on movement (distanceInterval: 10m). A rider sitting at a
+  // stage waiting for work does not move, so they stopped heartbeating,
+  // went stale after 90s, and silently received zero requests while their own
+  // screen still read ONLINE. Verified on device: online 30 minutes,
+  // one heartbeat, and a booked ride sat in SEARCHING and never reached them.
+  //
+  // So heartbeat on a timer as well, independent of movement, at well under
+  // the staleness window.
+  useEffect(() => {
+    if (!isOnline) return;
+
+    const beat = () => {
+      const coords = lastCoordsRef.current
+        ?? (latitude != null && longitude != null ? { latitude, longitude } : null);
+      if (!coords) return;
+      api.sendHeartbeat(coords).catch(() => {});
+    };
+
+    beat(); // don't wait a full interval to become eligible
+    const id = setInterval(beat, HEARTBEAT_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [isOnline, latitude, longitude]);
 
   // Real earnings for the header card (today + this week). No mock data —
   // an empty result simply shows UGX 0 / 0 trips.
@@ -225,6 +264,7 @@ export default function DriverHomeScreen() {
         },
         (location) => {
           const { latitude: lat, longitude: lng } = location.coords;
+          lastCoordsRef.current = { latitude: lat, longitude: lng };
 
           socketService.updateLocation({
             latitude: lat,
