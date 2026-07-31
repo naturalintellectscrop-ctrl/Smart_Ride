@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { db, setRLSContext, resetRLSContext } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { requireAuth } from '@/lib/auth/guards';
 import { errorResponse, notFoundResponse, serverErrorResponse, successResponse } from '@/lib/api/response';
 import { z } from 'zod';
@@ -37,7 +37,18 @@ export async function POST(
     }
     const user = authResult.user!;
 
-    await setRLSContext({ userId: user.userId, role: user.role });
+    // Rating is a SYSTEM write that spans two owners: the client inserts a
+    // Rating row and the *rider's* aggregate score is recomputed. Under
+    // client-scoped RLS every one of those steps fails:
+    //   - Rating INSERT -> 42501 (no client INSERT policy reaches the row)
+    //   - task.rider    -> invisible (riders_read_own is rider-scoped), so
+    //                      toUserId silently became null
+    //   - Rating SELECT -> users_read_own_ratings filters to the caller's own
+    //                      rows, so the average was computed from one client
+    //   - Rider UPDATE  -> riders_update_own matches 0 rows -> P2025
+    // Elevate to service role, then enforce ownership explicitly below.
+    // Mirrors /api/tasks/[id]/status.
+    await setServiceRoleContext();
 
     const { id } = await params;
     const body = await request.json();
@@ -93,16 +104,17 @@ export async function POST(
 
     // Update rider's average rating
     if (task.riderId) {
-      const ratings = await db.rating.findMany({
+      const agg = await db.rating.aggregate({
         where: { toRiderId: task.riderId },
-        select: { score: true },
+        _avg: { score: true },
       });
-      const avgRating = ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length;
 
-      await db.rider.update({
-        where: { id: task.riderId },
-        data: { rating: Math.round(avgRating * 10) / 10 },
-      });
+      if (agg._avg.score !== null) {
+        await db.rider.update({
+          where: { id: task.riderId },
+          data: { rating: Math.round(agg._avg.score * 10) / 10 },
+        });
+      }
     }
 
     return successResponse({ message: 'Rating submitted' }, 'Rating submitted');
