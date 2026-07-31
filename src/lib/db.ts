@@ -118,7 +118,20 @@ function getDatasourceUrl(databaseUrl: string): string {
   try {
     const url = new URL(databaseUrl)
     if (!url.searchParams.has('connection_limit')) {
-      url.searchParams.set('connection_limit', process.env.DB_CONNECTION_LIMIT || '10')
+      // connection_limit MUST be 1. RLS here is carried by PostgreSQL *session*
+      // state (SET ROLE + SET app.current_user_id/...), which lives on one
+      // specific connection. With a multi-connection pool, setRLSContext() sets
+      // those on whichever connection served the SET, and the queries that
+      // follow can land on a different one — either with no context at all, or
+      // with values another request RESET mid-flight. That surfaced in
+      // production as 42704 "unrecognized configuration parameter
+      // app.current_user_id", which aborted /api/dispatch/[id]/accept's
+      // post-response block *before* it broadcast rider:task:matched — the
+      // client was never told a rider had accepted. Pinning the pool to a
+      // single connection makes SET and the queries that depend on it share a
+      // session. One connection per lambda is also the right shape for Vercel,
+      // where an instance serves one request at a time.
+      url.searchParams.set('connection_limit', process.env.DB_CONNECTION_LIMIT || '1')
     }
     if (!url.searchParams.has('pool_timeout')) {
       url.searchParams.set('pool_timeout', process.env.DB_POOL_TIMEOUT || '10')
