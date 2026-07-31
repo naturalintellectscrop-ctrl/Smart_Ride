@@ -8,7 +8,8 @@
 // - Business logic hooks
 // ============================================
 
-import { db } from '@/lib/db';
+import { after } from 'next/server';
+import { db, setServiceRoleContext } from '@/lib/db';
 import { ActorType, TaskStatus, TaskType, RiderRole } from '@prisma/client';
 import { TaskAnalyticsUpdater } from './analytics-updater.service';
 import { FinanceLedgerService } from './finance-ledger.service';
@@ -700,18 +701,18 @@ export class EnhancedTaskStateMachine {
         await transitionConfig.afterTransition(result.task, context);
       }
 
-      // Fire-and-forget analytics updates
+      // Deferred analytics updates
       if (!result.idempotent) {
-        this.updateAnalytics(toStatus, result.task, context).catch(err =>
-          console.error('[StateMachine] Analytics update failed:', err)
+        this.runAfterResponse('Analytics update', () =>
+          this.updateAnalytics(toStatus, result.task, context)
         );
       }
 
-      // Fire-and-forget: lifecycle side effects (notifications + socket events)
+      // Deferred lifecycle side effects (notifications + socket events).
       // These run after the transition is committed and must never affect the result.
       if (!result.idempotent) {
-        this.emitLifecycleSideEffects(toStatus, task, result.task, fromStatus, context).catch(err =>
-          console.error('[StateMachine] Lifecycle side effects failed:', err)
+        this.runAfterResponse('Lifecycle side effects', () =>
+          this.emitLifecycleSideEffects(toStatus, task, result.task, fromStatus, context)
         );
       }
 
@@ -829,11 +830,17 @@ export class EnhancedTaskStateMachine {
             );
           }
 
-          // Fire-and-forget: Record task completion in the finance ledger
-          // for immutable audit trail and atomic earnings update
-          FinanceLedgerService.recordTaskCompletion(task.id).catch(err =>
-            console.error('[StateMachine] FinanceLedger recordTaskCompletion failed:', err)
-          );
+          // Record task completion in the finance ledger for immutable audit
+          // trail and atomic earnings update. AWAITED, not fire-and-forget:
+          // updateAnalytics already runs inside runAfterResponse, so the
+          // invocation is kept alive here. Letting this float instead orphaned
+          // the ledger's $transaction (P2028) and silently lost the rider's
+          // earnings for the trip. Never let real money race the response.
+          try {
+            await FinanceLedgerService.recordTaskCompletion(task.id);
+          } catch (err) {
+            console.error('[StateMachine] FinanceLedger recordTaskCompletion failed:', err);
+          }
           break;
         }
 
@@ -844,9 +851,13 @@ export class EnhancedTaskStateMachine {
 
           // Fire-and-forget: Record cancellation in the finance ledger
           // for refund handling and audit trail
-          FinanceLedgerService.recordCancellation(task.id, reason).catch(err =>
-            console.error('[StateMachine] FinanceLedger recordCancellation failed:', err)
-          );
+          // Awaited for the same reason as recordTaskCompletion above: this
+          // issues refunds, and an orphaned transaction loses them silently.
+          try {
+            await FinanceLedgerService.recordCancellation(task.id, reason);
+          } catch (err) {
+            console.error('[StateMachine] FinanceLedger recordCancellation failed:', err);
+          }
           break;
         }
 
@@ -1308,14 +1319,14 @@ export class EnhancedTaskStateMachine {
       }
     }
 
-    // Fire-and-forget analytics updates
-    this.updateAnalytics(toStatus, postTransitionTask, context).catch(err =>
-      console.error('[StateMachine] Analytics update failed:', err)
+    // Deferred analytics updates
+    this.runAfterResponse('Analytics update', () =>
+      this.updateAnalytics(toStatus, postTransitionTask, context)
     );
 
-    // Fire-and-forget: lifecycle side effects (notifications + socket events)
-    this.emitLifecycleSideEffects(toStatus, preTransitionTask, postTransitionTask, fromStatus, context).catch(err =>
-      console.error('[StateMachine] Lifecycle side effects failed:', err)
+    // Deferred lifecycle side effects (notifications + socket events)
+    this.runAfterResponse('Lifecycle side effects', () =>
+      this.emitLifecycleSideEffects(toStatus, preTransitionTask, postTransitionTask, fromStatus, context)
     );
   }
 
@@ -1407,6 +1418,43 @@ export class EnhancedTaskStateMachine {
   // ============================================
   // LIFECYCLE SIDE EFFECTS (notifications + sockets)
   // ============================================
+
+  /**
+   * Run post-transition work without racing the response.
+   *
+   * These jobs used to be launched as bare floating promises. On serverless
+   * that is unsafe: once the handler returns, the route's `finally` resets the
+   * shared RLS context and the lambda can freeze immediately, so the in-flight
+   * work is torn down mid-flight. Observed in production as
+   * P2028 "Transaction not found ... refers to an old closed transaction"
+   * (the finance ledger's $transaction being orphaned, silently rolling back a
+   * rider's earnings) and 42704 "unrecognized configuration parameter
+   * app.current_user_id" (RLS policies reading a context that was already
+   * RESET out from under them).
+   *
+   * `after()` keeps the invocation alive until the callback finishes, and each
+   * job re-establishes its own service-role context rather than inheriting
+   * whatever the request left behind. Outside a request scope (cron, scripts)
+   * `after()` throws, so fall back to running inline.
+   */
+  private static runAfterResponse(label: string, job: () => Promise<unknown>): void {
+    const run = async () => {
+      try {
+        await setServiceRoleContext();
+        await job();
+      } catch (err) {
+        console.error(`[StateMachine] ${label} failed:`, err);
+      }
+    };
+
+    try {
+      after(run);
+    } catch {
+      // No request scope available — run inline and let the caller's await
+      // (or lack of one) decide. Errors are already swallowed above.
+      void run();
+    }
+  }
 
   /**
    * Emit lifecycle side effects after a successful transition.
