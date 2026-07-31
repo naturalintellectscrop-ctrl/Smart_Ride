@@ -176,7 +176,9 @@ export interface Rider {
   isOnline: boolean;
   currentLatitude?: number;
   currentLongitude?: number;
-  rating: number;
+  /** null until the rider has actually been rated — see formatRating(). */
+  rating: number | null;
+  ratingCount?: number;
   totalTrips: number;
   completedTrips: number;
   walletBalance: number;

@@ -114,13 +114,27 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           });
           if (!task) return;
 
+          // Rider.rating defaults to 5.0, so broadcasting it directly showed
+          // the client an unearned "5.0" for a driver nobody has rated. Send
+          // the real average and the count, and null when there are none, so
+          // the client card can say "New" instead of inventing a score.
+          const ratingAgg = await db.rating.aggregate({
+            where: { toRiderId: rider.id },
+            _avg: { score: true },
+            _count: { _all: true },
+          });
+          const ratingCount = ratingAgg._count._all;
+          const realRating =
+            ratingCount > 0 ? Math.round((ratingAgg._avg.score ?? 0) * 10) / 10 : null;
+
           // 1. Notify CLIENT that a rider was assigned
           await broadcastToUser(task.clientId, 'rider:task:matched', {
             taskId,
             rider: {
               id: rider.id,
               name: firstNameOf(rider.fullName),
-              rating: rider.rating,
+              rating: realRating,
+              ratingCount,
             },
           }).catch((e) => console.error('Broadcast to client failed (non-blocking):', e));
 
@@ -131,7 +145,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
             rider: {
               id: rider.id,
               name: firstNameOf(rider.fullName),
-              rating: rider.rating,
+              rating: realRating,
+              ratingCount,
             },
             timestamp: new Date().toISOString(),
           }).catch((e) => console.error('Broadcast to task room failed (non-blocking):', e));

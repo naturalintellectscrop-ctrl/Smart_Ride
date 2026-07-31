@@ -70,8 +70,21 @@ export async function GET(request: NextRequest) {
       _count: true,
     });
 
+    // Rider.rating defaults to 5.0, so an unrated rider is indistinguishable
+    // from a genuinely 5-star one. Return the real aggregate alongside the
+    // count so clients can show "New" instead of a placeholder 5.00.
+    const ratingAgg = await db.rating.aggregate({
+      where: { toRiderId: rider.id },
+      _avg: { score: true },
+      _count: { _all: true },
+    });
+    const ratingCount = ratingAgg._count._all;
+
     return successResponse({
       ...rider,
+      // Only report a rating once at least one real rating exists.
+      rating: ratingCount > 0 ? Math.round((ratingAgg._avg.score ?? 0) * 10) / 10 : null,
+      ratingCount,
       earnings: {
         total: earnings._sum.totalAmount || 0,
         totalTrips: earnings._count,

@@ -49,6 +49,7 @@ import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { GradientButton } from '@/src/components/GradientButton';
 import { Rider } from '@/src/types';
+import { formatUGX, formatRating } from '@/src/utils/money';
 
 let COLORS: ThemedColors;
 let styles: any;
@@ -152,7 +153,10 @@ export default function DriverHomeScreen() {
           isOnline: typeof riderData.isOnline === 'boolean' ? riderData.isOnline : false,
           currentLatitude: riderData.currentLatitude,
           currentLongitude: riderData.currentLongitude,
-          rating: typeof riderData.rating === 'number' ? riderData.rating : 5.0,
+          // Keep null when the rider has no ratings yet — the schema default of
+          // 5.0 would otherwise show an unearned "5.00" to every new rider.
+          rating: typeof riderData.rating === 'number' ? riderData.rating : null,
+          ratingCount: typeof riderData.ratingCount === 'number' ? riderData.ratingCount : 0,
           totalTrips: riderData.totalTrips || 0,
           completedTrips: riderData.completedTrips || 0,
           walletBalance: riderData.walletBalance || 0,
@@ -498,7 +502,7 @@ export default function DriverHomeScreen() {
             </View>
             <View style={styles.ratingChip}>
               <Ionicons name="star" size={13} color={COLORS.warning} />
-              <Text style={styles.ratingChipText}>{(rider?.rating ?? 5).toFixed(2)}</Text>
+              <Text style={styles.ratingChipText}>{formatRating(rider?.rating, rider?.ratingCount)}</Text>
             </View>
           </View>
 
@@ -507,15 +511,15 @@ export default function DriverHomeScreen() {
             <View style={styles.earningsTop}>
               <View>
                 <Text style={styles.earningsLabel}>Today&apos;s earnings</Text>
-                <Text style={styles.earningsValue}>UGX {(today?.totalEarnings ?? 0).toLocaleString()}</Text>
+                <Text style={styles.earningsValue}>{formatUGX(today?.totalEarnings ?? 0)}</Text>
                 <Text style={styles.earningsMeta}>
                   {today?.tripCount ?? 0} trip{(today?.tripCount ?? 0) === 1 ? '' : 's'} today
-                  {weekEarnings != null ? `  •  UGX ${weekEarnings.toLocaleString()} this week` : ''}
+                  {weekEarnings != null ? `  •  ${formatUGX(weekEarnings)} this week` : ''}
                 </Text>
               </View>
               <View style={styles.walletChip}>
                 <Ionicons name="wallet-outline" size={14} color={COLORS.onPrimary} />
-                <Text style={styles.walletChipText}>UGX {(rider?.walletBalance ?? 0).toLocaleString()}</Text>
+                <Text style={styles.walletChipText}>{formatUGX(rider?.walletBalance ?? 0)}</Text>
               </View>
             </View>
             <View style={styles.shortcutRow}>
@@ -528,7 +532,7 @@ export default function DriverHomeScreen() {
 
           {/* Rider stats */}
           <View style={styles.statsCard}>
-            <Stat value={(rider?.rating ?? 5).toFixed(2)} label="Rating" />
+            <Stat value={formatRating(rider?.rating, rider?.ratingCount)} label="Rating" />
             <View style={styles.statDivider} />
             <Stat value={String(today?.tripCount ?? 0)} label="Trips today" />
             <View style={styles.statDivider} />
@@ -588,7 +592,7 @@ export default function DriverHomeScreen() {
 
             <View style={styles.fareRow}>
               <Text style={styles.fareLabel}>You earn</Text>
-              <Text style={styles.fareValue}>UGX {(incomingRequest.task?.totalAmount || 0).toLocaleString()}</Text>
+              <Text style={styles.fareValue}>{formatUGX(incomingRequest.task?.totalAmount || 0)}</Text>
             </View>
 
             <View style={styles.actionRow}>

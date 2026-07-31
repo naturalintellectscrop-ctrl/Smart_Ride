@@ -88,6 +88,13 @@ const PRICING_CONFIG = {
   },
 };
 
+/**
+ * Charged fares are rounded to this many UGX. 100 is the smallest coin in
+ * general circulation, so it is the finest amount two people can actually
+ * settle in cash.
+ */
+export const FARE_ROUNDING_UGX = 100;
+
 type RateConfig = {
   baseFare: number;
   perKmRate: number;
@@ -223,7 +230,20 @@ function computePricing(input: PricingInput, config: RateConfig): PricingBreakdo
     totalAmount = Math.min(totalAmount, config.maximumFare);
   }
 
-  // Calculate commission and rider earnings
+  // Round the charged fare to a cash-payable figure. Most rides here are paid
+  // in physical cash, and a fare like UGX 3,339 cannot actually be handed over
+  // — the smallest coin in circulation is 100. Rounding to the nearest 100
+  // gives riders and clients an amount they can count out and settle without
+  // owing each other change.
+  totalAmount = Math.round(totalAmount / FARE_ROUNDING_UGX) * FARE_ROUNDING_UGX;
+  // Re-assert the floor on a rounding boundary so it stays payable too.
+  totalAmount = Math.max(
+    totalAmount,
+    Math.ceil(config.minimumFare / FARE_ROUNDING_UGX) * FARE_ROUNDING_UGX
+  );
+
+  // Calculate commission and rider earnings. Derived AFTER rounding so the
+  // split always reconciles exactly: commission + riderEarnings === total.
   const platformCommission = Math.round(totalAmount * config.platformCommissionPercent);
   const riderEarnings = totalAmount - platformCommission;
   

@@ -41,6 +41,7 @@ import {
   RIDE_QUICK_REPLIES,
 } from '@/src/utils/ride';
 import { Ionicons } from '@expo/vector-icons';
+import { formatRating } from '@/src/utils/money';
 
 // Polling intervals (in ms)
 const POLL_INTERVAL_FAST = 3000;  // 3 seconds for active rides
@@ -601,7 +602,7 @@ export default function RideTrackingScreen() {
               <Text style={styles.driverName}>{firstName(rider.fullName, 'Driver')}</Text>
               <View style={styles.driverRatingRow}>
                 <Ionicons name="star" size={14} color="#F59E0B" />
-                <Text style={styles.driverRating}>{(rider.rating ?? 0).toFixed(1)}</Text>
+                <Text style={styles.driverRating}>{formatRating(rider.rating, (rider as any).ratingCount)}</Text>
                 <Text style={styles.driverTripsSeparator}>•</Text>
                 <Text style={styles.driverTrips}>{rider.totalTrips ?? 0} trips</Text>
               </View>
