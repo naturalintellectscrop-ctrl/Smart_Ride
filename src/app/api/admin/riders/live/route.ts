@@ -92,7 +92,11 @@ export async function GET(request: NextRequest) {
         riders: data,
         counts: {
           total: data.length,
-          online: data.filter((r) => r.isOnline).length,
+          // Count by the SAME connectionStatus each row renders with — a raw
+          // isOnline count here would headline a bigger number than the map
+          // actually shows active (ghost riders render grey/DISCONNECTED
+          // per-row but were still being added to this badge).
+          online: data.filter((r) => r.connectionStatus === 'ACTIVE').length,
           withLocation: data.filter((r) => r.lastKnownLocation).length,
         },
       },

@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { TaskStatus, DispatchMatchStatus, OrderStatus, ConnectionStatus } from '@prisma/client';
+import { RIDER_HEARTBEAT_STALE_MS } from '@/lib/services/capability.service';
 
 // ============================================
 // ADMIN AUTH VERIFICATION
@@ -174,10 +175,18 @@ export async function GET(request: NextRequest) {
     });
 
     // ── 5. Online Riders ──────────────────────────────────────
+    // isOnline alone is not evidence of a connected rider — it only flips
+    // false via an explicit go-offline call or the staleness sweep, so an
+    // app that was killed (crash, force-close, OS kill) stays isOnline=true
+    // forever. This is the same "ghost rider" gap that broke dispatch
+    // (fb5de7d): the same query, unfixed here, meant this admin card
+    // reported riders as online who dispatch itself would never offer a
+    // ride to. Require a fresh heartbeat, matching dispatch eligibility.
     const onlineRiders = await db.rider.count({
       where: {
         isOnline: true,
         status: 'APPROVED',
+        lastHeartbeatAt: { gte: new Date(Date.now() - RIDER_HEARTBEAT_STALE_MS) },
       },
     });
 
