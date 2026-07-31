@@ -72,8 +72,12 @@ export async function POST(
       return notFoundResponse('Task');
     }
 
-    // Only completed tasks can be rated
-    if (task.status !== 'COMPLETED') {
+    // Only finished tasks can be rated. PAID/CLOSED are post-completion
+    // terminal states (reachable via settlement or admin override), and a ride
+    // that has settled is still rateable — keying on COMPLETED alone would
+    // silently make those rides unratable.
+    const RATEABLE_STATUSES = ['COMPLETED', 'PAID', 'CLOSED'];
+    if (!RATEABLE_STATUSES.includes(task.status)) {
       return errorResponse('Can only rate completed tasks');
     }
 

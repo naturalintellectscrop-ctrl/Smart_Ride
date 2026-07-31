@@ -117,6 +117,15 @@ export class FinanceLedgerService {
       const totalAmount = toNumber(task.totalAmount);
       const merchantId = task.order?.merchantId ?? null;
 
+      // CASH settles differently from every gateway method: the rider physically
+      // takes the full fare from the client at completion, so there is no
+      // inbound payment to wait for and nothing to credit to their wallet —
+      // crediting walletBalance here would pay the rider twice (cash in hand +
+      // withdrawable balance). Instead the rider now OWES the platform its
+      // commission, recorded as a COD_PAYMENT receivable that the existing
+      // deposit flow (recordCashDeposit) clears.
+      const isCash = task.paymentMethod === 'CASH';
+
       // Calculate merchant earnings if applicable (for food/shopping orders)
       let merchantEarnings: number | null = null;
       if (merchantId && (task.taskType === 'FOOD_DELIVERY' || task.taskType === 'SHOPPING')) {
@@ -167,15 +176,45 @@ export class FinanceLedgerService {
           },
         });
 
-        // Update rider totalEarnings and walletBalance atomically
+        // Update rider totalEarnings and walletBalance atomically.
+        // totalEarnings is a lifetime stat and always accrues; walletBalance is
+        // spendable money and must NOT move for cash (see isCash above).
         if (task.riderId && riderEarnings > 0) {
           await tx.rider.update({
             where: { id: task.riderId },
             data: {
               totalEarnings: { increment: riderEarnings },
-              walletBalance: { increment: riderEarnings },
+              ...(isCash ? {} : { walletBalance: { increment: riderEarnings } }),
             },
           });
+        }
+
+        // Cash settlement: the client has paid in full, and the rider holds the
+        // platform's commission until they deposit it.
+        if (isCash) {
+          await tx.task.update({
+            where: { id: taskId },
+            data: { paymentStatus: 'COMPLETED' },
+          });
+
+          if (task.riderId && platformCommission > 0) {
+            await tx.cashCollection.create({
+              data: {
+                riderId: task.riderId,
+                taskId,
+                userId: task.clientId,
+                amount: platformCommission,
+                currency: 'UGX',
+                collectionType: 'COD_PAYMENT',
+                status: 'COLLECTED',
+                collectedAt: new Date(),
+                notes:
+                  `Commission owed on cash task ${task.taskNumber}: ` +
+                  `rider collected UGX ${totalAmount}, keeps UGX ${riderEarnings}, ` +
+                  `owes platform UGX ${platformCommission}`,
+              },
+            });
+          }
         }
 
         // Create audit log for the finance ledger entry
@@ -197,7 +236,16 @@ export class FinanceLedgerService {
               riderEarnings,
               merchantEarnings,
               riderTotalEarnings: toNumber(task.rider?.totalEarnings) + riderEarnings,
-              riderWalletBalance: toNumber(task.rider?.walletBalance) + riderEarnings,
+              riderWalletBalance:
+                toNumber(task.rider?.walletBalance) + (isCash ? 0 : riderEarnings),
+              paymentMethod: task.paymentMethod,
+              cashSettlement: isCash
+                ? {
+                    collectedByRider: totalAmount,
+                    commissionOwedToPlatform: platformCommission,
+                    walletCredited: false,
+                  }
+                : undefined,
             }),
             source: 'SYSTEM',
           },
