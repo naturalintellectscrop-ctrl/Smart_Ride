@@ -19,6 +19,27 @@ import {
   DEPOSIT_REMINDER_THRESHOLD,
 } from '@/lib/finance/cash-tracking-service';
 import { CollectionType } from '@prisma/client';
+import { requireAdmin } from '@/lib/auth/guards';
+import { setServiceRoleContext, resetRLSContext } from '@/lib/db';
+
+/**
+ * Both handlers below were completely unauthenticated. GET exposed every
+ * rider's cash position and the high-cash alert list; POST exposed
+ * recordCashDeposit / recordCashAdjustment / verifyCashCollection, so an
+ * anonymous caller could clear a rider's outstanding cash debt to the platform
+ * or fabricate collections outright. This is finance-operator surface — it
+ * requires an admin.
+ */
+function guardAdmin(request: NextRequest) {
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error || 'Admin access required' },
+      { status: authResult.statusCode || 403 }
+    );
+  }
+  return null;
+}
 
 // ============================================
 // GET /api/finance/cash-tracking
@@ -26,7 +47,11 @@ import { CollectionType } from '@prisma/client';
 // ============================================
 
 export async function GET(request: NextRequest) {
+  const denied = guardAdmin(request);
+  if (denied) return denied;
+
   try {
+    await setServiceRoleContext();
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     const riderId = searchParams.get('riderId') || undefined;
@@ -127,6 +152,8 @@ export async function GET(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
@@ -136,7 +163,11 @@ export async function GET(request: NextRequest) {
 // ============================================
 
 export async function POST(request: NextRequest) {
+  const denied = guardAdmin(request);
+  if (denied) return denied;
+
   try {
+    await setServiceRoleContext();
     const body = await request.json();
     const { action, ...data } = body;
 
@@ -300,5 +331,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
