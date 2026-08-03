@@ -28,7 +28,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useLocationStore } from '@/src/store';
 import { api } from '@/src/services';
-import { DEFAULT_LOCATION } from '@/src/constants';
+import { DEFAULT_LOCATION, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, MOTION } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 

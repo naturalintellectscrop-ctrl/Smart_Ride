@@ -22,6 +22,8 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, ThemeColors } from '@/src/context/theme-context';
+import { makeThemedColors } from '@/src/theme/themedColors';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 
 const HELP_URL = 'https://smartrideug.vercel.app/help';
 const CONTACT_URL = 'https://smartrideug.vercel.app/contact';

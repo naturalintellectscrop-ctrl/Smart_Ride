@@ -20,7 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useChatStore } from '@/src/store/chatStore';
 import { socketService } from '@/src/services/socket.service';
-import { GRADIENTS } from '@/src/constants';
+import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, MOTION } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Conversation } from '@/src/store/chatStore';

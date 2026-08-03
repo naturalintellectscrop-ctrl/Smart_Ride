@@ -28,6 +28,8 @@ import Animated, {
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { useTheme, ThemeColors } from '@/src/context/theme-context';
+import { makeThemedColors } from '@/src/theme/themedColors';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, MOTION } from '@/src/constants';
 import { GlowHeader, GlassCard, GradientButton } from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
 import { pickImage } from '@/src/utils/imagePicker';

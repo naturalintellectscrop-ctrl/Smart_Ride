@@ -33,7 +33,7 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import { api } from '@/src/services/api';
-import { GRADIENTS } from '@/src/constants';
+import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, MOTION } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { isAgoraConfigured, AGORA_CONFIG } from '@/src/config/agora';

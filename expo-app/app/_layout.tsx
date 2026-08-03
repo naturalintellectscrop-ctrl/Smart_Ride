@@ -21,7 +21,7 @@ initSentry();
 // has the token before the first MapView mounts (prevents a black map).
 // ---------------------------------------------------------------------------
 import { Platform } from 'react-native';
-import { MAPBOX_CONFIG } from '../src/constants';
+import { MAPBOX_CONFIG, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../src/constants';
 try {
   if (Platform.OS !== 'web' && MAPBOX_CONFIG.accessToken) {
     const MapboxGL = require('@rnmapbox/maps').default;
