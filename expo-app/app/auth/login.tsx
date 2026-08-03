@@ -30,7 +30,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes, GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
 import { loginWithEmail, isAuthenticated, getAccessToken, getUserData, loginWithGoogle } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
-import { SPACING, RADIUS } from '../../src/constants';
+import { SPACING, RADIUS, TYPOGRAPHY, SHADOWS, OPACITY, BORDER } from '../../src/constants';
 import { useTheme } from '../../src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
@@ -367,64 +367,160 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   logoImage: { width: 62, height: 62, borderRadius: 14 },
 
   brandTitle: {
-    fontSize: 26, fontWeight: '800', color: COLORS.primary,
-    textAlign: 'center', letterSpacing: 0.2,
+    ...TYPOGRAPHY.headlineMd,
+    fontWeight: '700',
+    color: COLORS.primary,
+    textAlign: 'center',
   },
   brandSubtitle: {
-    fontSize: 14, color: COLORS.onSurfaceVariant,
-    textAlign: 'center', marginTop: 4, marginBottom: SPACING.md,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    marginTop: 4,
+    marginBottom: SPACING.md,
   },
 
   errorBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
     backgroundColor: COLORS.errorContainer,
-    borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 10,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
     marginBottom: SPACING.sm,
   },
-  errorText: { flex: 1, color: COLORS.error, fontSize: 13, fontWeight: '500' },
+  errorText: {
+    flex: 1,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.error,
+  },
   hidden: { height: 0, paddingVertical: 0, marginBottom: 0, opacity: 0, overflow: 'hidden' },
 
-  fieldLabel: { fontSize: 14, fontWeight: '700', color: COLORS.onSurface, marginBottom: 8 },
-  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.md, marginBottom: 8 },
-  forgotText: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
+  fieldLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.sm,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: SPACING.md,
+    marginBottom: SPACING.sm,
+  },
+  forgotText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
 
   inputWrap: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.lg,
-    borderWidth: 1, borderColor: COLORS.borderLight,
-    paddingHorizontal: 14, height: 54,
+    borderWidth: 1,
+    borderColor: COLORS.borderLight,
+    paddingHorizontal: SPACING.md,
+    minHeight: 48,
+    justifyContent: 'center',
   },
-  inputIcon: { marginRight: 10 },
-  input: { flex: 1, fontSize: 15, color: COLORS.onSurface, paddingVertical: 0 },
+  inputIcon: {
+    marginRight: SPACING.sm,
+  },
+  input: {
+    flex: 1,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    paddingVertical: SPACING.sm,
+  },
 
   loginButton: {
     backgroundColor: COLORS.primary,
-    height: 56, borderRadius: RADIUS.full,
-    alignItems: 'center', justifyContent: 'center',
+    minHeight: 56,
+    borderRadius: RADIUS.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: SPACING.lg,
-    shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 4,
+    ...SHADOWS.button,
   },
-  loginButtonText: { color: COLORS.onPrimary, fontSize: 17, fontWeight: '700', letterSpacing: 0.3 },
-  buttonDisabled: { opacity: 0.6 },
+  loginButtonText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onPrimary,
+  },
+  buttonDisabled: {
+    opacity: OPACITY.disabled,
+  },
 
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: SPACING.lg },
-  dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.borderLight },
-  dividerText: { fontSize: 11, fontWeight: '700', color: COLORS.onSurfaceVariant, letterSpacing: 1 },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginVertical: SPACING.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: BORDER.hairline,
+    backgroundColor: COLORS.borderLight,
+  },
+  dividerText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    letterSpacing: 1,
+  },
 
   socialButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10,
-    height: 54, borderRadius: RADIUS.full, marginBottom: SPACING.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    minHeight: 48,
+    borderRadius: RADIUS.xl,
+    marginBottom: SPACING.sm,
   },
-  googleButton: { backgroundColor: COLORS.backgroundElevated, borderWidth: 1.5, borderColor: COLORS.border },
-  googleButtonText: { fontSize: 15, fontWeight: '700', color: COLORS.onSurface },
-  phoneButton: { backgroundColor: COLORS.inverseSurface },
-  phoneButtonText: { fontSize: 15, fontWeight: '700', color: COLORS.inverseOnSurface },
+  googleButton: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderWidth: BORDER.emphasis,
+    borderColor: COLORS.border,
+  },
+  googleButtonText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+  },
+  phoneButton: {
+    backgroundColor: COLORS.inverseSurface,
+  },
+  phoneButtonText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.inverseOnSurface,
+  },
 
-  signUpRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: SPACING.md },
-  signUpText: { fontSize: 14, color: COLORS.onSurfaceVariant },
-  signUpLink: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+  signUpRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.md,
+  },
+  signUpText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  signUpLink: {
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
 
-  footerText: { fontSize: 11, color: COLORS.onSurfaceVariant, textAlign: 'center', marginTop: SPACING.lg, opacity: 0.8 },
-  footerLink: { color: COLORS.primary, fontWeight: '600' },
+  footerText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+    marginTop: SPACING.lg,
+    opacity: OPACITY.disabled,
+  },
+  footerLink: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
 });

@@ -36,7 +36,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes, GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
 import { registerUser, isAuthenticated, loginWithGoogle, getAccessToken, getUserData } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
-import { SPACING, RADIUS } from '../../src/constants';
+import { SPACING, RADIUS, TYPOGRAPHY, SHADOWS, OPACITY, BORDER } from '../../src/constants';
 import { useTheme } from '../../src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
@@ -482,78 +482,331 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   progressFill: { flex: 1, height: 4, borderRadius: 2, backgroundColor: COLORS.primary },
   progressFillOn: { backgroundColor: COLORS.primary },
   progressFillOff: { backgroundColor: COLORS.borderLight },
-  stepText: { fontSize: 13, fontWeight: '700', color: COLORS.onSurfaceVariant },
+  stepText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+  },
 
-  scroll: { flexGrow: 1, paddingHorizontal: SPACING.lg, paddingTop: SPACING.sm },
+  scroll: {
+    flexGrow: 1,
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+  },
 
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: SPACING.lg },
-  logo: { width: 40, height: 40, borderRadius: 10 },
-  brandName: { fontSize: 18, fontWeight: '800', color: COLORS.primary },
-  brandTag: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 1 },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  logo: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.md,
+  },
+  brandName: {
+    ...TYPOGRAPHY.headlineMd,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
+  brandTag: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.xs,
+  },
 
-  title: { fontSize: 32, lineHeight: 38, fontWeight: '800', color: COLORS.onSurface, letterSpacing: -0.5 },
-  subtitle: { fontSize: 16, lineHeight: 23, color: COLORS.onSurfaceVariant, marginTop: 8, marginBottom: SPACING.lg },
+  title: {
+    ...TYPOGRAPHY.displayLg,
+    color: COLORS.onSurface,
+  },
+  subtitle: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
 
-  errorBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.errorContainer, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 10, marginBottom: SPACING.md },
-  errorText: { flex: 1, color: COLORS.error, fontSize: 13, fontWeight: '500' },
+  errorBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    backgroundColor: COLORS.errorContainer,
+    borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.md,
+  },
+  errorText: {
+    flex: 1,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.error,
+  },
 
   // Fields
-  field: { marginBottom: SPACING.md },
-  fieldLabel: { fontSize: 15, fontWeight: '600', color: COLORS.onSurface, marginBottom: 8 },
-  inputWrap: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.surfaceContainerLow, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.borderLight, paddingHorizontal: 16, height: 58 },
-  inputWrapFocused: { borderColor: COLORS.primary, backgroundColor: COLORS.backgroundElevated },
-  inputIcon: { marginRight: 10 },
-  inputPrefix: { fontSize: 15, fontWeight: '700', color: COLORS.onSurface, marginRight: 8 },
-  input: { flex: 1, fontSize: 15, color: COLORS.onSurface, paddingVertical: 0 },
-  fieldHint: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 6, marginLeft: 4 },
+  field: {
+    marginBottom: SPACING.md,
+  },
+  fieldLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.sm,
+  },
+  inputWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    borderWidth: BORDER.hairline,
+    borderColor: COLORS.borderLight,
+    paddingHorizontal: SPACING.md,
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  inputWrapFocused: {
+    borderColor: COLORS.primary,
+    borderWidth: BORDER.emphasis,
+    backgroundColor: COLORS.backgroundElevated,
+  },
+  inputIcon: {
+    marginRight: SPACING.sm,
+  },
+  inputPrefix: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+    marginRight: SPACING.sm,
+  },
+  input: {
+    flex: 1,
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    paddingVertical: SPACING.sm,
+  },
+  fieldHint: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.xs,
+    marginLeft: SPACING.xs,
+  },
 
   // Primary CTA
-  cta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 58, borderRadius: 20, backgroundColor: COLORS.primary, marginTop: SPACING.md, shadowColor: COLORS.primary, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.28, shadowRadius: 14, elevation: 5 },
-  ctaDisabled: { opacity: 0.5, shadowOpacity: 0 },
-  ctaText: { color: COLORS.onPrimary, fontSize: 18, fontWeight: '700', letterSpacing: 0.3 },
+  cta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    minHeight: 56,
+    borderRadius: RADIUS.xl,
+    backgroundColor: COLORS.primary,
+    marginTop: SPACING.lg,
+    ...SHADOWS.button,
+  },
+  ctaDisabled: {
+    opacity: OPACITY.disabled,
+  },
+  ctaText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onPrimary,
+  },
 
   // Divider + social
-  dividerRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: SPACING.lg },
-  dividerLine: { flex: 1, height: 1, backgroundColor: COLORS.borderLight },
-  dividerText: { fontSize: 12, fontWeight: '700', color: COLORS.onSurfaceVariant, letterSpacing: 1 },
-  socialButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 54, borderRadius: 20, marginBottom: SPACING.sm },
-  googleButton: { backgroundColor: COLORS.backgroundElevated, borderWidth: 1.5, borderColor: COLORS.border },
-  googleText: { fontSize: 15, fontWeight: '700', color: COLORS.onSurface },
-  phoneButton: { backgroundColor: COLORS.inverseSurface },
-  phoneText: { fontSize: 15, fontWeight: '700', color: COLORS.inverseOnSurface },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    marginVertical: SPACING.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: BORDER.hairline,
+    backgroundColor: COLORS.borderLight,
+  },
+  dividerText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    letterSpacing: 1,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    minHeight: 48,
+    borderRadius: RADIUS.xl,
+    marginBottom: SPACING.sm,
+  },
+  googleButton: {
+    backgroundColor: COLORS.backgroundElevated,
+    borderWidth: BORDER.emphasis,
+    borderColor: COLORS.border,
+  },
+  googleText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+  },
+  phoneButton: {
+    backgroundColor: COLORS.inverseSurface,
+  },
+  phoneText: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.inverseOnSurface,
+  },
 
-  signInRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: SPACING.md },
-  signInText: { fontSize: 14, color: COLORS.onSurfaceVariant },
-  signInLink: { fontSize: 14, fontWeight: '700', color: COLORS.primary },
+  signInRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.md,
+  },
+  signInText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  signInLink: {
+    ...TYPOGRAPHY.bodySm,
+    fontWeight: '700',
+    color: COLORS.primary,
+  },
 
   // Grouped account selector
-  clientCard: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 },
-  groupCard: { backgroundColor: COLORS.surfaceContainerLow, borderRadius: 20, borderWidth: 1.5, borderColor: COLORS.borderLight, paddingHorizontal: 16, marginBottom: SPACING.sm, overflow: 'hidden' },
-  groupCardOn: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryContainer + '14' },
-  groupHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16 },
-  groupIconWrap: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surfaceContainerHigh },
-  groupIconWrapOn: { backgroundColor: COLORS.primary },
-  groupLabel: { fontSize: 16, fontWeight: '700', color: COLORS.onSurface },
-  optionText: { flex: 1 },
-  optionDesc: { fontSize: 13, color: COLORS.onSurfaceVariant, marginTop: 2 },
+  clientCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    paddingVertical: SPACING.md,
+  },
+  groupCard: {
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.lg,
+    borderWidth: BORDER.hairline,
+    borderColor: COLORS.borderLight,
+    paddingHorizontal: SPACING.md,
+    marginBottom: SPACING.sm,
+    overflow: 'hidden',
+  },
+  groupCardOn: {
+    borderColor: COLORS.primary,
+    borderWidth: BORDER.emphasis,
+    backgroundColor: COLORS.primaryContainer + '14',
+  },
+  groupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    paddingVertical: SPACING.md,
+  },
+  groupIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.surfaceContainerHigh,
+  },
+  groupIconWrapOn: {
+    backgroundColor: COLORS.primary,
+  },
+  groupLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+  },
+  optionText: {
+    flex: 1,
+  },
+  optionDesc: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.xs,
+  },
 
-  groupBody: { paddingBottom: 10, gap: 8 },
-  optionRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, paddingHorizontal: 12, borderRadius: 14, backgroundColor: COLORS.backgroundElevated, borderWidth: 1.5, borderColor: 'transparent' },
-  optionRowOn: { borderColor: COLORS.primary, backgroundColor: COLORS.primaryContainer + '10' },
-  optionLabel: { fontSize: 15, fontWeight: '600', color: COLORS.onSurface },
-  optionLabelOn: { color: COLORS.primary },
+  groupBody: {
+    paddingBottom: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.md,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.backgroundElevated,
+    borderWidth: BORDER.hairline,
+    borderColor: 'transparent',
+  },
+  optionRowOn: {
+    borderColor: COLORS.primary,
+    borderWidth: BORDER.emphasis,
+    backgroundColor: COLORS.primaryContainer + '10',
+  },
+  optionLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+  },
+  optionLabelOn: {
+    color: COLORS.primary,
+  },
 
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: COLORS.outline, alignItems: 'center', justifyContent: 'center' },
-  radioOn: { borderColor: COLORS.primary },
-  radioDot: { width: 11, height: 11, borderRadius: 6, backgroundColor: COLORS.primary },
+  radio: {
+    width: 20,
+    height: 20,
+    borderRadius: RADIUS.full,
+    borderWidth: BORDER.emphasis,
+    borderColor: COLORS.outline,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioOn: {
+    borderColor: COLORS.primary,
+  },
+  radioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
+  },
 
   // Terms
-  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: SPACING.md, marginBottom: SPACING.xs },
-  checkbox: { width: 24, height: 24, borderRadius: 8, borderWidth: 2, borderColor: COLORS.outline, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
-  checkboxOn: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  termsText: { flex: 1, fontSize: 14, lineHeight: 20, color: COLORS.onSurfaceVariant },
-  termsLink: { color: COLORS.primary, fontWeight: '700' },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.md,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xs,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: RADIUS.sm,
+    borderWidth: BORDER.emphasis,
+    borderColor: COLORS.outline,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: SPACING.xs,
+  },
+  checkboxOn: {
+    backgroundColor: COLORS.primary,
+    borderColor: COLORS.primary,
+  },
+  termsText: {
+    flex: 1,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
+  termsLink: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
 
-  safeNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: SPACING.md },
-  safeNoteText: { fontSize: 12, color: COLORS.onSurfaceVariant, textAlign: 'center' },
+  safeNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.md,
+  },
+  safeNoteText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
+  },
 });
