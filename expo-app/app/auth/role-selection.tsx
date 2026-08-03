@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import { api } from '../../src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../../src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, BORDER, OPACITY } from '../../src/constants';
 import { useTheme } from '../../src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
 import { GradientButton } from '../../src/components/GradientButton';
@@ -354,18 +354,18 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
   },
   heroIconContainer: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+    width: 56,
+    height: 56,
+    borderRadius: RADIUS.lg,
     backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.md,
-    borderWidth: 1,
+    borderWidth: BORDER.hairline,
     borderColor: COLORS.outlineVariant,
   },
   heroIcon: {
-    fontSize: 32,
+    ...TYPOGRAPHY.displaySm,
   },
   heroTitle: {
     ...TYPOGRAPHY.headlineLgMobile,
@@ -388,15 +388,16 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   // Role card
   roleCard: {
     backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    borderWidth: 2,
+    borderRadius: RADIUS.lg,
+    padding: SPACING.md,
+    borderWidth: BORDER.hairline,
     borderColor: COLORS.outlineVariant,
     ...SHADOWS.card,
   },
   roleCardSelected: {
     backgroundColor: 'rgba(0, 95, 58, 0.03)',
-    borderWidth: 2,
+    borderWidth: BORDER.emphasis,
+    borderColor: COLORS.primary,
     ...SHADOWS.active,
   },
   roleCardHeader: {
@@ -413,7 +414,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginRight: SPACING.md,
   },
   roleIcon: {
-    fontSize: 28,
+    ...TYPOGRAPHY.displaySm,
+    fontSize: 24,
   },
   roleInfo: {
     flex: 1,

@@ -30,6 +30,7 @@ import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
 import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
 import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
 import { Ionicons } from '@expo/vector-icons';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, OPACITY, BORDER } from '../../src/constants';
 
 const { height } = Dimensions.get('window');
 
@@ -501,34 +502,75 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 24,
+    paddingBottom: SPACING.lg,
   },
   header: {
     alignItems: 'center',
-    paddingTop: 60,
-    paddingBottom: 32,
-    paddingHorizontal: 24,
+    paddingTop: SPACING.xl * 1.2,
+    paddingBottom: SPACING.lg,
+    paddingHorizontal: SPACING.md,
   },
   logoContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
+    width: 64,
+    height: 64,
+    borderRadius: RADIUS.lg,
     backgroundColor: COLORS.surfaceContainerLowest,
-    borderWidth: 1,
+    borderWidth: BORDER.hairline,
     borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
+    marginBottom: SPACING.lg,
     overflow: 'hidden',
   },
   logoGlow: {
     position: 'absolute',
-    top: -20,
-    left: -20,
-    right: -20,
-    bottom: -20,
-    borderRadius: 40,
+    top: -16,
+    left: -16,
+    right: -16,
+    bottom: -16,
+    borderRadius: RADIUS.xl,
     backgroundColor: 'rgba(0, 95, 58, 0.12)',
+  },
+  headerTitle: {
+    ...TYPOGRAPHY.displaySm,
+    color: COLORS.onSurface,
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.outline,
+    marginTop: SPACING.sm,
+  },
+  formCard: {
+    marginHorizontal: SPACING.lg,
+    marginTop: -SPACING.sm,
+    backgroundColor: COLORS.surfaceContainerLowest,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.lg,
+    borderWidth: BORDER.hairline,
+    borderColor: COLORS.outlineVariant,
+    ...SHADOWS.card,
+  },
+  shieldContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: RADIUS.md,
+    backgroundColor: 'rgba(0, 95, 58, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: SPACING.md,
+  },
+  formTitle: {
+    ...TYPOGRAPHY.headlineMd,
+    color: COLORS.onSurface,
+    letterSpacing: -0.5,
+    marginBottom: SPACING.xs,
+  },
+  formSubtitle: {
+    ...TYPOGRAPHY.headlineMd,
+    marginBottom: SPACING.xs,
   },
   logoImage: {
     width: 56,

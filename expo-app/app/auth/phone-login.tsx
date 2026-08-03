@@ -25,7 +25,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, OPACITY, BORDER } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { navigateToRoleHome } from '@/src/utils/roleRouting';
@@ -452,17 +452,17 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   flagEmoji: {
-    fontSize: 20,
+    ...TYPOGRAPHY.headlineMd,
+    fontSize: 24,
   },
 
   countryCodeText: {
-    ...TYPOGRAPHY.bodyLg,
+    ...TYPOGRAPHY.labelLg,
     color: COLORS.onSurface,
-    fontWeight: '500',
   },
 
   countryDivider: {
-    width: 1,
+    width: BORDER.hairline,
     height: 24,
     backgroundColor: COLORS.outlineVariant,
     marginRight: SPACING.sm,
@@ -472,9 +472,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flex: 1,
     paddingVertical: SPACING.md,
     paddingRight: SPACING.md,
-    fontSize: 18,
+    ...TYPOGRAPHY.bodyMd,
     color: COLORS.onSurface,
-    fontWeight: '400',
     letterSpacing: 0.5,
   },
 
