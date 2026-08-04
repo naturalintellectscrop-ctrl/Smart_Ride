@@ -439,13 +439,5 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-// ============================================
-// EXPORTS
-// ============================================
-
-export {
-  getAvailablePromotions,
-  applyPromotionToOrder,
-  processOrderCompletion,
-  validatePromoCode,
-};
+// Each function above is already declared with `export const` — a trailing
+// re-export block here would redeclare them.

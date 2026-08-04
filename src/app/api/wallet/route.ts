@@ -11,7 +11,7 @@ import { z } from 'zod';
 const walletTopUpSchema = z.object({
   amount: z.number().positive('Amount must be greater than 0'),
   paymentMethod: z.enum(['MTN_MOMO', 'AIRTEL_MONEY'], {
-    errorMap: () => ({ message: 'Wallet top-up requires a payment method (MTN_MOMO or AIRTEL_MONEY)' }),
+    error: () => 'Wallet top-up requires a payment method (MTN_MOMO or AIRTEL_MONEY)',
   }),
   phoneNumber: z.string().min(1, 'Phone number is required for mobile money top-up'),
 });
@@ -72,15 +72,10 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user payment methods
-    let paymentMethods: unknown[] = [];
-    try {
-      paymentMethods = await db.userPaymentMethod.findMany({
-        where: { userId, isActive: true },
-        orderBy: { isDefault: 'desc' },
-      });
-    } catch {
-      // UserPaymentMethod table may not exist yet
-    }
+    const paymentMethods = await db.userPaymentMethod.findMany({
+      where: { userId, isActive: true },
+      orderBy: { isDefault: 'desc' },
+    });
 
     return NextResponse.json({
       success: true,

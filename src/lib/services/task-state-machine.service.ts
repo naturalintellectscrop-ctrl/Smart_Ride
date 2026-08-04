@@ -9,16 +9,28 @@ import { TaskStatus, TaskType, RiderRole } from '@prisma/client';
  * Valid state transitions for tasks
  * Each state maps to an array of allowed next states
  */
+// Must cover every TaskStatus member. A state missing from this map makes
+// isValidTransition() return false for it, which strands any task that
+// reaches that state. Ride lifecycle:
+//   REQUESTED → SEARCHING → ASSIGNED → ARRIVING → ARRIVED → PICKED_UP
+//   → IN_PROGRESS → COMPLETED → PAID → CLOSED
+// Deliveries use IN_TRANSIT/DELIVERED where rides use IN_PROGRESS.
 export const TASK_STATE_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
-  CREATED: ['MATCHING', 'CANCELLED'],
-  MATCHING: ['ASSIGNED', 'CANCELLED', 'FAILED'],
-  ASSIGNED: ['ACCEPTED', 'MATCHING', 'CANCELLED'],
-  ACCEPTED: ['ARRIVED', 'CANCELLED'],
+  CREATED: ['REQUESTED', 'SEARCHING', 'MATCHING', 'ASSIGNED', 'CANCELLED'],
+  REQUESTED: ['SEARCHING', 'CANCELLED'],
+  SEARCHING: ['ASSIGNED', 'MATCHING', 'CANCELLED', 'FAILED'],
+  MATCHING: ['ASSIGNED', 'SEARCHING', 'CANCELLED', 'FAILED'],
+  ASSIGNED: ['ACCEPTED', 'IN_PROGRESS', 'PICKED_UP', 'MATCHING', 'CANCELLED'],
+  ACCEPTED: ['ARRIVING', 'ARRIVED', 'CANCELLED'],
+  ARRIVING: ['ARRIVED', 'CANCELLED'],
   ARRIVED: ['PICKED_UP', 'CANCELLED'],
-  PICKED_UP: ['IN_TRANSIT', 'CANCELLED'],
+  PICKED_UP: ['IN_PROGRESS', 'IN_TRANSIT', 'DELIVERED', 'CANCELLED'],
+  IN_PROGRESS: ['COMPLETED', 'IN_TRANSIT', 'PICKED_UP', 'CANCELLED'],
   IN_TRANSIT: ['DELIVERED', 'CANCELLED', 'FAILED'],
-  DELIVERED: ['COMPLETED'],
-  COMPLETED: [],
+  DELIVERED: ['COMPLETED', 'CANCELLED'],
+  COMPLETED: ['PAID'],
+  PAID: ['CLOSED'],
+  CLOSED: [],
   CANCELLED: [],
   FAILED: [],
 };

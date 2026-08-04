@@ -77,11 +77,18 @@ export function AnimatedAuthBackground({
   // ==========================================
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const canvasEl = canvasRef.current;
+    if (!canvasEl) return;
+    // Same hoisting caveat as `ctx` below — handleResize is a hoisted function
+    // declaration, so bind the narrowed value to a const it can close over.
+    const canvas = canvasEl;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const maybeCtx = canvas.getContext('2d');
+    if (!maybeCtx) return;
+    // Bind to a const after the guard: renderFrame below is a hoisted function
+    // declaration, and TS widens a closed-over `let`/outer binding back to
+    // nullable inside it, so the guard above would not narrow there.
+    const ctx = maybeCtx;
 
     // Set initial dimensions
     const width = window.innerWidth;

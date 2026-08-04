@@ -18,7 +18,7 @@ import { z } from 'zod';
 const withdrawSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
   phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits'),
-  provider: z.enum(['MTN', 'AIRTEL'], { errorMap: () => ({ message: 'Provider must be MTN or AIRTEL' }) }),
+  provider: z.enum(['MTN', 'AIRTEL'], { error: () => 'Provider must be MTN or AIRTEL' }),
 });
 
 export async function POST(request: NextRequest) {

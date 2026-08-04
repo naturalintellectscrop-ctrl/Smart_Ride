@@ -686,15 +686,5 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-// ============================================
-// EXPORTS
-// ============================================
-
-export {
-  enrollInIncentive,
-  getDriverIncentiveProgress,
-  processTaskCompletion,
-  completeIncentiveAndReward,
-  processPendingRewards,
-  expireEndedIncentives,
-};
+// Each function above is already declared with `export async function` — a
+// trailing re-export block here would redeclare them.

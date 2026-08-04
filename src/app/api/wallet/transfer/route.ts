@@ -49,7 +49,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (senderWallet.balance < totalAmount) {
+    // balance is a Prisma Decimal — compare via the Decimal API. A plain
+    // `<` relies on JS coercion and can wrongly pass this guard.
+    if (senderWallet.balance.lessThan(totalAmount)) {
       return NextResponse.json({ success: false, error: 'Insufficient balance' },
         { status: 400 }
       );
@@ -125,7 +127,7 @@ export async function POST(request: NextRequest) {
           description: note || `Transfer to ${recipientUser.name || recipientPhone}`,
           amount: -amount,
           balanceBefore: senderBalanceBefore,
-          balanceAfter: senderBalanceBefore - totalAmount,
+          balanceAfter: senderBalanceBefore.minus(totalAmount),
           status: 'COMPLETED',
         },
       });
@@ -137,8 +139,8 @@ export async function POST(request: NextRequest) {
           transactionType: 'FEE',
           description: 'Transfer fee',
           amount: -fee,
-          balanceBefore: senderBalanceBefore - totalAmount + amount,
-          balanceAfter: senderBalanceBefore - totalAmount,
+          balanceBefore: senderBalanceBefore.minus(totalAmount).plus(amount),
+          balanceAfter: senderBalanceBefore.minus(totalAmount),
           status: 'COMPLETED',
         },
       });
@@ -151,7 +153,7 @@ export async function POST(request: NextRequest) {
           description: note || `Received from ${user.name || 'Smart Ride user'}`,
           amount: amount,
           balanceBefore: recipientBalanceBefore,
-          balanceAfter: recipientBalanceBefore + amount,
+          balanceAfter: recipientBalanceBefore.plus(amount),
           status: 'COMPLETED',
         },
       });

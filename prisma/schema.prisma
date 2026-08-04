@@ -52,6 +52,7 @@ model User {
   tasks                    Task[]
   callerCalls              CallSession[]          @relation("CallerCalls")
   recipientCalls           CallSession[]          @relation("RecipientCalls")
+  paymentMethods           UserPaymentMethod[]
 
   @@index([email])
   @@index([phone])
@@ -1684,6 +1685,65 @@ model WalletTransaction {
 }
 
 // ============================================
+// EMERGENCY CONTACT MODEL
+// People notified when a user or rider raises an SOS alert.
+// NOTE: `userId` is polymorphic — it holds a User.id when userType=CLIENT and
+// a Rider.id when userType=RIDER — so it is deliberately NOT a foreign key.
+// At most one row per (userId, userType) should have isPrimary=true; the API
+// clears the previous primary before setting a new one.
+// ============================================
+model EmergencyContact {
+  id               String                @id @default(cuid())
+  userId           String
+  userType         EmergencyContactOwner @default(CLIENT)
+  name             String
+  phone            String
+  email            String?
+  relationship     String                @default("Other")
+  isPrimary        Boolean               @default(false)
+  isVerified       Boolean               @default(false)
+  verificationCode String?
+  verifiedAt       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([userId])
+  @@index([userId, userType])
+  @@index([isPrimary])
+}
+
+enum EmergencyContactOwner {
+  CLIENT
+  RIDER
+}
+
+// ============================================
+// USER PAYMENT METHOD MODEL
+// Saved mobile-money accounts and cards a user can pay/top-up with.
+// Removal is a soft delete (isActive=false) so historical payments keep
+// resolving their method; exactly one active row per user is isDefault.
+// ============================================
+model UserPaymentMethod {
+  id            String   @id @default(cuid())
+  userId        String
+  type          String
+  name          String
+  accountNumber String?
+  cardLastFour  String?
+  cardBrand     String?
+  phoneNumber   String?
+  isDefault     Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@index([isDefault])
+}
+
+// ============================================
 // CART MODEL
 // Shopping cart for marketplace orders
 // ============================================
@@ -2110,6 +2170,17 @@ enum NotificationType {
   SOS_ALERT
   HEALTH_ORDER_UPDATE
   PRESCRIPTION_UPDATE
+  // Marketplace balance broadcasts. Driver-facing types tell riders where
+  // demand/earnings are; client-facing types warn about surge and promos.
+  // Emitted by getNotificationTypeForBroadcast() in notification.service.ts.
+  SURGE_ALERT
+  SURGE_WARNING
+  HIGH_DEMAND_ZONE
+  INCENTIVE_AVAILABLE
+  EARNINGS_OPPORTUNITY
+  DRIVER_REPOSITION
+  PROMO_AVAILABLE
+  DISCOUNT_OFFER
 }
 
 enum SOSStatus {
@@ -2389,6 +2460,11 @@ enum WalletTransactionType {
   COMMISSION
   PAYOUT
   ADJUSTMENT
+  // Peer-to-peer wallet transfers (/api/wallet/transfer) record three legs:
+  // TRANSFER_OUT + FEE on the sender's wallet, TRANSFER_IN on the recipient's.
+  TRANSFER_IN
+  TRANSFER_OUT
+  FEE
 }
 
 enum WalletTransactionStatus {
