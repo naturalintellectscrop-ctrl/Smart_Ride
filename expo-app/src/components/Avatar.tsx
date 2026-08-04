@@ -6,7 +6,7 @@
 // ============================================
 
 import React, { useMemo } from 'react';
-import { View, Text, Image, ViewStyle } from 'react-native';
+import { View, Text, Image, ViewStyle, ImageStyle, StyleProp } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AVATAR, BORDER } from '../constants';
 import { useTheme } from '../context/theme-context';
@@ -44,7 +44,16 @@ export function Avatar({ uri, name, size = 'md', icon = 'person', style }: Avata
   };
 
   if (uri) {
-    return <Image source={{ uri }} style={[base, style]} accessibilityLabel={label} accessible />;
+    // Image takes ImageStyle, not ViewStyle. Every property in `base` (size,
+    // radius, background, border, overflow) is valid on both.
+    return (
+      <Image
+        source={{ uri }}
+        style={[base, style] as StyleProp<ImageStyle>}
+        accessibilityLabel={label}
+        accessible
+      />
+    );
   }
   return (
     <View style={[base, style]} accessibilityLabel={label} accessible>

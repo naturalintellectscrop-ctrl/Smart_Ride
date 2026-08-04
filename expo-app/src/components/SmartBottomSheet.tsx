@@ -47,12 +47,14 @@ export function SmartBottomSheet({
       statusBarTranslucent
       onRequestClose={onDismiss}
     >
-      <Animated.View entering={FadeIn.duration(MOTION.base)} exiting={FadeOut.duration(MOTION.fast)} style={styles.backdrop}>
+      {/* Durations live under MOTION.duration.*; MOTION.base/MOTION.fast were
+          undefined, so these animations had no duration. */}
+      <Animated.View entering={FadeIn.duration(MOTION.duration.base)} exiting={FadeOut.duration(MOTION.duration.fast)} style={styles.backdrop}>
         <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
         
         <Animated.View
           entering={SlideInUp.damping(20).mass(0.9).springify()}
-          exiting={FadeOut.duration(MOTION.fast)}
+          exiting={FadeOut.duration(MOTION.duration.fast)}
           style={[
             styles.sheet,
             { paddingBottom: Math.max(insets.bottom, SPACING.sm) },

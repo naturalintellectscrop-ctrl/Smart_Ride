@@ -125,6 +125,10 @@ export const COLORS = {
 // ============================================
 export const TYPOGRAPHY = {
   displayLg: { fontSize: 32, fontWeight: '700' as const, lineHeight: 40, letterSpacing: -0.02 * 16 },
+  // Auth headers (reset-password, change-password, role-selection) reference
+  // displaySm; it was missing from the scale, so those styles resolved to
+  // undefined. 28 matches the hardcoded value those screens were using.
+  displaySm: { fontSize: 28, fontWeight: '700' as const, lineHeight: 36, letterSpacing: -0.02 * 14 },
   headlineLg: { fontSize: 24, fontWeight: '700' as const, lineHeight: 32 },
   headlineLgMobile: { fontSize: 22, fontWeight: '700' as const, lineHeight: 28 },
   headlineMd: { fontSize: 20, fontWeight: '600' as const, lineHeight: 28 },
@@ -415,8 +419,8 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
   PICKED_UP: 'Trip started',
   // Rides use IN_PROGRESS as the moving state (deliveries use IN_TRANSIT).
   // Both must be mapped or the raw enum leaks into the UI header.
-  IN_PROGRESS: 'On your way',
-  IN_TRANSIT: 'On your way',
+  IN_PROGRESS: 'Moving',
+  IN_TRANSIT: 'Moving',
   DELIVERED: 'Delivered',
   COMPLETED: 'Trip completed',
   CANCELLED: 'Cancelled',
