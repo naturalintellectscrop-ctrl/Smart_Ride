@@ -390,7 +390,7 @@ export class MetricsService {
         completionRate: rider.totalTrips > 0 ? (rider.completedTrips / rider.totalTrips) * 100 : 0,
         averageRating: avgRating,
         totalEarnings: toNumber(rider.totalEarnings),
-        averageEarningsPerDay: rider.totalEarnings / 30,
+        averageEarningsPerDay: toNumber(rider.totalEarnings) / 30,
         onTimeRate,
         averageResponseTime: avgResponseTime,
         onlineHours,

@@ -243,7 +243,9 @@ export async function recordCashDeposit(
       },
     });
 
-    remainingDeposit -= collection.amount;
+    // amount is a Prisma Decimal — subtracting it raw makes this NaN and
+    // silently breaks the remaining-deposit allocation loop.
+    remainingDeposit -= toNumber(collection.amount);
   }
 
   // Create finance log

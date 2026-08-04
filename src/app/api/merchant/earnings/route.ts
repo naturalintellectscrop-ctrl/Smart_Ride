@@ -103,8 +103,10 @@ async function getEarningsSummary(startDate?: string | null, endDate?: string | 
   
   orders.forEach(order => {
     const commissionRate = order.merchant?.commissionRate || 0.15;
-    const merchantEarnings = order.subtotal * (1 - commissionRate);
-    const platformCommission = order.subtotal * commissionRate;
+    // subtotal is a Prisma Decimal — multiplying it directly yields NaN.
+    const subtotal = toNumber(order.subtotal);
+    const merchantEarnings = subtotal * (1 - commissionRate);
+    const platformCommission = subtotal * commissionRate;
     
     totalMerchantEarnings += merchantEarnings;
     totalPlatformCommission += platformCommission;
@@ -218,10 +220,10 @@ async function getMerchantEarnings(merchantId?: string | null, startDate?: strin
     const orders = merchant.orders;
     const totalRevenue = orders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
     const merchantEarnings = orders.reduce((sum, order) => {
-      return sum + (order.subtotal * (1 - merchant.commissionRate));
+      return sum + toNumber(order.subtotal) * (1 - merchant.commissionRate);
     }, 0);
     const platformCommission = orders.reduce((sum, order) => {
-      return sum + (order.subtotal * merchant.commissionRate);
+      return sum + toNumber(order.subtotal) * merchant.commissionRate;
     }, 0);
 
     return NextResponse.json({
@@ -486,7 +488,7 @@ async function getEarningsByMerchantType() {
       orders.forEach(order => {
         const merchant = merchants.find(m => m.id === order.merchantId);
         if (merchant) {
-          totalCommission += order.subtotal * merchant.commissionRate;
+          totalCommission += toNumber(order.subtotal) * merchant.commissionRate;
         }
       });
 

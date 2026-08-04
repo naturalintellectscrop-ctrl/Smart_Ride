@@ -114,8 +114,9 @@ export async function getOrCreateCart(userId: string) {
             where: { id: existingItem.id },
             data: {
               quantity: existingItem.quantity + item.quantity,
+              // unitPrice is a Decimal — multiplying it raw produces NaN.
               totalPrice:
-                (existingItem.quantity + item.quantity) * existingItem.unitPrice,
+                (existingItem.quantity + item.quantity) * toNumber(existingItem.unitPrice),
             },
           });
         } else {
@@ -139,11 +140,18 @@ export async function getOrCreateCart(userId: string) {
     });
   });
 
-  // Return the merged cart
+  // Return the merged cart. findUnique is nullable, which made every caller's
+  // `cart.id` a possible null dereference; the row was just updated in the
+  // transaction above, so absence is a real invariant violation, not a
+  // normal outcome.
   const mergedCart = await db.cart.findUnique({
     where: { id: targetCart.id },
     include: { items: { where: { isActive: true } } },
   });
+
+  if (!mergedCart) {
+    throw new Error(`Failed to load merged cart ${targetCart.id}`);
+  }
 
   return mergedCart;
 }
@@ -208,7 +216,7 @@ export async function addItemToCart(
         where: { id: existingItem.id },
         data: {
           quantity: newQuantity,
-          totalPrice: newQuantity * existingItem.unitPrice,
+          totalPrice: newQuantity * toNumber(existingItem.unitPrice),
           specialNotes: specialNotes ?? existingItem.specialNotes,
         },
       });
@@ -233,7 +241,7 @@ export async function addItemToCart(
         productName: menuItem.name,
         quantity,
         unitPrice: menuItem.price,
-        totalPrice: menuItem.price * quantity,
+        totalPrice: toNumber(menuItem.price) * quantity,
         specialNotes,
         priceSnapshot: menuItem.price,
         isActive: true,
@@ -297,7 +305,7 @@ export async function updateCartItem(
 
     if (quantity !== undefined) {
       updateData.quantity = quantity;
-      updateData.totalPrice = quantity * cartItem.unitPrice;
+      updateData.totalPrice = quantity * toNumber(cartItem.unitPrice);
     }
 
     if (specialNotes !== undefined) {
@@ -685,7 +693,7 @@ export async function mergeCarts(
           where: { id: existingItem.id },
           data: {
             quantity: newQuantity,
-            totalPrice: newQuantity * existingItem.unitPrice,
+            totalPrice: newQuantity * toNumber(existingItem.unitPrice),
           },
         });
         // Remove the source item

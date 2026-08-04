@@ -27,13 +27,12 @@ export async function GET(request: NextRequest) {
   await setRLSContext(decoded);
   try {
     // Get merchant for this user
+    // Resolve by the unique Merchant.userId link. The previous OR matched on
+    // decoded.phone (never present on JWTPayload, so always undefined) and
+    // decoded.email, which could resolve a different merchant that happens to
+    // share an email.
     const merchant = await db.merchant.findFirst({
-      where: {
-        OR: [
-          { phone: decoded.phone },
-          { email: decoded.email },
-        ],
-      },
+      where: { userId: decoded.userId },
     });
 
     if (!merchant) {
@@ -73,13 +72,12 @@ export async function POST(request: NextRequest) {
   await setRLSContext(decoded);
   try {
     // Get merchant for this user
+    // Resolve by the unique Merchant.userId link. The previous OR matched on
+    // decoded.phone (never present on JWTPayload, so always undefined) and
+    // decoded.email, which could resolve a different merchant that happens to
+    // share an email.
     const merchant = await db.merchant.findFirst({
-      where: {
-        OR: [
-          { phone: decoded.phone },
-          { email: decoded.email },
-        ],
-      },
+      where: { userId: decoded.userId },
     });
 
     if (!merchant) {
@@ -147,13 +145,12 @@ export async function PUT(request: NextRequest) {
   await setRLSContext(decoded);
   try {
     // Get merchant for this user
+    // Resolve by the unique Merchant.userId link. The previous OR matched on
+    // decoded.phone (never present on JWTPayload, so always undefined) and
+    // decoded.email, which could resolve a different merchant that happens to
+    // share an email.
     const merchant = await db.merchant.findFirst({
-      where: {
-        OR: [
-          { phone: decoded.phone },
-          { email: decoded.email },
-        ],
-      },
+      where: { userId: decoded.userId },
     });
 
     if (!merchant) {
@@ -227,13 +224,12 @@ export async function DELETE(request: NextRequest) {
   await setRLSContext(decoded);
   try {
     // Get merchant for this user
+    // Resolve by the unique Merchant.userId link. The previous OR matched on
+    // decoded.phone (never present on JWTPayload, so always undefined) and
+    // decoded.email, which could resolve a different merchant that happens to
+    // share an email.
     const merchant = await db.merchant.findFirst({
-      where: {
-        OR: [
-          { phone: decoded.phone },
-          { email: decoded.email },
-        ],
-      },
+      where: { userId: decoded.userId },
     });
 
     if (!merchant) {

@@ -53,7 +53,9 @@ export async function POST(
     body = sendMessageSchema.parse(rawBody);
   } catch (validationError) {
     if (validationError instanceof z.ZodError) {
-      return errorResponse(validationError.errors.map((e) => e.message).join(', '));
+      // zod v4 renamed ZodError.errors to .issues; the old name is undefined
+      // here, so this handler threw instead of returning a 400.
+      return errorResponse(validationError.issues.map((e) => e.message).join(', '));
     }
     return errorResponse('Invalid request body');
   }

@@ -99,8 +99,10 @@ async function getEarningsSummary(startDate?: string | null, endDate?: string | 
   
   healthOrders.forEach(order => {
     const commissionRate = order.provider?.commissionRate || 0.10;
-    const providerEarnings = order.subtotal * (1 - commissionRate);
-    const platformCommission = order.subtotal * commissionRate;
+    // subtotal is a Prisma Decimal — multiplying it raw produces NaN.
+    const subtotal = toNumber(order.subtotal);
+    const providerEarnings = subtotal * (1 - commissionRate);
+    const platformCommission = subtotal * commissionRate;
     
     totalProviderEarnings += providerEarnings;
     totalPlatformCommission += platformCommission;
@@ -164,7 +166,9 @@ async function getEarningsSummary(startDate?: string | null, endDate?: string | 
       total: totalProviders,
       active: activeProviders,
     },
-    pendingPayouts: pendingPayouts.toNumber(_sum.pendingPayout),
+    // Was `pendingPayouts.toNumber(_sum.pendingPayout)` — a non-existent
+    // method on the aggregate plus an undefined identifier.
+    pendingPayouts: toNumber(pendingPayouts._sum.pendingPayout),
     orderTypes: {
       prescription: {
         count: prescriptionOrders.length,
@@ -205,10 +209,10 @@ async function getProviderEarnings(providerId?: string | null, startDate?: strin
     const orders = provider.healthOrders;
     const totalRevenue = orders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
     const providerEarnings = orders.reduce((sum, order) => {
-      return sum + (order.subtotal * (1 - provider.commissionRate));
+      return sum + toNumber(order.subtotal) * (1 - provider.commissionRate);
     }, 0);
     const platformCommission = orders.reduce((sum, order) => {
-      return sum + (order.subtotal * provider.commissionRate);
+      return sum + toNumber(order.subtotal) * provider.commissionRate;
     }, 0);
 
     return NextResponse.json({
@@ -263,8 +267,8 @@ async function getProviderEarnings(providerId?: string | null, startDate?: strin
       });
 
       const revenue = orders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
-      const earnings = orders.reduce((sum, order) => sum + (order.subtotal * (1 - provider.commissionRate)), 0);
-      const commission = orders.reduce((sum, order) => sum + (order.subtotal * provider.commissionRate), 0);
+      const earnings = orders.reduce((sum, order) => sum + toNumber(order.subtotal) * (1 - provider.commissionRate), 0);
+      const commission = orders.reduce((sum, order) => sum + toNumber(order.subtotal) * provider.commissionRate, 0);
 
       return {
         id: provider.id,
