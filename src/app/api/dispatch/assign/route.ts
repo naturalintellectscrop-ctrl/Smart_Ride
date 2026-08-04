@@ -9,6 +9,7 @@ import { setRLSContext, resetRLSContext } from '@/lib/db';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 import { z } from 'zod';
+import { TaskType } from '@prisma/client';
 
 // POST /api/dispatch/assign - Find and assign rider
 export async function POST(request: NextRequest) {
@@ -33,11 +34,15 @@ export async function POST(request: NextRequest) {
 
     const dispatchAssignSchema = z.object({
       taskId: z.string().min(1),
-      taskType: z.string().min(1),
+      // Validate against the real enums the dispatch service consumes. These
+      // were previously a loose string and a 0-10 number, which let unknown
+      // task types through and passed a numeric priority where the service
+      // expects HIGH/NORMAL/LOW — so priority never matched a real branch.
+      taskType: z.enum(TaskType),
       pickupLatitude: z.number().min(-90).max(90),
       pickupLongitude: z.number().min(-180).max(180),
       excludeRiderIds: z.array(z.string()).optional(),
-      priority: z.number().int().min(0).max(10).optional(),
+      priority: z.enum(['HIGH', 'NORMAL', 'LOW']).optional(),
     });
     const parsed = dispatchAssignSchema.safeParse(body);
     if (!parsed.success) {

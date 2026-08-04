@@ -3,12 +3,11 @@
  * Get current authenticated user
  */
 
-import { NextRequest } from 'next/server';
-import { withAuth } from '@/lib/auth/middleware';
+import { withAuth, type AuthenticatedRequest } from '@/lib/auth/middleware';
 import { getUserById } from '@/lib/services/auth.service';
 import { successResponse, errorResponse } from '@/lib/api/response';
 
-export const GET = withAuth(async (request: NextRequest) => {
+export const GET = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const user = request.user;
     

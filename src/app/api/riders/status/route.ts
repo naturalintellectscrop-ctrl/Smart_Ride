@@ -144,8 +144,10 @@ export async function GET(request: NextRequest) {
         id: true,
         isOnline: true,
         status: true,
-        lastOnlineAt: true,
-        lastOfflineAt: true,
+        // lastOnlineAt/lastOfflineAt are not columns on Rider and nothing
+        // writes them — selecting them made Prisma throw on every request.
+        // lastLocationUpdate is the real "last seen" signal.
+        lastLocationUpdate: true,
         lastHeartbeatAt: true,
         connectionStatus: true,
       },

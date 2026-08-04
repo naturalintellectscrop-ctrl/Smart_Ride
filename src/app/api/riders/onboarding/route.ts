@@ -67,7 +67,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Reconstruct the documents/vehicle state from the rider record
-    const steps = [
+    // Explicit element type: the literal below would otherwise infer a union
+    // of just the personal/documents shapes, rejecting the vehicle step push.
+    const steps: { step: string; data: Record<string, string> }[] = [
       {
         step: 'personal',
         data: {

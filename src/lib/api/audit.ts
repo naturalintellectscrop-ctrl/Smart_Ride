@@ -14,6 +14,9 @@ interface AuditLogData {
   merchantId?: string;
   orderId?: string;
   taskId?: string;
+  // AuditLog has a healthOrderId column + HealthOrderAuditLogs relation; it
+  // was missing here, so health-order audit entries lost that linkage.
+  healthOrderId?: string;
   description?: string;
   oldValues?: Record<string, unknown>;
   newValues?: Record<string, unknown>;
@@ -39,6 +42,7 @@ export async function createAuditLog(data: AuditLogData) {
         merchantId: data.merchantId,
         orderId: data.orderId,
         taskId: data.taskId,
+        healthOrderId: data.healthOrderId,
         description: data.description,
         oldValues: data.oldValues ? JSON.stringify(data.oldValues) : null,
         newValues: data.newValues ? JSON.stringify(data.newValues) : null,

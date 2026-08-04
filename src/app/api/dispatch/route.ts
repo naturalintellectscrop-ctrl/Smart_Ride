@@ -222,8 +222,12 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case 'create':
-        // Create and start a new dispatch
-        return await handleCreateDispatch(validatedData);
+        // Create and start a new dispatch. createSchema above validates the
+        // { request, config? } shape but widens to Record<string, unknown>;
+        // handleCreateDispatch re-checks the required request fields itself.
+        return await handleCreateDispatch(
+          validatedData as unknown as { request: DispatchRequest; config?: Partial<DispatchConfig> }
+        );
 
       case 'accept':
         // Provider accepts an offer

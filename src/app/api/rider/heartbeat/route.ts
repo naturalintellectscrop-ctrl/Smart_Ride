@@ -98,7 +98,8 @@ export async function POST(request: NextRequest) {
       });
 
       // If task_id is provided, update task tracking
-      let updatedTask = null;
+      // Widen from the `null` initialiser so the task row can be assigned.
+      let updatedTask: Awaited<ReturnType<typeof tx.task.update>> | null = null;
       if (task_id) {
         const task = await tx.task.findUnique({
           where: { id: task_id },
@@ -252,7 +253,7 @@ export async function GET(request: NextRequest) {
     const taskId = searchParams.get('task_id');
 
     // Get recent heartbeat logs if task_id provided
-    let recentLogs = null;
+    let recentLogs: Awaited<ReturnType<typeof db.heartbeatLog.findMany>> | null = null;
     if (taskId) {
       recentLogs = await db.heartbeatLog.findMany({
         where: {

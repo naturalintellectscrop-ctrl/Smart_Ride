@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { Prisma, ActorType } from '@prisma/client';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType, BorderStyle, ShadingType } from 'docx';
 
 // GET - Fetch audit logs with filtering
@@ -99,23 +100,20 @@ export async function POST(request: NextRequest) {
 
 // Build where clause helper
 function buildWhereClause(
-  actorType: string | null,
-  entityType: string | null,
-  source: string | null,
-  search: string | null,
-  startDate: string | null,
-  endDate: string | null
+  // Callers pass optional (possibly undefined) query params, so accept both.
+  actorType: string | null | undefined,
+  entityType: string | null | undefined,
+  source: string | null | undefined,
+  search: string | null | undefined,
+  startDate: string | null | undefined,
+  endDate: string | null | undefined
 ) {
-  const where: {
-    actorType?: string;
-    entityType?: string;
-    source?: string;
-    OR?: Array<{ action: { contains: string } } | { description: { contains: string } }>;
-    createdAt?: { gte?: Date; lte?: Date };
-  } = {};
+  // Use Prisma's own input type: actorType/source are enums, not strings, so
+  // the previous hand-rolled shape did not satisfy AuditLogWhereInput.
+  const where: Prisma.AuditLogWhereInput = {};
 
   if (actorType && actorType !== 'all') {
-    where.actorType = actorType;
+    where.actorType = actorType as ActorType;
   }
 
   if (entityType && entityType !== 'all') {
@@ -620,7 +618,8 @@ async function exportAuditLogsDocx(
 
   const buffer = await Packer.toBuffer(doc);
 
-  return new NextResponse(buffer, {
+  // Node Buffer is not a BodyInit; hand the response its underlying bytes.
+  return new NextResponse(new Uint8Array(buffer), {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'Content-Disposition': `attachment; filename="smart-ride-audit-report-${new Date().toISOString().split('T')[0]}.docx"`,

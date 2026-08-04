@@ -53,6 +53,7 @@ model User {
   callerCalls              CallSession[]          @relation("CallerCalls")
   recipientCalls           CallSession[]          @relation("RecipientCalls")
   paymentMethods           UserPaymentMethod[]
+  healthProvider           HealthProvider?
 
   @@index([email])
   @@index([phone])
@@ -976,6 +977,10 @@ model HealthProvider {
   totalReviews                Int                @default(0)
   providerType                HealthProviderType
   verificationStatus          VerificationStatus @default(PENDING)
+  // userId was a bare column with no relation, so `include: { user: ... }`
+  // in the admin verification route threw. Optional because a provider record
+  // can exist before its owner account is linked.
+  user                        User?              @relation(fields: [userId], references: [id], onDelete: SetNull)
   healthOrders                HealthOrder[]
   medicineCatalog             MedicineCatalog[]
   documents                   ProviderDocument[]
@@ -2158,6 +2163,10 @@ enum ActorType {
   MERCHANT
   ADMIN
   PHARMACY_STAFF
+  // The health-compliance audit view filters on these two actor types; only
+  // PHARMACY_STAFF existed, so those filters were invalid enum comparisons.
+  PHARMACIST
+  HEALTH_PROVIDER
 }
 
 enum NotificationType {

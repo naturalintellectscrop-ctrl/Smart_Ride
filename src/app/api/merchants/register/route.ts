@@ -193,7 +193,8 @@ export async function POST(request: NextRequest) {
       });
 
       // Store documents in database
-      const docPromises = [];
+      // Untyped [] infers never[], which rejects every push below.
+      const docPromises: Promise<unknown>[] = [];
 
       if (documents?.businessLicense) {
         docPromises.push(
@@ -266,19 +267,16 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate tokens
+    // generateAccessToken takes the user record (it maps id -> userId itself);
+    // generateRefreshToken takes the bare user id.
     const accessToken = generateAccessToken({
-      userId: result.user.id,
+      id: result.user.id,
       email: result.user.email,
       role: result.user.role,
       name: result.user.name,
     });
 
-    const refreshToken = generateRefreshToken({
-      userId: result.user.id,
-      email: result.user.email,
-      role: result.user.role,
-      name: result.user.name,
-    });
+    const refreshToken = generateRefreshToken(result.user.id);
 
     // Update user with refresh token
     await db.user.update({

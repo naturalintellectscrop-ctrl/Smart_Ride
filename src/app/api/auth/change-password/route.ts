@@ -26,15 +26,15 @@ export async function POST(request: NextRequest) {
     // Get user with password hash
     const user = await db.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, password: true },
+      select: { id: true, passwordHash: true },
     });
 
-    if (!user || !user.password) {
+    if (!user || !user.passwordHash) {
       return errorResponse('User not found or no password set', 404);
     }
 
     // Verify current password
-    const isValid = await bcrypt.compare(validated.currentPassword, user.password);
+    const isValid = await bcrypt.compare(validated.currentPassword, user.passwordHash);
     if (!isValid) {
       return errorResponse('Current password is incorrect', 400);
     }
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     // Update password
     await db.user.update({
       where: { id: decoded.userId },
-      data: { password: hashedPassword },
+      data: { passwordHash: hashedPassword },
     });
 
     return successResponse(null, 'Password changed successfully');
