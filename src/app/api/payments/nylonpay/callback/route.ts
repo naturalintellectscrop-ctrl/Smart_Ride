@@ -27,7 +27,7 @@ import { sendPaymentNotification } from '@/lib/services/notification.service';
 import { isWebhookProcessed, recordWebhookProcessed } from '@/lib/security/webhook-protection';
 import { toNumber } from '@/lib/decimal-utils';
 import { paymentLogger } from '@/lib/logging/logger';
-import type { WebhookPayload, Transaction } from '@nile-squad/nylonpay-ts';
+import type { WebhookPayload } from '@nile-squad/nylonpay-ts';
 
 export const runtime = 'nodejs'; // NOT edge — signature verify needs raw body bytes
 // Next.js App Router gives us the raw body via request.text() — no body parser
@@ -48,13 +48,18 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // The SDK delivers { delivery_id, event, payload, timestamp } — the
+  // transaction snapshot is under `payload`, not `data`. Reading body.data
+  // yielded undefined for every field below.
+  const snapshot = body.payload;
+
   // Metadata-only logging — never dump full body (PII: phone numbers, names)
   paymentLogger.info('nylonpay/callback received', {
     event: body.event,
-    reference: body.data?.reference,
-    status: body.data?.status,
-    amount: body.data?.amount,
-    currency: body.data?.currency,
+    reference: snapshot?.reference,
+    status: snapshot?.status,
+    amount: snapshot?.amount,
+    currency: snapshot?.currency,
   });
 
   // Service availability check
@@ -66,19 +71,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Signature + replay verification (HMAC-SHA256 over raw body, 5-min freshness)
-  // The signature comes from the JSON body's `signature` field (per SDK spec),
-  // but some HTTP clients send it in a header — check both.
-  const headerSignature =
+  // Signature + replay verification (HMAC-SHA256 over raw body, 5-min freshness).
+  // Per the SDK: "the signature does NOT live in the body" — it is delivered in
+  // the x-nylon-signature header. The previous `body.signature` was always
+  // undefined.
+  const signature =
     request.headers.get('x-nylon-signature') ||
     request.headers.get('x-nylonpay-signature') ||
     request.headers.get('x-webhook-signature') ||
     '';
 
-  const signature = body.signature || headerSignature;
   if (!signature) {
     paymentLogger.error('nylonpay/callback: no signature present', {
-      reference: body.data?.reference,
+      reference: snapshot?.reference,
     });
     return NextResponse.json(
       { success: false, error: 'Missing signature' },
@@ -94,7 +99,7 @@ export async function POST(request: NextRequest) {
   });
   if (!isValid) {
     paymentLogger.error('nylonpay/callback: signature verification failed', {
-      reference: body.data?.reference,
+      reference: snapshot?.reference,
     });
     return NextResponse.json(
       { success: false, error: 'Invalid signature' },
@@ -104,7 +109,8 @@ export async function POST(request: NextRequest) {
 
   await setServiceRoleContext();
   try {
-    const { event, data } = body as { event: string; data: Transaction };
+    const event = body.event;
+    const data = snapshot;
     const txnReference = data?.reference;
 
     if (!txnReference) {
@@ -133,10 +139,12 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Defense in depth: re-verify with getStatus() before fulfilling on
-    // collection.completed events. This catches webhook forgery even if our
-    // webhook secret leaked.
-    if (event === 'collection.completed') {
+    // Defense in depth: re-verify with getStatus() before fulfilling a
+    // successful payment. This catches webhook forgery even if our webhook
+    // secret leaked. SDK events are transaction.{successful,failed,
+    // processing,cancelled} — this previously tested 'collection.completed',
+    // which never matches, so the re-verification never ran.
+    if (event === 'transaction.successful') {
       try {
         // Lazy import to avoid circular dep at module load
         const { getNylonPayClient } = await import('@/lib/payments/nylonpay');
@@ -183,9 +191,10 @@ export async function POST(request: NextRequest) {
     await handleNylonPayCallback({
       reference: txnReference,
       status: data.status,
-      transactionId: data.id,
+      // Snapshot field is transactionId; amount arrives as a decimal string.
+      transactionId: data.transactionId,
       operatorTid: data.operatorTid,
-      amount: data.amount,
+      amount: data.amount !== undefined ? Number(data.amount) : undefined,
       currency: data.currency,
       failureReason: data.failureReason,
       event,
