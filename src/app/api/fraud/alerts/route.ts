@@ -2,9 +2,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { Prisma, FraudAlertStatus, AlertSeverity, FraudAlertType } from '@prisma/client';
 import { createAuditLog } from '@/lib/api/audit';
+import { requireAdmin } from '@/lib/auth/guards';
+
+/**
+ * None of GET/POST/PATCH had any authentication. GET exposed every fraud
+ * alert (flagged users/riders, risk scores, descriptions) to anonymous
+ * callers. Worse: PATCH's `take_action` case calls applyAdminAction(), which
+ * can SUSPEND or BAN a client/rider/merchant/pharmacy account — so an
+ * unauthenticated request could ban any account on the platform. This is the
+ * admin dashboard's Fraud tab; it requires an admin.
+ */
+function guardAdmin(request: NextRequest) {
+  const authResult = requireAdmin(request);
+  if (!authResult.success) {
+    return NextResponse.json(
+      { success: false, error: authResult.error || 'Admin access required' },
+      { status: authResult.statusCode || 403 }
+    );
+  }
+  return null;
+}
 
 // GET /api/fraud/alerts - Get fraud alerts with filtering
 export async function GET(request: NextRequest) {
+  const denied = guardAdmin(request);
+  if (denied) return denied;
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
@@ -62,6 +85,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/fraud/alerts - Create a new fraud alert
 export async function POST(request: NextRequest) {
+  const denied = guardAdmin(request);
+  if (denied) return denied;
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -109,11 +135,16 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Failed to create fraud alert' },
       { status: 500 }
     );
+  } finally {
+    await resetRLSContext();
   }
 }
 
 // PATCH /api/fraud/alerts - Update fraud alert (review/resolve)
 export async function PATCH(request: NextRequest) {
+  const denied = guardAdmin(request);
+  if (denied) return denied;
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
