@@ -407,10 +407,15 @@ export async function recordTaskCompletion(
   const totalArrivals = onTimeArrivals + lateArrivals;
   const onTimeRate = totalArrivals > 0 ? onTimeArrivals / totalArrivals : 1;
   
-  // Calculate rolling average arrival delay
-  const averageArrivalDelay = 
-    (reputation.averageArrivalDelay * reputation.lateArrivals + delayMinutes) / 
-    (reputation.lateArrivals + (wasOnTime ? 0 : 1));
+  // Rolling average delay, taken over LATE arrivals only. Guard the divisor:
+  // on an on-time trip for a driver with no prior late arrivals this was
+  // 0/0 = NaN, which Prisma rejects — so a driver's first punctual completion
+  // threw and their task counters never advanced.
+  const averageArrivalDelay =
+    lateArrivals > 0
+      ? (reputation.averageArrivalDelay * reputation.lateArrivals + (wasOnTime ? 0 : delayMinutes)) /
+        lateArrivals
+      : 0;
   
   const updatedReputation = await db.driverReputation.update({
     where: { id: reputation.id },

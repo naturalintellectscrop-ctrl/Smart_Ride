@@ -722,6 +722,7 @@ model SOSAlert {
   task            Task?     @relation("TaskSOSAlerts", fields: [taskId], references: [id])
   user            User?     @relation("UserSOSAlerts", fields: [userId], references: [id])
   locationUpdates SOSLocationUpdate[]
+  incidentReports IncidentReport[]    @relation("SOSAlertIncidentReports")
 
   @@index([status])
   @@index([createdAt])
@@ -1165,10 +1166,15 @@ model FraudAlert {
   riderId         String?
   taskId          String?
   orderId         String?
+  /// Polymorphic subject. userId/riderId above stay as real FKs so the admin
+  /// table can join names, but an alert may also target a device or merchant,
+  /// and the dashboard groups by entityType.
+  entityType      RiskEntityType?
+  entityId        String?
   alertType       FraudAlertType
-  riskScore       Int
+  riskScore       Int              @default(0)
   severity        AlertSeverity
-  description     String
+  description     String           @default("")
   indicators      String?
   status          FraudAlertStatus @default(OPEN)
   reviewedBy      String?
@@ -1180,6 +1186,12 @@ model FraudAlert {
   // the time so accuracy can be measured against the outcome.
   riskScoreAtDetection Float?
   detectionMethod      String?  @default("RULE_BASED")
+  /// JSON array of FraudPattern.patternCode values that fired.
+  detectedPatterns     String?
+  /// JSON evidence payload backing the alert.
+  evidence             String?
+  /// JSON array of SuspiciousActivityLog ids that produced this alert.
+  relatedActivityIds   String?
   isFalsePositive      Boolean?
   adminDecision        String?
   mlFeedbackGiven      Boolean  @default(false)
@@ -1196,6 +1208,7 @@ model FraudAlert {
 
   @@index([userId])
   @@index([riderId])
+  @@index([entityType, entityId])
   @@index([alertType])
   @@index([status])
   @@index([createdAt])
@@ -2355,6 +2368,12 @@ enum FraudAlertType {
   ABNORMAL_ORDER_FREQUENCY
   ABNORMAL_CANCELLATION_RATE
   REFUND_ABUSE
+  EXCESSIVE_CANCELLATIONS
+  EXCESSIVE_REFUNDS
+  SUSPICIOUS_PAYMENT_ATTEMPTS
+  IMPOSSIBLE_TRAVEL
+  FAKE_LISTINGS
+  CONTROLLED_DRUG_VIOLATION
 }
 
 enum FraudAlertStatus {
@@ -2685,6 +2704,12 @@ model SuspiciousActivityLog {
   activityType    SuspiciousActivityType
   /// Free-form grouping above activityType (e.g. "PAYMENT", "IDENTITY").
   activityCategory String?
+  /// Device hash observed when the activity was recorded.
+  deviceFingerprint String?
+  ipAddress       String?
+  userAgent       String?
+  latitude        Float?
+  longitude       Float?
   referenceType   String?
   referenceId     String?
   riskScore       Float                  @default(0)
@@ -2959,19 +2984,30 @@ model FraudSystemConfig {
 /// Daily rollup powering the fraud dashboard without scanning raw tables.
 model FraudDashboardStats {
   id                  String   @id @default(cuid())
-  date                DateTime @unique
+  /// One rollup row per day.
+  date                DateTime @unique @default(now())
   totalAlerts         Int      @default(0)
   openAlerts          Int      @default(0)
   criticalAlerts      Int      @default(0)
   highAlerts          Int      @default(0)
   resolvedAlerts      Int      @default(0)
+  falsePositives      Int      @default(0)
+  totalFlaggedAccounts Int     @default(0)
+  suspendedAccounts   Int      @default(0)
   frozenAccounts      Int      @default(0)
   ruleBasedDetections Int      @default(0)
   mlDetections        Int      @default(0)
   manualReviews       Int      @default(0)
-  falsePositives      Int      @default(0)
+  /// Null until enough alerts have been reviewed to measure anything —
+  /// meaningfully different from 0% accuracy.
+  detectionAccuracy   Float?
+  falsePositiveRate   Float?
   avgRiskScore        Float    @default(0)
   highRiskEntities    Int      @default(0)
+  lowRiskCount        Int      @default(0)
+  mediumRiskCount     Int      @default(0)
+  highRiskCount       Int      @default(0)
+  criticalRiskCount   Int      @default(0)
   alertsByType        String?
   alertsBySeverity    String?
   riskDistribution    String?
@@ -2987,10 +3023,15 @@ model IncidentReport {
   reportNumber String        @unique
   reporterId   String?
   reporterRole String?
+  // Subjects of the incident. userId/riderId are filterable directly because
+  // the admin incident list scopes by party.
+  userId       String?
+  riderId      String?
   subjectType  String?
   subjectId    String?
   taskId       String?
   sosAlertId   String?
+  incidentType String?
   category     String
   severity     AlertSeverity @default(MEDIUM)
   title        String
@@ -3005,7 +3046,11 @@ model IncidentReport {
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  sosAlert SOSAlert? @relation("SOSAlertIncidentReports", fields: [sosAlertId], references: [id], onDelete: SetNull)
+
   @@index([reporterId])
+  @@index([userId])
+  @@index([riderId])
   @@index([subjectType, subjectId])
   @@index([status])
   @@index([severity])
@@ -3116,7 +3161,13 @@ model DriverReputation {
   totalRequestsIgnored  Int     @default(0)
 
   /// Count of fraud signals attributed to this driver; feeds fraudRiskScore.
-  fraudFlags          Int       @default(0)
+  fraudFlags             Int       @default(0)
+  // Per-signal counters, so the admin view can tell WHICH kind of abuse a
+  // driver is accumulating rather than just a total.
+  gpsSpoofingFlags       Int       @default(0)
+  fakeCompletionFlags    Int       @default(0)
+  suspiciousPatternFlags Int       @default(0)
+  lastFraudCheckAt       DateTime?
 
   // Punctuality
   onTimeArrivals      Int       @default(0)
@@ -3364,11 +3415,14 @@ enum ZoneType {
   RURAL
 }
 
+// Mirrors the BalanceStatus union in lib/marketplace/types.ts — the
+// balance-engine owns these thresholds, so the schema follows it.
 enum BalanceStatus {
   OVERSUPPLIED
   BALANCED
-  UNDERSUPPLIED
-  CRITICAL_SHORTAGE
+  HIGH_DEMAND
+  SURGE
+  CRITICAL
 }
 
 enum SurgeStatus {
@@ -3404,10 +3458,13 @@ enum ParticipationStatus {
   REWARDED
   FAILED
   EXPIRED
+  CANCELLED
 }
 
 enum RewardType {
   CASH
+  CREDIT
+  BONUS
   WALLET_CREDIT
   BONUS_MULTIPLIER
   PRIORITY_DISPATCH
@@ -3590,6 +3647,8 @@ model DriverIncentive {
   totalRewardsPaid    Float @default(0)
   totalRidesCompleted Int   @default(0)
   currentPayout       Float @default(0)
+  /// Hard ceiling on total payout for this campaign.
+  maxPayout           Float?
 
   createdBy String?
   createdAt DateTime @default(now())
@@ -3626,6 +3685,8 @@ model IncentiveParticipation {
   rewardCreditedAt  DateTime?
 
   enrolledAt     DateTime  @default(now())
+  /// Alias of enrolledAt used by the participation API responses.
+  joinedAt       DateTime  @default(now())
   lastProgressAt DateTime?
   completedAt    DateTime?
   createdAt      DateTime  @default(now())

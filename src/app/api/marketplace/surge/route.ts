@@ -148,7 +148,8 @@ export async function POST(request: NextRequest) {
     await db.zoneMetric.create({
       data: {
         zoneId,
-        timeBucket: new Date().toISOString().slice(0, 13).replace('T', '-'),
+        // Bucket to the top of the current hour; timeBucket is a DateTime.
+        timeBucket: new Date(new Date().setMinutes(0, 0, 0)),
         rideRequests,
         activeDrivers: latestMetric?.activeDrivers || 0,
         availableDrivers,
@@ -161,8 +162,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Send notifications to riders and clients
-    let riderNotificationResult = null;
-    let clientNotificationResult = null;
+    let riderNotificationResult: Awaited<ReturnType<typeof notifySurgeActivation>> | null = null;
+    let clientNotificationResult: Awaited<ReturnType<typeof warnClientsAboutSurge>> | null = null;
     
     try {
       // Notify all online riders about surge opportunity

@@ -13,6 +13,7 @@ import { db, setServiceRoleContext } from '@/lib/db';
 import { ActorType, TaskStatus, TaskType, RiderRole } from '@prisma/client';
 import { TaskAnalyticsUpdater } from './analytics-updater.service';
 import { FinanceLedgerService } from './finance-ledger.service';
+import { PlatformIntelligence } from '@/lib/intelligence/platform-events.service';
 import { sendTaskUpdateNotification } from './notification.service';
 import { SocketReliabilityService } from '@/lib/realtime/socket-reliability.service';
 import { computeWaitingCharge, getPricingConfig } from '@/lib/api/pricing';
@@ -841,6 +842,12 @@ export class EnhancedTaskStateMachine {
           } catch (err) {
             console.error('[StateMachine] FinanceLedger recordTaskCompletion failed:', err);
           }
+
+          // Intelligent platform layer: reputation, incentive progress and
+          // fraud analysis all derive from this event. PlatformIntelligence
+          // never throws — intelligence must not be able to fail a trip that
+          // has already completed and been paid out above.
+          await PlatformIntelligence.onTaskCompleted(task.id);
           break;
         }
 
@@ -858,6 +865,10 @@ export class EnhancedTaskStateMachine {
           } catch (err) {
             console.error('[StateMachine] FinanceLedger recordCancellation failed:', err);
           }
+
+          // Cancellations move completion/cancellation rate, which moves the
+          // driver's trust score and tier.
+          await PlatformIntelligence.onTaskCancelled(task.id, reason);
           break;
         }
 

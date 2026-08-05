@@ -3,6 +3,7 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { PlatformIntelligence } from '@/lib/intelligence/platform-events.service';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
 import { db, setRLSContext, resetRLSContext, setServiceRoleContext } from '@/lib/db';
@@ -75,6 +76,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { status: 403 }
       );
     }
+
+    // Record the declined offer against the driver's acceptance rate.
+    await PlatformIntelligence.onDispatchOffer(rider.id, 'DECLINED');
 
     // Create audit log for rejection BEFORE processing (for traceability)
     await db.auditLog.create({

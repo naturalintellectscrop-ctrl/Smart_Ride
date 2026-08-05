@@ -127,7 +127,7 @@ export async function PUT(request: NextRequest) {
   // Validate PUT body per action
   const fraudPutSchema = z.discriminatedUnion('action', [
     z.object({ action: z.literal('resolve-alert'), alertId: z.string().min(1), resolution: z.string().min(1) }),
-    z.object({ action: z.literal('update-profile'), riderId: z.string().min(1), updates: z.record(z.unknown()) }),
+    z.object({ action: z.literal('update-profile'), riderId: z.string().min(1), updates: z.record(z.string(), z.unknown()) }),
   ]);
 
   const putParsed = fraudPutSchema.safeParse(body);
@@ -176,9 +176,6 @@ async function getAlerts(params: URLSearchParams) {
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset,
-      include: {
-        _count: true,
-      },
     }),
     db.fraudAlert.count({ where }),
   ]);
@@ -342,7 +339,10 @@ async function checkGPS(data: {
 }
 
 async function createAlert(data: Record<string, unknown>) {
-  await FraudDetectionService.createAlert(data);
+  // The POST body is validated upstream; narrow it to the service's contract.
+  await FraudDetectionService.createAlert(
+    data as unknown as Parameters<typeof FraudDetectionService.createAlert>[0]
+  );
   return NextResponse.json({ success: true });
 }
 

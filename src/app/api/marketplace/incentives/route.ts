@@ -159,6 +159,9 @@ export async function POST(request: NextRequest) {
     const incentive = await db.driverIncentive.create({
       data: {
         name: validatedData.name,
+        // code is the unique campaign handle; derive a stable one when the
+        // admin form does not supply it.
+        code: `INC-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
         description: validatedData.description,
         incentiveType: validatedData.incentiveType,
         rewardAmount: validatedData.rewardAmount,
@@ -189,7 +192,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Send notification to riders about the new incentive (only if active)
-    let notificationResult = null;
+    let notificationResult: Awaited<ReturnType<typeof notifyNewIncentive>> | null = null;
     if (status === 'ACTIVE') {
       try {
         notificationResult = await notifyNewIncentive(

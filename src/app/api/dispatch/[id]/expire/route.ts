@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse, after } from 'next/server';
+import { PlatformIntelligence } from '@/lib/intelligence/platform-events.service';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
 import { db, resetRLSContext, setServiceRoleContext } from '@/lib/db';
@@ -76,6 +77,10 @@ export async function POST(
     // rotateAfterExpiry re-dispatches (excluding this rider while fresh
     // candidates exist) OR, after maxRetryAttempts failed offers, cancels the
     // task and notifies the client instead of looping forever.
+    // An expired offer is an ignored offer — it counts against acceptance rate
+    // differently from an explicit decline.
+    await PlatformIntelligence.onDispatchOffer(match.riderId, 'IGNORED');
+
     const task = match.task;
     if (task?.pickupLatitude != null && task?.pickupLongitude != null) {
       const taskId = match.taskId;

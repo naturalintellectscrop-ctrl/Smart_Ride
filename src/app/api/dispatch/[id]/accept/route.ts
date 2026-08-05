@@ -3,6 +3,7 @@
 // ============================================
 
 import { NextRequest, NextResponse, after } from 'next/server';
+import { PlatformIntelligence } from '@/lib/intelligence/platform-events.service';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { authGuard } from '@/lib/auth/guards';
 import { db, setRLSContext, resetRLSContext, setServiceRoleContext } from '@/lib/db';
@@ -189,6 +190,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
               }),
             },
           }).catch((e) => console.error('Audit log creation failed (non-blocking):', e));
+
+          // Acceptance rate is 15% of trust score — it only reflects reality
+          // if every offer outcome is recorded.
+          await PlatformIntelligence.onDispatchOffer(rider.id, 'ACCEPTED');
         } catch (e) {
           console.error('[dispatch/accept] post-response side effects failed:', e);
         } finally {

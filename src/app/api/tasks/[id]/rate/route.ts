@@ -8,6 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { PlatformIntelligence } from '@/lib/intelligence/platform-events.service';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { requireAuth } from '@/lib/auth/guards';
 import { errorResponse, notFoundResponse, serverErrorResponse, successResponse } from '@/lib/api/response';
@@ -119,6 +120,13 @@ export async function POST(
           data: { rating: Math.round(agg._avg.score * 10) / 10 },
         });
       }
+
+      // Feed the reputation engine. Ratings are the heaviest input to trust
+      // score (40%), and drive streaks, tier changes and complaint counts.
+      await PlatformIntelligence.onRatingSubmitted(task.riderId, id, {
+        score: validated.rating,
+        comment: validated.comment ?? null,
+      });
     }
 
     return successResponse({ message: 'Rating submitted' }, 'Rating submitted');

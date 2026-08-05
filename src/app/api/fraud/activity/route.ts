@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { FraudAlertType, RiskEntityType } from '@prisma/client';
 
 interface RiskIndicators {
   highFrequency?: boolean;
@@ -183,6 +184,7 @@ async function matchPatterns(entityType: string, activityType: string, riskIndic
 
   for (const pattern of patterns) {
     try {
+      if (!pattern.detectionRules) continue;
       const rules = JSON.parse(pattern.detectionRules);
       let matched = false;
 
@@ -209,7 +211,7 @@ async function createFraudAlertFromActivity(activity: SuspiciousActivity, matche
   await db.fraudAlert.create({
     data: {
       alertNumber: `FRA-${Date.now()}`,
-      entityType: activity.entityType,
+      entityType: activity.entityType as RiskEntityType,
       entityId: activity.entityId,
       alertType: mapActivityToAlertType(activity.activityType),
       severity: activity.riskScore >= 70 ? 'CRITICAL' : activity.riskScore >= 50 ? 'HIGH' : 'MEDIUM',
@@ -227,8 +229,8 @@ async function createFraudAlertFromActivity(activity: SuspiciousActivity, matche
 }
 
 // Map activity type to alert type
-function mapActivityToAlertType(activityType: string): string {
-  const mapping: Record<string, string> = {
+function mapActivityToAlertType(activityType: string): FraudAlertType {
+  const mapping: Record<string, FraudAlertType> = {
     'CANCELLATION': 'EXCESSIVE_CANCELLATIONS',
     'REFUND_REQUEST': 'EXCESSIVE_REFUNDS',
     'PAYMENT_FAILURE': 'SUSPICIOUS_PAYMENT_ATTEMPTS',
@@ -239,7 +241,7 @@ function mapActivityToAlertType(activityType: string): string {
     'FAKE_LISTING': 'FAKE_LISTINGS',
     'PRESCRIPTION_VIOLATION': 'CONTROLLED_DRUG_VIOLATION',
   };
-  return mapping[activityType] || 'ABNORMAL_ORDER_FREQUENCY';
+  return mapping[activityType] ?? FraudAlertType.ABNORMAL_ORDER_FREQUENCY;
 }
 
 // Update device fingerprint tracking
@@ -250,7 +252,7 @@ async function updateDeviceFingerprint(fingerprintHash: string, entityType: stri
 
   if (existing) {
     // Update existing fingerprint
-    const accounts = JSON.parse(existing.associatedAccounts);
+    const accounts = JSON.parse(existing.associatedAccounts ?? '[]');
     const existingAccount = accounts.find((a: { entityId: string; [key: string]: unknown }) => a.entityId === entityId);
     
     if (existingAccount) {
@@ -285,7 +287,7 @@ async function updateDeviceFingerprint(fingerprintHash: string, entityType: stri
       await db.fraudAlert.create({
         data: {
           alertNumber: `FRA-${Date.now()}`,
-          entityType: entityType as string,
+          entityType: entityType as RiskEntityType,
           entityId,
           alertType: 'MULTIPLE_ACCOUNTS_SAME_DEVICE',
           severity: 'HIGH',
@@ -303,6 +305,9 @@ async function updateDeviceFingerprint(fingerprintHash: string, entityType: stri
     // Create new fingerprint
     await db.deviceFingerprint.create({
       data: {
+        // deviceId is the key RiderDeviceAssociation/UserDeviceAssociation
+        // join on; seed it from the hash when the caller only supplies one.
+        deviceId: fingerprintHash,
         fingerprintHash,
         associatedAccounts: JSON.stringify([{
           entityType,
