@@ -48,14 +48,40 @@ Errors: **665 → 478** (web), **14 → 0** (mobile). Build passes. 5 commits.
 2. Remaining ~310 errors in analytics/admin/setup — mostly inference and shape mismatches; triage `TS2353`/`TS2339` first, they are the runtime-fatal ones.
 3. No live verification was possible — see blocker below.
 
+## Schema push — DONE and verified
+
+The database became reachable and `prisma db push` was applied to the live
+Supabase instance. The diff was verified additive-only beforehand (no DROP /
+TRUNCATE / column retype) and an FK precheck found 0 orphaned or duplicate
+`HealthProvider.userId` rows.
+
+Verified against the live DB after the push:
+- `UserPaymentMethod` and `EmergencyContact` tables exist (72 → 74 tables)
+- `WalletTransactionType` has TRANSFER_IN / TRANSFER_OUT / FEE
+- `NotificationType` has all 8 new marketplace/driver values
+- `ActorType` has PHARMACIST / HEALTH_PROVIDER
+- Data intact: User=12, Task=28, Notification=777, Wallet=6
+- Round-trip smoke test passed (then cleaned up): create/list a payment method,
+  create an emergency contact, insert all three wallet transfer legs, insert a
+  SURGE_ALERT notification, and `healthProvider.findMany({ include: { user } })`
+
+### Correction to the Decimal findings
+
+Measured against the real Prisma `Decimal`, the earlier commit messages
+overstated part of this. Actual behaviour:
+- `Decimal + number` **concatenates strings** — `50000.75 + 1000` produced
+  `"50000.751000"`. This is the transfer recipient's `balanceAfter`, so credited
+  balances were silently written ~1000 UGX short. Genuinely corrupting.
+- `Decimal - number` and `Decimal * number` coerce correctly via `valueOf` and
+  produced right answers; they were type errors, not wrong values.
+- Raw arithmetic also loses integer precision above 2^53 where the Decimal API
+  keeps it.
+
+The fixes remain correct (the Decimal API is precision-safe), but only the `+`
+sites were producing bad data.
+
 ## Exact next implementation step
 
-**Run `npm run db:push` against a reachable database.** The Supabase instance
-(`aws-0-eu-west-1.pooler.supabase.com:5432`) returned Prisma **P1001** from this
-environment, and the repo has **no `prisma/migrations/` directory** — it syncs via
-`db push`. Until that runs, the new tables and enum values exist only in the schema
-and generated client, so `/api/wallet/payment-methods`, `/api/emergency-contacts`,
-wallet transfers, and the new notification types **still fail against the live DB**.
-
-After the push: exercise wallet top-up → transfer → payment-methods, then add/list
-emergency contacts, to confirm end-to-end. Neither was verifiable here.
+Decide the fate of the ~30 missing Prisma models (item 1 under Remaining work):
+build the schema for fraud / reputation / marketplace, or delete the dead routes.
+That single decision clears 168 of the remaining 478 errors.
