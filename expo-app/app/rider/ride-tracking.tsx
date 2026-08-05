@@ -1,7 +1,17 @@
 // ============================================
-// SMART RIDE MOBILE - RIDE TRACKING SCREEN
+// SMART RIDE — ACTIVE RIDE
 // ============================================
-// Real-time ride experience:
+// Golden Screen #12 · Archetype AR-3 (Operational Map, live).
+//
+//   compact AppHeader overlay → live map workspace → operations panel:
+//   status + RideTimeline → live ETA → DriverCard → action row (Call · Chat ·
+//   SOS danger · Cancel)
+//
+// This is the master real-time screen, so every surface is a Design-System
+// primitive (Card, Avatar, Rating, StatusBadge, RideTimeline, Chip,
+// GradientButton, StateViews, ConfirmDialog) — no bespoke buttons or cards.
+//
+// Real-time behaviour is unchanged:
 //  - Live map: driver position, pickup, destination, traffic-aware route polyline
 //  - Route + ETA update in real time from the driver's streaming GPS (Directions API)
 //  - Driver card: Smart Ride avatar, first name, rating, vehicle, masked plate
@@ -13,20 +23,39 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
   ScrollView,
-  Image,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SmartRideMap } from '@/src/components/SmartRideMap';
-import { ConfirmDialog } from '@/src/components/ConfirmDialog';
+import {
+  AppHeader,
+  Avatar,
+  Card,
+  Chip,
+  ConfirmDialog,
+  ErrorState,
+  GradientButton,
+  Rating,
+  RideTimeline,
+  SmartRideMap,
+  StatusBadge,
+  Skeleton,
+} from '@/src/components';
+import type { TimelineStep } from '@/src/components/RideTimeline';
 import { useTaskStore, useAuthStore } from '@/src/store';
 import { useChatStore } from '@/src/store/chatStore';
 import { api, socketService } from '@/src/services';
-import { TASK_STATUS_LABELS, TASK_STATUS_COLORS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import {
+  TASK_STATUS_LABELS,
+  TASK_STATUS_COLORS,
+  TYPOGRAPHY,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+  ICON,
+  BORDER,
+} from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Task, TaskStatus } from '@/src/types';
@@ -41,7 +70,6 @@ import {
   RIDE_QUICK_REPLIES,
 } from '@/src/utils/ride';
 import { Ionicons } from '@expo/vector-icons';
-import { formatRating } from '@/src/utils/money';
 
 // Polling intervals (in ms)
 const POLL_INTERVAL_FAST = 3000;  // 3 seconds for active rides
@@ -445,25 +473,33 @@ export default function RideTrackingScreen() {
     router.replace('/(tabs)');
   };
 
+  // Map-archetype loading skeleton: the panel's shape is already visible, so
+  // arrival doesn't shift the layout.
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading ride details...</Text>
+      <View style={styles.container}>
+        <View style={styles.mapWorkspace} />
+        <View style={styles.panel}>
+          <View style={styles.grabberWrap}><View style={styles.grabber} /></View>
+          <View style={styles.panelContent}>
+            <Skeleton width="52%" height={20} borderRadius={RADIUS.sm} />
+            <Skeleton width="100%" height={72} borderRadius={RADIUS.lg} style={styles.skeletonGap} />
+            <Skeleton width="100%" height={96} borderRadius={RADIUS.lg} style={styles.skeletonGap} />
+          </View>
+        </View>
       </View>
     );
   }
 
   if (!task) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.noRideText}>No active ride found</Text>
-        <TouchableOpacity
-          style={styles.goHomeButton}
-          onPress={() => router.replace('/(tabs)')}
-        >
-          <Text style={styles.goHomeButtonText}>Go Home</Text>
-        </TouchableOpacity>
+      <View style={styles.stateContainer}>
+        <ErrorState
+          title="No active ride found"
+          subtitle="This ride is no longer available."
+          retryLabel="Go Home"
+          onRetry={() => router.replace('/(tabs)')}
+        />
       </View>
     );
   }
@@ -475,26 +511,29 @@ export default function RideTrackingScreen() {
   const NO_SERVICE_STATES = ['FAILED', 'EXPIRED', 'CANCELLED'];
   if (!task.riderId && (searchFailed || NO_SERVICE_STATES.includes(task.status))) {
     return (
-      <View style={styles.loadingContainer}>
-        <View style={{ width: 88, height: 88, borderRadius: 44, backgroundColor: `${COLORS.error}18`, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
-          <Ionicons name="car-outline" size={44} color={COLORS.error} />
+      <View style={styles.stateContainer}>
+        <ErrorState
+          title="No nearby riders available"
+          subtitle="We couldn't find a rider for your trip right now. Try again, change your ride type, or cancel."
+          retryLabel="Try Again"
+          onRetry={handleTryAgain}
+        />
+        <View style={styles.stateActions}>
+          <GradientButton
+            title="Change Ride Type"
+            onPress={handleChangeRideType}
+            variant="outline"
+            size="md"
+            fullWidth
+          />
+          <GradientButton
+            title="Cancel"
+            onPress={handleCancelSearch}
+            variant="danger"
+            size="md"
+            fullWidth
+          />
         </View>
-        <Text style={{ fontSize: 20, fontWeight: '700', color: COLORS.onSurface, textAlign: 'center' }}>No nearby riders available</Text>
-        <Text style={{ fontSize: 14, color: COLORS.onSurfaceVariant, textAlign: 'center', marginTop: 8, paddingHorizontal: 28, lineHeight: 21 }}>
-          We couldn&apos;t find a rider for your trip right now. Try again, change your ride type, or cancel.
-        </Text>
-        <TouchableOpacity onPress={handleTryAgain} activeOpacity={0.85}
-          style={{ flexDirection: 'row', gap: 8, alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: 14, paddingHorizontal: 32, borderRadius: RADIUS.lg, marginTop: 24 }}>
-          <Ionicons name="refresh" size={18} color={COLORS.onPrimary} />
-          <Text style={{ color: COLORS.onPrimary, fontWeight: '700' }}>Try Again</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleChangeRideType} activeOpacity={0.85}
-          style={{ paddingVertical: 12, paddingHorizontal: 24, borderRadius: RADIUS.lg, borderWidth: 1.5, borderColor: COLORS.outline, marginTop: 12 }}>
-          <Text style={{ color: COLORS.onSurface, fontWeight: '600' }}>Change Ride Type</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleCancelSearch} style={{ padding: 12, marginTop: 8 }}>
-          <Text style={{ color: COLORS.error, fontWeight: '600' }}>Cancel</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -525,219 +564,262 @@ export default function RideTrackingScreen() {
   // arrived, show a static "at your pickup" line instead of a ticking ETA.
   const showEta = !isSettled && (isArrived || liveRoute.durationMin != null || liveRoute.loading);
 
+  // Ride progress as the shared stepper. One step per phase the customer cares
+  // about; the backend's many statuses collapse onto these four.
+  const phaseIndex = !hasDriver ? 0
+    : isArrived ? 2
+    : isInTransit ? 3
+    : 1; // driver assigned and en route to pickup
+  const timelineSteps: TimelineStep[] = [
+    { id: 'matched', label: 'Rider matched', icon: 'search' },
+    { id: 'enroute', label: 'On the way to you', icon: 'navigate' },
+    { id: 'arrived', label: 'Arrived at pickup', icon: 'location' },
+    { id: 'transit', label: 'On the way to destination', icon: 'flag' },
+  ].map((s, i) => ({
+    ...s,
+    status: i < phaseIndex ? 'completed' : i === phaseIndex ? 'active' : 'pending',
+  })) as TimelineStep[];
+
   return (
     <View style={styles.container}>
-      {/* Map */}
-      <SmartRideMap
-        style={{ flex: 1 }}
-        initialLatitude={driverLocation?.latitude || task.pickupLatitude || 0.3476}
-        initialLongitude={driverLocation?.longitude || task.pickupLongitude || 32.5825}
-        pickup={pickupCoord ? { ...pickupCoord, title: 'Pickup' } : undefined}
-        dropoff={dropoffCoord ? { ...dropoffCoord, title: 'Destination' } : undefined}
-        driverLocation={driverLocation || undefined}
-        driverKind={isCarRide ? 'car' : 'boda'}
-        routeCoordinates={liveRoute.routeCoordinates}
-        showUserLocation
-      />
+      {/* ─── Live map workspace ────────────────────────── */}
+      <View style={styles.mapWorkspace}>
+        <SmartRideMap
+          style={StyleSheet.absoluteFill}
+          initialLatitude={driverLocation?.latitude || task.pickupLatitude || 0.3476}
+          initialLongitude={driverLocation?.longitude || task.pickupLongitude || 32.5825}
+          pickup={pickupCoord ? { ...pickupCoord, title: 'Pickup' } : undefined}
+          dropoff={dropoffCoord ? { ...dropoffCoord, title: 'Destination' } : undefined}
+          driverLocation={driverLocation || undefined}
+          driverKind={isCarRide ? 'car' : 'boda'}
+          routeCoordinates={liveRoute.routeCoordinates}
+          showUserLocation
+        />
 
-      {/* Status Card (scrollable bottom sheet) */}
-      <ScrollView
-        style={styles.statusCard}
-        contentContainerStyle={styles.statusCardContent}
-        showsVerticalScrollIndicator={false}
-        bounces={false}
-      >
-        {/* Grab handle */}
-        <View style={styles.grabHandle} />
+        <AppHeader
+          title={statusLabel}
+          onBack={() => router.replace('/(tabs)')}
+          style={styles.headerOverlay}
+        />
+      </View>
 
-        {/* Status + ETA hero */}
-        <View style={styles.statusRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.statusLabel, { color: statusColor }]}>{statusLabel}</Text>
-            <Text style={styles.taskNumber}>{task.taskNumber}</Text>
-          </View>
-          <View style={[styles.statusIndicator, { backgroundColor: `${statusColor}20` }]}>
-            <ActivityIndicator size="small" color={statusColor} />
-          </View>
+      {/* ─── Operations panel ──────────────────────────── */}
+      <View style={styles.panel}>
+        <View style={styles.grabberWrap}>
+          <View style={styles.grabber} />
         </View>
 
-        {showEta && (
-          <View style={styles.etaCard}>
-            <View style={styles.etaIconWrap}>
-              <Ionicons name="time" size={20} color={COLORS.onPrimary} />
-            </View>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.panelContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+        >
+          {/* Status + reference */}
+          <View style={styles.statusRow}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.etaLabel}>{etaLabel}</Text>
-              {isArrived ? (
-                <Text style={styles.etaValue}>At your pickup point</Text>
-              ) : liveRoute.loading && liveRoute.durationMin == null ? (
-                <Text style={styles.etaValue}>Calculating…</Text>
-              ) : (
-                <Text style={styles.etaValue}>
-                  {etaValue}
-                  {liveRoute.distanceKm != null && (
-                    <Text style={styles.etaDistance}>  ·  {liveRoute.distanceKm.toFixed(1)} km</Text>
-                  )}
-                </Text>
-              )}
-            </View>
-            <View style={styles.liveBadge}>
-              <View style={styles.liveDot} />
-              <Text style={styles.liveText}>LIVE</Text>
+              <StatusBadge label={statusLabel} color={statusColor} size="md" />
+              <Text style={styles.taskNumber}>{task.taskNumber}</Text>
             </View>
           </View>
-        )}
 
-        {/* Driver Info */}
-        {hasDriver && (
-          <View style={styles.driverCard}>
-            {driverAvatarUrl ? (
-              <Image source={{ uri: driverAvatarUrl }} style={styles.driverAvatarImg} />
-            ) : (
-              <View style={styles.driverAvatar}>
-                <Ionicons name="person" size={24} color={COLORS.onSurfaceVariant} />
-              </View>
-            )}
-            <View style={styles.driverInfo}>
-              <Text style={styles.driverName}>{firstName(rider.fullName, 'Driver')}</Text>
-              <View style={styles.driverRatingRow}>
-                <Ionicons name="star" size={14} color="#F59E0B" />
-                <Text style={styles.driverRating}>{formatRating(rider.rating, (rider as any).ratingCount)}</Text>
-                <Text style={styles.driverTripsSeparator}>•</Text>
-                <Text style={styles.driverTrips}>{rider.totalTrips ?? 0} trips</Text>
-              </View>
-              {(vehicleText || maskedPlate) && (
-                <View style={styles.vehicleRow}>
-                  <Ionicons
-                    name={isCarRide ? 'car' : 'bicycle'}
-                    size={13}
-                    color={COLORS.onSurfaceVariant}
-                  />
-                  {!!vehicleText && (
-                    <Text style={styles.vehicleText} numberOfLines={1}>{vehicleText}</Text>
+          {/* Live ETA */}
+          {showEta && (
+            <Card variant="accent" padding={SPACING.md} radius={RADIUS.xl} style={styles.etaCard}>
+              <View style={styles.etaRow}>
+                <View style={styles.etaIconWrap}>
+                  <Ionicons name="time" size={ICON.md} color={COLORS.onPrimary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.etaLabel}>{etaLabel}</Text>
+                  {isArrived ? (
+                    <Text style={styles.etaValue}>At your pickup point</Text>
+                  ) : liveRoute.loading && liveRoute.durationMin == null ? (
+                    <Text style={styles.etaValue}>Calculating…</Text>
+                  ) : (
+                    <Text style={styles.etaValue}>
+                      {etaValue}
+                      {liveRoute.distanceKm != null && (
+                        <Text style={styles.etaDistance}>  ·  {liveRoute.distanceKm.toFixed(1)} km</Text>
+                      )}
+                    </Text>
                   )}
-                  {!!maskedPlate && (
-                    <View style={styles.plateChip}>
-                      <Text style={styles.plateText}>{maskedPlate}</Text>
+                </View>
+                <View style={styles.liveBadge}>
+                  <View style={styles.liveDot} />
+                  <Text style={styles.liveText}>LIVE</Text>
+                </View>
+              </View>
+            </Card>
+          )}
+
+          {/* Ride progress (shared stepper) */}
+          {!isSettled && (
+            <Card variant="flat" padding={SPACING.md} radius={RADIUS.xl} style={styles.timelineCard}>
+              <RideTimeline steps={timelineSteps} />
+            </Card>
+          )}
+
+          {/* Driver */}
+          {hasDriver && (
+            <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.driverCard}>
+              <View style={styles.driverRow}>
+                <Avatar uri={driverAvatarUrl} name={rider.fullName} size="lg" />
+                <View style={styles.driverInfo}>
+                  <Text style={styles.driverName}>{firstName(rider.fullName, 'Driver')}</Text>
+                  <View style={styles.driverMetaRow}>
+                    <Rating value={rider.rating} count={(rider as any).ratingCount} />
+                    <Text style={styles.driverTripsSeparator}>•</Text>
+                    <Text style={styles.driverTrips}>{rider.totalTrips ?? 0} trips</Text>
+                  </View>
+                  {(vehicleText || maskedPlate) && (
+                    <View style={styles.vehicleRow}>
+                      <Ionicons
+                        name={isCarRide ? 'car' : 'bicycle'}
+                        size={ICON.xs}
+                        color={COLORS.onSurfaceVariant}
+                      />
+                      {!!vehicleText && (
+                        <Text style={styles.vehicleText} numberOfLines={1}>{vehicleText}</Text>
+                      )}
+                      {!!maskedPlate && (
+                        <View style={styles.plateChip}>
+                          <Text style={styles.plateText}>{maskedPlate}</Text>
+                        </View>
+                      )}
                     </View>
                   )}
                 </View>
-              )}
-            </View>
-            <View style={styles.driverActions}>
-              <TouchableOpacity style={styles.callButton} onPress={handleCallDriver}>
-                <Ionicons name="call" size={18} color={COLORS.onPrimary} />
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.chatButton} onPress={handleChatDriver}>
-                <Ionicons name="chatbubble-ellipses" size={18} color={COLORS.primary} />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+              </View>
 
-        {/* Quick replies (privacy-safe canned messages) */}
-        {hasDriver && (
-          <View style={styles.quickReplySection}>
-            <Text style={styles.quickReplyHeading}>Quick messages</Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.quickReplyRow}
-            >
-              {RIDE_QUICK_REPLIES.map((msg) => {
-                const isSent = sentQuickReply === msg;
-                return (
-                  <TouchableOpacity
-                    key={msg}
-                    style={[styles.quickReplyChip, isSent && styles.quickReplyChipSent]}
-                    onPress={() => handleQuickReply(msg)}
-                    activeOpacity={0.7}
-                    disabled={isSent}
-                  >
-                    <Ionicons
-                      name={isSent ? 'checkmark-circle' : 'chatbox-ellipses-outline'}
-                      size={14}
-                      color={isSent ? COLORS.onPrimary : COLORS.primary}
+              {/* Contact actions */}
+              <View style={styles.contactRow}>
+                <GradientButton
+                  title="Call"
+                  onPress={handleCallDriver}
+                  variant="primary"
+                  size="sm"
+                  fullWidth={false}
+                  style={styles.contactButton}
+                  icon={<Ionicons name="call" size={ICON.sm} color={COLORS.onPrimary} />}
+                />
+                <GradientButton
+                  title="Chat"
+                  onPress={handleChatDriver}
+                  variant="outline"
+                  size="sm"
+                  fullWidth={false}
+                  style={styles.contactButton}
+                  icon={<Ionicons name="chatbubble-ellipses" size={ICON.sm} color={COLORS.primary} />}
+                />
+              </View>
+            </Card>
+          )}
+
+          {/* Quick replies (privacy-safe canned messages) */}
+          {hasDriver && (
+            <View style={styles.quickReplySection}>
+              <Text style={styles.quickReplyHeading}>Quick messages</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.quickReplyRow}
+              >
+                {RIDE_QUICK_REPLIES.map((msg) => {
+                  const isSent = sentQuickReply === msg;
+                  return (
+                    <Chip
+                      key={msg}
+                      label={isSent ? 'Sent' : msg}
+                      icon={isSent ? 'checkmark-circle' : 'chatbox-ellipses-outline'}
+                      active={isSent}
+                      onPress={isSent ? undefined : () => handleQuickReply(msg)}
                     />
-                    <Text style={[styles.quickReplyText, isSent && styles.quickReplyTextSent]}>
-                      {isSent ? 'Sent' : msg}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
-          </View>
-        )}
-
-        {/* Route Info */}
-        <View style={styles.routeSection}>
-          <View style={styles.routePoint}>
-            <View style={styles.routeDotSecondary} />
-            <Text style={styles.routePointLabel}>Pickup</Text>
-          </View>
-          <Text style={styles.routePointAddress} numberOfLines={1}>{task.pickupAddress}</Text>
-        </View>
-        <View style={styles.routeSection}>
-          <View style={styles.routePoint}>
-            <View style={styles.routeDotPrimary} />
-            <Text style={styles.routePointLabel}>Destination</Text>
-          </View>
-          <Text style={styles.routePointAddress} numberOfLines={1}>{task.dropoffAddress}</Text>
-        </View>
-
-        {/* Fare */}
-        <View style={styles.fareRow}>
-          <Text style={styles.fareLabel}>Estimated Fare</Text>
-          <Text style={styles.fareAmount}>
-            UGX {(task.totalAmount ?? 0).toLocaleString()}
-          </Text>
-        </View>
-
-        {/* Privacy note */}
-        <View style={styles.privacyNote}>
-          <Ionicons name="lock-closed" size={12} color={COLORS.onSurfaceVariant} />
-          <Text style={styles.privacyText}>
-            Your contact details stay private. Chat & calls are in-app only.
-          </Text>
-        </View>
-
-        {/* Actions */}
-        {/* Once the ride is in transit (passenger aboard) it can no longer be
-            cancelled — the backend rejects it too. Hide the Cancel button and
-            surface SOS as the only escalation path, with a short explainer. */}
-        {isInTransit ? (
-          <View>
-            <View style={[styles.actionsRow, { justifyContent: 'center' }]}>
-              <TouchableOpacity style={[styles.sosButton, { flex: 1 }]} onPress={handleSOS}>
-                <Ionicons name="warning" size={16} color={COLORS.onError} />
-                <Text style={styles.sosButtonText}>SOS</Text>
-              </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
-            <View style={styles.privacyNote}>
-              <Ionicons name="information-circle" size={12} color={COLORS.onSurfaceVariant} />
-              <Text style={styles.privacyText}>
-                Your ride is in progress and can no longer be cancelled. Tap SOS if you need help.
+          )}
+
+          {/* Route + fare */}
+          <Card variant="flat" padding={SPACING.md} radius={RADIUS.xl} style={styles.routeCard}>
+            <View style={styles.routeSection}>
+              <View style={styles.routePoint}>
+                <View style={styles.routeDotSecondary} />
+                <Text style={styles.routePointLabel}>Pickup</Text>
+              </View>
+              <Text style={styles.routePointAddress} numberOfLines={1}>{task.pickupAddress}</Text>
+            </View>
+            <View style={styles.routeSection}>
+              <View style={styles.routePoint}>
+                <View style={styles.routeDotPrimary} />
+                <Text style={styles.routePointLabel}>Destination</Text>
+              </View>
+              <Text style={styles.routePointAddress} numberOfLines={1}>{task.dropoffAddress}</Text>
+            </View>
+
+            <View style={styles.fareRow}>
+              <Text style={styles.fareLabel}>Estimated Fare</Text>
+              <Text style={styles.fareAmount}>
+                UGX {(task.totalAmount ?? 0).toLocaleString()}
               </Text>
             </View>
+          </Card>
+
+          {/* Privacy note */}
+          <View style={styles.privacyNote}>
+            <Ionicons name="lock-closed" size={ICON.xs} color={COLORS.onSurfaceVariant} />
+            <Text style={styles.privacyText}>
+              Your contact details stay private. Chat &amp; calls are in-app only.
+            </Text>
           </View>
-        ) : (
-          <View style={styles.actionsRow}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={handleCancel}
-              disabled={isCancelling || task.status === 'COMPLETED'}
-            >
-              <Text style={styles.cancelButtonText}>
-                {isCancelling ? 'Cancelling...' : 'Cancel Ride'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.sosButton} onPress={handleSOS}>
-              <Ionicons name="warning" size={16} color={COLORS.onError} />
-              <Text style={styles.sosButtonText}>SOS</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </ScrollView>
+
+          {/* Actions */}
+          {/* Once the ride is in transit (passenger aboard) it can no longer be
+              cancelled — the backend rejects it too. Hide the Cancel button and
+              surface SOS as the only escalation path, with a short explainer. */}
+          {isInTransit ? (
+            <View>
+              <GradientButton
+                title="SOS"
+                onPress={handleSOS}
+                variant="danger"
+                size="md"
+                fullWidth
+                icon={<Ionicons name="warning" size={ICON.sm} color={COLORS.onError} />}
+              />
+              <View style={styles.privacyNote}>
+                <Ionicons name="information-circle" size={ICON.xs} color={COLORS.onSurfaceVariant} />
+                <Text style={styles.privacyText}>
+                  Your ride is in progress and can no longer be cancelled. Tap SOS if you need help.
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.actionsRow}>
+              <GradientButton
+                title={isCancelling ? 'Cancelling...' : 'Cancel Ride'}
+                onPress={handleCancel}
+                variant="secondary"
+                size="md"
+                fullWidth={false}
+                style={styles.actionButton}
+                loading={isCancelling}
+                disabled={isCancelling || task.status === 'COMPLETED'}
+              />
+              <GradientButton
+                title="SOS"
+                onPress={handleSOS}
+                variant="danger"
+                size="md"
+                fullWidth={false}
+                style={styles.actionButton}
+                icon={<Ionicons name="warning" size={ICON.sm} color={COLORS.onError} />}
+              />
+            </View>
+          )}
+        </ScrollView>
+      </View>
 
       <ConfirmDialog
         visible={showCancelConfirm}
@@ -755,195 +837,184 @@ export default function RideTrackingScreen() {
   );
 }
 
+// ============================================
+// STYLES — layout + domain content only.
+// Surfaces, buttons, avatars, ratings, badges, chips, the stepper and the
+// state views all come from the Design System.
+// ============================================
+
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
   },
-  loadingContainer: {
+
+  // Full-screen state screens (loading / no ride / no riders)
+  stateContainer: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: SPACING.md,
     backgroundColor: COLORS.surface,
   },
-  loadingText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurfaceVariant,
+  stateActions: {
+    gap: SPACING.sm,
     marginTop: SPACING.md,
   },
-  noRideText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurfaceVariant,
-  },
-  goHomeButton: {
+  skeletonGap: {
     marginTop: SPACING.md,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
   },
-  goHomeButtonText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onPrimary,
-    fontWeight: '600',
+
+  // Map workspace (AR-3)
+  mapWorkspace: {
+    flex: 1,
+    position: 'relative',
+    backgroundColor: COLORS.surfaceContainerLow,
   },
-  // Status card (bottom sheet)
-  statusCard: {
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+
+  // Operations panel (rounded-26 + grabber, matching SmartBottomSheet)
+  panel: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    maxHeight: '64%',
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
+    maxHeight: '68%',
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: RADIUS.xl + 2,
+    borderTopRightRadius: RADIUS.xl + 2,
     ...SHADOWS.active,
   },
-  statusCardContent: {
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-    paddingBottom: SPACING.xl,
+  grabberWrap: {
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
   },
-  grabHandle: {
-    alignSelf: 'center',
+  grabber: {
     width: 40,
     height: 4,
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.outlineVariant,
-    marginBottom: SPACING.sm,
   },
+  scrollView: {
+    flexGrow: 0,
+  },
+  panelContent: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.xl,
+  },
+
+  // Status
   statusRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     marginBottom: SPACING.md,
-  },
-  statusLabel: {
-    ...TYPOGRAPHY.bodyLg,
-    fontWeight: 'bold',
   },
   taskNumber: {
     ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.xs,
   },
-  statusIndicator: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  // ETA hero card
+
+  // Live ETA
   etaCard: {
+    marginBottom: SPACING.gutter,
+  },
+  etaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.primaryContainer,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    gap: SPACING.sm,
+    gap: SPACING.md,
   },
   etaIconWrap: {
     width: 40,
     height: 40,
-    borderRadius: RADIUS.full,
+    borderRadius: 20,
     backgroundColor: COLORS.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   etaLabel: {
     ...TYPOGRAPHY.labelMd,
-    color: COLORS.onPrimaryContainer,
-    fontWeight: '600',
+    color: COLORS.onSurfaceVariant,
   },
   etaValue: {
     ...TYPOGRAPHY.headlineMd,
-    color: COLORS.onPrimaryContainer,
-    fontWeight: 'bold',
+    color: COLORS.onSurface,
+    fontWeight: '700',
+    marginTop: 2,
   },
   etaDistance: {
     ...TYPOGRAPHY.bodySm,
-    color: COLORS.onPrimaryContainer,
+    color: COLORS.onSurfaceVariant,
     fontWeight: '500',
   },
   liveBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.surfaceContainerLowest,
+    gap: SPACING.xs,
+    backgroundColor: COLORS.primaryFixed,
+    borderRadius: RADIUS.full,
     paddingHorizontal: SPACING.sm,
     paddingVertical: 3,
-    borderRadius: RADIUS.full,
   },
   liveDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.error,
+    backgroundColor: COLORS.primary,
   },
   liveText: {
-    fontSize: 10,
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
     fontWeight: '700',
-    color: COLORS.onSurface,
     letterSpacing: 0.5,
   },
-  // Driver card
+
+  // Ride progress
+  timelineCard: {
+    marginBottom: SPACING.gutter,
+  },
+
+  // Driver
   driverCard: {
+    marginBottom: SPACING.gutter,
+  },
+  driverRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  driverAvatar: {
-    width: 56,
-    height: 56,
-    backgroundColor: COLORS.surfaceContainer,
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.md,
-  },
-  driverAvatarImg: {
-    width: 56,
-    height: 56,
-    borderRadius: RADIUS.full,
-    marginRight: SPACING.md,
-    backgroundColor: COLORS.surfaceContainer,
+    gap: SPACING.md,
   },
   driverInfo: {
     flex: 1,
+    minWidth: 0,
   },
   driverName: {
     ...TYPOGRAPHY.bodyMd,
-    fontWeight: 'bold',
     color: COLORS.onSurface,
+    fontWeight: '700',
   },
-  driverRatingRow: {
+  driverMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: SPACING.xs,
     marginTop: 2,
   },
-  driverRating: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    marginLeft: SPACING.xs,
-  },
   driverTripsSeparator: {
-    ...TYPOGRAPHY.bodySm,
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.outlineVariant,
-    marginHorizontal: SPACING.sm,
   },
   driverTrips: {
-    ...TYPOGRAPHY.bodySm,
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
   },
   vehicleRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    marginTop: 4,
+    marginTop: SPACING.xs,
   },
   vehicleText: {
     ...TYPOGRAPHY.labelMd,
@@ -951,172 +1022,118 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexShrink: 1,
   },
   plateChip: {
-    backgroundColor: COLORS.surfaceContainerHighest,
+    backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.sm,
     paddingHorizontal: SPACING.sm,
-    paddingVertical: 1,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
+    paddingVertical: 2,
+    borderWidth: BORDER.hairline,
+    borderColor: COLORS.borderLight,
   },
   plateText: {
-    fontSize: 11,
-    fontWeight: '700',
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurface,
-    letterSpacing: 1,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
-  driverActions: {
+  contactRow: {
     flexDirection: 'row',
     gap: SPACING.sm,
+    marginTop: SPACING.md,
   },
-  callButton: {
-    width: 40,
-    height: 40,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
-    justifyContent: 'center',
+  contactButton: {
+    flex: 1,
   },
-  chatButton: {
-    width: 40,
-    height: 40,
-    backgroundColor: COLORS.primaryFixed,
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+
   // Quick replies
   quickReplySection: {
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.gutter,
   },
   quickReplyHeading: {
-    ...TYPOGRAPHY.labelMd,
+    ...TYPOGRAPHY.labelLg,
     color: COLORS.onSurfaceVariant,
+    fontWeight: '700',
     marginBottom: SPACING.sm,
-    fontWeight: '600',
   },
   quickReplyRow: {
+    flexDirection: 'row',
     gap: SPACING.sm,
     paddingRight: SPACING.md,
   },
-  quickReplyChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: COLORS.primaryFixed,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+
+  // Route + fare
+  routeCard: {
+    marginBottom: SPACING.gutter,
   },
-  quickReplyChipSent: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  quickReplyText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  quickReplyTextSent: {
-    color: COLORS.onPrimary,
-  },
-  // Route section
   routeSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.gutter,
   },
   routePoint: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: SPACING.sm,
+    gap: SPACING.sm,
   },
   routeDotSecondary: {
-    width: 8,
-    height: 8,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.secondaryFixedDim,
-    marginRight: SPACING.sm,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: COLORS.secondaryFixed,
   },
   routeDotPrimary: {
-    width: 8,
-    height: 8,
-    borderRadius: RADIUS.full,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: COLORS.primary,
-    marginRight: SPACING.sm,
   },
   routePointLabel: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
   },
   routePointAddress: {
-    ...TYPOGRAPHY.bodyMd,
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurface,
-    flex: 1,
+    fontWeight: '500',
+    marginTop: SPACING.xs,
+    marginLeft: 18,
   },
-  // Fare
   fareRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: SPACING.md,
-    borderTopWidth: 1,
+    borderTopWidth: BORDER.hairline,
     borderTopColor: COLORS.outlineVariant,
+    paddingTop: SPACING.gutter,
   },
   fareLabel: {
-    ...TYPOGRAPHY.bodyMd,
+    ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurfaceVariant,
   },
   fareAmount: {
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: 'bold',
-    color: COLORS.primary,
+    ...TYPOGRAPHY.bodyLg,
+    color: COLORS.onSurface,
+    fontWeight: '700',
   },
+
   // Privacy note
   privacyNote: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    marginBottom: SPACING.md,
+    marginBottom: SPACING.gutter,
+    paddingHorizontal: SPACING.xs,
   },
   privacyText: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
     flex: 1,
+    lineHeight: 16,
   },
+
   // Actions
   actionsRow: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: SPACING.sm,
   },
-  cancelButton: {
+  actionButton: {
     flex: 1,
-    backgroundColor: `${COLORS.error}10`,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cancelButtonText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.error,
-    fontWeight: '600',
-  },
-  sosButton: {
-    flex: 1,
-    backgroundColor: COLORS.error,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-  },
-  sosButtonText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onError,
-    fontWeight: '600',
   },
 });

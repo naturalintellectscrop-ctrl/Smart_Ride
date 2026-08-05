@@ -20,7 +20,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
   ScrollView,
   StyleSheet,
 } from 'react-native';
@@ -115,7 +114,6 @@ export default function RideRequestScreen() {
   const { setPendingTask } = useTaskStore();
   const { user } = useAuthStore();
 
-  const rideType = params.type === 'CAR' ? RIDE_TYPES.CAR : RIDE_TYPES.BODA;
   // Start on the DESTINATION step when we already know the pickup (the user's
   // current GPS location). They arrived here via "Set destination", so the very
   // first place they choose is their destination — not a new pickup. They can
@@ -173,9 +171,6 @@ export default function RideRequestScreen() {
 
   // Loading
   const [isRequesting, setIsRequesting] = useState(false);
-
-  // Derived fare for the currently selected vehicle
-  const estimatedFare = selectedVehicle === 'CAR' ? carFare : bodaFare;
 
   // Get current ride type config based on selected vehicle
   const currentRideType = selectedVehicle === 'CAR' ? RIDE_TYPES.CAR : RIDE_TYPES.BODA;
