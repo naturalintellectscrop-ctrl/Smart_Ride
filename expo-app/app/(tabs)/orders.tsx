@@ -4,7 +4,7 @@
 // VERSION: STITCH-DS-001
 // PURPOSE: Merchant orders with filter tabs and order cards
 // DESIGN: Stitch Design System — MD3 Green Theme
-// - GlowHeader with "Orders" title
+// - AppHeader with "Orders" title
 // - Order tabs (All, Active, Completed, Cancelled)
 // - Order cards with merchant info, item count, status, total amount
 // - Empty state with illustration
@@ -15,33 +15,37 @@ import {
   View, 
   Text, 
   FlatList, 
-  TouchableOpacity, 
   RefreshControl,
   StyleSheet
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
   FadeIn,
   FadeInUp,
-  FadeInDown,
   SlideInRight,
-  ZoomIn,
   Layout,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, TASK_STATUS_COLORS } from '@/src/constants';
+import {
+  TYPOGRAPHY,
+  SPACING,
+  RADIUS,
+  MOTION,
+  ICON,
+} from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Order } from '@/src/types';
-import { GlowHeader } from '@/src/components/GlowHeader';
-import { GlassCard } from '@/src/components/GlassCard';
-import { StatusBadge } from '@/src/components/StatusBadge';
-import { ServiceIcon } from '@/src/components/ServiceIcon';
-import { OrderSkeleton } from '@/src/components/Skeleton';
+import {
+  AppHeader,
+  Card,
+  Chip,
+  EmptyState,
+  OrderSkeleton,
+  SearchInput,
+  StatusBadge,
+} from '@/src/components';
 
 // ============================================
 // FILTER TABS CONFIG
@@ -68,6 +72,7 @@ export default function OrdersScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<OrderFilter>('all');
+  const [query, setQuery] = useState('');
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -119,24 +124,25 @@ export default function OrdersScreen() {
     }
   };
 
-  // Filter orders based on active tab
-  const filteredOrders = orders.filter((order) => {
-    if (activeFilter === 'all') return true;
-    if (activeFilter === 'active') {
-      return !['DELIVERED', 'COMPLETED', 'CANCELLED', 'FAILED'].includes(order.status);
-    }
-    if (activeFilter === 'completed') {
-      return ['DELIVERED', 'COMPLETED'].includes(order.status);
-    }
-    if (activeFilter === 'cancelled') {
-      return ['CANCELLED', 'FAILED'].includes(order.status);
-    }
-    return true;
-  });
+  // Status filter (rail) then free-text search over order number and merchant.
+  const filteredOrders = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return orders.filter((order) => {
+      const matchesFilter =
+        activeFilter === 'all' ? true
+        : activeFilter === 'active' ? !['DELIVERED', 'COMPLETED', 'CANCELLED', 'FAILED'].includes(order.status)
+        : activeFilter === 'completed' ? ['DELIVERED', 'COMPLETED'].includes(order.status)
+        : ['CANCELLED', 'FAILED'].includes(order.status);
+      if (!matchesFilter) return false;
+      if (!q) return true;
+      return [order.orderNumber, (order as any).merchant?.businessName, (order as any).merchantName]
+        .some((f?: string | null) => f?.toLowerCase().includes(q));
+    });
+  }, [orders, activeFilter, query]);
 
   const renderOrder = ({ item, index }: { item: Order; index: number }) => (
     <Animated.View
-      entering={SlideInRight.duration(400).delay(index * 80).springify()}
+      entering={SlideInRight.duration(MOTION.duration.slower).delay(Math.min(index * 40, 240)).springify()}
       layout={Layout.springify()}
     >
       <OrderCard
@@ -152,18 +158,24 @@ export default function OrdersScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <GlowHeader title="Orders" subtitle="Your order history" />
+      <AppHeader title="Orders" subtitle="Your order history" variant="large" />
 
-      {/* Filter Tabs */}
-      <Animated.View entering={FadeInUp.duration(400).delay(100).springify()} style={styles.tabsContainer}>
+      <Animated.View entering={FadeInUp.duration(MOTION.duration.slower).delay(100)} style={styles.searchWrap}>
+        <SearchInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search by order number or merchant"
+        />
+      </Animated.View>
+
+      {/* Filter rail */}
+      <Animated.View entering={FadeInUp.duration(MOTION.duration.slower).delay(140)} style={styles.filterRail}>
         {ORDER_TABS.map((tab) => (
-          <OrderFilterTab
+          <Chip
             key={tab.key}
             label={tab.label}
-            isActive={activeFilter === tab.key}
+            active={activeFilter === tab.key}
             onPress={() => setActiveFilter(tab.key)}
-            styles={styles}
           />
         ))}
       </Animated.View>
@@ -222,72 +234,34 @@ export default function OrdersScreen() {
             />
           }
           ListEmptyComponent={
-            <Animated.View entering={FadeIn.duration(400)} style={styles.emptyContainer}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="bag-outline" size={40} color={COLORS.outline} />
-              </View>
-              <Text style={styles.emptyTitle}>
-                {activeFilter === 'all' ? 'No orders yet' : 
-                 activeFilter === 'active' ? 'No active orders' :
-                 activeFilter === 'completed' ? 'No completed orders' :
-                 'No cancelled orders'}
-              </Text>
-              <Text style={styles.emptySubtitle}>
-                {activeFilter === 'all' ? 'Order food, shop, or send a package' : 'Try a different filter'}
-              </Text>
-              <TouchableOpacity style={styles.orderButton} onPress={() => router.push('/orders/restaurants')}>
-                <Text style={styles.orderButtonText}>Order Food</Text>
-              </TouchableOpacity>
+            <Animated.View entering={FadeIn.duration(MOTION.duration.slower)} style={styles.stateWrap}>
+              {query.trim() ? (
+                <EmptyState
+                  icon="search-outline"
+                  title="No orders match your search"
+                  subtitle="Try a different order number or merchant."
+                  actionLabel="Clear search"
+                  onAction={() => setQuery('')}
+                />
+              ) : (
+                <EmptyState
+                  icon="bag-outline"
+                  title={
+                    activeFilter === 'all' ? 'No orders yet'
+                    : activeFilter === 'active' ? 'No active orders'
+                    : activeFilter === 'completed' ? 'No completed orders'
+                    : 'No cancelled orders'
+                  }
+                  subtitle={activeFilter === 'all' ? 'Order food, shop, or send a package' : 'Try a different filter'}
+                  actionLabel={activeFilter === 'all' ? 'Order Food' : undefined}
+                  onAction={activeFilter === 'all' ? () => router.push('/orders/restaurants') : undefined}
+                />
+              )}
             </Animated.View>
           }
         />
       )}
     </View>
-  );
-}
-
-// ============================================
-// ORDER FILTER TAB COMPONENT
-// ============================================
-
-function OrderFilterTab({
-  isActive,
-  onPress,
-  label,
-  styles,
-}: {
-  isActive: boolean;
-  onPress: () => void;
-  label: string;
-  styles: any;
-}) {
-  const scale = useSharedValue(1);
-
-  const handlePress = () => {
-    scale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
-    setTimeout(() => {
-      scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-    }, 100);
-    onPress();
-  };
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <TouchableOpacity 
-      style={[styles.tabButton, isActive && styles.tabButtonActive]}
-      onPress={handlePress}
-      activeOpacity={0.7}
-    >
-      <Animated.View style={animatedStyle}>
-        <Text style={[styles.tabButtonText, isActive && styles.tabButtonTextActive]}>
-          {label}
-        </Text>
-      </Animated.View>
-      {isActive && <View style={styles.tabIndicator} />}
-    </TouchableOpacity>
   );
 }
 
@@ -308,35 +282,24 @@ function QuickServiceAction({
   onPress: () => void;
   styles: any;
 }) {
-  const scale = useSharedValue(1);
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  };
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
+  // Press motion comes from Card so this tile presses exactly like every other
+  // tappable surface, rather than re-deriving its own spring.
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={0.8}
+    <Card
+      variant="flat"
+      padding={SPACING.sm}
+      radius={RADIUS.xl}
       style={styles.quickActionItem}
+      onPress={onPress}
+      accessibilityLabel={label}
     >
-      <Animated.View style={[styles.quickActionContent, animatedStyle]}>
+      <View style={styles.quickActionContent}>
         <View style={[styles.quickActionIconCircle, { backgroundColor: `${color}15` }]}>
-          <Ionicons name={icon as any} size={22} color={color} />
+          <Ionicons name={icon as any} size={ICON.lg} color={color} />
         </View>
         <Text style={styles.quickActionLabel}>{label}</Text>
-      </Animated.View>
-    </TouchableOpacity>
+      </View>
+    </Card>
   );
 }
 
@@ -345,20 +308,6 @@ function QuickServiceAction({
 // ============================================
 
 function OrderCard({ item, onPress, getStatusColor, formatDate, COLORS, styles }: { item: Order; onPress: () => void; getStatusColor: (s: string) => string; formatDate: (d: string) => string; COLORS: ThemedColors; styles: any }) {
-  const scale = useSharedValue(1);
-
-  const handlePressIn = () => {
-    scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 15, stiffness: 300 });
-  };
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   const statusColor = getStatusColor(item.status);
   const isFoodOrder = item.orderType === 'FOOD_DELIVERY';
   const orderIconName = isFoodOrder ? 'restaurant' : 'bag';
@@ -366,20 +315,19 @@ function OrderCard({ item, onPress, getStatusColor, formatDate, COLORS, styles }
   const iconFgColor = isFoodOrder ? COLORS.onPrimaryFixedVariant : COLORS.onTertiaryFixedVariant;
 
   return (
-    <TouchableOpacity
+    <Card
+      variant="raised"
+      padding={SPACING.md}
+      radius={RADIUS.xl}
       onPress={onPress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      activeOpacity={0.9}
+      accessibilityLabel={`Order ${item.orderNumber}`}
     >
-      <Animated.View style={animatedStyle}>
-        <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={{ backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border }}>
-          <View style={styles.orderCardContent}>
+      <View>
             {/* Header: icon + order info + status */}
             <View style={styles.orderHeader}>
               <View style={styles.orderHeaderLeft}>
                 <View style={[styles.orderTypeIconCircle, { backgroundColor: iconBgColor }]}>
-                  <Ionicons name={orderIconName as any} size={18} color={iconFgColor} />
+                  <Ionicons name={orderIconName as any} size={ICON.md} color={iconFgColor} />
                 </View>
                 <View style={styles.orderHeaderText}>
                   <Text style={styles.orderMerchant}>{item.merchant?.name || 'Order'}</Text>
@@ -412,15 +360,13 @@ function OrderCard({ item, onPress, getStatusColor, formatDate, COLORS, styles }
             {/* Footer: date + amount */}
             <View style={styles.orderFooter}>
               <View style={styles.orderFooterLeft}>
-                <Ionicons name="time-outline" size={14} color={COLORS.outline} />
+                <Ionicons name="time-outline" size={ICON.xs} color={COLORS.outline} />
                 <Text style={styles.orderDate}>{formatDate(item.createdAt)}</Text>
               </View>
               <Text style={styles.orderAmount}>UGX {(item.totalAmount ?? 0).toLocaleString()}</Text>
-            </View>
-          </View>
-        </GlassCard>
-      </Animated.View>
-    </TouchableOpacity>
+        </View>
+      </View>
+    </Card>
   );
 }
 
@@ -433,46 +379,23 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  searchWrap: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.sm,
+  },
+  filterRail: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.gutter,
+  },
+  stateWrap: {
+    paddingTop: SPACING.xl,
+    paddingHorizontal: SPACING.md,
+  },
 
   // Filter Tabs
-  tabsContainer: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surfaceContainerLowest,
-    paddingHorizontal: SPACING.containerMargin,
-    paddingVertical: SPACING.sm,
-    gap: SPACING.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  tabButton: {
-    flex: 1,
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceContainer,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  tabButtonActive: {
-    backgroundColor: COLORS.primary,
-    ...SHADOWS.button,
-  },
-  tabButtonText: {
-    textAlign: 'center',
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.outline,
-  },
-  tabButtonTextActive: {
-    color: COLORS.onPrimary,
-  },
-  tabIndicator: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.onPrimary,
-    marginTop: SPACING.xs,
-  },
 
   // Quick Service Actions
   quickActionsSection: {
@@ -510,17 +433,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     padding: SPACING.containerMargin,
     paddingTop: SPACING.md,
   },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.xl + SPACING.md,
-  },
-  loadingText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.outline,
-    marginTop: SPACING.md,
-  },
 
   // List
   list: {
@@ -533,53 +445,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Empty State
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.xl + SPACING.md,
-  },
-  emptyIconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-  },
-  emptyTitle: {
-    ...TYPOGRAPHY.bodyLg,
-    fontWeight: '700',
-    color: COLORS.onSurface,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.outline,
-    textAlign: 'center',
-    marginTop: SPACING.xs,
-  },
-  orderButton: {
-    marginTop: SPACING.md,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.xl,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 2,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.button,
-  },
-  orderButtonText: {
-    color: COLORS.onPrimary,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight as any,
-    fontSize: TYPOGRAPHY.labelLg.fontSize,
-  },
 
   // Order Card
-  orderCardContent: {
-    padding: SPACING.md,
-  },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
