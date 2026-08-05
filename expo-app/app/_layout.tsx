@@ -53,6 +53,20 @@ import { useAuthStore } from '@/src/store/authStore';
 import { OfflineBanner } from '@/src/components/OfflineBanner';
 import { FeedbackHost } from '@/src/components/feedback';
 
+// Without an explicit handler, expo-notifications does not play a sound or
+// show an alert while the app is foregrounded — the default behavior in
+// current SDKs is to suppress both. This is why the driver's incoming-ride
+// request only ever vibrated: nothing was configured to let a foreground
+// notification actually make noise. Applies globally, not just to dispatch.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
+
 // Suppress known benign warnings in production
 LogBox.ignoreLogs([
   'Non-serializable values were found in the navigation state',

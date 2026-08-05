@@ -28,6 +28,7 @@ import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -395,6 +396,35 @@ export default function DriverHomeScreen() {
 
     return () => clearInterval(interval);
   }, [requestTimer, clearIncomingRequest, incomingRequest]);
+
+  // Ringtone while a request is awaiting accept/decline. handleIncomingRequest
+  // already vibrates once on arrival, but a single buzz is easy to miss and
+  // gives no audible cue at all — a real ringtone/alert-tone asset isn't
+  // bundled in this app, so this plays the device's own notification sound
+  // repeatedly (via a local, immediate notification) for as long as the
+  // request sheet is showing. Keyed on `incomingRequest` itself rather than
+  // wired into each accept/decline/expire handler individually, so it stops
+  // the instant any of them clears the request — same pattern as the
+  // countdown timer effect above.
+  useEffect(() => {
+    if (!incomingRequest) return;
+
+    const ring = () => {
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'New ride request',
+          body: incomingRequest.pickup?.address || 'Respond before it expires',
+          sound: true,
+        },
+        trigger: null,
+      }).catch(() => {});
+      Vibration.vibrate([0, 300, 150, 300]);
+    };
+
+    ring();
+    const interval = setInterval(ring, 3500);
+    return () => clearInterval(interval);
+  }, [incomingRequest]);
 
   // Show loading state
   if (isLoading) {
