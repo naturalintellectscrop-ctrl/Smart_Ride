@@ -641,7 +641,7 @@ export async function getCashCollectionSummary(): Promise<{
     totalPendingCash,
     totalRidersWithCash: ridersWithCash,
     totalOverdueCash,
-    recentDeposits: Math.abs(recentDeposits.toNumber(_sum.amount)),
+    recentDeposits: Math.abs(toNumber(recentDeposits._sum.amount)),
     alertCount,
   };
 }
