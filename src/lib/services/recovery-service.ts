@@ -219,7 +219,7 @@ export class RecoveryService {
                   data: {
                     riderId: match.riderId,
                     taskId: match.taskId,
-                    alertType: AlertType.TASK_STUCK,
+                    alertType: AlertType.TASK_TIMEOUT,
                     severity: AlertSeverity.HIGH,
                     message: `Task ${task.taskNumber} failed: no rider responded after ${failedAttempts} attempts`,
                   },
@@ -340,7 +340,7 @@ export class RecoveryService {
                 data: {
                   riderId: rider.id,
                   taskId: activeTask.id,
-                  alertType: AlertType.RIDER_DISCONNECTED,
+                  alertType: AlertType.LONG_DISCONNECT,
                   severity: AlertSeverity.CRITICAL,
                   message: `Rider ${rider.fullName} disconnected for ${Math.round(secondsSinceHeartbeat / 60)} min during task ${activeTask.taskNumber}. Task reassigned.`,
                 },
@@ -377,7 +377,7 @@ export class RecoveryService {
               where: {
                 riderId: rider.id,
                 taskId: activeTask.id,
-                alertType: AlertType.RIDER_DISCONNECTED,
+                alertType: AlertType.CONNECTION_LOST,
                 isAcknowledged: false,
               },
             });
@@ -387,7 +387,7 @@ export class RecoveryService {
                 data: {
                   riderId: rider.id,
                   taskId: activeTask.id,
-                  alertType: AlertType.RIDER_DISCONNECTED,
+                  alertType: AlertType.CONNECTION_LOST,
                   severity: AlertSeverity.HIGH,
                   message: `Rider ${rider.fullName} disconnected for ${Math.round(secondsSinceHeartbeat / 60)} min during task ${activeTask.taskNumber}. Will auto-reassign at 5 min.`,
                 },
@@ -567,6 +567,11 @@ export class RecoveryService {
           status: true,
           clientId: true,
           matchingStartedAt: true,
+          // A task stuck in MATCHING/SEARCHING genuinely has no rider yet —
+          // included (always null here) so the mapped union below has a
+          // consistent shape and `task.riderId` narrows correctly at every
+          // stuck-task category, not just ASSIGNED/IN_PROGRESS.
+          riderId: true,
         },
       });
 
@@ -636,7 +641,7 @@ export class RecoveryService {
           const existingAlert = await db.connectionAlert.findFirst({
             where: {
               taskId: task.id,
-              alertType: AlertType.TASK_STUCK,
+              alertType: AlertType.TASK_TIMEOUT,
               isAcknowledged: false,
             },
           });
@@ -648,20 +653,27 @@ export class RecoveryService {
             : 0;
 
           // Determine severity based on how long stuck
-          let severity = AlertSeverity.MEDIUM;
+          let severity: AlertSeverity = AlertSeverity.MEDIUM;
           if (minutesStuck > 30) severity = AlertSeverity.HIGH;
           if (minutesStuck > 60) severity = AlertSeverity.CRITICAL;
 
-          // Create ConnectionAlert for admin visibility
-          await db.connectionAlert.create({
-            data: {
-              riderId: task.riderId || undefined,
-              taskId: task.id,
-              alertType: AlertType.TASK_STUCK,
-              severity,
-              message: `Task ${task.taskNumber} stuck in ${task.status} for ${minutesStuck} minutes (threshold: ${Math.round(task.threshold / 60)} min)`,
-            },
-          });
+          // ConnectionAlert.riderId is required (non-nullable) — it's a
+          // rider-connection alert by design. A task stuck in MATCHING has
+          // no rider yet (nobody has accepted), so there is nothing valid to
+          // attribute the alert to. Skip it for that category only; the
+          // audit log and admin socket event below fire regardless and
+          // don't require a rider, so escalation visibility isn't lost.
+          if (task.riderId) {
+            await db.connectionAlert.create({
+              data: {
+                riderId: task.riderId,
+                taskId: task.id,
+                alertType: AlertType.TASK_TIMEOUT,
+                severity,
+                message: `Task ${task.taskNumber} stuck in ${task.status} for ${minutesStuck} minutes (threshold: ${Math.round(task.threshold / 60)} min)`,
+              },
+            });
+          }
 
           // Create audit log
           await db.auditLog.create({
