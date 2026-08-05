@@ -10,21 +10,27 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useChatStore } from '@/src/store/chatStore';
 import { socketService } from '@/src/services/socket.service';
-import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, MOTION } from '@/src/constants';
+import { SPACING, RADIUS, MOTION, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Conversation } from '@/src/store/chatStore';
-import { ConversationSkeleton } from '@/src/components/Skeleton';
+import {
+  AppHeader,
+  Avatar,
+  Card,
+  ConversationSkeleton,
+  CountBadge,
+  EmptyState,
+  SearchInput,
+} from '@/src/components';
 
 export default function MessagesTabScreen() {
   const router = useRouter();
@@ -39,6 +45,17 @@ export default function MessagesTabScreen() {
   } = useChatStore();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [query, setQuery] = useState('');
+
+  // Client-side search over the loaded conversations — participant name or the
+  // ride/order number the thread belongs to. No endpoint needed.
+  const visibleConversations = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter((c) =>
+      [c.otherUser?.name, c.taskNumber].some((f) => f?.toLowerCase().includes(q))
+    );
+  }, [conversations, query]);
 
   useEffect(() => {
     loadConversations();
@@ -106,15 +123,17 @@ export default function MessagesTabScreen() {
     const isSystem = item.lastMessage?.type === 'SYSTEM';
 
     return (
-      <Animated.View entering={FadeInDown.duration(300).delay(index * 50).springify()}>
-        <TouchableOpacity
+      <Animated.View entering={FadeInDown.duration(MOTION.duration.base).delay(Math.min(index * 40, 240)).springify()}>
+        <Card
+          variant="raised"
+          padding={SPACING.md}
+          radius={RADIUS.xl}
           style={styles.conversationCard}
           onPress={() => handleConversationPress(item)}
-          activeOpacity={0.7}
+          accessibilityLabel={`Conversation with ${item.otherUser.name}`}
         >
-          <View style={[styles.avatarContainer, { borderColor: serviceColor + '30' }]}>
-            <Ionicons name={serviceIcon as any} size={22} color={serviceColor} />
-          </View>
+          <View style={styles.conversationRow}>
+            <Avatar name={item.otherUser.name} icon={serviceIcon as any} size="lg" />
 
           <View style={styles.conversationContent}>
             <View style={styles.conversationHeader}>
@@ -142,44 +161,37 @@ export default function MessagesTabScreen() {
               </View>
 
               {item.unreadCount > 0 && (
-                <View style={[styles.unreadBadge, { backgroundColor: serviceColor }]}>
-                  <Text style={styles.unreadBadgeText}>
-                    {item.unreadCount > 99 ? '99+' : item.unreadCount}
-                  </Text>
-                </View>
+                <CountBadge count={item.unreadCount} color={serviceColor} />
               )}
             </View>
           </View>
 
-          <Ionicons name="chevron-forward" size={18} color={COLORS.outlineVariant} />
-        </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={ICON.md} color={COLORS.outlineVariant} />
+          </View>
+        </Card>
       </Animated.View>
     );
   };
 
   const renderEmptyState = () => (
-    <Animated.View entering={FadeInUp.duration(400).springify()} style={styles.emptyContainer}>
-      <View style={styles.emptyIconContainer}>
-        <Ionicons name="chatbubbles-outline" size={56} color={COLORS.primary} />
-      </View>
-      <Text style={styles.emptyTitle}>No Messages Yet</Text>
-      <Text style={styles.emptySubtitle}>
-        Your conversations with drivers{'\n'}and merchants will appear here
-      </Text>
-      <TouchableOpacity
-        style={styles.emptyButton}
-        onPress={() => router.push('/rider/ride-request?type=BODA' as any)}
-        activeOpacity={0.7}
-      >
-        <LinearGradient
-          colors={GRADIENTS.primary as unknown as [string, string]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.emptyButtonGradient}
-        >
-          <Text style={styles.emptyButtonText}>Book a Ride</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+    <Animated.View entering={FadeInUp.duration(MOTION.duration.slower)} style={styles.stateWrap}>
+      {query.trim() ? (
+        <EmptyState
+          icon="search-outline"
+          title="No conversations match your search"
+          subtitle="Try a different name or ride number."
+          actionLabel="Clear search"
+          onAction={() => setQuery('')}
+        />
+      ) : (
+        <EmptyState
+          icon="chatbubbles-outline"
+          title="No messages yet"
+          subtitle="Your conversations with drivers and merchants will appear here."
+          actionLabel="Book a Ride"
+          onAction={() => router.push('/rider/ride-request?type=BODA' as any)}
+        />
+      )}
     </Animated.View>
   );
 
@@ -187,26 +199,17 @@ export default function MessagesTabScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Messages</Text>
-            {totalUnread > 0 && (
-              <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>
-                  {totalUnread > 99 ? '99+' : totalUnread}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
+      <AppHeader
+        title="Messages"
+        subtitle={totalUnread > 0 ? `${totalUnread > 99 ? '99+' : totalUnread} unread` : undefined}
+        variant="large"
+      />
 
-        <LinearGradient
-          colors={['#4ae176', '#98f6be', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
+      <View style={styles.searchWrap}>
+        <SearchInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search by name or ride number"
         />
       </View>
 
@@ -221,11 +224,11 @@ export default function MessagesTabScreen() {
         </View>
       ) : (
         <FlatList
-          data={conversations}
+          data={visibleConversations}
           keyExtractor={(item) => item.id}
           renderItem={renderConversation}
           contentContainerStyle={
-            conversations.length === 0 ? styles.emptyList : styles.listContent
+            visibleConversations.length === 0 ? styles.emptyList : styles.listContent
           }
           ListEmptyComponent={renderEmptyState}
           refreshControl={
@@ -248,44 +251,18 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.surface,
   },
-  header: {
-    backgroundColor: COLORS.surface,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+  searchWrap: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.gutter,
   },
-  headerRow: {
+  conversationRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: SPACING.gutter,
   },
-  headerTitleContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    letterSpacing: -0.5,
-  },
-  headerBadge: {
-    backgroundColor: COLORS.error,
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  headerBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  glowBorder: {
-    height: 1,
-    marginTop: 16,
+  stateWrap: {
+    paddingTop: SPACING.xl,
+    paddingHorizontal: SPACING.md,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -304,16 +281,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     borderRadius: 16,
     padding: 14,
     marginBottom: 10,
-  },
-  avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
   },
   conversationContent: {
     flex: 1,
@@ -358,75 +325,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontStyle: 'italic',
     color: COLORS.outlineVariant,
   },
-  unreadBadge: {
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  unreadBadgeText: {
-    color: COLORS.surface,
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#98f6be',
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: COLORS.outline,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 32,
-  },
-  emptyButton: {
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  emptyButtonGradient: {
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-  },
-  emptyButtonText: {
-    color: COLORS.surface,
-    fontSize: 16,
-    fontWeight: '600',
-  },
   skeletonContainer: {
     flex: 1,
     paddingTop: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: 12,
-    color: COLORS.outline,
-    fontSize: 14,
   },
 });
