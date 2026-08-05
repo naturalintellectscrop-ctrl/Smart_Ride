@@ -1,24 +1,22 @@
-/* eslint-disable react-hooks/immutability */
 // ============================================
-// SMART RIDE MOBILE - RIDER HOME (OPERATIONAL)
+// SMART RIDE — DRIVER DASHBOARD
 // ============================================
-// Commercial driver-app home (Uber/Bolt/SafeBoda style):
-//   compact top bar + animated Online pill, a right-sized map workspace with
-//   floating quick actions, and a bottom operations panel (live status,
-//   real earnings, rider stats, Go Online). Incoming requests arrive as a
-//   premium bottom sheet with a countdown.
+// Golden Screen #13 · Archetype AR-3 (Operational Map). Incoming requests are
+// Golden Screen #14 (time-boxed decision).
+//
+//   AppHeader (greeting + OnlinePill + notifications) → map workspace + FAB
+//   cluster → operations panel (live status, real earnings, stats, Go Online)
 //
 // UI/UX ONLY — every socket event, dispatch call, ride-lifecycle transition,
 // location tracking, gate and timer below is preserved from the previous
 // screen. Earnings/stats use REAL /riders/earnings + profile data (no mocks).
 // ============================================
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
   ScrollView,
   Vibration,
@@ -26,34 +24,44 @@ import {
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SmartRideMap } from '@/src/components/SmartRideMap';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withRepeat,
-  withSequence,
-  withTiming,
   FadeIn,
   FadeInDown,
   SlideInUp,
   ZoomIn,
 } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useTaskStore, useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
-import { GRADIENTS, DEFAULT_LOCATION, SPACING, RADIUS, MOTION } from '@/src/constants';
+import {
+  DEFAULT_LOCATION,
+  SPACING,
+  RADIUS,
+  MOTION,
+  TYPOGRAPHY,
+  SHADOWS,
+  ICON,
+  BORDER,
+  OPACITY,
+} from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GradientButton } from '@/src/components/GradientButton';
+import {
+  AppHeader,
+  Card,
+  EmptyState,
+  ErrorState,
+  GradientButton,
+  OnlinePill,
+  Rating,
+  Skeleton,
+  SmartBottomSheet,
+  SmartRideMap,
+} from '@/src/components';
 import { Rider } from '@/src/types';
 import { formatUGX, formatRating } from '@/src/utils/money';
-
-let COLORS: ThemedColors;
-let styles: any;
 
 interface PeriodEarnings { totalEarnings: number; tripCount: number }
 
@@ -72,7 +80,9 @@ function greetingFor(): string {
 }
 
 export default function DriverHomeScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
@@ -426,12 +436,19 @@ export default function DriverHomeScreen() {
     return () => clearInterval(interval);
   }, [incomingRequest]);
 
-  // Show loading state
+  // Map-archetype loading skeleton — the panel shape is already there, so the
+  // dashboard doesn't jump when the profile lands.
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <PulsingLoader />
-        <Text style={styles.loadingText}>Loading driver profile...</Text>
+      <View style={styles.root}>
+        <View style={styles.mapArea} />
+        <View style={styles.panel}>
+          <View style={styles.grabber} />
+          <Skeleton width="58%" height={20} borderRadius={RADIUS.sm} />
+          <Skeleton width="100%" height={132} borderRadius={RADIUS.xl} style={styles.skeletonGap} />
+          <Skeleton width="100%" height={72} borderRadius={RADIUS.xl} style={styles.skeletonGap} />
+          <Skeleton width="100%" height={56} borderRadius={RADIUS.full} style={styles.skeletonGap} />
+        </View>
       </View>
     );
   }
@@ -440,32 +457,21 @@ export default function DriverHomeScreen() {
   if (profileError && !rider) {
     const isRiderRole = user?.role === 'RIDER';
     return (
-      <View style={styles.errorContainer}>
-        <View style={styles.errorIconCircle}>
-          <Ionicons name={isRiderRole ? 'bicycle-outline' : 'alert-circle-outline'} size={40} color={isRiderRole ? COLORS.primary : COLORS.error} />
-        </View>
-        <Text style={styles.errorTitle}>{isRiderRole ? 'Complete Your Profile' : 'Profile Load Error'}</Text>
-        <Text style={styles.errorSubtitle}>
-          {isRiderRole
-            ? 'You need to complete rider onboarding before you can go online and accept trips.'
-            : profileError}
-        </Text>
+      <View style={styles.gateContainer}>
         {isRiderRole ? (
-          <GradientButton
-            title="Start Onboarding"
-            onPress={() => router.replace('/rider/onboarding')}
-            variant="primary"
-            size="md"
-            style={{ marginTop: 24, width: 200 }}
-            icon={<Ionicons name="arrow-forward" size={18} color={COLORS.onPrimary} />}
+          <EmptyState
+            icon="bicycle-outline"
+            title="Complete your profile"
+            subtitle="You need to complete rider onboarding before you can go online and accept trips."
+            actionLabel="Start Onboarding"
+            onAction={() => router.replace('/rider/onboarding')}
           />
         ) : (
-          <GradientButton
-            title="Retry"
-            onPress={loadRiderProfile}
-            variant="primary"
-            size="md"
-            style={{ marginTop: 24, width: 180 }}
+          <ErrorState
+            title="Profile load error"
+            subtitle={profileError}
+            retryLabel="Retry"
+            onRetry={loadRiderProfile}
           />
         )}
       </View>
@@ -479,33 +485,34 @@ export default function DriverHomeScreen() {
     const rejected = riderStatus === 'REJECTED';
     const suspended = riderStatus === 'SUSPENDED';
     const reason = (rider as { rejectionReason?: string }).rejectionReason;
+    const gateTitle = rejected
+      ? 'Application not approved'
+      : suspended
+        ? 'Account suspended'
+        : 'Application under review';
+    const gateSubtitle = rejected
+      ? (reason ? `Your application was not approved. Reason: ${reason}` : 'Your application was not approved. Please contact Smart Ride support.')
+      : suspended
+        ? 'Your account has been suspended. Please contact Smart Ride support.'
+        : "Your application has been submitted and is being reviewed. You'll be able to go online and accept trips once an admin approves it.";
     return (
-      <View style={styles.errorContainer}>
-        <View style={styles.errorIconCircle}>
-          <Ionicons
-            name={rejected || suspended ? 'close-circle-outline' : 'time-outline'}
-            size={40}
-            color={rejected || suspended ? COLORS.error : COLORS.primary}
+      <View style={styles.gateContainer}>
+        {rejected || suspended ? (
+          <ErrorState
+            title={gateTitle}
+            subtitle={gateSubtitle}
+            retryLabel="Check status again"
+            onRetry={loadRiderProfile}
           />
-        </View>
-        <Text style={styles.errorTitle}>
-          {rejected ? 'Application not approved' : suspended ? 'Account suspended' : 'Application under review'}
-        </Text>
-        <Text style={styles.errorSubtitle}>
-          {rejected
-            ? (reason ? `Your application was not approved. Reason: ${reason}` : 'Your application was not approved. Please contact Smart Ride support.')
-            : suspended
-              ? 'Your account has been suspended. Please contact Smart Ride support.'
-              : "Your application has been submitted and is being reviewed. You'll be able to go online and accept trips once an admin approves it."}
-        </Text>
-        <GradientButton
-          title="Check status again"
-          onPress={loadRiderProfile}
-          variant="primary"
-          size="md"
-          style={{ marginTop: 24, width: 220 }}
-          icon={<Ionicons name="refresh" size={18} color={COLORS.onPrimary} />}
-        />
+        ) : (
+          <EmptyState
+            icon="time-outline"
+            title={gateTitle}
+            subtitle={gateSubtitle}
+            actionLabel="Check status again"
+            onAction={loadRiderProfile}
+          />
+        )}
       </View>
     );
   }
@@ -530,39 +537,44 @@ export default function DriverHomeScreen() {
           showUserLocation
         />
 
-        {/* Compact top app bar */}
-        <Animated.View entering={FadeInDown.duration(450)} style={[styles.topBar, { paddingTop: Math.max(insets.top, 12) + 6 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>{greetingFor()}</Text>
-            <Text style={styles.riderName} numberOfLines={1}>{firstName}</Text>
-          </View>
-          <OnlinePill isOnline={isOnline} onToggle={() => toggleOnlineStatus(!isOnline)} />
-          <TouchableOpacity style={styles.bellButton} onPress={() => router.push('/notifications')} activeOpacity={0.8} accessibilityLabel="Notifications">
-            <Ionicons name="notifications-outline" size={20} color={COLORS.onSurface} />
-          </TouchableOpacity>
+        {/* Compact header: greeting + availability + notifications */}
+        <Animated.View entering={FadeInDown.duration(MOTION.duration.slower)} style={styles.headerOverlay}>
+          <AppHeader
+            title={firstName}
+            subtitle={greetingFor()}
+            rightSlot={<OnlinePill isOnline={isOnline} onToggle={() => toggleOnlineStatus(!isOnline)} />}
+            rightActions={[
+              { icon: 'notifications-outline', onPress: () => router.push('/notifications'), label: 'Notifications' },
+            ]}
+          />
         </Animated.View>
 
         {profileError && rider && (
-          <Animated.View entering={FadeIn.duration(300)} style={[styles.errorBanner, { top: Math.max(insets.top, 12) + 72 }]}>
-            <Ionicons name="alert-circle-outline" size={15} color={COLORS.warning} />
+          <Animated.View
+            entering={FadeIn.duration(MOTION.duration.base)}
+            style={[styles.errorBanner, { top: Math.max(insets.top, 12) + 78 }]}
+          >
+            <Ionicons name="alert-circle-outline" size={ICON.sm} color={COLORS.warning} />
             <Text style={styles.errorBannerText} numberOfLines={1}>{profileError}</Text>
-            <TouchableOpacity onPress={loadRiderProfile}><Text style={styles.errorBannerAction}>Retry</Text></TouchableOpacity>
+            <TouchableOpacity onPress={loadRiderProfile} accessibilityRole="button" accessibilityLabel="Retry loading profile">
+              <Text style={styles.errorBannerAction}>Retry</Text>
+            </TouchableOpacity>
           </Animated.View>
         )}
 
         {/* Floating quick actions */}
         <View style={styles.fabColumn}>
-          <Fab icon="warning" bg={COLORS.error} fg="#FFFFFF" onPress={() => router.push('/sos' as never)} label="SOS" />
-          <Fab icon="chatbubble-ellipses-outline" bg={COLORS.backgroundElevated} fg={COLORS.onSurface} onPress={() => router.push('/chat' as never)} label="Messages" />
-          <Fab icon="help-buoy-outline" bg={COLORS.backgroundElevated} fg={COLORS.onSurface} onPress={() => router.push('/help-center' as never)} label="Support" />
-          <Fab icon="locate" bg={COLORS.backgroundElevated} fg={COLORS.primary} onPress={() => getCurrentLocation().catch(() => {})} label="Recenter" />
+          <Fab icon="warning" bg={COLORS.error} fg={COLORS.onError} onPress={() => router.push('/sos' as never)} label="SOS" styles={styles} />
+          <Fab icon="chatbubble-ellipses-outline" bg={COLORS.backgroundElevated} fg={COLORS.onSurface} onPress={() => router.push('/chat' as never)} label="Messages" styles={styles} />
+          <Fab icon="help-buoy-outline" bg={COLORS.backgroundElevated} fg={COLORS.onSurface} onPress={() => router.push('/help-center' as never)} label="Support" styles={styles} />
+          <Fab icon="locate" bg={COLORS.backgroundElevated} fg={COLORS.primary} onPress={() => getCurrentLocation().catch(() => {})} label="Recenter" styles={styles} />
         </View>
       </View>
 
       {/* ── OPERATIONS PANEL (lower) ── */}
-      <Animated.View entering={SlideInUp.duration(500).springify()} style={styles.panel}>
+      <Animated.View entering={SlideInUp.duration(MOTION.duration.slower).springify()} style={styles.panel}>
         <View style={styles.grabber} />
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 12) + 8 }}>
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 12) + SPACING.sm }}>
           {/* Live status */}
           <View style={styles.statusRow}>
             <View style={[styles.statusDot, { backgroundColor: liveStatus.dot }]} />
@@ -570,16 +582,13 @@ export default function DriverHomeScreen() {
               <Text style={styles.statusText}>{liveStatus.text}</Text>
               <Text style={styles.statusSub}>{liveStatus.sub}</Text>
             </View>
-            <View style={styles.ratingChip}>
-              <Ionicons name="star" size={13} color={COLORS.warning} />
-              <Text style={styles.ratingChipText}>{formatRating(rider?.rating, rider?.ratingCount)}</Text>
-            </View>
+            <Rating value={rider?.rating} count={rider?.ratingCount} />
           </View>
 
-          {/* Earnings card */}
-          <View style={styles.earningsCard}>
+          {/* Earnings */}
+          <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl}>
             <View style={styles.earningsTop}>
-              <View>
+              <View style={{ flex: 1 }}>
                 <Text style={styles.earningsLabel}>Today&apos;s earnings</Text>
                 <Text style={styles.earningsValue}>{formatUGX(today?.totalEarnings ?? 0)}</Text>
                 <Text style={styles.earningsMeta}>
@@ -588,29 +597,31 @@ export default function DriverHomeScreen() {
                 </Text>
               </View>
               <View style={styles.walletChip}>
-                <Ionicons name="wallet-outline" size={14} color={COLORS.onPrimary} />
+                <Ionicons name="wallet-outline" size={ICON.xs} color={COLORS.onPrimary} />
                 <Text style={styles.walletChipText}>{formatUGX(rider?.walletBalance ?? 0)}</Text>
               </View>
             </View>
             <View style={styles.shortcutRow}>
-              <Shortcut icon="wallet-outline" label="Wallet" onPress={() => router.push('/rider/wallet' as never)} />
-              <Shortcut icon="arrow-up-circle-outline" label="Withdraw" onPress={() => router.push('/rider/wallet' as never)} />
-              <Shortcut icon="time-outline" label="History" onPress={() => router.push('/rider/history' as never)} />
-              <Shortcut icon="stats-chart-outline" label="Earnings" onPress={() => router.push('/rider/earnings' as never)} />
+              <Shortcut icon="wallet-outline" label="Wallet" onPress={() => router.push('/rider/wallet' as never)} COLORS={COLORS} styles={styles} />
+              <Shortcut icon="arrow-up-circle-outline" label="Withdraw" onPress={() => router.push('/rider/wallet' as never)} COLORS={COLORS} styles={styles} />
+              <Shortcut icon="time-outline" label="History" onPress={() => router.push('/rider/history' as never)} COLORS={COLORS} styles={styles} />
+              <Shortcut icon="stats-chart-outline" label="Earnings" onPress={() => router.push('/rider/earnings' as never)} COLORS={COLORS} styles={styles} />
             </View>
-          </View>
+          </Card>
 
           {/* Rider stats */}
-          <View style={styles.statsCard}>
-            <Stat value={formatRating(rider?.rating, rider?.ratingCount)} label="Rating" />
-            <View style={styles.statDivider} />
-            <Stat value={String(today?.tripCount ?? 0)} label="Trips today" />
-            <View style={styles.statDivider} />
-            <Stat value={String(rider?.completedTrips ?? rider?.totalTrips ?? 0)} label="Completed" />
-          </View>
+          <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.statsCard}>
+            <View style={styles.statsRow}>
+              <Stat value={formatRating(rider?.rating, rider?.ratingCount)} label="Rating" styles={styles} />
+              <View style={styles.statDivider} />
+              <Stat value={String(today?.tripCount ?? 0)} label="Trips today" styles={styles} />
+              <View style={styles.statDivider} />
+              <Stat value={String(rider?.completedTrips ?? rider?.totalTrips ?? 0)} label="Completed" styles={styles} />
+            </View>
+          </Card>
 
           {/* Go online / offline */}
-          <View style={{ marginTop: SPACING.md }}>
+          <View style={styles.goOnlineWrap}>
             <GradientButton
               title={isOnline ? 'Go Offline' : 'Go Online'}
               onPress={() => toggleOnlineStatus(!isOnline)}
@@ -618,31 +629,37 @@ export default function DriverHomeScreen() {
               size="lg"
               fullWidth
               icon={isOnline
-                ? <Ionicons name="power" size={20} color={COLORS.onPrimary} />
-                : <Ionicons name="flash" size={20} color={COLORS.onPrimary} />}
+                ? <Ionicons name="power" size={ICON.md} color={COLORS.onPrimary} />
+                : <Ionicons name="flash" size={ICON.md} color={COLORS.onPrimary} />}
             />
           </View>
         </ScrollView>
       </Animated.View>
 
-      {/* ── INCOMING REQUEST BOTTOM SHEET ── */}
-      {incomingRequest && (
-        <View style={styles.sheetScrim} pointerEvents="box-none">
-          <Animated.View entering={SlideInUp.duration(360).springify()} style={[styles.requestSheet, { paddingBottom: Math.max(insets.bottom, 14) + 8 }]}>
-            <View style={styles.grabber} />
+      {/* ── INCOMING REQUEST (Golden Screen #14) ── */}
+      <SmartBottomSheet
+        visible={!!incomingRequest}
+        onDismiss={handleDeclineRequest}
+      >
+        {incomingRequest ? (
+          <View>
             <View style={styles.requestHead}>
               <View style={styles.requestTitleRow}>
-                <View style={styles.requestIcon}><Ionicons name="navigate" size={16} color={COLORS.onPrimary} /></View>
+                <View style={styles.requestIcon}>
+                  <Ionicons name="navigate" size={ICON.sm} color={COLORS.onPrimary} />
+                </View>
                 <Text style={styles.requestTitle}>New ride request</Text>
               </View>
-              <Animated.View entering={ZoomIn.duration(250)}>
+              <Animated.View entering={ZoomIn.duration(MOTION.duration.base)}>
                 <View style={[styles.timerRing, { borderColor: (requestTimer || 0) < 10 ? COLORS.error : COLORS.primary }]}>
-                  <Text style={[styles.timerText, { color: (requestTimer || 0) < 10 ? COLORS.error : COLORS.primary }]}>{requestTimer ?? 0}</Text>
+                  <Text style={[styles.timerText, { color: (requestTimer || 0) < 10 ? COLORS.error : COLORS.primary }]}>
+                    {requestTimer ?? 0}
+                  </Text>
                 </View>
               </Animated.View>
             </View>
 
-            <View style={styles.routeCard}>
+            <Card variant="flat" padding={SPACING.md} radius={RADIUS.lg}>
               <View style={styles.routeRow}>
                 <View style={styles.pickupDot} />
                 <View style={{ flex: 1 }}>
@@ -658,7 +675,7 @@ export default function DriverHomeScreen() {
                   <Text style={styles.routeAddr} numberOfLines={1}>{incomingRequest.task?.dropoffAddress || 'Dropoff location'}</Text>
                 </View>
               </View>
-            </View>
+            </Card>
 
             <View style={styles.fareRow}>
               <Text style={styles.fareLabel}>You earn</Text>
@@ -666,21 +683,30 @@ export default function DriverHomeScreen() {
             </View>
 
             <View style={styles.actionRow}>
-              <AnimatedPressable onPress={handleDeclineRequest}>
-                <View style={styles.declineBtn}><Text style={styles.declineText}>Decline</Text></View>
-              </AnimatedPressable>
-              <AnimatedPressable onPress={handleAcceptRequest} disabled={isAccepting}>
-                <View style={styles.acceptBtn}>
-                  {isAccepting ? <ActivityIndicator color={COLORS.onPrimary} /> : (<>
-                    <Ionicons name="checkmark" size={18} color={COLORS.onPrimary} />
-                    <Text style={styles.acceptText}>Accept</Text>
-                  </>)}
-                </View>
-              </AnimatedPressable>
+              <GradientButton
+                title="Decline"
+                onPress={handleDeclineRequest}
+                variant="secondary"
+                size="lg"
+                fullWidth={false}
+                style={styles.actionButton}
+                disabled={isAccepting}
+              />
+              <GradientButton
+                title="Accept"
+                onPress={handleAcceptRequest}
+                variant="primary"
+                size="lg"
+                fullWidth={false}
+                style={styles.actionButton}
+                loading={isAccepting}
+                disabled={isAccepting}
+                icon={!isAccepting ? <Ionicons name="checkmark" size={ICON.md} color={COLORS.onPrimary} /> : undefined}
+              />
             </View>
-          </Animated.View>
-        </View>
-      )}
+          </View>
+        ) : null}
+      </SmartBottomSheet>
     </View>
   );
 }
@@ -688,38 +714,40 @@ export default function DriverHomeScreen() {
 // ============================================
 // SUB-COMPONENTS
 // ============================================
+// Each takes the styles it needs. The screen previously assigned COLORS and
+// styles to module-level `let`s so these could read them — shared mutable
+// module state that only worked while exactly one instance was mounted.
 
-// Animated Online/Offline pill switch (small — replaces the giant button).
-function OnlinePill({ isOnline, onToggle }: { isOnline: boolean; onToggle: () => void }) {
-  const p = useSharedValue(isOnline ? 1 : 0);
-  useEffect(() => { p.value = withTiming(isOnline ? 1 : 0, { duration: 220 }); }, [isOnline]);
-  const knob = useAnimatedStyle(() => ({ transform: [{ translateX: p.value * 34 }] }));
+function Fab({ icon, bg, fg, onPress, label, styles }: { icon: string; bg: string; fg: string; onPress: () => void; label: string; styles: any }) {
   return (
-    <TouchableOpacity onPress={onToggle} activeOpacity={0.9} accessibilityRole="switch" accessibilityState={{ checked: isOnline }} style={[styles.pill, isOnline && styles.pillOn]}>
-      <Animated.View style={[styles.pillKnob, isOnline && styles.pillKnobOn, knob]} />
-      <Text style={[styles.pillText, isOnline ? styles.pillTextOn : styles.pillTextOff]}>{isOnline ? 'ONLINE' : 'OFFLINE'}</Text>
+    <TouchableOpacity
+      style={[styles.fab, { backgroundColor: bg }]}
+      onPress={onPress}
+      activeOpacity={OPACITY.pressed}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <Ionicons name={icon as any} size={ICON.md} color={fg} />
     </TouchableOpacity>
   );
 }
 
-function Fab({ icon, bg, fg, onPress, label }: { icon: string; bg: string; fg: string; onPress: () => void; label: string }) {
+function Shortcut({ icon, label, onPress, COLORS, styles }: { icon: string; label: string; onPress: () => void; COLORS: ThemedColors; styles: any }) {
   return (
-    <TouchableOpacity style={[styles.fab, { backgroundColor: bg }]} onPress={onPress} activeOpacity={0.85} accessibilityLabel={label}>
-      <Ionicons name={icon as any} size={20} color={fg} />
-    </TouchableOpacity>
-  );
-}
-
-function Shortcut({ icon, label, onPress }: { icon: string; label: string; onPress: () => void }) {
-  return (
-    <TouchableOpacity style={styles.shortcut} onPress={onPress} activeOpacity={0.8}>
-      <View style={styles.shortcutIcon}><Ionicons name={icon as any} size={19} color={COLORS.primary} /></View>
+    <TouchableOpacity
+      style={styles.shortcut}
+      onPress={onPress}
+      activeOpacity={OPACITY.pressed}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+    >
+      <View style={styles.shortcutIcon}><Ionicons name={icon as any} size={ICON.md} color={COLORS.primary} /></View>
       <Text style={styles.shortcutLabel}>{label}</Text>
     </TouchableOpacity>
   );
 }
 
-function Stat({ value, label }: { value: string; label: string }) {
+function Stat({ value, label, styles }: { value: string; label: string; styles: any }) {
   return (
     <View style={styles.stat}>
       <Text style={styles.statValue}>{value}</Text>
@@ -728,167 +756,120 @@ function Stat({ value, label }: { value: string; label: string }) {
   );
 }
 
-// Pulsing Loader Component
-function PulsingLoader() {
-  const scale = useSharedValue(1);
-  useEffect(() => {
-    scale.value = withRepeat(withSequence(withTiming(1.2, { duration: 600 }), withTiming(1, { duration: 600 })), -1, true);
-  }, []);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return (
-    <Animated.View style={animatedStyle}>
-      <ActivityIndicator size="large" color={COLORS.primary} />
-    </Animated.View>
-  );
-}
-
-function AnimatedPressable({ children, onPress, disabled }: { children: React.ReactNode; onPress: () => void; disabled?: boolean }) {
-  const scale = useSharedValue(1);
-  const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
-  return (
-    <Animated.View style={[{ flex: 1 }, animatedStyle]}>
-      <TouchableOpacity
-        activeOpacity={0.9}
-        disabled={disabled}
-        onPressIn={() => { scale.value = withSpring(MOTION.pressScale, MOTION.spring.press); }}
-        onPressOut={() => { scale.value = withSpring(1, MOTION.spring.press); }}
-        onPress={onPress}
-      >
-        {children}
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
+// ============================================
+// STYLES — layout + domain content only.
+// ============================================
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.surface },
 
-  // Loading / error gates
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface, gap: 16 },
-  loadingText: { color: COLORS.onSurfaceVariant, fontSize: 15 },
-  errorContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface, paddingHorizontal: 32 },
-  errorIconCircle: { width: 84, height: 84, borderRadius: 42, backgroundColor: COLORS.surfaceContainerLow, alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
-  errorTitle: { fontSize: 20, fontWeight: '800', color: COLORS.onSurface, textAlign: 'center' },
-  errorSubtitle: { fontSize: 14, color: COLORS.onSurfaceVariant, textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  // Gates
+  gateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surface,
+  },
+  skeletonGap: { marginTop: SPACING.md },
 
   // Map workspace ~56%
-  mapArea: { flex: 1.28, overflow: 'hidden' },
-
-  topBar: {
-    position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10,
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: SPACING.md, paddingBottom: 12,
-  },
-  greeting: { fontSize: 13, color: COLORS.onSurfaceVariant, fontWeight: '500', textShadowColor: 'rgba(255,255,255,0.6)', textShadowRadius: 6 },
-  riderName: { fontSize: 22, fontWeight: '800', color: COLORS.onSurface, textShadowColor: 'rgba(255,255,255,0.6)', textShadowRadius: 6 },
-  bellButton: {
-    width: 44, height: 44, borderRadius: 22, backgroundColor: COLORS.backgroundElevated,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 3,
-  },
-
-  // Online pill
-  pill: {
-    width: 84, height: 34, borderRadius: 17, backgroundColor: COLORS.surfaceContainerHigh,
-    justifyContent: 'center', paddingHorizontal: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.12, shadowRadius: 6, elevation: 3,
-  },
-  pillOn: { backgroundColor: COLORS.primary },
-  pillKnob: { position: 'absolute', left: 4, width: 26, height: 26, borderRadius: 13, backgroundColor: COLORS.onSurfaceVariant },
-  pillKnobOn: { backgroundColor: '#FFFFFF' },
-  pillText: { fontSize: 10, fontWeight: '800', letterSpacing: 0.5, textAlign: 'center', marginLeft: 8 },
-  pillTextOn: { color: COLORS.onPrimary },
-  pillTextOff: { color: COLORS.onSurfaceVariant },
+  mapArea: { flex: 1.28, overflow: 'hidden', backgroundColor: COLORS.surfaceContainerLow },
+  headerOverlay: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 },
 
   errorBanner: {
     position: 'absolute', left: SPACING.md, right: SPACING.md, zIndex: 9,
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: COLORS.backgroundElevated, borderRadius: RADIUS.md, paddingHorizontal: 12, paddingVertical: 8,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3,
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.sm,
+    backgroundColor: COLORS.backgroundElevated, borderRadius: RADIUS.md,
+    paddingHorizontal: SPACING.gutter, paddingVertical: SPACING.sm,
+    ...SHADOWS.card,
   },
-  errorBannerText: { flex: 1, fontSize: 12, color: COLORS.onSurface },
-  errorBannerAction: { fontSize: 12, fontWeight: '700', color: COLORS.primary },
+  errorBannerText: { flex: 1, ...TYPOGRAPHY.labelMd, color: COLORS.onSurface },
+  errorBannerAction: { ...TYPOGRAPHY.labelMd, fontWeight: '700', color: COLORS.primary },
 
   // Floating quick actions
-  fabColumn: { position: 'absolute', right: SPACING.md, bottom: 16, gap: 10, alignItems: 'center' },
+  fabColumn: { position: 'absolute', right: SPACING.md, bottom: SPACING.md, gap: SPACING.sm + 2, alignItems: 'center' },
   fab: {
-    width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 5,
+    width: 48, height: 48, borderRadius: RADIUS.full,
+    alignItems: 'center', justifyContent: 'center',
+    ...SHADOWS.active,
   },
 
-  // Operations panel ~44%
+  // Operations panel ~44% (rounded-26 + grabber, matching SmartBottomSheet)
   panel: {
     flex: 1,
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: 26, borderTopRightRadius: 26,
-    marginTop: -22, paddingHorizontal: SPACING.md, paddingTop: 8,
-    shadowColor: '#000', shadowOffset: { width: 0, height: -6 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 12,
+    borderTopLeftRadius: RADIUS.xl + 2,
+    borderTopRightRadius: RADIUS.xl + 2,
+    marginTop: -(RADIUS.xl - 2),
+    paddingHorizontal: SPACING.md,
+    paddingTop: SPACING.sm,
+    ...SHADOWS.active,
   },
-  grabber: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: COLORS.outlineVariant, marginBottom: 12 },
+  grabber: {
+    alignSelf: 'center', width: 40, height: 4, borderRadius: RADIUS.full,
+    backgroundColor: COLORS.outlineVariant, marginBottom: SPACING.gutter,
+  },
 
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: SPACING.md },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.gutter, marginBottom: SPACING.md },
   statusDot: { width: 12, height: 12, borderRadius: 6 },
-  statusText: { fontSize: 16, fontWeight: '700', color: COLORS.onSurface },
-  statusSub: { fontSize: 12.5, color: COLORS.onSurfaceVariant, marginTop: 1 },
-  ratingChip: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: COLORS.surfaceContainerLow, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
-  ratingChipText: { fontSize: 13, fontWeight: '700', color: COLORS.onSurface },
+  statusText: { ...TYPOGRAPHY.bodyMd, fontWeight: '700', color: COLORS.onSurface },
+  statusSub: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, marginTop: 1 },
 
   // Earnings
-  earningsCard: {
-    backgroundColor: COLORS.backgroundElevated, borderRadius: RADIUS.xl, padding: SPACING.md,
-    borderWidth: 1, borderColor: COLORS.borderLight,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.05, shadowRadius: 12, elevation: 2,
+  earningsTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: SPACING.sm },
+  earningsLabel: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant, fontWeight: '500' },
+  earningsValue: { ...TYPOGRAPHY.displayLg, color: COLORS.onSurface, marginTop: 2 },
+  earningsMeta: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, marginTop: SPACING.xs },
+  walletChip: {
+    flexDirection: 'row', alignItems: 'center', gap: SPACING.xs,
+    backgroundColor: COLORS.primary, borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm + 2, paddingVertical: 6,
   },
-  earningsTop: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
-  earningsLabel: { fontSize: 13, color: COLORS.onSurfaceVariant, fontWeight: '500' },
-  earningsValue: { fontSize: 28, fontWeight: '800', color: COLORS.onSurface, marginTop: 2 },
-  earningsMeta: { fontSize: 12.5, color: COLORS.onSurfaceVariant, marginTop: 4 },
-  walletChip: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: COLORS.primary, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 6 },
-  walletChipText: { fontSize: 12, fontWeight: '700', color: COLORS.onPrimary },
+  walletChipText: { ...TYPOGRAPHY.labelMd, fontWeight: '700', color: COLORS.onPrimary },
   shortcutRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: SPACING.md },
-  shortcut: { alignItems: 'center', gap: 6, flex: 1 },
-  shortcutIcon: { width: 46, height: 46, borderRadius: 15, backgroundColor: COLORS.surfaceContainerLow, alignItems: 'center', justifyContent: 'center' },
-  shortcutLabel: { fontSize: 11.5, color: COLORS.onSurfaceVariant, fontWeight: '600' },
+  shortcut: { alignItems: 'center', gap: SPACING.xs + 2, flex: 1, minHeight: 44 },
+  shortcutIcon: {
+    width: 46, height: 46, borderRadius: RADIUS.md + 3,
+    backgroundColor: COLORS.surfaceContainerLow,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  shortcutLabel: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, fontWeight: '600' },
 
   // Stats
-  statsCard: {
-    flexDirection: 'row', alignItems: 'center', marginTop: SPACING.md,
-    backgroundColor: COLORS.backgroundElevated, borderRadius: RADIUS.xl, paddingVertical: SPACING.md,
-    borderWidth: 1, borderColor: COLORS.borderLight,
-  },
+  statsCard: { marginTop: SPACING.md },
+  statsRow: { flexDirection: 'row', alignItems: 'center' },
   stat: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 19, fontWeight: '800', color: COLORS.onSurface },
-  statLabel: { fontSize: 11.5, color: COLORS.onSurfaceVariant, marginTop: 2 },
-  statDivider: { width: 1, height: 30, backgroundColor: COLORS.borderLight },
+  statValue: { ...TYPOGRAPHY.headlineMd, fontWeight: '800', color: COLORS.onSurface },
+  statLabel: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, marginTop: 2 },
+  statDivider: { width: BORDER.hairline, height: 30, backgroundColor: COLORS.borderLight },
 
-  // Incoming request sheet
-  sheetScrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.28)', justifyContent: 'flex-end' },
-  requestSheet: {
-    backgroundColor: COLORS.surface, borderTopLeftRadius: 26, borderTopRightRadius: 26,
-    paddingHorizontal: SPACING.lg, paddingTop: 10,
-  },
+  goOnlineWrap: { marginTop: SPACING.md },
+
+  // Incoming request
   requestHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md },
-  requestTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  requestIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
-  requestTitle: { fontSize: 17, fontWeight: '800', color: COLORS.onSurface },
-  timerRing: { width: 46, height: 46, borderRadius: 23, borderWidth: 3, alignItems: 'center', justifyContent: 'center' },
-  timerText: { fontSize: 17, fontWeight: '800' },
+  requestTitleRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm + 2, flex: 1 },
+  requestIcon: {
+    width: 34, height: 34, borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center',
+  },
+  requestTitle: { ...TYPOGRAPHY.bodyLg, fontWeight: '800', color: COLORS.onSurface },
+  timerRing: {
+    width: 46, height: 46, borderRadius: RADIUS.full, borderWidth: 3,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  timerText: { ...TYPOGRAPHY.bodyLg, fontWeight: '800' },
 
-  routeCard: { backgroundColor: COLORS.surfaceContainerLow, borderRadius: RADIUS.lg, padding: SPACING.md },
-  routeRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  routeRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.gutter },
   pickupDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: COLORS.primary },
-  dropoffDot: { width: 12, height: 12, borderRadius: 3, backgroundColor: COLORS.error },
+  dropoffDot: { width: 12, height: 12, borderRadius: RADIUS.sm - 1, backgroundColor: COLORS.error },
   routeConnector: { width: 2, height: 18, backgroundColor: COLORS.outlineVariant, marginLeft: 5, marginVertical: 2 },
-  routeLabel: { fontSize: 11, color: COLORS.onSurfaceVariant, fontWeight: '600' },
-  routeAddr: { fontSize: 14.5, color: COLORS.onSurface, fontWeight: '600' },
+  routeLabel: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, fontWeight: '600' },
+  routeAddr: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurface, fontWeight: '600' },
 
   fareRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.md },
-  fareLabel: { fontSize: 14, color: COLORS.onSurfaceVariant },
-  fareValue: { fontSize: 22, fontWeight: '800', color: COLORS.primary },
+  fareLabel: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant },
+  fareValue: { ...TYPOGRAPHY.headlineLg, color: COLORS.primary },
 
-  actionRow: { flexDirection: 'row', gap: 12, marginTop: SPACING.md },
-  declineBtn: { height: 54, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surfaceContainerHigh },
-  declineText: { fontSize: 16, fontWeight: '700', color: COLORS.onSurface },
-  acceptBtn: { height: 54, borderRadius: RADIUS.full, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: COLORS.primary },
-  acceptText: { fontSize: 16, fontWeight: '700', color: COLORS.onPrimary },
+  actionRow: { flexDirection: 'row', gap: SPACING.gutter, marginTop: SPACING.md },
+  actionButton: { flex: 1 },
 });

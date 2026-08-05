@@ -22,10 +22,15 @@ interface AppHeaderProps {
   variant?: 'compact' | 'large';
   onBack?: () => void; // renders a back button when provided
   rightActions?: HeaderAction[];
+  /**
+   * Arbitrary control rendered before the icon actions — the operational
+   * dashboards (Driver, Merchant, Pharmacy) put their `OnlinePill` here.
+   */
+  rightSlot?: React.ReactNode;
   style?: ViewStyle;
 }
 
-export function AppHeader({ title, subtitle, variant = 'compact', onBack, rightActions, style }: AppHeaderProps) {
+export function AppHeader({ title, subtitle, variant = 'compact', onBack, rightActions, rightSlot, style }: AppHeaderProps) {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -40,11 +45,15 @@ export function AppHeader({ title, subtitle, variant = 'compact', onBack, rightA
           </TouchableOpacity>
         ) : null}
         {variant === 'compact' ? (
-          <Text style={styles.compactTitle} numberOfLines={1}>{title}</Text>
+          <View style={styles.compactTitleBlock}>
+            {subtitle ? <Text style={styles.compactSubtitle} numberOfLines={1}>{subtitle}</Text> : null}
+            <Text style={styles.compactTitle} numberOfLines={1}>{title}</Text>
+          </View>
         ) : (
           <View style={{ flex: 1 }} />
         )}
         <View style={styles.actions}>
+          {rightSlot}
           {rightActions?.map((a, i) => (
             <TouchableOpacity key={i} onPress={a.onPress} style={styles.iconButton} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={a.label ?? a.icon}>
               <Ionicons name={a.icon} size={ICON.md} color={COLORS.onSurface} />
@@ -68,7 +77,9 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   wrap: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, minHeight: 44 },
   iconButton: { width: 44, height: 44, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surfaceContainerLow },
-  compactTitle: { flex: 1, fontSize: 20, fontWeight: '800', color: COLORS.onSurface, letterSpacing: -0.2 },
+  compactTitleBlock: { flex: 1, minWidth: 0 },
+  compactTitle: { fontSize: 20, fontWeight: '800', color: COLORS.onSurface, letterSpacing: -0.2 },
+  compactSubtitle: { fontSize: 13, fontWeight: '500', color: COLORS.onSurfaceVariant },
   actions: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm },
   largeBlock: { marginTop: SPACING.sm },
   largeTitle: { fontSize: 28, fontWeight: '800', color: COLORS.onSurface, letterSpacing: -0.3 },

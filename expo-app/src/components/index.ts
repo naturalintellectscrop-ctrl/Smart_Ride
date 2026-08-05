@@ -28,6 +28,7 @@ export { CountBadge } from './CountBadge';
 export { AppHeader } from './AppHeader';
 export { SearchInput } from './SearchInput';
 export { Chip } from './Chip';
+export { OnlinePill } from './OnlinePill';
 export { SmartBottomSheet } from './SmartBottomSheet';
 export { RideTimeline } from './RideTimeline';
 export { SmartRideModal as SmartDialog } from './feedback/SmartRideModal';
