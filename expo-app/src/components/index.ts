@@ -26,6 +26,8 @@ export { Rating } from './Rating';
 export { SegmentedControl } from './SegmentedControl';
 export { CountBadge } from './CountBadge';
 export { AppHeader } from './AppHeader';
+export { SearchInput } from './SearchInput';
+export { Chip } from './Chip';
 export { SmartBottomSheet } from './SmartBottomSheet';
 export { RideTimeline } from './RideTimeline';
 export { SmartRideModal as SmartDialog } from './feedback/SmartRideModal';

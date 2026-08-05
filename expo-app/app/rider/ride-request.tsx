@@ -1,21 +1,30 @@
 // ============================================
-// SMART RIDE MOBILE - RIDE REQUEST SCREEN
+// SMART RIDE — BOOK A RIDE
 // ============================================
-// Stitch Design System — Book a Ride
-// Map area at top, floating search card, vehicle
-// selection, payment tray, Request Ride CTA
+// Golden Screens #8–#10 · Archetype AR-3 (Operational Map, progressive).
+//
+//   compact AppHeader overlay → map workspace → operations panel (rounded-26,
+//   grabber, live content → primary action)
+//
+// The flow is one decision per step: pickup → destination → confirm. Every
+// surface here is a Design-System primitive (Card, SearchInput, Chip,
+// SegmentedControl, SmartBottomSheet, GradientButton, StateViews); the screen
+// contributes layout and domain content only, no bespoke cards or buttons.
+//
+// Business logic — place search/debounce, recents, directions, fare estimates,
+// nearby drivers, payment mapping and task creation — is unchanged.
 // ============================================
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
   StyleSheet,
 } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Alert } from '@/src/components/feedback';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -30,16 +39,28 @@ import {
   TYPOGRAPHY,
   SPACING,
   RADIUS,
-  SHADOWS,
-  GRADIENTS,
+  MOTION,
+  ICON,
+  BORDER,
+  OPACITY,
 } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { PaymentMethod } from '@/src/types';
-import { SmartRideMap } from '@/src/components/SmartRideMap';
-import { GlassCard } from '@/src/components/GlassCard';
-import { GradientButton } from '@/src/components/GradientButton';
-import { IconInput } from '@/src/components/IconInput';
+import {
+  AppHeader,
+  Card,
+  Chip,
+  EmptyState,
+  GradientButton,
+  IconInput,
+  SearchInput,
+  SectionHeader,
+  SegmentedControl,
+  Skeleton,
+  SmartBottomSheet,
+  SmartRideMap,
+} from '@/src/components';
 
 // Types for search results
 interface PlaceResult {
@@ -59,6 +80,9 @@ interface PlaceResult {
 
 const RECENT_PLACES_KEY = 'smart-ride-recent-destinations';
 
+/** Entrance stagger for list rows — `base` step, capped at 240ms (DS motion). */
+const rowDelay = (index: number) => Math.min(index * 40, 240);
+
 // Types for ride type
 interface RideTypeConfig {
   id: string;
@@ -69,12 +93,19 @@ interface RideTypeConfig {
   capacity: number;
 }
 
+type Step = 'pickup' | 'dropoff' | 'confirm';
+
+const STEP_TITLE: Record<Step, string> = {
+  pickup: 'Set pickup',
+  dropoff: 'Where to?',
+  confirm: 'Confirm ride',
+};
+
 export default function RideRequestScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
   const params = useLocalSearchParams<{ type?: 'BODA' | 'CAR' }>();
   const insets = useSafeAreaInsets();
   const {
@@ -90,7 +121,7 @@ export default function RideRequestScreen() {
   // first place they choose is their destination — not a new pickup. They can
   // still tap the pickup chip (or the back arrow) to change pickup. Previously
   // this always began at 'pickup', so the first selection overwrote the pickup.
-  const [step, setStep] = useState<'pickup' | 'dropoff' | 'confirm'>(
+  const [step, setStep] = useState<Step>(
     address && latitude != null && longitude != null ? 'dropoff' : 'pickup'
   );
   const [selectedVehicle, setSelectedVehicle] = useState<'BODA' | 'CAR'>(
@@ -117,6 +148,7 @@ export default function RideRequestScreen() {
   // Payment
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [paymentSheetOpen, setPaymentSheetOpen] = useState(false);
 
   // Route + pricing state (all from real APIs)
   const [distance, setDistance] = useState<number | null>(null);      // road km
@@ -203,6 +235,7 @@ export default function RideRequestScreen() {
     setStep('confirm');
     fetchRouteAndFares(dropoffLocation.latitude, dropoffLocation.longitude);
   }, [dropoffLocation]);
+
   // Load recently used destinations from device storage
   const loadRecentPlaces = async () => {
     try {
@@ -262,6 +295,11 @@ export default function RideRequestScreen() {
         setIsSearching(false);
       }
     }, 350);
+  };
+
+  const onChangeQuery = (q: string) => {
+    setSearchQuery(q);
+    searchPlaces(q);
   };
 
   // Resolve coordinates + label from a unified place (robust to either shape)
@@ -416,10 +454,17 @@ export default function RideRequestScreen() {
     }
   };
 
+  // Back steps through the flow before leaving the screen.
+  const handleBack = () => {
+    if (step === 'dropoff') setStep('pickup');
+    else if (step === 'confirm') setStep('dropoff');
+    else router.back();
+  };
+
   return (
     <View style={styles.container}>
-      {/* Map area at top */}
-      <View style={styles.mapContainer}>
+      {/* ─── Map workspace ─────────────────────────────── */}
+      <View style={styles.mapWorkspace}>
         <SmartRideMap
           style={StyleSheet.absoluteFill}
           initialLatitude={pickupLatitude || 0.3476}
@@ -442,70 +487,51 @@ export default function RideRequestScreen() {
           showUserLocation
         />
 
-        {/* Back button overlay */}
-        <TouchableOpacity
-          style={[styles.mapBackButton, { top: insets.top + SPACING.sm || 48 }]}
-          onPress={() => {
-            if (step === 'dropoff') setStep('pickup');
-            else if (step === 'confirm') setStep('dropoff');
-            else router.back();
-          }}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
-        </TouchableOpacity>
+        {/* Compact header overlays the map (AR-3) */}
+        <AppHeader
+          title={STEP_TITLE[step]}
+          onBack={handleBack}
+          style={styles.headerOverlay}
+        />
       </View>
 
-      {/* Floating bottom sheet */}
-      <View style={styles.bottomSheet}>
-        <View style={styles.sheetHandle} />
+      {/* ─── Operations panel ──────────────────────────── */}
+      <View style={styles.panel}>
+        <View style={styles.grabberWrap}>
+          <View style={styles.grabber} />
+        </View>
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + SPACING.lg }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {step === 'pickup' && (
-            <PickupStep
+          {step !== 'confirm' ? (
+            <PlaceSearchStep
+              mode={step}
               pickupAddress={pickupAddress}
               searchQuery={searchQuery}
-              setSearchQuery={(q) => { setSearchQuery(q); searchPlaces(q); }}
+              onChangeQuery={onChangeQuery}
               searchResults={searchResults}
               isSearching={isSearching}
               onSelectPlace={selectPlace}
               popularPlaces={popularPlaces}
               recentPlaces={recentPlaces}
-              onPickOnMap={() => router.push('/location-picker?type=pickup' as any)}
+              onPickOnMap={() =>
+                router.push(`/location-picker?type=${step === 'pickup' ? 'pickup' : 'dropoff'}` as any)
+              }
               onUseCurrentLocation={() => {
                 setPickupAddress(address);
                 setPickupLatitude(latitude);
                 setPickupLongitude(longitude);
                 setStep('dropoff');
               }}
-              COLORS={COLORS}
-              styles={styles}
-            />
-          )}
-
-          {step === 'dropoff' && (
-            <DropoffStep
-              pickupAddress={pickupAddress}
-              searchQuery={searchQuery}
-              setSearchQuery={(q) => { setSearchQuery(q); searchPlaces(q); }}
-              searchResults={searchResults}
-              isSearching={isSearching}
-              onSelectPlace={selectPlace}
-              popularPlaces={popularPlaces}
-              recentPlaces={recentPlaces}
-              onPickOnMap={() => router.push('/location-picker?type=dropoff' as any)}
               onEditPickup={() => setStep('pickup')}
               COLORS={COLORS}
               styles={styles}
             />
-          )}
-
-          {step === 'confirm' && (
+          ) : (
             <ConfirmStep
               selectedVehicle={selectedVehicle}
               setSelectedVehicle={setSelectedVehicle}
@@ -517,7 +543,7 @@ export default function RideRequestScreen() {
               carFare={carFare}
               isCalculating={isCalculating}
               paymentMethod={paymentMethod}
-              setPaymentMethod={setPaymentMethod}
+              onChangePayment={() => setPaymentSheetOpen(true)}
               phoneNumber={phoneNumber}
               setPhoneNumber={setPhoneNumber}
               onRequestRide={handleRequestRide}
@@ -531,21 +557,66 @@ export default function RideRequestScreen() {
           )}
         </ScrollView>
       </View>
+
+      {/* ─── Payment selection (overlay, Golden Screen #10) ─── */}
+      <SmartBottomSheet
+        visible={paymentSheetOpen}
+        title="Payment method"
+        onDismiss={() => setPaymentSheetOpen(false)}
+      >
+        <View style={styles.paymentOptions}>
+          {PAYMENT_METHODS.map((method) => {
+            const active = method.id === paymentMethod;
+            return (
+              <Card
+                key={method.id}
+                variant={active ? 'accent' : 'flat'}
+                padding={SPACING.md}
+                radius={RADIUS.lg}
+                onPress={() => {
+                  setPaymentMethod(method.id as PaymentMethod);
+                  setPaymentSheetOpen(false);
+                }}
+                accessibilityLabel={method.name}
+                style={active ? styles.paymentOptionActive : undefined}
+              >
+                <View style={styles.paymentOptionRow}>
+                  <Text style={[styles.paymentOptionLabel, active && styles.paymentOptionLabelActive]}>
+                    {method.name}
+                  </Text>
+                  {active ? (
+                    <Ionicons name="checkmark-circle" size={ICON.lg} color={COLORS.primary} />
+                  ) : null}
+                </View>
+              </Card>
+            );
+          })}
+        </View>
+      </SmartBottomSheet>
     </View>
   );
 }
 
 // ============================================
-// PICKUP STEP
+// PLACE SEARCH STEP (pickup + destination)
 // ============================================
+// Golden Screen #8 (Location / Destination Search). Pickup and destination were
+// two near-identical copies before; they are one component with a `mode`.
+
 // Single tappable place row (name + secondary address line + ↗ jump icon)
 function PlaceRow({ place, icon, onPress, COLORS, styles }: { place: PlaceResult; icon: keyof typeof Ionicons.glyphMap; onPress: () => void; COLORS: ThemedColors; styles: any }) {
   const primary = place.name || place.place_name || 'Location';
   const secondary = place.address || place.fullAddress || place.place_name || '';
   return (
-    <TouchableOpacity style={styles.searchResultItem} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.searchResultItem}
+      onPress={onPress}
+      activeOpacity={OPACITY.pressed}
+      accessibilityRole="button"
+      accessibilityLabel={primary}
+    >
       <View style={styles.resultIconCircle}>
-        <Ionicons name={icon} size={16} color={COLORS.primary} />
+        <Ionicons name={icon} size={ICON.sm} color={COLORS.primary} />
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.searchResultText} numberOfLines={1}>{primary}</Text>
@@ -553,61 +624,47 @@ function PlaceRow({ place, icon, onPress, COLORS, styles }: { place: PlaceResult
           <Text style={styles.searchResultSubtext} numberOfLines={1}>{secondary}</Text>
         ) : null}
       </View>
-      <Ionicons name="arrow-forward" size={16} color={COLORS.onSurfaceVariant} style={styles.resultJumpIcon} />
+      <Ionicons name="arrow-forward" size={ICON.sm} color={COLORS.onSurfaceVariant} style={styles.resultJumpIcon} />
     </TouchableOpacity>
   );
 }
 
-// Empty-state suggestions: recent destinations + popular places
-function PlaceSuggestions({
-  recentPlaces,
-  popularPlaces,
+/** A grouped list of places on one flat Card, dividers between rows. */
+function PlaceList({
+  places,
+  icon,
+  keyPrefix,
   onSelectPlace,
   COLORS,
   styles,
 }: {
-  recentPlaces: PlaceResult[];
-  popularPlaces: PlaceResult[];
+  places: PlaceResult[];
+  icon: keyof typeof Ionicons.glyphMap;
+  keyPrefix: string;
   onSelectPlace: (p: PlaceResult) => void;
   COLORS: ThemedColors;
   styles: any;
 }) {
-  if (recentPlaces.length === 0 && popularPlaces.length === 0) return null;
-  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
   return (
-    <View style={{ marginTop: SPACING.md }}>
-      {recentPlaces.length > 0 && (
-        <>
-          <Text style={styles.suggestionHeader}>Recent</Text>
-          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={[styles.resultsCard, cardBg]}>
-            {recentPlaces.map((p, i) => (
-              <View key={`recent-${p.id}-${i}`} style={i < recentPlaces.length - 1 ? styles.searchResultDivider : undefined}>
-                <PlaceRow place={p} icon="time-outline" onPress={() => onSelectPlace(p)} COLORS={COLORS} styles={styles} />
-              </View>
-            ))}
-          </GlassCard>
-        </>
-      )}
-      {popularPlaces.length > 0 && (
-        <>
-          <Text style={styles.suggestionHeader}>Popular places</Text>
-          <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={[styles.resultsCard, cardBg]}>
-            {popularPlaces.map((p, i) => (
-              <View key={`pop-${p.id}-${i}`} style={i < popularPlaces.length - 1 ? styles.searchResultDivider : undefined}>
-                <PlaceRow place={p} icon="star-outline" onPress={() => onSelectPlace(p)} COLORS={COLORS} styles={styles} />
-              </View>
-            ))}
-          </GlassCard>
-        </>
-      )}
-    </View>
+    <Card variant="flat" padding={0} radius={RADIUS.xl} style={styles.resultsCard}>
+      {places.map((p, i) => (
+        <Animated.View
+          key={`${keyPrefix}-${p.id}-${i}`}
+          entering={FadeInUp.delay(rowDelay(i)).duration(MOTION.duration.base)}
+          style={i < places.length - 1 ? styles.searchResultDivider : undefined}
+        >
+          <PlaceRow place={p} icon={icon} onPress={() => onSelectPlace(p)} COLORS={COLORS} styles={styles} />
+        </Animated.View>
+      ))}
+    </Card>
   );
 }
 
-function PickupStep({
+function PlaceSearchStep({
+  mode,
   pickupAddress,
   searchQuery,
-  setSearchQuery,
+  onChangeQuery,
   searchResults,
   isSearching,
   onSelectPlace,
@@ -615,12 +672,14 @@ function PickupStep({
   recentPlaces,
   onPickOnMap,
   onUseCurrentLocation,
+  onEditPickup,
   COLORS,
   styles,
 }: {
+  mode: 'pickup' | 'dropoff';
   pickupAddress: string;
   searchQuery: string;
-  setSearchQuery: (q: string) => void;
+  onChangeQuery: (q: string) => void;
   searchResults: PlaceResult[];
   isSearching: boolean;
   onSelectPlace: (place: PlaceResult) => void;
@@ -628,109 +687,18 @@ function PickupStep({
   recentPlaces: PlaceResult[];
   onPickOnMap: () => void;
   onUseCurrentLocation: () => void;
-  COLORS: ThemedColors;
-  styles: any;
-}) {
-  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
-  return (
-    <View>
-      {/* Destination search floating card */}
-      <GlassCard variant="elevated" padding={0} borderRadius={RADIUS.xl} style={cardBg}>
-        <View style={styles.searchCardInner}>
-          <View style={styles.searchIconRow}>
-            <View style={styles.pickupDot} />
-            <View style={styles.dottedLine} />
-            <View style={styles.dropoffDot} />
-          </View>
-          <View style={styles.searchInputsColumn}>
-            <TouchableOpacity
-              style={styles.locationChip}
-              onPress={onUseCurrentLocation}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="locate" size={16} color={COLORS.primary} />
-              <Text style={styles.locationChipText} numberOfLines={1}>
-                {pickupAddress || 'Current Location'}
-              </Text>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceVariant} />
-            </TouchableOpacity>
-            <View style={styles.searchInputRow}>
-              <Ionicons name="search" size={18} color={COLORS.onSurfaceVariant} style={styles.searchInputIcon} />
-              <TextInput
-                style={styles.searchTextInput}
-                placeholder="Where to?"
-                placeholderTextColor={COLORS.onSurfaceVariant}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
-              />
-            </View>
-          </View>
-        </View>
-      </GlassCard>
-
-      <TouchableOpacity style={styles.setOnMapRow} onPress={onPickOnMap} activeOpacity={0.7}>
-        <Ionicons name="map-outline" size={18} color={COLORS.primary} />
-        <Text style={styles.setOnMapText}>Set pickup on map</Text>
-      </TouchableOpacity>
-
-      {/* Search Results */}
-      {isSearching && (
-        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.md }} />
-      )}
-
-      {!isSearching && searchResults.length > 0 && (
-        <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={[styles.resultsCard, cardBg]}>
-          {searchResults.map((place, index) => (
-            <View key={`${place.id}-${index}`} style={index < searchResults.length - 1 ? styles.searchResultDivider : undefined}>
-              <PlaceRow place={place} icon="location-outline" onPress={() => onSelectPlace(place)} COLORS={COLORS} styles={styles} />
-            </View>
-          ))}
-        </GlassCard>
-      )}
-
-      {!isSearching && searchResults.length === 0 && searchQuery.trim().length < 2 && (
-        <PlaceSuggestions recentPlaces={recentPlaces} popularPlaces={popularPlaces} onSelectPlace={onSelectPlace} COLORS={COLORS} styles={styles} />
-      )}
-    </View>
-  );
-}
-
-// ============================================
-// DROPOFF STEP
-// ============================================
-function DropoffStep({
-  pickupAddress,
-  searchQuery,
-  setSearchQuery,
-  searchResults,
-  isSearching,
-  onSelectPlace,
-  popularPlaces,
-  recentPlaces,
-  onPickOnMap,
-  onEditPickup,
-  COLORS,
-  styles,
-}: {
-  pickupAddress: string;
-  searchQuery: string;
-  setSearchQuery: (q: string) => void;
-  searchResults: PlaceResult[];
-  isSearching: boolean;
-  onSelectPlace: (place: PlaceResult) => void;
-  popularPlaces: PlaceResult[];
-  recentPlaces: PlaceResult[];
-  onPickOnMap: () => void;
   onEditPickup: () => void;
   COLORS: ThemedColors;
   styles: any;
 }) {
-  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
+  const isPickup = mode === 'pickup';
+  const showSuggestions = !isSearching && searchResults.length === 0 && searchQuery.trim().length < 2;
+  const noResults = !isSearching && searchResults.length === 0 && searchQuery.trim().length >= 2;
+
   return (
     <View>
-      {/* Pickup summary + destination search */}
-      <GlassCard variant="elevated" padding={0} borderRadius={RADIUS.xl} style={cardBg}>
+      {/* Route rail: pickup chip above, destination search below */}
+      <Card variant="elevated" padding={SPACING.md} radius={RADIUS.xl}>
         <View style={styles.searchCardInner}>
           <View style={styles.searchIconRow}>
             <View style={styles.pickupDot} />
@@ -739,57 +707,93 @@ function DropoffStep({
           </View>
           <View style={styles.searchInputsColumn}>
             {/* Pickup is tappable so the user can change it (defaults to their
-                current location); the destination field below is auto-focused. */}
+                current location); the field below is auto-focused. */}
             <TouchableOpacity
-              style={styles.locationChipStatic}
-              onPress={onEditPickup}
-              activeOpacity={0.7}
+              style={styles.locationChip}
+              onPress={isPickup ? onUseCurrentLocation : onEditPickup}
+              activeOpacity={OPACITY.pressed}
+              accessibilityRole="button"
+              accessibilityLabel={isPickup ? 'Use current location as pickup' : 'Change pickup'}
             >
-              <Text style={[styles.locationChipText, { flex: 1 }]} numberOfLines={1}>
-                {pickupAddress}
+              {isPickup ? (
+                <Ionicons name="locate" size={ICON.sm} color={COLORS.primary} />
+              ) : null}
+              <Text style={styles.locationChipText} numberOfLines={1}>
+                {pickupAddress || 'Current Location'}
               </Text>
-              <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceVariant} />
+              <Ionicons name="chevron-forward" size={ICON.sm} color={COLORS.onSurfaceVariant} />
             </TouchableOpacity>
-            <View style={styles.searchInputRow}>
-              <Ionicons name="search" size={18} color={COLORS.onSurfaceVariant} style={styles.searchInputIcon} />
-              <TextInput
-                style={styles.searchTextInput}
-                placeholder="Enter destination"
-                placeholderTextColor={COLORS.onSurfaceVariant}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
-              />
-            </View>
+
+            <SearchInput
+              value={searchQuery}
+              onChangeText={onChangeQuery}
+              placeholder={isPickup ? 'Search pickup point' : 'Where to?'}
+              loading={isSearching}
+              autoFocus
+            />
           </View>
         </View>
-      </GlassCard>
+      </Card>
 
-      {/* Set destination on map (Uber-style center-pin picker) */}
-      <TouchableOpacity style={styles.setOnMapRow} onPress={onPickOnMap} activeOpacity={0.7}>
-        <Ionicons name="map-outline" size={18} color={COLORS.primary} />
-        <Text style={styles.setOnMapText}>Set destination on map</Text>
-      </TouchableOpacity>
+      {/* Pick-on-map entry point (Uber-style centre-pin picker) */}
+      <View style={styles.setOnMapRow}>
+        <Chip
+          label={isPickup ? 'Set pickup on map' : 'Set destination on map'}
+          icon="map-outline"
+          onPress={onPickOnMap}
+        />
+      </View>
 
-      {/* Search Results */}
-      {isSearching && (
-        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: SPACING.md }} />
-      )}
+      {/* Results */}
+      {searchResults.length > 0 ? (
+        <PlaceList
+          places={searchResults}
+          icon="location-outline"
+          keyPrefix="result"
+          onSelectPlace={onSelectPlace}
+          COLORS={COLORS}
+          styles={styles}
+        />
+      ) : null}
 
-      {!isSearching && searchResults.length > 0 && (
-        <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={[styles.resultsCard, cardBg]}>
-          {searchResults.map((place, index) => (
-            <View key={`${place.id}-${index}`} style={index < searchResults.length - 1 ? styles.searchResultDivider : undefined}>
-              <PlaceRow place={place} icon="location-outline" onPress={() => onSelectPlace(place)} COLORS={COLORS} styles={styles} />
-            </View>
-          ))}
-        </GlassCard>
-      )}
+      {noResults ? (
+        <EmptyState
+          icon="location-outline"
+          title="No places found"
+          subtitle="Try a different name, or set the point on the map."
+          actionLabel="Set on map"
+          onAction={onPickOnMap}
+        />
+      ) : null}
 
       {/* Empty state: recent + popular suggestions */}
-      {!isSearching && searchResults.length === 0 && searchQuery.trim().length < 2 && (
-        <PlaceSuggestions recentPlaces={recentPlaces} popularPlaces={popularPlaces} onSelectPlace={onSelectPlace} COLORS={COLORS} styles={styles} />
-      )}
+      {showSuggestions && recentPlaces.length > 0 ? (
+        <>
+          <SectionHeader title="Recent" />
+          <PlaceList
+            places={recentPlaces}
+            icon="time-outline"
+            keyPrefix="recent"
+            onSelectPlace={onSelectPlace}
+            COLORS={COLORS}
+            styles={styles}
+          />
+        </>
+      ) : null}
+
+      {showSuggestions && popularPlaces.length > 0 ? (
+        <>
+          <SectionHeader title="Popular places" />
+          <PlaceList
+            places={popularPlaces}
+            icon="star-outline"
+            keyPrefix="popular"
+            onSelectPlace={onSelectPlace}
+            COLORS={COLORS}
+            styles={styles}
+          />
+        </>
+      ) : null}
     </View>
   );
 }
@@ -797,6 +801,8 @@ function DropoffStep({
 // ============================================
 // CONFIRM STEP
 // ============================================
+// Golden Screen #10 — vehicle via SegmentedControl, fare + ETA on a Card,
+// payment through the shared sheet, one primary action.
 function ConfirmStep({
   selectedVehicle,
   setSelectedVehicle,
@@ -808,7 +814,7 @@ function ConfirmStep({
   carFare,
   isCalculating,
   paymentMethod,
-  setPaymentMethod,
+  onChangePayment,
   phoneNumber,
   setPhoneNumber,
   onRequestRide,
@@ -829,7 +835,7 @@ function ConfirmStep({
   carFare: number | null;
   isCalculating: boolean;
   paymentMethod: PaymentMethod;
-  setPaymentMethod: (method: PaymentMethod) => void;
+  onChangePayment: () => void;
   phoneNumber: string;
   setPhoneNumber: (phone: string) => void;
   onRequestRide: () => void;
@@ -840,7 +846,6 @@ function ConfirmStep({
   COLORS: ThemedColors;
   styles: any;
 }) {
-  const cardBg = { backgroundColor: COLORS.backgroundElevated, borderColor: COLORS.border };
   const etaLabel = duration != null ? `~${duration} min drive` : '...';
 
   // SafeBoda-style fare range: bracket the exact fare to a tidy UGX window.
@@ -853,10 +858,14 @@ function ConfirmStep({
     return `UGX ${low.toLocaleString()} ~ ${high.toLocaleString()}`;
   };
 
+  const vehicle = selectedVehicle === 'CAR'
+    ? { icon: 'car' as const, name: 'Smart Car', desc: 'Comfort · AC · up to 4', fare: carFare }
+    : { icon: 'bicycle' as const, name: 'Smart Boda', desc: 'Fast & affordable', fare: bodaFare };
+
   return (
     <View>
-      {/* Route Summary Card */}
-      <GlassCard variant="elevated" padding={SPACING.md} borderRadius={RADIUS.xl} style={cardBg}>
+      {/* Route summary */}
+      <Card variant="elevated" padding={SPACING.md} radius={RADIUS.xl}>
         <View style={styles.routeRow}>
           <View style={styles.routeDotsColumn}>
             <View style={[styles.routeCircle, { backgroundColor: COLORS.secondaryFixed }]} />
@@ -864,11 +873,11 @@ function ConfirmStep({
             <View style={[styles.routeCircle, { backgroundColor: COLORS.primary }]} />
           </View>
           <View style={styles.routeTextColumn}>
-            <View style={styles.routePoint}>
+            <View>
               <Text style={styles.routePointLabel}>Pickup</Text>
               <Text style={styles.routePointAddress} numberOfLines={1}>{pickupAddress}</Text>
             </View>
-            <View style={styles.routePoint}>
+            <View>
               <Text style={styles.routePointLabel}>Dropoff</Text>
               <Text style={styles.routePointAddress} numberOfLines={1}>{dropoffAddress}</Text>
             </View>
@@ -879,71 +888,49 @@ function ConfirmStep({
             {distance.toFixed(1)} km · {etaLabel}
           </Text>
         )}
-      </GlassCard>
+      </Card>
 
-      {/* Estimated cost header */}
-      <View style={styles.estCostHeader}>
-        <View style={styles.estCostLeft}>
-          <Ionicons name="information-circle-outline" size={16} color={COLORS.onSurfaceVariant} />
-          <Text style={styles.estCostText}>ESTIMATED COST</Text>
+      {/* Vehicle choice */}
+      <SectionHeader title="Choose your ride" />
+      <SegmentedControl
+        segments={[
+          { value: 'BODA', label: 'Smart Boda' },
+          { value: 'CAR', label: 'Smart Car' },
+        ]}
+        value={selectedVehicle}
+        onChange={setSelectedVehicle}
+      />
+
+      {/* Selected vehicle: fare + driver ETA */}
+      <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.vehicleCard}>
+        <View style={styles.vehicleRow}>
+          <View style={styles.rideIconCircle}>
+            <Ionicons name={vehicle.icon} size={ICON.lg} color={COLORS.primary} />
+          </View>
+          <View style={styles.vehicleContent}>
+            <Text style={styles.vehicleName} numberOfLines={1}>{vehicle.name}</Text>
+            <Text style={styles.vehicleDesc} numberOfLines={1}>{vehicle.desc}</Text>
+          </View>
+          <View style={styles.vehiclePriceWrap}>
+            {isCalculating ? (
+              <Skeleton width={104} height={16} borderRadius={RADIUS.sm} />
+            ) : (
+              <Text style={styles.vehiclePrice} numberOfLines={1}>{fareRange(vehicle.fare) ?? '---'}</Text>
+            )}
+          </View>
         </View>
-        {isCalculating ? (
-          <ActivityIndicator size="small" color={COLORS.primary} />
-        ) : nearestEtaMin != null ? (
+
+        {nearestEtaMin != null && !isCalculating ? (
           <View style={styles.driverEtaBadge}>
-            <Ionicons name="time-outline" size={12} color={COLORS.primary} />
+            <Ionicons name="time-outline" size={ICON.xs} color={COLORS.primary} />
             <Text style={styles.driverEtaText}>Driver ~{nearestEtaMin} min away</Text>
           </View>
         ) : null}
-      </View>
-
-      {/* Ride option: Smart Boda */}
-      <TouchableOpacity
-        style={[styles.rideRow, selectedVehicle === 'BODA' && styles.rideRowSelected]}
-        onPress={() => setSelectedVehicle('BODA')}
-        activeOpacity={0.75}
-      >
-        <View style={[styles.rideIconCircle, selectedVehicle === 'BODA' && styles.rideIconCircleActive]}>
-          <Ionicons name="bicycle" size={22} color={selectedVehicle === 'BODA' ? COLORS.onPrimary : COLORS.primary} />
-        </View>
-        <View style={styles.rideCardContent}>
-          <Text numberOfLines={1} style={[styles.rideCardName, selectedVehicle === 'BODA' && styles.rideCardNameActive]}>Smart Boda</Text>
-          <Text numberOfLines={1} style={styles.rideCardDesc}>Fast &amp; affordable</Text>
-        </View>
-        <View style={styles.rideCardRight}>
-          {isCalculating ? (
-            <ActivityIndicator size="small" color={COLORS.primary} />
-          ) : (
-            <Text numberOfLines={1} style={styles.rideCardPrice}>{fareRange(bodaFare) ?? '---'}</Text>
-          )}
-        </View>
-      </TouchableOpacity>
-
-      {/* Ride option: Smart Car */}
-      <TouchableOpacity
-        style={[styles.rideRow, selectedVehicle === 'CAR' && styles.rideRowSelected]}
-        onPress={() => setSelectedVehicle('CAR')}
-        activeOpacity={0.75}
-      >
-        <View style={[styles.rideIconCircle, selectedVehicle === 'CAR' && styles.rideIconCircleActive]}>
-          <Ionicons name="car" size={22} color={selectedVehicle === 'CAR' ? COLORS.onPrimary : COLORS.primary} />
-        </View>
-        <View style={styles.rideCardContent}>
-          <Text numberOfLines={1} style={[styles.rideCardName, selectedVehicle === 'CAR' && styles.rideCardNameActive]}>Smart Car</Text>
-          <Text numberOfLines={1} style={styles.rideCardDesc}>Comfort · AC · up to 4</Text>
-        </View>
-        <View style={styles.rideCardRight}>
-          {isCalculating ? (
-            <ActivityIndicator size="small" color={COLORS.primary} />
-          ) : (
-            <Text numberOfLines={1} style={styles.rideCardPrice}>{fareRange(carFare) ?? '---'}</Text>
-          )}
-        </View>
-      </TouchableOpacity>
+      </Card>
 
       {/* Fare breakdown for the selected vehicle */}
       {fareBreakdown && !isCalculating && (
-        <View style={styles.fareBreakdown}>
+        <Card variant="flat" padding={SPACING.md} radius={RADIUS.lg} style={styles.fareBreakdown}>
           <View style={styles.fareRow}>
             <Text style={styles.fareRowLabel}>Base fare</Text>
             <Text style={styles.fareRowValue}>UGX {fareBreakdown.baseFare.toLocaleString()}</Text>
@@ -981,35 +968,28 @@ function ConfirmStep({
           {fareBreakdown.minimumApplied && (
             <Text style={styles.fareNote}>Minimum fare applied</Text>
           )}
-        </View>
+        </Card>
       )}
 
-      {/* Payment Method — single bar with Change */}
-      <View style={styles.paymentBar}>
-        <View style={styles.paymentBarLeft}>
-          <View style={styles.paymentBarBadge}>
-            <Text style={styles.paymentBarBadgeText}>
-              {paymentMethod === 'CASH' ? 'CASH'
-                : paymentMethod === 'MTN_MOMO' ? 'MTN'
-                : paymentMethod === 'AIRTEL_MONEY' ? 'AIRTEL'
-                : 'VISA'}
+      {/* Payment method — opens the shared sheet */}
+      <Card
+        variant="flat"
+        padding={SPACING.md}
+        radius={RADIUS.xl}
+        style={styles.paymentBar}
+        onPress={onChangePayment}
+        accessibilityLabel="Change payment method"
+      >
+        <View style={styles.paymentBarRow}>
+          <View style={styles.paymentBarLeft}>
+            <Ionicons name="wallet-outline" size={ICON.md} color={COLORS.primary} />
+            <Text style={styles.paymentBarLabel}>
+              {PAYMENT_METHODS.find(m => m.id === paymentMethod)?.name ?? paymentMethod}
             </Text>
           </View>
-          <Text style={styles.paymentBarLabel}>
-            {PAYMENT_METHODS.find(m => m.id === paymentMethod)?.name ?? paymentMethod}
-          </Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => {
-            const options: PaymentMethod[] = ['CASH', 'MTN_MOMO', 'AIRTEL_MONEY', 'VISA'];
-            const idx = options.indexOf(paymentMethod);
-            setPaymentMethod(options[(idx + 1) % options.length]);
-          }}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
           <Text style={styles.paymentChangeText}>Change</Text>
-        </TouchableOpacity>
-      </View>
+        </View>
+      </Card>
 
       {/* Phone number for mobile money (MTN / Airtel only) */}
       {(paymentMethod === 'MTN_MOMO' || paymentMethod === 'AIRTEL_MONEY') && (
@@ -1024,7 +1004,7 @@ function ConfirmStep({
         </View>
       )}
 
-      {/* Request Ride CTA Button */}
+      {/* One primary action */}
       <View style={styles.ctaContainer}>
         <GradientButton
           title={isRequesting ? 'Requesting...' : `Request ${currentRideType.name}`}
@@ -1034,7 +1014,7 @@ function ConfirmStep({
           fullWidth
           loading={isRequesting}
           disabled={isRequesting}
-          icon={!isRequesting ? <Ionicons name="navigate" size={20} color={COLORS.onPrimary} /> : undefined}
+          icon={!isRequesting ? <Ionicons name="navigate" size={ICON.md} color={COLORS.onPrimary} /> : undefined}
         />
       </View>
     </View>
@@ -1042,7 +1022,8 @@ function ConfirmStep({
 }
 
 // ============================================
-// STYLES
+// STYLES — layout + domain content only.
+// Surfaces, buttons, fields, sheets and states come from the Design System.
 // ============================================
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
@@ -1051,53 +1032,47 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  // Map
-  mapContainer: {
-    height: '40%',
+  // Map workspace (AR-3 ~55%)
+  mapWorkspace: {
+    flex: 1,
     position: 'relative',
   },
-  mapBackButton: {
+  headerOverlay: {
     position: 'absolute',
-    left: SPACING.md,
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.card,
+    top: 0,
+    left: 0,
+    right: 0,
   },
 
-  // Bottom sheet
-  bottomSheet: {
-    flex: 1,
+  // Operations panel (AR-3 ~45%, rounded-26 + grabber to match SmartBottomSheet)
+  panel: {
+    flex: 1.2,
     backgroundColor: COLORS.surface,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    marginTop: -RADIUS.xl,
+    borderTopLeftRadius: RADIUS.xl + 2,
+    borderTopRightRadius: RADIUS.xl + 2,
+    marginTop: -(RADIUS.xl + 2),
     overflow: 'hidden',
   },
-  sheetHandle: {
+  grabberWrap: {
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+  },
+  grabber: {
     width: 40,
     height: 4,
     borderRadius: 2,
     backgroundColor: COLORS.outlineVariant,
-    alignSelf: 'center',
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.sm,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.xl,
   },
 
-  // Search card (shared)
+  // Route rail inside the search card
   searchCardInner: {
     flexDirection: 'row',
-    padding: SPACING.md,
   },
   searchIconRow: {
     width: 20,
@@ -1132,19 +1107,11 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   locationChip: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 44,
     backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.lg,
     paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
     gap: SPACING.sm,
-  },
-  locationChipStatic: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
   },
   locationChipText: {
     flex: 1,
@@ -1152,38 +1119,12 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.onSurface,
     fontWeight: '500',
   },
-  searchInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-  },
-  searchInputIcon: {
-    marginRight: SPACING.sm,
-  },
-  searchTextInput: {
-    flex: 1,
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurface,
-    paddingVertical: SPACING.md - 2,
-  },
 
-  // "Set on map" entry point
+  // Pick-on-map entry point
   setOnMapRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    gap: SPACING.sm,
-    marginTop: SPACING.sm,
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.primaryFixed,
-  },
-  setOnMapText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.primary,
-    fontWeight: '700',
+    marginTop: SPACING.gutter,
   },
 
   // Results
@@ -1196,9 +1137,10 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.md,
+    minHeight: 44,
   },
   searchResultDivider: {
-    borderBottomWidth: 1,
+    borderBottomWidth: BORDER.hairline,
     borderBottomColor: COLORS.outlineVariant,
   },
   resultIconCircle: {
@@ -1211,7 +1153,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginRight: SPACING.md,
   },
   searchResultText: {
-    flex: 1,
     ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurface,
     fontWeight: '600',
@@ -1221,13 +1162,9 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     marginTop: 1,
   },
-  suggestionHeader: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurfaceVariant,
-    fontWeight: '700',
-    marginTop: SPACING.md,
-    marginBottom: SPACING.sm,
-    marginLeft: SPACING.xs,
+  resultJumpIcon: {
+    transform: [{ rotate: '-45deg' }],
+    marginLeft: SPACING.sm,
   },
 
   // Route summary
@@ -1255,7 +1192,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flex: 1,
     gap: SPACING.md,
   },
-  routePoint: {},
   routePointLabel: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
@@ -1266,35 +1202,21 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontWeight: '500',
     marginTop: 2,
   },
-
-  // Available rides header
-  availableRidesHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.sm,
-  },
-  sectionLabel: {
-    ...TYPOGRAPHY.labelLg,
+  routeMeta: {
+    ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
+    marginTop: SPACING.sm,
+    textAlign: 'right',
   },
-  // Ride list cards (Stitch vertical layout)
-  rideCard: {
+
+  // Selected vehicle
+  vehicleCard: {
+    marginTop: SPACING.gutter,
+  },
+  vehicleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.xl,
-    borderWidth: 1.5,
-    borderColor: COLORS.outlineVariant,
-    padding: SPACING.md,
-    marginBottom: SPACING.sm,
     gap: SPACING.md,
-    ...SHADOWS.card,
-  },
-  rideCardSelected: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.surfaceContainerLow,
   },
   rideIconCircle: {
     width: 48,
@@ -1304,63 +1226,52 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rideIconCircleActive: {
-    backgroundColor: COLORS.primary,
-  },
-  rideCardContent: {
+  vehicleContent: {
     flex: 1,
     minWidth: 0, // allow text to ellipsize instead of forcing the row to wrap
     flexShrink: 1,
   },
-  rideCardName: {
+  vehicleName: {
     ...TYPOGRAPHY.bodyMd,
     fontWeight: '600',
     color: COLORS.onSurface,
   },
-  rideCardNameActive: {
-    color: COLORS.primary,
-  },
-  rideCardDesc: {
+  vehicleDesc: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
     marginTop: 2,
   },
-  rideCardRight: {
+  vehiclePriceWrap: {
     alignItems: 'flex-end',
     flexShrink: 0, // keep the price on one line; content column shrinks instead
     paddingLeft: SPACING.sm,
   },
-  rideCardPrice: {
+  vehiclePrice: {
     ...TYPOGRAPHY.bodySm,
     fontWeight: '700',
     color: COLORS.onSurface,
   },
-  // SafeBoda-style estimated-cost header
-  estCostHeader: {
+  driverEtaBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.sm,
+    alignSelf: 'flex-start',
+    gap: SPACING.xs,
+    backgroundColor: COLORS.primaryFixed,
+    borderRadius: RADIUS.full,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 3,
+    marginTop: SPACING.gutter,
   },
-  estCostLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  driverEtaText: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.primary,
+    fontWeight: '600',
   },
-  estCostText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurfaceVariant,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
+
+  // Fare breakdown
   fareBreakdown: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
     marginTop: SPACING.sm,
-    gap: 4,
+    gap: SPACING.xs,
   },
   fareRow: {
     flexDirection: 'row',
@@ -1370,84 +1281,29 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   fareRowLabel: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant },
   fareRowValue: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurface },
   fareTotalRow: {
-    borderTopWidth: 1,
+    borderTopWidth: BORDER.hairline,
     borderTopColor: COLORS.outlineVariant,
-    marginTop: 4,
+    marginTop: SPACING.xs,
     paddingTop: 6,
   },
   fareTotalLabel: { ...TYPOGRAPHY.bodyMd, color: COLORS.onSurface, fontWeight: '700' },
   fareTotalValue: { ...TYPOGRAPHY.bodyMd, color: COLORS.primary, fontWeight: '700' },
   fareNote: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, fontStyle: 'italic', marginTop: 2 },
-  driverEtaBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: COLORS.primaryFixed,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
-  },
-  driverEtaText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  // SafeBoda-style ride rows (left accent border when selected)
-  rideRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
-    borderLeftWidth: 4,
-    borderLeftColor: 'transparent',
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.sm,
-    gap: SPACING.md,
-    ...SHADOWS.card,
-  },
-  rideRowSelected: {
-    borderLeftColor: COLORS.primary,
-    backgroundColor: COLORS.primaryFixed,
-  },
-  resultJumpIcon: {
-    transform: [{ rotate: '-45deg' }],
-    marginLeft: SPACING.sm,
-  },
-  routeMeta: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.sm,
-    textAlign: 'right',
-  },
 
-  // Payment bar (Stitch single-row with Change)
+  // Payment
   paymentBar: {
+    marginTop: SPACING.gutter,
+  },
+  paymentBarRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.xl,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.sm,
   },
   paymentBarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
-  },
-  paymentBarBadge: {
-    backgroundColor: '#FFC107',
-    borderRadius: RADIUS.sm,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
-  },
-  paymentBarBadgeText: {
-    ...TYPOGRAPHY.labelMd,
-    color: '#000',
-    fontWeight: '700',
+    flex: 1,
   },
   paymentBarLabel: {
     ...TYPOGRAPHY.bodyMd,
@@ -1459,6 +1315,28 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.primary,
     fontWeight: '600',
   },
+  paymentOptions: {
+    gap: SPACING.sm,
+  },
+  paymentOptionActive: {
+    borderColor: COLORS.primary,
+    borderWidth: BORDER.emphasis,
+  },
+  paymentOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 28,
+  },
+  paymentOptionLabel: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    fontWeight: '500',
+  },
+  paymentOptionLabelActive: {
+    color: COLORS.primary,
+    fontWeight: '700',
+  },
 
   // Phone input
   phoneInputContainer: {
@@ -1468,6 +1346,5 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   // CTA
   ctaContainer: {
     marginTop: SPACING.lg,
-    marginBottom: SPACING.md,
   },
 });
