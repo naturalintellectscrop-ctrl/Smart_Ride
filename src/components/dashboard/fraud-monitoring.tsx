@@ -22,12 +22,16 @@ import {
   RefreshCw
 } from 'lucide-react';
 
+// Mirrors the FraudAlert model. Previously declared `message` (the column is
+// `description`) and `isAcknowledged` (no such column), so alert text rendered
+// blank and the acknowledged count was always 0.
 interface FraudAlert {
   id: string;
   alertType: string;
   severity: string;
-  message: string;
-  isAcknowledged: boolean;
+  description: string;
+  status: 'OPEN' | 'UNDER_REVIEW' | 'CONFIRMED' | 'FALSE_POSITIVE' | 'RESOLVED';
+  riskScore: number;
   createdAt: string;
   rider: { fullName: string } | null;
   user: { name: string } | null;
@@ -88,8 +92,8 @@ export function FraudMonitoring() {
         setStats({
           totalAlerts: data.alerts?.length || 0,
           criticalAlerts: data.alerts?.filter((a: FraudAlert) => a.severity === 'CRITICAL' || a.severity === 'HIGH').length || 0,
-          acknowledgedToday: data.alerts?.filter((a: FraudAlert) => a.isAcknowledged).length || 0,
-          resolvedToday: 0,
+          acknowledgedToday: data.alerts?.filter((a: FraudAlert) => a.status === 'UNDER_REVIEW').length || 0,
+          resolvedToday: data.alerts?.filter((a: FraudAlert) => a.status === 'RESOLVED' || a.status === 'FALSE_POSITIVE').length || 0,
         });
       } else {
         throw new Error('Failed to fetch fraud alerts');
@@ -257,11 +261,11 @@ export function FraudMonitoring() {
                             {alert.severity}
                           </Badge>
                         </TableCell>
-                        <TableCell className="max-w-xs truncate text-gray-300">{alert.message}</TableCell>
+                        <TableCell className="max-w-xs truncate text-gray-300">{alert.description}</TableCell>
                         <TableCell className="text-gray-300">{alert.rider?.fullName || alert.user?.name || 'N/A'}</TableCell>
                         <TableCell>
-                          <Badge className={alert.isAcknowledged ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}>
-                            {alert.isAcknowledged ? 'Acknowledged' : 'Pending'}
+                          <Badge className={alert.status === 'OPEN' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'}>
+                            {alert.status.replace('_', ' ')}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-gray-400">{new Date(alert.createdAt).toLocaleString()}</TableCell>

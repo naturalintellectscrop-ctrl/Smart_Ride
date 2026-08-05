@@ -54,6 +54,7 @@ model User {
   recipientCalls           CallSession[]          @relation("RecipientCalls")
   paymentMethods           UserPaymentMethod[]
   healthProvider           HealthProvider?
+  fraudAlerts              FraudAlert[]              @relation("UserFraudAlerts")
 
   @@index([email])
   @@index([phone])
@@ -187,6 +188,7 @@ model Rider {
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
   auditLogs          AuditLog[]       @relation("RiderAuditLogs")
+  fraudAlerts        FraudAlert[]     @relation("RiderFraudAlerts")
   cashCollections    CashCollection[]
   dispatchMatches    DispatchMatch[]
   heartbeatLogs      HeartbeatLog[]
@@ -1163,6 +1165,10 @@ model FraudAlert {
   resolutionNotes String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+  // userId/riderId were bare columns with no relations, so the admin fraud
+  // table could not include the subject and always rendered "N/A".
+  user            User?            @relation("UserFraudAlerts", fields: [userId], references: [id], onDelete: SetNull)
+  rider           Rider?           @relation("RiderFraudAlerts", fields: [riderId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([riderId])

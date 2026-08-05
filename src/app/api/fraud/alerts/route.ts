@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { Prisma, FraudAlertStatus, AlertSeverity, FraudAlertType } from '@prisma/client';
+import { createAuditLog } from '@/lib/api/audit';
 
 // GET /api/fraud/alerts - Get fraud alerts with filtering
 export async function GET(request: NextRequest) {
@@ -8,19 +10,30 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const severity = searchParams.get('severity');
-    const entityType = searchParams.get('entityType');
     const alertType = searchParams.get('alertType');
+    const userId = searchParams.get('userId');
+    const riderId = searchParams.get('riderId');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    const where: Record<string, unknown> = {};
-    if (status) where.status = status;
-    if (severity) where.severity = severity;
-    if (entityType) where.entityType = entityType;
-    if (alertType) where.alertType = alertType;
+    // FraudAlert has no entityType/entityId columns — filtering on them made
+    // Prisma throw, so any filtered request 500'd. It links to the subject via
+    // userId/riderId/taskId/orderId.
+    const where: Prisma.FraudAlertWhereInput = {};
+    if (status) where.status = status as FraudAlertStatus;
+    if (severity) where.severity = severity as AlertSeverity;
+    if (alertType) where.alertType = alertType as FraudAlertType;
+    if (userId) where.userId = userId;
+    if (riderId) where.riderId = riderId;
 
     const alerts = await db.fraudAlert.findMany({
       where,
+      // The admin table shows the subject's name; without these the column
+      // always fell through to "N/A".
+      include: {
+        user: { select: { name: true } },
+        rider: { select: { fullName: true } },
+      },
       orderBy: { createdAt: 'desc' },
       take: limit,
       skip: offset,
@@ -53,42 +66,40 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      entityType,
-      entityId,
+      userId,
+      riderId,
+      taskId,
+      orderId,
       alertType,
       severity,
-      detectionMethod,
-      detectedPatterns,
-      evidence,
-      relatedActivityIds,
-      confidenceScore,
-      falsePositiveRisk,
+      description,
+      indicators,
+      riskScore,
     } = body;
 
-    // Get current risk score
-    let riskScore = await db.fraudRiskScore.findUnique({
-      where: {
-        entityType_entityId: {
-          entityType,
-          entityId,
-        },
-      },
-    });
+    if (!alertType || !description) {
+      return NextResponse.json(
+        { success: false, error: 'alertType and description are required' },
+        { status: 400 }
+      );
+    }
 
+    // Written against the columns FraudAlert actually has. The previous body
+    // set alertNumber/entityType/entityId/detectionMethod/detectedPatterns/
+    // riskScoreAtDetection/evidence/relatedActivityIds/confidenceScore/
+    // falsePositiveRisk — none of which exist — and read a FraudRiskScore
+    // model that is not in the schema, so creating an alert always threw.
     const alert = await db.fraudAlert.create({
       data: {
-        alertNumber: `FRA-${Date.now()}`,
-        entityType,
-        entityId,
+        userId: userId || null,
+        riderId: riderId || null,
+        taskId: taskId || null,
+        orderId: orderId || null,
         alertType,
         severity: severity || 'MEDIUM',
-        detectionMethod: detectionMethod || 'RULE_BASED',
-        detectedPatterns: detectedPatterns ? JSON.stringify(detectedPatterns) : null,
-        riskScoreAtDetection: riskScore?.riskScore || 0,
-        evidence: evidence ? JSON.stringify(evidence) : null,
-        relatedActivityIds: relatedActivityIds ? JSON.stringify(relatedActivityIds) : null,
-        confidenceScore,
-        falsePositiveRisk,
+        description,
+        indicators: indicators ? JSON.stringify(indicators) : null,
+        riskScore: typeof riskScore === 'number' ? riskScore : 0,
       },
     });
 
@@ -130,46 +141,63 @@ export async function PATCH(request: NextRequest) {
         };
         break;
 
+      // FraudAlert has no resolvedBy/resolvedAt/isFalsePositive/adminDecision/
+      // resolutionAction columns, and no DISMISSED/ESCALATED status — writing
+      // them made Prisma throw, so every triage action below failed. Mapped
+      // onto the columns that exist: reviewedBy/reviewedAt/resolution/
+      // resolutionNotes and the real FraudAlertStatus values.
       case 'resolve':
         updateData = {
           status: 'RESOLVED',
-          resolvedBy: adminId,
-          resolvedAt: new Date(),
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
           resolutionNotes: notes,
         };
         break;
 
       case 'dismiss':
         updateData = {
-          status: 'DISMISSED',
-          resolvedBy: adminId,
-          resolvedAt: new Date(),
+          status: 'FALSE_POSITIVE',
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+          resolution: 'DISMISSED',
           resolutionNotes: notes,
-          isFalsePositive: true,
         };
-        // Record for ML feedback
-        await recordMLFeedback(alert, true);
         break;
 
       case 'escalate':
+        // No ESCALATED status exists; an escalation is an open alert raised
+        // to CRITICAL for triage.
         updateData = {
-          status: 'ESCALATED',
+          status: 'UNDER_REVIEW',
           severity: 'CRITICAL',
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+          resolutionNotes: notes,
         };
         break;
 
-      case 'take_action':
+      case 'take_action': {
         const { adminDecision } = body;
         updateData = {
-          adminDecision,
-          resolvedBy: adminId,
-          resolvedAt: new Date(),
-          resolutionAction: adminDecision,
+          status: 'CONFIRMED',
+          reviewedBy: adminId,
+          reviewedAt: new Date(),
+          resolution: adminDecision,
           resolutionNotes: notes,
         };
-        // Apply the action to the entity
-        await applyAdminAction(alert.entityType, alert.entityId, adminDecision, adminId, notes);
+        // Derive the target from the alert's own FK columns — there is no
+        // entityType/entityId on FraudAlert.
+        const [entityType, entityId] = alert.riderId
+          ? (['RIDER', alert.riderId] as const)
+          : alert.userId
+            ? (['CLIENT', alert.userId] as const)
+            : ([null, null] as const);
+        if (entityType && entityId) {
+          await applyAdminAction(entityType, entityId, adminDecision, adminId, notes);
+        }
         break;
+      }
 
       default:
         return NextResponse.json({ success: false, error: 'Invalid action' },
@@ -210,19 +238,17 @@ async function applyAdminAction(
     'ACCOUNT_BANNED': 'banned',
   };
 
-  // Create admin action record
-  await db.adminFraudAction.create({
-    data: {
-      entityType: entityType as string,
-      entityId,
-      actionType: action as string,
-      actionReason: notes,
-      adminId,
-      durationHours: action === 'TEMPORARY_RESTRICTION' ? 72 : null,
-      expiresAt: action === 'TEMPORARY_RESTRICTION' 
-        ? new Date(Date.now() + 72 * 60 * 60 * 1000) 
-        : null,
-    },
+  // There is no AdminFraudAction model in the schema, so the action record
+  // that used to be written here could never persist. Record it in AuditLog,
+  // which exists and is the platform's audit surface.
+  await createAuditLog({
+    action: 'FRAUD_ADMIN_ACTION',
+    entityType: entityType as string,
+    entityId,
+    actorType: 'ADMIN',
+    actorId: adminId,
+    description: `Fraud action ${action} applied to ${entityType} ${entityId}${notes ? `: ${notes}` : ''}`,
+    source: 'ADMIN_DASHBOARD',
   });
 
   // Apply to entity
@@ -265,34 +291,8 @@ async function applyAdminAction(
   }
 }
 
-// Record ML feedback for improving detection
-async function recordMLFeedback(alert: { id: string; detectedPatterns: string | null; [key: string]: unknown }, isFalsePositive: boolean) {
-  // Update the alert
-  await db.fraudAlert.update({
-    where: { id: alert.id },
-    data: {
-      mlFeedbackGiven: true,
-      isFalsePositive,
-    },
-  });
-
-  // Update pattern statistics if patterns were detected
-  if (alert.detectedPatterns) {
-    const patterns = JSON.parse(alert.detectedPatterns);
-    for (const patternCode of patterns) {
-      const pattern = await db.fraudPattern.findUnique({
-        where: { patternCode },
-      });
-      if (pattern) {
-        await db.fraudPattern.update({
-          where: { patternCode },
-          data: {
-            truePositiveCount: isFalsePositive ? pattern.truePositiveCount : pattern.truePositiveCount + 1,
-            falsePositiveCount: isFalsePositive ? pattern.falsePositiveCount + 1 : pattern.falsePositiveCount,
-            lastAccuracyUpdate: new Date(),
-          },
-        });
-      }
-    }
-  }
-}
+// recordMLFeedback was removed: it wrote FraudAlert.mlFeedbackGiven /
+// .isFalsePositive and read the FraudPattern model, none of which exist in
+// the schema, so it could only ever throw. Dismissing an alert now records
+// FALSE_POSITIVE status directly. Reinstate ML feedback alongside a real
+// FraudPattern model if that feature is built.
