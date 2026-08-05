@@ -23,6 +23,12 @@ interface SmartBottomSheetProps {
   style?: ViewStyle;
   contentStyle?: ViewStyle;
   maxHeight?: number; // default: 80% of screen
+  /**
+   * Whether tapping the scrim (or the Android back button) dismisses the sheet.
+   * Set false for sheets whose dismissal is a real decision — an incoming ride
+   * offer must not be declined by a stray tap next to the sheet.
+   */
+  dismissOnBackdrop?: boolean;
 }
 
 export function SmartBottomSheet({
@@ -33,6 +39,7 @@ export function SmartBottomSheet({
   style,
   contentStyle,
   maxHeight,
+  dismissOnBackdrop = true,
 }: SmartBottomSheetProps) {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
@@ -45,12 +52,12 @@ export function SmartBottomSheet({
       transparent
       animationType="none"
       statusBarTranslucent
-      onRequestClose={onDismiss}
+      onRequestClose={dismissOnBackdrop ? onDismiss : undefined}
     >
       {/* Durations live under MOTION.duration.*; MOTION.base/MOTION.fast were
           undefined, so these animations had no duration. */}
       <Animated.View entering={FadeIn.duration(MOTION.duration.base)} exiting={FadeOut.duration(MOTION.duration.fast)} style={styles.backdrop}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} />
+        {dismissOnBackdrop ? <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} /> : null}
         
         <Animated.View
           entering={SlideInUp.damping(20).mass(0.9).springify()}

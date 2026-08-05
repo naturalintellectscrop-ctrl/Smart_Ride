@@ -1,15 +1,16 @@
 // ============================================
-// SMART RIDE MOBILE - HOME SCREEN
+// SMART RIDE — CLIENT HOME
 // ============================================
-// Stitch Design System — MD3 Green Theme
-// Layout:
-//   GlowHeader (greeting + location)
-//   Wallet Balance card (UGX balance + Top Up)
-//   Search bar
-//   Mini map preview
-//   Service grid (5 services)
-//   Quick Ride cards
-//   Promo banner
+// Golden Screen #7 · Archetype AR-3 (content-first variant).
+//
+//   AppHeader (greeting + location + notifications) → wallet preview →
+//   "Where to?" → services → map preview → quick ride → support
+//
+// Every surface is a Design-System primitive. The promo banner that used to sit
+// above Support advertised "50% off your first 3 rides" with no promotions API
+// behind it; the Design Language forbids fabricated content, so it is gone
+// rather than restyled. Quick-ride prices now read from RIDE_TYPES instead of
+// being typed into the markup.
 // ============================================
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
@@ -25,11 +26,30 @@ import {
 import { useRouter } from 'expo-router';
 import Animated, { FadeIn, FadeInUp, ZoomIn } from 'react-native-reanimated';
 import { useAuthStore, useLocationStore } from '@/src/store';
-import { SERVICES, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import {
+  SERVICES,
+  RIDE_TYPES,
+  TYPOGRAPHY,
+  SPACING,
+  RADIUS,
+  SHADOWS,
+  MOTION,
+  ICON,
+  BORDER,
+  OPACITY,
+} from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlowHeader, GlassCard, GradientButton, ServiceIcon } from '@/src/components';
-import { SmartRideMap } from '@/src/components/SmartRideMap';
+import {
+  AppHeader,
+  Card,
+  GradientButton,
+  SearchInput,
+  SectionHeader,
+  ServiceIcon,
+  Skeleton,
+  SmartRideMap,
+} from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
 
@@ -46,6 +66,13 @@ const HOME_SERVICES: {
   { id: 'shopping', name: 'Shop', serviceKey: 'SHOPPING' },
   { id: 'delivery', name: 'Parcel', serviceKey: 'DELIVERY' },
   { id: 'health', name: 'Health', serviceKey: 'HEALTH' },
+];
+
+// Quick-ride tiles. Fares come from the shared RIDE_TYPES config so home can
+// never drift from what the booking screen actually quotes.
+const QUICK_RIDES: { type: 'BODA' | 'CAR'; name: string; icon: keyof typeof Ionicons.glyphMap; baseFare: number }[] = [
+  { type: 'BODA', name: RIDE_TYPES.BODA.name, icon: 'bicycle', baseFare: RIDE_TYPES.BODA.baseFare },
+  { type: 'CAR', name: RIDE_TYPES.CAR.name, icon: 'car-sport', baseFare: RIDE_TYPES.CAR.baseFare },
 ];
 
 export default function HomeScreen() {
@@ -172,83 +199,94 @@ export default function HomeScreen() {
         stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Sticky Header ── */}
-        <GlowHeader
-          title="Smart Ride"
-          rightAction={{ icon: 'notifications-outline', onPress: () => router.push('/notifications') }}
-        >
-          <View style={styles.headerChildren}>
-            {/* Greeting */}
-            <Animated.View entering={FadeIn.duration(400)}>
-              <Text style={styles.greeting}>{getGreeting()},</Text>
-              <Text style={styles.userName}>{firstName}</Text>
-            </Animated.View>
+        {/* ── Sticky header: greeting + location + notifications ── */}
+        <View style={styles.stickyHeader}>
+          <AppHeader
+            title={firstName}
+            subtitle={`${getGreeting()},`}
+            rightActions={[
+              { icon: 'notifications-outline', onPress: () => router.push('/notifications'), label: 'Notifications' },
+            ]}
+          />
+          <Animated.View entering={FadeIn.duration(MOTION.duration.slower)} style={styles.locationRow}>
+            <TouchableOpacity
+              style={styles.locationButton}
+              onPress={() => getCurrentLocation().catch(() => {})}
+              activeOpacity={OPACITY.pressed}
+              accessibilityRole="button"
+              accessibilityLabel="Refresh location"
+            >
+              <Ionicons name="location-outline" size={ICON.xs} color={COLORS.primary} />
+              {isLocating ? (
+                <ActivityIndicator color={COLORS.primary} size="small" style={styles.locationSpinner} />
+              ) : (
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {address || 'Tap to set location'}
+                </Text>
+              )}
+              <Ionicons name="chevron-down" size={ICON.xs} color={COLORS.outline} />
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
 
-            {/* Location pill */}
-            <Animated.View entering={FadeIn.duration(500).delay(100)}>
-              <TouchableOpacity
-                style={styles.locationButton}
-                onPress={() => getCurrentLocation().catch(() => {})}
-                activeOpacity={0.7}
-                accessibilityLabel="Refresh location"
-              >
-                <Ionicons name="location-outline" size={14} color={COLORS.primary} />
-                {isLocating ? (
-                  <ActivityIndicator color={COLORS.primary} size="small" style={{ marginLeft: SPACING.xs }} />
-                ) : (
-                  <Text style={styles.locationText} numberOfLines={1}>
-                    {address || 'Tap to set location'}
-                  </Text>
-                )}
-                <Ionicons name="chevron-down" size={12} color={COLORS.outline} style={{ marginLeft: 2 }} />
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
-        </GlowHeader>
-
-        {/* ── Wallet Balance Card ── */}
-        <Animated.View entering={FadeInUp.duration(350).delay(150)} style={styles.walletSection}>
-          <TouchableOpacity
-            style={styles.walletCard}
+        {/* ── Wallet preview ── */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(150)} style={styles.section}>
+          <Card
+            variant="accent"
+            padding={SPACING.md}
+            radius={RADIUS.xl}
             onPress={() => router.push('/wallet')}
-            activeOpacity={0.85}
             accessibilityLabel="Open wallet"
           >
-            <View style={styles.walletLeft}>
-              <Text style={styles.walletLabel}>Wallet Balance</Text>
-              <Text style={styles.walletBalance}>
-                {walletBalance !== null ? formatBalance(walletBalance) : '—'}
-              </Text>
+            <View style={styles.walletRow}>
+              <View style={styles.walletLeft}>
+                <Text style={styles.walletLabel}>Wallet Balance</Text>
+                {walletBalance !== null ? (
+                  <Text style={styles.walletBalance}>{formatBalance(walletBalance)}</Text>
+                ) : (
+                  <Skeleton width={140} height={28} borderRadius={RADIUS.sm} style={styles.walletSkeleton} />
+                )}
+              </View>
+              <GradientButton
+                title="Top Up"
+                onPress={() => router.push('/wallet')}
+                variant="primary"
+                size="sm"
+                fullWidth={false}
+                icon={<Ionicons name="add" size={ICON.sm} color={COLORS.onPrimary} />}
+              />
             </View>
-            <TouchableOpacity
-              style={styles.topUpButton}
-              onPress={() => router.push('/wallet')}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="add" size={14} color={COLORS.onPrimary} />
-              <Text style={styles.topUpText}>Top Up</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
+          </Card>
         </Animated.View>
 
-        {/* ── Search Bar ── */}
-        <Animated.View entering={FadeInUp.duration(350).delay(200)} style={styles.searchContainer}>
+        {/* ── "Where to?" — opens the booking flow ── */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(200)} style={styles.section}>
           <TouchableOpacity
-            style={styles.searchBar}
             onPress={() => router.push('/rider/ride-request?type=BODA')}
-            activeOpacity={0.8}
+            activeOpacity={OPACITY.pressed}
+            accessibilityRole="button"
+            accessibilityLabel="Where do you want to go?"
           >
-            <Ionicons name="search-outline" size={18} color={COLORS.outline} />
-            <Text style={styles.searchPlaceholder}>Where do you want to go?</Text>
+            {/* Non-editable: this is the entry point to destination search, not a
+                field. Same affordance as the real SearchInput it hands off to. */}
+            <View pointerEvents="none">
+              <SearchInput
+                value=""
+                onChangeText={() => {}}
+                placeholder="Where do you want to go?"
+                editable={false}
+              />
+            </View>
           </TouchableOpacity>
         </Animated.View>
 
-        {/* ── Mini Map Preview ── */}
-        <Animated.View entering={FadeInUp.duration(350).delay(250)} style={styles.section}>
+        {/* ── Map preview ── */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(250)} style={styles.section}>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={() => router.push('/rider/ride-request?type=BODA')}
             style={styles.mapPreviewCard}
+            accessibilityRole="button"
             accessibilityLabel="Book a ride — tap to set destination"
           >
             <SmartRideMap
@@ -258,44 +296,43 @@ export default function HomeScreen() {
               showUserLocation
               driverPoints={nearbyDrivers}
             />
-            {/* Top badge row */}
             <View style={styles.mapBadgeRow}>
               <View style={styles.mapBadge}>
-                <Ionicons name="location" size={11} color={COLORS.onPrimary} />
+                <Ionicons name="location" size={ICON.xs} color={COLORS.onPrimary} />
                 <Text style={styles.mapBadgeText} numberOfLines={1}>
                   {address || 'Current location'}
                 </Text>
               </View>
               {isLocating && (
-                <View style={styles.mapLocatingPill}>
+                <View style={styles.mapBadge}>
                   <ActivityIndicator size="small" color={COLORS.onPrimary} />
                   <Text style={styles.mapBadgeText}>Locating…</Text>
                 </View>
               )}
             </View>
-            {/* Bottom CTA pill */}
             <View style={styles.mapCtaPill}>
-              <Ionicons name="navigate-outline" size={14} color={COLORS.onPrimary} />
+              <Ionicons name="navigate-outline" size={ICON.xs} color={COLORS.onPrimary} />
               <Text style={styles.mapCtaText}>Set destination</Text>
-              <Ionicons name="arrow-forward" size={14} color={COLORS.onPrimary} />
+              <Ionicons name="arrow-forward" size={ICON.xs} color={COLORS.onPrimary} />
             </View>
           </TouchableOpacity>
         </Animated.View>
 
-        {/* ── Service Grid ── */}
-        <Animated.View entering={FadeInUp.duration(350).delay(300)} style={styles.section}>
-          <Text style={styles.sectionTitle}>Services</Text>
+        {/* ── Services ── */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(300)} style={styles.section}>
+          <SectionHeader title="Services" />
           <View style={styles.servicesGrid}>
             {HOME_SERVICES.map((service, index) => (
               <Animated.View
                 key={service.id}
-                entering={ZoomIn.duration(280).delay(300 + index * 70)}
+                entering={ZoomIn.duration(MOTION.duration.base).delay(300 + index * 70)}
                 style={styles.serviceCardWrapper}
               >
                 <TouchableOpacity
                   style={styles.serviceCard}
                   onPress={() => handleServicePress(service.id)}
-                  activeOpacity={0.7}
+                  activeOpacity={OPACITY.pressed}
+                  accessibilityRole="button"
                   accessibilityLabel={`${service.name} service`}
                 >
                   <ServiceIcon
@@ -312,83 +349,56 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* ── Quick Ride ── */}
-        <Animated.View entering={FadeInUp.duration(350).delay(450)} style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Ride</Text>
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(450)} style={styles.section}>
+          <SectionHeader title="Quick Ride" />
           <View style={styles.rideRow}>
-            {/* Smart Boda */}
-            <TouchableOpacity
-              style={[styles.rideCard, styles.rideCardBoda]}
-              onPress={() => router.push('/rider/ride-request?type=BODA')}
-              activeOpacity={0.8}
-            >
-              <View style={styles.rideIconCircle}>
-                <Ionicons name="bicycle" size={22} color={COLORS.primary} />
-              </View>
-              <Text style={styles.rideCardName}>Smart Boda</Text>
-              <Text style={styles.rideCardPrice}>From UGX 2,000</Text>
-              <View style={styles.rideCardCta}>
-                <Text style={styles.rideCardCtaText}>Book</Text>
-                <Ionicons name="arrow-forward" size={12} color={COLORS.onPrimary} />
-              </View>
-            </TouchableOpacity>
-
-            {/* Smart Car */}
-            <TouchableOpacity
-              style={[styles.rideCard, styles.rideCardCar]}
-              onPress={() => router.push('/rider/ride-request?type=CAR')}
-              activeOpacity={0.8}
-            >
-              <View style={[styles.rideIconCircle, styles.rideIconCircleCar]}>
-                <Ionicons name="car-sport" size={22} color={COLORS.serviceCar} />
-              </View>
-              <Text style={styles.rideCardName}>Smart Car</Text>
-              <Text style={styles.rideCardPrice}>From UGX 5,000</Text>
-              <View style={[styles.rideCardCta, styles.rideCardCtaCar]}>
-                <Text style={styles.rideCardCtaText}>Book</Text>
-                <Ionicons name="arrow-forward" size={12} color={COLORS.onPrimary} />
-              </View>
-            </TouchableOpacity>
+            {QUICK_RIDES.map((ride) => (
+              <Card
+                key={ride.type}
+                variant="raised"
+                padding={SPACING.md}
+                radius={RADIUS.xl}
+                style={styles.rideCard}
+                onPress={() => router.push(`/rider/ride-request?type=${ride.type}`)}
+                accessibilityLabel={`Book ${ride.name}`}
+              >
+                <View style={styles.rideIconCircle}>
+                  <Ionicons name={ride.icon} size={ICON.lg} color={COLORS.primary} />
+                </View>
+                <Text style={styles.rideCardName}>{ride.name}</Text>
+                <Text style={styles.rideCardPrice}>From {formatBalance(ride.baseFare)}</Text>
+              </Card>
+            ))}
           </View>
         </Animated.View>
 
-        {/* ── Promo Banner ── */}
-        <Animated.View entering={FadeInUp.duration(350).delay(550)} style={styles.section}>
-          <TouchableOpacity
-            style={styles.promoBanner}
-            onPress={() => router.push('/rider/ride-request?type=BODA')}
-            activeOpacity={0.85}
-          >
-            <View style={styles.promoBadge}>
-              <Text style={styles.promoBadgeText}>LIMITED OFFER</Text>
-            </View>
-            <Text style={styles.promoTitle}>50% off your first 3 SmartRide rides!</Text>
-            <Text style={styles.promoDesc}>Book now and save on your first three rides across Kampala.</Text>
-            <View style={styles.promoCta}>
-              <Text style={styles.promoCtaText}>Book Now</Text>
-              <Ionicons name="arrow-forward" size={14} color={COLORS.primary} />
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* ── Support Banner ── */}
-        <Animated.View entering={FadeInUp.duration(350).delay(620)} style={[styles.section, styles.supportSection]}>
-          <TouchableOpacity
-            style={styles.supportBanner}
+        {/* ── Support ── */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(550)} style={styles.section}>
+          <Card
+            variant="flat"
+            padding={SPACING.md}
+            radius={RADIUS.xl}
             onPress={() => router.push('/chat')}
-            activeOpacity={0.8}
+            accessibilityLabel="Contact in-app support"
           >
-            <Ionicons name="headset-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.supportText}>Need assistance?</Text>
-            <Text style={styles.supportCta}>In-app Support</Text>
-            <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
-          </TouchableOpacity>
+            <View style={styles.supportRow}>
+              <Ionicons name="headset-outline" size={ICON.md} color={COLORS.primary} />
+              <Text style={styles.supportText}>Need assistance?</Text>
+              <Text style={styles.supportCta}>In-app Support</Text>
+              <Ionicons name="chevron-forward" size={ICON.sm} color={COLORS.primary} />
+            </View>
+          </Card>
         </Animated.View>
 
-        <View style={{ height: 110 }} />
+        <View style={styles.bottomNavSpacer} />
       </ScrollView>
     </View>
   );
 }
+
+// ============================================
+// STYLES — layout + domain content only.
+// ============================================
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   screen: {
@@ -403,131 +413,75 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingBottom: SPACING.lg,
   },
 
-  // ── Header children ──
-  headerChildren: {
-    marginTop: SPACING.sm,
-    gap: SPACING.sm,
+  // Sticky header
+  stickyHeader: {
+    backgroundColor: COLORS.surface,
+    paddingBottom: SPACING.sm,
   },
-  greeting: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-  },
-  userName: {
-    ...TYPOGRAPHY.headlineLgMobile,
-    color: COLORS.onSurface,
-    fontWeight: '700',
-    marginTop: 2,
+  locationRow: {
+    paddingHorizontal: SPACING.md,
   },
   locationButton: {
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs + 2,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
     gap: SPACING.xs,
-    ...SHADOWS.card,
+    minHeight: 36,
+    paddingHorizontal: SPACING.gutter,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceContainerLow,
+    maxWidth: '100%',
+  },
+  locationSpinner: {
+    marginLeft: SPACING.xs,
   },
   locationText: {
-    flex: 1,
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurface,
-    maxWidth: 200,
+    fontWeight: '600',
+    flexShrink: 1,
   },
 
-  // ── Wallet Balance ──
-  walletSection: {
-    marginHorizontal: SPACING.lg,
+  section: {
+    paddingHorizontal: SPACING.md,
     marginTop: SPACING.md,
   },
-  walletCard: {
+
+  // Wallet
+  walletRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.xl,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md + 2,
-    ...SHADOWS.active,
+    gap: SPACING.md,
   },
   walletLeft: {
     flex: 1,
+    minWidth: 0,
   },
   walletLabel: {
-    ...TYPOGRAPHY.labelMd,
-    color: 'rgba(255,255,255,0.75)',
-    marginBottom: 2,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
   },
   walletBalance: {
-    ...TYPOGRAPHY.headlineLgMobile,
-    color: COLORS.onPrimary,
-    fontWeight: '700',
-  },
-  topUpButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  topUpText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onPrimary,
-    fontWeight: '600',
-  },
-
-  // ── Search ──
-  searchContainer: {
-    marginHorizontal: SPACING.lg,
-    marginTop: SPACING.md,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    ...SHADOWS.card,
-  },
-  searchPlaceholder: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.outline,
-    flex: 1,
-  },
-
-  // ── Sections ──
-  section: {
-    marginHorizontal: SPACING.lg,
-    marginTop: SPACING.lg,
-  },
-  sectionTitle: {
-    ...TYPOGRAPHY.bodyLg,
+    ...TYPOGRAPHY.displayLg,
     color: COLORS.onSurface,
-    fontWeight: '700',
-    marginBottom: SPACING.md,
+    marginTop: 2,
+  },
+  walletSkeleton: {
+    marginTop: SPACING.xs,
   },
 
-  // ── Mini Map Preview ──
+  // Map preview
   mapPreviewCard: {
-    height: 195,
+    height: 180,
     borderRadius: RADIUS.xl,
     overflow: 'hidden',
     backgroundColor: COLORS.surfaceContainerLow,
-    ...SHADOWS.card,
+    borderWidth: BORDER.hairline,
+    borderColor: COLORS.border,
   },
   mapPreview: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
   },
   mapBadgeRow: {
     position: 'absolute',
@@ -535,28 +489,17 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     left: SPACING.sm,
     right: SPACING.sm,
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
+    gap: SPACING.sm,
   },
   mapBadge: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.xs,
-    backgroundColor: 'rgba(0,95,58,0.9)',
+    backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs + 1,
-    ...SHADOWS.card,
-  },
-  mapLocatingPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    backgroundColor: 'rgba(0,95,58,0.9)',
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
+    paddingHorizontal: SPACING.sm + 2,
+    paddingVertical: 5,
+    flexShrink: 1,
   },
   mapBadgeText: {
     ...TYPOGRAPHY.labelMd,
@@ -566,76 +509,61 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   mapCtaPill: {
     position: 'absolute',
-    bottom: SPACING.md,
+    bottom: SPACING.sm,
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
+    gap: SPACING.sm,
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
-    paddingVertical: SPACING.sm + 1,
-    paddingHorizontal: SPACING.lg,
-    ...SHADOWS.active,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    ...SHADOWS.button,
   },
   mapCtaText: {
-    ...TYPOGRAPHY.bodySm,
+    ...TYPOGRAPHY.labelLg,
     color: COLORS.onPrimary,
     fontWeight: '700',
   },
 
-  // ── Service Grid ──
+  // Services
   servicesGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
   serviceCardWrapper: {
-    flex: 1,
-    alignItems: 'center',
+    width: '19%',
   },
   serviceCard: {
     alignItems: 'center',
-    paddingHorizontal: SPACING.xs,
+    gap: SPACING.xs + 2,
+    minHeight: 44,
   },
   serviceName: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.sm,
+    fontWeight: '600',
     textAlign: 'center',
   },
 
-  // ── Quick Ride ──
+  // Quick ride
   rideRow: {
     flexDirection: 'row',
-    gap: SPACING.md,
+    gap: SPACING.gutter,
   },
   rideCard: {
     flex: 1,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.md,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
-  },
-  rideCardBoda: {
-    borderColor: `${COLORS.primary}30`,
-    backgroundColor: `${COLORS.primary}06`,
-  },
-  rideCardCar: {
-    borderColor: `${COLORS.serviceCar}30`,
-    backgroundColor: `${COLORS.serviceCar}06`,
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
   },
   rideIconCircle: {
     width: 44,
     height: 44,
-    borderRadius: 22,
-    backgroundColor: `${COLORS.primary}15`,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.sm,
-  },
-  rideIconCircleCar: {
-    backgroundColor: `${COLORS.serviceCar}15`,
   },
   rideCardName: {
     ...TYPOGRAPHY.bodyMd,
@@ -644,97 +572,28 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   rideCardPrice: {
     ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    marginTop: 2,
-    marginBottom: SPACING.md,
-  },
-  rideCardCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.full,
-    paddingVertical: SPACING.sm,
-  },
-  rideCardCtaCar: {
-    backgroundColor: COLORS.serviceCar,
-  },
-  rideCardCtaText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onPrimary,
-    fontWeight: '600',
-  },
-
-  // ── Promo Banner ──
-  promoBanner: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: `${COLORS.primary}25`,
-    ...SHADOWS.card,
-  },
-  promoBadge: {
-    alignSelf: 'flex-start',
-    backgroundColor: `${COLORS.primary}15`,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 3,
-    marginBottom: SPACING.sm,
-  },
-  promoBadgeText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  promoTitle: {
-    ...TYPOGRAPHY.bodyLg,
-    color: COLORS.onSurface,
-    fontWeight: '700',
-    marginBottom: SPACING.xs,
-  },
-  promoDesc: {
-    ...TYPOGRAPHY.bodySm,
     color: COLORS.onSurfaceVariant,
-    lineHeight: 18,
-  },
-  promoCta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginTop: SPACING.md,
-  },
-  promoCtaText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.primary,
-    fontWeight: '600',
   },
 
-  // ── Support ──
-  supportSection: {
-    marginTop: SPACING.md,
-  },
-  supportBanner: {
+  // Support
+  supportRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
-    backgroundColor: `${COLORS.primary}08`,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    borderWidth: 1,
-    borderColor: `${COLORS.primary}20`,
   },
   supportText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurfaceVariant,
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurface,
+    fontWeight: '600',
     flex: 1,
   },
   supportCta: {
-    ...TYPOGRAPHY.bodyMd,
+    ...TYPOGRAPHY.labelLg,
     color: COLORS.primary,
-    fontWeight: '600',
+    fontWeight: '700',
+  },
+
+  bottomNavSpacer: {
+    height: 110,
   },
 });

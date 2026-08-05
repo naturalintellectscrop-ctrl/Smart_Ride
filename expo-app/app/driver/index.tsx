@@ -637,9 +637,12 @@ export default function DriverHomeScreen() {
       </Animated.View>
 
       {/* ── INCOMING REQUEST (Golden Screen #14) ── */}
+      {/* Declining is an explicit decision — a stray tap beside the sheet must
+          not cost the driver the offer, so the scrim does not dismiss. */}
       <SmartBottomSheet
         visible={!!incomingRequest}
         onDismiss={handleDeclineRequest}
+        dismissOnBackdrop={false}
       >
         {incomingRequest ? (
           <View>
