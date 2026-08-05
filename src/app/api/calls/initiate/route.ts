@@ -69,6 +69,33 @@ export async function POST(request: NextRequest) {
       return errorResponse('Recipient is not available for calls');
     }
 
+    // IDOR guard: for CLIENT/RIDER calls, the caller and recipient must be
+    // the two parties on a shared task. Without this, recipientId is a
+    // caller-supplied field checked only against "does this user exist and
+    // are they ACTIVE" — any authenticated user could ring any other user
+    // in the system with no relationship between them at all.
+    // (SUPPORT calls are intentionally not task-bound here; the same
+    // unchecked-recipient gap applies to them and is a separate follow-up.)
+    if (validatedData.recipientType === 'CLIENT' || validatedData.recipientType === 'RIDER') {
+      if (!validatedData.taskId) {
+        return errorResponse('taskId is required to call a client or rider');
+      }
+
+      const task = await db.task.findUnique({
+        where: { id: validatedData.taskId },
+        select: { clientId: true, rider: { select: { userId: true } } },
+      });
+
+      if (!task) {
+        return errorResponse('Task not found', 404);
+      }
+
+      const parties = [task.clientId, task.rider?.userId].filter(Boolean);
+      if (!parties.includes(decoded.userId) || !parties.includes(validatedData.recipientId)) {
+        return errorResponse('You can only call the client or rider on your own task', 403);
+      }
+    }
+
     // Check for any existing active calls between these users
     const existingCall = await db.callSession.findFirst({
       where: {
