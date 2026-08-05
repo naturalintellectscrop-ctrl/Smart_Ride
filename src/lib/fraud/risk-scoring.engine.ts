@@ -423,7 +423,7 @@ export class RiskScoringEngine {
       where: { riderId, isFlagged: true },
     });
 
-    const gpsAnomalies = await db.gPSAnomalyRecord.count({
+    const gpsAnomalies = await db.gPSAnomaly.count({
       where: {
         riderId,
         createdAt: {
@@ -572,7 +572,7 @@ export class RiskScoringEngine {
     }
 
     // Get GPS anomalies for task
-    const gpsAnomalies = await db.gPSAnomalyRecord.findMany({
+    const gpsAnomalies = await db.gPSAnomaly.findMany({
       where: { taskId },
     });
 

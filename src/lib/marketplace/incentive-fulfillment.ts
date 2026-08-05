@@ -2,7 +2,7 @@
 // Handles driver participation, progress tracking, and automatic reward distribution
 
 import { db } from '@/lib/db';
-import { IncentiveType, IncentiveStatus, ParticipationStatus, RewardType } from '@prisma/client';
+import { IncentiveType, IncentiveStatus, ParticipationStatus, RewardType, IncentiveParticipation } from '@prisma/client';
 import { createNotification } from '@/lib/services/notification.service';
 import { creditRewardToWallet } from '@/lib/wallet/wallet-service';
 import { toNumber } from '@/lib/decimal-utils';
@@ -61,7 +61,7 @@ export interface TaskCompletionData {
 export async function enrollInIncentive(
   incentiveId: string,
   riderId: string
-): Promise<{ success: boolean; participation?: typeof participation; error?: string }> {
+): Promise<{ success: boolean; participation?: IncentiveParticipation; error?: string }> {
   try {
     // Get the incentive
     const incentive = await db.driverIncentive.findUnique({
@@ -218,7 +218,7 @@ export async function getDriverIncentiveProgress(riderId: string): Promise<Incen
  */
 function calculateProgressPercent(
   incentive: { minRides: number | null; minEarnings: number | null; targetHours: number | null },
-  participation: { ridesCompleted: number; earningsAccumulated: number; hoursOnline: number } | null
+  participation: { ridesCompleted: number; earningsAccumulated: number; hoursOnline: number } | null | undefined
 ): number {
   if (!participation) return 0;
 
@@ -462,7 +462,9 @@ export async function completeIncentiveAndReward(participationId: string): Promi
       include: {
         incentive: true,
         rider: {
-          include: { user: true },
+          // reputation is needed below to attach the earned bonus to the
+          // driver's reputation record.
+          include: { user: true, reputation: true },
         },
       },
     });

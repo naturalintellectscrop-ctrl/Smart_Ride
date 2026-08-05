@@ -4,6 +4,7 @@
  */
 
 import { db } from '@/lib/db';
+import { FraudAlertType, AlertSeverity } from '@prisma/client';
 
 // ============================================
 // Types
@@ -282,7 +283,7 @@ export class FraudDetectionService {
   ): Promise<{ isAnomaly: boolean; anomalyType?: string; scoreAdd: number }> {
     // No previous location - can't detect anomaly yet
     if (!previousLat || !previousLng) {
-      return { isAnomaly: false };
+      return { isAnomaly: false, scoreAdd: 0 };
     }
 
     // Get last GPS record
@@ -293,7 +294,7 @@ export class FraudDetectionService {
     });
 
     if (!lastGPS) {
-      return { isAnomaly: false };
+      return { isAnomaly: false, scoreAdd: 0 };
     }
 
     // Calculate distance and time
@@ -305,7 +306,7 @@ export class FraudDetectionService {
     const timeDiffSeconds = (timestamp.getTime() - lastGPS.createdAt.getTime()) / 1000;
     
     if (timeDiffSeconds <= 0) {
-      return { isAnomaly: false };
+      return { isAnomaly: false, scoreAdd: 0 };
     }
 
     // Calculate speed
@@ -324,7 +325,7 @@ export class FraudDetectionService {
       return { isAnomaly: true, anomalyType: 'LOCATION_JUMP', scoreAdd: 25 };
     }
 
-    return { isAnomaly: false };
+    return { isAnomaly: false, scoreAdd: 0 };
   }
 
   /**
@@ -356,7 +357,7 @@ export class FraudDetectionService {
    */
   static async detectMultiAccountFarming(riderId: string): Promise<{ isFarming: boolean; score: number }> {
     // Get all devices for this rider
-    const riderDevices = await db.riderDevice.findMany({
+    const riderDevices = await db.riderDeviceAssociation.findMany({
       where: { riderId },
       select: { deviceId: true },
     });
@@ -366,7 +367,7 @@ export class FraudDetectionService {
     const deviceIds = riderDevices.map(rd => rd.deviceId);
 
     // Check if these devices are used by other riders
-    const otherRiders = await db.riderDevice.findMany({
+    const otherRiders = await db.riderDeviceAssociation.findMany({
       where: {
         deviceId: { in: deviceIds },
         riderId: { not: riderId },
@@ -444,18 +445,19 @@ export class FraudDetectionService {
     riskScore: number;
     evidence?: any;
   }): Promise<void> {
+    // FraudAlert links the subject via userId/riderId/taskId and carries a
+    // single `description` + `indicators` payload — there is no alertId,
+    // clientId, title or evidence column.
     await db.fraudAlert.create({
       data: {
-        alertId: `ALERT-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        alertType: data.type as any,
-        severity: data.severity as any,
-        riderId: data.riderId,
-        clientId: data.clientId,
-        taskId: data.taskId,
-        title: data.title,
-        description: data.description,
-        riskScore: data.riskScore,
-        evidence: data.evidence ? JSON.stringify(data.evidence) : null,
+        alertType: data.type as FraudAlertType,
+        severity: data.severity as AlertSeverity,
+        riderId: data.riderId ?? null,
+        userId: data.clientId ?? null,
+        taskId: data.taskId ?? null,
+        description: `${data.title}: ${data.description}`,
+        riskScore: Math.round(data.riskScore),
+        indicators: data.evidence ? JSON.stringify(data.evidence) : null,
       },
     });
   }

@@ -201,7 +201,7 @@ export class FeatureExtractor {
       where: { riderId },
     });
 
-    const gpsAnomalies = await db.gPSAnomalyRecord.findMany({
+    const gpsAnomalies = await db.gPSAnomaly.findMany({
       where: {
         riderId,
         createdAt: { gte: timeWindow.start, lte: timeWindow.end },
@@ -312,7 +312,7 @@ export class FeatureExtractor {
     const riderFeatures = await this.extractRiderFeatures(task.riderId, timeWindow);
 
     // Add task-specific features
-    const gpsAnomalies = await db.gPSAnomalyRecord.findMany({
+    const gpsAnomalies = await db.gPSAnomaly.findMany({
       where: { taskId },
     });
 
@@ -1389,6 +1389,7 @@ export class ScheduledTrainingService {
         status: { in: ['RESOLVED', 'DISMISSED'] },
       },
       select: {
+        riskScore: true,
         riskScoreAtDetection: true,
         adminDecision: true,
         isFalsePositive: true,
@@ -1402,7 +1403,11 @@ export class ScheduledTrainingService {
     const falsePositiveRates: Record<number, number> = {};
 
     for (const threshold of thresholds) {
-      const alertsAtThreshold = recentAlerts.filter(a => a.riskScoreAtDetection >= threshold);
+      // riskScoreAtDetection is nullable for alerts raised before the field
+      // existed; fall back to the alert's current riskScore.
+      const alertsAtThreshold = recentAlerts.filter(
+        a => (a.riskScoreAtDetection ?? a.riskScore) >= threshold
+      );
       const falsePositives = alertsAtThreshold.filter(a => a.isFalsePositive || a.adminDecision === 'FALSE_POSITIVE').length;
       
       if (alertsAtThreshold.length > 0) {

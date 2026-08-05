@@ -623,8 +623,8 @@ export async function recordSafetyEvent(
     data: {
       safetyScore: newSafetyScore,
       totalSafetyEvents: reputation.totalSafetyEvents + 1,
-      speedingEvents: reputation.speedingEvents + 
-        ([SafetyEventType.EXCESSIVE_SPEEDING, SafetyEventType.MODERATE_SPEEDING].includes(eventData.eventType) ? 1 : 0),
+      speedingEvents: reputation.speedingEvents +
+        (([SafetyEventType.EXCESSIVE_SPEEDING, SafetyEventType.MODERATE_SPEEDING] as SafetyEventType[]).includes(eventData.eventType) ? 1 : 0),
       routeDeviationEvents: reputation.routeDeviationEvents + 
         (eventData.eventType === SafetyEventType.ROUTE_DEVIATION ? 1 : 0),
       unexplainedStopEvents: reputation.unexplainedStopEvents + 
@@ -754,7 +754,10 @@ async function updateTrustScore(
     data: {
       reputationId,
       trustScore: scoreResult.trustScore,
+      // The score before this recalculation, so history rows are self-contained.
+      previousTrustScore: scoreResult.trustScore - scoreResult.scoreChange,
       trustTier: scoreResult.trustTier,
+      previousTrustTier: scoreResult.previousTier,
       ratingScore: scoreResult.components.ratingScore,
       completionScore: scoreResult.components.completionScore,
       acceptanceScore: scoreResult.components.acceptanceScore,
@@ -778,8 +781,8 @@ async function updateTrustScore(
         'Platinum Status Achieved!',
         'Congratulations! You\'ve achieved Platinum status. Enjoy priority dispatch and premium benefits!'
       );
-    } else if (scoreResult.trustTier === TrustTier.GOLD && 
-               [TrustTier.SILVER, TrustTier.WARNING].includes(scoreResult.previousTier)) {
+    } else if (scoreResult.trustTier === TrustTier.GOLD &&
+               ([TrustTier.SILVER, TrustTier.WARNING] as TrustTier[]).includes(scoreResult.previousTier)) {
       await createIncentive(reputationId, 'TRUST_TIER_BONUS', 'Achieved Gold Status!', 25);
       await createPerformanceAlert(
         reputationId,

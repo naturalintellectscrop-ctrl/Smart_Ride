@@ -55,6 +55,10 @@ model User {
   paymentMethods           UserPaymentMethod[]
   healthProvider           HealthProvider?
   fraudAlerts              FraudAlert[]              @relation("UserFraudAlerts")
+  // Intelligent platform layer
+  deviceAssociations       UserDeviceAssociation[]
+  driverInteractions       DriverRiderInteraction[]
+  promotionParticipations  ClientPromotionParticipation[]
 
   @@index([email])
   @@index([phone])
@@ -189,6 +193,13 @@ model Rider {
   updatedAt          DateTime         @updatedAt
   auditLogs          AuditLog[]       @relation("RiderAuditLogs")
   fraudAlerts        FraudAlert[]     @relation("RiderFraudAlerts")
+  // Intelligent platform layer
+  reputation         DriverReputation?
+  fraudProfile       RiderFraudProfile?
+  deviceAssociations RiderDeviceAssociation[]
+  gpsAnomalies       GPSAnomaly[]
+  clientInteractions DriverRiderInteraction[]
+  incentiveParticipations IncentiveParticipation[]
   cashCollections    CashCollection[]
   dispatchMatches    DispatchMatch[]
   heartbeatLogs      HeartbeatLog[]
@@ -1102,6 +1113,7 @@ model MedicineCatalog {
   healthOrderItems     HealthOrderItem[]
   pharmacy             Pharmacy?         @relation(fields: [pharmacyId], references: [id])
   provider             HealthProvider?   @relation(fields: [providerId], references: [id])
+  medicineReservations MedicineInventoryReservation[]
 
   @@index([providerId])
   @@index([pharmacyId])
@@ -1163,6 +1175,18 @@ model FraudAlert {
   reviewedAt      DateTime?
   resolution      String?
   resolutionNotes String?
+  // Manual-review -> ML feedback loop. The admin's verdict on an alert is the
+  // training label; riskScoreAtDetection preserves the score the model gave at
+  // the time so accuracy can be measured against the outcome.
+  riskScoreAtDetection Float?
+  detectionMethod      String?  @default("RULE_BASED")
+  isFalsePositive      Boolean?
+  adminDecision        String?
+  mlFeedbackGiven      Boolean  @default(false)
+  /// Human-facing reference, e.g. FRA-1730000000000.
+  alertNumber          String?  @unique
+  resolvedBy           String?
+  resolvedAt           DateTime?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   // userId/riderId were bare columns with no relations, so the admin fraud
@@ -2318,6 +2342,19 @@ enum FraudAlertType {
   LOCATION_SPOOFING
   MULTIPLE_ACCOUNTS
   UNUSUAL_PATTERN
+  // Raised by the intelligent platform layer
+  MULTIPLE_ACCOUNTS_SAME_DEVICE
+  GPS_SPOOFING
+  RIDE_ABUSE
+  WALLET_ABUSE
+  PROMO_ABUSE
+  VELOCITY_BREACH
+  FAKE_ACCOUNT
+  DEVICE_FARMING
+  TRUST_SCORE_COLLAPSE
+  ABNORMAL_ORDER_FREQUENCY
+  ABNORMAL_CANCELLATION_RATE
+  REFUND_ABUSE
 }
 
 enum FraudAlertStatus {
@@ -2326,6 +2363,8 @@ enum FraudAlertStatus {
   CONFIRMED
   FALSE_POSITIVE
   RESOLVED
+  DISMISSED
+  ESCALATED
 }
 
 enum ConversationType {
@@ -2520,4 +2559,1185 @@ model CallSession {
   @@index([callerId])
   @@index([recipientId])
   @@index([status])
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// INTELLIGENT PLATFORM LAYER
+// ════════════════════════════════════════════════════════════════════════
+// Three first-class platform systems:
+//   1. Fraud Intelligence       — risk scoring, device trust, abuse detection
+//   2. Driver Reputation        — trust/safety/reliability scoring and tiers
+//   3. Marketplace Intelligence — zones, surge, incentives, promotions
+// Every score here is derived from real platform events; nothing is static.
+// ════════════════════════════════════════════════════════════════════════
+
+// ── Shared enums ────────────────────────────────────────────────────────
+
+enum RiskEntityType {
+  CLIENT
+  RIDER
+  MERCHANT
+  PHARMACY
+  DEVICE
+  // Per-task scoring: a single trip can carry its own fraud score independent
+  // of the parties involved.
+  TASK
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+// ── 1. FRAUD INTELLIGENCE ───────────────────────────────────────────────
+
+enum SuspiciousActivityType {
+  MULTI_ACCOUNT
+  GPS_SPOOFING
+  RIDE_ABUSE
+  WALLET_ABUSE
+  PROMO_ABUSE
+  COLLUSION
+  VELOCITY_BREACH
+  FAKE_ACCOUNT
+  PAYMENT_ABUSE
+  ACCOUNT_TAKEOVER
+}
+
+enum GPSAnomalyType {
+  IMPOSSIBLE_SPEED
+  LOCATION_JUMP
+  MOCK_LOCATION
+  ACCURACY_ISSUE
+  ROUTE_MISMATCH
+}
+
+enum FraudActionType {
+  WARNING_ISSUED
+  TEMPORARY_RESTRICTION
+  ACCOUNT_SUSPENDED
+  ACCOUNT_BANNED
+  PAYOUT_HELD
+  CLEARED
+  MANUAL_REVIEW
+  // Admin marked the detection wrong; consumed as a negative training label.
+  FALSE_POSITIVE
+}
+
+/// Current fraud risk score for any platform entity. One row per entity;
+/// history lives in FraudScoreHistoryRecord.
+model FraudRiskScore {
+  id                  String         @id @default(cuid())
+  entityType          RiskEntityType
+  entityId            String
+  riskScore           Float          @default(0)
+  riskLevel           RiskLevel      @default(LOW)
+  previousScore       Float          @default(0)
+  triggerReason       String?
+  collusionScore      Float          @default(0)
+  gpsAnomalyScore     Float          @default(0)
+  behaviorScore       Float          @default(0)
+  deviceScore         Float          @default(0)
+  patternScore        Float          @default(0)
+  matchedRules        String?
+  isRestricted        Boolean        @default(false)
+  restrictionsApplied String?
+  hasSuspiciousActivity Boolean      @default(false)
+  lastAnalyzedAt      DateTime       @default(now())
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@unique([entityType, entityId])
+  @@index([riskLevel])
+  @@index([riskScore])
+  @@index([isRestricted])
+  @@index([lastAnalyzedAt])
+}
+
+/// Append-only audit trail of every risk-score recalculation.
+model FraudScoreHistoryRecord {
+  id              String         @id @default(cuid())
+  entityType      RiskEntityType
+  entityId        String
+  riskScore       Float
+  previousScore   Float          @default(0)
+  collusionScore  Float          @default(0)
+  gpsAnomalyScore Float          @default(0)
+  behaviorScore   Float          @default(0)
+  deviceScore     Float          @default(0)
+  patternScore    Float          @default(0)
+  triggerTaskId   String?
+  triggerReason   String?
+  matchedRules    String?
+  createdAt       DateTime       @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+/// Raw suspicious-activity events feeding detection and the ML pipeline.
+model SuspiciousActivityLog {
+  id              String                 @id @default(cuid())
+  entityType      RiskEntityType
+  entityId        String
+  activityType    SuspiciousActivityType
+  /// Free-form grouping above activityType (e.g. "PAYMENT", "IDENTITY").
+  activityCategory String?
+  referenceType   String?
+  referenceId     String?
+  riskScore       Float                  @default(0)
+  severity        AlertSeverity          @default(LOW)
+  description     String?
+  riskIndicators  String?
+  matchedPatterns String?
+  metadata        String?
+  taskId          String?
+  reviewed        Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+
+  @@index([entityType, entityId])
+  @@index([activityType])
+  @@index([createdAt])
+  @@index([reviewed])
+}
+
+/// A physical device seen by the platform. Multi-account detection counts
+/// distinct accounts sharing one fingerprint.
+model DeviceFingerprint {
+  id                 String   @id @default(cuid())
+  deviceId           String   @unique
+  /// Stable hash of the device's hardware/software signature. Two installs
+  /// that share a hash are the same physical device even if deviceId rotates.
+  /// Unique so multi-account detection can upsert by hash.
+  fingerprintHash    String   @unique
+  platform           String?
+  deviceModel        String?
+  osVersion          String?
+  appVersion         String?
+  firstSeen          DateTime @default(now())
+  lastSeen           DateTime @default(now())
+  lastActivityAt     DateTime @default(now())
+  activityCount      Int      @default(0)
+  accountCount       Int      @default(1)
+  associatedAccounts String?
+  isFlagged          Boolean  @default(false)
+  flagReason         String?
+  riskScore          Float    @default(0)
+  isTrusted          Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  riderAssociations RiderDeviceAssociation[]
+  userAssociations  UserDeviceAssociation[]
+
+  @@index([isFlagged])
+  @@index([riskScore])
+  @@index([lastSeen])
+}
+
+/// Rider-to-device link. Several riders on one device is a multi-account signal.
+model RiderDeviceAssociation {
+  id        String   @id @default(cuid())
+  deviceId  String
+  riderId   String
+  isActive  Boolean  @default(true)
+  isFlagged Boolean  @default(false)
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+  useCount  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  device DeviceFingerprint @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
+  rider  Rider             @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, riderId])
+  @@index([riderId])
+  @@index([deviceId])
+  @@index([isActive])
+}
+
+/// Client-to-device link, same purpose as RiderDeviceAssociation for users.
+model UserDeviceAssociation {
+  id        String   @id @default(cuid())
+  deviceId  String
+  userId    String
+  isActive  Boolean  @default(true)
+  isFlagged Boolean  @default(false)
+  firstSeen DateTime @default(now())
+  lastSeen  DateTime @default(now())
+  useCount  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  device DeviceFingerprint @relation(fields: [deviceId], references: [deviceId], onDelete: Cascade)
+  user   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([deviceId, userId])
+  @@index([userId])
+  @@index([deviceId])
+  @@index([isActive])
+}
+
+/// Rolling behavioural feature vector per rider — the input to behaviour
+/// scoring and the ML training pipeline. Recomputed from real task history.
+model RiderFraudProfile {
+  id                    String   @id @default(cuid())
+  riderId               String   @unique
+  ridesPerHour          Float    @default(0)
+  avgRideDistance       Float    @default(0)
+  avgRideDuration       Float    @default(0)
+  rideDistanceVariance  Float    @default(0)
+  rideDurationVariance  Float    @default(0)
+  shortRideRatio        Float    @default(0)
+  nightRideRatio        Float    @default(0)
+  weekendRideRatio      Float    @default(0)
+  repeatClientRatio     Float    @default(0)
+  shortRides            Int      @default(0)
+  totalRides            Int      @default(0)
+  gpsAnomalyCount       Int      @default(0)
+  impossibleSpeedCount  Int      @default(0)
+  locationJumpCount     Int      @default(0)
+  avgSpeedAnomaly       Float    @default(0)
+  maxSpeedAnomaly       Float    @default(0)
+  gpsAccuracyIssueCount Int      @default(0)
+  cancellationRate      Float    @default(0)
+  cancelledRides        Int      @default(0)
+  /// Device-spread signals: many devices per rider is a farming indicator.
+  deviceCount           Int      @default(0)
+  activeDeviceCount     Int      @default(0)
+  /// Rolled-up behavioural risk for this rider, kept here so high-risk driver
+  /// queries do not have to join FraudRiskScore.
+  overallRiskScore      Float    @default(0)
+  lastAnalyzedAt        DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  rider Rider @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@index([totalRides])
+  @@index([overallRiskScore])
+  @@index([lastAnalyzedAt])
+}
+
+/// A single GPS integrity violation. Canonical record for both the fraud
+/// dashboard and the ML feature builder.
+model GPSAnomaly {
+  id                String         @id @default(cuid())
+  riderId           String?
+  taskId            String?
+  deviceId          String?
+  anomalyType       GPSAnomalyType
+  severity          AlertSeverity  @default(LOW)
+  reportedLatitude  Float?
+  reportedLongitude Float?
+  previousLatitude  Float?
+  previousLongitude Float?
+  jumpDistance      Float?
+  speedKmh          Float?
+  accuracyMeters    Float?
+  riskScoreAdd      Float          @default(0)
+  description       String?
+  detectedAt        DateTime       @default(now())
+  createdAt         DateTime       @default(now())
+
+  rider Rider? @relation(fields: [riderId], references: [id], onDelete: SetNull)
+
+  @@index([riderId])
+  @@index([taskId])
+  @@index([anomalyType])
+  @@index([detectedAt])
+}
+
+/// Pairwise rider-to-client history. A very high repeat ratio between one
+/// driver and one client is the primary collusion signal.
+model DriverRiderInteraction {
+  id                 String   @id @default(cuid())
+  riderId            String
+  clientId           String
+  totalRides         Int      @default(0)
+  totalValue         Decimal  @default(0)
+  cancelledRides     Int      @default(0)
+  /// Unusually many very short rides between the same pair is a strong
+  /// fare-farming / collusion indicator.
+  shortRideCount     Int      @default(0)
+  collusionScore     Float    @default(0)
+  isFlagged          Boolean  @default(false)
+  firstInteractionAt DateTime @default(now())
+  lastInteractionAt  DateTime @default(now())
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  rider  Rider @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  client User  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([riderId, clientId])
+  @@index([riderId])
+  @@index([clientId])
+  @@index([collusionScore])
+}
+
+/// Detection rule/pattern with live accuracy counters updated by admin
+/// feedback on alerts (the manual-review to ML feedback loop).
+model FraudPattern {
+  id                 String    @id @default(cuid())
+  patternCode        String    @unique
+  name               String
+  description        String?
+  category           String?
+  /// JSON rule definition evaluated by the detection engine.
+  detectionRules     String?
+  weight             Float     @default(1)
+  isActive           Boolean   @default(true)
+  truePositiveCount  Int       @default(0)
+  falsePositiveCount Int       @default(0)
+  lastAccuracyUpdate DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([isActive])
+  @@index([category])
+}
+
+/// Every administrative action taken on a fraud subject.
+model AdminFraudAction {
+  id            String          @id @default(cuid())
+  entityType    String
+  entityId      String
+  actionType    FraudActionType
+  actionReason  String?
+  adminId       String?
+  alertId       String?
+  durationHours Int?
+  expiresAt     DateTime?
+  reverted      Boolean         @default(false)
+  revertedAt    DateTime?
+  /// Set once this action has been folded into ML training, so the pipeline
+  /// does not double-count the same label.
+  mlFeedbackRecorded Boolean    @default(false)
+  createdAt     DateTime        @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actionType])
+  @@index([adminId])
+  @@index([createdAt])
+}
+
+/// Promotion/referral abuse evidence.
+model PromoAbuseRecord {
+  id          String        @id @default(cuid())
+  clientId    String
+  promotionId String?
+  promoCode   String?
+  deviceId    String?
+  abuseType   String        @default("PROMO_REUSE")
+  severity    AlertSeverity @default(LOW)
+  riskScore   Float         @default(0)
+  evidence    String?
+  createdAt   DateTime      @default(now())
+
+  @@index([clientId])
+  @@index([promoCode])
+  @@index([deviceId])
+  @@index([promotionId])
+  @@index([createdAt])
+}
+
+/// Tunable fraud thresholds and persisted ML model weights (configKey/JSON).
+model FraudSystemConfig {
+  id          String   @id @default(cuid())
+  configKey   String   @unique
+  configValue String
+  description String?
+  updatedBy   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+/// Daily rollup powering the fraud dashboard without scanning raw tables.
+model FraudDashboardStats {
+  id                  String   @id @default(cuid())
+  date                DateTime @unique
+  totalAlerts         Int      @default(0)
+  openAlerts          Int      @default(0)
+  criticalAlerts      Int      @default(0)
+  highAlerts          Int      @default(0)
+  resolvedAlerts      Int      @default(0)
+  frozenAccounts      Int      @default(0)
+  ruleBasedDetections Int      @default(0)
+  mlDetections        Int      @default(0)
+  manualReviews       Int      @default(0)
+  falsePositives      Int      @default(0)
+  avgRiskScore        Float    @default(0)
+  highRiskEntities    Int      @default(0)
+  alertsByType        String?
+  alertsBySeverity    String?
+  riskDistribution    String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([date])
+}
+
+/// Safety/quality incident reports raised by clients, riders or the system.
+model IncidentReport {
+  id           String        @id @default(cuid())
+  reportNumber String        @unique
+  reporterId   String?
+  reporterRole String?
+  subjectType  String?
+  subjectId    String?
+  taskId       String?
+  sosAlertId   String?
+  category     String
+  severity     AlertSeverity @default(MEDIUM)
+  title        String
+  description  String
+  evidence     String?
+  latitude     Float?
+  longitude    Float?
+  status       String        @default("OPEN")
+  resolution   String?
+  resolvedBy   String?
+  resolvedAt   DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([reporterId])
+  @@index([subjectType, subjectId])
+  @@index([status])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+// ── 2. DRIVER REPUTATION ENGINE ─────────────────────────────────────────
+
+enum TrustTier {
+  PLATINUM
+  GOLD
+  SILVER
+  WARNING
+  SUSPENDED
+}
+
+enum ScoreTriggerType {
+  RATING_RECEIVED
+  TASK_COMPLETED
+  TASK_CANCELLED
+  REQUEST_ACCEPTED
+  REQUEST_DECLINED
+  SAFETY_EVENT
+  FRAUD_DETECTED
+  MANUAL_ADJUSTMENT
+  SCORE_DECAY
+  RECOVERY
+}
+
+enum PerformanceAlertType {
+  RATING_WARNING
+  RATING_DECLINED
+  RATING_IMPROVED
+  COMPLETION_LOW
+  CANCELLATION_HIGH
+  SAFETY_WARNING
+  STREAK_ACHIEVED
+  STREAK_BROKEN
+  TIER_PROMOTION
+  TIER_DEMOTION
+  SUSPENSION_WARNING
+  SUSPENSION_NOTICE
+}
+
+enum SafetyEventType {
+  MODERATE_SPEEDING
+  EXCESSIVE_SPEEDING
+  ROUTE_DEVIATION
+  UNEXPLAINED_STOP
+  SOS_TRIGGERED
+  HARSH_BRAKING
+  NIGHT_FATIGUE
+}
+
+enum SafetyEventSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+/// The live reputation record for a driver. Every field is accumulated from
+/// real platform events (ratings, task outcomes, safety events, fraud score).
+model DriverReputation {
+  id                  String    @id @default(cuid())
+  riderId             String    @unique
+
+  // Composite score and tier
+  trustScore          Float     @default(75)
+  previousTrustScore  Float     @default(75)
+  trustTier           TrustTier @default(SILVER)
+  previousTrustTier   TrustTier @default(SILVER)
+  lastScoreUpdateAt   DateTime  @default(now())
+
+  // Component scores (0-100)
+  ratingScore         Float     @default(75)
+  completionScore     Float     @default(75)
+  acceptanceScore     Float     @default(75)
+  safetyScore         Float     @default(100)
+  fraudRiskScore      Float     @default(100)
+  professionalismScore Float    @default(75)
+  reliabilityScore    Float     @default(75)
+
+  // Ratings
+  averageRating       Float     @default(5)
+  totalRatings        Int       @default(0)
+  fiveStarRatings     Int       @default(0)
+  fourStarRatings     Int       @default(0)
+  threeStarRatings    Int       @default(0)
+  twoStarRatings      Int       @default(0)
+  oneStarRatings      Int       @default(0)
+  lastRatingAt        DateTime?
+
+  // Task performance
+  totalTasksAssigned  Int       @default(0)
+  totalTasksCompleted Int       @default(0)
+  totalTasksCancelled Int       @default(0)
+  totalTasksDeclined  Int       @default(0)
+  completionRate      Float     @default(1)
+  acceptanceRate      Float     @default(1)
+  cancellationRate    Float     @default(0)
+  lastTaskAt          DateTime?
+
+  // Dispatch offer funnel — acceptance rate is derived from these.
+  totalRequestsReceived Int     @default(0)
+  totalRequestsAccepted Int     @default(0)
+  totalRequestsDeclined Int     @default(0)
+  totalRequestsIgnored  Int     @default(0)
+
+  /// Count of fraud signals attributed to this driver; feeds fraudRiskScore.
+  fraudFlags          Int       @default(0)
+
+  // Punctuality
+  onTimeArrivals      Int       @default(0)
+  lateArrivals        Int       @default(0)
+  onTimeRate          Float     @default(1)
+  averageArrivalDelay Float     @default(0)
+
+  // Safety
+  totalSafetyEvents   Int       @default(0)
+  speedingEvents      Int       @default(0)
+  routeDeviationEvents Int      @default(0)
+  unexplainedStopEvents Int     @default(0)
+  sosAlerts           Int       @default(0)
+
+  // Feedback
+  totalComplaints     Int       @default(0)
+  totalCompliments    Int       @default(0)
+
+  // Streaks
+  currentStreak       Int       @default(0)
+  longestStreak       Int       @default(0)
+  lastStreakUpdateAt  DateTime?
+
+  // Account health / privileges driven by tier
+  isSuspended         Boolean   @default(false)
+  suspendedAt         DateTime?
+  suspensionEndsAt    DateTime?
+  suspensionReason    String?
+  warningCount        Int       @default(0)
+  bonusEligible       Boolean   @default(true)
+  priorityDispatch    Boolean   @default(false)
+  premiumAccess       Boolean   @default(false)
+
+  // Rewards
+  totalBonusEarned    Decimal   @default(0)
+  lastBonusAt         DateTime?
+
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  rider             Rider                    @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  history           DriverReputationHistory[]
+  safetyEvents      DriverSafetyEvent[]
+  performanceAlerts DriverPerformanceAlert[]
+  incentives        DriverIncentiveEarned[]
+
+  @@index([trustScore])
+  @@index([trustTier])
+  @@index([isSuspended])
+  @@index([priorityDispatch])
+}
+
+/// Append-only trust-score history; one row per recalculation.
+model DriverReputationHistory {
+  id                 String           @id @default(cuid())
+  reputationId       String
+  trustScore         Float
+  previousTrustScore Float            @default(0)
+  scoreChange        Float            @default(0)
+  trustTier          TrustTier
+  previousTrustTier  TrustTier?
+  ratingScore        Float            @default(0)
+  completionScore    Float            @default(0)
+  acceptanceScore    Float            @default(0)
+  safetyScore        Float            @default(0)
+  fraudRiskScore     Float            @default(0)
+  triggerType        ScoreTriggerType
+  /// Id of the entity that caused the change (task, rating, safety event).
+  triggerReferenceId String?
+  reason             String?
+  metadata           String?
+  createdAt          DateTime         @default(now())
+
+  reputation DriverReputation @relation(fields: [reputationId], references: [id], onDelete: Cascade)
+
+  @@index([reputationId])
+  @@index([triggerType])
+  @@index([createdAt])
+}
+
+/// Tunable weights and thresholds for the trust-score engine.
+model DriverTrustConfig {
+  id       String  @id @default(cuid())
+  name     String  @default("default")
+  isActive Boolean @default(true)
+
+  // Component weights (must sum to 1.0)
+  ratingWeight     Float @default(0.40)
+  completionWeight Float @default(0.20)
+  acceptanceWeight Float @default(0.15)
+  safetyWeight     Float @default(0.15)
+  fraudRiskWeight  Float @default(0.10)
+
+  // Tier thresholds
+  platinumThreshold Float @default(90)
+  goldThreshold     Float @default(80)
+  silverThreshold   Float @default(70)
+  warningThreshold  Float @default(60)
+
+  // Rating bands
+  excellentRating Float @default(4.8)
+  goodRating      Float @default(4.5)
+  averageRating   Float @default(4.0)
+  poorRating      Float @default(3.5)
+
+  // Completion bands
+  excellentCompletion Float @default(0.95)
+  goodCompletion      Float @default(0.90)
+  averageCompletion   Float @default(0.85)
+  poorCompletion      Float @default(0.80)
+
+  // Acceptance bands
+  excellentAcceptance Float @default(0.90)
+  goodAcceptance      Float @default(0.80)
+  averageAcceptance   Float @default(0.70)
+  poorAcceptance      Float @default(0.60)
+
+  // Safety penalties
+  speedingPenalty        Float @default(5)
+  routeDeviationPenalty  Float @default(10)
+  unexplainedStopPenalty Float @default(3)
+  sosPenalty             Float @default(0)
+  criticalSafetyPenalty  Float @default(30)
+
+  // Fraud penalties
+  gpsSpoofingPenalty       Float @default(50)
+  fakeCompletionPenalty    Float @default(40)
+  suspiciousPatternPenalty Float @default(25)
+
+  // Enforcement
+  autoSuspendThreshold Float @default(50)
+  autoSuspendDuration  Int   @default(7)
+  warningThreshold1    Float @default(65)
+  warningThreshold2    Float @default(60)
+
+  // Streaks
+  streakBonusThreshold Int   @default(10)
+  streakBonusAmount    Float @default(5)
+  streakBreakPenalty   Float @default(3)
+
+  // Decay and recovery
+  scoreDecayDays      Int   @default(30)
+  scoreDecayRate      Float @default(0.5)
+  recentMetricsWindow Int   @default(30)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+/// A driving-safety violation detected from telemetry or SOS.
+model DriverSafetyEvent {
+  id               String              @id @default(cuid())
+  reputationId     String
+  riderId          String?
+  taskId           String?
+  eventType        SafetyEventType
+  severity         SafetyEventSeverity
+  latitude         Float?
+  longitude        Float?
+  speedKmh         Float?
+  speedLimitKmh    Float?
+  deviationDistance Float?
+  stopDuration     Int?
+  detectionSource  String
+  confidence       Float               @default(1)
+  scoreImpact      Float               @default(0)
+  trustScoreBefore Float?
+  trustScoreAfter  Float?
+  details          String?
+  createdAt        DateTime            @default(now())
+
+  reputation DriverReputation @relation(fields: [reputationId], references: [id], onDelete: Cascade)
+
+  @@index([reputationId])
+  @@index([riderId])
+  @@index([eventType])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+/// Driver-facing performance notification (tier change, warning, streak).
+model DriverPerformanceAlert {
+  id           String               @id @default(cuid())
+  reputationId String
+  alertType    PerformanceAlertType
+  severity     AlertSeverity        @default(LOW)
+  title        String
+  message      String
+  currentValue Float?
+  thresholdValue Float?
+  /// Short, driver-facing remedy shown with the alert.
+  suggestedAction String?
+  isRead       Boolean              @default(false)
+  readAt       DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime             @default(now())
+
+  reputation DriverReputation @relation(fields: [reputationId], references: [id], onDelete: Cascade)
+
+  @@index([reputationId])
+  @@index([alertType])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+/// A reputation-driven bonus granted to a driver (streak, tier, quality).
+model DriverIncentiveEarned {
+  id              String   @id @default(cuid())
+  reputationId    String
+  /// Set when this bonus came from a marketplace DriverIncentive campaign;
+  /// null for reputation-native bonuses (streaks, tier promotions).
+  incentiveId     String?
+  incentiveType   String
+  name            String?
+  description     String?
+  rewardAmount    Decimal  @default(0)
+  rewardType      String   @default("CASH")
+  qualifyingMetric String?
+  qualifyingValue Float?
+  status          String   @default("PENDING")
+  isPaid          Boolean  @default(false)
+  paidAt          DateTime?
+  paidOutAt       DateTime?
+  createdAt       DateTime @default(now())
+
+  reputation DriverReputation @relation(fields: [reputationId], references: [id], onDelete: Cascade)
+
+  @@index([reputationId])
+  @@index([incentiveType])
+  @@index([isPaid])
+}
+
+// ── 3. MARKETPLACE INTELLIGENCE ─────────────────────────────────────────
+
+enum ZoneType {
+  URBAN_CORE
+  SUBURBAN
+  AIRPORT
+  UNIVERSITY
+  COMMERCIAL
+  RESIDENTIAL
+  INDUSTRIAL
+  RURAL
+}
+
+enum BalanceStatus {
+  OVERSUPPLIED
+  BALANCED
+  UNDERSUPPLIED
+  CRITICAL_SHORTAGE
+}
+
+enum SurgeStatus {
+  ACTIVE
+  ENDED
+  CANCELLED
+}
+
+enum IncentiveType {
+  PEAK_HOUR_BONUS
+  RIDE_STREAK
+  ZONE_SPECIFIC
+  GUARANTEED_EARNINGS
+  FIRST_RIDE_BONUS
+  REFERRAL_BONUS
+  COMPLETION_BONUS
+  QUALITY_BONUS
+}
+
+enum IncentiveStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  ENDED
+  CANCELLED
+}
+
+enum ParticipationStatus {
+  ENROLLED
+  IN_PROGRESS
+  COMPLETED
+  REWARDED
+  FAILED
+  EXPIRED
+}
+
+enum RewardType {
+  CASH
+  WALLET_CREDIT
+  BONUS_MULTIPLIER
+  PRIORITY_DISPATCH
+  BADGE
+}
+
+enum PromotionType {
+  PERCENTAGE_DISCOUNT
+  FIXED_DISCOUNT
+  CASHBACK
+  FREE_DELIVERY
+  FIRST_RIDE
+  REFERRAL
+}
+
+enum PromotionStatus {
+  DRAFT
+  SCHEDULED
+  ACTIVE
+  PAUSED
+  ENDED
+  CANCELLED
+}
+
+enum ClientPromotionStatus {
+  ACTIVE
+  EXHAUSTED
+  EXPIRED
+}
+
+/// An operational area. Zones are the unit of supply/demand balancing,
+/// surge pricing, heat maps and zone-targeted incentives.
+model GeographicZone {
+  id              String   @id @default(cuid())
+  name            String
+  code            String   @unique
+  description     String?
+  zoneType        ZoneType @default(URBAN_CORE)
+  centerLatitude  Float
+  centerLongitude Float
+  radiusKm        Float    @default(5)
+  boundaries      String?
+  priority        Int      @default(0)
+  isActive        Boolean  @default(true)
+  city            String?
+  district        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  zoneMetrics  ZoneMetric[]
+  surgeRecords SurgeRecord[]
+  incentives   DriverIncentive[]
+  promotions   RiderPromotion[]
+
+  @@index([isActive])
+  @@index([zoneType])
+  @@index([centerLatitude, centerLongitude])
+}
+
+/// A time-bucketed snapshot of a zone's supply/demand health. This is the
+/// series behind heat maps, forecasting and marketplace analytics.
+model ZoneMetric {
+  id                String        @id @default(cuid())
+  zoneId            String
+  timeBucket        DateTime
+  activeDrivers     Int           @default(0)
+  busyDrivers       Int           @default(0)
+  availableDrivers  Int           @default(0)
+  demandCount       Int           @default(0)
+  rideRequests      Int           @default(0)
+  uniqueRequesters  Int           @default(0)
+  completedRides    Int           @default(0)
+  cancelledRides    Int           @default(0)
+  unfulfilledDemand Int           @default(0)
+  demandSupplyRatio Float         @default(0)
+  balanceStatus     BalanceStatus @default(BALANCED)
+  surgeActive       Boolean       @default(false)
+  surgeMultiplier   Float         @default(1)
+
+  // Service quality
+  avgWaitTimeSeconds   Int   @default(0)
+  cancellationRate     Float @default(0)
+  driverAcceptanceRate Float @default(0)
+  avgFare              Float @default(0)
+
+  // Contextual signals used by demand prediction
+  weatherCondition String?
+  trafficLevel     String?
+  specialEvent     String?
+  isPeakHour       Boolean @default(false)
+
+  // Forecast for this bucket, written by the prediction pass
+  predictedDemand Float?
+  predictedSupply Float?
+  predictedRatio  Float?
+
+  recordedAt        DateTime      @default(now())
+
+  zone GeographicZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@unique([zoneId, timeBucket])
+  @@index([zoneId])
+  @@index([timeBucket])
+  @@index([balanceStatus])
+}
+
+/// One surge episode in a zone, from trigger to end, with its measured impact.
+model SurgeRecord {
+  id              String      @id @default(cuid())
+  zoneId          String
+  status          SurgeStatus @default(ACTIVE)
+  multiplier      Float       @default(1)
+  startMultiplier Float       @default(1)
+  peakMultiplier  Float       @default(1)
+  avgMultiplier   Float       @default(1)
+  triggerRatio    Float       @default(0)
+  triggerReason   String?
+  endReason       String?
+  startedAt       DateTime    @default(now())
+  endedAt         DateTime?
+  durationMinutes Int?
+  driversBefore   Int         @default(0)
+  driversAfter    Int         @default(0)
+  demandBefore    Int         @default(0)
+  demandAfter     Int         @default(0)
+  ridesDuringSurge Int        @default(0)
+  normalRevenue   Float     @default(0)
+  surgeRevenue    Float     @default(0)
+  revenueIncrease Float     @default(0)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  zone GeographicZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  @@index([zoneId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+/// A driver-facing incentive/quest definition.
+model DriverIncentive {
+  id          String          @id @default(cuid())
+  name        String
+  code        String          @unique
+  description String?
+  incentiveType IncentiveType
+  status      IncentiveStatus @default(DRAFT)
+
+  // Reward
+  rewardAmount Float    @default(0)
+  rewardType   RewardType @default(CASH)
+
+  // Targets (only those relevant to incentiveType are enforced)
+  minRides     Int?
+  minEarnings  Float?
+  targetHours  Float?
+  streakDays   Int?
+  ridesInZone  Int?
+
+  // Eligibility
+  zoneId            String?
+  targetZones       String?
+  minRating         Float?
+  minCompletionRate Float?
+  vehicleTypes      String?
+  minTrustScore     Float?
+
+  // Window
+  startTime       DateTime
+  endTime         DateTime
+  validDays       String?
+  validHoursStart Int?
+  validHoursEnd   Int?
+
+  // Caps
+  maxParticipants     Int?
+  currentParticipants Int   @default(0)
+  totalBudget         Float?
+  budgetSpent         Float @default(0)
+  totalRewardsPaid    Float @default(0)
+  totalRidesCompleted Int   @default(0)
+  currentPayout       Float @default(0)
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  zone           GeographicZone?          @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  participations IncentiveParticipation[]
+
+  @@index([status])
+  @@index([incentiveType])
+  @@index([zoneId])
+  @@index([startTime, endTime])
+}
+
+/// A driver's enrolment and live progress in an incentive.
+model IncentiveParticipation {
+  id          String              @id @default(cuid())
+  incentiveId String
+  riderId     String
+  status      ParticipationStatus @default(ENROLLED)
+
+  // Progress, incremented from real task events
+  ridesCompleted      Int      @default(0)
+  earningsAccumulated Float  @default(0)
+  hoursOnline         Float    @default(0)
+  currentStreak       Int      @default(0)
+  ridesInTargetZone   Int      @default(0)
+  qualifyingTasks     String?
+  progressPercent     Float    @default(0)
+  isCompleted         Boolean  @default(false)
+
+  // Reward
+  rewardEarned      Float   @default(0)
+  rewardCreditedAt  DateTime?
+
+  enrolledAt     DateTime  @default(now())
+  lastProgressAt DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  incentive DriverIncentive @relation(fields: [incentiveId], references: [id], onDelete: Cascade)
+  rider     Rider           @relation(fields: [riderId], references: [id], onDelete: Cascade)
+
+  @@unique([incentiveId, riderId])
+  @@index([riderId])
+  @@index([status])
+  @@index([incentiveId])
+}
+
+/// A client-facing promotion definition (discount, cashback, free delivery).
+model RiderPromotion {
+  id            String          @id @default(cuid())
+  name          String
+  code          String          @unique
+  promoCode     String          @unique
+  description   String?
+  promotionType PromotionType
+  status        PromotionStatus @default(DRAFT)
+
+  // Value
+  discountPercent Float?
+  discountAmount  Float?
+  maxDiscount     Float?
+  cashbackPercent Float?
+  minOrderValue   Float?
+
+  // Caps
+  maxUsesPerUser Int?
+  maxTotalUses   Int?
+  /// Platform-wide cap; alias of maxTotalUses kept because the promotion
+  /// service reads `maxUses` when deciding whether a campaign is exhausted.
+  maxUses        Int?
+  currentUses    Int      @default(0)
+  totalSavings   Float  @default(0)
+  totalRides     Int      @default(0)
+  totalBudget    Float?
+
+  // Targeting
+  zoneId          String?
+  targetUserRoles String?
+  newUsersOnly    Boolean @default(false)
+
+  startTime DateTime
+  endTime   DateTime
+  // Recurrence window, same semantics as DriverIncentive
+  validDays       String?
+  validHoursStart Int?
+  validHoursEnd   Int?
+
+  createdBy String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  zone           GeographicZone?               @relation(fields: [zoneId], references: [id], onDelete: SetNull)
+  participations ClientPromotionParticipation[]
+
+  @@index([status])
+  @@index([promotionType])
+  @@index([startTime, endTime])
+}
+
+/// A client's usage record against one promotion.
+model ClientPromotionParticipation {
+  id          String                @id @default(cuid())
+  promotionId String
+  userId      String
+  status      ClientPromotionStatus @default(ACTIVE)
+
+  promoCode        String?
+  timesUsed        Int       @default(0)
+  totalSaved       Float   @default(0)
+  totalSpent       Float   @default(0)
+  cashbackEarned   Float   @default(0)
+  cashbackPending  Float   @default(0)
+  cashbackCreditedAt DateTime?
+  usedOnOrders     String?
+  firstUsedAt      DateTime?
+  lastUsedAt       DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  promotion RiderPromotion @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([promotionId, userId])
+  @@index([userId])
+  @@index([status])
+}
+
+/// Stock reservation for pharmacy/health catalogue items. Mirrors
+/// InventoryReservation, which covers merchant MenuItems.
+model MedicineInventoryReservation {
+  id                String                     @id @default(cuid())
+  medicineCatalogId String
+  healthOrderId     String?
+  quantity          Int
+  status            InventoryReservationStatus @default(RESERVED)
+  expiresAt         DateTime
+  releasedAt        DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+
+  medicineCatalog MedicineCatalog @relation(fields: [medicineCatalogId], references: [id], onDelete: Cascade)
+
+  @@index([medicineCatalogId])
+  @@index([healthOrderId])
+  @@index([status])
+  @@index([expiresAt])
 }
