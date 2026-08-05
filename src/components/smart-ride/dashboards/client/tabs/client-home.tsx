@@ -211,7 +211,7 @@ export function ClientHome({ onBellClick }: ClientHomeProps) {
       {/* Logo + Greeting Section */}
       <div className="bg-white px-4 pb-5">
         <div className="flex items-center gap-2 mb-1">
-          <Image src="/smartride-logo-transparent.png" alt="Smart Ride" width={20} height={20} className="rounded" />
+          <Image src="/icon.png" alt="Smart Ride" width={20} height={20} className="rounded" />
           <span className="font-[family-name:var(--font-plus-jakarta)] text-lg font-bold text-[#005f3a]">Smart Ride</span>
         </div>
         <p className="text-[#6f7a71] text-sm">{greeting} {emoji}</p>

@@ -145,7 +145,7 @@ export default function AdminLoginPage() {
                   }}
                 >
                   <Image
-                    src="/smartride-logo-transparent.png"
+                    src="/icon.png"
                     alt="Smart Ride Logo"
                     width={80}
                     height={80}

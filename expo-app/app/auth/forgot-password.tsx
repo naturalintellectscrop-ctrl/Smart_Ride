@@ -27,7 +27,7 @@ import { forgotPassword } from '@/src/services/auth';
 import { useTheme } from '../../src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
 import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
-import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
+import SmartRideLogoImage from '../../assets/images/brand-mark.png';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, OPACITY, BORDER } from '../../src/constants';
 
 const { height } = Dimensions.get('window');

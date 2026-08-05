@@ -35,7 +35,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../src/store';
 import { navigateToRoleHome } from '../src/utils/roleRouting';
-import SmartRideLogoImage from '../assets/images/smartride-logo.png';
+import SmartRideLogoImage from '../assets/images/brand-mark.png';
 
 // Hero photo (Kampala skyline at golden hour + Smart Ride boda rider).
 const HERO_IMAGE: number | null = require('../assets/images/welcome-hero.jpg');

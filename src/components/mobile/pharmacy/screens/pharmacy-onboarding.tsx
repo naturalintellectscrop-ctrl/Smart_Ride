@@ -64,7 +64,7 @@ export function PharmacyOnboarding({ onComplete }: PharmacyOnboardingProps) {
       <div className="min-h-screen bg-gradient-to-br from-rose-500 to-pink-600 flex flex-col items-center justify-center p-6">
         {/* Logo */}
         <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center mb-6 shadow-xl">
-          <Image src="/smartride-logo-transparent.png" alt="Smart Ride" width={48} height={48} className="rounded-2xl" />
+          <Image src="/icon.png" alt="Smart Ride" width={48} height={48} className="rounded-2xl" />
         </div>
 
         <h1 className="text-3xl font-bold text-white text-center mb-2">

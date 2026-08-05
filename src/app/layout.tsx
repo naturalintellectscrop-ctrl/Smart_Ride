@@ -51,18 +51,17 @@ export const metadata: Metadata = {
   // PWA Configuration
   manifest: "/manifest.json",
   
-  // Icons - Smart Ride single mark (map pin + road)
+  // Icons - Smart Ride single mark (map pin + road), all derived from
+  // assets/brand/mark.png via scripts/generate-brand-assets.mjs
   icons: {
     icon: [
-      { url: "/favicon-new.png", type: "image/png", sizes: "512x512" },
-      { url: "/favicon-new.png", type: "image/png", sizes: "32x32" },
-      { url: "/favicon-new.png", type: "image/png", sizes: "16x16" },
+      { url: "/favicon-16x16.png", type: "image/png", sizes: "16x16" },
+      { url: "/favicon-32x32.png", type: "image/png", sizes: "32x32" },
+      { url: "/icons/icon-192x192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icons/icon-512x512.png", type: "image/png", sizes: "512x512" },
     ],
     apple: [
-      { url: "/favicon-new.png", sizes: "1024x1024", type: "image/png" },
-    ],
-    other: [
-      { rel: "mask-icon", url: "/favicon-new.png", color: "#00FF88" },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
   },
   
@@ -83,20 +82,20 @@ export const metadata: Metadata = {
     description: "Book a boda or car, order food, send a parcel and refill a prescription from one app.",
     images: [
       {
-        url: "/smartride-logo-new.png",
-        width: 1024,
-        height: 1024,
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
         alt: "Smart Ride Uganda",
       },
     ],
   },
-  
+
   // Twitter
   twitter: {
     card: "summary_large_image",
     title: "Smart Ride: rides, food and deliveries in Uganda",
     description: "Book a boda or car, order food, send a parcel and refill a prescription from one app.",
-    images: ["/smartride-logo-new.png"],
+    images: ["/og-image.png"],
   },
   
   // Additional PWA
@@ -130,15 +129,16 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Smart Ride" />
         <meta name="application-name" content="Smart Ride" />
-        <meta name="msapplication-TileColor" content="#00FF88" />
+        <meta name="msapplication-TileColor" content="#060D17" />
         <meta name="msapplication-tap-highlight" content="no" />
-        <meta name="msapplication-TileImage" content="/favicon-new.png" />
-        
-        {/* iOS Splash Screens */}
-        <link rel="apple-touch-startup-image" href="/favicon-new.png" />
-        <link rel="apple-touch-icon" href="/favicon-new.png" />
-        <link rel="icon" href="/favicon-new.png" type="image/png" />
-        
+        <meta name="msapplication-TileImage" content="/icons/icon-192x192.png" />
+
+        {/* iOS home-screen icon */}
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="icon" sizes="32x32" href="/favicon-32x32.png" type="image/png" />
+        <link rel="icon" sizes="16x16" href="/favicon-16x16.png" type="image/png" />
+
+
         {/* Preconnect to external domains */}
         <link rel="preconnect" href="https://api.mapbox.com" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />

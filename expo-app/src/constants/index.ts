@@ -448,10 +448,10 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   PREPARING: 'Preparing',
   READY: 'Ready for pickup',
   PICKED_UP: 'Picked up',
-  DELIVERED: 'Delivered',
-  COMPLETED: 'Completed',
+  DELIVERED: 'Yay your item has been Delivered',
+  COMPLETED: 'Successfully Completed',
   CANCELLED: 'Cancelled',
-  FAILED: 'Failed',
+  FAILED: 'Failed, Try Again',
   NEW: 'New order',
 };
 

@@ -88,7 +88,7 @@ export function Sidebar({ activeView, setActiveView }: SidebarProps) {
           <div className="flex items-center gap-3">
             <div className="relative">
               <Image 
-                src="/smartride-logo-transparent.png"
+                src="/icon.png"
                 alt="Smart Ride"
                 width={42}
                 height={42}

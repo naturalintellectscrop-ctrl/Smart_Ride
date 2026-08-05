@@ -51,7 +51,7 @@ export function WelcomeScreen({ onGetStarted }: WelcomeScreenProps) {
       <div className="px-6 pt-12 pb-8">
         <div className="flex items-center justify-center mb-8">
           <Image 
-            src="/smartride-logo-transparent.png"
+            src="/icon.png"
             alt="Smart Ride"
             width={80}
             height={80}

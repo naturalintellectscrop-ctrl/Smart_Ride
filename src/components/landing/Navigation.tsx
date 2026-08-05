@@ -50,7 +50,7 @@ export default function Navigation({ currentPage }: NavigationProps) {
                 style={{ background: 'linear-gradient(135deg, #00FF88, #00FFF3)', filter: 'blur(8px)' }}
               />
               <Image 
-                src="/smartride-logo-transparent.png" 
+                src="/icon.png" 
                 alt="Smart Ride" 
                 width={44} 
                 height={44} 

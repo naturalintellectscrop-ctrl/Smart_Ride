@@ -33,7 +33,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { SPACING, RADIUS, TYPOGRAPHY, SHADOWS, OPACITY, BORDER } from '../../src/constants';
 import { useTheme } from '../../src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
-import SmartRideLogoImage from '../../assets/images/smartride-logo.png';
+import SmartRideLogoImage from '../../assets/images/brand-mark.png';
 import { navigateToRoleHome } from '../../src/utils/roleRouting';
 
 // An "Email or Phone Number" entry that is all digits (optionally +/spaces,

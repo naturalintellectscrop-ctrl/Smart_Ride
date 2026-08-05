@@ -253,26 +253,26 @@ function shouldRequireInteraction(type: string): boolean {
 function getNotificationActions(type: string, data: Record<string, unknown>): NotificationAction[] {
   const actionSets: Record<string, NotificationAction[]> = {
     RIDE_REQUEST: [
-      { action: 'accept', title: '✓ Accept', icon: '/icons/check.png' },
-      { action: 'decline', title: '✗ Decline', icon: '/icons/close.png' },
+      { action: 'accept', title: '✓ Accept' },
+      { action: 'decline', title: '✗ Decline' },
     ],
     TASK_ASSIGNMENT: [
-      { action: 'accept', title: '✓ Accept', icon: '/icons/check.png' },
-      { action: 'decline', title: '✗ Decline', icon: '/icons/close.png' },
+      { action: 'accept', title: '✓ Accept' },
+      { action: 'decline', title: '✗ Decline' },
     ],
     ORDER_REQUEST: [
-      { action: 'view', title: '👁 View Order', icon: '/icons/eye.png' },
-      { action: 'dismiss', title: 'Dismiss', icon: '/icons/close.png' },
+      { action: 'view', title: '👁 View Order' },
+      { action: 'dismiss', title: 'Dismiss' },
     ],
     SOS_ALERT: [
-      { action: 'view', title: '🚨 View Alert', icon: '/icons/alert.png' },
+      { action: 'view', title: '🚨 View Alert' },
     ],
     PAYMENT: [
-      { action: 'view', title: '💳 View Payment', icon: '/icons/payment.png' },
+      { action: 'view', title: '💳 View Payment' },
     ],
     PROMOTION: [
-      { action: 'view', title: '🎁 View Offer', icon: '/icons/gift.png' },
-      { action: 'dismiss', title: 'Dismiss', icon: '/icons/close.png' },
+      { action: 'view', title: '🎁 View Offer' },
+      { action: 'dismiss', title: 'Dismiss' },
     ],
   };
 

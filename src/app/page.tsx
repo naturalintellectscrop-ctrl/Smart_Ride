@@ -242,7 +242,7 @@ export default function LandingPage() {
           <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
             <div className="relative h-9 w-9 overflow-hidden rounded-xl">
               <Image
-                src="/smartride-logo-new.png"
+                src="/icon.png"
                 alt=""
                 fill
                 className="object-cover"
@@ -357,7 +357,7 @@ export default function LandingPage() {
                   <div className="flex h-full flex-col items-center justify-center gap-4 px-4">
                     <div className="relative h-16 w-16 overflow-hidden rounded-2xl">
                       <Image
-                        src="/smartride-logo-new.png"
+                        src="/icon.png"
                         alt=""
                         fill
                         className="object-cover"
@@ -600,7 +600,7 @@ export default function LandingPage() {
               <Link href="/" className="flex items-center gap-2.5">
                 <div className="relative h-9 w-9 overflow-hidden rounded-xl">
                   <Image
-                    src="/smartride-logo-new.png"
+                    src="/icon.png"
                     alt=""
                     fill
                     className="object-cover"
