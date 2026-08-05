@@ -58,9 +58,9 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          // Home screen renders its own GlowHeader inside a ScrollView,
+          // Home screen renders its own AppHeader inside a ScrollView,
           // so we MUST hide the default navigation header here — otherwise
-          // the user sees two headers stacked (nav header + GlowHeader).
+          // the user sees two headers stacked (nav header + AppHeader).
           headerShown: false,
           title: 'Smart Ride',
           tabBarIcon: ({ focused, color, size }) => (
