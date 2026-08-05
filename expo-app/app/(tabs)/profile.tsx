@@ -1,7 +1,10 @@
 // ============================================
 // SMART RIDE MOBILE - PROFILE SCREEN
 // ============================================
-// Theme-aware with GlowHeader & Custom Components
+// Golden Screen #38 · Archetype AR-5 (Detail + grouped rows).
+//
+//   identity hero (Avatar + name + contact) → stats → grouped sections
+//   (Account / Preferences / Support) → Sign Out (danger, confirmed)
 // ============================================
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
@@ -12,7 +15,6 @@ import {
   TouchableOpacity, 
   Switch,
   Linking,
-  Image,
   ActivityIndicator,
   StyleSheet
 } from 'react-native';
@@ -28,9 +30,15 @@ import Animated, {
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
 import { useTheme, ThemeColors } from '@/src/context/theme-context';
-import { makeThemedColors } from '@/src/theme/themedColors';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, MOTION } from '@/src/constants';
-import { GlowHeader, GlassCard, GradientButton } from '@/src/components';
+import { TYPOGRAPHY, SPACING, RADIUS, MOTION, ICON, OPACITY } from '@/src/constants';
+import {
+  AppHeader,
+  Avatar,
+  Card,
+  GradientButton,
+  Rating,
+  SectionHeader,
+} from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
 import { pickImage } from '@/src/utils/imagePicker';
 import { API_CONFIG } from '@/src/constants';
@@ -205,7 +213,6 @@ export default function ProfileScreen() {
           onToggle: handleNotificationToggle,
           disabled: updatingPrefs,
         },
-        { icon: 'globe-outline', label: 'Language', value: 'English', onPress: () => Alert.alert('Coming Soon', 'Language settings will be available soon') },
       ],
     },
     {
@@ -222,42 +229,43 @@ export default function ProfileScreen() {
   return (
     <View style={styles.screenContainer}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        {/* Header - GlowHeader replaces solid green header */}
-        <Animated.View entering={FadeInDown.duration(400).springify()}>
-          <GlowHeader
-            title="Profile"
-            rightAction={{ icon: 'settings-outline', onPress: () => Alert.alert('Coming Soon', 'Settings will be available soon') }}
-          >
-            {/* User Info as children of GlowHeader */}
-            <View style={styles.userInfo}>
-              <TouchableOpacity 
-                onPress={handleAvatarPress}
-                activeOpacity={0.7}
-                disabled={isUploadingAvatar}
-              >
-                <Animated.View 
-                  entering={ZoomIn.delay(200).duration(300)}
-                  style={styles.avatar}
-                >
-                  {isUploadingAvatar ? (
+        {/* Identity hero. The settings action opens the shared /settings hub —
+            it used to raise a "Coming Soon" alert even though that screen has
+            existed and been reachable from merchant and pharmacist all along. */}
+        <AppHeader
+          title="Profile"
+          rightActions={[
+            { icon: 'settings-outline', onPress: () => router.push('/settings' as never), label: 'Settings' },
+          ]}
+        />
+        <Animated.View entering={FadeInDown.duration(MOTION.duration.slower)} style={styles.identityWrap}>
+          <View style={styles.userInfo}>
+            <TouchableOpacity
+              onPress={handleAvatarPress}
+              activeOpacity={OPACITY.pressed}
+              disabled={isUploadingAvatar}
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+            >
+              <Animated.View entering={ZoomIn.delay(200).duration(MOTION.duration.base)}>
+                {isUploadingAvatar ? (
+                  <View style={styles.avatarLoading}>
                     <ActivityIndicator size="small" color={colors.primary} />
-                  ) : (user as any)?.avatarUrl ? (
-                    <Image source={{ uri: (user as any).avatarUrl }} style={styles.avatarImage} />
-                  ) : (
-                    <Ionicons name="person" size={32} color={colors.primary} />
-                  )}
-                  <View style={styles.avatarBadge}>
-                    <Ionicons name="camera-outline" size={12} color="#fff" />
                   </View>
-                </Animated.View>
-              </TouchableOpacity>
-              <View style={styles.userDetails}>
-                <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
-                <Text style={styles.userEmail}>{user?.email || ''}</Text>
-                <Text style={styles.userPhone}>{user?.phone || ''}</Text>
-              </View>
+                ) : (
+                  <Avatar uri={(user as any)?.avatarUrl} name={user?.name} size="xl" />
+                )}
+                <View style={styles.avatarBadge}>
+                  <Ionicons name="camera-outline" size={ICON.xs} color={colors.white} />
+                </View>
+              </Animated.View>
+            </TouchableOpacity>
+            <View style={styles.userDetails}>
+              <Text style={styles.userName}>{user?.name || 'Guest'}</Text>
+              <Text style={styles.userEmail}>{user?.email || ''}</Text>
+              <Text style={styles.userPhone}>{user?.phone || ''}</Text>
             </View>
-          </GlowHeader>
+          </View>
         </Animated.View>
 
         {/* Stats - Overlapping header bottom edge with negative margin */}
@@ -265,26 +273,29 @@ export default function ProfileScreen() {
           entering={FadeInUp.duration(400).delay(200).springify()}
           style={styles.statsWrapper}
         >
-          <GlassCard variant="elevated" style={styles.statsCard}>
+          <Card variant="elevated" padding={SPACING.md} radius={RADIUS.xl} style={styles.statsCard}>
             <View style={styles.statsRow}>
               <StatItem label="Total Rides" value={String(stats.totalRides)} delay={300} colors={colors} />
               <View style={styles.statDivider} />
               <StatItem label="Orders" value={String(stats.orders)} delay={350} colors={colors} />
               <View style={styles.statDivider} />
-              <StatItem label="Rating" value={stats.rating} delay={400} colors={colors} />
+              <View style={styles.ratingStat}>
+              <Rating value={Number(stats.rating) || 0} size="md" />
+              <Text style={styles.statLabel}>Rating</Text>
             </View>
-          </GlassCard>
+            </View>
+          </Card>
         </Animated.View>
 
-        {/* Menu Items - Using GlassCard instead of raw View */}
+        {/* Grouped setting rows */}
         {menuItems.map((section, sectionIndex) => (
           <Animated.View 
             key={sectionIndex} 
             entering={FadeInUp.duration(400).delay(300 + sectionIndex * 100).springify()}
             style={styles.section}
           >
-            <Text style={styles.sectionTitle}>{section.section}</Text>
-            <GlassCard variant="default" style={styles.menuCard}>
+            <SectionHeader title={section.section} />
+            <Card variant="raised" padding={SPACING.sm} radius={RADIUS.xl} style={styles.menuCard}>
               {section.items.map((item, itemIndex) => (
                 <Animated.View
                   key={itemIndex}
@@ -297,7 +308,7 @@ export default function ProfileScreen() {
                   />
                 </Animated.View>
               ))}
-            </GlassCard>
+            </Card>
           </Animated.View>
         ))}
 
@@ -443,27 +454,31 @@ function createStyles(colors: ThemeColors) {
       flex: 1,
       backgroundColor: colors.background,
     },
+    identityWrap: {
+      paddingHorizontal: SPACING.md,
+    },
     userInfo: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginTop: 16,
+      gap: SPACING.md,
+      marginTop: SPACING.sm,
     },
-    avatar: {
-      width: 72,
-      height: 72,
-      borderRadius: 36,
+    ratingStat: {
+      flex: 1,
+      alignItems: 'center',
+      gap: SPACING.xs,
+    },
+    statLabel: {
+      ...TYPOGRAPHY.labelMd,
+      color: colors.textMuted,
+    },
+    avatarLoading: {
+      width: 64,
+      height: 64,
+      borderRadius: 32,
       backgroundColor: colors.backgroundSurface,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 16,
-      borderWidth: 2,
-      borderColor: colors.primary,
-      overflow: 'hidden',
-    },
-    avatarImage: {
-      width: 72,
-      height: 72,
-      borderRadius: 36,
     },
     avatarBadge: {
       position: 'absolute',
@@ -472,9 +487,6 @@ function createStyles(colors: ThemeColors) {
       backgroundColor: colors.primary,
       borderRadius: 10,
       padding: 4,
-    },
-    avatarText: {
-      fontSize: 32,
     },
     userDetails: {
       flex: 1,
@@ -500,11 +512,8 @@ function createStyles(colors: ThemeColors) {
       zIndex: 10,
     },
     statsCard: {
-      padding: 16,
-      // Theme-aware so the card is dark in dark mode (GlassCard's default is a
-      // static white surface, which made light text invisible in dark mode).
-      backgroundColor: colors.backgroundElevated,
-      borderColor: colors.border,
+      // Card is theme-aware, so the old backgroundColor/borderColor overrides
+      // that GlassCard needed are gone.
     },
     statsRow: {
       flexDirection: 'row',
