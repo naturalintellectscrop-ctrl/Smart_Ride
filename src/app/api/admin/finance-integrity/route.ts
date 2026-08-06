@@ -9,6 +9,7 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { TransactionType } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { FinanceLedgerService } from '@/lib/services/finance-ledger.service';
 import { toNumber } from '@/lib/decimal-utils';
@@ -170,7 +171,9 @@ async function getUnreconciledTransactions() {
 
   const financeLogs = await db.financeLog.findMany({
     where: {
-      transactionType: { in: paymentTransactionTypes as unknown as string[] },
+      // The tuple is already TransactionType members; widening it to
+      // string[] is what broke the filter's type.
+      transactionType: { in: paymentTransactionTypes as unknown as TransactionType[] },
       status: 'COMPLETED',
     },
     select: {

@@ -129,6 +129,21 @@ export const sanitizedString = z.string().transform(val => {
 });
 
 /**
+ * Length-constrained sanitised string.
+ *
+ * `.transform()` returns a ZodPipe, which has no `.min()`/`.max()` — chaining
+ * them onto `sanitizedString` did not compile and silently dropped the length
+ * limits from the intended schema. Constraints must be applied to the string
+ * BEFORE the transform, which is what this helper does.
+ */
+export function sanitizedStringOf(opts: { min?: number; max?: number } = {}) {
+  let base = z.string();
+  if (opts.min !== undefined) base = base.min(opts.min);
+  if (opts.max !== undefined) base = base.max(opts.max);
+  return base.transform(val => stripDangerousChars(sanitizeString(val)));
+}
+
+/**
  * Zod refinement for safe text (with HTML escaping for display)
  */
 export const safeText = z.string().transform(val => {
@@ -167,22 +182,23 @@ export function sanitizeRequestBody<T>(body: T): T {
  * Create sanitized Zod schema
  */
 export function createSanitizedSchema<T extends z.ZodRawShape>(shape: T): z.ZodObject<T> {
-  const sanitizedShape: Record<string, z.ZodTypeAny> = {};
-  
+  // The transformed values are ZodPipe, not ZodString, so the map cannot be
+  // typed as T while being built — hence the unknown-first assertion on the
+  // way out. Behaviour is unchanged: string members gain sanitisation, others
+  // pass through.
+  const sanitizedShape: Record<string, unknown> = {};
+
   for (const [key, schema] of Object.entries(shape)) {
     if (schema instanceof z.ZodString) {
-      // Wrap string schemas with sanitization
-      sanitizedShape[key] = schema.transform(val => {
-        let sanitized = sanitizeString(val);
-        sanitized = stripDangerousChars(sanitized);
-        return sanitized;
-      });
+      sanitizedShape[key] = schema.transform(val =>
+        stripDangerousChars(sanitizeString(val))
+      );
     } else {
       sanitizedShape[key] = schema;
     }
   }
-  
-  return z.object(sanitizedShape as T);
+
+  return z.object(sanitizedShape as unknown as T);
 }
 
 // ============================================================================
@@ -219,16 +235,16 @@ export const commonSchemas = {
   }),
   
   // Address
-  address: sanitizedString.max(500),
+  address: sanitizedStringOf({ max: 500 }),
   
   // Name
-  name: sanitizedString.min(2).max(100),
+  name: sanitizedStringOf({ min: 2, max: 100 }),
   
   // Description
-  description: sanitizedString.max(2000).optional(),
+  description: sanitizedStringOf({ max: 2000 }).optional(),
   
   // Notes
-  notes: sanitizedString.max(1000).optional(),
+  notes: sanitizedStringOf({ max: 1000 }).optional(),
 };
 
 // ============================================================================

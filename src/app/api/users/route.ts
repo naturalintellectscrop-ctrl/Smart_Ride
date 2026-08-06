@@ -97,7 +97,8 @@ export async function POST(request: NextRequest) {
     
     const userSchema = z.object({
       name: z.string().min(2),
-      email: z.string().email().optional(),
+      // User.email is required and unique — it cannot be optional here.
+      email: z.string().email(),
       phone: z.string().min(10),
       role: z.enum(['CLIENT', 'ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN']).default('CLIENT'),
     });

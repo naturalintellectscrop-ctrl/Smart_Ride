@@ -54,7 +54,7 @@ export async function GET(
         headers['Content-Disposition'] = `attachment; filename="${path.basename(key)}"`;
       }
 
-      return new NextResponse(fileBuffer, { headers });
+      return new NextResponse(new Uint8Array(fileBuffer), { headers });
     } else {
       // S3 storage: redirect to the S3 URL (or presigned URL for private buckets)
       const s3Provider = getS3StorageProvider();

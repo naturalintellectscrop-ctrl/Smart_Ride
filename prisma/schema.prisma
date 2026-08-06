@@ -195,6 +195,7 @@ model Rider {
   fraudAlerts        FraudAlert[]     @relation("RiderFraudAlerts")
   ratingsReceived    Rating[]         @relation("RatingToRider")
   documents          Document[]
+  connectionAlerts   ConnectionAlert[]
   // Intelligent platform layer
   reputation         DriverReputation?
   fraudProfile       RiderFraudProfile?
@@ -463,6 +464,8 @@ model Task {
   order               Order?                @relation(fields: [orderId], references: [id], onDelete: Cascade)
   rider               Rider?                @relation(fields: [riderId], references: [id])
   calls               CallSession[]
+
+  connectionAlerts    ConnectionAlert[]
 
   @@index([taskType])
   @@index([status])
@@ -833,6 +836,11 @@ model ConnectionAlert {
   resolutionNotes String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+
+  // riderId/taskId were bare columns, so the admin monitoring dashboard could
+  // not include the rider or task to show who an alert is about.
+  rider Rider @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  task  Task? @relation(fields: [taskId], references: [id], onDelete: SetNull)
 
   @@index([riderId])
   @@index([taskId])
