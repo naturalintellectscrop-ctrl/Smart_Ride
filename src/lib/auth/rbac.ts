@@ -226,6 +226,9 @@ export const PERMISSION_MATRIX: Record<UserRole, Record<Resource, Action[]>> = {
   // Non-admin roles have no permissions on admin resources
   CLIENT: createEmptyPermissions(),
   RIDER: createEmptyPermissions(),
+  // DRIVER (car) holds no admin permissions, same as RIDER — but the key must
+  // exist or PERMISSION_MATRIX['DRIVER'] is undefined and every lookup throws.
+  DRIVER: createEmptyPermissions(),
   MERCHANT: createEmptyPermissions(),
   PHARMACIST: createEmptyPermissions(),
 };

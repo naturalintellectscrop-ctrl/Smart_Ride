@@ -53,5 +53,6 @@ export function isProviderConfigured(provider: MobileMoneyProvider): boolean {
  * Get list of configured providers
  */
 export function getConfiguredProviders(): MobileMoneyProvider[] {
-  return Object.keys(mobileMoneyConfigs).filter(isProviderConfigured) as MobileMoneyProvider[];
+  // Object.keys widens to string[]; narrow before the typed predicate.
+  return (Object.keys(mobileMoneyConfigs) as MobileMoneyProvider[]).filter(isProviderConfigured);
 }

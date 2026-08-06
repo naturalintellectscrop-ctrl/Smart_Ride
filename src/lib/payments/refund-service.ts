@@ -61,7 +61,9 @@ export async function processRefund(params: RefundParams): Promise<RefundResult>
   // 1. Fetch payment with related task
   const payment = await db.payment.findUnique({
     where: { id: paymentId },
-    include: { task: true },
+    // task.order is read below for merchantId — a bare `task: true`
+    // does not load it.
+    include: { task: { include: { order: true } } },
   });
 
   if (!payment) {

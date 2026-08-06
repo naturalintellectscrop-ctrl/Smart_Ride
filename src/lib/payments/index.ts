@@ -37,6 +37,9 @@ export async function initiatePayment(params: InitiatePaymentParams): Promise<Pa
     // Create payment record
     const payment = await db.payment.create({
       data: {
+        // paymentReference is required and unique; it was never supplied, so
+        // this insert threw on every payment initiation.
+        paymentReference: `PAY-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
         userId: params.userId,
         taskId: params.taskId,
         amount: params.amount,

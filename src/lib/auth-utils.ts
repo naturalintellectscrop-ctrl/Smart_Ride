@@ -52,7 +52,7 @@ export async function verifyAuth(request: NextRequest): Promise<AuthResult | Aut
   
   // Fall back to cookie if no header token
   if (!token) {
-    token = request.cookies.get('accessToken')?.value;
+    token = request.cookies.get('accessToken')?.value ?? null;
   }
   
   if (!token) {

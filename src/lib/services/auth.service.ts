@@ -362,13 +362,17 @@ export async function requestPasswordReset(email: string): Promise<{ success: bo
     // Generate OTP
     const otp = generateOTP(6);
     
-    // Store OTP (in production, this would be in Redis or similar)
-    // For now, we'll use a simple approach
-    await db.user.update({
-      where: { id: user.id },
+    // Store the OTP in the OTP model, which exists precisely for this and
+    // holds a HASH plus an expiry. The previous code wrote the RAW otp into a
+    // `User.verificationNotes` column that does not exist on User — so this
+    // update threw, and had the column existed it would have persisted the
+    // one-time code in plaintext.
+    await db.oTP.create({
       data: {
-        // In production, store hashed OTP with expiry
-        verificationNotes: `RESET_OTP:${otp}:${Date.now() + 10 * 60 * 1000}`, // 10 min expiry
+        phone: user.phone ?? user.email,
+        otpHash: await hashPassword(otp),
+        purpose: 'reset_password',
+        expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 min
       },
     });
     
