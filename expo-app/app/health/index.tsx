@@ -2,7 +2,7 @@
 // SMART RIDE MOBILE - HEALTH SCREEN
 // ============================================
 // Stitch Design System — Pharmacy/Health layout
-// GlowHeader, Category cards, Pharmacy list, SOS
+// AppHeader, Category cards, Pharmacy list, SOS
 // ============================================
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -15,8 +15,6 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  Modal,
-  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, {
@@ -27,15 +25,18 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, MOTION, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import {
-  GlowHeader,
-  GlassCard,
-  GradientButton,
-  ServiceIcon,
-  IconInput,
+  AppHeader,
+  Card,
+  Chip,
+  EmptyState,
+  ListRow,
+  SearchInput,
+  SectionHeader,
+  SmartBottomSheet,
 } from '@/src/components';
 
 // ============================================
@@ -57,9 +58,9 @@ interface Pharmacy {
 // ============================================
 
 const HEALTH_CATEGORIES = [
-  { key: 'prescriptions', label: 'Prescriptions', emoji: 'document-text-outline', icon: 'document-text' as const, color: '#005f3a' },
-  { key: 'pharmacy', label: 'Pharmacy', emoji: 'medkit-outline', icon: 'medkit' as const, color: '#006e2f' },
-  { key: 'delivery', label: 'Health Delivery', emoji: 'car-outline', icon: 'car' as const, color: '#4b5264' },
+  { key: 'prescriptions', label: 'Prescriptions', emoji: 'document-text-outline', icon: 'document-text' as const, colorKey: 'primary' as const },
+  { key: 'pharmacy', label: 'Pharmacy', emoji: 'medkit-outline', icon: 'medkit' as const, colorKey: 'success' as const },
+  { key: 'delivery', label: 'Health Delivery', emoji: 'car-outline', icon: 'car' as const, colorKey: 'secondary' as const },
 ];
 
 // ============================================
@@ -78,11 +79,10 @@ const HEALTH_FILTERS: { key: HealthFilter; label: string; icon: keyof typeof Ion
 // MAIN COMPONENT
 // ============================================
 
-let COLORS: ThemedColors;
-let styles: any;
-
 export default function HealthScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -170,26 +170,20 @@ export default function HealthScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Header */}
-      <GlowHeader
+      <AppHeader
         title="Smart Health"
         subtitle="Medicine delivery & prescriptions"
-      >
-        {/* Search */}
-        <Animated.View
-          entering={ZoomIn.delay(200).duration(300)}
-          style={styles.searchWrapper}
-        >
-          <IconInput
-            placeholder="Search medicines or pharmacies..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            icon="search"
-            rightIcon="filter"
-            onRightIconPress={handleFilterPress}
-          />
-        </Animated.View>
-      </GlowHeader>
+        variant="large"
+        rightActions={[{ icon: 'filter', onPress: handleFilterPress, label: 'Filter pharmacies' }]}
+      />
+
+      <Animated.View entering={ZoomIn.delay(200).duration(MOTION.duration.base)} style={styles.searchWrapper}>
+        <SearchInput
+          placeholder="Search medicines or pharmacies"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </Animated.View>
 
       <ScrollView
         style={styles.scrollView}
@@ -223,15 +217,15 @@ export default function HealthScreen() {
                 }}
                 activeOpacity={0.7}
               >
-                <GlassCard
-                  variant={activeCategory === cat.key ? 'accent' : 'default'}
+                <Card
+                  variant={activeCategory === cat.key ? 'accent' : 'raised'}
                   padding={SPACING.md}
-                  borderRadius={RADIUS.xl}
+                  radius={RADIUS.xl}
                   style={styles.categoryCard}
                 >
                   {/* Icon Circle */}
-                  <View style={[styles.categoryIconCircle, { backgroundColor: `${cat.color}15` }]}>
-                    <Ionicons name={cat.icon} size={22} color={cat.color} />
+                  <View style={[styles.categoryIconCircle, { backgroundColor: `${COLORS[cat.colorKey]}26` }]}>
+                    <Ionicons name={cat.icon} size={22} color={COLORS[cat.colorKey]} />
                   </View>
                   <Text
                     style={[
@@ -241,7 +235,7 @@ export default function HealthScreen() {
                   >
                     {cat.label}
                   </Text>
-                </GlassCard>
+                </Card>
               </TouchableOpacity>
             </Animated.View>
           ))}
@@ -268,27 +262,18 @@ export default function HealthScreen() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* Section Title */}
-        <Animated.Text
-          entering={FadeIn.duration(300)}
-          style={styles.sectionTitle}
-        >
-          Featured Pharmacies
-        </Animated.Text>
+        <SectionHeader title="Featured pharmacies" />
 
         {/* Active filter indicator chip */}
         {selectedFilter !== 'all' && (
           <View style={styles.filterChipRow}>
-            <View style={styles.filterChip}>
-              <Ionicons name="filter" size={12} color={COLORS.primary} />
-              <Text style={styles.filterChipText}>{activeFilterLabel}</Text>
-              <TouchableOpacity
-                onPress={() => setSelectedFilter('all')}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="close-circle" size={14} color={COLORS.outline} />
-              </TouchableOpacity>
-            </View>
+            {/* Tapping the active filter clears it. */}
+            <Chip
+              label={activeFilterLabel}
+              icon="close-circle"
+              active
+              onPress={() => setSelectedFilter('all')}
+            />
           </View>
         )}
 
@@ -306,27 +291,26 @@ export default function HealthScreen() {
             </Animated.View>
           ))
         ) : (
-          <Animated.View
-            entering={FadeIn.duration(400)}
-            style={styles.emptyState}
-          >
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="search" size={32} color={COLORS.outlineVariant} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {searchQuery.trim().length > 0
-                ? `No pharmacies matching "${searchQuery}"`
-                : selectedFilter !== 'all'
-                  ? 'No pharmacies match this filter'
-                  : 'No pharmacies available'}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {searchQuery.trim().length > 0
-                ? 'Try a different search term'
-                : selectedFilter !== 'all'
-                  ? 'Try a different filter or clear it'
-                  : 'Check back soon for updates'}
-            </Text>
+          <Animated.View entering={FadeIn.duration(MOTION.duration.slower)} style={styles.stateWrap}>
+            <EmptyState
+              icon="search-outline"
+              title={
+                searchQuery.trim().length > 0 ? 'No pharmacies match your search'
+                : selectedFilter !== 'all' ? 'No pharmacies match this filter'
+                : 'No pharmacies available'
+              }
+              subtitle={
+                searchQuery.trim().length > 0 ? 'Try a different search term.'
+                : selectedFilter !== 'all' ? 'Try a different filter, or clear it.'
+                : 'Check back soon for updates.'
+              }
+              actionLabel={searchQuery.trim() || selectedFilter !== 'all' ? 'Clear filters' : undefined}
+              onAction={
+                searchQuery.trim() || selectedFilter !== 'all'
+                  ? () => { setSearchQuery(''); setSelectedFilter('all'); }
+                  : undefined
+              }
+            />
           </Animated.View>
         )}
 
@@ -334,58 +318,35 @@ export default function HealthScreen() {
         <View style={{ height: SPACING.xl }} />
       </ScrollView>
 
-      {/* Filter Modal */}
-      <Modal
+      {/* Filters. This was a bespoke <Modal transparent> with its own scrim,
+          flex-end container and top radii — i.e. a hand-built bottom sheet
+          beside the one the design system already provides. */}
+      <SmartBottomSheet
         visible={filterModalVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setFilterModalVisible(false)}
+        title="Filter pharmacies"
+        onDismiss={() => setFilterModalVisible(false)}
       >
-        <TouchableOpacity
-          style={styles.filterModalOverlay}
-          activeOpacity={1}
-          onPress={() => setFilterModalVisible(false)}
-        >
-          <TouchableOpacity
-            style={styles.filterModalContent}
-            activeOpacity={1}
-            onPress={() => {}}
-          >
-            <View style={styles.filterModalHeader}>
-              <Text style={styles.filterModalTitle}>Filter Pharmacies</Text>
-              <TouchableOpacity
-                onPress={() => setFilterModalVisible(false)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="close" size={22} color={COLORS.onSurface} />
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={HEALTH_FILTERS}
-              keyExtractor={item => item.key}
-              renderItem={({ item }) => {
-                const isActive = selectedFilter === item.key;
-                return (
-                  <TouchableOpacity
-                    style={[styles.filterOptionRow, isActive && styles.filterOptionRowActive]}
-                    onPress={() => applyFilter(item.key)}
-                  >
-                    <View style={[styles.filterOptionIconCircle, isActive && { backgroundColor: `${COLORS.primary}15` }]}>
-                      <Ionicons name={item.icon} size={18} color={isActive ? COLORS.primary : COLORS.onSurfaceVariant} />
-                    </View>
-                    <Text style={[styles.filterOptionLabel, isActive && styles.filterOptionLabelActive]}>
-                      {item.label}
-                    </Text>
-                    {isActive && (
-                      <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} />
-                    )}
-                  </TouchableOpacity>
-                );
-              }}
-            />
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
+        <View>
+          {HEALTH_FILTERS.map((item, i) => {
+            const isActive = selectedFilter === item.key;
+            return (
+              <ListRow
+                key={item.key}
+                title={item.label}
+                icon={item.icon}
+                iconColor={isActive ? COLORS.primary : COLORS.onSurfaceVariant}
+                divider={i < HEALTH_FILTERS.length - 1}
+                onPress={() => applyFilter(item.key)}
+                trailing={
+                  isActive ? (
+                    <Ionicons name="checkmark-circle" size={ICON.lg} color={COLORS.primary} />
+                  ) : undefined
+                }
+              />
+            );
+          })}
+        </View>
+      </SmartBottomSheet>
     </View>
   );
 }
@@ -400,9 +361,12 @@ function PharmacyCard({
   pharmacy: Pharmacy;
   onPress: () => void;
 }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
-      <GlassCard variant="default" style={styles.pharmacyCard}>
+      <Card variant="raised" style={styles.pharmacyCard}>
         <View style={styles.pharmacyRow}>
           {/* Pharmacy Image / Icon Circle */}
           <View style={styles.pharmacyImageContainer}>
@@ -426,8 +390,8 @@ function PharmacyCard({
                   styles.statusBadge,
                   {
                     backgroundColor: pharmacy.isOpen
-                      ? 'rgba(0, 110, 47, 0.1)'
-                      : 'rgba(186, 26, 26, 0.1)',
+                      ? `${COLORS.success}1A`
+                      : `${COLORS.error}1A`,
                   },
                 ]}
               >
@@ -451,7 +415,7 @@ function PharmacyCard({
             <View style={styles.pharmacyMetaRow}>
               {pharmacy.rating && (
                 <View style={styles.ratingRow}>
-                  <Ionicons name="star" size={14} color="#F59E0B" />
+                  <Ionicons name="star" size={ICON.xs} color={COLORS.warning} />
                   <Text style={styles.ratingText}>
                     {pharmacy.rating.toFixed(1)}
                   </Text>
@@ -471,7 +435,7 @@ function PharmacyCard({
           {/* Chevron */}
           <Ionicons name="chevron-forward" size={20} color={COLORS.outlineVariant} />
         </View>
-      </GlassCard>
+      </Card>
     </TouchableOpacity>
   );
 }
@@ -480,6 +444,7 @@ function PharmacyCard({
 // STYLES
 // ============================================
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  stateWrap: { paddingTop: SPACING.lg, paddingHorizontal: SPACING.md },
   root: {
     flex: 1,
     backgroundColor: COLORS.surface,
@@ -602,14 +567,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Section Title
-  sectionTitle: {
-    ...TYPOGRAPHY.bodyLg,
-    fontWeight: '700',
-    color: COLORS.onSurface,
-    paddingHorizontal: SPACING.containerMargin,
-    marginTop: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
 
   // Pharmacy Card
   pharmacyCard: {
@@ -697,109 +654,12 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Empty State
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: SPACING.xl,
-  },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-  },
-  emptyTitle: {
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '600',
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    marginBottom: SPACING.xs,
-  },
-  emptySubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.outline,
-    textAlign: 'center',
-  },
 
   // Filter chip
   filterChipRow: {
     paddingHorizontal: SPACING.containerMargin,
     marginBottom: SPACING.sm,
   },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    backgroundColor: `${COLORS.primary}12`,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    gap: SPACING.xs,
-  },
-  filterChipText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
 
   // Filter modal
-  filterModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  filterModalContent: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xl,
-    maxHeight: '70%',
-  },
-  filterModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.md,
-  },
-  filterModalTitle: {
-    ...TYPOGRAPHY.bodyLg,
-    fontWeight: '700',
-    color: COLORS.onSurface,
-  },
-  filterOptionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-    gap: SPACING.md,
-  },
-  filterOptionRowActive: {
-    backgroundColor: `${COLORS.primary}08`,
-    marginHorizontal: -SPACING.sm,
-    paddingHorizontal: SPACING.sm,
-    borderRadius: RADIUS.md,
-    borderBottomColor: 'transparent',
-  },
-  filterOptionIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  filterOptionLabel: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurface,
-    flex: 1,
-  },
-  filterOptionLabelActive: {
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
 });
