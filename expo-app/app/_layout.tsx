@@ -320,6 +320,7 @@ function ThemedRootLayout() {
           <Stack.Screen name="driver/index" />
           <Stack.Screen name="driver/driver-task" />
           <Stack.Screen name="wallet/index" />
+          <Stack.Screen name="wallet/transactions" />
           <Stack.Screen name="health/index" />
           <Stack.Screen name="shopping/index" />
           <Stack.Screen name="profile/edit" />

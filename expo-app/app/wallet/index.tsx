@@ -14,7 +14,6 @@ import {
   View,
   Text,
   ScrollView,
-  ActivityIndicator,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
@@ -25,14 +24,22 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
-import { TYPOGRAPHY, SPACING, RADIUS, GRADIENTS, MOTION } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, MOTION } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { Card } from '@/src/components/Card';
-import { GradientButton } from '@/src/components/GradientButton';
-import { StatusBadge } from '@/src/components/StatusBadge';
-import { TopUpModal } from '@/src/components/TopUpModal';
-import { WithdrawModal } from '@/src/components/WithdrawModal';
+import {
+  AppHeader,
+  Card,
+  DetailSkeleton,
+  EmptyState,
+  ErrorState,
+  GradientButton,
+  ListRow,
+  SectionHeader,
+  StatusBadge,
+  TopUpModal,
+  WithdrawModal,
+} from '@/src/components';
 
 interface WalletData {
   balance: number;
@@ -40,7 +47,19 @@ interface WalletData {
   totalDeposited?: number;
   totalWithdrawn?: number;
   transactions?: Transaction[];
-  paymentMethods?: any[];
+  paymentMethods?: PaymentMethodSummary[];
+}
+
+/** Shape returned by GET /api/wallet — a method the user has actually linked. */
+interface PaymentMethodSummary {
+  id: string;
+  type: string;
+  name: string;
+  accountNumber?: string | null;
+  isDefault?: boolean;
+  cardLastFour?: string | null;
+  cardBrand?: string | null;
+  phoneNumber?: string | null;
 }
 
 interface Transaction {
@@ -121,13 +140,8 @@ export default function WalletScreen() {
   // ---------- Error State ----------
   if (error && !walletData) {
     return (
-      <View style={[styles.centered, { paddingTop: insets.top }]}>
-        <View style={styles.errorIconCircle}>
-          <Ionicons name="cloud-offline-outline" size={40} color={COLORS.outline} />
-        </View>
-        <Text style={styles.errorTitle}>Something went wrong</Text>
-        <Text style={styles.errorMessage}>{error}</Text>
-        <GradientButton title="Try Again" onPress={loadWallet} variant="primary" size="md" style={{ marginTop: 24, width: 180 }} />
+      <View style={styles.stateScreen}>
+        <ErrorState title="Couldn't load your wallet" subtitle={error} onRetry={loadWallet} />
       </View>
     );
   }
@@ -135,18 +149,18 @@ export default function WalletScreen() {
   // ---------- Loading State ----------
   if (isLoading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
+      <View style={styles.screen}>
+        <AppHeader title="Wallet" subtitle="Balance & payments" variant="large" />
+        <DetailSkeleton />
       </View>
     );
   }
 
-  const PAYMENT_CHIPS = [
-    { name: 'VISA', icon: 'card', color: '#1A1F71' },
-    { name: 'MTN MoMo', icon: 'phone-portrait', color: COLORS.mtnYellow },
-    { name: 'Airtel Money', icon: 'phone-portrait', color: COLORS.airtelRed },
-    { name: 'Cash', icon: 'cash', color: COLORS.primary },
-  ];
+  const methods = walletData?.paymentMethods ?? [];
+  const transactions = walletData?.transactions ?? [];
+  // Only the most recent handful belong on the overview; the rest live on the
+  // dedicated history screen.
+  const recentTransactions = transactions.slice(0, 5);
 
   return (
     <View style={styles.screen}>
@@ -155,16 +169,14 @@ export default function WalletScreen() {
         contentContainerStyle={{ paddingTop: insets.top + 8, paddingBottom: insets.bottom + 24 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.headerTitle}>Wallet</Text>
-            <Text style={styles.headerSubtitle}>Balance & payments</Text>
-          </View>
-          <Card variant="flat" padding={0} radius={RADIUS.full} onPress={() => router.push('/notifications')} style={styles.bellButton} accessibilityLabel="Notifications">
-            <Ionicons name="notifications-outline" size={20} color={COLORS.onSurface} />
-          </Card>
-        </View>
+        <AppHeader
+          title="Wallet"
+          subtitle="Balance & payments"
+          variant="large"
+          rightActions={[
+            { icon: 'notifications-outline', onPress: () => router.push('/notifications'), label: 'Notifications' },
+          ]}
+        />
 
         {/* Balance hero */}
         <Animated.View entering={FadeInUp.duration(MOTION.duration.slow)} style={styles.section}>
@@ -178,7 +190,7 @@ export default function WalletScreen() {
             <Text style={styles.balanceAmount}>{formatCurrency(walletData?.balance || 0)}</Text>
             {walletData?.pendingBalance ? (
               <View style={styles.pendingRow}>
-                <Ionicons name="time-outline" size={13} color="rgba(255,255,255,0.85)" />
+                <Ionicons name="time-outline" size={13} color={`${COLORS.onPrimary}D9`} />
                 <Text style={styles.pendingText}>Pending {formatCurrency(walletData.pendingBalance)}</Text>
               </View>
             ) : null}
@@ -212,54 +224,69 @@ export default function WalletScreen() {
           </View>
         </Animated.View>
 
-        {/* Payment methods */}
+        {/* Payment methods — the ones this user has actually linked.
+            This section used to render a fixed four-chip list (VISA / MTN /
+            Airtel / Cash) that was identical for every account, while the real
+            `paymentMethods` the API returns was fetched into state and never
+            read. */}
         <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(80)} style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment methods</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRow}>
-            {PAYMENT_CHIPS.map((m) => (
-              <Card key={m.name} variant="raised" padding={SPACING.md} radius={RADIUS.lg} style={styles.paymentChip}>
-                <View style={[styles.paymentIcon, { backgroundColor: `${m.color}18` }]}>
-                  <Ionicons name={m.icon as any} size={19} color={m.color} />
-                </View>
-                <Text style={styles.paymentName}>{m.name}</Text>
-              </Card>
-            ))}
-          </ScrollView>
-        </Animated.View>
-
-        {/* Transactions */}
-        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(140)} style={styles.section}>
-          <Text style={styles.sectionTitle}>Recent transactions</Text>
-          {walletData?.transactions?.length ? (
-            <Card variant="raised" padding={0} radius={RADIUS.xl}>
-              {walletData.transactions.map((tx, index) => (
-                <TransactionItem
-                  key={tx.id}
-                  transaction={tx}
-                  formatCurrency={formatCurrency}
-                  formatDate={formatDate}
-                  isLast={index === walletData.transactions!.length - 1}
-                  COLORS={COLORS}
-                  styles={styles}
+          <SectionHeader title="Payment methods" />
+          {methods.length > 0 ? (
+            <Card variant="raised" padding={SPACING.sm} radius={RADIUS.xl}>
+              {methods.map((m, i) => (
+                <ListRow
+                  key={m.id}
+                  title={m.name}
+                  subtitle={paymentMethodDetail(m)}
+                  icon={paymentMethodIcon(m.type)}
+                  divider={i < methods.length - 1}
+                  trailing={m.isDefault ? <StatusBadge label="Default" size="sm" /> : undefined}
                 />
               ))}
             </Card>
           ) : (
-            <View style={styles.empty}>
-              <View style={styles.emptyIconCircle}>
-                <Ionicons name="receipt-outline" size={32} color={COLORS.outline} />
-              </View>
-              <Text style={styles.emptyTitle}>No transactions yet</Text>
-              <Text style={styles.emptySubtitle}>Your transaction history will appear here</Text>
-            </View>
+            <Card variant="flat" padding={SPACING.md} radius={RADIUS.xl}>
+              <Text style={styles.emptyInline}>
+                No payment methods linked yet. Top up with mobile money to add one.
+              </Text>
+            </Card>
           )}
         </Animated.View>
 
-        {/* Security note */}
-        <View style={styles.securityNote}>
-          <Ionicons name="lock-closed" size={13} color={COLORS.onSurfaceVariant} />
-          <Text style={styles.securityText}>Payments secured with 256-bit encryption</Text>
-        </View>
+        {/* Transactions */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(140)} style={styles.section}>
+          <SectionHeader
+            title="Recent transactions"
+            actionLabel={transactions.length > recentTransactions.length ? 'See all' : undefined}
+            onAction={transactions.length > recentTransactions.length ? () => router.push('/wallet/transactions') : undefined}
+          />
+          {recentTransactions.length > 0 ? (
+            <Card variant="raised" padding={SPACING.sm} radius={RADIUS.xl}>
+              {recentTransactions.map((tx, index) => (
+                <ListRow
+                  key={tx.id}
+                  title={tx.description || (tx.type === 'CREDIT' ? 'Money in' : 'Money out')}
+                  subtitle={formatDate(tx.createdAt)}
+                  icon={tx.type === 'CREDIT' ? 'arrow-down' : 'arrow-up'}
+                  iconColor={tx.type === 'CREDIT' ? COLORS.success : COLORS.error}
+                  value={`${tx.type === 'CREDIT' ? '+' : '−'}${formatCurrency(tx.amount)}`}
+                  divider={index < recentTransactions.length - 1}
+                  trailing={
+                    tx.status !== 'COMPLETED'
+                      ? <StatusBadge label={tx.status} color={tx.status === 'FAILED' ? COLORS.error : COLORS.warning} size="sm" />
+                      : undefined
+                  }
+                />
+              ))}
+            </Card>
+          ) : (
+            <EmptyState
+              icon="receipt-outline"
+              title="No transactions yet"
+              subtitle="Your transaction history will appear here."
+            />
+          )}
+        </Animated.View>
       </ScrollView>
 
       <TopUpModal visible={showTopUp} onClose={() => setShowTopUp(false)} defaultPhoneNumber={user?.phone} onSuccess={() => loadWallet()} />
@@ -268,91 +295,60 @@ export default function WalletScreen() {
   );
 }
 
-function TransactionItem({
-  transaction, formatCurrency, formatDate, isLast, COLORS, styles,
-}: {
-  transaction: Transaction;
-  formatCurrency: (a: number) => string;
-  formatDate: (d: string) => string;
-  isLast: boolean;
-  COLORS: ThemedColors;
-  styles: any;
-}) {
-  const isCredit = transaction.type === 'CREDIT';
-  const statusColor = transaction.status === 'COMPLETED' ? COLORS.success
-    : transaction.status === 'PENDING' ? COLORS.warning
-      : transaction.status === 'FAILED' ? COLORS.error : COLORS.outline;
+/** Which glyph represents a linked method — card, mobile money, or cash. */
+function paymentMethodIcon(type: string): keyof typeof Ionicons.glyphMap {
+  const t = (type || '').toUpperCase();
+  if (t.includes('CARD') || t.includes('VISA') || t.includes('MASTER')) return 'card-outline';
+  if (t.includes('MOMO') || t.includes('MOBILE') || t.includes('AIRTEL') || t.includes('MTN')) return 'phone-portrait-outline';
+  if (t.includes('CASH')) return 'cash-outline';
+  return 'wallet-outline';
+}
 
-  return (
-    <View style={[styles.txRow, !isLast && styles.txBorder]}>
-      <View style={[styles.txIcon, { backgroundColor: isCredit ? `${COLORS.primary}15` : COLORS.surfaceContainerLow }]}>
-        <Ionicons name={isCredit ? 'arrow-down' : 'arrow-up'} size={18} color={isCredit ? COLORS.primary : COLORS.onSurfaceVariant} />
-      </View>
-      <View style={styles.txInfo}>
-        <Text style={styles.txDescription} numberOfLines={1}>{transaction.description}</Text>
-        <Text style={styles.txDate}>{formatDate(transaction.createdAt)}</Text>
-      </View>
-      <View style={styles.txRight}>
-        <Text style={[styles.txAmount, { color: isCredit ? COLORS.primary : COLORS.onSurface }]}>
-          {isCredit ? '+' : '-'}{formatCurrency(transaction.amount)}
-        </Text>
-        <StatusBadge label={transaction.status} color={statusColor} size="sm" />
-      </View>
-    </View>
-  );
+/**
+ * The identifying detail for a method, masked. Cards show their last four,
+ * mobile money shows the number it is linked to — never the full PAN.
+ */
+function paymentMethodDetail(m: PaymentMethodSummary): string | undefined {
+  if (m.cardLastFour) return `${m.cardBrand ?? 'Card'} ···· ${m.cardLastFour}`;
+  if (m.phoneNumber) return m.phoneNumber;
+  if (m.accountNumber) return m.accountNumber;
+  return undefined;
 }
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  stateScreen: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surface,
+  },
+  emptyInline: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+  },
   screen: { flex: 1, backgroundColor: COLORS.surface },
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surface, paddingHorizontal: 32 },
 
-  errorIconCircle: { width: 84, height: 84, borderRadius: 42, backgroundColor: COLORS.surfaceContainerLow, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  errorTitle: { ...TYPOGRAPHY.headlineMd, fontWeight: '800', color: COLORS.onSurface },
-  errorMessage: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant, textAlign: 'center', marginTop: 6 },
 
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md, marginBottom: SPACING.md },
-  headerTitle: { fontSize: 28, fontWeight: '800', color: COLORS.onSurface, letterSpacing: -0.3 },
-  headerSubtitle: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant, marginTop: 2 },
-  bellButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.backgroundElevated },
 
   section: { paddingHorizontal: SPACING.md, marginBottom: SPACING.lg },
-  sectionTitle: { ...TYPOGRAPHY.labelLg, fontWeight: '700', color: COLORS.onSurface, marginBottom: SPACING.sm + 2 },
 
   // Balance hero
   balanceCard: { borderRadius: RADIUS.xl, padding: SPACING.lg, overflow: 'hidden' },
-  balanceLabel: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: '500' },
-  balanceAmount: { fontSize: 36, fontWeight: '800', color: '#FFFFFF', marginTop: 4, letterSpacing: -0.5 },
+  balanceLabel: { ...TYPOGRAPHY.bodySm, color: `${COLORS.onPrimary}D9`, fontWeight: '500' },
+  balanceAmount: { fontSize: 36, fontWeight: '800', color: COLORS.onPrimary, marginTop: SPACING.xs, letterSpacing: -0.5 },
   pendingRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },
-  pendingText: { fontSize: 12.5, color: 'rgba(255,255,255,0.85)', fontWeight: '500' },
-  balanceStatsRow: { flexDirection: 'row', gap: SPACING.xl, marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.15)' },
+  pendingText: { ...TYPOGRAPHY.labelMd, color: `${COLORS.onPrimary}D9`, fontWeight: '500' },
+  balanceStatsRow: { flexDirection: 'row', gap: SPACING.xl, marginTop: SPACING.md, paddingTop: SPACING.md, borderTopWidth: 1, borderTopColor: `${COLORS.onPrimary}26` },
   balanceStat: {},
-  balanceStatLabel: { fontSize: 11.5, color: 'rgba(255,255,255,0.7)' },
-  balanceStatValue: { fontSize: 15, fontWeight: '700', color: '#FFFFFF', marginTop: 2 },
+  balanceStatLabel: { ...TYPOGRAPHY.labelMd, color: `${COLORS.onPrimary}B3` },
+  balanceStatValue: { ...TYPOGRAPHY.bodySm, fontWeight: '700', color: COLORS.onPrimary, marginTop: 2 },
 
   actionRow: { flexDirection: 'row', gap: SPACING.sm + 4, marginTop: SPACING.md },
 
   // Payment chips
-  chipRow: { gap: SPACING.sm + 4, paddingRight: SPACING.md },
-  paymentChip: { alignItems: 'center', gap: 8, minWidth: 96 },
-  paymentIcon: { width: 44, height: 44, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  paymentName: { fontSize: 12.5, fontWeight: '600', color: COLORS.onSurface },
 
   // Transactions
-  txRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: SPACING.md, paddingVertical: 14 },
-  txBorder: { borderBottomWidth: 1, borderBottomColor: COLORS.borderLight },
-  txIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
-  txInfo: { flex: 1 },
-  txDescription: { fontSize: 14.5, fontWeight: '600', color: COLORS.onSurface },
-  txDate: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 2 },
-  txRight: { alignItems: 'flex-end', gap: 4 },
-  txAmount: { fontSize: 14.5, fontWeight: '700' },
 
   // Empty
-  empty: { alignItems: 'center', paddingVertical: SPACING.xl },
-  emptyIconCircle: { width: 68, height: 68, borderRadius: 34, backgroundColor: COLORS.surfaceContainerLow, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  emptyTitle: { fontSize: 15, fontWeight: '700', color: COLORS.onSurface },
-  emptySubtitle: { fontSize: 13, color: COLORS.onSurfaceVariant, marginTop: 4 },
 
-  securityNote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: SPACING.md, marginTop: SPACING.xs },
-  securityText: { fontSize: 12, color: COLORS.onSurfaceVariant },
 });
