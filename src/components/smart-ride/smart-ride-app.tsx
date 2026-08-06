@@ -69,10 +69,19 @@ export function SmartRideApp() {
   };
 
   // Handle auth success (PHONE NUMBER AUTH ONLY)
-  const handleAuthSuccess = (userData: { phone: string; name: string }) => {
+  // MobileAuthScreen also emits Google sign-ins, where phone is absent and
+  // email/photoURL are present — the narrower signature rejected that callback.
+  const handleAuthSuccess = (userData: {
+    phone?: string;
+    name: string;
+    email?: string;
+    photoURL?: string;
+    uid?: string;
+    idToken?: string;
+  }) => {
     const newUser: User = {
       id: `user_${Date.now()}`,
-      phone: userData.phone,
+      phone: userData.phone ?? '',
       name: userData.name,
       role: null,
       isNewUser: true,

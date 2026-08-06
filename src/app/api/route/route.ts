@@ -280,6 +280,9 @@ async function handleCalculateRoute(data: {
     requestId: routeId,
     distanceKm: Math.round(distanceKm * 10) / 10,
     estimatedTimeMinutes: Math.round(estimatedTimeMinutes),
+    // Required by RouteResult. Uganda pump price ~5,000 UGX/L at a boda's
+    // ~35 km/L; kept here rather than defaulted silently to 0.
+    fuelCostEstimate: Math.round((distanceKm / 35) * 5000),
     trafficLevel: trafficImpact.congestionLevel,
     tollRequired: false,
     tollAmount: 0,
@@ -371,6 +374,8 @@ async function handleReportIncident(data: {
     location,
     affectedSegments,
     severity: severity as TrafficIncident['severity'],
+    // Required by TrafficIncident; the report API does not collect lane counts.
+    lanesBlocked: 0,
     description,
   });
 

@@ -36,6 +36,8 @@ import {
 
 export interface Location {
   address: string;
+  /// Full formatted address from the geocoder, when available.
+  fullAddress?: string;
   lat?: number;
   lng?: number;
   placeId?: string;

@@ -322,12 +322,16 @@ export function ItemDeliveryScreen({ onBack }: ItemDeliveryScreenProps) {
         dropoffAddress: dropoff.address,
         distanceKm: route.distanceKm,
         paymentMethod: paymentMethod,
-        itemDetails: {
-          description: itemDetails.description,
-          weight: itemDetails.weight,
-          value: itemDetails.value,
-          size: itemDetails.size,
-        },
+        // TaskRequest has no nested itemDetails — it carries a flat
+        // itemDescription, so the parcel details were being dropped.
+        itemDescription: [
+          itemDetails.description,
+          itemDetails.size && `size: ${itemDetails.size}`,
+          itemDetails.weight && `weight: ${itemDetails.weight}`,
+          itemDetails.value && `value: ${itemDetails.value}`,
+        ]
+          .filter(Boolean)
+          .join(' · '),
       };
       
       const result = await createTask(taskData);

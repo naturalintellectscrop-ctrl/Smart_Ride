@@ -68,7 +68,8 @@ function paymentMethodToApi(method: PaymentMethod): string {
     case 'CASH': return 'CASH';
     case 'MTN_MOMO': return 'MTN_MOMO';
     case 'AIRTEL_MONEY': return 'AIRTEL_MONEY';
-    case 'CARD': return 'VISA';
+    // 'CARD' is a UI label; the PaymentMethod enum uses VISA/MASTERCARD.
+    case 'VISA': return 'VISA';
     default: return 'CASH';
   }
 }

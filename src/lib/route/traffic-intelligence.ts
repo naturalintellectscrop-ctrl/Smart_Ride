@@ -500,7 +500,9 @@ export function getIntersectionWaitTime(
   timeOfDay: Date
 ): number {
   const signal = signalStore.get(signalId);
-  if (!signal || !signal.hasTrafficLight) return 0;
+  // A TrafficSignal in the store IS a traffic light; there is no
+  // `hasTrafficLight` flag on the type.
+  if (!signal) return 0;
 
   const hour = timeOfDay.getHours();
   

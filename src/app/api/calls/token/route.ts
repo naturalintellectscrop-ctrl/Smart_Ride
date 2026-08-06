@@ -91,6 +91,9 @@ export async function POST(request: NextRequest) {
       validatedData.channelName,
       uid,
       RtcRole.PUBLISHER,
+      // buildTokenWithUid takes BOTH tokenExpire and privilegeExpire; only one
+      // was passed, so the call was one argument short and never built.
+      privilegeExpiredTs,
       privilegeExpiredTs,
     );
 

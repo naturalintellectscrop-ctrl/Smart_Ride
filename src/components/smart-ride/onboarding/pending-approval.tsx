@@ -284,7 +284,10 @@ export function PendingApproval({ user }: PendingApprovalProps) {
             </p>
             <MaskedCallButton
               userId={user.id}
-              userType={user.role || 'CLIENT'}
+              // MaskedCallButton accepts only the three caller roles.
+              userType={
+                user.role === 'RIDER' || user.role === 'MERCHANT' ? user.role : 'CLIENT'
+              }
               calleeId="SUPPORT_TEAM"
               calleeType="SUPPORT"
               calleeDisplayName="Smart Ride Support"

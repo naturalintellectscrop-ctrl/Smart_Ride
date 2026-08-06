@@ -608,7 +608,24 @@ export function buildRouteGraph(
     }
   }
 
-  return { nodes: graphNodes, edges: graphEdges };
+  // RouteGraph carries segment lookup indexes; returning only nodes/edges
+  // left them undefined for every consumer that traverses by segment.
+  const nodeIndex = new Map<string, string[]>();
+  for (const [nodeId, node] of graphNodes) {
+    const segId = (node as { segmentId?: string }).segmentId;
+    if (!segId) continue;
+    const list = nodeIndex.get(segId) ?? [];
+    list.push(nodeId);
+    nodeIndex.set(segId, list);
+  }
+
+  const edgeIndex = new Map<string, string>();
+  for (const [edgeId, edge] of graphEdges) {
+    const segId = (edge as { segmentId?: string }).segmentId;
+    if (segId) edgeIndex.set(segId, edgeId);
+  }
+
+  return { nodes: graphNodes, edges: graphEdges, nodeIndex, edgeIndex };
 }
 
 function calculateIncidentDelay(segmentId: string, incidents: TrafficIncident[]): number {
