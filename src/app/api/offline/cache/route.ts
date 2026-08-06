@@ -6,6 +6,7 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { TaskStatus } from '@prisma/client';
 import { db, setRLSContext, resetRLSContext } from '@/lib/db';
 import { CacheManager } from '@/lib/offline/cache-manager';
 import { authGuard } from '@/lib/auth/guards';
@@ -35,20 +36,25 @@ export async function GET(request: NextRequest) {
     };
 
     // Minimal: Just user profile and active tasks
+    // phone is not carried on the JWT — read it from the User record.
+    const profile = await db.user.findUnique({
+      where: { id: user.id },
+      select: { phone: true },
+    });
     cachedData.user = {
       id: user.id,
       name: user.name,
       email: user.email,
-      phone: user.phone,
+      phone: profile?.phone ?? null,
       role: user.role,
     };
 
     if (scope === 'minimal' || scope === 'standard' || scope === 'full') {
       // Get user's active tasks
-      const activeStatuses = [
+      const activeStatuses: TaskStatus[] = [
         'CREATED', 'REQUESTED', 'SEARCHING', 'MATCHING',
         'ASSIGNED', 'ACCEPTED', 'ARRIVING', 'ARRIVED',
-        'PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT'
+        'PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT', 'DELIVERING',
       ];
 
       const activeTasks = await db.task.findMany({

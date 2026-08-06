@@ -301,7 +301,7 @@ export class RiderOnboardingService {
             taskType,
             isAllowed: true,
             requiresVehicle: riderRole === 'SMART_CAR_DRIVER' && taskType === TaskType.SMART_CAR_RIDE,
-            requiresInsulatedBox: [TaskType.FOOD_DELIVERY, TaskType.SMART_HEALTH_DELIVERY].includes(taskType),
+            requiresInsulatedBox: ([TaskType.FOOD_DELIVERY, TaskType.SMART_HEALTH_DELIVERY] as TaskType[]).includes(taskType),
           },
         });
       }
@@ -552,7 +552,7 @@ export class RiderOnboardingService {
         taskType: capabilityType,
         isAllowed: true,
         requiresVehicle: capabilityType === TaskType.SMART_CAR_RIDE,
-        requiresInsulatedBox: [TaskType.FOOD_DELIVERY, TaskType.SMART_HEALTH_DELIVERY].includes(capabilityType),
+        requiresInsulatedBox: ([TaskType.FOOD_DELIVERY, TaskType.SMART_HEALTH_DELIVERY] as TaskType[]).includes(capabilityType),
       },
     });
 

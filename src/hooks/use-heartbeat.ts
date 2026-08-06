@@ -293,7 +293,7 @@ export function useHeartbeat(
       accuracy: currentLocation.accuracy,
       batteryLevel: batteryLevel ?? undefined,
       isCharging,
-      networkType: navigator.connection ? (navigator.connection as any).effectiveType : undefined,
+      networkType: (navigator as Navigator & { connection?: { effectiveType?: string } }).connection ? ((navigator as Navigator & { connection?: { effectiveType?: string } }).connection as any).effectiveType : undefined,
     };
 
     if (!isOnlineRef.current) {

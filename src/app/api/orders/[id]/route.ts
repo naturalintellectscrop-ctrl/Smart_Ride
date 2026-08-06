@@ -602,22 +602,25 @@ async function handleReady(orderId: string, body: Record<string, unknown>, decod
   });
 
   // Update order and KOT
-  const [updatedOrder, _] = await db.$transaction([
-    db.order.update({
-      where: { id: orderId },
-      data: {
-        status: 'READY_FOR_PICKUP',
-        readyAt: new Date(),
-      },
-    }),
-    order.kot ? db.kOT.update({
-      where: { id: order.kot.id },
-      data: {
-        status: 'COMPLETED',
-        completedAt: new Date(),
-      },
-    }) : Promise.resolve(null),
-  ]);
+  // Build the batch conditionally: $transaction([...]) takes PrismaPromises
+  // only, and a `Promise.resolve(null)` placeholder is not one.
+  const orderUpdate = db.order.update({
+    where: { id: orderId },
+    data: {
+      status: 'READY_FOR_PICKUP',
+      readyAt: new Date(),
+    },
+  });
+
+  const [updatedOrder] = order.kot
+    ? await db.$transaction([
+        orderUpdate,
+        db.kOT.update({
+          where: { id: order.kot.id },
+          data: { status: 'COMPLETED', completedAt: new Date() },
+        }),
+      ])
+    : await db.$transaction([orderUpdate]);
 
   // Create FOOD_DELIVERY task and dispatch rider if no task exists yet
   let task = existingTask;
@@ -1015,7 +1018,9 @@ async function handleCancel(orderId: string, body: Record<string, unknown>, deco
     action: AuditActions.ORDER_CANCELLED,
     entityType: EntityTypes.ORDER,
     entityId: orderId,
-    actorType: validatedData.cancelledBy,
+    // cancelledBy is SYSTEM | MERCHANT | CUSTOMER; ActorType has no
+    // CUSTOMER member — the platform calls that role USER.
+    actorType: validatedData.cancelledBy === 'CUSTOMER' ? 'USER' : validatedData.cancelledBy,
     orderId: orderId,
     description: `Order cancelled by ${validatedData.cancelledBy}: ${validatedData.reason}`,
   });
