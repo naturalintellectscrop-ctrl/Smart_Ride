@@ -192,12 +192,14 @@ class FCMService {
     if (!this.isNotificationEnabled()) return null;
 
     try {
+      // `vibrate` is a non-standard extension not present in the DOM
+      // NotificationOptions type, but it is honoured by Chromium.
       const notification = new Notification(title, {
         icon: '/icons/icon-192x192.png',
         badge: '/icons/badge-72x72.png',
         vibrate: [100, 50, 100],
         ...options,
-      });
+      } as NotificationOptions & { vibrate?: number[] });
 
       notification.onclick = () => {
         window.focus();

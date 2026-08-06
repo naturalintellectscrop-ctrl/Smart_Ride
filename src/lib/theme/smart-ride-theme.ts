@@ -297,7 +297,8 @@ export function getGlassClasses(variant: 'default' | 'elevated' | 'subtle' = 'de
     background: glass.background,
     backdropFilter: glass.backdropFilter,
     border: glass.border,
-    boxShadow: glass.boxShadow,
+    // Not every glass variant defines boxShadow.
+    boxShadow: 'boxShadow' in glass ? glass.boxShadow : undefined,
   };
 }
 

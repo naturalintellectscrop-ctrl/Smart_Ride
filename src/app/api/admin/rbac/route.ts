@@ -86,7 +86,9 @@ export async function GET(req: NextRequest): Promise<NextResponse<PermissionsRes
   const user = getAuthUser(req);
   
   if (!user) {
-    return unauthorizedResponse('Authentication required');
+    // unauthorizedResponse is untyped; the handler declares a concrete
+    // response type, so widen the error branch to match.
+    return unauthorizedResponse('Authentication required') as never;
   }
 
   try {
@@ -137,7 +139,9 @@ export async function POST(req: NextRequest): Promise<NextResponse<VerifyAccessR
   const user = getAuthUser(req);
   
   if (!user) {
-    return unauthorizedResponse('Authentication required');
+    // unauthorizedResponse is untyped; the handler declares a concrete
+    // response type, so widen the error branch to match.
+    return unauthorizedResponse('Authentication required') as never;
   }
 
   try {

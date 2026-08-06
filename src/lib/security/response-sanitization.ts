@@ -314,7 +314,8 @@ function sanitizeValue(key: string, value: unknown, entityType?: string, options
       return '[Buffer]';
     }
     // Recursively sanitize
-    return sanitizeResponse(value, entityType, options);
+    // `object` is not indexable; the recursive call takes a keyed record.
+    return sanitizeResponse(value as Record<string, unknown>, entityType, options);
   }
   
   return value;

@@ -160,7 +160,9 @@ export const rateLimits = {
  */
 export function withRateLimit(
   handler: (req: NextRequest, context?: unknown) => Promise<NextResponse>,
-  config: RateLimitConfig = rateLimits.api.config
+  // rateLimits.api is the wrapped middleware, not a config holder — it has no
+  // `.config`. Inline the same defaults the `api` limiter is built with.
+  config: RateLimitConfig = { windowMs: 60 * 1000, maxRequests: 60 }
 ) {
   const limiter = rateLimit(config);
   

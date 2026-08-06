@@ -318,7 +318,12 @@ export function useCreateDispatch() {
     } catch (err) {
       return {
         success: false,
-        data: { error: err instanceof Error ? err.message : 'Network error' },
+        // The declared data shape requires requestId/status even on failure.
+        data: {
+          requestId: '',
+          status: 'FAILED',
+          error: err instanceof Error ? err.message : 'Network error',
+        },
       };
     } finally {
       setLoading(false);
