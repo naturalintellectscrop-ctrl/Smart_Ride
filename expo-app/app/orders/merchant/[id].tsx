@@ -5,7 +5,7 @@
 // Uses StyleSheet.create() + Ionicons (no NativeWind)
 // ============================================
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect , useMemo } from 'react';
 import {
   View,
   Text,
@@ -27,14 +27,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { api } from '@/src/services';
 import { RADIUS, SHADOWS, SPACING, TYPOGRAPHY } from '@/src/constants';
+import {
+  Chip,
+  EmptyState,
+} from '@/src/components';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { useCartStore, CartItem } from '@/src/store';
 
-// Module-scoped themed styles, (re)assigned from the component on each theme
-// change so the stylesheet factory below can reference them.
-let COLORS: ThemedColors;
-let styles: any;
 
 interface Merchant {
   id: string;
@@ -62,7 +62,9 @@ interface Product {
 }
 
 export default function MerchantDetailScreen() {
-  { const __t = useTheme(); COLORS = makeThemedColors(__t.isDark); styles = create_styles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => create_styles(COLORS), [COLORS]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const cart = useCartStore();
@@ -227,7 +229,7 @@ export default function MerchantDetailScreen() {
                     <Ionicons
                       name="star"
                       size={14}
-                      color="#F59E0B"
+                      color={COLORS.warning}
                       style={styles.starIcon}
                     />
                     <Text style={styles.ratingValue}>
@@ -314,28 +316,13 @@ export default function MerchantDetailScreen() {
           >
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {categories.map((cat) => (
-                <TouchableOpacity
+                <Chip
                   key={cat}
+                  label={cat}
+                  active={selectedCategory === cat}
                   onPress={() => setSelectedCategory(cat)}
-                  activeOpacity={0.7}
-                  style={[
-                    styles.categoryChip,
-                    selectedCategory === cat
-                      ? styles.categoryChipActive
-                      : styles.categoryChipInactive,
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.categoryChipText,
-                      selectedCategory === cat
-                        ? styles.categoryChipTextActive
-                        : styles.categoryChipTextInactive,
-                    ]}
-                  >
-                    {cat}
-                  </Text>
-                </TouchableOpacity>
+                  style={styles.categoryChip}
+                />
               ))}
             </ScrollView>
           </Animated.View>
@@ -357,16 +344,11 @@ export default function MerchantDetailScreen() {
               </Animated.View>
             ))
           ) : (
-            <View style={styles.emptyProducts}>
-              <Ionicons
-                name="restaurant-outline"
-                size={40}
-                color={COLORS.outline}
-              />
-              <Text style={styles.emptyProductsText}>
-                No products available
-              </Text>
-            </View>
+            <EmptyState
+              icon="restaurant-outline"
+              title="No products available"
+              subtitle="This merchant hasn't listed anything yet."
+            />
           )}
         </View>
       </ScrollView>
@@ -406,6 +388,9 @@ function ProductCard({
   product: Product;
   onAddToCart: () => void;
 }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => create_styles(COLORS), [COLORS]);
   return (
     <View style={styles.productCard}>
       <View style={styles.productInfo}>
@@ -620,22 +605,6 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full,
   },
-  categoryChipActive: {
-    backgroundColor: COLORS.primary,
-  },
-  categoryChipInactive: {
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
-  categoryChipText: {
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '500',
-  },
-  categoryChipTextActive: {
-    color: COLORS.onPrimary,
-  },
-  categoryChipTextInactive: {
-    color: COLORS.onSurfaceVariant,
-  },
 
   // Products
   productsSection: {
@@ -648,15 +617,6 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     fontWeight: '700',
     color: COLORS.onSurface,
     marginBottom: SPACING.gutter,
-  },
-  emptyProducts: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    gap: SPACING.sm,
-  },
-  emptyProductsText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.outline,
   },
 
   // Product Card

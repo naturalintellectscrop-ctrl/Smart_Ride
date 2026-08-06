@@ -14,23 +14,26 @@ import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
-  TextInput,
-  ActivityIndicator,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { api } from '@/src/services';
 import { SPACING, RADIUS, MOTION } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from '@/src/components/Card';
-import { StatusBadge } from '@/src/components/StatusBadge';
-import { EmptyState, ErrorState } from '@/src/components/StateViews';
+import {
+  AppHeader,
+  Card,
+  Chip,
+  EmptyState,
+  ErrorState,
+  ListSkeleton,
+  SearchInput,
+  StatusBadge,
+} from '@/src/components';
 import { Merchant } from '@/src/types';
 
 const CATEGORIES = [
@@ -42,7 +45,6 @@ const CATEGORIES = [
 
 export default function RestaurantsScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -117,51 +119,33 @@ export default function RestaurantsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 6 }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.8} accessibilityLabel="Go back">
-            <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Restaurants</Text>
-        </View>
+      <AppHeader title="Restaurants" onBack={() => router.back()} />
 
-        {/* Search */}
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color={COLORS.onSurfaceVariant} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search restaurants"
-            placeholderTextColor={COLORS.outline}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="close-circle" size={18} color={COLORS.outline} />
-            </TouchableOpacity>
-          )}
-        </View>
+      <View style={styles.searchWrap}>
+        <SearchInput
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          placeholder="Search restaurants"
+        />
       </View>
 
-      {/* Category chips */}
+      {/* Category rail */}
       <View style={styles.chipsRow}>
-        {CATEGORIES.map((cat) => {
-          const active = selectedCategory === cat.id;
-          return (
-            <TouchableOpacity key={cat.id} style={[styles.chip, active && styles.chipActive]} onPress={() => setSelectedCategory(cat.id)} activeOpacity={0.8}>
-              <Text style={[styles.chipText, active && styles.chipTextActive]}>{cat.label}</Text>
-            </TouchableOpacity>
-          );
-        })}
+        {CATEGORIES.map((cat) => (
+          <Chip
+            key={cat.id}
+            label={cat.label}
+            active={selectedCategory === cat.id}
+            onPress={() => setSelectedCategory(cat.id)}
+          />
+        ))}
       </View>
 
       {/* List */}
       {error && filteredMerchants.length === 0 ? (
         <ErrorState subtitle={error} onRetry={loadMerchants} retryLabel="Try Again" />
       ) : isLoading ? (
-        <View style={styles.loading}><ActivityIndicator size="large" color={COLORS.primary} /></View>
+        <View style={styles.listContent}><ListSkeleton /></View>
       ) : (
         <FlatList
           data={filteredMerchants}
@@ -178,23 +162,13 @@ export default function RestaurantsScreen() {
 }
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  searchWrap: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm },
   container: { flex: 1, backgroundColor: COLORS.surface },
 
-  header: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm },
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
-  backButton: { width: 40, height: 40, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.surfaceContainerLow },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: COLORS.onSurface, letterSpacing: -0.3 },
 
-  searchBar: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.surfaceContainerLow, borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.borderLight, paddingHorizontal: 14, height: 48 },
-  searchInput: { flex: 1, fontSize: 15, color: COLORS.onSurface, paddingVertical: 0 },
 
   chipsRow: { flexDirection: 'row', gap: SPACING.sm, paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm + 2 },
-  chip: { paddingHorizontal: SPACING.md, paddingVertical: 8, borderRadius: RADIUS.full, backgroundColor: COLORS.surfaceContainerLow },
-  chipActive: { backgroundColor: COLORS.primary },
-  chipText: { fontSize: 13, fontWeight: '600', color: COLORS.onSurfaceVariant },
-  chipTextActive: { color: COLORS.onPrimary },
 
-  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   listContent: { paddingHorizontal: SPACING.md, paddingTop: SPACING.xs, paddingBottom: SPACING.xl },
 
   merchantCard: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: SPACING.sm + 4 },

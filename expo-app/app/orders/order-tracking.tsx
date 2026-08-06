@@ -16,10 +16,16 @@ import {
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SmartRideMap } from '@/src/components/SmartRideMap';
-import { useLocationStore } from '@/src/store';
+import {
+  AppHeader,
+  Card,
+  DetailSkeleton,
+  ErrorState,
+  RideTimeline,
+  SmartRideMap,
+} from '@/src/components';
 import { api, socketService } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Order } from '@/src/types';
@@ -47,7 +53,6 @@ export default function OrderTrackingScreen() {
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const params = useLocalSearchParams<{ orderId: string }>();
-  const { address } = useLocationStore();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -283,17 +288,25 @@ export default function OrderTrackingScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading order details...</Text>
+      <View style={styles.container}>
+        <AppHeader title="Order" onBack={() => router.back()} />
+        <DetailSkeleton />
       </View>
     );
   }
 
   if (!order) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>No order found</Text>
+      <View style={styles.container}>
+        <AppHeader title="Order" onBack={() => router.back()} />
+        <View style={styles.stateWrap}>
+          <ErrorState
+            title="Order not found"
+            subtitle="We couldn't load this order."
+            retryLabel="Go Back"
+            onRetry={() => router.back()}
+          />
+        </View>
       </View>
     );
   }
@@ -302,6 +315,12 @@ export default function OrderTrackingScreen() {
 
   return (
     <View style={styles.container}>
+      <AppHeader
+        title={`Order #${order.orderNumber}`}
+        subtitle={ORDER_STATUS_FLOW[currentStep]?.label}
+        onBack={() => router.back()}
+      />
+
       {/* Map */}
       {order.deliveryLatitude && order.deliveryLongitude && (
         <SmartRideMap
@@ -323,55 +342,23 @@ export default function OrderTrackingScreen() {
 
       <ScrollView style={styles.scrollView}>
         <View style={styles.content}>
-          {/* Order Status */}
-          <Text style={styles.orderNumber}>
-            Order #{order.orderNumber}
-          </Text>
 
-          {/* Progress Steps */}
-          <View style={styles.progressCard}>
-            {ORDER_STATUS_FLOW.map((step, index) => {
-              const isActive = index <= currentStep;
-              const isCurrent = index === currentStep;
-
-              return (
-                <View key={step.status} style={styles.stepRow}>
-                  {/* Line */}
-                  {index > 0 && (
-                    <View 
-                      style={[
-                        styles.stepLine,
-                        index <= currentStep ? styles.stepLineActive : styles.stepLineInactive,
-                      ]}
-                    />
-                  )}
-
-                  {/* Icon & Content */}
-                  <View style={styles.stepContentRow}>
-                    <View 
-                      style={[
-                        styles.stepIconContainer,
-                        isActive ? styles.stepIconActive : styles.stepIconInactive,
-                      ]}
-                    >
-                      <Ionicons name={step.icon as any} size={14} color={isActive ? COLORS.onPrimary : COLORS.onSurfaceVariant} />
-                    </View>
-                    <Text 
-                      style={[
-                        styles.stepLabel,
-                        isCurrent ? styles.stepLabelCurrent : styles.stepLabelInactive,
-                      ]}
-                    >
-                      {step.label}
-                    </Text>
-                    {isCurrent && !isTerminalState(order.status) && (
-                      <ActivityIndicator size="small" color={COLORS.primary} />
-                    )}
-                  </View>
-                </View>
-              );
-            })}
-          </View>
+          {/* Progress. This was a hand-rolled six-step stepper with its own
+              line, icon-circle and label styles — the same thing RideTimeline
+              already renders for the ride flow. One stepper, two flows. */}
+          <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.progressCard}>
+            <RideTimeline
+              steps={ORDER_STATUS_FLOW.map((step, index) => ({
+                id: step.status,
+                label: step.label,
+                icon: step.icon as any,
+                status:
+                  index < currentStep ? 'completed'
+                  : index === currentStep ? 'active'
+                  : 'pending',
+              }))}
+            />
+          </Card>
 
           {/* Merchant Info */}
           {order.merchant && (
@@ -510,20 +497,14 @@ export default function OrderTrackingScreen() {
 // ============================================
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  stateWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.md,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.surfaceContainerLowest,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surfaceContainerLowest,
-  },
-  loadingText: {
-    marginTop: SPACING.md,
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodyMd,
   },
   scrollView: {
     flex: 1,
@@ -532,65 +513,11 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingHorizontal: SPACING.md,
     paddingTop: SPACING.md,
   },
-  orderNumber: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
-    marginBottom: SPACING.md,
-  },
   progressCard: {
     backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.lg,
     padding: SPACING.md,
     marginBottom: SPACING.md,
-  },
-  stepRow: {
-    alignItems: 'flex-start',
-  },
-  stepLine: {
-    width: 2,
-    height: SPACING.md + 8,
-    marginLeft: 14,
-    marginBottom: -SPACING.sm,
-  },
-  stepLineActive: {
-    backgroundColor: COLORS.primary,
-  },
-  stepLineInactive: {
-    backgroundColor: COLORS.outlineVariant,
-  },
-  stepContentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    paddingVertical: SPACING.sm,
-  },
-  stepIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepIconActive: {
-    backgroundColor: COLORS.primary,
-  },
-  stepIconInactive: {
-    backgroundColor: COLORS.surfaceContainerHigh,
-  },
-  stepIcon: {
-    fontSize: 14,
-  },
-  stepLabel: {
-    marginLeft: SPACING.md - 4,
-    flex: 1,
-    ...TYPOGRAPHY.bodySm,
-  },
-  stepLabelCurrent: {
-    color: COLORS.onSurface,
-    fontWeight: 'bold',
-  },
-  stepLabelInactive: {
-    color: COLORS.onSurfaceVariant,
   },
   card: {
     backgroundColor: COLORS.surfaceContainerLow,
@@ -616,9 +543,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     justifyContent: 'center',
     marginRight: SPACING.md - 4,
   },
-  merchantEmoji: {
-    fontSize: 24,
-  },
   merchantInfo: {
     flex: 1,
   },
@@ -639,9 +563,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  callIcon: {
-    fontSize: 16,
-  },
   orderItemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -658,9 +579,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   addressRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-  },
-  addressIcon: {
-    marginRight: SPACING.sm,
   },
   addressText: {
     color: COLORS.onSurface,
