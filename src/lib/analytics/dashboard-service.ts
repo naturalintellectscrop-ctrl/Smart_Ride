@@ -219,7 +219,7 @@ export class DashboardService {
       onlineRiders: riderUtilization.onlineRiders,
       pendingVerifications,
       activeSOSAlerts,
-      todayRevenue: todayRevenue.toNumber(_sum.platformCommission),
+      todayRevenue: toNumber(todayRevenue._sum.platformCommission),
       todayCompletedTasks,
       averageWaitTime,
       riderUtilization: riderUtilization.utilizationRate,
@@ -356,9 +356,9 @@ export class DashboardService {
       : 0;
 
     return {
-      todayEarnings: todayEarnings.toNumber(_sum.riderEarnings),
-      weekEarnings: weekEarnings.toNumber(_sum.riderEarnings),
-      monthEarnings: monthEarnings.toNumber(_sum.riderEarnings),
+      todayEarnings: toNumber(todayEarnings._sum.riderEarnings),
+      weekEarnings: toNumber(weekEarnings._sum.riderEarnings),
+      monthEarnings: toNumber(monthEarnings._sum.riderEarnings),
       totalTrips: rider.totalTrips,
       rating: avgRating,
       activeTask,

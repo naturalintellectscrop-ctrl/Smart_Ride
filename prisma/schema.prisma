@@ -193,6 +193,7 @@ model Rider {
   updatedAt          DateTime         @updatedAt
   auditLogs          AuditLog[]       @relation("RiderAuditLogs")
   fraudAlerts        FraudAlert[]     @relation("RiderFraudAlerts")
+  ratingsReceived    Rating[]         @relation("RatingToRider")
   // Intelligent platform layer
   reputation         DriverReputation?
   fraudProfile       RiderFraudProfile?
@@ -586,9 +587,14 @@ model Rating {
   fromUser              User     @relation("RatingFromUser", fields: [fromUserId], references: [id])
   task                  Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   toUser                User?    @relation("RatingToUser", fields: [toUserId], references: [id])
+  // toRiderId was a bare column with no relation, so analytics could not
+  // include a rider's received ratings and had to be written against a
+  // relation that did not exist.
+  toRider               Rider?   @relation("RatingToRider", fields: [toRiderId], references: [id], onDelete: SetNull)
 
   @@index([fromUserId])
   @@index([toUserId])
+  @@index([toRiderId])
 }
 
 model AuditLog {

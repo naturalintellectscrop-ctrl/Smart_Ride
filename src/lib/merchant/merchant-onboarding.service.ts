@@ -586,8 +586,8 @@ export class MerchantOnboardingService {
       }),
     ]);
 
-    const thisMonthRevenue = thisMonthRevenueResult.toNumber(_sum.amount);
-    const lastMonthRevenue = lastMonthRevenueResult.toNumber(_sum.amount);
+    const thisMonthRevenue = toNumber(thisMonthRevenueResult._sum.amount);
+    const lastMonthRevenue = toNumber(lastMonthRevenueResult._sum.amount);
     const monthlyChange = lastMonthRevenue > 0
       ? ((thisMonthRevenue - lastMonthRevenue) / lastMonthRevenue) * 100
       : thisMonthRevenue > 0 ? 100 : 0;
@@ -680,7 +680,8 @@ export class MerchantOnboardingService {
         order: { merchantId },
         status: 'COMPLETED',
         completedAt: { not: null },
-        createdAt: { not: null },
+        // createdAt is non-nullable on Task, so a `not: null` filter on it is
+        // both invalid to Prisma and a no-op.
       },
       select: {
         createdAt: true,
@@ -725,7 +726,7 @@ export class MerchantOnboardingService {
 
     return {
       revenue: {
-        total: totalRevenueResult.toNumber(_sum.amount),
+        total: toNumber(totalRevenueResult._sum.amount),
         thisMonth: thisMonthRevenue,
         lastMonth: lastMonthRevenue,
         monthlyChange: Math.round(monthlyChange * 100) / 100,

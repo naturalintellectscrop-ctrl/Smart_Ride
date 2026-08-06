@@ -293,9 +293,16 @@ async function checkResourceAccess(
     }
     
     case 'order': {
+      // Order has no riderId column — a rider is linked to an order through
+      // its Task, so selecting order.riderId made Prisma throw on every
+      // ownership check for an order.
       const order = await db.order.findUnique({
         where: { id: resourceId },
-        select: { clientId: true, merchantId: true, riderId: true },
+        select: {
+          clientId: true,
+          merchantId: true,
+          task: { select: { riderId: true } },
+        },
       });
       
       // Check if user is the client
@@ -315,7 +322,7 @@ async function checkResourceAccess(
         where: { userId },
         select: { id: true },
       });
-      if (rider && order?.riderId === rider.id) return true;
+      if (rider && order?.task?.riderId === rider.id) return true;
       
       return false;
     }
@@ -341,11 +348,12 @@ async function checkResourceAccess(
     }
     
     case 'prescription': {
+      // Prescription is keyed by clientId, not userId.
       const prescription = await db.prescription.findUnique({
         where: { id: resourceId },
-        select: { userId: true },
+        select: { clientId: true },
       });
-      return prescription?.userId === userId;
+      return prescription?.clientId === userId;
     }
     
     case 'payment': {
@@ -357,11 +365,14 @@ async function checkResourceAccess(
     }
     
     case 'wallet': {
+      // Wallet is polymorphic (ownerId + ownerType), not userId. A user only
+      // owns a wallet whose ownerType is USER — without that check a rider or
+      // merchant wallet sharing the id space could be claimed.
       const wallet = await db.wallet.findUnique({
         where: { id: resourceId },
-        select: { userId: true },
+        select: { ownerId: true, ownerType: true },
       });
-      return wallet?.userId === userId;
+      return wallet?.ownerType === 'USER' && wallet.ownerId === userId;
     }
     
     default:
@@ -627,6 +638,11 @@ export function canPerformTaskAction(userRole: UserRole, action: 'create' | 'acc
   const permissions: Record<UserRole, string[]> = {
     CLIENT: ['create', 'cancel'],
     RIDER: ['accept', 'complete', 'cancel'],
+    // DRIVER (car) has the same task capabilities as RIDER (boda). It was
+    // missing entirely, so permissions[DRIVER] was undefined and every task
+    // action fell through to `false` — a car driver could not accept or
+    // complete a trip.
+    DRIVER: ['accept', 'complete', 'cancel'],
     MERCHANT: ['create', 'cancel'],
     PHARMACIST: ['create', 'cancel'],
     ADMIN: ['create', 'accept', 'complete', 'cancel'],
