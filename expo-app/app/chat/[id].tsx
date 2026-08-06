@@ -9,7 +9,7 @@
 // Secure connection badge
 // ============================================
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -28,29 +28,26 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import Animated, { FadeIn, FadeInUp, withRepeat, withTiming, useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
-import { useChatStore, Conversation, Message } from '@/src/store/chatStore';
+import Animated, { FadeInUp, withRepeat, withTiming, useSharedValue, useAnimatedStyle } from 'react-native-reanimated';
+import { useChatStore, Message } from '@/src/store/chatStore';
 import { firstName } from '@/src/utils/formatName';
 import { useAuthStore, useLocationStore } from '@/src/store';
 import { socketService } from '@/src/services/socket.service';
-import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, MOTION, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard } from '@/src/components/GlassCard';
+import { AppHeader, EmptyState } from '@/src/components';
 import { pickImage } from '@/src/utils/imagePicker';
 
-// Module-scoped themed styles, (re)assigned from the component on each theme
-// change so the sub-components and stylesheet factories below can reference them.
-let COLORS: ThemedColors;
-let styles: any;
-let bubbleStyles: any;
-let typingStyles: any;
 
 // ============================================
 // TYPING INDICATOR COMPONENT
 // ============================================
 
 function TypingIndicator() {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const typingStyles = useMemo(() => create_typingStyles(COLORS), [COLORS]);
   const dot1 = useSharedValue(0);
   const dot2 = useSharedValue(0);
   const dot3 = useSharedValue(0);
@@ -146,6 +143,10 @@ function StitchChatBubble({
   imageUrl?: string;
   metadata?: { latitude?: number; longitude?: number; [key: string]: any };
 }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const bubbleStyles = useMemo(() => create_bubbleStyles(COLORS), [COLORS]);
+
   const handleOpenMap = useCallback(() => {
     if (!metadata?.latitude || !metadata?.longitude) return;
     const { latitude, longitude } = metadata;
@@ -339,7 +340,9 @@ const create_bubbleStyles = (COLORS: ThemedColors) => StyleSheet.create({
 // ============================================
 
 export default function ChatDetailScreen() {
-  { const __t = useTheme(); COLORS = makeThemedColors(__t.isDark); typingStyles = create_typingStyles(COLORS); bubbleStyles = create_bubbleStyles(COLORS); styles = create_styles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => create_styles(COLORS), [COLORS]);
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
@@ -563,14 +566,12 @@ export default function ChatDetailScreen() {
   };
 
   const renderEmptyState = () => (
-    <Animated.View entering={FadeInUp.duration(400)} style={styles.emptyContainer}>
-      <View style={styles.emptyIconContainer}>
-        <Ionicons name="chatbubbles-outline" size={48} color={COLORS.primary} />
-      </View>
-      <Text style={styles.emptyTitle}>Start the conversation</Text>
-      <Text style={styles.emptySubtitle}>
-        Send a message to {conversation?.otherUser?.name ? firstName(conversation.otherUser.name) : 'get started'}
-      </Text>
+    <Animated.View entering={FadeInUp.duration(MOTION.duration.slower)} style={styles.stateWrap}>
+      <EmptyState
+        icon="chatbubbles-outline"
+        title="Start the conversation"
+        subtitle={`Send a message to ${conversation?.otherUser?.name ? firstName(conversation.otherUser.name) : 'get started'}.`}
+      />
     </Animated.View>
   );
 
@@ -583,46 +584,26 @@ export default function ChatDetailScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
-      {/* Chat Header — Stitch Design with online status and call button */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.sm || 48 }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
-          </TouchableOpacity>
+      {/* Header. The subtitle carries presence — typing, or the task this
+          conversation belongs to. */}
+      <View style={styles.header}>
+        <AppHeader
+          title={otherUserName}
+          subtitle={otherUserOnline ? 'typing…' : (conversation?.taskNumber || 'Online')}
+          onBack={() => router.back()}
+          rightActions={[{ icon: 'call-outline', onPress: handleCall, label: `Call ${otherUserName}` }]}
+        />
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerName} numberOfLines={1}>
-              {otherUserName}
-            </Text>
-            <View style={styles.onlineRow}>
-              <View style={[styles.onlineDot, otherUserOnline && styles.onlineDotActive]} />
-              <Text style={[styles.onlineText, otherUserOnline && styles.onlineTextActive]}>
-                {otherUserOnline ? 'typing...' : (conversation?.taskNumber || 'Online')}
-              </Text>
-            </View>
-          </View>
-
-          {/* Call button */}
-          <TouchableOpacity
-            style={styles.headerCallButton}
-            onPress={handleCall}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="call-outline" size={20} color={COLORS.primary} />
-          </TouchableOpacity>
-        </View>
-
-        {/* Secure connection badge — Stitch Design */}
+        {/* Privacy note. This badge used to read "End-to-end encrypted", which
+            was untrue — Message.content is a plain String column and there is
+            no crypto anywhere in the chat path. It now states the privacy
+            property that actually holds, matching the wording ride tracking
+            already uses. */}
         <View style={styles.secureBadge}>
-          <Ionicons name="shield-checkmark" size={12} color={COLORS.primary} />
-          <Text style={styles.secureBadgeText}>End-to-end encrypted</Text>
+          <Ionicons name="lock-closed" size={ICON.xs} color={COLORS.primary} />
+          <Text style={styles.secureBadgeText}>Contact details stay private · in-app only</Text>
         </View>
 
-        {/* Subtle bottom border */}
         <View style={styles.headerBorder} />
       </View>
 
@@ -743,6 +724,11 @@ export default function ChatDetailScreen() {
 // ============================================
 
 const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
+  stateWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.md,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
@@ -751,66 +737,6 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   // Header — Stitch Design
   header: {
     backgroundColor: COLORS.surfaceContainerLowest,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.sm,
-  },
-  headerCenter: {
-    flex: 1,
-    marginLeft: SPACING.xs,
-  },
-  headerName: {
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '700',
-    color: COLORS.onSurface,
-    letterSpacing: -0.3,
-  },
-  onlineRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    marginTop: 2,
-  },
-  onlineDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-    backgroundColor: COLORS.outlineVariant,
-  },
-  onlineDotActive: {
-    backgroundColor: COLORS.primary,
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.6,
-    shadowRadius: 4,
-  },
-  onlineText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.outline,
-  },
-  onlineTextActive: {
-    color: COLORS.primary,
-  },
-  headerCallButton: {
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.primaryFixed,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: SPACING.sm,
   },
 
   // Secure badge — Stitch Design
@@ -866,33 +792,6 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Empty State
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyIconContainer: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: COLORS.primaryFixed,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    marginBottom: SPACING.sm,
-  },
-  emptySubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
 
   // Quick Actions
   quickActions: {

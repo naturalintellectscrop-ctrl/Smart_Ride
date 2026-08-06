@@ -1,39 +1,47 @@
 // ============================================
-// SMART RIDE MOBILE - CONVERSATIONS LIST SCREEN
+// SMART RIDE — CONVERSATIONS
 // ============================================
-// Shows list of active conversations linked to tasks/orders
-// Dark theme with Smart Ride branding
-// ============================================
+// Golden Screen #33 · Archetype AR-4 (List + Search).
+//
+//   AppHeader (unread count) → SearchInput → Card rows (Avatar, preview,
+//   CountBadge) → EmptyState, pull-to-refresh
+//
+// Reachable two ways: the client's Messages tab, and /chat for roles without a
+// tab bar (driver, merchant, pharmacist). Both render this one implementation —
+// (tabs)/messages.tsx is a re-export shim.
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
   FlatList,
-  TouchableOpacity,
   RefreshControl,
   StyleSheet,
-  ActivityIndicator,
-  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useChatStore } from '@/src/store/chatStore';
 import { socketService } from '@/src/services/socket.service';
-import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { SPACING, RADIUS, MOTION, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Conversation } from '@/src/store/chatStore';
+import {
+  AppHeader,
+  Avatar,
+  Card,
+  ConversationSkeleton,
+  CountBadge,
+  EmptyState,
+  SearchInput,
+} from '@/src/components';
 
-export default function ConversationsScreen() {
+export default function MessagesTabScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const insets = useSafeAreaInsets();
   const {
     conversations,
     isLoadingConversations,
@@ -42,24 +50,21 @@ export default function ConversationsScreen() {
   } = useChatStore();
 
   const [refreshing, setRefreshing] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
+  const [query, setQuery] = useState('');
 
-  // Filter conversations by search query (name or last message content)
-  const filteredConversations = useMemo(() => {
-    if (!searchQuery.trim()) return conversations;
-    const q = searchQuery.trim().toLowerCase();
-    return conversations.filter(
-      (c) =>
-        c.otherUser?.name?.toLowerCase().includes(q) ||
-        c.lastMessage?.content?.toLowerCase().includes(q),
+  // Client-side search over the loaded conversations — participant name or the
+  // ride/order number the thread belongs to. No endpoint needed.
+  const visibleConversations = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return conversations;
+    return conversations.filter((c) =>
+      [c.otherUser?.name, c.taskNumber].some((f) => f?.toLowerCase().includes(q))
     );
-  }, [conversations, searchQuery]);
+  }, [conversations, query]);
 
   useEffect(() => {
     loadConversations();
 
-    // Listen for new messages to update conversation list
     const unsubMessage = socketService.on('chat:message', (data: any) => {
       onNewMessage(data);
     });
@@ -123,18 +128,18 @@ export default function ConversationsScreen() {
     const isSystem = item.lastMessage?.type === 'SYSTEM';
 
     return (
-      <Animated.View entering={FadeInDown.duration(300).delay(index * 50).springify()}>
-        <TouchableOpacity
+      <Animated.View entering={FadeInDown.duration(MOTION.duration.base).delay(Math.min(index * 40, 240)).springify()}>
+        <Card
+          variant="raised"
+          padding={SPACING.md}
+          radius={RADIUS.xl}
           style={styles.conversationCard}
           onPress={() => handleConversationPress(item)}
-          activeOpacity={0.7}
+          accessibilityLabel={`Conversation with ${item.otherUser.name}`}
         >
-          {/* Avatar */}
-          <View style={[styles.avatarContainer, { borderColor: serviceColor + '30' }]}>
-            <Ionicons name={serviceIcon as any} size={22} color={serviceColor} />
-          </View>
+          <View style={styles.conversationRow}>
+            <Avatar name={item.otherUser.name} icon={serviceIcon as any} size="lg" />
 
-          {/* Content */}
           <View style={styles.conversationContent}>
             <View style={styles.conversationHeader}>
               <Text style={styles.conversationName} numberOfLines={1}>
@@ -161,45 +166,37 @@ export default function ConversationsScreen() {
               </View>
 
               {item.unreadCount > 0 && (
-                <View style={[styles.unreadBadge, { backgroundColor: serviceColor }]}>
-                  <Text style={styles.unreadBadgeText}>
-                    {item.unreadCount > 99 ? '99+' : item.unreadCount}
-                  </Text>
-                </View>
+                <CountBadge count={item.unreadCount} color={serviceColor} />
               )}
             </View>
           </View>
 
-          {/* Chevron */}
-          <Ionicons name="chevron-forward" size={18} color={COLORS.outlineVariant} />
-        </TouchableOpacity>
+            <Ionicons name="chevron-forward" size={ICON.md} color={COLORS.outlineVariant} />
+          </View>
+        </Card>
       </Animated.View>
     );
   };
 
   const renderEmptyState = () => (
-    <Animated.View entering={FadeInUp.duration(400).springify()} style={styles.emptyContainer}>
-      <View style={styles.emptyIconContainer}>
-        <Ionicons name="chatbubbles-outline" size={56} color={COLORS.primary} />
-      </View>
-      <Text style={styles.emptyTitle}>No Messages Yet</Text>
-      <Text style={styles.emptySubtitle}>
-        Your conversations with drivers and merchants{'\n'}will appear here
-      </Text>
-      <TouchableOpacity
-        style={styles.emptyButton}
-        onPress={() => router.push('/rider/ride-request?type=BODA' as any)}
-        activeOpacity={0.7}
-      >
-        <LinearGradient
-          colors={GRADIENTS.primary as unknown as [string, string]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.emptyButtonGradient}
-        >
-          <Text style={styles.emptyButtonText}>Book a Ride</Text>
-        </LinearGradient>
-      </TouchableOpacity>
+    <Animated.View entering={FadeInUp.duration(MOTION.duration.slower)} style={styles.stateWrap}>
+      {query.trim() ? (
+        <EmptyState
+          icon="search-outline"
+          title="No conversations match your search"
+          subtitle="Try a different name or ride number."
+          actionLabel="Clear search"
+          onAction={() => setQuery('')}
+        />
+      ) : (
+        <EmptyState
+          icon="chatbubbles-outline"
+          title="No messages yet"
+          subtitle="Your conversations with drivers and merchants will appear here."
+          actionLabel="Book a Ride"
+          onAction={() => router.push('/rider/ride-request?type=BODA' as any)}
+        />
+      )}
     </Animated.View>
   );
 
@@ -207,93 +204,38 @@ export default function ConversationsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 12 || 56 }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
-          </TouchableOpacity>
-          <View style={styles.headerTitleContainer}>
-            <Text style={styles.headerTitle}>Messages</Text>
-            {totalUnread > 0 && (
-              <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>
-                  {totalUnread > 99 ? '99+' : totalUnread}
-                </Text>
-              </View>
-            )}
-          </View>
-          <TouchableOpacity
-            style={styles.headerAction}
-            onPress={() => setShowSearch(!showSearch)}
-            activeOpacity={0.7}
-          >
-            <Ionicons name={showSearch ? 'close-outline' : 'search-outline'} size={22} color={COLORS.onSurfaceSecondary} />
-          </TouchableOpacity>
-        </View>
+      <AppHeader
+        title="Messages"
+        subtitle={totalUnread > 0 ? `${totalUnread > 99 ? '99+' : totalUnread} unread` : undefined}
+        variant="large"
+      />
 
-        {/* Search Bar */}
-        {showSearch && (
-          <View style={styles.searchContainer}>
-            <Ionicons name="search-outline" size={18} color={COLORS.outline} style={styles.searchIcon} />
-            <TextInput
-              style={styles.searchInput}
-              placeholder="Search conversations..."
-              placeholderTextColor={COLORS.outline}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => setSearchQuery('')}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              >
-                <Ionicons name="close-circle" size={18} color={COLORS.outline} />
-              </TouchableOpacity>
-            )}
-          </View>
-        )}
-
-        {/* Gradient glow border */}
-        <LinearGradient
-          colors={['#4ae176', '#98f6be', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
+      <View style={styles.searchWrap}>
+        <SearchInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search by name or ride number"
         />
       </View>
 
       {/* Conversations List */}
       {isLoadingConversations && conversations.length === 0 ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading conversations...</Text>
+        <View style={styles.skeletonContainer}>
+          <ConversationSkeleton />
+          <ConversationSkeleton />
+          <ConversationSkeleton />
+          <ConversationSkeleton />
+          <ConversationSkeleton />
         </View>
       ) : (
         <FlatList
-          data={filteredConversations}
+          data={visibleConversations}
           keyExtractor={(item) => item.id}
           renderItem={renderConversation}
           contentContainerStyle={
-            filteredConversations.length === 0 ? styles.emptyList : styles.listContent
+            visibleConversations.length === 0 ? styles.emptyList : styles.listContent
           }
-          ListEmptyComponent={
-            searchQuery.trim()
-              ? () => (
-                  <View style={styles.loadingContainer}>
-                    <Ionicons name="search-outline" size={48} color={COLORS.outlineVariant} />
-                    <Text style={styles.loadingText}>No conversations match "{searchQuery}"</Text>
-                  </View>
-                )
-              : renderEmptyState
-          }
+          ListEmptyComponent={renderEmptyState}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -314,116 +256,36 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.surface,
   },
-  header: {
-    backgroundColor: COLORS.surface,
-    paddingBottom: 16,
+  searchWrap: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.gutter,
   },
-  headerRow: {
+  conversationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
+    gap: SPACING.gutter,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.gutter,
-  },
-  headerTitleContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    letterSpacing: -0.5,
-  },
-  headerBadge: {
-    backgroundColor: COLORS.error,
-    borderRadius: RADIUS.md,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  headerBadgeText: {
-    color: '#FFFFFF',
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    fontWeight: 'bold',
-  },
-  headerAction: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  glowBorder: {
-    height: 1,
-    marginTop: SPACING.md,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginHorizontal: 16,
-    marginTop: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    borderRadius: RADIUS.xl,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    paddingVertical: 8,
-    fontSize: 15,
-    color: COLORS.onSurface,
+  stateWrap: {
+    paddingTop: SPACING.xl,
+    paddingHorizontal: SPACING.md,
   },
   listContent: {
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-    paddingBottom: SPACING.lg,
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 24,
   },
   emptyList: {
     flexGrow: 1,
   },
-
-  // Conversation Card
   conversationCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
-    borderRadius: RADIUS.lg,
+    borderRadius: 16,
     padding: 14,
     marginBottom: 10,
-  },
-  avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.gutter,
   },
   conversationContent: {
     flex: 1,
@@ -436,13 +298,13 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   conversationName: {
     fontSize: 15,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
+    fontWeight: '600',
     color: COLORS.onSurface,
     flex: 1,
-    marginRight: SPACING.sm,
+    marginRight: 8,
   },
   conversationTime: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
+    fontSize: 12,
     color: COLORS.outlineVariant,
   },
   conversationFooter: {
@@ -453,11 +315,11 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   messagePreviewContainer: {
     flex: 1,
     flexDirection: 'row',
-    marginRight: SPACING.sm,
+    marginRight: 8,
   },
   taskBadge: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
+    fontSize: 12,
+    fontWeight: '600',
   },
   messagePreview: {
     fontSize: 13,
@@ -468,75 +330,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontStyle: 'italic',
     color: COLORS.outlineVariant,
   },
-  unreadBadge: {
-    borderRadius: RADIUS.md,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  unreadBadgeText: {
-    color: COLORS.onPrimary,
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    fontWeight: 'bold',
-  },
-
-  // Empty State
-  emptyContainer: {
+  skeletonContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyIconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#98f6be',
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.lg,
-  },
-  emptyTitle: {
-    fontSize: TYPOGRAPHY.headlineMd.fontSize,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    marginBottom: SPACING.sm,
-  },
-  emptySubtitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.outline,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: SPACING.xl,
-  },
-  emptyButton: {
-    borderRadius: RADIUS.md,
-    overflow: 'hidden',
-  },
-  emptyButtonGradient: {
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    borderRadius: RADIUS.md,
-  },
-  emptyButtonText: {
-    color: COLORS.onPrimary,
-    fontSize: TYPOGRAPHY.bodyMd.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-  },
-
-  // Loading
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    marginTop: SPACING.sm,
-    color: COLORS.outline,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
+    paddingTop: 8,
   },
 });
