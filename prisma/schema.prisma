@@ -194,6 +194,7 @@ model Rider {
   auditLogs          AuditLog[]       @relation("RiderAuditLogs")
   fraudAlerts        FraudAlert[]     @relation("RiderFraudAlerts")
   ratingsReceived    Rating[]         @relation("RatingToRider")
+  documents          Document[]
   // Intelligent platform layer
   reputation         DriverReputation?
   fraudProfile       RiderFraudProfile?
@@ -269,6 +270,7 @@ model Merchant {
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @updatedAt
   auditLogs          AuditLog[]     @relation("MerchantAuditLogs")
+  documents          Document[]
   kots               KOT[]
   menuItems          MenuItem[]
   orders             Order[]
@@ -1325,6 +1327,12 @@ model Document {
   description       String?
   providerId        String?
   verificationNotes String?
+  // riderId/merchantId were bare columns with no relations, so compliance
+  // services could not `include: { rider: true }` to report who a document
+  // belongs to. Same pattern previously fixed on HealthProvider, FraudAlert
+  // and Rating.
+  rider             Rider?         @relation(fields: [riderId], references: [id], onDelete: Cascade)
+  merchant          Merchant?      @relation(fields: [merchantId], references: [id], onDelete: Cascade)
 
   @@index([riderId])
   @@index([merchantId])
@@ -1430,6 +1438,11 @@ model Transaction {
   currency         String            @default("UGX")
   balanceBefore Decimal
   balanceAfter Decimal
+  // Per-transaction money split, reported by the finance ledger. Nullable
+  // because only revenue-bearing transactions carry a breakdown.
+  platformCommission Decimal?
+  riderEarnings      Decimal?
+  merchantEarnings   Decimal?
   status           TransactionStatus @default(COMPLETED)
   paymentMethod    String?
   paymentReference String?
@@ -1472,6 +1485,8 @@ model Settlement {
   status             SettlementStatus        @default(PENDING)
   paymentMethod      String?
   paymentReference   String?
+  /// The payout Transaction this settlement was paid through.
+  transactionId      String?
   processedAt        DateTime?
   paidAt             DateTime?
   failedAt           DateTime?

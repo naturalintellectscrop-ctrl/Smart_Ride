@@ -5,7 +5,7 @@
  */
 
 import { db } from '@/lib/db';
-import { Prisma } from '@prisma/client';
+import { WalletTransactionType, Prisma } from '@prisma/client';
 import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
@@ -221,7 +221,11 @@ export async function preventDuplicateNotification(
 export async function atomicWalletDebit(
   walletId: string,
   amount: number,
-  fn?: (tx: Prisma.TransactionClient, wallet: { id: string; balance: number; ownerId: string; ownerType: string }) => Promise<void>
+  fn?: (tx: Prisma.TransactionClient, wallet: { id: string; balance: number; ownerId: string; ownerType: string }) => Promise<void>,
+  // The ledger records WHY money moved, not just the direction. There is no
+  // generic DEBIT member — writing one made every guarded debit throw. Callers
+  // should pass the real reason; PAYMENT is the common case.
+  transactionType: WalletTransactionType = 'PAYMENT'
 ): Promise<{ walletId: string; balanceBefore: number; balanceAfter: number }> {
   if (amount <= 0) {
     throw new Error('Debit amount must be positive');
@@ -263,7 +267,7 @@ export async function atomicWalletDebit(
     await tx.walletTransaction.create({
       data: {
         walletId,
-        transactionType: 'DEBIT',
+        transactionType,
         amount,
         balanceBefore,
         balanceAfter,
@@ -304,7 +308,9 @@ export async function atomicWalletDebit(
 export async function atomicWalletCredit(
   walletId: string,
   amount: number,
-  description: string
+  description: string,
+  // As above: no generic CREDIT member exists. DEPOSIT is the common case.
+  transactionType: WalletTransactionType = 'DEPOSIT'
 ): Promise<{ walletId: string; balanceBefore: number; balanceAfter: number }> {
   if (amount <= 0) {
     throw new Error('Credit amount must be positive');
@@ -334,7 +340,7 @@ export async function atomicWalletCredit(
     await tx.walletTransaction.create({
       data: {
         walletId,
-        transactionType: 'CREDIT',
+        transactionType,
         amount,
         balanceBefore,
         balanceAfter,

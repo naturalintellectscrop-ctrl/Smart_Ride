@@ -62,7 +62,9 @@ export function maskUserForNonAdmin<T extends { phone?: string | null; email?: s
   isAdmin: boolean
 ): Omit<T, 'phone'> & { phone?: string } {
   if (isAdmin) {
-    return user;
+    // Admins see the record unmasked. T structurally satisfies the return
+    // shape, but TS cannot prove that for an open generic.
+    return user as Omit<T, 'phone'> & { phone?: string };
   }
   
   const { phone, ...rest } = user;
@@ -80,7 +82,7 @@ export function maskRiderForNonAdmin<T extends { phone?: string | null }>(
   isAdmin: boolean
 ): Omit<T, 'phone'> & { phone?: string } {
   if (isAdmin) {
-    return rider;
+    return rider as Omit<T, 'phone'> & { phone?: string };
   }
   
   const { phone, ...rest } = rider;
@@ -98,7 +100,7 @@ export function maskClientForNonAdmin<T extends { phone?: string | null }>(
   isAdmin: boolean
 ): Omit<T, 'phone'> & { phone?: string } {
   if (isAdmin) {
-    return client;
+    return client as Omit<T, 'phone'> & { phone?: string };
   }
   
   const { phone, ...rest } = client;

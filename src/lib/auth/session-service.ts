@@ -100,7 +100,9 @@ export async function createSession(data: CreateSessionData): Promise<SessionRes
     // Get user for access token generation
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, role: true },
+      // generateTokenPair takes Pick<User,'id'|'email'|'role'|'name'>;
+      // `name` was missing from the select.
+      select: { id: true, email: true, role: true, name: true },
     });
 
     if (!user) {
@@ -165,7 +167,7 @@ export async function refreshSession(
     });
 
     // Find matching session by comparing hash
-    let matchedSession = null;
+    let matchedSession: (typeof sessions)[number] | null = null;
     for (const session of sessions) {
       const isValid = await compare(refreshToken, session.refreshTokenHash);
       if (isValid) {

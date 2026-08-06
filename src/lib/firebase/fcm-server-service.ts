@@ -9,7 +9,12 @@
  * 2. JSON string: FIREBASE_SERVICE_ACCOUNT
  */
 
-import * as admin from 'firebase-admin';
+// firebase-admin v14 exposes modular entrypoints. The legacy `admin.apps` /
+// `admin.credential` / `admin.messaging()` namespace was removed, so the
+// previous `import * as admin` usage did not compile and would not have
+// initialised at runtime.
+import { initializeApp, getApps, cert, type App, type ServiceAccount } from 'firebase-admin/app';
+import { getMessaging, type Messaging } from 'firebase-admin/messaging';
 import { notificationLogger } from '@/lib/logging/logger';
 
 // ==========================================
@@ -48,7 +53,7 @@ export interface TopicSubscriptionResult {
 // ==========================================
 
 class FCMServerService {
-  private app: admin.app.App | null = null;
+  private app: App | null = null;
   private initialized = false;
   private initError: string | null = null;
 
@@ -60,8 +65,9 @@ class FCMServerService {
 
     try {
       // Check if firebase-admin is already initialized
-      if (admin.apps.length > 0) {
-        this.app = admin.apps[0];
+      const existing = getApps();
+      if (existing.length > 0) {
+        this.app = existing[0];
         this.initialized = true;
         return;
       }
@@ -77,8 +83,8 @@ class FCMServerService {
         return;
       }
 
-      this.app = admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+      this.app = initializeApp({
+        credential: cert(serviceAccount),
       });
 
       this.initialized = true;
@@ -94,7 +100,7 @@ class FCMServerService {
   /**
    * Get service account credentials from environment variables
    */
-  private getServiceAccount(): admin.ServiceAccount | null {
+  private getServiceAccount(): ServiceAccount | null {
     // Priority 1: Individual env vars
     const projectId = process.env.FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
@@ -113,7 +119,7 @@ class FCMServerService {
     const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
     if (serviceAccountJson) {
       try {
-        const parsed = JSON.parse(serviceAccountJson) as admin.ServiceAccount;
+        const parsed = JSON.parse(serviceAccountJson) as ServiceAccount;
         if (parsed.projectId && parsed.clientEmail && parsed.privateKey) {
           return {
             projectId: parsed.projectId,
@@ -142,12 +148,12 @@ class FCMServerService {
   /**
    * Get the messaging instance
    */
-  private getMessaging(): admin.messaging.Messaging | null {
+  private getMessaging(): Messaging | null {
     if (!this.initialized) {
       this.initialize();
     }
     if (!this.app) return null;
-    return admin.messaging(this.app);
+    return getMessaging(this.app);
   }
 
   /**

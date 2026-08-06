@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 import { User, UserRole } from '@prisma/client';
 
+// Re-exported: lib/db-rls imports UserRole from this module.
+export type { UserRole };
+
 // Get JWT secret - MUST be set in environment for production
 const getJwtSecret = (): string => {
   const secret = process.env.JWT_SECRET;
@@ -15,8 +18,10 @@ const getJwtSecret = (): string => {
   return secret;
 };
 
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
-const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '30d';
+// Typed as jsonwebtoken's StringValue: a plain `string` does not satisfy
+// the SignOptions.expiresIn overload in v9.
+const JWT_EXPIRES_IN = (process.env.JWT_EXPIRES_IN || '7d') as jwt.SignOptions['expiresIn'];
+const JWT_REFRESH_EXPIRES_IN = (process.env.JWT_REFRESH_EXPIRES_IN || '30d') as jwt.SignOptions['expiresIn'];
 
 export interface JWTPayload {
   userId: string;
@@ -158,6 +163,10 @@ export function hasAdminPermission(role: UserRole, permission: string): boolean 
   const permissions: Record<UserRole, string[]> = {
     CLIENT: [],
     RIDER: [],
+    // DRIVER was missing from this Record<UserRole, string[]>, so
+    // permissions['DRIVER'] was undefined. Non-admin roles hold no admin
+    // permissions, which is the correct value — it just had to be present.
+    DRIVER: [],
     MERCHANT: [],
     PHARMACIST: [],
     ADMIN: ['read', 'write', 'delete'],

@@ -214,9 +214,10 @@ export async function createLedgerEntry(input: {
     merchantId: transaction.merchantId || undefined,
     taskId: transaction.taskId || undefined,
     orderId: transaction.orderId || undefined,
-    platformCommission: transaction.platformCommission || undefined,
-    riderEarnings: transaction.riderEarnings || undefined,
-    merchantEarnings: transaction.merchantEarnings || undefined,
+    // Decimal columns — the reported shape is plain numbers.
+    platformCommission: transaction.platformCommission ? toNumber(transaction.platformCommission) : undefined,
+    riderEarnings: transaction.riderEarnings ? toNumber(transaction.riderEarnings) : undefined,
+    merchantEarnings: transaction.merchantEarnings ? toNumber(transaction.merchantEarnings) : undefined,
     status: transaction.status,
     description: transaction.description || undefined,
     metadata: transaction.metadata ? JSON.parse(transaction.metadata) : undefined,
@@ -675,16 +676,14 @@ export async function generateReconciliationReport(
   const discrepancies: DiscrepancyRecord[] = [];
 
   // Check for orphan transactions (no corresponding finance log)
+  // flatMap narrows away null; a .filter() predicate does not, which left
+  // these as Set<string | null>.
   const transactionTaskIds = new Set(
-    transactions
-      .filter((t) => t.taskId)
-      .map((t) => t.taskId)
+    transactions.flatMap((t) => (t.taskId ? [t.taskId] : []))
   );
 
   const financeLogTaskIds = new Set(
-    financeLogs
-      .filter((l) => l.referenceId)
-      .map((l) => l.referenceId)
+    financeLogs.flatMap((l) => (l.referenceId ? [l.referenceId] : []))
   );
 
   for (const taskId of transactionTaskIds) {
