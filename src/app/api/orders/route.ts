@@ -15,6 +15,7 @@ import { z } from 'zod';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { redactPerson } from '@/lib/privacy/public-contact';
 import { resetRLSContext } from '@/lib/auth-utils';
+import { quoteOrder } from '@/lib/api/order-pricing';
 
 /**
  * GET /api/orders
@@ -136,11 +137,15 @@ const createOrderSchema = z.object({
     unitPrice: z.number().min(0),
     specialInstructions: z.string().optional(),
   })),
-  subtotal: z.number().min(0),
-  deliveryFee: z.number().min(0),
+  // Money fields are accepted for backward compatibility with existing
+  // clients but are NOT trusted — the server re-prices the order below via
+  // quoteOrder and writes its own figures. A client cannot set its own
+  // delivery fee or total.
+  subtotal: z.number().min(0).optional(),
+  deliveryFee: z.number().min(0).optional(),
   serviceFee: z.number().min(0).optional(),
   discount: z.number().min(0).optional(),
-  totalAmount: z.number().min(0),
+  totalAmount: z.number().min(0).optional(),
   paymentMethod: z.enum(['CASH', 'MTN_MOMO', 'AIRTEL_MONEY', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD', 'WALLET']),
   deliveryAddress: z.string(),
   deliveryLatitude: z.number().optional(),
@@ -201,6 +206,20 @@ export async function POST(request: NextRequest) {
       return errorResponse('Merchant is not active');
     }
 
+    // Price the order server-side. The request body's subtotal/fees/total are
+    // ignored: this route used to write whatever the client sent, so a
+    // modified client could zero its own delivery fee.
+    const pricing = await quoteOrder({
+      orderType: validatedData.orderType,
+      items: validatedData.items.map((i) => ({ quantity: i.quantity, unitPrice: i.unitPrice })),
+      merchant: { latitude: (merchant as any).latitude, longitude: (merchant as any).longitude },
+      delivery: {
+        latitude: validatedData.deliveryLatitude,
+        longitude: validatedData.deliveryLongitude,
+      },
+      discount: validatedData.discount,
+    });
+
     // Create order + items + task atomically in a transaction
     const result = await db.$transaction(async (tx) => {
       const order = await tx.order.create({
@@ -210,11 +229,11 @@ export async function POST(request: NextRequest) {
           clientId: effectiveClientId,
           merchantId: validatedData.merchantId,
           status: 'ORDER_CREATED',
-          subtotal: validatedData.subtotal,
-          deliveryFee: validatedData.deliveryFee,
-          serviceFee: validatedData.serviceFee || 0,
-          discount: validatedData.discount || 0,
-          totalAmount: validatedData.totalAmount,
+          subtotal: pricing.subtotal,
+          deliveryFee: pricing.deliveryFee,
+          serviceFee: pricing.serviceFee,
+          discount: pricing.discount,
+          totalAmount: pricing.totalAmount,
           paymentMethod: validatedData.paymentMethod,
           paymentStatus: 'PENDING',
           deliveryAddress: validatedData.deliveryAddress,
@@ -260,10 +279,10 @@ export async function POST(request: NextRequest) {
           // Task.baseFare is a required Decimal field (no default). The
           // authoritative fare breakdown lives on the Order; mirror the
           // subtotal here so the Task row satisfies the schema.
-          baseFare: validatedData.subtotal,
-          deliveryFee: validatedData.deliveryFee,
-          serviceFee: validatedData.serviceFee || 0,
-          totalAmount: validatedData.totalAmount,
+          baseFare: pricing.subtotal,
+          deliveryFee: pricing.deliveryFee,
+          serviceFee: pricing.serviceFee,
+          totalAmount: pricing.totalAmount,
           paymentMethod: validatedData.paymentMethod,
           itemDescription: `Order ${order.orderNumber} - ${validatedData.items.length} item(s)`,
         },
