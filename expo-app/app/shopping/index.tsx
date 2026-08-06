@@ -1,8 +1,10 @@
 // ============================================
-// SMART RIDE MOBILE - SHOPPING SCREEN
+// SMART RIDE — SHOP
 // ============================================
-// Stitch Design System — Food/Shop Marketplace layout
-// GlowHeader, Category scroll, Store cards, Deals grid
+// Archetype AR-4 (List + Search).
+//
+//   AppHeader (cart count) → SearchInput → category rail → featured stores →
+//   all stores → EmptyState / ErrorState
 // ============================================
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -25,11 +27,19 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, MOTION, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { useCartStore } from '@/src/store';
-import { GlowHeader, GlassCard, GradientButton, IconInput } from '@/src/components';
+import {
+  AppHeader,
+  Card,
+  CountBadge,
+  EmptyState,
+  GradientButton,
+  SearchInput,
+  SectionHeader,
+} from '@/src/components';
 
 // ============================================
 // TYPES
@@ -49,8 +59,10 @@ interface CategoryItem {
   label: string;
   emoji: string;
   serviceKey: string;
-  customColor: string;
-  apiType: string | undefined;
+  /** Optional override; omit to use the shared service palette. */
+  customColor?: string;
+  /** Required — a category with no merchant type can never return results. */
+  apiType: string;
   icon: keyof typeof Ionicons.glyphMap;
 }
 
@@ -58,23 +70,25 @@ interface CategoryItem {
 // CATEGORIES
 // ============================================
 
+// Every category must map to a real merchant type. 'Fashion' and 'More'
+// previously had `apiType: undefined`, so tapping them filtered to nothing and
+// silently returned an empty list — 'More' had no destination at all and is
+// gone. Colours come from the service palette rather than five loose hexes.
 const CATEGORIES: CategoryItem[] = [
-  { label: 'Groceries', emoji: 'nutrition', serviceKey: 'SHOPPING', customColor: '#005f3a', apiType: 'GROCERY', icon: 'nutrition' },
-  { label: 'Electronics', emoji: 'phone-portrait', serviceKey: 'custom', customColor: '#3B82F6', apiType: 'RETAIL_STORE', icon: 'phone-portrait' },
-  { label: 'Fashion', emoji: 'shirt', serviceKey: 'custom', customColor: '#EC4899', apiType: undefined, icon: 'shirt' },
-  { label: 'Home', emoji: 'home', serviceKey: 'custom', customColor: '#F59E0B', apiType: 'GROCERY', icon: 'home' },
-  { label: 'More', emoji: '⋯', serviceKey: 'custom', customColor: '#4b5264', apiType: undefined, icon: 'ellipsis-horizontal' },
+  { label: 'Groceries', emoji: 'nutrition', serviceKey: 'SHOPPING', apiType: 'GROCERY', icon: 'nutrition' },
+  { label: 'Electronics', emoji: 'phone-portrait', serviceKey: 'custom', apiType: 'RETAIL_STORE', icon: 'phone-portrait' },
+  { label: 'Fashion', emoji: 'shirt', serviceKey: 'custom', apiType: 'RETAIL_STORE', icon: 'shirt' },
+  { label: 'Home', emoji: 'home', serviceKey: 'custom', apiType: 'GROCERY', icon: 'home' },
 ];
 
 // ============================================
 // MAIN COMPONENT
 // ============================================
 
-let COLORS: ThemedColors;
-let styles: any;
-
 export default function ShoppingScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -172,33 +186,29 @@ export default function ShoppingScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Header */}
-      <GlowHeader
+      <AppHeader
         title="Shop"
         subtitle="Groceries & essentials delivered"
-        rightAction={
+        variant="large"
+        rightActions={
           totalCartItems > 0
-            ? {
+            ? [{
                 icon: 'cart-outline' as const,
                 onPress: () => router.push('/orders/cart'),
-                badge: totalCartItems,
-              }
+                label: 'Cart',
+                badge: <CountBadge count={totalCartItems} />,
+              }]
             : undefined
         }
-      >
-        {/* Search bar */}
-        <Animated.View
-          entering={ZoomIn.delay(200).duration(300)}
-          style={styles.searchWrapper}
-        >
-          <IconInput
-            placeholder="Search stores & products..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            icon="search"
-          />
-        </Animated.View>
-      </GlowHeader>
+      />
+
+      <Animated.View entering={ZoomIn.delay(200).duration(MOTION.duration.base)} style={styles.searchWrapper}>
+        <SearchInput
+          placeholder="Search stores & products"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+      </Animated.View>
 
       <ScrollView
         style={styles.scrollView}
@@ -272,12 +282,7 @@ export default function ShoppingScreen() {
         </Animated.View>
 
         {/* Featured Stores — Horizontal Scroll */}
-        <Animated.Text
-          entering={FadeIn.duration(300)}
-          style={styles.sectionTitle}
-        >
-          Featured Stores
-        </Animated.Text>
+        <SectionHeader title="Featured stores" />
 
         <Animated.View
           entering={FadeInUp.duration(400).delay(200)}
@@ -306,23 +311,19 @@ export default function ShoppingScreen() {
                 </Animated.View>
               ))
             ) : (
-              <GlassCard variant="default" style={styles.emptyFeaturedCard}>
-                <Ionicons name="storefront" size={28} color={COLORS.outlineVariant} />
-                <Text style={styles.emptyFeaturedText}>
-                  {searchQuery.trim().length > 0 ? 'No matching stores' : 'No stores yet'}
-                </Text>
-              </GlassCard>
+              <EmptyState
+                icon="storefront-outline"
+                title={searchQuery.trim().length > 0 ? 'No matching stores' : 'No stores yet'}
+                subtitle={searchQuery.trim().length > 0 ? 'Try a different search term.' : undefined}
+              />
             )}
           </ScrollView>
         </Animated.View>
 
-        {/* All Stores List */}
-        <Animated.Text
-          entering={FadeIn.duration(300)}
-          style={styles.sectionTitle}
-        >
-          {CATEGORIES[selectedCategory].label === 'More' ? 'All Stores' : `${CATEGORIES[selectedCategory].label} Stores`}
-        </Animated.Text>
+        {/* The old title branched on a 'More' category that had no merchant
+            type behind it; that category is gone, so the heading is simply the
+            selected one. */}
+        <SectionHeader title={`${CATEGORIES[selectedCategory].label} stores`} />
 
         {filteredMerchants.length > 0 ? (
           filteredMerchants.map((merchant, index) => {
@@ -344,30 +345,13 @@ export default function ShoppingScreen() {
             );
           })
         ) : (
-          <Animated.View
-            entering={FadeIn.duration(400)}
-            style={styles.emptyContainer}
-          >
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="storefront" size={32} color={COLORS.outlineVariant} />
-            </View>
-            <Text style={styles.emptyTitle}>
-              {searchQuery.trim().length > 0
-                ? 'No stores match your search'
-                : 'No stores available yet'}
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              {searchQuery.trim().length > 0
-                ? 'Try a different search term'
-                : 'Check back soon!'}
-            </Text>
-            <GradientButton
-              title="Refresh"
-              onPress={onRefresh}
-              variant="outline"
-              size="sm"
-              fullWidth={false}
-              style={styles.refreshButton}
+          <Animated.View entering={FadeIn.duration(MOTION.duration.slower)} style={styles.stateWrap}>
+            <EmptyState
+              icon="storefront-outline"
+              title={searchQuery.trim().length > 0 ? 'No stores match your search' : 'No stores available yet'}
+              subtitle={searchQuery.trim().length > 0 ? 'Try a different search term.' : 'Check back soon.'}
+              actionLabel={searchQuery.trim().length > 0 ? 'Clear search' : 'Refresh'}
+              onAction={searchQuery.trim().length > 0 ? () => setSearchQuery('') : onRefresh}
             />
           </Animated.View>
         )}
@@ -384,9 +368,12 @@ export default function ShoppingScreen() {
 // ============================================
 
 function StoreCard({ merchant, onPress }: { merchant: Merchant; onPress: () => void }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-      <GlassCard variant="elevated" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.storeCard}>
+      <Card variant="elevated" padding={SPACING.md} radius={RADIUS.xl} style={styles.storeCard}>
         {/* Image area */}
         <View style={styles.storeImageArea}>
           {merchant.image ? (
@@ -399,7 +386,7 @@ function StoreCard({ merchant, onPress }: { merchant: Merchant; onPress: () => v
           {/* Rating badge */}
           {merchant.rating !== undefined && merchant.rating !== null && (
             <View style={styles.ratingBadge}>
-              <Ionicons name="star" size={10} color="#FFFFFF" />
+              <Ionicons name="star" size={10} color={COLORS.onPrimary} />
               <Text style={styles.ratingBadgeText}>{merchant.rating.toFixed(1)}</Text>
             </View>
           )}
@@ -415,7 +402,7 @@ function StoreCard({ merchant, onPress }: { merchant: Merchant; onPress: () => v
             </View>
           )}
         </View>
-      </GlassCard>
+      </Card>
     </TouchableOpacity>
   );
 }
@@ -425,9 +412,12 @@ function StoreCard({ merchant, onPress }: { merchant: Merchant; onPress: () => v
 // ============================================
 
 function MerchantCard({ merchant, onPress }: { merchant: Merchant; onPress: () => void }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-      <GlassCard variant="elevated" style={styles.merchantCard}>
+      <Card variant="elevated" style={styles.merchantCard}>
         <View style={styles.merchantRow}>
           {/* Store icon/image */}
           <View style={styles.merchantImageContainer}>
@@ -447,7 +437,7 @@ function MerchantCard({ merchant, onPress }: { merchant: Merchant; onPress: () =
             <View style={styles.merchantMeta}>
               {merchant.rating !== undefined && merchant.rating !== null && (
                 <View style={styles.ratingContainer}>
-                  <Ionicons name="star" size={13} color="#F59E0B" />
+                  <Ionicons name="star" size={ICON.xs} color={COLORS.warning} />
                   <Text style={styles.ratingText}>{merchant.rating.toFixed(1)}</Text>
                 </View>
               )}
@@ -471,7 +461,7 @@ function MerchantCard({ merchant, onPress }: { merchant: Merchant; onPress: () =
             />
           </View>
         </View>
-      </GlassCard>
+      </Card>
     </TouchableOpacity>
   );
 }
@@ -481,6 +471,10 @@ function MerchantCard({ merchant, onPress }: { merchant: Merchant; onPress: () =
 // ============================================
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  stateWrap: {
+    paddingTop: SPACING.lg,
+    paddingHorizontal: SPACING.md,
+  },
   root: {
     flex: 1,
     backgroundColor: COLORS.surface,
@@ -580,14 +574,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Section title
-  sectionTitle: {
-    ...TYPOGRAPHY.bodyLg,
-    fontWeight: '700',
-    color: COLORS.onSurface,
-    paddingHorizontal: SPACING.containerMargin,
-    marginTop: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
 
   // Featured store cards (horizontal)
   featuredScrollContent: {
@@ -652,17 +638,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     gap: SPACING.xs,
   },
   storeDeliveryText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-  },
-  emptyFeaturedCard: {
-    width: 160,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.xl,
-    gap: SPACING.sm,
-  },
-  emptyFeaturedText: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
   },
@@ -737,33 +712,4 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Empty state
-  emptyContainer: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    paddingHorizontal: SPACING.xl,
-  },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-  },
-  emptyTitle: {
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '500',
-    color: COLORS.outline,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.outlineVariant,
-    marginTop: SPACING.xs,
-    textAlign: 'center',
-  },
-  refreshButton: {
-    marginTop: SPACING.md,
-  },
 });
