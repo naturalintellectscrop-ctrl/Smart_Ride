@@ -15,10 +15,8 @@ import {
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Switch,
   Linking,
   Vibration,
-  Dimensions,
   ActivityIndicator,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
@@ -39,10 +37,17 @@ import Animated, {
   cancelAnimation,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, MOTION, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard, GradientButton } from '@/src/components';
+import {
+  AppHeader,
+  Card,
+  EmptyState,
+  GradientButton,
+  ListRow,
+  Toggle,
+} from '@/src/components';
 import { api } from '@/src/services/api';
 import { useAuthStore } from '@/src/store/authStore';
 import { useLocationStore } from '@/src/store/locationStore';
@@ -94,6 +99,9 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded, disab
   onLongPressEnded: () => void;
   disabled?: boolean;
 }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const scale = useSharedValue(1);
   const glowOpacity = useSharedValue(0.3);
 
@@ -173,7 +181,7 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded, disab
             end={{ x: 1, y: 1 }}
             style={styles.sosButtonGradient}
           >
-            <Ionicons name="alert" size={40} color={'#ffffff'} />
+            <Ionicons name="alert" size={40} color={COLORS.onError} />
             <Text style={styles.sosButtonText}>SOS</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -186,11 +194,10 @@ function PulsingSosButton({ onPress, onLongPressStarted, onLongPressEnded, disab
 // MAIN COMPONENT
 // ============================================
 
-let COLORS: ThemedColors;
-let styles: any;
-
 export default function SosScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
@@ -431,22 +438,12 @@ export default function SosScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + SPACING.md || 56 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header — Stitch: simple with back arrow */}
-        <Animated.View entering={FadeInDown.duration(400).springify()}>
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
-            </TouchableOpacity>
-            <View style={styles.titleContainer}>
-              <Text style={styles.headerTitle}>Emergency SOS</Text>
-              <Text style={styles.headerSubtitle}>Safety & Emergency</Text>
-            </View>
-            <View style={{ width: 44 }} />
-          </View>
+        <Animated.View entering={FadeInDown.duration(MOTION.duration.slower)}>
+          <AppHeader
+            title="Emergency SOS"
+            subtitle="Safety & Emergency"
+            onBack={() => router.back()}
+          />
         </Animated.View>
 
         {/* Main content based on state */}
@@ -484,7 +481,7 @@ export default function SosScreen() {
             </View>
 
             {/* Location Info */}
-            <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.tripCard}>
+            <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.tripCard}>
               <View style={styles.tripHeaderRow}>
                 <View style={styles.locationIconCircle}>
                   <Ionicons name="locate" size={18} color={COLORS.primary} />
@@ -503,10 +500,10 @@ export default function SosScreen() {
                   <Ionicons name="refresh" size={18} color={COLORS.primary} />
                 </TouchableOpacity>
               </View>
-            </GlassCard>
+            </Card>
 
             {/* Trip Details Card (if ride active) */}
-            <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.tripCard}>
+            <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.tripCard}>
               <View style={styles.tripHeaderRow}>
                 <View style={styles.tripIconCircle}>
                   <Ionicons name="car" size={18} color={COLORS.primary} />
@@ -516,10 +513,10 @@ export default function SosScreen() {
                   <Text style={styles.tripSubtitle}>Emergency info will show ride details if a trip is active</Text>
                 </View>
               </View>
-            </GlassCard>
+            </Card>
 
             {/* Info Card */}
-            <GlassCard variant="accent" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.infoCard}>
+            <Card variant="accent" padding={SPACING.md} radius={RADIUS.xl} style={styles.infoCard}>
               <View style={styles.infoRow}>
                 <View style={styles.infoIconCircle}>
                   <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
@@ -532,7 +529,7 @@ export default function SosScreen() {
                   </Text>
                 </View>
               </View>
-            </GlassCard>
+            </Card>
           </Animated.View>
         ) : sosState === 'activated' ? (
           <Animated.View entering={FadeInUp.duration(500).springify()}>
@@ -559,7 +556,7 @@ export default function SosScreen() {
               )}
 
               {/* Location card with REAL GPS data */}
-              <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.locationCard}>
+              <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.locationCard}>
                 <View style={styles.locationRow}>
                   <View style={styles.locationIconContainer}>
                     <Ionicons name="location" size={18} color={COLORS.error} />
@@ -580,10 +577,10 @@ export default function SosScreen() {
                     </View>
                   )}
                 </View>
-              </GlassCard>
+              </Card>
 
               {/* Share Live Location Toggle */}
-              <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.toggleCard}>
+              <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.toggleCard}>
                 <View style={styles.toggleRow}>
                   <View style={styles.toggleIconCircle}>
                     <Ionicons name="locate-outline" size={20} color={COLORS.primary} />
@@ -596,14 +593,13 @@ export default function SosScreen() {
                         : 'Continuously share your GPS position'}
                     </Text>
                   </View>
-                  <Switch
+                  <Toggle
                     value={shareLiveLocation}
                     onValueChange={setShareLiveLocation}
-                    trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.primary }}
-                    thumbColor={shareLiveLocation ? COLORS.surfaceContainerLowest : COLORS.outlineVariant}
+                    accessibilityLabel="Share live location"
                   />
                 </View>
-              </GlassCard>
+              </Card>
 
               {/* Call Emergency Button */}
               <View style={styles.activatedActions}>
@@ -613,7 +609,7 @@ export default function SosScreen() {
                   variant="danger"
                   fullWidth
                   size="lg"
-                  icon={<Ionicons name="call-outline" size={20} color="#FFFFFF" />}
+                  icon={<Ionicons name="call-outline" size={20} color={COLORS.onPrimary} />}
                 />
               </View>
 
@@ -665,14 +661,13 @@ export default function SosScreen() {
               </View>
 
               {contacts.length === 0 && !contactsLoading && (
-                <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl}>
-                  <View style={styles.emptyContactsRow}>
-                    <Ionicons name="people-outline" size={20} color={COLORS.onSurfaceVariant} />
-                    <Text style={styles.emptyContactsText}>
-                      No emergency contacts saved. Add contacts in your profile settings.
-                    </Text>
-                  </View>
-                </GlassCard>
+                <EmptyState
+                  icon="people-outline"
+                  title="No emergency contacts"
+                  subtitle="Add the people we should reach if you trigger SOS."
+                  actionLabel="Add contacts"
+                  onAction={() => router.push('/profile/edit')}
+                />
               )}
 
               {contacts.map((contact, index) => (
@@ -680,38 +675,29 @@ export default function SosScreen() {
                   key={contact.id}
                   entering={FadeInUp.duration(350).delay(500 + index * 60).springify()}
                 >
-                  <GlassCard variant="default" padding={SPACING.md} borderRadius={RADIUS.xl} style={styles.contactCard}>
-                    <View style={styles.contactRow}>
-                      <View style={styles.contactIconCircle}>
-                        <Ionicons
-                          name={getContactIcon(contact.phone)}
-                          size={18}
-                          color={COLORS.error}
-                        />
-                      </View>
-                      <View style={styles.contactContent}>
-                        <View style={styles.contactNameRow}>
-                          <Text style={styles.contactName}>{contact.name}</Text>
-                          {contact.isPrimary && (
+                  <Card variant="raised" padding={SPACING.sm} radius={RADIUS.xl} style={styles.contactCard}>
+                    <ListRow
+                      title={contact.name}
+                      subtitle={`${contact.relationship} • ${contact.phone}`}
+                      icon={getContactIcon(contact.phone)}
+                      iconColor={COLORS.error}
+                      onPress={() => handleCall(contact.phone)}
+                      accessibilityLabel={`Call ${contact.name}`}
+                      trailing={
+                        <View style={styles.contactTrailing}>
+                          {contact.isPrimary ? (
                             <View style={styles.primaryBadge}>
-                              <Ionicons name="star" size={10} color={COLORS.onPrimary} />
+                              <Ionicons name="star" size={ICON.xs} color={COLORS.onPrimary} />
                               <Text style={styles.primaryBadgeText}>Primary</Text>
                             </View>
-                          )}
+                          ) : null}
+                          <View style={styles.contactCallButton}>
+                            <Ionicons name="call" size={ICON.sm} color={COLORS.onPrimary} />
+                          </View>
                         </View>
-                        <Text style={styles.contactRelationship}>
-                          {contact.relationship} • {contact.phone}
-                        </Text>
-                      </View>
-                      <TouchableOpacity
-                        style={styles.contactCallButton}
-                        onPress={() => handleCall(contact.phone)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="call" size={16} color={COLORS.onPrimary} />
-                      </TouchableOpacity>
-                    </View>
-                  </GlassCard>
+                      }
+                    />
+                  </Card>
                 </Animated.View>
               ))}
             </View>
@@ -756,9 +742,13 @@ export default function SosScreen() {
 // STYLES
 // ============================================
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  contactTrailing: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
@@ -771,7 +761,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(186, 26, 26, 0.2)',
+    backgroundColor: `${COLORS.error}33`,
     zIndex: 999,
   },
 
@@ -782,7 +772,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     left: 0,
     right: 0,
     height: 200,
-    backgroundColor: 'rgba(186, 26, 26, 0.04)',
+    backgroundColor: `${COLORS.error}0A`,
     borderBottomLeftRadius: 40,
     borderBottomRightRadius: 40,
   },
@@ -796,35 +786,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Header
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.lg,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.md,
-    ...SHADOWS.card,
-  },
-  titleContainer: {
-    flex: 1,
-  },
-  headerTitle: {
-    ...TYPOGRAPHY.headlineLgMobile,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.xs,
-  },
 
   // SOS Button — Stitch: w-128 h-128 bg-error rounded-full with pulse
   sosSection: {
@@ -843,14 +804,14 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 180,
     height: 180,
     borderRadius: 90,
-    backgroundColor: 'rgba(186, 26, 26, 0.06)',
+    backgroundColor: `${COLORS.error}0F`,
   },
   glowRing2: {
     position: 'absolute',
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: 'rgba(186, 26, 26, 0.1)',
+    backgroundColor: `${COLORS.error}1A`,
   },
   sosButtonTouchable: {
     width: 128,
@@ -1185,32 +1146,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   contactCard: {
     marginBottom: SPACING.sm,
   },
-  contactRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  contactIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.errorContainer,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.md,
-  },
-  contactContent: {
-    flex: 1,
-  },
-  contactNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-  },
-  contactName: {
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '600',
-    color: COLORS.onSurface,
-  },
   primaryBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1226,11 +1161,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.onPrimary,
     letterSpacing: 0.3,
   },
-  contactRelationship: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    marginTop: 2,
-  },
   contactCallButton: {
     width: 40,
     height: 40,
@@ -1241,17 +1171,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Empty contacts
-  emptyContactsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-  },
-  emptyContactsText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    flex: 1,
-    lineHeight: 18,
-  },
 
   // Call Support
   callSupportContainer: {
