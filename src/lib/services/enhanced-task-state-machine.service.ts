@@ -125,7 +125,8 @@ export function isValidTransition(currentStatus: TaskStatus, newStatus: TaskStat
     [TaskStatus.ARRIVED]: [TaskStatus.PICKED_UP, TaskStatus.CANCELLED],
     [TaskStatus.PICKED_UP]: [TaskStatus.IN_PROGRESS, TaskStatus.IN_TRANSIT, TaskStatus.DELIVERED, TaskStatus.CANCELLED],
     [TaskStatus.IN_PROGRESS]: [TaskStatus.COMPLETED, TaskStatus.IN_TRANSIT, TaskStatus.SEARCHING, TaskStatus.PICKED_UP, TaskStatus.CANCELLED],
-    [TaskStatus.IN_TRANSIT]: [TaskStatus.DELIVERED, TaskStatus.CANCELLED],
+    [TaskStatus.IN_TRANSIT]: [TaskStatus.DELIVERING, TaskStatus.DELIVERED, TaskStatus.CANCELLED],
+    [TaskStatus.DELIVERING]: [TaskStatus.DELIVERED, TaskStatus.CANCELLED],
     [TaskStatus.DELIVERED]: [TaskStatus.COMPLETED, TaskStatus.CANCELLED],
     [TaskStatus.COMPLETED]: [TaskStatus.PAID],
     [TaskStatus.PAID]: [TaskStatus.CLOSED],
@@ -332,6 +333,9 @@ const ITEM_DELIVERY_TRANSITIONS: TransitionConfig[] = [
   { from: TaskStatus.ACCEPTED, to: TaskStatus.ARRIVING },
   { from: TaskStatus.ARRIVING, to: TaskStatus.PICKED_UP },
   { from: TaskStatus.PICKED_UP, to: TaskStatus.IN_TRANSIT },
+  { from: TaskStatus.IN_TRANSIT, to: TaskStatus.DELIVERING },
+  { from: TaskStatus.DELIVERING, to: TaskStatus.DELIVERED },
+  // Kept so a client that skips the handover step still completes.
   { from: TaskStatus.IN_TRANSIT, to: TaskStatus.DELIVERED },
   { from: TaskStatus.DELIVERED, to: TaskStatus.COMPLETED },
   { from: TaskStatus.COMPLETED, to: TaskStatus.PAID, requiredFields: ['paymentStatus'] },
@@ -361,6 +365,9 @@ const HEALTH_DELIVERY_TRANSITIONS: TransitionConfig[] = [
   },
   { from: TaskStatus.ASSIGNED, to: TaskStatus.PICKED_UP },
   { from: TaskStatus.PICKED_UP, to: TaskStatus.IN_TRANSIT },
+  { from: TaskStatus.IN_TRANSIT, to: TaskStatus.DELIVERING },
+  { from: TaskStatus.DELIVERING, to: TaskStatus.DELIVERED },
+  // Kept so a client that skips the handover step still completes.
   { from: TaskStatus.IN_TRANSIT, to: TaskStatus.DELIVERED },
   { from: TaskStatus.DELIVERED, to: TaskStatus.COMPLETED },
   { from: TaskStatus.COMPLETED, to: TaskStatus.PAID, requiredFields: ['paymentStatus'] },
@@ -750,6 +757,8 @@ export class EnhancedTaskStateMachine {
       [TaskStatus.PICKED_UP]: 'pickedUpAt',
       [TaskStatus.IN_PROGRESS]: 'inProgressAt',
       [TaskStatus.IN_TRANSIT]: 'inProgressAt',
+      // Task.deliveringAt exists precisely for this state.
+      [TaskStatus.DELIVERING]: 'deliveringAt',
       [TaskStatus.DELIVERED]: 'completedAt',
       [TaskStatus.COMPLETED]: 'completedAt',
       [TaskStatus.PAID]: 'completedAt',

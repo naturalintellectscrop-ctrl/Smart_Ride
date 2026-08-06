@@ -2182,6 +2182,11 @@ enum TaskStatus {
   PICKED_UP
   IN_PROGRESS
   IN_TRANSIT
+  /// Rider is at the drop-off completing the handover. The delivery state
+  /// machine routes IN_TRANSIT -> DELIVERING -> DELIVERED and Task already has
+  /// a `deliveringAt` column, but the enum member was never added — so the
+  /// transition endpoint rejected it and every delivery stuck at IN_TRANSIT.
+  DELIVERING
   DELIVERED
   COMPLETED
   PAID
