@@ -1,9 +1,12 @@
 // ============================================
-// SMART RIDE MOBILE - NOTIFICATIONS CENTER
+// SMART RIDE — NOTIFICATION CENTER
 // ============================================
-// Organized notification center with filter tabs,
-// glassmorphism cards, and pull-to-refresh
-// Connected to real API
+// Golden Screen #37 · Archetype AR-4 (List + filters).
+//
+//   AppHeader → Chip filter rail → NotificationCard rows → EmptyState /
+//   ErrorState, pull-to-refresh, sticky "Mark all as read"
+//
+// Unread vs read is carried by card variant + weight + dot, not colour alone.
 // ============================================
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
@@ -11,29 +14,30 @@ import {
   View,
   Text,
   ScrollView,
-  TouchableOpacity,
   RefreshControl,
   StyleSheet,
   FlatList,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   FadeIn,
   FadeInUp,
-  FadeInDown,
-  SlideInRight,
-  ZoomIn,
-  Layout,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GRADIENTS, NOTIFICATION_TYPES, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { NOTIFICATION_TYPES, TYPOGRAPHY, SPACING, RADIUS, MOTION, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { api } from '@/src/services';
-import { GlassCard, GradientButton, StatusBadge } from '@/src/components';
+import {
+  AppHeader,
+  Card,
+  Chip,
+  EmptyState,
+  ErrorState,
+  GradientButton,
+  StatusBadge,
+} from '@/src/components';
 
 // ============================================
 // TYPES
@@ -56,63 +60,40 @@ interface AppNotification {
 // NOTIFICATION TYPE CONFIG
 // ============================================
 
-const NOTIFICATION_CONFIG: Record<string, {
+/**
+ * Per-type presentation. Derived from theme tokens rather than fixed hex: the
+ * previous table hardcoded a colour per type and then paired it with `colorDim`
+ * / `colorBorder` rgba values taken from a different palette entirely (brand
+ * green #005f3a next to emerald rgba(16,185,129), etc.), so the tint behind an
+ * icon never matched the icon.
+ */
+function notificationConfig(COLORS: ThemedColors): Record<string, {
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
   colorDim: string;
   colorBorder: string;
   label: string;
-}> = {
-  RIDE_UPDATE: {
-    icon: 'car-outline',
-    color: '#005f3a',
-    colorDim: 'rgba(16, 185, 129, 0.1)',
-    colorBorder: 'rgba(16, 185, 129, 0.2)',
-    label: 'Ride',
-  },
-  ORDER_UPDATE: {
-    icon: 'restaurant-outline',
-    color: '#006e2f',
-    colorDim: 'rgba(249, 115, 22, 0.1)',
-    colorBorder: 'rgba(249, 115, 22, 0.2)',
-    label: 'Order',
-  },
-  PAYMENT: {
-    icon: 'card-outline',
-    color: '#0e7a4d',
-    colorDim: 'rgba(59, 130, 246, 0.1)',
-    colorBorder: 'rgba(59, 130, 246, 0.2)',
-    label: 'Payment',
-  },
-  PROMO: {
-    icon: 'pricetag-outline',
-    color: '#4b5264',
-    colorDim: 'rgba(139, 92, 246, 0.1)',
-    colorBorder: 'rgba(139, 92, 246, 0.2)',
-    label: 'Promo',
-  },
-  SOS: {
-    icon: 'alert-circle-outline',
-    color: '#ba1a1a',
-    colorDim: 'rgba(239, 68, 68, 0.1)',
-    colorBorder: 'rgba(239, 68, 68, 0.2)',
-    label: 'Emergency',
-  },
-  CHAT: {
-    icon: 'chatbubble-outline',
-    color: '#006e2f',
-    colorDim: 'rgba(0, 212, 255, 0.1)',
-    colorBorder: 'rgba(0, 212, 255, 0.2)',
-    label: 'Chat',
-  },
-  SYSTEM: {
-    icon: 'settings-outline',
-    color: '#F59E0B',
-    colorDim: 'rgba(245, 158, 11, 0.1)',
-    colorBorder: 'rgba(245, 158, 11, 0.2)',
-    label: 'System',
-  },
-};
+}> {
+  const entry = (icon: keyof typeof Ionicons.glyphMap, color: string, label: string) => ({
+    icon,
+    color,
+    // One tint rule for every type, so dim/border can never drift from colour.
+    colorDim: `${color}1A`,
+    colorBorder: `${color}33`,
+    label,
+  });
+
+  return {
+    RIDE_UPDATE: entry('car-outline', COLORS.primary, 'Ride'),
+    ORDER_UPDATE: entry('restaurant-outline', COLORS.success, 'Order'),
+    PAYMENT: entry('card-outline', COLORS.info, 'Payment'),
+    PROMO: entry('pricetag-outline', COLORS.secondary, 'Promo'),
+    SOS: entry('alert-circle-outline', COLORS.error, 'Emergency'),
+    CHAT: entry('chatbubble-outline', COLORS.tertiary, 'Chat'),
+    SYSTEM: entry('settings-outline', COLORS.warning, 'System'),
+  };
+}
+
 
 // ============================================
 // FILTER TABS
@@ -163,11 +144,10 @@ function mapApiNotification(raw: any): AppNotification {
 // MAIN COMPONENT
 // ============================================
 
-let COLORS: ThemedColors;
-let styles: any;
-
 export default function NotificationsScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -248,115 +228,47 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with Glow Border */}
-      <Animated.View entering={FadeInDown.duration(400).springify()}>
-        <View style={[styles.header, { paddingTop: insets.top + 12 || 56 }]}>
-          {/* Ambient circles */}
-          <View style={styles.ambientCircle1} />
-          <View style={styles.ambientCircle2} />
+      <AppHeader
+        title="Notifications"
+        onBack={() => router.back()}
+        rightActions={unreadCount > 0 ? [] : undefined}
+      />
 
-          {/* Back button + Title */}
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => router.back()}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="arrow-back" size={20} color={COLORS.onSurface} />
-            </TouchableOpacity>
-            <View style={styles.titleContainer}>
-              <Text style={styles.headerTitle}>Notifications</Text>
-              {unreadCount > 0 && (
-                <View style={styles.unreadBadge}>
-                  <Text style={styles.unreadBadgeText}>{unreadCount}</Text>
-                </View>
-              )}
-            </View>
-            <View style={{ width: 40 }} />
-          </View>
-
-          {/* Filter Tabs */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.tabsContainer}
-          >
-            {FILTER_TABS.map((tab) => {
-              const isActive = activeFilter === tab.key;
-              return (
-                <TouchableOpacity
-                  key={tab.key}
-                  onPress={() => setActiveFilter(tab.key)}
-                  activeOpacity={0.7}
-                  style={styles.tabWrapper}
-                >
-                  {isActive ? (
-                    <LinearGradient
-                      colors={GRADIENTS.primary as unknown as [string, string]}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.activeTab}
-                    >
-                      <Ionicons name={tab.icon} size={14} color={COLORS.background} />
-                      <Text style={styles.activeTabText}>{tab.label}</Text>
-                      {tab.key !== 'ALL' && (
-                        <View style={styles.tabCountBadge}>
-                          <Text style={styles.tabCountText}>
-                            {notifications.filter(n => n.type === tab.key).length}
-                          </Text>
-                        </View>
-                      )}
-                    </LinearGradient>
-                  ) : (
-                    <View style={styles.inactiveTab}>
-                      <Ionicons name={tab.icon} size={14} color={COLORS.onSurfaceMuted} />
-                      <Text style={styles.inactiveTabText}>{tab.label}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* Glow border at bottom */}
-          <LinearGradient
-            colors={['#4ae176', '#98f6be', 'transparent']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.headerGlowBorder}
+      {/* Filter rail */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterRail}
+      >
+        {FILTER_TABS.map((tab) => (
+          <Chip
+            key={tab.key}
+            label={
+              tab.key === 'ALL'
+                ? tab.label
+                : `${tab.label} ${notifications.filter((n) => n.type === tab.key).length}`
+            }
+            icon={tab.icon}
+            active={activeFilter === tab.key}
+            onPress={() => setActiveFilter(tab.key)}
           />
-        </View>
-      </Animated.View>
+        ))}
+      </ScrollView>
 
       {/* Notifications List */}
       {error && filteredNotifications.length === 0 ? (
-        <Animated.View
-          entering={ZoomIn.duration(400).delay(200)}
-          style={styles.errorContainer}
-        >
-          <Ionicons name="cloud-offline-outline" size={48} color={COLORS.outline} />
-          <Text style={styles.errorTitle}>Something went wrong</Text>
-          <Text style={styles.errorMessage}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={loadNotifications} activeOpacity={0.7}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
+        <Animated.View entering={FadeIn.duration(MOTION.duration.slower)} style={styles.stateWrap}>
+          <ErrorState title="Something went wrong" subtitle={error} onRetry={loadNotifications} retryLabel="Try Again" />
         </Animated.View>
       ) : filteredNotifications.length === 0 ? (
-        <Animated.View
-          entering={ZoomIn.duration(400).delay(200)}
-          style={styles.emptyContainer}
-        >
-          <GlassCard variant="default" padding={24} borderRadius={50} style={styles.emptyIconCircle}>
-            <Ionicons name="notifications-outline" size={48} color={COLORS.primary} />
-          </GlassCard>
-          <Text style={styles.emptyTitle}>All caught up</Text>
-          <Text style={styles.emptyDescription}>
-            You have no {activeFilter === 'ALL' ? '' : FILTER_TABS.find(t => t.key === activeFilter)?.label.toLowerCase() + ' '}
-            notifications right now.
-          </Text>
-          <Text style={styles.emptySubtext}>
-            We'll let you know when something arrives.
-          </Text>
+        <Animated.View entering={FadeIn.duration(MOTION.duration.slower)} style={styles.stateWrap}>
+          <EmptyState
+            icon="notifications-outline"
+            title="All caught up"
+            subtitle={`You have no ${
+              activeFilter === 'ALL' ? '' : (FILTER_TABS.find((t) => t.key === activeFilter)?.label.toLowerCase() ?? '') + ' '
+            }notifications right now. We'll let you know when something arrives.`}
+          />
         </Animated.View>
       ) : (
         <FlatList
@@ -376,7 +288,9 @@ export default function NotificationsScreen() {
             <NotificationCard
               notification={item}
               onPress={handleNotificationPress}
-              delay={index * 60}
+              delay={Math.min(index * 40, 240)}
+              COLORS={COLORS}
+              styles={styles}
             />
           )}
           ItemSeparatorComponent={() => <View style={styles.cardSeparator} />}
@@ -411,27 +325,28 @@ function NotificationCard({
   notification,
   onPress,
   delay,
+  COLORS,
+  styles,
 }: {
   notification: AppNotification;
   onPress: (n: AppNotification) => void;
   delay: number;
+  COLORS: ThemedColors;
+  styles: any;
 }) {
-  const config = NOTIFICATION_CONFIG[notification.type] || NOTIFICATION_CONFIG.SYSTEM;
+  const configs = notificationConfig(COLORS);
+  const config = configs[notification.type] || configs.SYSTEM;
 
   return (
-    <Animated.View
-      entering={FadeInUp.duration(350).delay(delay).springify()}
-    >
-      <TouchableOpacity
-        activeOpacity={0.7}
+    <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(delay).springify()}>
+      <Card
+        variant={notification.isRead ? 'flat' : 'accent'}
+        padding={SPACING.md}
+        radius={RADIUS.md}
+        style={!notification.isRead ? styles.unreadCard : undefined}
         onPress={() => onPress(notification)}
+        accessibilityLabel={notification.title}
       >
-        <GlassCard
-          variant={notification.isRead ? 'default' : 'accent'}
-          padding={14}
-          borderRadius={14}
-          style={!notification.isRead ? [styles.notificationCard, styles.unreadCard] : styles.notificationCard}
-        >
           <View style={styles.notificationRow}>
             {/* Icon container */}
             <View
@@ -443,7 +358,7 @@ function NotificationCard({
                 },
               ]}
             >
-              <Ionicons name={config.icon} size={20} color={config.color} />
+              <Ionicons name={config.icon} size={ICON.md} color={config.color} />
             </View>
 
             {/* Content */}
@@ -472,13 +387,12 @@ function NotificationCard({
             {/* Chevron */}
             <Ionicons
               name="chevron-forward"
-              size={16}
+              size={ICON.sm}
               color={COLORS.onSurfaceDim}
               style={styles.chevron}
             />
           </View>
-        </GlassCard>
-      </TouchableOpacity>
+      </Card>
     </Animated.View>
   );
 }
@@ -487,138 +401,27 @@ function NotificationCard({
 // STYLES
 // ============================================
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  filterRail: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.gutter,
+  },
+  stateWrap: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.md,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
   },
 
   // ---- Header ----
-  header: {
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: 20,
-    paddingBottom: 12,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  ambientCircle1: {
-    position: 'absolute',
-    top: -20,
-    right: -30,
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: COLORS.surfaceContainer,
-  },
-  ambientCircle2: {
-    position: 'absolute',
-    top: 60,
-    left: -20,
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  titleContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    letterSpacing: -0.5,
-  },
-  unreadBadge: {
-    backgroundColor: COLORS.error,
-    borderRadius: RADIUS.md,
-    minWidth: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  unreadBadgeText: {
-    color: '#FFFFFF',
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    fontWeight: 'bold',
-  },
-  headerGlowBorder: {
-    height: 1,
-    marginTop: SPACING.sm,
-  },
 
   // ---- Tabs ----
-  tabsContainer: {
-    paddingVertical: 4,
-    gap: 8,
-  },
-  tabWrapper: {
-    marginRight: 4,
-  },
-  activeTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    gap: 5,
-  },
-  activeTabText: {
-    color: COLORS.background,
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-  },
-  tabCountBadge: {
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    borderRadius: RADIUS.md,
-    minWidth: 16,
-    height: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 4,
-  },
-  tabCountText: {
-    color: COLORS.background,
-    fontSize: 9,
-    fontWeight: 'bold',
-  },
-  inactiveTab: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    gap: 5,
-  },
-  inactiveTabText: {
-    color: COLORS.onSurfaceMuted,
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    fontWeight: '500',
-  },
 
   // ---- List ----
   listContent: {
@@ -631,9 +434,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // ---- Notification Card ----
-  notificationCard: {
-    // extra styles for card
-  },
   unreadCard: {
     borderLeftWidth: 3,
     borderLeftColor: COLORS.primary,
@@ -693,67 +493,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // ---- Empty State ----
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyIconCircle: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  emptyTitle: {
-    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    marginBottom: SPACING.sm,
-  },
-  emptyDescription: {
-    fontSize: 15,
-    color: COLORS.onSurfaceSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: SPACING.xs,
-  },
-  emptySubtext: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.outline,
-    textAlign: 'center',
-  },
 
   // Error State
-  errorContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-  },
-  errorTitle: {
-    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    marginTop: SPACING.md,
-  },
-  errorMessage: {
-    fontSize: 15,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: SPACING.lg,
-  },
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.md,
-  },
-  retryButtonText: {
-    color: COLORS.onPrimary,
-    fontSize: TYPOGRAPHY.bodyMd.fontSize,
-    fontWeight: '600',
-  },
 
   // ---- Bottom Bar ----
   bottomBar: {
