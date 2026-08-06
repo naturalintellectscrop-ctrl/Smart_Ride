@@ -15,6 +15,8 @@ import { ConnectionMonitoringDashboard } from '@/components/admin/connection-mon
 import { SmartHealthManagement } from '@/components/dashboard/smart-health-management';
 import { SOSMonitoring } from '@/components/dashboard/sos-monitoring';
 import { FraudMonitoring } from '@/components/dashboard/fraud-monitoring';
+import { DriverReputationDashboard } from '@/components/dashboard/driver-reputation';
+import { MarketplaceBalance } from '@/components/dashboard/marketplace-balance';
 import { downloadBlob } from '@/lib/export';
 
 export type ActiveView = 
@@ -30,6 +32,8 @@ export type ActiveView =
   | 'health'
   | 'sos'
   | 'fraud'
+  | 'reputation'
+  | 'marketplace'
   | 'settings';
 
 // Map each tab to its export config
@@ -115,6 +119,10 @@ export function AdminDashboard() {
         return <SOSMonitoring />;
       case 'fraud':
         return <FraudMonitoring />;
+      case 'reputation':
+        return <DriverReputationDashboard />;
+      case 'marketplace':
+        return <MarketplaceBalance />;
       case 'settings':
         return <Settings />;
       default:

@@ -266,3 +266,87 @@ export interface MerchantTransaction {
   status?: string;
   orderId?: string;
 }
+
+// ============================================
+// INTELLIGENT PLATFORM — DRIVER REPUTATION
+// ============================================
+// Mirrors GET /api/rider/reputation. This is the DRIVER-FACING projection:
+// it intentionally has no fraudRiskScore / fraud flag fields, because the
+// detector's internals must not be exposed to the account being scored.
+
+export type TrustTier = 'PLATINUM' | 'GOLD' | 'SILVER' | 'WARNING' | 'SUSPENDED';
+
+export interface ReputationMetrics {
+  averageRating: number;
+  totalRatings: number;
+  /** Percentages, 0-100 */
+  completionRate: number;
+  acceptanceRate: number;
+  cancellationRate: number;
+  onTimeRate: number;
+  safetyScore: number;
+  tripsCompleted: number;
+  tripsCancelled: number;
+  compliments: number;
+  complaints: number;
+}
+
+export interface ReputationAlert {
+  id: string;
+  alertType: string;
+  severity: string;
+  title: string;
+  message: string;
+  suggestedAction?: string | null;
+  createdAt: string;
+}
+
+export interface ReputationHistoryPoint {
+  trustScore: number;
+  scoreChange: number;
+  triggerType: string;
+  reason?: string | null;
+  createdAt: string;
+}
+
+export interface DriverIncentiveProgress {
+  id: string;
+  status: string;
+  name: string;
+  type: string;
+  rewardAmount: number;
+  ridesCompleted: number;
+  ridesRequired?: number | null;
+  earningsAccumulated: number;
+  progressPercent: number;
+  endsAt: string;
+}
+
+export interface RiderReputation {
+  hasReputation: boolean;
+  trustScore: number | null;
+  trustTier: TrustTier | null;
+  previousTrustTier?: TrustTier | null;
+  lastScoreUpdateAt?: string;
+  nextTier?: TrustTier | null;
+  pointsToNextTier?: number | null;
+  /** Present only when hasReputation is false */
+  message?: string;
+  metrics?: ReputationMetrics;
+  streak?: { current: number; longest: number };
+  accountHealth?: {
+    isSuspended: boolean;
+    suspendedAt?: string | null;
+    suspensionEndsAt?: string | null;
+    suspensionReason?: string | null;
+  };
+  privileges: {
+    bonusEligible: boolean;
+    priorityDispatch: boolean;
+    premiumAccess: boolean;
+  };
+  earnings?: { totalBonusEarned: number; lastBonusAt?: string | null };
+  alerts?: ReputationAlert[];
+  history?: ReputationHistoryPoint[];
+  incentives?: DriverIncentiveProgress[];
+}

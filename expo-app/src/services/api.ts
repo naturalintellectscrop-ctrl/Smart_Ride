@@ -4,7 +4,7 @@
 // Complete API service with all endpoints
 // ============================================
 
-import { ApiResponse, Task, Order, Merchant, User, Rider } from '../types';
+import { ApiResponse, Task, Order, Merchant, User, Rider, RiderReputation } from '../types';
 import { API_CONFIG, STORAGE_KEYS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
@@ -528,6 +528,43 @@ class ApiService {
 
   async requestRiderWithdrawal(amount: number, phone: string, provider: string): Promise<ApiResponse<any>> {
     return this.request<any>('/riders/withdraw', 'POST', { amount, phone, provider });
+  }
+
+  // ==========================================
+  // INTELLIGENT PLATFORM — DRIVER
+  // ==========================================
+
+  /**
+   * The driver's own reputation: trust score, tier, the metrics that move it,
+   * account health, tier privileges and live incentive progress.
+   * Deliberately excludes internal fraud signals.
+   */
+  async getMyReputation(): Promise<ApiResponse<RiderReputation>> {
+    return this.request<RiderReputation>('/rider/reputation');
+  }
+
+  /** Driver incentive campaigns currently open to enrol in. */
+  async getAvailableIncentives(): Promise<ApiResponse<any>> {
+    return this.request<any>('/marketplace/incentives?status=ACTIVE');
+  }
+
+  /** Enrol this driver in an incentive campaign. */
+  async joinIncentive(incentiveId: string): Promise<ApiResponse<any>> {
+    return this.request<any>('/marketplace/incentives/participate', 'POST', { incentiveId });
+  }
+
+  // ==========================================
+  // INTELLIGENT PLATFORM — CLIENT
+  // ==========================================
+
+  /** Promotions this client can currently use, with their own usage state. */
+  async getMyPromotions(): Promise<ApiResponse<any>> {
+    return this.request<any>('/marketplace/promotions');
+  }
+
+  /** Validate a promo code against an order amount before checkout. */
+  async validatePromoCode(promoCode: string, orderAmount: number): Promise<ApiResponse<any>> {
+    return this.request<any>('/marketplace/promotions', 'POST', { promoCode, orderAmount });
   }
 
   // ==========================================

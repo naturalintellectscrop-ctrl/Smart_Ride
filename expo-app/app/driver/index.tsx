@@ -606,6 +606,8 @@ export default function DriverHomeScreen() {
               <Shortcut icon="arrow-up-circle-outline" label="Withdraw" onPress={() => router.push('/rider/wallet' as never)} COLORS={COLORS} styles={styles} />
               <Shortcut icon="time-outline" label="History" onPress={() => router.push('/rider/history' as never)} COLORS={COLORS} styles={styles} />
               <Shortcut icon="stats-chart-outline" label="Earnings" onPress={() => router.push('/rider/earnings' as never)} COLORS={COLORS} styles={styles} />
+              {/* Driver Reputation engine — trust score, tier, benefits, bonuses */}
+              <Shortcut icon="ribbon-outline" label="Reputation" onPress={() => router.push('/driver/reputation' as never)} COLORS={COLORS} styles={styles} />
             </View>
           </Card>
 

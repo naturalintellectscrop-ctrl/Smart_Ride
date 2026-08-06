@@ -40,13 +40,20 @@ const DISPATCH_CONFIG = {
   // Time between retry attempts (seconds)
   retryDelay: 5,
   
-  // Scoring weights
+  // Scoring weights. trustScore is the Driver Reputation engine's composite
+  // (rating + completion + acceptance + safety + fraud), so it is weighted
+  // above the raw star rating it already subsumes.
   weights: {
-    distance: 0.4,
-    rating: 0.3,
-    completedTrips: 0.2,
-    responseTime: 0.1,
+    distance: 0.35,
+    trust: 0.30,
+    rating: 0.15,
+    completedTrips: 0.10,
+    responseTime: 0.10,
   },
+
+  // Multiplier applied to a PLATINUM/GOLD driver's final score. Reputation
+  // has to be worth something concrete or the tiers are cosmetic.
+  priorityDispatchBoost: 1.15,
 };
 
 // ============================================
@@ -176,6 +183,18 @@ export class DispatchService {
         request.pickupLongitude
       );
 
+      // scoreRiders drops suspended drivers, so the pool can empty here even
+      // though availableRiders was non-empty above. Without this guard
+      // bestRider is undefined and dispatch throws instead of retrying.
+      if (scoredRiders.length === 0) {
+        await this.handleNoRidersAvailable(request.taskId);
+        return {
+          success: false,
+          noRidersAvailable: true,
+          error: 'No eligible riders available in the area',
+        };
+      }
+
       // Select the best rider
       const bestRider = scoredRiders[0];
 
@@ -225,35 +244,71 @@ export class DispatchService {
     pickupLat: number,
     pickupLng: number
   ): Promise<{ rider: any; score: number; distanceKm: number; estimatedArrival: number }[]> {
-    const scoredRiders = riders.map((rider) => {
-      const distanceKm = this.calculateDistance(
-        pickupLat,
-        pickupLng,
-        rider.currentLatitude || 0,
-        rider.currentLongitude || 0
-      );
-
-      // Calculate individual scores (0-100)
-      const distanceScore = Math.max(0, 100 - distanceKm * 10);
-      const ratingScore = (rider.rating || 5) * 20; // 5.0 rating = 100
-      const tripScore = Math.min(100, (rider.completedTrips || 0) / 100);
-      
-      // Combined weighted score
-      const score =
-        DISPATCH_CONFIG.weights.distance * distanceScore +
-        DISPATCH_CONFIG.weights.rating * ratingScore +
-        DISPATCH_CONFIG.weights.completedTrips * tripScore;
-
-      // Estimate arrival time (assuming 30km/h average speed in city)
-      const estimatedArrival = Math.round((distanceKm / 30) * 3600); // seconds
-
-      return {
-        rider,
-        score,
-        distanceKm,
-        estimatedArrival,
-      };
+    // Pull the Driver Reputation records for this candidate set in one query.
+    // Reputation is what makes dispatch merit-based rather than purely
+    // proximity-based; a driver with no record yet scores neutrally.
+    const reputations = await db.driverReputation.findMany({
+      where: { riderId: { in: riders.map((r) => r.id) } },
+      select: {
+        riderId: true,
+        trustScore: true,
+        priorityDispatch: true,
+        isSuspended: true,
+        suspensionEndsAt: true,
+      },
     });
+    const repByRider = new Map(reputations.map((r) => [r.riderId, r]));
+
+    const now = Date.now();
+    const scoredRiders = riders
+      // Suspended drivers are not dispatchable. A lapsed suspension no longer
+      // excludes them — the ban is time-boxed, not permanent.
+      .filter((rider) => {
+        const rep = repByRider.get(rider.id);
+        if (!rep?.isSuspended) return true;
+        const stillServing =
+          !rep.suspensionEndsAt || rep.suspensionEndsAt.getTime() > now;
+        return !stillServing;
+      })
+      .map((rider) => {
+        const distanceKm = this.calculateDistance(
+          pickupLat,
+          pickupLng,
+          rider.currentLatitude || 0,
+          rider.currentLongitude || 0
+        );
+
+        const rep = repByRider.get(rider.id);
+        // 75 is the engine's own starting trust score, so an unscored driver
+        // is neither rewarded nor punished for having no history.
+        const trustScore = rep?.trustScore ?? 75;
+
+        // Individual scores (0-100)
+        const distanceScore = Math.max(0, 100 - distanceKm * 10);
+        const ratingScore = (rider.rating || 5) * 20; // 5.0 rating = 100
+        const tripScore = Math.min(100, (rider.completedTrips || 0) / 100);
+
+        let score =
+          DISPATCH_CONFIG.weights.distance * distanceScore +
+          DISPATCH_CONFIG.weights.trust * trustScore +
+          DISPATCH_CONFIG.weights.rating * ratingScore +
+          DISPATCH_CONFIG.weights.completedTrips * tripScore;
+
+        // Tier privilege earned through sustained good service.
+        if (rep?.priorityDispatch) {
+          score *= DISPATCH_CONFIG.priorityDispatchBoost;
+        }
+
+        // Estimate arrival time (assuming 30km/h average speed in city)
+        const estimatedArrival = Math.round((distanceKm / 30) * 3600); // seconds
+
+        return {
+          rider,
+          score,
+          distanceKm,
+          estimatedArrival,
+        };
+      });
 
     // Sort by score descending
     return scoredRiders.sort((a, b) => b.score - a.score);

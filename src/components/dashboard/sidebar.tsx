@@ -19,6 +19,8 @@ import {
   Heart,
   Shield,
   ShieldAlert,
+  Award,
+  TrendingUp,
   LogOut
 } from 'lucide-react';
 import { ActiveView } from '@/components/dashboard/admin-dashboard';
@@ -36,6 +38,8 @@ const menuItems = [
   { id: 'monitoring' as ActiveView, label: 'Live Monitoring', icon: Activity },
   { id: 'sos' as ActiveView, label: 'SOS Safety', icon: Shield },
   { id: 'fraud' as ActiveView, label: 'Fraud Detection', icon: ShieldAlert },
+  { id: 'reputation' as ActiveView, label: 'Driver Reputation', icon: Award },
+  { id: 'marketplace' as ActiveView, label: 'Marketplace', icon: TrendingUp },
   { id: 'users' as ActiveView, label: 'User Management', icon: Users },
   { id: 'riders' as ActiveView, label: 'Rider Management', icon: Bike },
   { id: 'merchants' as ActiveView, label: 'Merchants', icon: Store },

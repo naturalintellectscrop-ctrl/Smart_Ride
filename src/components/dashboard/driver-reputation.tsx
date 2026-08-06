@@ -93,6 +93,12 @@ interface DriverReputation {
   currentStreak: number;
   totalTasksCompleted: number;
   totalTasksCancelled: number;
+  // Tier privileges — what a driver's reputation actually buys them.
+  // priorityDispatch is read by the dispatch ranker.
+  bonusEligible: boolean;
+  priorityDispatch: boolean;
+  premiumAccess: boolean;
+  totalBonusEarned: number;
   rider: Rider;
 }
 
