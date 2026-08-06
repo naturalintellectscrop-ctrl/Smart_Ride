@@ -43,6 +43,11 @@ const SUITES: Suite[] = [
     covers: 'event -> engine -> DB -> dispatch -> dashboard -> mobile',
   },
   {
+    name: 'intelligence-automation',
+    file: 'scripts/verify-intelligence-automation.ts',
+    covers: 'scheduled work: zone sampling, auto surge, decay, incentive expiry',
+  },
+  {
     name: 'core-journey',
     file: 'scripts/verify-client-driver-journey.ts',
     covers: 'book -> dispatch -> ride -> pay -> rate -> receipt -> notify',

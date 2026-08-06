@@ -1,0 +1,72 @@
+# ============================================
+# SMART RIDE - External Cron for Intelligence Maintenance
+# ============================================
+# Drives the intelligent platform layer, which is otherwise event-only:
+#
+#   marketplace  samples every zone into a ZoneMetric bucket and starts/ends
+#                surge automatically (previously only an admin POSTing
+#                /api/marketplace/surge ever wrote these rows)
+#   forecast     projects next-bucket demand/supply from real history
+#   reputation   lifts elapsed suspensions, applies score decay, syncs the
+#                tier privileges that dispatch reads
+#   incentives   expires ended campaigns and pays out completed rewards
+#
+# Vercel Hobby only allows once-per-day cron, which is far too coarse for
+# supply/demand sampling — hence GitHub Actions, matching the existing
+# cron-dispatch-timeout workflow.
+#
+# REQUIRED REPOSITORY SECRET:
+#   Name:  CRON_SECRET   (same value as the CRON_SECRET env var in Vercel)
+#   GitHub repo → Settings → Secrets and variables → Actions
+# ============================================
+name: Cron - Intelligence Maintenance
+
+on:
+  schedule:
+    # Every 15 minutes. Frequent enough that surge reacts within a quarter
+    # hour and the metric series is usable for forecasting, without hammering
+    # the pooled database connection.
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'Run a single task (blank = all)'
+        required: false
+        type: choice
+        options: ['', 'marketplace', 'reputation', 'incentives']
+        default: ''
+
+jobs:
+  intelligence-maintenance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run intelligence maintenance
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: https://smartrideug.vercel.app/api/cron/intelligence
+          TASK: ${{ github.event.inputs.task }}
+        run: |
+          URL="$BASE_URL"
+          if [ -n "$TASK" ]; then
+            URL="$BASE_URL?task=$TASK"
+          fi
+          echo "Pinging $URL at $(date -u)"
+
+          HTTP_CODE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
+            --max-time 120 \
+            -H "X-Cron-Secret: $CRON_SECRET" \
+            "$URL")
+
+          echo "HTTP status: $HTTP_CODE"
+          echo "Response body:"
+          cat /tmp/response.json
+          echo ""
+
+          # The endpoint returns 500 when ANY step failed, even if others
+          # succeeded — a partial failure should be visible, not silent.
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Intelligence maintenance completed"
+          else
+            echo "⚠️ Intelligence maintenance reported a failure"
+            exit 1
+          fi

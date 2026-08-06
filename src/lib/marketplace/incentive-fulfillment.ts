@@ -669,7 +669,11 @@ export async function expireEndedIncentives(): Promise<number> {
       },
     },
     data: {
-      status: ParticipationStatus.FAILED,
+      // EXPIRED, not FAILED. A driver whose campaign simply ran out of time
+      // did not fail anything — and the driver app surfaces this status, so
+      // "This campaign ended" versus "You failed" is a real difference to
+      // them. FAILED stays reserved for a driver who was disqualified.
+      status: ParticipationStatus.EXPIRED,
     },
   });
 
