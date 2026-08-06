@@ -2,7 +2,7 @@
 // SMART RIDE MOBILE - CLIENT PRESCRIPTIONS
 // ============================================
 // Allows clients to upload and track their prescriptions.
-// Stitch Design System — Material Design 3 (light theme, primary #005f3a)
+// Design System primitives — Card, SmartBottomSheet, UploadField, StateViews
 // ============================================
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -11,14 +11,11 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
   RefreshControl,
   Modal,
   Image,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
@@ -26,11 +23,21 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, OPACITY } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
-import { pickImage, ImagePickerResult } from '@/src/utils/imagePicker';
+import {
+  Card,
+  EmptyState,
+  ErrorState,
+  IconInput,
+  GradientButton,
+  SmartBottomSheet,
+  StatusBadge,
+  UploadField,
+} from '@/src/components';
+import { statusColor } from '@/src/theme/statusColors';
+import { ImagePickerResult } from '@/src/utils/imagePicker';
 
 // ============================================
 // TYPES
@@ -54,13 +61,9 @@ interface Prescription {
 // CONSTANTS
 // ============================================
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: '#F59E0B',
-  VERIFIED: '#006e2f',
-  REJECTED: '#ba1a1a',
-  EXPIRED: '#6f7a71',
-  UNKNOWN: '#6f7a71',
-};
+// Status colours come from the shared semantic mapping — this file used to
+// hardcode five hexes that neither matched the other screens' copies of the
+// same table nor followed dark mode.
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pending Review',
@@ -73,11 +76,11 @@ const STATUS_LABELS: Record<string, string> = {
 // MAIN COMPONENT
 // ============================================
 
-let COLORS: ThemedColors;
-let styles: any;
 
 export default function PrescriptionsScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -149,12 +152,6 @@ export default function PrescriptionsScreen() {
     setUploadProgress('');
   };
 
-  const handlePickImage = async () => {
-    const image = await pickImage({ allowsEditing: true, aspect: [4, 3], quality: 0.7 });
-    if (image) {
-      setSelectedImage(image);
-    }
-  };
 
   const handleUpload = async () => {
     if (!selectedImage) {
@@ -285,13 +282,7 @@ export default function PrescriptionsScreen() {
           }
         >
           {error ? (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="alert-circle-outline" size={40} color={COLORS.error} />
-              <Text style={styles.emptyTitle}>{error}</Text>
-              <TouchableOpacity onPress={onRefresh} style={styles.retryBtn}>
-                <Text style={styles.retryText}>Tap to retry</Text>
-              </TouchableOpacity>
-            </View>
+            <ErrorState title="Couldn't load prescriptions" subtitle={error} onRetry={onRefresh} />
           ) : prescriptions.length > 0 ? (
             prescriptions.map((prescription) => (
               <PrescriptionCard
@@ -302,140 +293,84 @@ export default function PrescriptionsScreen() {
               />
             ))
           ) : (
-            <View style={styles.emptyContainer}>
-              <GlassCard variant="default" padding={24} borderRadius={50} style={styles.emptyIconCircle}>
-                <Ionicons name="document-text-outline" size={44} color={COLORS.primary} />
-              </GlassCard>
-              <Text style={styles.emptyTitle}>No prescriptions yet</Text>
-              <Text style={styles.emptySubtitle}>
-                Upload your first prescription to have it reviewed by our pharmacists.
-              </Text>
-              <TouchableOpacity
-                style={styles.emptyUploadBtn}
-                onPress={() => setUploadModalVisible(true)}
-                activeOpacity={0.8}
-              >
-                <Ionicons name="cloud-upload-outline" size={18} color={COLORS.onPrimary} />
-                <Text style={styles.emptyUploadText}>Upload Prescription</Text>
-              </TouchableOpacity>
-            </View>
+            <EmptyState
+              icon="document-text-outline"
+              title="No prescriptions yet"
+              subtitle="Upload your first prescription to have it reviewed by our pharmacists."
+              actionLabel="Upload prescription"
+              onAction={() => setUploadModalVisible(true)}
+            />
           )}
         </ScrollView>
       )}
 
       {/* Upload Modal */}
-      <Modal
+      {/* Upload. This was a bespoke <Modal> with its own KeyboardAvoidingView,
+          scrim, header, close button and hand-built image picker — all of which
+          SmartBottomSheet and UploadField now provide. */}
+      <SmartBottomSheet
         visible={uploadModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={handleCloseUploadModal}
+        title="Upload prescription"
+        onDismiss={handleCloseUploadModal}
+        dismissOnBackdrop={!isUploading}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Upload Prescription</Text>
-              <TouchableOpacity
-                onPress={handleCloseUploadModal}
-                style={styles.modalCloseBtn}
-                disabled={isUploading}
-              >
-                <Ionicons name="close" size={22} color={COLORS.onSurface} />
-              </TouchableOpacity>
+        <View>
+          <UploadField
+            label="Prescription image"
+            hint="A clear photo of the whole prescription. JPG or PNG."
+            value={selectedImage?.uri ?? null}
+            onChange={(file) => setSelectedImage(file)}
+            uploading={isUploading}
+          />
+
+          <IconInput
+            label="Doctor name (optional)"
+            placeholder="e.g. Dr. Mukasa"
+            value={doctorName}
+            onChangeText={setDoctorName}
+            icon="person-outline"
+            editable={!isUploading}
+          />
+
+          <IconInput
+            label="Notes (optional)"
+            placeholder="Anything the pharmacist should know"
+            value={notes}
+            onChangeText={setNotes}
+            icon="document-text-outline"
+            multiline
+            editable={!isUploading}
+          />
+
+          {uploadProgress ? (
+            <View style={styles.progressContainer}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+              <Text style={styles.progressText}>{uploadProgress}</Text>
             </View>
+          ) : null}
 
-            <ScrollView style={styles.modalScroll} contentContainerStyle={styles.modalScrollContent}>
-              {/* Image picker */}
-              <Text style={styles.fieldLabel}>Prescription Image *</Text>
-              {selectedImage ? (
-                <View style={styles.imagePreviewContainer}>
-                  <Image source={{ uri: selectedImage.uri }} style={styles.imagePreview} resizeMode="cover" />
-                  <View style={styles.imageActions}>
-                    <TouchableOpacity
-                      style={styles.imageActionBtn}
-                      onPress={handlePickImage}
-                      disabled={isUploading}
-                    >
-                      <Ionicons name="swap-horizontal-outline" size={16} color={COLORS.primary} />
-                      <Text style={styles.imageActionText}>Change</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.imageActionBtn, styles.imageActionDanger]}
-                      onPress={() => setSelectedImage(null)}
-                      disabled={isUploading}
-                    >
-                      <Ionicons name="trash-outline" size={16} color={COLORS.error} />
-                      <Text style={[styles.imageActionText, { color: COLORS.error }]}>Remove</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.imagePicker}
-                  onPress={handlePickImage}
-                  disabled={isUploading}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="cloud-upload-outline" size={36} color={COLORS.outline} />
-                  <Text style={styles.imagePickerTitle}>Tap to upload</Text>
-                  <Text style={styles.imagePickerHint}>JPG, PNG up to 10MB</Text>
-                </TouchableOpacity>
-              )}
-
-              {/* Doctor name */}
-              <Text style={styles.fieldLabel}>Doctor Name (optional)</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="e.g., Dr. Mukasa"
-                placeholderTextColor={COLORS.outline}
-                value={doctorName}
-                onChangeText={setDoctorName}
-                editable={!isUploading}
-              />
-
-              {/* Notes */}
-              <Text style={styles.fieldLabel}>Notes (optional)</Text>
-              <TextInput
-                style={[styles.textInput, styles.textArea]}
-                placeholder="Add any notes for the pharmacist..."
-                placeholderTextColor={COLORS.outline}
-                value={notes}
-                onChangeText={setNotes}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                editable={!isUploading}
-              />
-
-              {uploadProgress ? (
-                <View style={styles.progressContainer}>
-                  <ActivityIndicator size="small" color={COLORS.primary} />
-                  <Text style={styles.progressText}>{uploadProgress}</Text>
-                </View>
-              ) : null}
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <GradientButton
-                title="Cancel"
-                variant="outline"
-                onPress={handleCloseUploadModal}
-                disabled={isUploading}
-                style={styles.modalFooterBtn}
-              />
-              <GradientButton
-                title="Upload"
-                onPress={handleUpload}
-                loading={isUploading}
-                disabled={!selectedImage || isUploading}
-                style={styles.modalFooterBtn}
-              />
-            </View>
+          <View style={styles.modalFooter}>
+            <GradientButton
+              title="Cancel"
+              onPress={handleCloseUploadModal}
+              variant="outline"
+              size="lg"
+              fullWidth={false}
+              disabled={isUploading}
+              style={styles.modalFooterBtn}
+            />
+            <GradientButton
+              title="Upload"
+              onPress={handleUpload}
+              size="lg"
+              fullWidth={false}
+              loading={isUploading}
+              disabled={!selectedImage || isUploading}
+              style={styles.modalFooterBtn}
+            />
           </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        </View>
+      </SmartBottomSheet>
 
       {/* Image Viewer Modal */}
       <Modal visible={imageModalVisible} animationType="fade" transparent onRequestClose={() => setImageModalVisible(false)}>
@@ -470,12 +405,15 @@ interface PrescriptionCardProps {
 }
 
 function PrescriptionCard({ prescription, onImagePress, formatDate }: PrescriptionCardProps) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const statusKey = (prescription.status || 'UNKNOWN').toUpperCase();
-  const statusColor = STATUS_COLORS[statusKey] || COLORS.outline;
+  const statusTint = statusColor(statusKey, COLORS);
   const statusLabel = STATUS_LABELS[statusKey] || prescription.status || 'Unknown';
 
   return (
-    <GlassCard style={styles.prescriptionCard}>
+    <Card style={styles.prescriptionCard}>
       <View style={styles.cardHeader}>
         <View style={styles.cardHeaderLeft}>
           {prescription.imageUrl ? (
@@ -492,7 +430,7 @@ function PrescriptionCard({ prescription, onImagePress, formatDate }: Prescripti
             <Text style={styles.prescriptionDate}>{formatDate(prescription.createdAt)}</Text>
           </View>
         </View>
-        <StatusBadge label={statusLabel} color={statusColor} size="md" />
+        <StatusBadge label={statusLabel} color={statusTint} size="md" />
       </View>
 
       {prescription.doctorName ? (
@@ -538,7 +476,7 @@ function PrescriptionCard({ prescription, onImagePress, formatDate }: Prescripti
           <Text style={styles.viewImageText}>View Image</Text>
         </TouchableOpacity>
       ) : null}
-    </GlassCard>
+    </Card>
   );
 }
 
@@ -728,176 +666,9 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontWeight: '600',
   },
   // Empty state
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-    paddingHorizontal: SPACING.lg,
-  },
-  emptyIconCircle: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.lg,
-  },
-  emptyTitle: {
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    marginBottom: SPACING.xs,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: SPACING.lg,
-  },
-  emptyUploadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.lg,
-    borderRadius: RADIUS.xl,
-    ...SHADOWS.button,
-  },
-  emptyUploadText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onPrimary,
-    fontWeight: '600',
-  },
-  retryBtn: {
-    marginTop: SPACING.sm,
-    padding: SPACING.sm,
-  },
-  retryText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
   // Upload modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    maxHeight: '92%',
-    paddingBottom: SPACING.lg,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  modalTitle: {
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-  },
-  modalCloseBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalScroll: {
-    paddingHorizontal: SPACING.lg,
-  },
-  modalScrollContent: {
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
-  },
-  fieldLabel: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    marginBottom: SPACING.xs,
-    marginTop: SPACING.md,
-  },
-  textInput: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.bodySm,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
-  textArea: {
-    minHeight: 90,
-    textAlignVertical: 'top',
-  },
   // Image picker
-  imagePicker: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: COLORS.outlineVariant,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
-  imagePickerTitle: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurface,
-    fontWeight: '600',
-    marginTop: SPACING.sm,
-  },
-  imagePickerHint: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.outline,
-    marginTop: 2,
-  },
   // Image preview
-  imagePreviewContainer: {
-    borderRadius: RADIUS.lg,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
-  imagePreview: {
-    width: '100%',
-    height: 200,
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
-  imageActions: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.outlineVariant,
-  },
-  imageActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    paddingVertical: SPACING.md,
-  },
-  imageActionDanger: {
-    borderLeftWidth: 1,
-    borderLeftColor: COLORS.outlineVariant,
-  },
-  imageActionText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
   progressContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -927,7 +698,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   // Image viewer modal
   imageModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.92)',
+    backgroundColor: `rgba(0, 0, 0, ${OPACITY.scrimHeavy + 0.32})`,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -939,7 +710,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.18)',
+    backgroundColor: `${COLORS.onPrimary}2E`,
     alignItems: 'center',
     justifyContent: 'center',
   },

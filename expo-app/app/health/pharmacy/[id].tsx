@@ -3,7 +3,7 @@
 // ============================================
 // VERSION: DARK-THEME-002
 // PURPOSE: View pharmacy details and medicine/products
-// DESIGN: Dark theme with StyleSheet, GlassCard, GlowHeader
+// DESIGN: Design System primitives — Card, Chip, EmptyState, StatusBadge
 // ============================================
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -21,7 +21,6 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import Animated, {
   FadeIn,
   FadeInUp,
-  FadeInDown,
   SlideInRight,
   ZoomIn,
 } from 'react-native-reanimated';
@@ -29,11 +28,18 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { GRADIENTS, SPACING, RADIUS } from '@/src/constants';
+import { GRADIENTS, SPACING, RADIUS, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { useCartStore, CartItem } from '@/src/store';
-import { GlassCard, GradientButton, ServiceIcon, StatusBadge } from '@/src/components';
+import {
+  Card,
+  Chip,
+  EmptyState,
+  GradientButton,
+  ServiceIcon,
+  StatusBadge,
+} from '@/src/components';
 
 interface Pharmacy {
   id: string;
@@ -61,11 +67,10 @@ interface Product {
   inStock: boolean;
 }
 
-let COLORS: ThemedColors;
-let styles: any;
-
 export default function PharmacyDetailScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -235,7 +240,7 @@ export default function PharmacyDetailScreen() {
               <View style={styles.metaRow}>
                 {pharmacy.rating !== undefined && pharmacy.rating !== null && (
                   <View style={styles.ratingRow}>
-                    <Ionicons name="star" size={13} color="#F59E0B" />
+                    <Ionicons name="star" size={ICON.xs} color={COLORS.warning} />
                     <Text style={styles.ratingText}>
                       {pharmacy.rating.toFixed(1)}
                     </Text>
@@ -292,27 +297,13 @@ export default function PharmacyDetailScreen() {
           >
             <ScrollView horizontal showsHorizontalScrollIndicator={false}>
               {categories.map((cat) => (
-                <TouchableOpacity
+                <Chip
                   key={cat}
+                  label={cat}
+                  active={selectedCategory === cat}
                   onPress={() => setSelectedCategory(cat)}
-                  activeOpacity={0.7}
-                >
-                  <GlassCard
-                    variant={selectedCategory === cat ? 'accent' : 'default'}
-                    padding={8}
-                    borderRadius={20}
-                    style={styles.categoryPill}
-                  >
-                    <Text
-                      style={[
-                        styles.categoryPillText,
-                        selectedCategory === cat && styles.categoryPillTextActive,
-                      ]}
-                    >
-                      {cat}
-                    </Text>
-                  </GlassCard>
-                </TouchableOpacity>
+                  style={styles.categoryPill}
+                />
               ))}
             </ScrollView>
           </Animated.View>
@@ -334,18 +325,11 @@ export default function PharmacyDetailScreen() {
               </Animated.View>
             ))
           ) : (
-            <Animated.View
-              entering={FadeIn.duration(400)}
-              style={styles.emptyProducts}
-            >
-              <ServiceIcon
-                service="HEALTH"
-                size="lg"
-                customEmoji="medkit-outline"
-                style={styles.emptyIcon}
-              />
-              <Text style={styles.emptyText}>No products available</Text>
-            </Animated.View>
+            <EmptyState
+              icon="medkit-outline"
+              title="No products available"
+              subtitle="This pharmacy hasn't listed anything yet."
+            />
           )}
         </View>
 
@@ -397,8 +381,11 @@ function ProductCard({
   product: Product;
   onAddToCart: () => void;
 }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   return (
-    <GlassCard variant="default" style={styles.productCard}>
+    <Card variant="raised" style={styles.productCard}>
       <View style={styles.productRow}>
         {/* Product Image / Placeholder */}
         <View style={styles.productImageContainer}>
@@ -445,7 +432,7 @@ function ProductCard({
       {!product.inStock && (
         <Text style={styles.outOfStockText}>Out of stock</Text>
       )}
-    </GlassCard>
+    </Card>
   );
 }
 
@@ -518,12 +505,9 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   coverPlaceholder: {
     width: '100%',
     height: 192,
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
+    backgroundColor: `${COLORS.error}1A`,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  coverEmoji: {
-    fontSize: 56,
   },
   backButton: {
     position: 'absolute',
@@ -591,10 +575,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  ratingStar: {
-    fontSize: 13,
-    marginRight: 3,
-  },
   ratingText: {
     fontSize: 14,
     color: COLORS.onSurfaceSecondary,
@@ -644,15 +624,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   categoryPill: {
     marginRight: 8,
-  },
-  categoryPillText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: COLORS.onSurfaceSecondary,
-  },
-  categoryPillTextActive: {
-    color: COLORS.primary,
-    fontWeight: '600',
   },
 
   // Products Section
@@ -723,17 +694,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Empty State
-  emptyProducts: {
-    alignItems: 'center',
-    paddingVertical: 40,
-  },
-  emptyIcon: {
-    marginBottom: 12,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: COLORS.outline,
-  },
 
   // Bottom spacer
   bottomSpacer: {
