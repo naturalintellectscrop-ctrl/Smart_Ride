@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { assessTransactionRisk } from '@/lib/intelligence/platform-events.service';
 import { db, resetRLSContext } from '@/lib/db';
 import { requireAuth, requireOwnershipOrAdmin } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
@@ -157,6 +158,17 @@ export async function POST(request: NextRequest) {
 
     // Users can only top up their own wallet
     const userId = user.userId;
+
+    // Pre-transaction fraud gate. Runs BEFORE any payment is initiated so a
+    // flagged account cannot push money through — previously nothing checked
+    // fraud risk on a money path at all.
+    const gate = await assessTransactionRisk({ userId, context: 'wallet top-up' });
+    if (!gate.allowed) {
+      return NextResponse.json(
+        { success: false, error: gate.reason },
+        { status: 403 }
+      );
+    }
 
     // Get or create wallet (Wallet model uses ownerId/ownerType)
     let wallet = await db.wallet.findFirst({ where: { ownerId: userId, ownerType: 'USER' } });

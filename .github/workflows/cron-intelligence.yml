@@ -9,6 +9,8 @@
 #   forecast     projects next-bucket demand/supply from real history
 #   reputation   lifts elapsed suspensions, applies score decay, syncs the
 #                tier privileges that dispatch reads
+#   fraud        re-scores recently-active riders and clients with the full
+#                comprehensive scorer (too heavy for the per-task hot path)
 #   incentives   expires ended campaigns and pays out completed rewards
 #
 # Vercel Hobby only allows once-per-day cron, which is far too coarse for
@@ -33,7 +35,7 @@ on:
         description: 'Run a single task (blank = all)'
         required: false
         type: choice
-        options: ['', 'marketplace', 'reputation', 'incentives']
+        options: ['', 'marketplace', 'reputation', 'fraud', 'incentives']
         default: ''
 
 jobs:

@@ -11,6 +11,7 @@
 //   marketplace  sample every zone -> ZoneMetric bucket, auto start/end surge
 //   forecast     project next-bucket demand/supply from real history
 //   reputation   lift elapsed suspensions, apply score decay, sync privileges
+//   fraud        re-score active entities with the comprehensive scorer
 //   incentives   expire ended campaigns, pay out completed participations
 //
 // Security: X-Cron-Secret header must match CRON_SECRET (same contract as
@@ -21,6 +22,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { MarketplaceScheduler } from '@/lib/marketplace/marketplace-scheduler.service';
 import { ReputationMaintenance } from '@/lib/reputation/reputation-maintenance.service';
+import { PlatformIntelligence } from '@/lib/intelligence/platform-events.service';
 import {
   expireEndedIncentives,
   processPendingRewards,
@@ -65,7 +67,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Allow running a single task: ?task=marketplace|reputation|incentives
+  // Allow running a single task: ?task=marketplace|reputation|fraud|incentives
   const task = request.nextUrl.searchParams.get('task');
   const runAll = !task;
   const now = new Date();
@@ -83,6 +85,14 @@ export async function GET(request: NextRequest) {
       steps.push(await step('reputation.maintenance', () => ReputationMaintenance.runAll(now)));
     }
 
+    if (runAll || task === 'fraud') {
+      // The comprehensive scorer is too heavy for the hot path, so it runs
+      // here rather than on every task completion.
+      steps.push(
+        await step('fraud.rescoreActive', () => PlatformIntelligence.rescoreActiveEntities())
+      );
+    }
+
     if (runAll || task === 'incentives') {
       steps.push(await step('incentives.expireEnded', () => expireEndedIncentives()));
       steps.push(await step('incentives.payPending', () => processPendingRewards()));
@@ -90,7 +100,7 @@ export async function GET(request: NextRequest) {
 
     if (steps.length === 0) {
       return NextResponse.json(
-        { success: false, error: `Unknown task "${task}". Use marketplace, reputation or incentives.` },
+        { success: false, error: `Unknown task "${task}". Use marketplace, reputation, fraud or incentives.` },
         { status: 400 }
       );
     }

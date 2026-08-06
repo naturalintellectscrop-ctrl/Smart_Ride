@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { assessTransactionRisk } from '@/lib/intelligence/platform-events.service';
 import { db } from '@/lib/db';
 import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { JWTPayload } from '@/lib/auth/jwt';
@@ -33,6 +34,12 @@ export async function POST(request: NextRequest) {
 
     // Use authenticated user as sender
     const senderId = user.userId;
+
+    // Pre-transaction fraud gate, before any balance work.
+    const gate = await assessTransactionRisk({ userId: senderId, context: 'wallet transfer' });
+    if (!gate.allowed) {
+      return NextResponse.json({ success: false, error: gate.reason }, { status: 403 });
+    }
 
     // Calculate transfer fee (1.5%)
     const fee = Math.ceil(amount * 0.015);

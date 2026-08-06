@@ -20,6 +20,8 @@
 
 import { db } from '@/lib/db';
 import { FraudDetectionService } from '@/lib/fraud/fraud-detection.service';
+import { FraudPreventionService } from '@/lib/fraud/fraud-prevention.service';
+import { riskScoringEngine } from '@/lib/fraud/risk-scoring.engine';
 import {
   recordTaskCompletion as reputationRecordCompletion,
   recordTaskCancellation as reputationRecordCancellation,
@@ -410,6 +412,99 @@ export class PlatformIntelligence {
   }
 
   /**
+   * Periodically re-score recently-active riders and clients with the FULL
+   * scoring engine.
+   *
+   * This closes the gap between the two scorers, which are complementary
+   * rather than duplicated:
+   *   FraudDetectionService.analyzeTask       cached, per-task, runs on the
+   *                                           hot path at every completion
+   *   RiskScoringEngine.calculateComprehensive full sub-score breakdown
+   *                                           (collusion / gps / behaviour /
+   *                                           device / pattern) plus rule
+   *                                           matching — too heavy for the hot
+   *                                           path, and previously had NO
+   *                                           trigger at all.
+   *
+   * Called from the intelligence cron. Bounded by `limit` so one pass cannot
+   * run away on a large active set.
+   */
+  static async rescoreActiveEntities(
+    sinceHours = 24,
+    limit = 200
+  ): Promise<{ scored: number; escalated: number }> {
+    const since = new Date(Date.now() - sinceHours * 3_600_000);
+
+    const recent = await db.task.findMany({
+      where: { createdAt: { gte: since } },
+      select: { riderId: true, clientId: true },
+      take: limit * 4,
+    });
+
+    const riders = [...new Set(recent.map(t => t.riderId).filter(Boolean))] as string[];
+    const clients = [...new Set(recent.map(t => t.clientId).filter(Boolean))] as string[];
+
+    const entities: Array<{ type: 'RIDER' | 'CLIENT'; id: string }> = [
+      ...riders.slice(0, limit).map(id => ({ type: 'RIDER' as const, id })),
+      ...clients.slice(0, limit).map(id => ({ type: 'CLIENT' as const, id })),
+    ];
+    if (entities.length === 0) return { scored: 0, escalated: 0 };
+
+    const breakdowns = await riskScoringEngine.batchCalculateScores(entities);
+
+    let escalated = 0;
+    for (const entity of entities) {
+      const breakdown = breakdowns[entity.id];
+      if (!breakdown) continue;
+
+      const before = await db.fraudRiskScore.findUnique({
+        where: {
+          entityType_entityId: {
+            entityType: entity.type as RiskEntityType,
+            entityId: entity.id,
+          },
+        },
+        select: { riskScore: true },
+      });
+
+      // Persist the component breakdown the comprehensive engine produces —
+      // applyRiskScore only carries the headline number.
+      await safely('fraud.rescore', async () => {
+        await PlatformIntelligence.applyRiskScore(
+          entity.type as RiskEntityType,
+          entity.id,
+          breakdown.overallScore,
+          'Periodic comprehensive re-score'
+        );
+        await db.fraudRiskScore.update({
+          where: {
+            entityType_entityId: {
+              entityType: entity.type as RiskEntityType,
+              entityId: entity.id,
+            },
+          },
+          data: {
+            collusionScore: breakdown.collusionScore,
+            gpsAnomalyScore: breakdown.gpsAnomalyScore,
+            behaviorScore: breakdown.behaviorScore,
+            deviceScore: breakdown.deviceScore,
+            patternScore: breakdown.patternScore,
+            matchedRules: breakdown.matchedRules.length
+              ? JSON.stringify(breakdown.matchedRules)
+              : null,
+          },
+        });
+      });
+
+      if ((before?.riskScore ?? 0) < REVIEW_THRESHOLD && breakdown.overallScore >= REVIEW_THRESHOLD) {
+        escalated++;
+      }
+    }
+
+    return { scored: entities.length, escalated };
+  }
+
+  /**
    * Record a device sighting and detect multi-account farming. Returns the
    * number of distinct accounts sharing the device.
    */
@@ -474,6 +569,82 @@ export class PlatformIntelligence {
     }
 
     return accountCount;
+  }
+}
+
+/**
+ * Result of a pre-transaction fraud gate.
+ *
+ * `allowed: false` means the caller MUST NOT proceed with the money movement.
+ */
+export interface TransactionGateResult {
+  allowed: boolean;
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  riskScore: number;
+  /** Safe to show a user — never names the rule that fired. */
+  reason?: string;
+}
+
+/**
+ * Pre-transaction fraud gate.
+ *
+ * FraudPreventionService ran repeated-failed-payment, cancellation-abuse and
+ * dispatch-abuse checks, but nothing called it — so no payment or wallet
+ * action was ever gated on fraud risk. This is the gate.
+ *
+ * Unlike the rest of PlatformIntelligence (which is non-throwing and
+ * fire-and-forget), this is a BLOCKING check whose answer the caller must
+ * respect. It still fails OPEN: if the risk engine itself errors we allow the
+ * transaction rather than take payments offline, and log loudly — a broken
+ * detector must not become an outage.
+ */
+export async function assessTransactionRisk(params: {
+  userId?: string;
+  riderId?: string;
+  /** Used only for the audit trail. */
+  context: string;
+}): Promise<TransactionGateResult> {
+  try {
+    const assessment = await FraudPreventionService.assessRisk(params.userId, params.riderId);
+
+    // SUSPEND and HOLD both stop the money. FLAG is recorded but permitted —
+    // a medium signal should not block a legitimate customer.
+    const blocked =
+      assessment.recommendedAction === 'SUSPEND' || assessment.recommendedAction === 'HOLD';
+
+    if (blocked) {
+      await safely('fraud.gateAlert', async () => {
+        await db.fraudAlert.create({
+          data: {
+            entityType: params.riderId ? RiskEntityType.RIDER : RiskEntityType.CLIENT,
+            entityId: params.riderId ?? params.userId ?? 'unknown',
+            riderId: params.riderId ?? null,
+            userId: params.userId ?? null,
+            alertType: 'SUSPICIOUS_PAYMENT_ATTEMPTS',
+            severity: assessment.overallRiskLevel === 'CRITICAL' ? 'CRITICAL' : 'HIGH',
+            riskScore: Math.round(assessment.overallRiskScore),
+            riskScoreAtDetection: assessment.overallRiskScore,
+            detectionMethod: 'RULE_BASED',
+            description: `Transaction blocked by pre-transaction risk gate (${params.context})`,
+            evidence: JSON.stringify(assessment.checks),
+          },
+        });
+      });
+    }
+
+    return {
+      allowed: !blocked,
+      riskLevel: assessment.overallRiskLevel,
+      riskScore: assessment.overallRiskScore,
+      // Deliberately generic: telling someone WHICH rule fired tells them
+      // exactly what to change to get around it.
+      reason: blocked
+        ? 'This transaction could not be completed. Please contact support.'
+        : undefined,
+    };
+  } catch (err) {
+    console.error('[Intelligence] transaction risk gate failed open:', err);
+    return { allowed: true, riskLevel: 'LOW', riskScore: 0 };
   }
 }
 

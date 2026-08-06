@@ -73,6 +73,7 @@ async function main() {
   let zoneId = '';
   const taskIds: string[] = [];
   let incentiveId = '';
+  let cleanUserId = '';
 
   try {
     // ── 1. Zone sampling ─────────────────────────────────────────────
@@ -315,6 +316,60 @@ async function main() {
       expired >= 1 && part?.status === 'EXPIRED',
       `expired=${expired} participationStatus=${part?.status}`
     );
+    // ── 8. Fraud gate and comprehensive re-scoring ───────────────────
+    stage('STAGE 8  fraud gate and comprehensive re-scoring');
+    const { assessTransactionRisk } = await import(
+      '../src/lib/intelligence/platform-events.service'
+    );
+    // A fresh account with no history must pass.
+    const cleanUser = await mkUser('CLIENT', 'clean');
+    cleanUserId = cleanUser.id;
+    const cleanGate = await assessTransactionRisk({
+      userId: cleanUser.id,
+      context: 'automation test',
+    });
+    check(
+      'clean account passes the pre-transaction gate',
+      cleanGate.allowed === true,
+      `allowed=${cleanGate.allowed} level=${cleanGate.riskLevel} score=${cleanGate.riskScore}`
+    );
+
+    // The fixture client above had 12 rides cancelled on it, which IS the
+    // cancellation-abuse pattern the gate exists to catch. Asserting it is
+    // BLOCKED is the check that proves the gate does something.
+    const abusiveGate = await assessTransactionRisk({
+      userId: client.id,
+      context: 'automation test',
+    });
+    check(
+      'cancellation-abuse pattern is blocked by the gate',
+      abusiveGate.allowed === false && abusiveGate.riskLevel !== 'LOW',
+      `allowed=${abusiveGate.allowed} level=${abusiveGate.riskLevel} score=${abusiveGate.riskScore}`
+    );
+    check(
+      'block reason does not leak which rule fired',
+      !!abusiveGate.reason && !/cancel|payment|dispatch|rule/i.test(abusiveGate.reason),
+      `reason="${abusiveGate.reason}"`
+    );
+
+    const gateAlert = await db.fraudAlert.findFirst({
+      where: { entityId: client.id, alertType: 'SUSPICIOUS_PAYMENT_ATTEMPTS' },
+    });
+    check(
+      'blocked transaction raises a reviewable alert',
+      !!gateAlert,
+      gateAlert ? `severity=${gateAlert.severity} score=${gateAlert.riskScore}` : 'no alert raised'
+    );
+
+    const { PlatformIntelligence } = await import(
+      '../src/lib/intelligence/platform-events.service'
+    );
+    const rescored = await PlatformIntelligence.rescoreActiveEntities(24, 25);
+    check(
+      'comprehensive scorer runs over active entities',
+      rescored.scored >= 0,
+      `scored=${rescored.scored} newly escalated=${rescored.escalated}`
+    );
   } finally {
     stage('cleanup');
     if (incentiveId) {
@@ -339,8 +394,13 @@ async function main() {
     await db.rider.deleteMany({
       where: { id: { in: [activeRider.id, staleRider.id, suspendedRider.id] } },
     });
+    await db.fraudAlert.deleteMany({ where: { entityId: client.id } });
+    await db.fraudScoreHistoryRecord.deleteMany({ where: { entityId: client.id } });
+    await db.fraudRiskScore.deleteMany({ where: { entityId: client.id } });
     await db.user.deleteMany({
-      where: { id: { in: [client.id, activeUser.id, staleUser.id, suspendedUser.id] } },
+      where: {
+        id: { in: [client.id, activeUser.id, staleUser.id, suspendedUser.id, cleanUserId].filter(Boolean) },
+      },
     });
     console.log('  removed all fixtures');
   }
