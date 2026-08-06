@@ -7,7 +7,7 @@
 // when Agora native SDK is unavailable.
 // ============================================
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -33,19 +33,12 @@ import Animated, {
   FadeIn,
 } from 'react-native-reanimated';
 import { api } from '@/src/services/api';
-import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, MOTION } from '@/src/constants';
+import { GRADIENTS, SPACING, RADIUS, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { isAgoraConfigured, AGORA_CONFIG } from '@/src/config/agora';
+import { AGORA_CONFIG } from '@/src/config/agora';
 import { useAgoraCall } from '@/src/hooks/useAgoraCall';
 
-// Module-scoped themed styles, (re)assigned from the component on each theme
-// change. Declared here so the sub-components and stylesheet factories below
-// can reference them (mirrors the pattern used on the other screens).
-let COLORS: ThemedColors;
-let styles: any;
-let pulseStyles: any;
-let avatarStyles: any;
 
 // ============================================
 // CALL STATE TYPES
@@ -69,6 +62,9 @@ interface CallInfo {
 // ============================================
 
 function PulseRing({ delay: delayMs }: { delay: number }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const pulseStyles = useMemo(() => create_pulseStyles(COLORS), [COLORS]);
   const scale = useSharedValue(1);
   const opacity = useSharedValue(0.6);
 
@@ -121,6 +117,9 @@ const create_pulseStyles = (COLORS: ThemedColors) => StyleSheet.create({
 // ============================================
 
 function CallAvatar({ isRinging, isConnected }: { isRinging: boolean; isConnected: boolean }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const avatarStyles = useMemo(() => create_avatarStyles(COLORS), [COLORS]);
   return (
     <View style={avatarStyles.container}>
       {isRinging && (
@@ -147,7 +146,7 @@ const create_avatarStyles = (COLORS: ThemedColors) => StyleSheet.create({
     height: 120,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: SPACING.lg,
   },
   circle: {
     width: 80,
@@ -172,6 +171,9 @@ const create_avatarStyles = (COLORS: ThemedColors) => StyleSheet.create({
 // ============================================
 
 function CallTimer({ startTime }: { startTime: number }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => create_styles(COLORS), [COLORS]);
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
@@ -196,7 +198,9 @@ function CallTimer({ startTime }: { startTime: number }) {
 // ============================================
 
 export default function CallScreen() {
-  { const __t = useTheme(); COLORS = makeThemedColors(__t.isDark); pulseStyles = create_pulseStyles(COLORS); avatarStyles = create_avatarStyles(COLORS); styles = create_styles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => create_styles(COLORS), [COLORS]);
   const router = useRouter();
   const params = useLocalSearchParams<{
     id: string;
@@ -599,7 +603,7 @@ export default function CallScreen() {
 
   const renderIncomingState = () => (
     <Animated.View entering={FadeIn.duration(300)} style={styles.stateContainer}>
-      <CallAvatar isRinging={true} isConnected={false} />
+      <CallAvatar isRinging={isRinging} isConnected={isConnected} />
       <Text style={styles.nameText}>{recipientName}</Text>
       <Text style={styles.stateLabel}>{getCallStateLabel()}</Text>
 
@@ -623,7 +627,7 @@ export default function CallScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.declineGradient}
           >
-            <Ionicons name="close" size={28} color="#FFFFFF" />
+            <Ionicons name="close" size={ICON.xl} color={COLORS.onPrimary} />
           </LinearGradient>
         </TouchableOpacity>
 
@@ -638,7 +642,7 @@ export default function CallScreen() {
             end={{ x: 1, y: 1 }}
             style={styles.answerGradient}
           >
-            <Ionicons name="call" size={28} color={COLORS.surface} />
+            <Ionicons name="call" size={ICON.xl} color={COLORS.surface} />
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -685,7 +689,7 @@ export default function CallScreen() {
         <View style={styles.callModeIndicator}>
           <Ionicons
             name={agoraCall.isSdkAvailable ? 'wifi' : 'phone-portrait-outline'}
-            size={14}
+            size={ICON.xs}
             color={agoraCall.isSdkAvailable ? COLORS.primary : COLORS.outline}
           />
           <Text style={styles.callModeText}>
@@ -705,7 +709,7 @@ export default function CallScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.cancelGradient}
         >
-          <Ionicons name="close" size={24} color="#FFFFFF" />
+          <Ionicons name="close" size={ICON.lg} color={COLORS.onPrimary} />
           <Text style={styles.cancelText}>Cancel</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -779,7 +783,7 @@ export default function CallScreen() {
         >
           <Ionicons
             name={isMuted ? 'mic-off-outline' : 'mic-outline'}
-            size={24}
+            size={ICON.lg}
             color={isMuted ? COLORS.error : COLORS.onSurface}
           />
           <Text style={[styles.actionLabel, isMuted && styles.actionLabelActive]}>
@@ -794,7 +798,7 @@ export default function CallScreen() {
         >
           <Ionicons
             name={isSpeaker ? 'volume-high-outline' : 'volume-mute-outline'}
-            size={24}
+            size={ICON.lg}
             color={isSpeaker ? COLORS.secondary : COLORS.onSurface}
           />
           <Text style={[styles.actionLabel, isSpeaker && styles.actionLabelSpeaker]}>
@@ -808,7 +812,7 @@ export default function CallScreen() {
             onPress={handleChat}
             activeOpacity={0.7}
           >
-            <Ionicons name="chatbubble-outline" size={24} color={COLORS.onSurface} />
+            <Ionicons name="chatbubble-outline" size={ICON.lg} color={COLORS.onSurface} />
             <Text style={styles.actionLabel}>Chat</Text>
           </TouchableOpacity>
         )}
@@ -826,7 +830,7 @@ export default function CallScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.endCallGradient}
         >
-          <Ionicons name="call" size={24} color="#FFFFFF" style={styles.endCallIcon} />
+          <Ionicons name="call" size={ICON.lg} color={COLORS.onPrimary} style={styles.endCallIcon} />
           <Text style={styles.endCallText}>End Call</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -861,7 +865,7 @@ export default function CallScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.backGradient}
         >
-          <Ionicons name="arrow-back" size={20} color={COLORS.surface} />
+          <Ionicons name="arrow-back" size={ICON.md} color={COLORS.surface} />
           <Text style={styles.backText}>Back</Text>
         </LinearGradient>
       </TouchableOpacity>
@@ -905,7 +909,7 @@ export default function CallScreen() {
       {/* Ambient gradient effects */}
       <View style={styles.ambientTop}>
         <LinearGradient
-          colors={['rgba(0, 95, 58, 0.08)', 'transparent']}
+          colors={[`${COLORS.primary}14`, 'transparent']}
           style={styles.ambientGradient}
         />
       </View>
@@ -959,7 +963,7 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   stateContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
+    paddingHorizontal: SPACING.xl,
     width: '100%',
   },
 
@@ -974,12 +978,12 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   stateLabel: {
     fontSize: 16,
     color: COLORS.outline,
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   stateLabelConnected: {
     fontSize: 16,
     color: COLORS.primary,
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   stateLabelReconnecting: {
     color: COLORS.error,
@@ -999,8 +1003,8 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   connectingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
+    gap: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
   connectingSpinner: {
     marginRight: 0,
@@ -1010,7 +1014,7 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   errorText: {
     fontSize: 13,
     color: COLORS.error,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
     textAlign: 'center',
   },
 
@@ -1018,12 +1022,12 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   voipAvailableBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: SPACING.xs,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    backgroundColor: 'rgba(0, 95, 58, 0.08)',
-    marginBottom: 16,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.md,
+    backgroundColor: `${COLORS.primary}14`,
+    marginBottom: SPACING.md,
   },
   voipAvailableText: {
     fontSize: 11,
@@ -1036,11 +1040,11 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: SPACING.gutter,
     paddingVertical: 6,
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     backgroundColor: COLORS.surfaceContainerLow,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   callModeText: {
     fontSize: 12,
@@ -1092,7 +1096,7 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 60,
-    marginTop: 8,
+    marginTop: SPACING.sm,
     width: '100%',
   },
   buttonLabelDecline: {
@@ -1108,7 +1112,7 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
 
   // Cancel Button (outgoing)
   cancelButton: {
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
     marginTop: 60,
     width: '80%',
@@ -1118,12 +1122,12 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 16,
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.lg,
   },
   cancelText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1133,11 +1137,11 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 16,
+    marginTop: SPACING.md,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.md,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 95, 58, 0.08)',
+    backgroundColor: `${COLORS.primary}14`,
   },
   phoneFallbackText: {
     fontSize: 14,
@@ -1149,12 +1153,12 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   voipStatusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: SPACING.xs,
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingVertical: SPACING.xs,
+    borderRadius: RADIUS.md,
     backgroundColor: COLORS.surfaceContainerLow,
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
   voipStatusText: {
     fontSize: 11,
@@ -1170,14 +1174,14 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     fontSize: 12,
     color: COLORS.outline,
     fontStyle: 'italic',
-    marginBottom: 16,
+    marginBottom: SPACING.md,
   },
 
   // Active Call Action Row
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 24,
+    gap: SPACING.lg,
     marginBottom: 40,
   },
   actionCircle: {
@@ -1191,14 +1195,14 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     justifyContent: 'center',
   },
   actionCircleActive: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: `${COLORS.error}26`,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: `${COLORS.error}4D`,
   },
   actionLabel: {
     fontSize: 10,
     color: COLORS.outline,
-    marginTop: 4,
+    marginTop: SPACING.xs,
     fontWeight: '500',
   },
   actionLabelActive: {
@@ -1210,7 +1214,7 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
 
   // End Call Button
   endCallButton: {
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
     width: '80%',
     maxWidth: 300,
@@ -1224,15 +1228,15 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 16,
+    gap: SPACING.sm,
+    paddingVertical: SPACING.md,
+    borderRadius: RADIUS.lg,
   },
   endCallIcon: {
     transform: [{ rotate: '135deg' }],
   },
   endCallText: {
-    color: '#FFFFFF',
+    color: COLORS.onPrimary,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -1247,13 +1251,13 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     borderColor: COLORS.outlineVariant,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: SPACING.lg,
   },
   endedLabel: {
     fontSize: 18,
     color: COLORS.outline,
     fontWeight: '600',
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   durationSummary: {
     fontSize: 15,
@@ -1273,7 +1277,7 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: SPACING.sm,
     paddingVertical: 14,
     borderRadius: 14,
   },
@@ -1286,17 +1290,17 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   // Call Again Options
   callAgainOptions: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
+    gap: SPACING.gutter,
+    marginTop: SPACING.md,
   },
   callAgainButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: SPACING.md,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 95, 58, 0.08)',
+    backgroundColor: `${COLORS.primary}14`,
   },
   callAgainText: {
     fontSize: 14,
