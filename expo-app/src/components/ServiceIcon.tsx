@@ -6,7 +6,7 @@
 // ============================================
 
 import React, { useMemo } from 'react';
-import { View, Text, StyleSheet, ViewStyle } from 'react-native';
+import { View, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SERVICES } from '../constants';
 import { useTheme } from '../context/theme-context';

@@ -6,7 +6,7 @@
 // ============================================
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, Animated } from 'react-native';
+import { Text, StyleSheet, Animated } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { Ionicons } from '@expo/vector-icons';
 import { TYPOGRAPHY, SPACING } from '@/src/constants';

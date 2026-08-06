@@ -16,7 +16,7 @@
 // =============================================================
 
 import React, { useRef, useCallback, useMemo } from 'react';
-import { View, Text, TextInput, StyleSheet, ViewStyle, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, TextInput, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { TYPOGRAPHY, SPACING, RADIUS } from '../constants';
 import { useTheme } from '../context/theme-context';

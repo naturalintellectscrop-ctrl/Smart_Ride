@@ -7,10 +7,9 @@
 // ============================================
 
 import React, { useMemo } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, ViewStyle, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Modal, ViewStyle, Pressable, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, { FadeIn, FadeOut, SlideInUp } from 'react-native-reanimated';
-import { Ionicons } from '@expo/vector-icons';
 import { SPACING, RADIUS, MOTION } from '../constants';
 import { useTheme } from '../context/theme-context';
 import { makeThemedColors, ThemedColors } from '../theme/themedColors';
@@ -58,7 +57,12 @@ export function SmartBottomSheet({
           undefined, so these animations had no duration. */}
       <Animated.View entering={FadeIn.duration(MOTION.duration.base)} exiting={FadeOut.duration(MOTION.duration.fast)} style={styles.backdrop}>
         {dismissOnBackdrop ? <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss} /> : null}
-        
+
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.keyboardWrap}
+          pointerEvents="box-none"
+        >
         <Animated.View
           entering={SlideInUp.damping(20).mass(0.9).springify()}
           exiting={FadeOut.duration(MOTION.duration.fast)}
@@ -80,11 +84,23 @@ export function SmartBottomSheet({
             </View>
           )}
 
-          {/* Content */}
-          <View style={[styles.content, contentStyle]}>
+          {/* Content.
+              Scrollable and keyboard-aware because sheets carry forms (top-up,
+              withdraw, pickers). Without this a focused field sits behind the
+              keyboard on both platforms — the bespoke modals these replaced
+              each had their own KeyboardAvoidingView, so the behaviour belongs
+              here rather than in every caller. */}
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={[styles.content, contentStyle]}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+          >
             {children}
-          </View>
+          </ScrollView>
         </Animated.View>
+        </KeyboardAvoidingView>
       </Animated.View>
     </Modal>
   );
@@ -96,11 +112,17 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.45)',
     justifyContent: 'flex-end',
   },
+  keyboardWrap: {
+    justifyContent: 'flex-end',
+  },
   sheet: {
     backgroundColor: COLORS.surface,
     borderTopLeftRadius: RADIUS.xl + 2,
     borderTopRightRadius: RADIUS.xl + 2,
     maxHeight: '80%',
+  },
+  scroll: {
+    flexGrow: 0,
   },
   grabberWrap: {
     alignItems: 'center',

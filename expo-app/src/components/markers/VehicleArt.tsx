@@ -12,7 +12,7 @@
 // ============================================
 
 import React from 'react';
-import Svg, { Path, Rect, Circle, Ellipse, G, Defs, LinearGradient, Stop } from 'react-native-svg';
+import Svg, { Path, Rect, Circle, Ellipse, Defs, LinearGradient, Stop } from 'react-native-svg';
 
 export interface VehiclePalette {
   body: string;

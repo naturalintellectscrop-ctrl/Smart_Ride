@@ -253,6 +253,14 @@ export const MOTION = {
   },
   // Press-feedback scale for tappable surfaces (buttons, cards, tiles).
   pressScale: 0.97,
+  // Success confirmation (DS gap #10). One choreography for every "it worked"
+  // moment — top-up, withdrawal, payment, trip complete — so success always
+  // reads the same: the ring scales in, then the check draws inside it.
+  success: {
+    ringIn: 260,    // container scales up from 0.6
+    checkDraw: 220, // tick strokes in after the ring has landed
+    hold: 900,      // how long the mark rests before a caller auto-dismisses
+  },
 } as const;
 
 // ============================================
@@ -454,6 +462,25 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   FAILED: 'Failed, Try Again',
   NEW: 'New order',
 };
+
+// ============================================
+// WALLET — shared money rules
+// ============================================
+// These were copy-pasted across TopUpModal, WithdrawModal, rider/wallet and
+// rider/earnings, which is how top-up came to enforce a UGX 1,000 floor while
+// withdrawal enforced none. One definition, so the rules cannot diverge again.
+
+/** Shortcut amounts offered on top-up and withdrawal. */
+export const WALLET_QUICK_AMOUNTS = [5000, 10000, 20000, 50000] as const;
+
+/** Smallest transferable amount, in UGX. Applies to both directions. */
+export const WALLET_MIN_AMOUNT = 1000;
+
+/** Mobile-money providers that can fund or receive a wallet transfer. */
+export const WALLET_PROVIDERS = [
+  { id: 'MTN_MOMO', name: 'MTN MoMo', color: '#FFCC00', icon: 'phone-portrait-outline' },
+  { id: 'AIRTEL_MONEY', name: 'Airtel Money', color: '#FF0000', icon: 'phone-portrait-outline' },
+] as const;
 
 // Payment Methods
 export const PAYMENT_METHODS = [
