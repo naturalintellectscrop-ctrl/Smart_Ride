@@ -630,6 +630,29 @@ class ApiService {
     return this.request<Order>('/orders', 'POST', data);
   }
 
+  /**
+   * Server-authoritative price for a cart, before it is placed. The same
+   * function prices the order on creation, so this is what will be charged —
+   * the client no longer decides its own delivery or service fee.
+   */
+  async quoteOrder(data: {
+    merchantId: string;
+    orderType: 'FOOD_DELIVERY' | 'SHOPPING';
+    items: Array<{ quantity: number; unitPrice: number }>;
+    deliveryLatitude?: number | null;
+    deliveryLongitude?: number | null;
+  }): Promise<ApiResponse<{
+    subtotal: number;
+    deliveryFee: number;
+    serviceFee: number;
+    discount: number;
+    totalAmount: number;
+    distanceKm: number;
+    currency: string;
+  }>> {
+    return this.request('/orders/quote', 'POST', data);
+  }
+
   async confirmOrderPayment(orderId: string, paymentReference?: string): Promise<ApiResponse<any>> {
     return this.request<any>(`/orders/${orderId}?action=confirm-payment`, 'PATCH', {
       paymentReference: paymentReference || `PAY-${Date.now()}`,

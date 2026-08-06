@@ -4,21 +4,28 @@
 // FIXED: Connected to cartStore instead of mock data
 // ============================================
 
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
   ScrollView, 
   TouchableOpacity, 
   TextInput,
-  ActivityIndicator,
   StyleSheet
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { useLocationStore, useCartStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
+import {
+  AppHeader,
+  Card,
+  EmptyState,
+  GradientButton,
+  SectionHeader,
+  Skeleton,
+} from '@/src/components';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { PaymentMethod } from '@/src/types';
@@ -40,9 +47,39 @@ export default function CartScreen() {
   const [isEditingAddress, setIsEditingAddress] = useState(false);
   const [tempAddress, setTempAddress] = useState(address || '');
 
-  const deliveryFee = 3000;
-  const serviceFee = 500;
-  const total = totalPrice + deliveryFee + serviceFee;
+  // Fees come from the server. They used to be two literals declared here and
+  // posted to the order API, which stored them verbatim — so the client was
+  // setting its own prices. POST /api/orders/quote returns the same figures
+  // the create route will charge.
+  const [quote, setQuote] = useState<{ deliveryFee: number; serviceFee: number; totalAmount: number } | null>(null);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+  const [isQuoting, setIsQuoting] = useState(false);
+
+  const deliveryFee = quote?.deliveryFee ?? null;
+  const serviceFee = quote?.serviceFee ?? null;
+  const total = quote?.totalAmount ?? null;
+
+  useEffect(() => {
+    if (items.length === 0 || !merchantId) { setQuote(null); return; }
+    let alive = true;
+    setIsQuoting(true);
+    setQuoteError(null);
+    api.quoteOrder({
+      merchantId,
+      orderType: 'FOOD_DELIVERY',
+      items: items.map((i) => ({ quantity: i.quantity, unitPrice: i.price })),
+      deliveryLatitude: latitude,
+      deliveryLongitude: longitude,
+    })
+      .then((res) => {
+        if (!alive) return;
+        if (res.success && res.data) setQuote(res.data);
+        else setQuoteError(res.error || 'Could not price this order');
+      })
+      .catch(() => { if (alive) setQuoteError('Could not reach pricing. Check your connection.'); })
+      .finally(() => { if (alive) setIsQuoting(false); });
+    return () => { alive = false; };
+  }, [items, merchantId, latitude, longitude]);
 
   const handleQuantityChange = (productId: string, delta: number) => {
     const item = items.find(i => i.productId === productId);
@@ -89,10 +126,7 @@ export default function CartScreen() {
           itemName: item.name,
           unitPrice: item.price,
         })),
-        subtotal: totalPrice,
-        deliveryFee,
-        serviceFee,
-        totalAmount: total,
+        // No money fields: the server prices the order from these items.
         deliveryAddress: address,
         deliveryLatitude: latitude,
         deliveryLongitude: longitude,
@@ -121,18 +155,9 @@ export default function CartScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Your Cart</Text>
-        </View>
-      </View>
+      {/* The back control was a text glyph "←" rather than an icon, so it did
+          not match any other screen's back affordance or its tap target. */}
+      <AppHeader title="Your Cart" onBack={() => router.back()} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Merchant Info */}
@@ -145,7 +170,7 @@ export default function CartScreen() {
 
         {/* Cart Items */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Order Items</Text>
+          <SectionHeader title="Order items" />
           
           {items.map((item) => (
             <View key={item.productId} style={styles.cartItemRow}>
@@ -175,13 +200,19 @@ export default function CartScreen() {
           ))}
 
           {items.length === 0 && (
-            <Text style={styles.emptyCartText}>Your cart is empty</Text>
+            <EmptyState
+              icon="bag-outline"
+              title="Your cart is empty"
+              subtitle="Add something from a restaurant or shop to get started."
+              actionLabel="Browse restaurants"
+              onAction={() => router.replace('/orders/restaurants')}
+            />
           )}
         </View>
 
         {/* Delivery Address */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Delivery Address</Text>
+          <SectionHeader title="Delivery address" />
           <TouchableOpacity
             style={styles.addressRow}
             onPress={() => {
@@ -246,7 +277,7 @@ export default function CartScreen() {
 
         {/* Payment Method */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Payment Method</Text>
+          <SectionHeader title="Payment method" />
           
           <View style={styles.paymentMethodsRow}>
             {PAYMENT_METHODS.slice(0, 3).map((method) => (
@@ -283,46 +314,60 @@ export default function CartScreen() {
           )}
         </View>
 
-        {/* Order Summary */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Order Summary</Text>
-          
+        {/* Order Summary. Amounts are the server's quote — while it is in
+            flight the rows show a skeleton rather than a stale or invented
+            number, and a failed quote blocks checkout instead of guessing. */}
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
+          <SectionHeader title="Order summary" />
+
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Subtotal</Text>
             <Text style={styles.summaryValue}>UGX {totalPrice.toLocaleString()}</Text>
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Delivery Fee</Text>
-            <Text style={styles.summaryValue}>UGX {deliveryFee.toLocaleString()}</Text>
+            <Text style={styles.summaryLabel}>Delivery fee</Text>
+            {deliveryFee != null ? (
+              <Text style={styles.summaryValue}>UGX {deliveryFee.toLocaleString()}</Text>
+            ) : (
+              <Skeleton width={72} height={14} borderRadius={RADIUS.sm} />
+            )}
           </View>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Service Fee</Text>
-            <Text style={styles.summaryValue}>UGX {serviceFee.toLocaleString()}</Text>
+            <Text style={styles.summaryLabel}>Service fee</Text>
+            {serviceFee != null ? (
+              <Text style={styles.summaryValue}>UGX {serviceFee.toLocaleString()}</Text>
+            ) : (
+              <Skeleton width={72} height={14} borderRadius={RADIUS.sm} />
+            )}
           </View>
           <View style={styles.summaryTotalRow}>
             <Text style={styles.summaryTotalLabel}>Total</Text>
-            <Text style={styles.summaryTotalValue}>
-              UGX {total.toLocaleString()}
-            </Text>
+            {total != null ? (
+              <Text style={styles.summaryTotalValue}>UGX {total.toLocaleString()}</Text>
+            ) : (
+              <Skeleton width={104} height={18} borderRadius={RADIUS.sm} />
+            )}
           </View>
-        </View>
+
+          {quoteError ? <Text style={styles.quoteError}>{quoteError}</Text> : null}
+        </Card>
       </ScrollView>
 
-      {/* Place Order Button */}
+      {/* Place Order */}
       <View style={styles.bottomBar}>
-        <TouchableOpacity
-          style={[styles.placeOrderButton, isPlacingOrder && styles.placeOrderButtonDisabled]}
+        <GradientButton
+          title={
+            isQuoting || total == null
+              ? 'Calculating total…'
+              : `Place Order • UGX ${total.toLocaleString()}`
+          }
           onPress={handlePlaceOrder}
-          disabled={isPlacingOrder || items.length === 0}
-        >
-          {isPlacingOrder ? (
-            <ActivityIndicator color={COLORS.onPrimary} />
-          ) : (
-            <Text style={styles.placeOrderButtonText}>
-              Place Order • UGX {total.toLocaleString()}
-            </Text>
-          )}
-        </TouchableOpacity>
+          variant="primary"
+          size="lg"
+          fullWidth
+          loading={isPlacingOrder}
+          disabled={isPlacingOrder || items.length === 0 || total == null}
+        />
       </View>
     </View>
   );
@@ -333,38 +378,14 @@ export default function CartScreen() {
 // ============================================
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  quoteError: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.error,
+    marginTop: SPACING.sm,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
-  },
-  header: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    paddingTop: 48,
-    paddingBottom: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.md - 4,
-  },
-  backIcon: {
-    color: COLORS.onSurfaceVariant,
-    fontSize: 18,
-  },
-  headerTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
   },
   scrollView: {
     flex: 1,
@@ -380,7 +401,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginBottom: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
   },
   merchantLabel: {
     color: COLORS.onSurfaceVariant,
@@ -391,12 +411,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.onSurface,
     ...TYPOGRAPHY.bodyMd,
     fontWeight: 'bold',
-  },
-  cardTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: 'bold',
-    marginBottom: SPACING.md,
   },
   cartItemRow: {
     flexDirection: 'row',
@@ -449,21 +463,12 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     ...TYPOGRAPHY.bodySm,
     fontWeight: '500',
   },
-  emptyCartText: {
-    color: COLORS.outlineVariant,
-    textAlign: 'center',
-    paddingVertical: SPACING.md,
-    ...TYPOGRAPHY.bodyMd,
-  },
   addressRow: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.lg,
     padding: SPACING.md - 4,
-  },
-  addressIcon: {
-    marginRight: SPACING.md - 4,
   },
   addressText: {
     flex: 1,
@@ -605,19 +610,5 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingVertical: SPACING.md,
     borderTopWidth: 1,
     borderTopColor: COLORS.outlineVariant,
-  },
-  placeOrderButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.lg,
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
-  },
-  placeOrderButtonDisabled: {
-    opacity: 0.6,
-  },
-  placeOrderButtonText: {
-    color: COLORS.onPrimary,
-    ...TYPOGRAPHY.bodyLg,
-    fontWeight: '600',
   },
 });
