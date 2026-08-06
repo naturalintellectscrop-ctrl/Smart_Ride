@@ -94,7 +94,8 @@ export function MerchantOrders({ merchantId }: MerchantOrdersProps) {
       setOrders(orderList.map((o: Record<string, unknown>) => ({
         id: o.id,
         orderNumber: o.orderNumber || o.id,
-        items: (o.items || []).map((i: Record<string, unknown>) => ({
+        // API rows arrive untyped; narrow the nested shapes at the boundary.
+        items: ((o.items as Record<string, unknown>[]) || []).map((i: Record<string, unknown>) => ({
           id: i.id,
           itemName: i.itemName,
           quantity: i.quantity,
@@ -105,7 +106,7 @@ export function MerchantOrders({ merchantId }: MerchantOrdersProps) {
         client: o.client || { id: '', name: 'Customer', phone: '' },
         deliveryAddress: o.deliveryAddress || '',
         status: o.status || 'PAYMENT_CONFIRMED',
-        rider: o.task?.rider || null,
+        rider: (o.task as { rider?: unknown } | undefined)?.rider || null,
         kot: o.kot || null,
         createdAt: o.createdAt || new Date().toISOString(),
         paymentMethod: o.paymentMethod || 'CASH',

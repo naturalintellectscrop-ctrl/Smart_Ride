@@ -1,5 +1,6 @@
 'use client';
 
+import { KAMPALA_LOCATIONS } from '@/lib/geo/kampala-locations';
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
@@ -116,20 +117,6 @@ const PACKAGE_SIZES: Record<PackageSize, { label: string; maxWeight: number; des
 const WEIGHT_OPTIONS = [1, 2, 5, 10, 15, 20, 30, 50];
 
 // Kampala locations for demo geocoding
-const KAMPALA_LOCATIONS = [
-  { name: 'Nakasero', lat: 0.3180, lng: 32.5810 },
-  { name: 'Kololo', lat: 0.3330, lng: 32.5870 },
-  { name: 'Ntinda', lat: 0.3510, lng: 32.6120 },
-  { name: 'Kampala CBD', lat: 0.3150, lng: 32.5710 },
-  { name: 'Makindye', lat: 0.2930, lng: 32.5780 },
-  { name: 'Mengo', lat: 0.3050, lng: 32.5580 },
-  { name: 'Kisenyi', lat: 0.3160, lng: 32.5610 },
-  { name: 'Katwe', lat: 0.3090, lng: 32.5700 },
-  { name: 'Wandegeya', lat: 0.3390, lng: 32.5730 },
-  { name: 'Kamwokya', lat: 0.3320, lng: 32.5780 },
-  { name: 'Kiswa', lat: 0.3280, lng: 32.6020 },
-  { name: 'Bugolobi', lat: 0.3150, lng: 32.6050 },
-];
 
 // ============================================
 // Utility Functions

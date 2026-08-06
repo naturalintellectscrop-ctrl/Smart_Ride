@@ -18,6 +18,22 @@ import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Loader2, MapPin, Navigation, Locate, Layers, X } from 'lucide-react';
 
+// NOTE: `mapbox-gl` is NOT a declared dependency and is not installed, so the
+// dynamic import below throws MODULE_NOT_FOUND at runtime — this component is
+// currently inert, and nothing imports it. The structural type keeps the file
+// honest without pretending the package exists. To actually enable it:
+//   npm i mapbox-gl @types/mapbox-gl
+// then delete this declaration and use the real types.
+type MapboxGL = {
+  accessToken: string;
+  Map: new (opts: Record<string, unknown>) => any;
+  Marker: new (opts?: HTMLElement | Record<string, unknown>) => any;
+  Popup: new (opts?: Record<string, unknown>) => any;
+  NavigationControl: new (opts?: Record<string, unknown>) => any;
+  GeolocateControl: new (opts?: Record<string, unknown>) => any;
+  LngLatBounds: new (...args: unknown[]) => any;
+};
+
 // ==========================================
 // Types
 // ==========================================
@@ -93,7 +109,9 @@ export function MapboxMap({
     const initMap = async () => {
       try {
         // Dynamic import of mapbox-gl
-        const mapboxgl = (await import('mapbox-gl')).default;
+        const mapboxModule = await import('mapbox-gl');
+        const mapboxgl = ((mapboxModule as { default?: unknown }).default ??
+          mapboxModule) as unknown as MapboxGL;
         mapboxgl.accessToken = token;
 
         map.current = new mapboxgl.Map({
@@ -180,7 +198,7 @@ export function MapboxMap({
     markersRef.current = [];
 
     const addMarker = async (location: MapLocation, type: 'pickup' | 'destination' | 'rider' | 'user') => {
-      const mapboxgl = (await import('mapbox-gl')).default;
+      const mapboxgl = (await import('mapbox-gl')) as unknown as MapboxGL;
       
       const colors = {
         pickup: '#005f3a',

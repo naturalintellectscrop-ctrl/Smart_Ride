@@ -147,7 +147,7 @@ export function ClientOrders() {
       const mapped: OrderDisplay[] = orderList.map((o: Record<string, unknown>) => {
         const category = mapOrderTypeToCategory(
           o.orderType as string,
-          o.task?.taskType as string | undefined
+          (o.task as { taskType?: string } | undefined)?.taskType
         );
         const isActive = ACTIVE_STATUSES.includes(o.status as string);
         const merchant = o.merchant as Record<string, unknown> | null;

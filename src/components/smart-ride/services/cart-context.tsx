@@ -103,8 +103,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [foodCart, groceryCart, healthCart, shoppingCart]);
 
-  // Helper to set cart by type
-  const setCartByType = useCallback((type: CartType, cart: CartState) => {
+  // Helper to set cart by type.
+  // Takes SetStateAction, not a bare CartState: every caller passes an updater
+  // function (prev => next), which React's setters accept but this signature
+  // did not — so all seven call sites were type errors.
+  const setCartByType = useCallback((type: CartType, cart: React.SetStateAction<CartState>) => {
     switch (type) {
       case 'food':
         setFoodCart(cart);

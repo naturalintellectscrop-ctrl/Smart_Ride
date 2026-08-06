@@ -1,5 +1,6 @@
 'use client';
 
+import { KAMPALA_LOCATIONS } from '@/lib/geo/kampala-locations';
 import React, { useState, useCallback, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
@@ -352,10 +353,13 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
       const result = await createTask(taskData);
       
       if (result.success && result.data) {
+        // Bind after the guard: the async socket callbacks below close over
+        // this value, and TS drops the narrowing inside them.
+        const createdTask = result.data;
         setCurrentTask({
-          id: result.data.id,
-          taskNumber: result.data.taskNumber,
-          status: result.data.status,
+          id: createdTask.id,
+          taskNumber: createdTask.taskNumber,
+          status: createdTask.status,
         });
         
         // Join the task room for real-time updates
@@ -365,14 +369,14 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
         if (token) {
           socketService.connect(token);
         }
-        socketService.joinTaskRoom(result.data.id);
+        socketService.joinTaskRoom(createdTask.id);
 
         // Listen for rider:task:matched event (real matching via socket)
         const unsubMatched = socketService.on('rider:task:matched', async (data: any) => {
-          if (data.taskId === result.data.id) {
+          if (data.taskId === createdTask.id) {
             // Fetch real rider details from the task
             try {
-              const taskResult = await fetch(`/api/tasks/${result.data.id}`, {
+              const taskResult = await fetch(`/api/tasks/${createdTask.id}`, {
                 headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` },
               });
               if (taskResult.ok) {
@@ -399,10 +403,10 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
 
         // Listen for task status updates (ASSIGNED means rider accepted)
         const unsubStatus = socketService.on('task:status:update', async (data: any) => {
-          if (data.taskId === result.data.id) {
+          if (data.taskId === createdTask.id) {
             if (data.status === 'ASSIGNED' || data.status === 'ACCEPTED') {
               try {
-                const taskResult = await fetch(`/api/tasks/${result.data.id}`, {
+                const taskResult = await fetch(`/api/tasks/${createdTask.id}`, {
                   headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` },
                 });
                 if (taskResult.ok) {
@@ -439,7 +443,7 @@ export function ServiceScreen({ serviceType, onBack }: ServiceScreenProps) {
         // HTTP polling fallback in case socket events are missed
         const pollInterval = setInterval(async () => {
           try {
-            const taskResult = await fetch(`/api/tasks/${result.data.id}`, {
+            const taskResult = await fetch(`/api/tasks/${createdTask.id}`, {
               headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` },
             });
             if (taskResult.ok) {

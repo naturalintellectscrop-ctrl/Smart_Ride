@@ -230,7 +230,7 @@ export function RiderEarnings() {
 
       // Build weekly chart data
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const weekChartData = [];
+      const weekChartData: { day: string; amount: number; commission: number }[] = [];
       for (let i = 6; i >= 0; i--) {
         const dayStart = new Date(today);
         dayStart.setDate(dayStart.getDate() - i);

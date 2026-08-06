@@ -780,8 +780,5 @@ export function NotificationsProvider({
 // Export Types
 // ============================================================================
 
-export type {
-  NotificationBellProps,
-  NotificationPanelProps,
-  NotificationsContextValue,
-};
+// These interfaces are already declared with `export interface` above; a
+// trailing re-export block redeclares them.
