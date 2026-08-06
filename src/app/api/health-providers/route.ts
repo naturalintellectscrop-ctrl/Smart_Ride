@@ -4,6 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { enumParam } from '@/lib/api/enum-params';
+import { VerificationStatus, HealthProviderType } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 
@@ -21,13 +23,16 @@ export async function GET(request: NextRequest) {
     const where: Prisma.HealthProviderWhereInput = {};
     
     // Filter by verification status
-    if (status) {
-      where.verificationStatus = status;
+    // enumParam drops unrecognised values instead of letting Prisma throw.
+    const verificationStatus = enumParam(VerificationStatus, status);
+    if (verificationStatus) {
+      where.verificationStatus = verificationStatus;
     }
     
     // Filter by provider type
-    if (type) {
-      where.providerType = type;
+    const providerType = enumParam(HealthProviderType, type);
+    if (providerType) {
+      where.providerType = providerType;
     }
     
     // Search by name or address

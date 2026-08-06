@@ -27,15 +27,16 @@ export async function GET(request: NextRequest) {
   await setRLSContext(decoded);
   try {
     // Get health provider for this user
-    const provider = await db.healthProvider.findFirst({
-      where: {
-        OR: [
-          { ownerPhone: decoded.phone },
-          { ownerEmail: decoded.email },
-          { userId: decoded.userId },
-        ],
-      },
-    });
+    // Resolve by the unique HealthProvider.userId link. The previous OR
+    // included `ownerPhone: decoded.phone` — phone is not on JWTPayload, so
+    // that arm was always undefined — and `ownerEmail`, which is NOT unique,
+    // so it could resolve a provider belonging to someone else. Email is kept
+    // only as a fallback for records not yet linked to a user account.
+    const provider =
+      (await db.healthProvider.findFirst({ where: { userId: decoded.userId } })) ??
+      (await db.healthProvider.findFirst({
+        where: { userId: null, ownerEmail: decoded.email },
+      }));
 
     if (!provider) {
       return NextResponse.json({ success: false, error: 'Health provider not found' }, { status: 404 });
@@ -74,15 +75,16 @@ export async function POST(request: NextRequest) {
   await setRLSContext(decoded);
   try {
     // Get health provider for this user
-    const provider = await db.healthProvider.findFirst({
-      where: {
-        OR: [
-          { ownerPhone: decoded.phone },
-          { ownerEmail: decoded.email },
-          { userId: decoded.userId },
-        ],
-      },
-    });
+    // Resolve by the unique HealthProvider.userId link. The previous OR
+    // included `ownerPhone: decoded.phone` — phone is not on JWTPayload, so
+    // that arm was always undefined — and `ownerEmail`, which is NOT unique,
+    // so it could resolve a provider belonging to someone else. Email is kept
+    // only as a fallback for records not yet linked to a user account.
+    const provider =
+      (await db.healthProvider.findFirst({ where: { userId: decoded.userId } })) ??
+      (await db.healthProvider.findFirst({
+        where: { userId: null, ownerEmail: decoded.email },
+      }));
 
     if (!provider) {
       return NextResponse.json({ success: false, error: 'Health provider not found' }, { status: 404 });
@@ -167,15 +169,16 @@ export async function PUT(request: NextRequest) {
   await setRLSContext(decoded);
   try {
     // Get health provider for this user
-    const provider = await db.healthProvider.findFirst({
-      where: {
-        OR: [
-          { ownerPhone: decoded.phone },
-          { ownerEmail: decoded.email },
-          { userId: decoded.userId },
-        ],
-      },
-    });
+    // Resolve by the unique HealthProvider.userId link. The previous OR
+    // included `ownerPhone: decoded.phone` — phone is not on JWTPayload, so
+    // that arm was always undefined — and `ownerEmail`, which is NOT unique,
+    // so it could resolve a provider belonging to someone else. Email is kept
+    // only as a fallback for records not yet linked to a user account.
+    const provider =
+      (await db.healthProvider.findFirst({ where: { userId: decoded.userId } })) ??
+      (await db.healthProvider.findFirst({
+        where: { userId: null, ownerEmail: decoded.email },
+      }));
 
     if (!provider) {
       return NextResponse.json({ success: false, error: 'Health provider not found' }, { status: 404 });
@@ -253,15 +256,16 @@ export async function DELETE(request: NextRequest) {
   await setRLSContext(decoded);
   try {
     // Get health provider for this user
-    const provider = await db.healthProvider.findFirst({
-      where: {
-        OR: [
-          { ownerPhone: decoded.phone },
-          { ownerEmail: decoded.email },
-          { userId: decoded.userId },
-        ],
-      },
-    });
+    // Resolve by the unique HealthProvider.userId link. The previous OR
+    // included `ownerPhone: decoded.phone` — phone is not on JWTPayload, so
+    // that arm was always undefined — and `ownerEmail`, which is NOT unique,
+    // so it could resolve a provider belonging to someone else. Email is kept
+    // only as a fallback for records not yet linked to a user account.
+    const provider =
+      (await db.healthProvider.findFirst({ where: { userId: decoded.userId } })) ??
+      (await db.healthProvider.findFirst({
+        where: { userId: null, ownerEmail: decoded.email },
+      }));
 
     if (!provider) {
       return NextResponse.json({ success: false, error: 'Health provider not found' }, { status: 404 });

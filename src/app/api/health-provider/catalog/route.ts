@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { enumParam, requireEnumParam } from '@/lib/api/enum-params';
+import { MedicineCategory } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
@@ -23,7 +25,8 @@ export async function GET(request: NextRequest) {
     }
 
     const where: Prisma.MedicineCatalogWhereInput = { providerId };
-    if (category) where.category = category;
+    const categoryFilter = enumParam(MedicineCategory, category);
+    if (categoryFilter) where.category = categoryFilter;
     if (requiresPrescription !== null) {
       where.requiresPrescription = requiresPrescription === 'true';
     }
@@ -90,7 +93,9 @@ export async function POST(request: NextRequest) {
       name: z.string().min(1).max(200),
       genericName: z.string().max(200).optional(),
       description: z.string().max(1000).optional(),
-      category: z.string().min(1).max(100),
+      // Must be a real MedicineCategory — a free string here reached Prisma
+      // and threw on an unknown value.
+      category: z.enum(MedicineCategory),
       manufacturer: z.string().max(200).optional(),
       dosageForm: z.string().max(100).optional(),
       strength: z.string().max(100).optional(),
@@ -107,6 +112,7 @@ export async function POST(request: NextRequest) {
       handlingInstructions: z.string().max(500).optional(),
       shelfLife: z.string().max(100).optional(),
       imageUrl: z.string().url().optional(),
+      // Stored as a single string column; accept an array and join it.
       searchKeywords: z.array(z.string()).optional(),
     });
 
@@ -183,7 +189,7 @@ export async function POST(request: NextRequest) {
         handlingInstructions,
         shelfLife,
         imageUrl,
-        searchKeywords,
+        searchKeywords: searchKeywords?.join(','),
       },
     });
 

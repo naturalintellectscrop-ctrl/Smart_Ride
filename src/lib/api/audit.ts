@@ -1,6 +1,10 @@
 import { db } from '@/lib/db';
+import type { ActorType as PrismaActorType } from '@prisma/client';
 
-export type ActorType = 'SYSTEM' | 'USER' | 'RIDER' | 'MERCHANT' | 'ADMIN';
+// Sourced from the Prisma enum rather than hand-listed: the local union had
+// drifted and was missing PHARMACY_STAFF / PHARMACIST / HEALTH_PROVIDER, so
+// health-journey callers could not pass a valid actor type.
+export type ActorType = PrismaActorType;
 export type AuditSource = 'ADMIN_DASHBOARD' | 'MOBILE_APP' | 'API' | 'SYSTEM';
 
 interface AuditLogData {
@@ -111,6 +115,7 @@ export const AuditActions = {
   ORDER_PICKED_UP: 'ORDER_PICKED_UP',
   ORDER_DELIVERED: 'ORDER_DELIVERED',
   ORDER_CANCELLED: 'ORDER_CANCELLED',
+  ORDER_UPDATED: 'ORDER_UPDATED',
 
   // Task actions
   TASK_CREATED: 'TASK_CREATED',

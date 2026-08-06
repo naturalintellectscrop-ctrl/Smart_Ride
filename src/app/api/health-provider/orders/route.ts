@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { enumParam, requireEnumParam } from '@/lib/api/enum-params';
+import { ProviderOrderStatus, HealthOrderType } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
@@ -23,8 +25,11 @@ export async function GET(request: NextRequest) {
     }
 
     const where: Prisma.ProviderOrderWhereInput = { providerId };
-    if (status) where.status = status;
-    if (orderType) where.orderType = orderType;
+    // Unrecognised filter values are dropped rather than thrown by Prisma.
+    const statusFilter = enumParam(ProviderOrderStatus, status);
+    if (statusFilter) where.status = statusFilter;
+    const typeFilter = enumParam(HealthOrderType, orderType);
+    if (typeFilter) where.orderType = typeFilter;
     if (dateFrom || dateTo) {
       where.createdAt = {};
       if (dateFrom) where.createdAt.gte = new Date(dateFrom);
@@ -106,7 +111,8 @@ export async function POST(request: NextRequest) {
       customerId: z.string().min(1),
       customerName: z.string().max(200).optional(),
       customerPhone: z.string().max(20).optional(),
-      orderType: z.enum(['OTC_MEDICINE', 'PRESCRIPTION_MEDICINE', 'HEALTH_CONSULTATION']).optional(),
+      // Required: ProviderOrder.orderType is non-nullable.
+      orderType: z.enum(['OTC_MEDICINE', 'PRESCRIPTION_MEDICINE', 'HEALTH_CONSULTATION']),
       prescriptionId: z.string().optional(),
       items: z.union([
         z.string(),
@@ -197,7 +203,8 @@ export async function POST(request: NextRequest) {
         paymentMethod,
         paymentStatus: 'PENDING',
         status: 'ORDER_RECEIVED',
-        customerNotes,
+        // customerNotes maps to the order's provider-visible note field.
+        providerNotes: customerNotes,
       },
     });
 
@@ -274,7 +281,7 @@ export async function PATCH(request: NextRequest) {
 
     switch (action) {
       case 'ACCEPT':
-        updateData.status = 'ORDER_ACCEPTED';
+        updateData.status = 'ACCEPTED';
         updateData.acceptedAt = now;
         break;
 

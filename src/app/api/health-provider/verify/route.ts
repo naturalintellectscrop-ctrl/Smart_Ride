@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { enumParam, requireEnumParam } from '@/lib/api/enum-params';
+import { VerificationStatus } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 import { verifyAccessToken } from '@/lib/auth/jwt';
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let newStatus: string;
+    let newStatus: VerificationStatus;
     let updateData: Prisma.HealthProviderUpdateInput = {
       verifiedBy: adminId,
       verificationNotes: notes,
@@ -164,8 +166,9 @@ export async function GET(request: NextRequest) {
 
     const where: Prisma.HealthProviderWhereInput = {};
     
-    if (status !== 'ALL') {
-      where.verificationStatus = status;
+    const verificationStatus = enumParam(VerificationStatus, status);
+    if (verificationStatus) {
+      where.verificationStatus = verificationStatus;
     }
 
     const [providers, total] = await Promise.all([

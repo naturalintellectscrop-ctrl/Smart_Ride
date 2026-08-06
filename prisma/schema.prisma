@@ -1065,6 +1065,15 @@ model ProviderOrder {
   deliveryLatitude           Float?
   deliveryLongitude          Float?
   deliveryInstructions       String?
+  // Delivery assignment — the rider carrying this order.
+  riderId                    String?
+  riderAssignedAt            DateTime?
+  // Payment state is tracked on the order so a provider can see whether a
+  // delivered order has actually been paid for.
+  paymentStatus              String              @default("PENDING")
+  paymentMethod              String?
+  // Free-text note the provider attaches during fulfilment.
+  providerNotes              String?
   createdAt                  DateTime            @default(now())
   updatedAt                  DateTime            @updatedAt
   provider                   HealthProvider      @relation(fields: [providerId], references: [id])
@@ -1072,6 +1081,7 @@ model ProviderOrder {
   @@index([providerId])
   @@index([status])
   @@index([customerId])
+  @@index([riderId])
 }
 
 model Pharmacy {
@@ -1108,10 +1118,25 @@ model MedicineCatalog {
   description          String?
   category             MedicineCategory
   manufacturer         String?
+  // Pharmaceutical presentation, collected by the provider catalogue form.
+  dosageForm           String?
+  strength             String?
+  packSize             String?
   price Decimal
+  discountedPrice Decimal?
   isAvailable          Boolean           @default(true)
   stockQuantity        Int?
+  /// Reorder trigger — the catalogue API filters low-stock items against this.
+  lowStockThreshold    Int?              @default(10)
+  lastRestockedAt      DateTime?
+  /// Lifetime order count, used to rank the catalogue by popularity.
+  timesOrdered         Int               @default(0)
   requiresPrescription Boolean           @default(false)
+  // Controlled-substance handling (fraud/compliance surfaces read these).
+  isControlled         Boolean           @default(false)
+  controlledLevel      String?
+  shelfLife            String?
+  searchKeywords       String?
   storageCondition     String?
   handlingInstructions String?
   imageUrl             String?
@@ -2273,6 +2298,10 @@ enum AlertSeverity {
 enum HealthOrderType {
   PRESCRIPTION_MEDICINE
   OVER_THE_COUNTER
+  /// Alias used by the provider order API for over-the-counter items.
+  OTC_MEDICINE
+  /// Backed by HealthProvider.offersConsultation.
+  HEALTH_CONSULTATION
 }
 
 enum HealthOrderStatus {
@@ -2317,6 +2346,8 @@ enum ProviderOrderStatus {
   ACCEPTED
   PREPARING
   READY_FOR_PICKUP
+  // A rider has been matched but has not yet collected the order.
+  RIDER_ASSIGNED
   OUT_FOR_DELIVERY
   DELIVERED
   CANCELLED

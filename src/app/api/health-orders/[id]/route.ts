@@ -173,7 +173,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       userId: validatedData.actorType === 'USER' ? validatedData.actorId : undefined,
       healthOrderId: id,
       description: `Health order status changed from ${order.status} to ${validatedData.status}`,
-      newValues: JSON.stringify({ status: validatedData.status }),
+      // newValues is Record<string, unknown>; createAuditLog serialises it.
+      newValues: { status: validatedData.status },
     });
 
     return successResponse(updatedOrder, 'Health order updated');
@@ -192,8 +193,22 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 /**
  * Start rider matching for health order delivery
  */
-async function startRiderMatching(healthOrderId: string, order: { id: string; deliveryAddress: string; pharmacy: { merchantId: string }; totalAmount: number; paymentMethod: string }) {
+// `order` is passed straight from the findUnique above, where pharmacy is
+// nullable and money columns are Decimal — the previous signature demanded a
+// non-null pharmacy and plain numbers, which no caller could satisfy.
+async function startRiderMatching(
+  healthOrderId: string,
+  order: {
+    id: string;
+    deliveryAddress: string;
+    pharmacy: { merchantId: string } | null;
+    totalAmount: unknown;
+    paymentMethod: string;
+  }
+) {
   try {
+    // No pharmacy means no pickup point — nothing to dispatch.
+    if (!order.pharmacy) return;
     // Get pharmacy location from merchant
     const merchant = await db.merchant.findUnique({
       where: { id: order.pharmacy.merchantId },
