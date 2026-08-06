@@ -18,9 +18,15 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import {
+  Card,
+  GradientButton,
+  SectionHeader,
+  SuccessCheck,
+} from '@/src/components';
 
 export default function TripSummaryScreen() {
   const { isDark } = useTheme();
@@ -86,25 +92,24 @@ export default function TripSummaryScreen() {
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
 
-        {/* Success indicator */}
-        <View style={styles.successCircle}>
-          <Ionicons name="checkmark" size={48} color={COLORS.onPrimary} />
-        </View>
-        <Text style={styles.heading}>Ride Completed</Text>
-        {params.driverName ? (
-          <Text style={styles.subheading}>Thanks for riding with {params.driverName}</Text>
-        ) : null}
+        {/* The one success mark, shared with top-up, withdrawal and payment. */}
+        <SuccessCheck
+          size="lg"
+          title="Ride completed"
+          subtitle={params.driverName ? `Thanks for riding with ${params.driverName}` : undefined}
+          style={styles.success}
+        />
 
-        {/* Fare card */}
-        <View style={styles.card}>
+        {/* Fare */}
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
           <View style={styles.fareRow}>
-            <Text style={styles.fareLabel}>Total Fare</Text>
+            <Text style={styles.fareLabel}>Total fare</Text>
             <Text style={styles.fareAmount}>UGX {totalAmount.toLocaleString()}</Text>
           </View>
           {waitingCharge > 0 && (
             <View style={styles.waitingRow}>
               <View style={styles.waitingLabelWrap}>
-                <Ionicons name="time-outline" size={14} color={COLORS.onSurfaceVariant} />
+                <Ionicons name="time-outline" size={ICON.xs} color={COLORS.onSurfaceVariant} />
                 <Text style={styles.waitingLabel}>
                   Includes waiting{waitingMinutes > 0 ? ` (${waitingMinutes} min)` : ''}
                 </Text>
@@ -114,19 +119,19 @@ export default function TripSummaryScreen() {
           )}
           <View style={styles.divider} />
           <View style={styles.metaRow}>
-            <Ionicons name="card-outline" size={16} color={COLORS.onSurfaceVariant} />
+            <Ionicons name="card-outline" size={ICON.sm} color={COLORS.onSurfaceVariant} />
             <Text style={styles.metaText}>{paymentLabel[paymentMethod] ?? paymentMethod}</Text>
           </View>
           {isCash && (
-            <View style={[styles.metaRow, { marginTop: 4 }]}>
-              <Ionicons name="information-circle-outline" size={16} color={COLORS.primary} />
-              <Text style={[styles.metaText, { color: COLORS.primary }]}>Please pay the driver in cash</Text>
+            <View style={styles.metaRowSpaced}>
+              <Ionicons name="information-circle-outline" size={ICON.sm} color={COLORS.primary} />
+              <Text style={[styles.metaText, styles.metaTextAccent]}>Please pay the driver in cash</Text>
             </View>
           )}
-        </View>
+        </Card>
 
-        {/* Trip details card */}
-        <View style={styles.card}>
+        {/* Trip details */}
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
           {params.pickupAddress ? (
             <View style={styles.routeRow}>
               <View style={styles.routeDots}>
@@ -152,14 +157,14 @@ export default function TripSummaryScreen() {
               <View style={styles.statsRow}>
                 {distanceKm > 0 && (
                   <View style={styles.statItem}>
-                    <Ionicons name="navigate-outline" size={18} color={COLORS.primary} />
+                    <Ionicons name="navigate-outline" size={ICON.md} color={COLORS.primary} />
                     <Text style={styles.statValue}>{distanceKm.toFixed(1)} km</Text>
                     <Text style={styles.statLabel}>Distance</Text>
                   </View>
                 )}
                 {durationMin > 0 && (
                   <View style={styles.statItem}>
-                    <Ionicons name="time-outline" size={18} color={COLORS.primary} />
+                    <Ionicons name="time-outline" size={ICON.md} color={COLORS.primary} />
                     <Text style={styles.statValue}>{durationMin} min</Text>
                     <Text style={styles.statLabel}>Duration</Text>
                   </View>
@@ -167,11 +172,14 @@ export default function TripSummaryScreen() {
               </View>
             </>
           )}
-        </View>
+        </Card>
 
-        {/* Rating */}
-        <View style={styles.card}>
-          <Text style={styles.ratingTitle}>Rate your trip</Text>
+        {/* Rating.
+            This is a rating *input*, not the read-only `Rating` display — the
+            stars are the control, so they stay here rather than becoming a
+            component that renders a fixed score. */}
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
+          <SectionHeader title="Rate your trip" />
           <Text style={styles.ratingSubtitle}>How was your ride?</Text>
           <View style={styles.starsRow}>
             {[1, 2, 3, 4, 5].map((star) => (
@@ -180,44 +188,61 @@ export default function TripSummaryScreen() {
                 onPress={() => handleRating(star)}
                 disabled={ratingSubmitted || isSubmitting}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Rate ${star} star${star > 1 ? 's' : ''}`}
+                accessibilityState={{ selected: star <= selectedRating, disabled: ratingSubmitted || isSubmitting }}
               >
                 <Ionicons
                   name={star <= selectedRating ? 'star' : 'star-outline'}
                   size={36}
-                  color={star <= selectedRating ? '#FFC107' : COLORS.outlineVariant}
+                  color={star <= selectedRating ? COLORS.warning : COLORS.outlineVariant}
                 />
               </TouchableOpacity>
             ))}
           </View>
-          {isSubmitting && <ActivityIndicator size="small" color={COLORS.primary} style={{ marginTop: 8 }} />}
-          {ratingSubmitted && (
-            <Text style={styles.ratingThanks}>Thanks for your feedback!</Text>
-          )}
-        </View>
+          {isSubmitting && <ActivityIndicator size="small" color={COLORS.primary} style={styles.ratingSpinner} />}
+          {ratingSubmitted && <Text style={styles.ratingThanks}>Thanks for your feedback!</Text>}
+        </Card>
 
       </ScrollView>
 
-      {/* Actions */}
       <View style={[styles.footer, { paddingBottom: insets.bottom + SPACING.md }]}>
         {params.taskId ? (
-          <TouchableOpacity
-            style={styles.receiptButton}
+          <GradientButton
+            title="View Receipt"
             onPress={() => router.push(`/receipt/${params.taskId}?taskId=${params.taskId}` as any)}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="receipt-outline" size={18} color={COLORS.primary} />
-            <Text style={styles.receiptButtonText}>View Receipt</Text>
-          </TouchableOpacity>
+            variant="outline"
+            size="lg"
+            fullWidth
+            style={styles.footerButton}
+            icon={<Ionicons name="receipt-outline" size={ICON.md} color={COLORS.primary} />}
+          />
         ) : null}
-        <TouchableOpacity style={styles.doneButton} onPress={handleDone} activeOpacity={0.85}>
-          <Text style={styles.doneButtonText}>Done</Text>
-        </TouchableOpacity>
+        <GradientButton title="Done" onPress={handleDone} variant="primary" size="lg" fullWidth />
       </View>
     </View>
   );
 }
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  success: {
+    marginBottom: SPACING.lg,
+  },
+  metaRowSpaced: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    marginTop: SPACING.xs,
+  },
+  metaTextAccent: {
+    color: COLORS.primary,
+  },
+  ratingSpinner: {
+    marginTop: SPACING.sm,
+  },
+  footerButton: {
+    marginBottom: SPACING.sm,
+  },
   screen: {
     flex: 1,
     backgroundColor: COLORS.surface,
@@ -227,37 +252,11 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingBottom: SPACING.xl,
     alignItems: 'center',
   },
-  successCircle: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: COLORS.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.xl,
-    marginBottom: SPACING.md,
-    ...SHADOWS.active,
-  },
-  heading: {
-    ...TYPOGRAPHY.headlineMd,
-    color: COLORS.onSurface,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  subheading: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurfaceVariant,
-    marginTop: 4,
-    marginBottom: SPACING.lg,
-    textAlign: 'center',
-  },
   card: {
+    // Surface, radius, padding and elevation come from Card; only the rhythm
+    // between cards belongs to the screen.
     width: '100%',
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.xl,
-    padding: SPACING.md,
     marginBottom: SPACING.md,
-    ...SHADOWS.card,
   },
   fareRow: {
     flexDirection: 'row',
@@ -361,11 +360,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
   },
-  ratingTitle: {
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '600',
-    color: COLORS.onSurface,
-  },
   ratingSubtitle: {
     ...TYPOGRAPHY.labelMd,
     color: COLORS.onSurfaceVariant,
@@ -388,32 +382,5 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingTop: SPACING.sm,
     borderTopWidth: 1,
     borderTopColor: COLORS.outlineVariant,
-  },
-  doneButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.xl,
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
-  },
-  doneButtonText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onPrimary,
-    fontWeight: '700',
-  },
-  receiptButton: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: RADIUS.xl,
-    paddingVertical: SPACING.md,
-    marginBottom: SPACING.sm,
-    borderWidth: 1.5,
-    borderColor: COLORS.primary,
-  },
-  receiptButtonText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.primary,
-    fontWeight: '700',
   },
 });
