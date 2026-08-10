@@ -98,3 +98,21 @@ export function makeThemedColors(isDark: boolean): ThemedColors {
   // tokens (including the derived aliases) with their dark equivalents.
   return { ...COLORS, ...DARK } as ThemedColors;
 }
+
+/**
+ * Blend a token colour with an opacity, for tint backgrounds and hairline
+ * borders. Screens used to hardcode `rgba(0, 95, 58, 0.08)` for these, which
+ * pinned the tint to the *light* primary — in dark mode those surfaces kept a
+ * light-theme wash. Deriving from the active token keeps them in step.
+ *
+ * Accepts `#rgb`, `#rrggbb` and `#rrggbbaa` (the trailing alpha is replaced).
+ */
+export function withAlpha(color: string, opacity: number): string {
+  let hex = color.trim().replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  if (hex.length === 8) hex = hex.slice(0, 6);
+  if (hex.length !== 6) return color; // already rgba()/named — leave it alone
+  const n = parseInt(hex, 16);
+  const a = Math.max(0, Math.min(1, opacity));
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}

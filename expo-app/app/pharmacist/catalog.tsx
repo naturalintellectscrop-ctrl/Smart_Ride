@@ -11,7 +11,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Switch,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
@@ -28,6 +27,7 @@ import {
   GradientButton,
   ListSkeleton,
   SmartBottomSheet,
+  Toggle,
 } from '@/src/components';
 
 export default function CatalogScreen() {
@@ -244,11 +244,10 @@ export default function CatalogScreen() {
                       </View>
                     )}
                   </View>
-                  <Switch
+                  <Toggle
                     value={medicine.isAvailable}
                     onValueChange={() => toggleAvailability(medicine)}
-                    trackColor={{ false: COLORS.surfaceContainerLow, true: `${COLORS.primary}40` }}
-                    thumbColor={medicine.isAvailable ? COLORS.primary : COLORS.outline}
+                    accessibilityLabel={`${medicine.name} available`}
                     style={styles.availabilitySwitch}
                   />
                 </View>
@@ -386,11 +385,10 @@ export default function CatalogScreen() {
 
               <View style={styles.prescriptionToggle}>
                 <Text style={styles.fieldLabel}>Requires Prescription</Text>
-                <Switch
+                <Toggle
                   value={newMedicine.requiresPrescription}
-                  onValueChange={v => setNewMedicine(p => ({ ...p, requiresPrescription: v }))}
-                  trackColor={{ false: COLORS.surfaceContainerLow, true: `${COLORS.primary}40` }}
-                  thumbColor={newMedicine.requiresPrescription ? COLORS.primary : COLORS.outline}
+                  onValueChange={(v: boolean) => setNewMedicine(p => ({ ...p, requiresPrescription: v }))}
+                  accessibilityLabel="Requires prescription"
                 />
 
               <View style={styles.modalButtons}>

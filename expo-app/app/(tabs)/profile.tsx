@@ -13,7 +13,6 @@ import {
   Text, 
   ScrollView, 
   TouchableOpacity, 
-  Switch,
   Linking,
   ActivityIndicator,
   StyleSheet
@@ -38,6 +37,7 @@ import {
   GradientButton,
   Rating,
   SectionHeader,
+  Toggle,
 } from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
 import { pickImage } from '@/src/utils/imagePicker';
@@ -426,12 +426,11 @@ function MenuItem({ item, isLast, colors }: { item: any; isLast: boolean; colors
         {item.label}
       </Text>
       {item.type === 'toggle' ? (
-        <Switch
+        <Toggle
           value={item.value}
           onValueChange={item.onToggle}
           disabled={item.disabled}
-          trackColor={{ false: colors.border, true: colors.primary }}
-          thumbColor={colors.white}
+          accessibilityLabel={item.label}
         />
       ) : item.value ? (
         <Text style={itemStyles.menuValue}>{item.value}</Text>
@@ -512,8 +511,6 @@ function createStyles(colors: ThemeColors) {
       zIndex: 10,
     },
     statsCard: {
-      // Card is theme-aware, so the old backgroundColor/borderColor overrides
-      // that GlassCard needed are gone.
     },
     statsRow: {
       flexDirection: 'row',

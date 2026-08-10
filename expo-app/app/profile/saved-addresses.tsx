@@ -12,7 +12,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Switch,
   Modal,
   ActivityIndicator,
   StyleSheet,
@@ -23,9 +22,7 @@ import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
-  FadeIn,
   FadeInUp,
-  FadeInDown,
   SlideInRight,
   ZoomIn,
 } from 'react-native-reanimated';
@@ -34,7 +31,8 @@ import { api } from '@/src/services';
 import { useLocationStore } from '@/src/store/locationStore';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
-import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import { ThemedColors, makeThemedColors, withAlpha } from '@/src/theme/themedColors';
+import { Toggle } from '@/src/components';
 
 // ============================================
 // TYPES
@@ -59,11 +57,11 @@ const PRESET_LABELS = [
 // ============================================
 // MAIN SCREEN
 // ============================================
-let COLORS: ThemedColors;
-let styles: any;
 
 export default function SavedAddressesScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
@@ -458,11 +456,10 @@ export default function SavedAddressesScreen() {
                     </Text>
                   </View>
                 </View>
-                <Switch
+                <Toggle
                   value={isDefault}
                   onValueChange={setIsDefault}
-                  trackColor={{ false: '#374151', true: COLORS.primary }}
-                  thumbColor={isDefault ? COLORS.onPrimary : '#6B7280'}
+                  accessibilityLabel="Set as default address"
                 />
               </View>
 
@@ -511,6 +508,9 @@ export default function SavedAddressesScreen() {
 // EMPTY STATE COMPONENT
 // ============================================
 function EmptyState({ onAdd }: { onAdd: () => void }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   return (
     <View style={styles.centerContainer}>
       <Animated.View entering={ZoomIn.duration(400).springify()}>
@@ -559,6 +559,9 @@ interface AddressCardProps {
 }
 
 function AddressCard({ address, icon, onEdit, onDelete, onSetDefault }: AddressCardProps) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   return (
     <View style={styles.card}>
       <View style={styles.cardMain}>
@@ -675,7 +678,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: RADIUS.full,
-    backgroundColor: 'rgba(0, 95, 58, 0.1)',
+    backgroundColor: withAlpha(COLORS.primary, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.lg,
@@ -744,7 +747,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: RADIUS.md,
-    backgroundColor: 'rgba(0, 95, 58, 0.1)',
+    backgroundColor: withAlpha(COLORS.primary, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.md,
@@ -971,8 +974,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
 
   // Error
   errorContainer: {
-    backgroundColor: 'rgba(186, 26, 26, 0.1)',
-    borderColor: 'rgba(186, 26, 26, 0.2)',
+    backgroundColor: withAlpha(COLORS.error, 0.1),
+    borderColor: withAlpha(COLORS.error, 0.2),
     borderWidth: 1,
     borderRadius: RADIUS.md,
     padding: 12,

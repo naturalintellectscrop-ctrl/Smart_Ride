@@ -8,6 +8,7 @@
 
 // CRITICAL: Reanimated must be first import
 import 'react-native-reanimated';
+import { makeThemedColors } from '@/src/theme/themedColors';
 
 // Initialize Sentry for crash reporting (must be early)
 import { initSentry } from '../src/lib/sentry';
@@ -21,7 +22,7 @@ initSentry();
 // has the token before the first MapView mounts (prevents a black map).
 // ---------------------------------------------------------------------------
 import { Platform } from 'react-native';
-import { MAPBOX_CONFIG, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '../src/constants';
+import { MAPBOX_CONFIG } from '../src/constants';
 try {
   if (Platform.OS !== 'web' && MAPBOX_CONFIG.accessToken) {
     const MapboxGL = require('@rnmapbox/maps').default;
@@ -391,6 +392,11 @@ export default function RootLayout() {
 // ============================================
 // STYLES
 // ============================================
+// The root error boundary can catch a failure in ThemeProvider itself, so it
+// renders outside the context and cannot read tokens from a hook. Deriving the
+// light palette directly keeps it from drifting away from the real theme.
+const FALLBACK = makeThemedColors(false);
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -399,23 +405,23 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f8f9fa', // Stitch surface
+    backgroundColor: FALLBACK.surface,
     padding: 20,
   },
   errorTitle: {
-    color: '#ba1a1a', // Stitch error
+    color: FALLBACK.error,
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 12,
   },
   errorText: {
-    color: '#191c1d', // Stitch on-surface
+    color: FALLBACK.onSurface,
     fontSize: 14,
     textAlign: 'center',
     marginBottom: 20,
   },
   errorHint: {
-    color: '#6f7a71', // Stitch outline
+    color: FALLBACK.outline,
     fontSize: 12,
   },
 });

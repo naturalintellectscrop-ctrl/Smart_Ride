@@ -26,11 +26,10 @@ import {
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { resetPassword } from '@/src/services/auth';
 import { useTheme } from '../../src/context/theme-context';
-import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
-import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
+import { ThemedColors, makeThemedColors, withAlpha } from '../../src/theme/themedColors';
 import SmartRideLogoImage from '../../assets/images/brand-mark.png';
 import { Ionicons } from '@expo/vector-icons';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, OPACITY, BORDER } from '../../src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, BORDER } from '../../src/constants';
 
 const { height } = Dimensions.get('window');
 
@@ -480,7 +479,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: 'rgba(0, 95, 58, 0.08)',
+    backgroundColor: withAlpha(COLORS.primary, 0.08),
   },
   ambientCyan: {
     position: 'absolute',
@@ -498,7 +497,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(139, 92, 246, 0.05)',
+    backgroundColor: withAlpha(COLORS.tertiary, 0.05),
   },
   scrollContent: {
     flexGrow: 1,
@@ -529,7 +528,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     right: -16,
     bottom: -16,
     borderRadius: RADIUS.xl,
-    backgroundColor: 'rgba(0, 95, 58, 0.12)',
+    backgroundColor: withAlpha(COLORS.primary, 0.12),
   },
   headerTitle: {
     ...TYPOGRAPHY.displaySm,
@@ -556,7 +555,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: RADIUS.md,
-    backgroundColor: 'rgba(0, 95, 58, 0.1)',
+    backgroundColor: withAlpha(COLORS.primary, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -580,12 +579,9 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     height: 56,
     borderRadius: 16,
   },
-  shieldIcon: {
-    fontSize: 24,
-  },
   errorContainer: {
-    backgroundColor: 'rgba(244, 63, 94, 0.1)',
-    borderColor: 'rgba(244, 63, 94, 0.2)',
+    backgroundColor: withAlpha(COLORS.error, 0.1),
+    borderColor: withAlpha(COLORS.error, 0.2),
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -606,9 +602,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginBottom: 0,
     borderWidth: 0,
     overflow: 'hidden',
-  },
-  errorIcon: {
-    fontSize: 14,
   },
   errorText: {
     color: COLORS.error,
@@ -633,11 +626,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     borderColor: COLORS.outlineVariant,
     overflow: 'hidden',
   },
-  inputIcon: {
-    paddingLeft: 14,
-    fontSize: 14,
-    opacity: 0.5,
-  },
   input: {
     flex: 1,
     paddingHorizontal: 10,
@@ -648,9 +636,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   eyeButton: {
     paddingHorizontal: 14,
     paddingVertical: 12,
-  },
-  eyeText: {
-    fontSize: 16,
   },
   strengthContainer: {
     flexDirection: 'row',
@@ -731,7 +716,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(0, 95, 58, 0.12)',
+    backgroundColor: withAlpha(COLORS.primary, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -780,7 +765,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(244, 63, 94, 0.15)',
+    backgroundColor: withAlpha(COLORS.error, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
@@ -805,8 +790,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingHorizontal: 8,
   },
   requestNewLinkButton: {
-    backgroundColor: 'rgba(0, 95, 58, 0.1)',
-    borderColor: 'rgba(0, 95, 58, 0.2)',
+    backgroundColor: withAlpha(COLORS.primary, 0.1),
+    borderColor: withAlpha(COLORS.primary, 0.2),
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 14,

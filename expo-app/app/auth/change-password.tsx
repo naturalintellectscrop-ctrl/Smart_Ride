@@ -23,13 +23,12 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services/api';
 import { useTheme } from '../../src/context/theme-context';
-import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
+import { ThemedColors, makeThemedColors, withAlpha } from '../../src/theme/themedColors';
 import SmartRideLogoImage from '../../assets/images/brand-mark.png';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, OPACITY, BORDER } from '../../src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, BORDER } from '../../src/constants';
 
 const { height } = Dimensions.get('window');
 
@@ -47,7 +46,6 @@ export default function ChangePasswordScreen() {
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -509,7 +507,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: 'rgba(0, 95, 58, 0.08)',
+    backgroundColor: withAlpha(COLORS.primary, 0.08),
   },
   ambientCyan: {
     position: 'absolute',
@@ -527,7 +525,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(139, 92, 246, 0.05)',
+    backgroundColor: withAlpha(COLORS.tertiary, 0.05),
   },
   scrollContent: {
     flexGrow: 1,
@@ -572,7 +570,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     right: -16,
     bottom: -16,
     borderRadius: RADIUS.xl,
-    backgroundColor: 'rgba(0, 95, 58, 0.12)',
+    backgroundColor: withAlpha(COLORS.primary, 0.12),
   },
   logoImage: {
     width: 48,
@@ -604,7 +602,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: RADIUS.md,
-    backgroundColor: 'rgba(0, 95, 58, 0.1)',
+    backgroundColor: withAlpha(COLORS.primary, 0.1),
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
@@ -766,7 +764,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: 'rgba(0, 95, 58, 0.12)',
+    backgroundColor: withAlpha(COLORS.primary, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,

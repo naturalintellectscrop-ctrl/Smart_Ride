@@ -12,7 +12,6 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  Alert,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -23,7 +22,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   FadeIn,
   FadeInUp,
-  FadeInDown,
   ZoomIn,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,7 +29,7 @@ import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
-import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import { ThemedColors, makeThemedColors, withAlpha } from '@/src/theme/themedColors';
 
 // Consequences list
 const CONSEQUENCES = [
@@ -377,13 +375,13 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     padding: SPACING.lg,
     marginBottom: SPACING.md,
     borderWidth: 1,
-    borderColor: 'rgba(186, 26, 26, 0.2)',
+    borderColor: withAlpha(COLORS.error, 0.2),
   },
   warningIconContainer: {
     width: 80,
     height: 80,
     borderRadius: RADIUS.full,
-    backgroundColor: 'rgba(186, 26, 26, 0.15)',
+    backgroundColor: withAlpha(COLORS.error, 0.15),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.md,
@@ -439,8 +437,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
 
   // Error Banner
   errorBanner: {
-    backgroundColor: 'rgba(186, 26, 26, 0.1)',
-    borderColor: 'rgba(186, 26, 26, 0.2)',
+    backgroundColor: withAlpha(COLORS.error, 0.1),
+    borderColor: withAlpha(COLORS.error, 0.2),
     borderWidth: 1,
     borderRadius: RADIUS.md,
     padding: 12,
@@ -552,7 +550,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 112,
     height: 112,
     borderRadius: RADIUS.full,
-    backgroundColor: 'rgba(0, 110, 47, 0.12)',
+    backgroundColor: withAlpha(COLORS.primary, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.lg,

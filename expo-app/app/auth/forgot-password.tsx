@@ -19,16 +19,14 @@ import {
   Animated,
   Dimensions,
   Easing,
-  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { forgotPassword } from '@/src/services/auth';
 import { useTheme } from '../../src/context/theme-context';
-import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
-import { GlassCard, GradientButton, GlowHeader, IconInput } from '../../src/components';
-import SmartRideLogoImage from '../../assets/images/brand-mark.png';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, OPACITY, BORDER } from '../../src/constants';
+import { ThemedColors, makeThemedColors, withAlpha } from '../../src/theme/themedColors';
+import { AppHeader, Card, GradientButton, IconInput } from '../../src/components';
+import { TYPOGRAPHY, SPACING, RADIUS, BORDER } from '../../src/constants';
 
 const { height } = Dimensions.get('window');
 
@@ -118,10 +116,6 @@ export default function ForgotPasswordScreen() {
     };
   }, []);
 
-  const glowOpacity = glowPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.8],
-  });
 
   const handleSubmit = async () => {
     if (!email.trim()) {
@@ -173,38 +167,13 @@ export default function ForgotPasswordScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Header with GlowHeader */}
-        <Animated.View 
-          style={[
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          <GlowHeader 
-            title="Forgot Password"
-            subtitle="Enter your email and we'll send you a reset link"
-          >
-            {/* Floating Logo as children */}
-            <Animated.View style={{ alignItems: 'center', marginTop: 16, transform: [{ translateY: logoFloat }] }}>
-              <View style={styles.logoContainer}>
-                <Animated.View style={[styles.logoGlow, { opacity: glowOpacity }]} />
-                <Image
-                  source={SmartRideLogoImage}
-                  style={styles.logoImage}
-                  resizeMode="contain"
-                />
-              </View>
-            </Animated.View>
-          </GlowHeader>
-        </Animated.View>
+        <AppHeader title="Forgot password" onBack={() => router.back()} />
 
         {/* Form Card — Animated.View swapped to plain View after entrance animation
             completes to prevent transforms from interfering with TextInput cursor on Android. */}
         {animationDone ? (
           <View>
-            <GlassCard variant="elevated" padding={24} borderRadius={24} style={styles.formCard}>
+            <Card variant="elevated" padding={24} radius={24} style={styles.formCard}>
               {success ? (
                 /* Success State */
                 <View style={styles.successContainer}>
@@ -268,7 +237,7 @@ export default function ForgotPasswordScreen() {
                   />
                 </>
               )}
-            </GlassCard>
+            </Card>
           </View>
         ) : (
           <Animated.View 
@@ -279,7 +248,7 @@ export default function ForgotPasswordScreen() {
               }
             ]}
           >
-            <GlassCard variant="elevated" padding={24} borderRadius={24} style={styles.formCard}>
+            <Card variant="elevated" padding={24} radius={24} style={styles.formCard}>
               {success ? (
                 /* Success State */
                 <View style={styles.successContainer}>
@@ -343,7 +312,7 @@ export default function ForgotPasswordScreen() {
                   />
                 </>
               )}
-            </GlassCard>
+            </Card>
           </Animated.View>
         )}
 
@@ -395,7 +364,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 300,
     height: 300,
     borderRadius: 150,
-    backgroundColor: 'rgba(0, 95, 58, 0.08)',
+    backgroundColor: withAlpha(COLORS.primary, 0.08),
   },
   ambientCyan: {
     position: 'absolute',
@@ -413,44 +382,19 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 200,
     height: 200,
     borderRadius: 100,
-    backgroundColor: 'rgba(139, 92, 246, 0.05)',
+    backgroundColor: withAlpha(COLORS.tertiary, 0.05),
   },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 24,
-  },
-  logoContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderWidth: BORDER.hairline,
-    borderColor: COLORS.outlineVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-    overflow: 'hidden',
-  },
-  logoGlow: {
-    position: 'absolute',
-    top: -16,
-    left: -16,
-    right: -16,
-    bottom: -16,
-    borderRadius: RADIUS.xl,
-    backgroundColor: 'rgba(0, 95, 58, 0.12)',
-  },
-  logoImage: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.md,
   },
   formCard: {
     marginHorizontal: SPACING.lg,
     marginTop: SPACING.sm,
   },
   infoContainer: {
-    backgroundColor: 'rgba(0, 95, 58, 0.06)',
-    borderColor: 'rgba(0, 95, 58, 0.12)',
+    backgroundColor: withAlpha(COLORS.primary, 0.06),
+    borderColor: withAlpha(COLORS.primary, 0.12),
     borderWidth: BORDER.hairline,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
@@ -466,8 +410,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flex: 1,
   },
   errorContainer: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-    borderColor: 'rgba(239, 68, 68, 0.2)',
+    backgroundColor: withAlpha(COLORS.error, 0.1),
+    borderColor: withAlpha(COLORS.error, 0.2),
     borderWidth: BORDER.hairline,
     borderRadius: RADIUS.md,
     paddingHorizontal: SPACING.md,
@@ -504,7 +448,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: RADIUS.xl,
-    backgroundColor: 'rgba(0, 95, 58, 0.12)',
+    backgroundColor: withAlpha(COLORS.primary, 0.12),
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: SPACING.lg,

@@ -13,23 +13,18 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Dimensions,
   StatusBar,
-  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import { api } from '../../src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, BORDER, OPACITY } from '../../src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, BORDER } from '../../src/constants';
 import { useTheme } from '../../src/context/theme-context';
-import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
+import { ThemedColors, makeThemedColors, withAlpha } from '../../src/theme/themedColors';
 import { GradientButton } from '../../src/components/GradientButton';
-import { LinearGradient } from 'expo-linear-gradient';
 import { navigateToRoleHome } from '@/src/utils/roleRouting';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 // Role definitions with icons, colors, and descriptions
 const ROLES = [
@@ -40,8 +35,6 @@ const ROLES = [
     description: 'Request rides, order food, shop, and more',
     icon: 'car-outline',
     gradient: ['#005f3a', '#0e7a4d'] as const,
-    bgAccent: 'rgba(0, 95, 58, 0.08)',
-    borderColor: 'rgba(0, 95, 58, 0.15)',
   },
   {
     id: 'RIDER',
@@ -50,8 +43,6 @@ const ROLES = [
     description: 'Accept ride requests and earn money as a boda or car driver',
     icon: 'bicycle-outline',
     gradient: ['#0e7a4d', '#006e2f'] as const,
-    bgAccent: 'rgba(14, 122, 77, 0.08)',
-    borderColor: 'rgba(14, 122, 77, 0.15)',
   },
   {
     id: 'DRIVER',
@@ -60,8 +51,6 @@ const ROLES = [
     description: 'Drive cars, delivery vehicles, or provide specialized transport services',
     icon: 'bus-outline',
     gradient: ['#1a6b3c', '#0e7a4d'] as const,
-    bgAccent: 'rgba(26, 107, 60, 0.08)',
-    borderColor: 'rgba(26, 107, 60, 0.15)',
   },
   {
     id: 'MERCHANT',
@@ -70,8 +59,6 @@ const ROLES = [
     description: 'List your restaurant, shop or pharmacy on Smart Ride',
     icon: 'storefront-outline',
     gradient: ['#4b5264', '#636a7c'] as const,
-    bgAccent: 'rgba(75, 82, 100, 0.08)',
-    borderColor: 'rgba(75, 82, 100, 0.15)',
   },
   {
     id: 'PHARMACIST',
@@ -80,8 +67,6 @@ const ROLES = [
     description: 'Manage medicine catalog, prescriptions, and healthcare services',
     icon: 'medkit-outline',
     gradient: ['#2e7d32', '#388e3c'] as const,
-    bgAccent: 'rgba(46, 125, 50, 0.08)',
-    borderColor: 'rgba(46, 125, 50, 0.15)',
   },
 ];
 
@@ -181,14 +166,14 @@ export default function RoleSelectionScreen() {
                 style={[
                   styles.roleCard,
                   isSelected && styles.roleCardSelected,
-                  { borderColor: isSelected ? COLORS.primary : role.borderColor },
+                  { borderColor: isSelected ? COLORS.primary : withAlpha(role.gradient[0], 0.15) },
                 ]}
                 onPress={() => setSelectedRole(role.id)}
                 activeOpacity={0.7}
               >
                 {/* Selection indicator */}
                 <View style={styles.roleCardHeader}>
-                  <View style={[styles.roleIconContainer, { backgroundColor: role.bgAccent }]}>
+                  <View style={[styles.roleIconContainer, { backgroundColor: withAlpha(role.gradient[0], 0.08) }]}>
                     <Ionicons name={role.icon as any} size={28} color={COLORS.primary} />
                   </View>
                   <View style={styles.roleInfo}>
@@ -307,7 +292,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 250,
     height: 250,
     borderRadius: 125,
-    backgroundColor: 'rgba(0, 95, 58, 0.04)',
+    backgroundColor: withAlpha(COLORS.primary, 0.04),
   },
   // Top bar
   appBar: {
@@ -364,9 +349,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     borderWidth: BORDER.hairline,
     borderColor: COLORS.outlineVariant,
   },
-  heroIcon: {
-    ...TYPOGRAPHY.displaySm,
-  },
   heroTitle: {
     ...TYPOGRAPHY.headlineLgMobile,
     color: COLORS.primary,
@@ -395,7 +377,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     ...SHADOWS.card,
   },
   roleCardSelected: {
-    backgroundColor: 'rgba(0, 95, 58, 0.03)',
+    backgroundColor: withAlpha(COLORS.primary, 0.03),
     borderWidth: BORDER.emphasis,
     borderColor: COLORS.primary,
     ...SHADOWS.active,
@@ -412,10 +394,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.md,
-  },
-  roleIcon: {
-    ...TYPOGRAPHY.displaySm,
-    fontSize: 24,
   },
   roleInfo: {
     flex: 1,

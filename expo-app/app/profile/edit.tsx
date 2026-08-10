@@ -21,7 +21,6 @@ import {
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import Animated, {
-  FadeIn,
   FadeInUp,
   FadeInDown,
   ZoomIn,
@@ -390,9 +389,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     height: 96,
     borderRadius: RADIUS.full,
   },
-  avatarEmoji: {
-    fontSize: 40,
-  },
   avatarBadge: {
     position: 'absolute',
     bottom: 0,
@@ -400,10 +396,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
     padding: SPACING.sm,
-  },
-  avatarBadgeIcon: {
-    color: COLORS.onPrimary,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
   },
   avatarHint: {
     color: COLORS.outline,

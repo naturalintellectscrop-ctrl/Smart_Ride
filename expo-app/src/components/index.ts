@@ -6,12 +6,10 @@
 
 export { Card } from './Card';
 export type { CardProps, CardVariant } from './Card';
-export { GlassCard } from './GlassCard';
 export { GradientButton } from './GradientButton';
 export { ServiceIcon } from './ServiceIcon';
 export { StatusBadge } from './StatusBadge';
 export { IconInput } from './IconInput';
-export { GlowHeader } from './GlowHeader';
 export { TopUpModal } from './TopUpModal';
 export { WithdrawModal } from './WithdrawModal';
 export { default as SmartRideMap } from './SmartRideMap';

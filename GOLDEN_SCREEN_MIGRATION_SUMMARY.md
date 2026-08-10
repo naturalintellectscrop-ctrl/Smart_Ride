@@ -1,8 +1,22 @@
-# SMART RIDE — GOLDEN SCREEN MIGRATION COMPLETE
+# SMART RIDE — GOLDEN SCREEN ARCHITECTURE
 
-**Status:** ✓ PRODUCTION READY  
+> **Status correction (Stage 3 exit).** An earlier revision of this document
+> claimed "62/62 screens migrated (100%)". That was a count of screens *specified*
+> against a Golden Screen archetype, not screens whose code had been migrated onto
+> the Design System. At the time it was written, 20 screens still carried legacy UI
+> and 17 still reassigned module-level `let COLORS` / `let styles` during render.
+>
+> The real migration ran afterwards, journey by journey (Client Money, Client
+> Support, Shopping, Health, Delivery Personnel, Driver, Merchant, Pharmacist).
+> The numbers below are kept as the original *specification* coverage; treat them
+> as archetype coverage, not implementation status.
+
+
+
+**Scope of this document:** the Golden Screen *specification* — archetypes, personas and per-screen assignments.
+**Status:** specification complete; implementation tracked per journey in the Stage 3 commits  
 **Date:** August 3, 2026  
-**Result:** All 39+ screens migrated to unified Golden Screen architecture
+**Result:** every screen has an assigned archetype
 
 ---
 
@@ -10,7 +24,8 @@
 
 | Item | Status | Details |
 |------|--------|---------|
-| **Screens Migrated** | ✓ 62/62 | 100% of app screens use Golden Screen patterns |
+| **Screens Specified** | 62/62 | Every screen has a Golden Screen archetype assigned |
+| **Screens Migrated** | see Stage 3 journey commits | Implementation status is tracked per journey, not here |
 | **Design System Tokens** | ✓ 59/62 | 95% compliance (remaining 3 are layout wrappers) |
 | **Build Status** | ✓ PASSING | Website builds without errors |
 | **Functionality** | ✓ PRESERVED | Zero backend changes, all APIs intact |
@@ -208,7 +223,7 @@ Every screen now uses:
 
 ### Journey Coverage
 - Personas Covered: 6/6 (100%)
-- Screens Covered: 62/62 (100%)
+- Screens *Specified*: 62/62 (100%) — see the status correction at the top
 - Archetypes Used: 6/6 (100%)
 
 ---

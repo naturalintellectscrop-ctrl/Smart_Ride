@@ -85,6 +85,11 @@ export async function GET(request: NextRequest) {
       breakdown.peakSurcharge +
       breakdown.serviceFee;
 
+    // Compare the PRE-surge total against rawTotal. Surge is added on top of a
+    // fare that has already cleared the floor, so including it here would
+    // report "minimum fare applied" on every surging trip.
+    const preSurgeTotal = breakdown.totalAmount - (breakdown.surgeAmount ?? 0);
+
     estimates[taskType] = {
       totalAmount: breakdown.totalAmount,
       baseFare: breakdown.baseFare,
@@ -93,7 +98,12 @@ export async function GET(request: NextRequest) {
       waitingCharge: breakdown.waitingCharge,
       serviceFee: breakdown.serviceFee,
       surcharges: breakdown.nightSurcharge + breakdown.peakSurcharge,
-      minimumApplied: breakdown.totalAmount > rawTotal,
+      minimumApplied: preSurgeTotal > rawTotal,
+      // Surge is disclosed, not buried in the total — a rider who sees a
+      // higher price with no explanation assumes they are being cheated.
+      surgeMultiplier: breakdown.surgeMultiplier ?? 1,
+      surgeAmount: breakdown.surgeAmount ?? 0,
+      surgeReason: breakdown.surgeReason ?? null,
     };
   }
 
