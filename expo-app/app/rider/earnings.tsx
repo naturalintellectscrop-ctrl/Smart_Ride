@@ -23,6 +23,7 @@ import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import {
   AppHeader,
   Card,
+  SegmentedControl,
   WithdrawModal,
 } from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
@@ -224,19 +225,17 @@ export default function RiderEarningsScreen() {
           <Text style={styles.earningsAmount}>{formatCurrency(activeEarnings.totalEarnings)}</Text>
 
           {/* Period selector */}
-          <View style={styles.periodRow}>
-            {(['today', 'week', 'month', 'lifetime'] as EarningsPeriod[]).map(p => (
-              <TouchableOpacity
-                key={p}
-                style={[styles.periodChip, selectedPeriod === p && styles.periodChipActive]}
-                onPress={() => setSelectedPeriod(p)}
-              >
-                <Text style={[styles.periodChipText, selectedPeriod === p && styles.periodChipTextActive]}>
-                  {p === 'today' ? 'Today' : p === 'week' ? 'Week' : p === 'month' ? 'Month' : 'Lifetime'}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <SegmentedControl<EarningsPeriod>
+            segments={[
+              { value: 'today', label: 'Today' },
+              { value: 'week', label: 'Week' },
+              { value: 'month', label: 'Month' },
+              { value: 'lifetime', label: 'All' },
+            ]}
+            value={selectedPeriod}
+            onChange={setSelectedPeriod}
+            style={styles.periodControl}
+          />
         </Card>
 
         {/* Balance & Pending */}
@@ -431,30 +430,8 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.primary,
     marginBottom: SPACING.md,
   },
-  periodRow: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
-  },
-  periodChip: {
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: 14,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
-  periodChipActive: {
-    backgroundColor: `${COLORS.primary}25`,
-    borderWidth: 1,
-    borderColor: `${COLORS.primary}40`,
-  },
-  periodChipText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    fontWeight: '500',
-  },
-  periodChipTextActive: {
-    color: COLORS.primary,
-    fontWeight: '600',
+  periodControl: {
+    marginTop: SPACING.md,
   },
   statsRow: {
     flexDirection: 'row',
@@ -464,6 +441,10 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   statCard: {
     flex: 1,
     alignItems: 'center',
+    // Both cards stretch to the taller one's height; without this the shorter
+    // card's content sat at the top with dead space below it.
+    justifyContent: 'center',
+    gap: SPACING.xs,
   },
   statAmount: {
     ...TYPOGRAPHY.bodyLg,
@@ -510,12 +491,16 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   commissionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: SPACING.md,
   },
   commissionItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: SPACING.sm,
+    // Equal columns rather than content-width, so the two legend entries line
+    // up with the two segments of the bar above them.
+    minWidth: 0,
   },
   commissionDot: {
     width: 10,
@@ -574,6 +559,9 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   metricItem: {
     flex: 1,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+    minWidth: 0,
   },
   metricValue: {
     ...TYPOGRAPHY.headlineMd,
@@ -587,7 +575,10 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   metricDivider: {
     width: 1,
-    height: 30,
+    // Stretches with the row instead of a fixed 30px that floated centred and
+    // fell short of the taller metric cells.
+    alignSelf: 'stretch',
+    marginVertical: SPACING.xs,
     backgroundColor: COLORS.outlineVariant,
   },
   // Breakdown styles

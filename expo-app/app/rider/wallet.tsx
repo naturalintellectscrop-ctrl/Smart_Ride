@@ -15,7 +15,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/services';
 import { useAuthStore } from '@/src/store';
 import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
@@ -43,7 +43,10 @@ export default function RiderWalletScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   // Withdrawal modal
-  const [withdrawModalVisible, setWithdrawModalVisible] = useState(false);
+  // `?action=withdraw` opens the sheet on mount, so a caller can deep-link
+  // straight to the action instead of landing on the wallet and hunting for it.
+  const { action } = useLocalSearchParams<{ action?: string }>();
+  const [withdrawModalVisible, setWithdrawModalVisible] = useState(action === 'withdraw');
 
   // Top-up modal
   const [showTopUp, setShowTopUp] = useState(false);

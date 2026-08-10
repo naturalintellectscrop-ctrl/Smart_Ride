@@ -619,7 +619,7 @@ export default function DriverHomeScreen() {
               contentContainerStyle={styles.shortcutRow}
             >
               <Shortcut icon="wallet-outline" label="Wallet" onPress={() => router.push('/rider/wallet' as never)} COLORS={COLORS} styles={styles} />
-              <Shortcut icon="arrow-up-circle-outline" label="Withdraw" onPress={() => router.push('/rider/wallet' as never)} COLORS={COLORS} styles={styles} />
+              <Shortcut icon="arrow-up-circle-outline" label="Withdraw" onPress={() => router.push('/rider/wallet?action=withdraw' as never)} COLORS={COLORS} styles={styles} />
               <Shortcut icon="time-outline" label="History" onPress={() => router.push('/rider/history' as never)} COLORS={COLORS} styles={styles} />
               {isDeliveryRole ? (
                 <Shortcut icon="cube-outline" label="Deliveries" onPress={() => router.push('/driver/deliveries' as never)} COLORS={COLORS} styles={styles} />
@@ -767,7 +767,7 @@ function Shortcut({ icon, label, onPress, COLORS, styles }: { icon: string; labe
       accessibilityLabel={label}
     >
       <View style={styles.shortcutIcon}><Ionicons name={icon as any} size={ICON.md} color={COLORS.primary} /></View>
-      <Text style={styles.shortcutLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
+      <Text style={styles.shortcutLabel} numberOfLines={1}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -852,7 +852,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   walletChipText: { ...TYPOGRAPHY.labelMd, fontWeight: '700', color: COLORS.onPrimary },
   shortcutRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md, paddingRight: SPACING.xs },
-  shortcut: { alignItems: 'center', gap: SPACING.xs + 2, width: 76, minHeight: 44 },
+  shortcut: { alignItems: 'center', gap: SPACING.xs + 2, minWidth: 72, paddingHorizontal: SPACING.xs, minHeight: 44 },
   shortcutIcon: {
     width: 46, height: 46, borderRadius: RADIUS.md + 3,
     backgroundColor: COLORS.surfaceContainerLow,

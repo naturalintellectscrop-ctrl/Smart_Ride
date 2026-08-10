@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-011**.
+**ID allocation:** next free ID is **BE-012**.
 
 ---
 
@@ -744,3 +744,40 @@ findings were being worked on in parallel.
 - **BE-007** — dead wallet API surface, unchanged.
 - **BE-010** — push registration failure, unchanged.
 - **BE-006 backfill** — still owed; fixing the writer did not fix existing rows.
+
+---
+
+## BE-011 — Admin finance page fetches a payouts route that does not exist
+
+**Status:** OPEN
+**Severity:** P1 — rider withdrawals are invisible to admins, and the failure is silent
+**Owner:** backend session
+**Found:** 2026-08-10, tracing rider-screen functionality through to the admin dashboard.
+
+### What was verified
+
+`src/components/dashboard/payment-finance.tsx:97` fetches
+`/api/admin/payouts?limit=10`. There is no `src/app/api/admin/payouts/route.ts`
+— the only payout route in the tree is `src/app/api/pharmacy/payout`, which is
+a different subject. `ls src/app/api/admin/` confirms no `payouts` directory.
+
+The component is the live one: `/intellects` renders
+`components/smart-ride/dashboards/admin-dashboard.tsx`, an 8-line re-export of
+`components/dashboard/admin-dashboard.tsx`, which mounts this finance page.
+
+The request 404s, and because the result is guarded by `if (payoutsRes.ok)`
+with no `else`, nothing is reported. `setPayouts` is never called, so the table
+renders empty and an admin reads "no payouts" rather than "this feature is not
+connected." A rider who withdraws through `/riders/withdraw` — now consolidated
+onto `withdrawFromWallet` per BE-003 — has no corresponding admin view.
+
+### Not fixed here
+
+Building the route means deciding what a payout record *is*: whether it reads
+`Transaction` rows of type WITHDRAWAL, a dedicated payout model, or the mobile
+money provider's settlement records. That is a financial-data-model decision.
+
+### Adjacent, same file, also unfixed
+
+The three `if (res.ok)` blocks all fail silently the same way. A failed admin
+finance fetch should not be indistinguishable from an empty result set.
