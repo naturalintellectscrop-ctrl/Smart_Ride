@@ -347,17 +347,21 @@ function ThemedRootLayout() {
           <Stack.Screen name="merchant/menu" options={{ headerShown: false }} />
           <Stack.Screen name="merchant/earnings" options={{ headerShown: false }} />
           <Stack.Screen name="rider/onboarding" options={{ headerShown: false }} />
-          <Stack.Screen name="rider/ride-request" />
-          <Stack.Screen name="rider/ride-tracking" />
           <Stack.Screen name="rider/earnings" options={{ headerShown: false }} />
           <Stack.Screen name="rider/wallet" options={{ headerShown: false }} />
-          <Stack.Screen name="driver/driver-task" options={{ headerShown: false }} />
           <Stack.Screen name="pharmacist/index" options={{ headerShown: false }} />
           <Stack.Screen name="pharmacist/orders" options={{ headerShown: false }} />
           <Stack.Screen name="pharmacist/orders/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="pharmacist/catalog" options={{ headerShown: false }} />
           <Stack.Screen name="pharmacist/prescriptions" options={{ headerShown: false }} />
           <Stack.Screen name="pharmacist/earnings" options={{ headerShown: false }} />
+          <Stack.Screen name="rider/history" options={{ headerShown: false }} />
+          <Stack.Screen name="rider/trip-details" options={{ headerShown: false }} />
+          <Stack.Screen name="rider/trip-summary" options={{ headerShown: false }} />
+          <Stack.Screen name="driver/reputation" options={{ headerShown: false }} />
+          <Stack.Screen name="settings/index" options={{ headerShown: false }} />
+          <Stack.Screen name="receipt/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="help-center" options={{ headerShown: false }} />
         </Stack>
       </ProviderErrorBoundary>
       {/* Global branded feedback (modals + toasts) — replaces native Alert.alert */}
