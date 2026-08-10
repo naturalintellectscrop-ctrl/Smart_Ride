@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-010**.
+**ID allocation:** next free ID is **BE-011**.
 
 ---
 
@@ -492,6 +492,47 @@ rather than display. If so, its historical values were wrong during surge.
 
 ---
 
+---
+
+## BE-010 — Push registration fails on the release build (`FIS_AUTH_ERROR`)
+
+**Status:** OPEN
+**Severity:** P1 — no push notifications reach production users
+**Owner:** backend / infrastructure session
+**Found:** Stage 3 exit device pass, release APK on `R3CR709T4FN`, 2026-08-10.
+
+### What was verified
+
+A cold launch of the release APK logs:
+
+```
+W/ReactNativeJS: '[PUSH] Failed to register:',
+  { [Error: Fetching the token failed:
+     java.util.concurrent.ExecutionException:
+     java.io.IOException: FIS_AUTH_ERROR] code: 'E_REGISTRATION_FAILED' }
+```
+
+The device never obtains a push token, so every server-side notification path
+(dispatch offers, order status, chat) silently reaches nobody on this build.
+
+**Ruled out:** package-name mismatch. `android/app/google-services.json` and the
+repo-root copy both declare `ug.smartride.app` for project `smart-ride-774e7`,
+matching `applicationId` in `android/app/build.gradle:106`.
+
+**Remaining candidates** (all outside this session's reach): the Firebase
+Installations API disabled on the Cloud project, an API-key application
+restriction that does not include the release signing certificate's SHA-1, or a
+`google-services.json` regenerated without the release key.
+
+### Related gap, not a defect
+
+`app.json` declares no `scheme`. Nothing in the app depends on one today —
+there is no `Linking.createURL`, no OAuth redirect and no notification-tap
+route — so nothing is broken. But push notifications cannot deep-link into a
+screen until a scheme exists, which makes this a prerequisite for fixing the
+above in a way users would notice. Recorded as a Stage-4 item, not fixed here,
+because adding it is a native config change with no current consumer.
+
 # Session-end audit — Stage 3 exit
 
 Re-verified every finding against the tree at commit `94fec96`.
@@ -507,6 +548,7 @@ Re-verified every finding against the tree at commit `94fec96`.
 | BE-007 | **still OPEN** | `getWalletBalance` (`api.ts:993`) and `getReceipts` (`api.ts:1300`) still have zero callers |
 | BE-008 | FIXED_PENDING_VERIFICATION | signature completed with the two optional coordinate params only; the parallel session's surge logic untouched |
 | BE-009 | FIXED_PENDING_VERIFICATION | see above |
+| BE-010 | **OPEN** | reproduced on device at Stage 3 exit; package name ruled out as the cause |
 
 **Nothing in this ledger was renumbered.** BE-002, BE-003 and BE-007 are left
 open deliberately: each is backend architecture or financial infrastructure, and
