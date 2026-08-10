@@ -12,28 +12,30 @@ import {
   TouchableOpacity,
   TextInput,
   Switch,
-  ActivityIndicator,
   RefreshControl,
-  Modal,
   StyleSheet,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard, GradientButton } from '@/src/components';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  AppHeader,
+  Card,
+  EmptyState,
+  GradientButton,
+  ListSkeleton,
+  SmartBottomSheet,
+} from '@/src/components';
 
 export default function CatalogScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const insets = useSafeAreaInsets();
+  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
   const [medicines, setMedicines] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -172,7 +174,6 @@ export default function CatalogScreen() {
     }
   };
 
-  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
 
   const filteredMedicines = useMemo(() => searchQuery.trim()
     ? medicines.filter(m =>
@@ -189,26 +190,7 @@ export default function CatalogScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient
-        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
-        style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Medicine Catalog</Text>
-          <TouchableOpacity onPress={() => setAddModalVisible(true)} style={styles.addBtn}>
-            <Text style={styles.addBtnText}>+ Add</Text>
-          </TouchableOpacity>
-        </View>
-        <LinearGradient
-          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
-        />
-      </LinearGradient>
+      <AppHeader title="Catalogue" onBack={() => router.back()} />
 
       {/* Summary Row */}
       <View style={styles.summaryRow}>
@@ -243,10 +225,7 @@ export default function CatalogScreen() {
 
       {/* Medicine List */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading catalog...</Text>
-        </View>
+      <ListSkeleton />
       ) : (
         <ScrollView
           style={styles.scrollView}
@@ -255,7 +234,7 @@ export default function CatalogScreen() {
         >
           {filteredMedicines.length > 0 ? (
             filteredMedicines.map((medicine) => (
-              <GlassCard key={medicine.id} style={styles.medicineCard}>
+              <Card key={medicine.id} style={styles.medicineCard}>
                 <View style={styles.medicineHeader}>
                   <View style={styles.medicineTitleRow}>
                     <Text style={styles.medicineName}>{medicine.name || 'Unknown Medicine'}</Text>
@@ -318,34 +297,25 @@ export default function CatalogScreen() {
                 >
                   <Text style={styles.editStockText}>Update Stock</Text>
                 </TouchableOpacity>
-              </GlassCard>
+              </Card>
             ))
           ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="medkit-outline" size={32} color={COLORS.outlineVariant} />
-              <Text style={styles.emptyTitle}>No medicines found</Text>
-              <Text style={styles.emptySubtitle}>
-                {searchQuery ? 'Try a different search term' : 'Add medicines to your catalog'}
-              </Text>
-              {!searchQuery && (
-                <GradientButton
-                  title="Add Medicine"
-                  onPress={() => setAddModalVisible(true)}
-                  size="sm"
-                  style={{ marginTop: 16, width: 180 }}
-                />
-              )}
-            </View>
+            <EmptyState
+              icon="medkit-outline"
+              title="No medicines found"
+              subtitle={"{searchQuery ? 'Try a different search term' : 'Add medicines to your catalog'}"}
+            />
           )}
         </ScrollView>
       )}
 
       {/* Add Medicine Modal */}
-      <Modal visible={addModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <Text style={styles.modalTitle}>Add Medicine</Text>
+      <SmartBottomSheet
+        visible={addModalVisible}
+        title="Add medicine"
+        onDismiss={() => setAddModalVisible(false)}
+      >
+        <View>
 
               <Text style={styles.fieldLabel}>Name *</Text>
               <TextInput
@@ -422,7 +392,6 @@ export default function CatalogScreen() {
                   trackColor={{ false: COLORS.surfaceContainerLow, true: `${COLORS.primary}40` }}
                   thumbColor={newMedicine.requiresPrescription ? COLORS.primary : COLORS.outline}
                 />
-              </View>
 
               <View style={styles.modalButtons}>
                 <GradientButton
@@ -451,17 +420,18 @@ export default function CatalogScreen() {
                   size="sm"
                   style={styles.modalBtn}
                 />
-              </View>
-            </ScrollView>
           </View>
         </View>
-      </Modal>
+        </View>
+      </SmartBottomSheet>
 
       {/* Edit Stock Modal */}
-      <Modal visible={editModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Update Stock</Text>
+      <SmartBottomSheet
+        visible={editModalVisible}
+        title="Update stock"
+        onDismiss={() => setEditModalVisible(false)}
+      >
+        <View>
             <Text style={styles.modalSubtitle}>
               {editingMedicine?.name || 'Medicine'}
             </Text>
@@ -494,10 +464,9 @@ export default function CatalogScreen() {
                 size="sm"
                 style={styles.modalBtn}
               />
-            </View>
-          </View>
         </View>
-      </Modal>
+        </View>
+      </SmartBottomSheet>
     </View>
   );
 }
@@ -506,53 +475,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: COLORS.outline,
-    marginTop: SPACING.sm,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: SPACING.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-  backText: {
-    fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    color: COLORS.onSurface,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.headlineMd.fontSize,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-  },
-  addBtn: {
-    backgroundColor: `${COLORS.primary}20`,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: RADIUS.xl,
-  },
-  addBtnText: {
-    color: COLORS.primary,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-  },
-  glowBorder: {
-    height: 1,
-    marginTop: SPACING.md,
   },
   summaryRow: {
     flexDirection: 'row',
@@ -676,47 +598,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontSize: 13,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 60,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
-  },
-  emptyTitle: {
-    fontSize: TYPOGRAPHY.bodyLg.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.onSurface,
-    marginBottom: SPACING.xs,
-  },
-  emptySubtitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.outline,
-    textAlign: 'center',
-  },
   // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    maxHeight: '80%',
-  },
-  modalTitle: {
-    fontSize: TYPOGRAPHY.headlineMd.fontSize,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-    marginBottom: SPACING.xs,
-  },
   modalSubtitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,
     color: COLORS.outline,

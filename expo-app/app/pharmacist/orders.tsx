@@ -10,19 +10,22 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { statusColor } from '@/src/theme/statusColors';
+import {
+  AppHeader,
+  Card,
+  EmptyState,
+  ListSkeleton,
+  StatusBadge,
+} from '@/src/components';
 
 type OrderTab = 'ALL' | 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
 
@@ -34,24 +37,16 @@ const ORDER_TABS: { key: OrderTab; label: string }[] = [
   { key: 'CANCELLED', label: 'Cancelled' },
 ];
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: '#F59E0B',
-  ORDER_CREATED: '#4b5264',
-  PROCESSING: '#F97316',
-  PREPARING: '#F97316',
-  COMPLETED: '#006e2f',
-  DELIVERED: '#006e2f',
-  READY_FOR_PICKUP: '#005f3a',
-  CANCELLED: '#ba1a1a',
-};
+// Status colours resolve through the shared semantic mapping rather than a
+// local hex table — this was one of several near-identical copies.
 
-let COLORS: ThemedColors;
-let styles: any;
 
 export default function PharmacistOrdersScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<OrderTab>('ALL');
   const [orders, setOrders] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -86,7 +81,6 @@ export default function PharmacistOrdersScreen() {
     setRefreshing(false);
   };
 
-  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -96,24 +90,7 @@ export default function PharmacistOrdersScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient
-        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
-        style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Health Orders</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <LinearGradient
-          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
-        />
-      </LinearGradient>
+      <AppHeader title="Orders" onBack={() => router.back()} />
 
       {/* Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsContainer} contentContainerStyle={styles.tabsContent}>
@@ -132,10 +109,7 @@ export default function PharmacistOrdersScreen() {
 
       {/* Orders List */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading orders...</Text>
-        </View>
+      <ListSkeleton />
       ) : (
         <ScrollView
           style={styles.scrollView}
@@ -149,12 +123,12 @@ export default function PharmacistOrdersScreen() {
                 onPress={() => router.push(`/pharmacist/orders/${order.id}`)}
                 activeOpacity={0.7}
               >
-                <GlassCard style={styles.orderCard}>
+                <Card style={styles.orderCard}>
                   <View style={styles.orderHeader}>
                     <Text style={styles.orderNumber}>#{order.orderNumber || order.id?.slice(-6)}</Text>
                     <StatusBadge
                       label={order.status || 'UNKNOWN'}
-                      color={STATUS_COLORS[order.status] || COLORS.outline}
+                      color={statusColor(order.status, COLORS)}
                       size="sm"
                     />
                   </View>
@@ -174,17 +148,15 @@ export default function PharmacistOrdersScreen() {
                     <Text style={styles.orderDate}>{formatDate(order.createdAt)}</Text>
                     <Text style={styles.orderAmount}>{formatCurrency(order.totalAmount || order.amount)}</Text>
                   </View>
-                </GlassCard>
+                </Card>
               </TouchableOpacity>
             ))
           ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="cube-outline" size={32} color={COLORS.outlineVariant} />
-              <Text style={styles.emptyTitle}>No orders found</Text>
-              <Text style={styles.emptySubtitle}>
-                {activeTab === 'ALL' ? 'Orders will appear here when patients place them' : `No ${activeTab.toLowerCase()} orders`}
-              </Text>
-            </View>
+            <EmptyState
+              icon="cube-outline"
+              title="No orders found"
+              subtitle={"{activeTab === 'ALL' ? 'Orders will appear here when patients place them' : `No ${activeTab.toLowerCase()} orders`}"}
+            />
           )}
         </ScrollView>
       )}
@@ -196,42 +168,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: COLORS.outline,
-    marginTop: SPACING.sm,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: SPACING.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-  backText: {
-    fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    color: COLORS.onSurface,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.headlineMd.fontSize,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-  },
-  glowBorder: {
-    height: 1,
-    marginTop: SPACING.md,
   },
   tabsContainer: {
     maxHeight: 52,
@@ -315,25 +251,5 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontSize: TYPOGRAPHY.bodySm.fontSize,
     fontWeight: TYPOGRAPHY.labelLg.fontWeight,
     color: COLORS.primary,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: TYPOGRAPHY.bodyLg.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.onSurface,
-    marginBottom: SPACING.xs,
-  },
-  emptySubtitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.outline,
-    textAlign: 'center',
   },
 });

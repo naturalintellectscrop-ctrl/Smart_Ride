@@ -10,31 +10,23 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   StyleSheet,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import {
+  AppHeader,
+  Card,
+  DetailSkeleton,
+  GradientButton,
+} from '@/src/components';
 import { firstName } from '@/src/utils/formatName';
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: '#F59E0B',
-  ORDER_CREATED: '#4b5264',
-  PROCESSING: '#F97316',
-  PREPARING: '#F97316',
-  COMPLETED: '#006e2f',
-  DELIVERED: '#006e2f',
-  READY_FOR_PICKUP: '#005f3a',
-  CANCELLED: '#ba1a1a',
-};
+// Status colours resolve through the shared semantic mapping rather than a
+// local hex table — this was one of several near-identical copies.
 
 const STATUS_TIMELINE: Record<string, number> = {
   ORDER_CREATED: 1,
@@ -49,14 +41,14 @@ const STATUS_TIMELINE: Record<string, number> = {
   CANCELLED: 0,
 };
 
-let COLORS: ThemedColors;
-let styles: any;
 
 export default function OrderDetailScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const insets = useSafeAreaInsets();
   const [order, setOrder] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -96,7 +88,6 @@ export default function OrderDetailScreen() {
     }
   };
 
-  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
   const formatDate = (dateStr: string) => {
     if (!dateStr) return 'N/A';
     const d = new Date(dateStr);
@@ -105,9 +96,7 @@ export default function OrderDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <DetailSkeleton />
     );
   }
 
@@ -136,34 +125,11 @@ export default function OrderDetailScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient
-        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
-        style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Order #{order.orderNumber || id?.slice(-6)}</Text>
-          </View>
-          <StatusBadge
-            label={order.status || 'UNKNOWN'}
-            color={STATUS_COLORS[order.status] || COLORS.outline}
-            size="sm"
-          />
-        </View>
-        <LinearGradient
-          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
-        />
-      </LinearGradient>
+      <AppHeader title="Order" onBack={() => router.back()} />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Patient Info */}
-        <GlassCard style={styles.card}>
+        <Card style={styles.card}>
           <Text style={styles.cardTitle}>Patient Information</Text>
           {/* First name only — patient phone/full identity stays admin-only */}
           <View style={styles.infoRow}>
@@ -180,10 +146,10 @@ export default function OrderDetailScreen() {
               <Text style={[styles.infoValue, { color: COLORS.primary }]}>#{order.prescriptionId?.slice(-6)}</Text>
             </View>
           )}
-        </GlassCard>
+        </Card>
 
         {/* Medicine Items */}
-        <GlassCard style={styles.card}>
+        <Card style={styles.card}>
           <Text style={styles.cardTitle}>Medicines</Text>
           {Array.isArray(items) && items.length > 0 ? (
             items.map((item: any, index: number) => (
@@ -202,11 +168,11 @@ export default function OrderDetailScreen() {
             <Text style={styles.totalLabel}>Total</Text>
             <Text style={styles.totalValue}>{formatCurrency(order.totalAmount || order.amount || 0)}</Text>
           </View>
-        </GlassCard>
+        </Card>
 
         {/* Status Timeline */}
         {order.status !== 'CANCELLED' && (
-          <GlassCard style={styles.card}>
+          <Card style={styles.card}>
             <Text style={styles.cardTitle}>Order Progress</Text>
             {timelineSteps.map((step, index) => (
               <View key={step.step} style={styles.timelineItem}>
@@ -230,12 +196,12 @@ export default function OrderDetailScreen() {
                 </Text>
               </View>
             ))}
-          </GlassCard>
+          </Card>
         )}
 
         {/* Delivery Info */}
         {order.deliveryAddress && (
-          <GlassCard style={styles.card}>
+          <Card style={styles.card}>
             <Text style={styles.cardTitle}>Delivery</Text>
             <View style={styles.infoRow}>
               <Text style={styles.infoLabel}>Address</Text>
@@ -245,7 +211,7 @@ export default function OrderDetailScreen() {
               <Text style={styles.infoLabel}>Payment</Text>
               <Text style={styles.infoValue}>{order.paymentMethod || 'N/A'}</Text>
             </View>
-          </GlassCard>
+          </Card>
         )}
 
         {/* Action Buttons */}
@@ -310,36 +276,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.primary,
     fontSize: 14,
     fontWeight: '600',
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    marginRight: 8,
-  },
-  backText: {
-    fontSize: 24,
-    color: COLORS.onSurface,
-  },
-  headerCenter: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-  },
-  glowBorder: {
-    height: 1,
-    marginTop: 16,
   },
   scrollView: {
     flex: 1,

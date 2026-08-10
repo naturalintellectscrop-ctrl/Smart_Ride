@@ -10,19 +10,21 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
-  Switch,
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { GRADIENTS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  AppHeader,
+  Card,
+  DetailSkeleton,
+  OnlinePill,
+  StatusBadge,
+} from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
 import { useProviderApprovalGate } from '@/src/hooks/useProviderApprovalGate';
 
@@ -38,13 +40,12 @@ interface ProviderStatus {
   name?: string;
 }
 
-let COLORS: ThemedColors;
-let styles: any;
 
 export default function PharmacistDashboard() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   // Approval gate: a pharmacist can't use the dashboard until an admin approves.
   const approvalGate = useProviderApprovalGate('PHARMACIST');
   const [orderSummary, setOrderSummary] = useState<OrderSummary>({ pending: 0, processing: 0, completed: 0, total: 0 });
@@ -114,62 +115,35 @@ export default function PharmacistDashboard() {
     }
   };
 
-  const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
 
   // Not approved yet → show the approval-status screen instead of the dashboard.
   if (approvalGate) return approvalGate;
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
-      </View>
+      <DetailSkeleton />
     );
   }
 
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient
-        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
-        style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
-      >
-        <View style={styles.headerRow}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>Pharmacist</Text>
-            <Text style={styles.headerSubtitle}>
-              {providerStatus.name || 'Dashboard'}
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: SPACING.sm }}>
-            <TouchableOpacity onPress={() => router.push('/notifications')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="notifications-outline" size={22} color={COLORS.onSurface} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => router.push('/settings' as never)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Ionicons name="settings-outline" size={24} color={COLORS.onSurface} />
-            </TouchableOpacity>
-            <View style={styles.toggleContainer}>
-              <Text style={[styles.toggleLabel, { color: providerStatus.isOpen ? COLORS.primary : COLORS.outline }]}>
-                {providerStatus.isOpen ? 'Open' : 'Closed'}
-              </Text>
-              <Switch
-                value={providerStatus.isOpen}
-                onValueChange={toggleStatus}
-                disabled={isToggling}
-                trackColor={{ false: COLORS.surfaceContainerLow, true: `${COLORS.primary}40` }}
-                thumbColor={providerStatus.isOpen ? COLORS.primary : COLORS.outline}
-              />
-            </View>
-          </View>
-        </View>
-        <LinearGradient
-          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
-        />
-      </LinearGradient>
+      <AppHeader
+        title="Pharmacist"
+        subtitle={providerStatus.name || 'Dashboard'}
+        variant="large"
+        rightSlot={
+          <OnlinePill
+            isOnline={providerStatus.isOpen}
+            onToggle={toggleStatus}
+            labels={{ on: 'OPEN', off: 'CLOSED' }}
+            disabled={isToggling}
+          />
+        }
+        rightActions={[
+          { icon: 'settings-outline', onPress: () => router.push('/settings' as never), label: 'Settings' },
+        ]}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -178,23 +152,23 @@ export default function PharmacistDashboard() {
       >
         {/* Order Summary Cards */}
         <View style={styles.summaryRow}>
-          <GlassCard variant="accent" padding={14} style={styles.summaryCard}>
+          <Card variant="accent" padding={14} style={styles.summaryCard}>
             <Text style={styles.summaryNumber}>{orderSummary.pending}</Text>
             <Text style={styles.summaryLabel}>Pending</Text>
-          </GlassCard>
-          <GlassCard variant="cyan" padding={14} style={styles.summaryCard}>
+          </Card>
+          <Card variant="accent" padding={14} style={styles.summaryCard}>
             <Text style={styles.summaryNumber}>{orderSummary.processing}</Text>
             <Text style={styles.summaryLabel}>Processing</Text>
-          </GlassCard>
-          <GlassCard padding={14} style={styles.summaryCard}>
+          </Card>
+          <Card padding={14} style={styles.summaryCard}>
             <Text style={[styles.summaryNumber, { color: COLORS.success }]}>{orderSummary.completed}</Text>
             <Text style={styles.summaryLabel}>Completed</Text>
-          </GlassCard>
+          </Card>
         </View>
 
         {/* Pending Prescriptions Alert */}
         {pendingPrescriptions > 0 && (
-          <GlassCard variant="accent" style={styles.alertCard}>
+          <Card variant="accent" style={styles.alertCard}>
             <View style={styles.alertRow}>
               <Ionicons name="clipboard-outline" size={20} color={COLORS.primary} />
               <View style={styles.alertContent}>
@@ -205,7 +179,7 @@ export default function PharmacistDashboard() {
                 <Text style={styles.alertAction}>View →</Text>
               </TouchableOpacity>
             </View>
-          </GlassCard>
+          </Card>
         )}
 
         {/* Quick Actions */}
@@ -239,7 +213,7 @@ export default function PharmacistDashboard() {
 
         {/* Status Overview */}
         <Text style={styles.sectionTitle}>Status Overview</Text>
-        <GlassCard>
+        <Card>
           <View style={styles.statusRow}>
             <Text style={styles.statusLabel}>Store Status</Text>
             <StatusBadge
@@ -258,21 +232,23 @@ export default function PharmacistDashboard() {
             <Text style={styles.statusLabel}>Active Prescriptions</Text>
             <Text style={styles.statusValue}>{pendingPrescriptions}</Text>
           </View>
-        </GlassCard>
+        </Card>
       </ScrollView>
     </View>
   );
 }
 
 function QuickActionCard({ icon, title, subtitle, onPress }: { icon: string; title: string; subtitle: string; onPress: () => void }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-      <GlassCard padding={14} style={styles.actionCard}>
+    <Card padding={SPACING.md} style={styles.actionCard} onPress={onPress} accessibilityLabel={title}>
         <Ionicons name={icon as any} size={24} color={COLORS.primary} />
         <Text style={styles.actionTitle}>{title}</Text>
         <Text style={styles.actionSubtitle}>{subtitle}</Text>
-      </GlassCard>
-    </TouchableOpacity>
+      </Card>
   );
 }
 
@@ -280,52 +256,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-  },
-  loadingText: {
-    color: COLORS.outline,
-    marginTop: SPACING.sm,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: SPACING.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerLeft: {
-    flex: 1,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    fontWeight: TYPOGRAPHY.headlineLg.fontWeight,
-    color: COLORS.onSurface,
-  },
-  headerSubtitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.outline,
-    marginTop: SPACING.xs,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  toggleLabel: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    fontWeight: TYPOGRAPHY.labelMd.fontWeight,
-  },
-  glowBorder: {
-    height: 1,
-    marginTop: SPACING.md,
   },
   scrollView: {
     flex: 1,
@@ -361,10 +291,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  alertIcon: {
-    fontSize: 24,
-    marginRight: SPACING.gutter,
-  },
   alertContent: {
     flex: 1,
   },
@@ -398,10 +324,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   actionCard: {
     width: '47%',
     alignItems: 'center',
-  },
-  actionIcon: {
-    fontSize: 28,
-    marginBottom: SPACING.sm,
   },
   actionTitle: {
     fontSize: TYPOGRAPHY.bodySm.fontSize,

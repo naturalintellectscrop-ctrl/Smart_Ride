@@ -11,7 +11,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  ActivityIndicator,
   RefreshControl,
   Modal,
   Image,
@@ -19,13 +18,20 @@ import {
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, OPACITY } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
-import { LinearGradient } from 'expo-linear-gradient';
+import { statusColor } from '@/src/theme/statusColors';
+import {
+  AppHeader,
+  Card,
+  EmptyState,
+  GradientButton,
+  ListSkeleton,
+  SmartBottomSheet,
+  StatusBadge,
+} from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
 import { firstName } from '@/src/utils/formatName';
 
@@ -47,20 +53,14 @@ const PRESCRIPTION_TABS: { key: PrescriptionTab; label: string }[] = [
   { key: 'REJECTED', label: 'Rejected' },
 ];
 
-const STATUS_COLORS: Record<string, string> = {
-  PENDING: '#F59E0B',
-  VERIFIED: '#006e2f',
-  REJECTED: '#ba1a1a',
-  EXPIRED: '#6f7a71',
-};
+// Status colours resolve through the shared semantic mapping.
 
-let COLORS: ThemedColors;
-let styles: any;
 
 export default function PrescriptionsScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<PrescriptionTab>('PENDING');
   const [prescriptions, setPrescriptions] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -182,24 +182,7 @@ export default function PrescriptionsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient
-        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
-        style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Prescriptions</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <LinearGradient
-          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
-        />
-      </LinearGradient>
+      <AppHeader title="Prescriptions" onBack={() => router.back()} />
 
       {/* Tabs */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabsContainer} contentContainerStyle={styles.tabsContent}>
@@ -218,10 +201,7 @@ export default function PrescriptionsScreen() {
 
       {/* Prescriptions List */}
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading prescriptions...</Text>
-        </View>
+      <ListSkeleton />
       ) : (
         <ScrollView
           style={styles.scrollView}
@@ -230,12 +210,12 @@ export default function PrescriptionsScreen() {
         >
           {prescriptions.length > 0 ? (
             prescriptions.map((prescription) => (
-              <GlassCard key={prescription.id} style={styles.prescriptionCard}>
+              <Card key={prescription.id} style={styles.prescriptionCard}>
                 <View style={styles.prescriptionHeader}>
                   <Text style={styles.prescriptionId}>#{prescription.id?.slice(-6)}</Text>
                   <StatusBadge
                     label={prescription.status || 'UNKNOWN'}
-                    color={STATUS_COLORS[prescription.status] || COLORS.outline}
+                    color={statusColor(prescription.status, COLORS)}
                     size="sm"
                   />
                 </View>
@@ -317,26 +297,29 @@ export default function PrescriptionsScreen() {
                     />
                   </View>
                 )}
-              </GlassCard>
+              </Card>
             ))
           ) : (
-            <View style={styles.emptyContainer}>
-              <Ionicons name="clipboard-outline" size={32} color={COLORS.outlineVariant} />
-              <Text style={styles.emptyTitle}>No prescriptions found</Text>
-              <Text style={styles.emptySubtitle}>
-                {activeTab === 'ALL'
-                  ? 'Prescriptions will appear here when patients upload them'
-                  : `No ${activeTab.toLowerCase()} prescriptions`}
-              </Text>
-            </View>
+            <EmptyState
+              icon="clipboard-outline"
+              title="No prescriptions found"
+              subtitle={
+                activeTab === 'ALL'
+                  ? 'Prescriptions will appear here when patients upload them.'
+                  : `No ${activeTab.toLowerCase()} prescriptions.`
+              }
+            />
           )}
         </ScrollView>
       )}
 
       {/* Verify Modal — verification checklist + notes */}
-      <Modal visible={verifyModalVisible} animationType="slide" transparent onRequestClose={closeVerifyModal}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+      <SmartBottomSheet
+        visible={verifyModalVisible}
+        title="Verify prescription"
+        onDismiss={() => closeVerifyModal()}
+      >
+        <View>
             <Text style={styles.modalTitle}>Verify Prescription</Text>
             <Text style={styles.modalSubtitle}>Confirm each item against the prescription image</Text>
 
@@ -387,14 +370,16 @@ export default function PrescriptionsScreen() {
                 style={styles.modalBtn}
               />
             </View>
-          </View>
         </View>
-      </Modal>
+      </SmartBottomSheet>
 
       {/* Reject Modal */}
-      <Modal visible={rejectModalVisible} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+      <SmartBottomSheet
+        visible={rejectModalVisible}
+        title="Reject prescription"
+        onDismiss={() => setRejectModalVisible(false)}
+      >
+        <View>
             <Text style={styles.modalTitle}>Reject Prescription</Text>
             <Text style={styles.modalSubtitle}>Please provide a reason for rejection</Text>
             <TextInput
@@ -429,9 +414,8 @@ export default function PrescriptionsScreen() {
                 style={styles.modalBtn}
               />
             </View>
-          </View>
         </View>
-      </Modal>
+      </SmartBottomSheet>
 
       {/* Image Viewer Modal */}
       <Modal visible={imageModalVisible} animationType="fade" transparent>
@@ -459,42 +443,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: COLORS.outline,
-    marginTop: SPACING.sm,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: SPACING.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-  backText: {
-    fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    color: COLORS.onSurface,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.headlineMd.fontSize,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-  },
-  glowBorder: {
-    height: 1,
-    marginTop: SPACING.md,
   },
   tabsContainer: {
     maxHeight: 52,
@@ -634,40 +582,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   actionBtn: {
     flex: 1,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: 80,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: TYPOGRAPHY.bodyLg.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.onSurface,
-    marginBottom: SPACING.xs,
-  },
-  emptySubtitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.outline,
-    textAlign: 'center',
-  },
   // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
   modalTitle: {
     fontSize: TYPOGRAPHY.headlineMd.fontSize,
     fontWeight: 'bold',
@@ -733,7 +648,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   // Image modal
   imageModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.9)',
+    backgroundColor: `rgba(0, 0, 0, ${OPACITY.scrimHeavy + 0.3})`,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -745,7 +660,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: `${COLORS.onPrimary}33`,
     alignItems: 'center',
     justifyContent: 'center',
   },

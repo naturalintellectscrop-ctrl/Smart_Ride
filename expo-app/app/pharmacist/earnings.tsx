@@ -10,19 +10,22 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard, StatusBadge, GradientButton } from '@/src/components';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  AppHeader,
+  Card,
+  GradientButton,
+  ListSkeleton,
+  StatusBadge,
+} from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
 
 type PeriodFilter = 'daily' | 'weekly' | 'monthly';
@@ -32,7 +35,7 @@ export default function PharmacistEarningsScreen() {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const insets = useSafeAreaInsets();
+  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
   const [period, setPeriod] = useState<PeriodFilter>('daily');
   const [earningsData, setEarningsData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -66,7 +69,6 @@ export default function PharmacistEarningsScreen() {
     setRefreshing(false);
   };
 
-  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -132,30 +134,10 @@ export default function PharmacistEarningsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <LinearGradient
-        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
-        style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Earnings</Text>
-          <View style={{ width: 40 }} />
-        </View>
-        <LinearGradient
-          colors={[COLORS.primaryFixedDim, COLORS.primaryFixed, 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
-        />
-      </LinearGradient>
+      <AppHeader title="Earnings" onBack={() => router.back()} />
 
       {isLoading ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.loadingText}>Loading earnings...</Text>
-        </View>
+      <ListSkeleton />
       ) : (
         <ScrollView
           style={styles.scrollView}
@@ -163,7 +145,7 @@ export default function PharmacistEarningsScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
         >
           {/* Total Earnings Card */}
-          <GlassCard variant="accent" style={styles.totalCard}>
+          <Card variant="accent" style={styles.totalCard}>
             <Text style={styles.totalLabel}>Total Earnings</Text>
             <Text style={styles.totalAmount}>{formatCurrency(totalEarnings)}</Text>
             <View style={styles.balanceRow}>
@@ -181,7 +163,7 @@ export default function PharmacistEarningsScreen() {
                 </Text>
               </View>
             </View>
-          </GlassCard>
+          </Card>
 
           {/* Period Filter */}
           <View style={styles.periodRow}>
@@ -200,21 +182,21 @@ export default function PharmacistEarningsScreen() {
 
           {/* Period Earnings */}
           <View style={styles.earningsGrid}>
-            <GlassCard style={styles.earningsCard}>
+            <Card style={styles.earningsCard}>
               <Ionicons name="stats-chart-outline" size={20} color={COLORS.primary} />
               <Text style={styles.earningsAmount}>{formatCurrency(todayEarnings)}</Text>
               <Text style={styles.earningsPeriod}>Today</Text>
-            </GlassCard>
-            <GlassCard variant="cyan" style={styles.earningsCard}>
+            </Card>
+            <Card variant="accent" style={styles.earningsCard}>
               <Ionicons name="trending-up-outline" size={20} color={COLORS.primary} />
               <Text style={styles.earningsAmount}>{formatCurrency(weekEarnings)}</Text>
               <Text style={styles.earningsPeriod}>This Week</Text>
-            </GlassCard>
-            <GlassCard style={styles.earningsCard}>
+            </Card>
+            <Card style={styles.earningsCard}>
               <Ionicons name="wallet-outline" size={20} color={COLORS.primary} />
               <Text style={styles.earningsAmount}>{formatCurrency(monthEarnings)}</Text>
               <Text style={styles.earningsPeriod}>This Month</Text>
-            </GlassCard>
+            </Card>
           </View>
 
           {/* Request Payout */}
@@ -240,7 +222,7 @@ export default function PharmacistEarningsScreen() {
           <Text style={styles.sectionTitle}>Recent Transactions</Text>
           {transactions.length > 0 ? (
             transactions.map((tx: any) => (
-              <GlassCard key={tx.id} style={styles.transactionCard}>
+              <Card key={tx.id} style={styles.transactionCard}>
                 <View style={styles.transactionRow}>
                   <View style={[
                     styles.transactionIcon,
@@ -268,14 +250,14 @@ export default function PharmacistEarningsScreen() {
                     />
                   </View>
                 </View>
-              </GlassCard>
+              </Card>
             ))
           ) : (
-            <GlassCard style={styles.emptyCard}>
+            <Card style={styles.emptyCard}>
               <Ionicons name="card-outline" size={40} color={COLORS.outlineVariant} />
               <Text style={styles.emptyTitle}>No transactions yet</Text>
               <Text style={styles.emptySubtitle}>Transaction history will appear here</Text>
-            </GlassCard>
+            </Card>
           )}
         </ScrollView>
       )}
@@ -287,42 +269,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: COLORS.outline,
-    marginTop: SPACING.sm,
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: SPACING.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-  backText: {
-    fontSize: TYPOGRAPHY.headlineLg.fontSize,
-    color: COLORS.onSurface,
-  },
-  headerTitle: {
-    fontSize: TYPOGRAPHY.headlineMd.fontSize,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-  },
-  glowBorder: {
-    height: 1,
-    marginTop: SPACING.md,
   },
   scrollView: {
     flex: 1,
@@ -408,10 +354,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
   },
-  earningsIcon: {
-    fontSize: 20,
-    marginBottom: 6,
-  },
   earningsAmount: {
     fontSize: 15,
     fontWeight: 'bold',
@@ -453,9 +395,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     justifyContent: 'center',
     marginRight: SPACING.gutter,
   },
-  transactionEmoji: {
-    fontSize: TYPOGRAPHY.bodyLg.fontSize,
-  },
   transactionInfo: {
     flex: 1,
   },
@@ -479,10 +418,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   emptyCard: {
     alignItems: 'center',
     paddingVertical: 40,
-  },
-  emptyIcon: {
-    fontSize: 40,
-    marginBottom: SPACING.md,
   },
   emptyTitle: {
     fontSize: TYPOGRAPHY.bodyMd.fontSize,
