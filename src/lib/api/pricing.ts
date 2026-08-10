@@ -1,5 +1,6 @@
 import { TaskType } from '@prisma/client';
 import { db } from '@/lib/db';
+import { getSurgeForLocation, applySurgeToFare } from '@/lib/marketplace/surge-pricing';
 
 interface PricingInput {
   taskType: TaskType;
@@ -11,6 +12,13 @@ interface PricingInput {
   passengerCount?: number;
   isNightTime?: boolean;
   isPeakHours?: boolean;
+  /**
+   * Pickup point. When supplied, calculatePricingAsync resolves any ACTIVE
+   * surge for the containing zone and applies it. Omit to price without surge
+   * (the sync calculatePricing never applies surge).
+   */
+  pickupLatitude?: number | null;
+  pickupLongitude?: number | null;
 }
 
 interface PricingBreakdown {
@@ -25,10 +33,18 @@ interface PricingBreakdown {
   totalAmount: number;
   platformCommission: number;
   riderEarnings: number;
+  /** 1 when no surge is active. */
+  surgeMultiplier: number;
+  /** UGX added by surge; the whole amount goes to the rider. */
+  surgeAmount: number;
+  /** Customer-safe explanation, present only while surging. */
+  surgeReason?: string;
 }
 
 // Pricing configuration per service type (in UGX)
-const PRICING_CONFIG = {
+// Typed as a total map over TaskType so adding a task type to the enum without
+// a rate table is a compile error rather than a NaN fare in production.
+const PRICING_CONFIG: Record<TaskType, RateConfig> = {
   SMART_BODA_RIDE: {
     baseFare: 2000,
     perKmRate: 150,
@@ -82,6 +98,22 @@ const PRICING_CONFIG = {
     perKgRate: 50,
     minimumFare: 2000,
     platformCommissionPercent: 0.10,
+    serviceFeePercent: 0.02,
+    nightSurchargePercent: 0.10,
+    peakSurchargePercent: 0.15,
+  },
+  // Prescription and pharmacy runs. This entry was missing while
+  // SMART_HEALTH_DELIVERY was a live TaskType — health-orders creates tasks
+  // with it — so every health delivery priced through here produced NaN.
+  // The 15% platform cut matches the 85/15 split the earnings endpoint
+  // already declares for this task type; rates track ITEM_DELIVERY, with a
+  // higher base for the handling a medicine run requires.
+  SMART_HEALTH_DELIVERY: {
+    baseFare: 2000,
+    perKmRate: 150,
+    perMinuteRate: 0,
+    minimumFare: 3000,
+    platformCommissionPercent: 0.15,
     serviceFeePercent: 0.02,
     nightSurchargePercent: 0.10,
     peakSurchargePercent: 0.15,
@@ -152,7 +184,17 @@ async function loadDbPricing(): Promise<Record<string, Partial<RateConfig>>> {
 
 /** Merge admin DB overrides over the hardcoded defaults for a task type. */
 function mergeConfig(taskType: TaskType, dbMap: Record<string, Partial<RateConfig>>): RateConfig {
-  const base = PRICING_CONFIG[taskType] as RateConfig;
+  const base = PRICING_CONFIG[taskType] as RateConfig | undefined;
+  // A task type with no rate table silently produced NaN for every line of the
+  // fare — a quote of "NaN UGX" reaching a customer, or worse, a task written
+  // with a NaN total. Fail loudly instead: a missing rate table is a
+  // configuration bug, not a runtime condition to absorb.
+  if (!base) {
+    throw new Error(
+      `No pricing configuration for task type "${taskType}". ` +
+        `Add it to PRICING_CONFIG before this task type can be booked.`
+    );
+  }
   const override = dbMap[taskType] || {};
   const merged: RateConfig = { ...base };
   for (const [k, v] of Object.entries(override)) {
@@ -172,7 +214,24 @@ export function invalidatePricingCache(): void {
  */
 export async function calculatePricingAsync(input: PricingInput): Promise<PricingBreakdown> {
   const dbMap = await loadDbPricing();
-  return computePricing(input, mergeConfig(input.taskType, dbMap));
+  const base = computePricing(input, mergeConfig(input.taskType, dbMap));
+
+  // Apply marketplace surge. The scheduler decides WHETHER a zone surges and
+  // by how much; this is where that decision reaches the money. Without it the
+  // marketplace chain stopped at the database and no fare ever changed.
+  const surge = await getSurgeForLocation(input.pickupLatitude, input.pickupLongitude);
+  if (!surge.isActive) return base;
+
+  const surged = applySurgeToFare(base, surge.multiplier);
+  return {
+    ...base,
+    totalAmount: surged.totalAmount,
+    riderEarnings: surged.riderEarnings,
+    platformCommission: surged.platformCommission,
+    surgeMultiplier: surged.surgeMultiplier,
+    surgeAmount: surged.surgeAmount,
+    surgeReason: surge.reason,
+  };
 }
 
 /**
@@ -259,6 +318,10 @@ function computePricing(input: PricingInput, config: RateConfig): PricingBreakdo
     totalAmount,
     platformCommission,
     riderEarnings,
+    // No surge from the sync path; calculatePricingAsync overrides these
+    // after resolving the zone's active surge.
+    surgeMultiplier: 1,
+    surgeAmount: 0,
   };
 }
 

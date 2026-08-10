@@ -10,7 +10,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Switch,
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
@@ -24,6 +23,17 @@ import { useMerchantStore } from '@/src/store';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import {
+  AppHeader,
+  Card,
+  EmptyState,
+  ErrorState,
+  GradientButton,
+  IconInput,
+  ListSkeleton,
+  SmartBottomSheet,
+  Toggle,
+} from '@/src/components';
 import { MenuItem } from '@/src/types';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -183,17 +193,11 @@ export default function MerchantMenuScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.md || 56 }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Menu</Text>
-          <TouchableOpacity style={styles.addButton} onPress={openAddModal}>
-            <Text style={styles.addButtonText}>+ Add</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <AppHeader
+        title="Menu"
+        onBack={() => router.back()}
+        rightActions={[{ icon: 'add', onPress: openAddModal, label: 'Add item' }]}
+      />
 
       {/* Menu Items */}
       <ScrollView
@@ -202,30 +206,21 @@ export default function MerchantMenuScreen() {
         contentContainerStyle={styles.listContent}
       >
         {isLoadingMenu && !refreshing ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Loading menu...</Text>
-          </View>
+          <ListSkeleton rows={4} />
         ) : menuError ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={20} color={COLORS.error} />
-            <Text style={styles.errorText}>{menuError}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => merchantId && fetchMenu(merchantId)}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
+          <ErrorState
+            title="Couldn't load your menu"
+            subtitle={menuError}
+            onRetry={() => merchantId && fetchMenu(merchantId)}
+          />
         ) : menuItems.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="restaurant-outline" size={32} color={COLORS.outlineVariant} />
-            <Text style={styles.emptyTitle}>No Menu Items</Text>
-            <Text style={styles.emptySubtitle}>Add your first menu item to get started</Text>
-            <TouchableOpacity style={styles.emptyButton} onPress={openAddModal}>
-              <Text style={styles.emptyButtonText}>+ Add Item</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon="restaurant-outline"
+            title="No menu items"
+            subtitle="Add your first item so customers can order."
+            actionLabel="Add item"
+            onAction={openAddModal}
+          />
         ) : (
           categories.map(category => (
             <View key={category} style={styles.categorySection}>
@@ -237,11 +232,10 @@ export default function MerchantMenuScreen() {
                       <Text style={[styles.menuItemName, !item.isAvailable && styles.menuItemNameDisabled]}>
                         {item.name}
                       </Text>
-                      <Switch
+                      <Toggle
                         value={item.isAvailable}
                         onValueChange={() => handleToggleAvailability(item)}
-                        trackColor={{ false: '#374151', true: COLORS.primary }}
-                        thumbColor={item.isAvailable ? COLORS.surfaceContainerLowest : COLORS.outline}
+                        accessibilityLabel={`${item.name} available`}
                         style={styles.availabilitySwitch}
                       />
                     </View>
@@ -277,88 +271,65 @@ export default function MerchantMenuScreen() {
       </ScrollView>
 
       {/* Add/Edit Modal */}
-      <Modal
+      {/* Add/edit item. Was a bespoke <Modal> with its own scrim, header,
+          close glyph and four raw TextInputs. */}
+      <SmartBottomSheet
         visible={showAddModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowAddModal(false)}
+        title={editingItem ? 'Edit item' : 'Add new item'}
+        onDismiss={() => setShowAddModal(false)}
+        dismissOnBackdrop={!isSaving}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{editingItem ? 'Edit Item' : 'Add New Item'}</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
+        <View>
+          <IconInput
+            label="Name *"
+            placeholder="Item name"
+            value={formName}
+            onChangeText={setFormName}
+            icon="fast-food-outline"
+          />
+          <IconInput
+            label="Description"
+            placeholder="Item description"
+            value={formDescription}
+            onChangeText={setFormDescription}
+            icon="document-text-outline"
+            multiline
+          />
+          <IconInput
+            label="Price (UGX) *"
+            placeholder="0"
+            value={formPrice}
+            onChangeText={setFormPrice}
+            icon="cash-outline"
+            keyboardType="numeric"
+          />
+          <IconInput
+            label="Category"
+            placeholder="e.g. Main Dish, Drinks"
+            value={formCategory}
+            onChangeText={setFormCategory}
+            icon="pricetag-outline"
+          />
 
-            <ScrollView style={styles.modalForm}>
-              <Text style={styles.formLabel}>Name *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formName}
-                onChangeText={setFormName}
-                placeholder="Item name"
-                placeholderTextColor={COLORS.outline}
-              />
-
-              <Text style={styles.formLabel}>Description</Text>
-              <TextInput
-                style={[styles.formInput, styles.formInputMultiline]}
-                value={formDescription}
-                onChangeText={setFormDescription}
-                placeholder="Item description"
-                placeholderTextColor={COLORS.outline}
-                multiline
-                numberOfLines={3}
-              />
-
-              <Text style={styles.formLabel}>Price (UGX) *</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formPrice}
-                onChangeText={setFormPrice}
-                placeholder="0"
-                placeholderTextColor={COLORS.outline}
-                keyboardType="numeric"
-              />
-
-              <Text style={styles.formLabel}>Category</Text>
-              <TextInput
-                style={styles.formInput}
-                value={formCategory}
-                onChangeText={setFormCategory}
-                placeholder="e.g., Main Dish, Drinks"
-                placeholderTextColor={COLORS.outline}
-              />
-
-              <View style={styles.formToggleRow}>
-                <Text style={styles.formLabel}>Available</Text>
-                <Switch
-                  value={formAvailable}
-                  onValueChange={setFormAvailable}
-                  trackColor={{ false: '#374151', true: COLORS.primary }}
-                  thumbColor={formAvailable ? COLORS.surfaceContainerLowest : COLORS.outline}
-                />
-              </View>
-
-              <TouchableOpacity
-                style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-                onPress={handleSave}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <ActivityIndicator color={COLORS.surface} />
-                ) : (
-                  <Text style={styles.saveButtonText}>
-                    {editingItem ? 'Update Item' : 'Add Item'}
-                  </Text>
-                )}
-              </TouchableOpacity>
-            </ScrollView>
+          <View style={styles.formToggleRow}>
+            <Text style={styles.formLabel}>Available</Text>
+            <Toggle
+              value={formAvailable}
+              onValueChange={setFormAvailable}
+              accessibilityLabel="Item available"
+            />
           </View>
+
+          <GradientButton
+            title={editingItem ? 'Update item' : 'Add item'}
+            onPress={handleSave}
+            loading={isSaving}
+            disabled={isSaving}
+            size="lg"
+            fullWidth
+          />
         </View>
-      </Modal>
+      </SmartBottomSheet>
     </View>
   );
 }

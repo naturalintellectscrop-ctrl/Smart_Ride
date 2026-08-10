@@ -4,7 +4,7 @@
 // Full order detail with status timeline & actions
 // ============================================
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState , useMemo } from 'react';
 import {
   View,
   Text,
@@ -18,18 +18,21 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMerchantStore } from '@/src/store';
 import { api } from '@/src/services';
-import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { ORDER_STATUS_LABELS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import { statusColor as semanticStatusColor } from '@/src/theme/statusColors';
+import {
+  AppHeader,
+  Card,
+  DetailSkeleton,
+  ErrorState,
+  GradientButton,
+  StatusBadge,
+} from '@/src/components';
 import { MerchantOrder, OrderItem } from '@/src/types';
 import { Ionicons } from '@expo/vector-icons';
 
-// Module-scoped themed styles, (re)assigned from the component on each theme
-// change so the sub-components and stylesheet factories below can reference them.
-let COLORS: ThemedColors;
-let styles: any;
-let infoStyles: any;
-let summaryStyles: any;
 
 const STATUS_FLOW = [
   'ORDER_CREATED',
@@ -42,7 +45,9 @@ const STATUS_FLOW = [
 ];
 
 export default function MerchantOrderDetailScreen() {
-  { const __t = useTheme(); COLORS = makeThemedColors(__t.isDark); styles = create_styles(COLORS); infoStyles = create_infoStyles(COLORS); summaryStyles = create_summaryStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => create_styles(COLORS), [COLORS]);
   const router = useRouter();
   const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
@@ -143,53 +148,41 @@ export default function MerchantOrderDetailScreen() {
 
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading order...</Text>
+      <View style={styles.container}>
+        <AppHeader title="Order" onBack={() => router.back()} />
+        <DetailSkeleton />
       </View>
     );
   }
 
   if (error || !order) {
     return (
-      <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={20} color={COLORS.error} />
-        <Text style={styles.errorTitle}>Order Not Found</Text>
-        <Text style={styles.errorText}>{error || 'Could not load order details'}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={loadOrder}>
-          <Text style={styles.retryButtonText}>Retry</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backButtonText}>Go Back</Text>
-        </TouchableOpacity>
+      <View style={styles.container}>
+        <AppHeader title="Order" onBack={() => router.back()} />
+        <View style={styles.stateWrap}>
+          <ErrorState
+            title="Order not found"
+            subtitle={error || 'Could not load order details.'}
+            onRetry={loadOrder}
+          />
+        </View>
       </View>
     );
   }
 
   const actions = getAvailableActions(order.status);
-  const statusColor = ORDER_STATUS_COLORS[order.status] || COLORS.outline;
+  const statusColor = semanticStatusColor(order.status, COLORS);
   const currentStatusIndex = getStatusIndex(order.status);
 
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView}>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}>
-          <View style={styles.headerRow}>
-            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-              <Text style={styles.backIcon}>←</Text>
-            </TouchableOpacity>
-            <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>Order #{order.orderNumber || order.id.slice(-6)}</Text>
-              <View style={[styles.statusBadge, { backgroundColor: `${statusColor}20`, borderColor: `${statusColor}30` }]}>
-                <Text style={[styles.statusText, { color: statusColor }]}>
-                  {ORDER_STATUS_LABELS[order.status] || order.status}
-                </Text>
-              </View>
-            </View>
-            <View style={styles.headerSpacer} />
-          </View>
-        </View>
+        <AppHeader
+          title={`Order #${order.orderNumber || order.id.slice(-6)}`}
+          subtitle={ORDER_STATUS_LABELS[order.status] || order.status}
+          onBack={() => router.back()}
+        />
 
         {/* Order Info */}
         <View style={styles.section}>
@@ -211,7 +204,7 @@ export default function MerchantOrderDetailScreen() {
             {STATUS_FLOW.map((status, index) => {
               const isCompleted = index <= currentStatusIndex;
               const isCurrent = status === order.status;
-              const color = isCompleted ? ORDER_STATUS_COLORS[status] || COLORS.outline : COLORS.outlineVariant;
+              const color = isCompleted ? semanticStatusColor(status, COLORS) : COLORS.outlineVariant;
 
               return (
                 <View key={status} style={styles.timelineItem}>
@@ -322,6 +315,9 @@ export default function MerchantOrderDetailScreen() {
 // ============================================
 
 function InfoRow({ icon, label, value }: { icon: string; label: string; value: string }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const infoStyles = useMemo(() => create_infoStyles(COLORS), [COLORS]);
   return (
     <View style={infoStyles.row}>
       <Ionicons name={icon as any} size={16} color={COLORS.onSurfaceVariant} />
@@ -332,6 +328,9 @@ function InfoRow({ icon, label, value }: { icon: string; label: string; value: s
 }
 
 function SummaryRow({ label, value, isBold }: { label: string; value: string; isBold?: boolean }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const summaryStyles = useMemo(() => create_summaryStyles(COLORS), [COLORS]);
   return (
     <View style={summaryStyles.row}>
       <Text style={[summaryStyles.label, isBold && summaryStyles.boldLabel]}>{label}</Text>
@@ -345,6 +344,7 @@ function SummaryRow({ label, value, isBold }: { label: string; value: string; is
 // ============================================
 
 const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
+  stateWrap: { flex: 1, justifyContent: 'center', paddingHorizontal: SPACING.md },
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,

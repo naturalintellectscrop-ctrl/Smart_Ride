@@ -13,18 +13,24 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMerchantStore } from '@/src/store';
-import { ORDER_STATUS_COLORS, ORDER_STATUS_LABELS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { ORDER_STATUS_LABELS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { statusColor as semanticStatusColor } from '@/src/theme/statusColors';
+import {
+  AppHeader,
+  Chip,
+  EmptyState,
+  ErrorState,
+  ListSkeleton,
+  StatusBadge,
+} from '@/src/components';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { MerchantOrder } from '@/src/types';
 import { Ionicons } from '@expo/vector-icons';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
 
 const TABS = [
   { key: 'ALL', label: 'All' },
@@ -42,7 +48,6 @@ export default function MerchantOrdersScreen() {
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const params = useLocalSearchParams();
-  const insets = useSafeAreaInsets();
   const merchantId = params.merchantId as string;
 
   const orders = useMerchantStore(s => s.orders);
@@ -50,7 +55,6 @@ export default function MerchantOrdersScreen() {
   const ordersError = useMerchantStore(s => s.ordersError);
   const fetchOrders = useMerchantStore(s => s.fetchOrders);
   const updateOrderStatus = useMerchantStore(s => s.updateOrderStatus);
-  const isUpdatingOrder = useMerchantStore(s => s.isUpdatingOrder);
 
   const [activeTab, setActiveTab] = useState('ALL');
   const [refreshing, setRefreshing] = useState(false);
@@ -94,7 +98,7 @@ export default function MerchantOrdersScreen() {
   };
 
   const getStatusColor = (status: string) => {
-    return ORDER_STATUS_COLORS[status] || COLORS.outline;
+    return semanticStatusColor(status, COLORS);
   };
 
   const getAvailableActions = (status: string): { label: string; status: string; variant: 'primary' | 'secondary' | 'danger' }[] => {
@@ -122,16 +126,8 @@ export default function MerchantOrdersScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.md || 56 }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Orders</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      {/* Back was the text glyph '←'. */}
+      <AppHeader title="Orders" onBack={() => router.back()} />
 
       {/* Tab Filter */}
       <ScrollView
@@ -140,16 +136,13 @@ export default function MerchantOrdersScreen() {
         style={styles.tabContainer}
         contentContainerStyle={styles.tabContent}
       >
-        {TABS.map(tab => (
-          <TouchableOpacity
+        {TABS.map((tab) => (
+          <Chip
             key={tab.key}
-            style={[styles.tab, activeTab === tab.key && styles.activeTab]}
+            label={tab.label}
+            active={activeTab === tab.key}
             onPress={() => setActiveTab(tab.key)}
-          >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
-              {tab.label}
-            </Text>
-          </TouchableOpacity>
+          />
         ))}
       </ScrollView>
 
@@ -160,29 +153,23 @@ export default function MerchantOrdersScreen() {
         contentContainerStyle={styles.listContent}
       >
         {isLoadingOrders && !refreshing ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Loading orders...</Text>
-          </View>
+          <ListSkeleton rows={4} />
         ) : ordersError ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={20} color={COLORS.error} />
-            <Text style={styles.errorText}>{ordersError}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => merchantId && fetchOrders(merchantId, activeTab === 'ALL' ? undefined : activeTab)}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
+          <ErrorState
+            title="Couldn't load orders"
+            subtitle={ordersError}
+            onRetry={() => merchantId && fetchOrders(merchantId, activeTab === 'ALL' ? undefined : activeTab)}
+          />
         ) : orders.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Ionicons name="clipboard-outline" size={32} color={COLORS.outlineVariant} />
-            <Text style={styles.emptyTitle}>No Orders</Text>
-            <Text style={styles.emptySubtitle}>
-              {activeTab === 'ALL' ? 'Orders will appear here when customers place them' : `No ${ORDER_STATUS_LABELS[activeTab]?.toLowerCase() || activeTab.toLowerCase()} orders`}
-            </Text>
-          </View>
+          <EmptyState
+            icon="clipboard-outline"
+            title="No orders"
+            subtitle={
+              activeTab === 'ALL'
+                ? 'Orders will appear here when customers place them.'
+                : `No ${ORDER_STATUS_LABELS[activeTab]?.toLowerCase() || activeTab.toLowerCase()} orders.`
+            }
+          />
         ) : (
           orders.map(order => {
             const actions = getAvailableActions(order.status);
@@ -202,11 +189,11 @@ export default function MerchantOrdersScreen() {
                     <Text style={styles.orderNumber}>#{order.orderNumber || order.id.slice(-6)}</Text>
                     <Text style={styles.orderTime}>{formatTime(order.createdAt)}</Text>
                   </View>
-                  <View style={[styles.statusBadge, { backgroundColor: `${statusColor}20`, borderColor: `${statusColor}30` }]}>
-                    <Text style={[styles.statusText, { color: statusColor }]}>
-                      {ORDER_STATUS_LABELS[order.status] || order.status}
-                    </Text>
-                  </View>
+                  <StatusBadge
+                    label={ORDER_STATUS_LABELS[order.status] || order.status}
+                    color={statusColor}
+                    size="sm"
+                  />
                 </View>
 
                 {/* Order Details */}
@@ -272,38 +259,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.surface,
   },
-  header: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    paddingHorizontal: SPACING.md + 4,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    color: COLORS.onSurface,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
-  },
-  headerSpacer: {
-    width: 36,
-  },
   tabContainer: {
     backgroundColor: COLORS.surfaceContainerLowest,
     maxHeight: 52,
@@ -315,86 +270,12 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingVertical: SPACING.sm,
     gap: SPACING.sm,
   },
-  tab: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainerLow,
-    marginRight: SPACING.sm,
-  },
-  activeTab: {
-    backgroundColor: COLORS.primary,
-  },
-  tabText: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.labelMd,
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: COLORS.onPrimary,
-  },
   listContainer: {
     flex: 1,
   },
   listContent: {
     padding: SPACING.md,
     gap: SPACING.md - 4,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.md,
-    ...TYPOGRAPHY.bodySm,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  errorEmoji: {
-    fontSize: 40,
-    marginBottom: SPACING.md - 4,
-  },
-  errorText: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
-  },
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.md,
-  },
-  retryButtonText: {
-    color: COLORS.onPrimary,
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
-  },
-  emptyTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
-    marginBottom: SPACING.sm,
-  },
-  emptySubtitle: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
-    textAlign: 'center',
-    paddingHorizontal: 40,
   },
   orderCard: {
     backgroundColor: COLORS.surfaceContainerLowest,
@@ -424,17 +305,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     ...TYPOGRAPHY.labelMd,
   },
-  statusBadge: {
-    paddingHorizontal: SPACING.sm + 2,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.full,
-    borderWidth: 1,
-  },
-  statusText: {
-    ...TYPOGRAPHY.labelMd,
-    fontWeight: '600',
-    fontSize: 11,
-  },
   orderDetails: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -445,9 +315,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-  },
-  metaIcon: {
-    fontSize: 14,
   },
   metaText: {
     color: COLORS.onSurfaceVariant,

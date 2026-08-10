@@ -197,16 +197,86 @@ function determineTrustTier(score: number, config: DriverTrustConfig): TrustTier
 }
 
 /**
+ * Neutral starting point for a component with no evidence behind it. Matches
+ * DriverReputation.trustScore's default of 75, so a driver who has done
+ * nothing scores exactly what they were created with.
+ */
+const NEUTRAL_COMPONENT_SCORE = 75;
+
+/**
+ * How many observations a component needs before it is trusted on its own.
+ * At n = 0 the score is entirely neutral; at n = CONFIDENCE_SAMPLES it is
+ * half its own value; it approaches its true value from there.
+ */
+const CONFIDENCE_SAMPLES = 10;
+
+/**
+ * Shrink a component score toward neutral according to how much evidence
+ * supports it. Without this, "no ratings yet" and "a hundred five-star
+ * ratings" scored identically.
+ */
+function withConfidence(score: number, sampleSize: number): number {
+  const n = Math.max(0, sampleSize);
+  return (n * score + CONFIDENCE_SAMPLES * NEUTRAL_COMPONENT_SCORE) / (n + CONFIDENCE_SAMPLES);
+}
+
+/**
+ * Safety carries only 15% of the composite, so a driver with a catastrophic
+ * safety record could still sit at ~85 on the strength of ratings alone and
+ * keep GOLD — and its priority dispatch. Nobody should be a preferred driver
+ * with a safety score in the floor. Ratings can earn a tier; safety can veto
+ * one.
+ */
+const SAFETY_CAP_BANDS: { maxSafetyScore: number; maxTier: TrustTier }[] = [
+  { maxSafetyScore: 20, maxTier: TrustTier.WARNING },
+  { maxSafetyScore: 50, maxTier: TrustTier.SILVER },
+  { maxSafetyScore: 70, maxTier: TrustTier.GOLD },
+];
+
+/** Tier order, worst to best, for comparing a computed tier against a cap. */
+const TIER_ORDER: TrustTier[] = [
+  TrustTier.SUSPENDED,
+  TrustTier.WARNING,
+  TrustTier.SILVER,
+  TrustTier.GOLD,
+  TrustTier.PLATINUM,
+];
+
+function capTierForSafety(tier: TrustTier, safetyScore: number): TrustTier {
+  const band = SAFETY_CAP_BANDS.find(b => safetyScore <= b.maxSafetyScore);
+  if (!band) return tier;
+  return TIER_ORDER.indexOf(tier) > TIER_ORDER.indexOf(band.maxTier) ? band.maxTier : tier;
+}
+
+/**
  * Calculate full trust score from components
  */
 export async function calculateTrustScore(
   reputation: DriverReputation,
   config: DriverTrustConfig
 ): Promise<ScoreCalculationResult> {
+  // Unproven defaults are not achievements. A new DriverReputation starts at
+  // averageRating 5.0, completionRate 1.0 and acceptanceRate 1.0 — placeholders
+  // meaning "no data", not "perfect record". Scored at face value they produced
+  // 100/PLATINUM for a driver who had never taken a trip, handing out priority
+  // dispatch and a Platinum bonus on day one. Each component is therefore
+  // shrunk toward the neutral baseline until enough evidence exists to move it.
   const components: TrustScoreComponents = {
-    ratingScore: calculateRatingScore(reputation.averageRating, config),
-    completionScore: calculateCompletionScore(reputation.completionRate, config),
-    acceptanceScore: calculateAcceptanceScore(reputation.acceptanceRate, config),
+    ratingScore: withConfidence(
+      calculateRatingScore(reputation.averageRating, config),
+      reputation.totalRatings
+    ),
+    completionScore: withConfidence(
+      calculateCompletionScore(reputation.completionRate, config),
+      reputation.totalTasksCompleted + reputation.totalTasksCancelled
+    ),
+    acceptanceScore: withConfidence(
+      calculateAcceptanceScore(reputation.acceptanceRate, config),
+      reputation.totalRequestsReceived
+    ),
+    // Safety and fraud need no shrinking: they start at a clean 100 and only
+    // move when something actually happened, so every point of movement is
+    // already evidence.
     safetyScore: reputation.safetyScore,
     fraudRiskScore: reputation.fraudRiskScore,
   };
@@ -223,7 +293,10 @@ export async function calculateTrustScore(
   const clampedScore = Math.max(0, Math.min(100, trustScore));
   
   // Determine tier
-  const trustTier = determineTrustTier(clampedScore, config);
+  const trustTier = capTierForSafety(
+    determineTrustTier(clampedScore, config),
+    reputation.safetyScore
+  );
   const previousTier = reputation.trustTier;
   
   return {
@@ -860,7 +933,7 @@ async function createPerformanceAlert(
   thresholdValue?: number,
   suggestedAction?: string
 ): Promise<DriverPerformanceAlert> {
-  return db.driverPerformanceAlert.create({
+  const alert = await db.driverPerformanceAlert.create({
     data: {
       reputationId,
       alertType,
@@ -873,6 +946,64 @@ async function createPerformanceAlert(
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     }
   });
+
+  // Close the loop: an alert row the driver never sees is not a consequence.
+  // A promotion, a demotion, or a suspension all change what the driver can
+  // earn today, so each one is pushed to their device rather than waiting for
+  // them to open the reputation screen.
+  await notifyDriverOfAlert(reputationId, alertType, severity, title, message, suggestedAction);
+
+  return alert;
+}
+
+/**
+ * Deliver a performance alert to the driver's device.
+ *
+ * Deliberately non-throwing: a notification failure must never roll back the
+ * reputation change that earned it. The alert row is the record of truth; the
+ * notification is the delivery attempt.
+ */
+async function notifyDriverOfAlert(
+  reputationId: string,
+  alertType: PerformanceAlertType,
+  severity: AlertSeverity,
+  title: string,
+  message: string,
+  suggestedAction?: string
+): Promise<void> {
+  try {
+    const reputation = await db.driverReputation.findUnique({
+      where: { id: reputationId },
+      select: { riderId: true, trustScore: true, trustTier: true },
+    });
+    if (!reputation) return;
+
+    const rider = await db.rider.findUnique({
+      where: { id: reputation.riderId },
+      select: { userId: true },
+    });
+    if (!rider?.userId) return;
+
+    const { createNotification } = await import('@/lib/services/notification.service');
+    await createNotification({
+      userId: rider.userId,
+      type: 'SYSTEM',
+      title,
+      message: suggestedAction ? `${message} ${suggestedAction}` : message,
+      referenceId: reputationId,
+      referenceType: 'DRIVER_REPUTATION',
+      data: {
+        alertType,
+        severity,
+        trustScore: reputation.trustScore,
+        trustTier: reputation.trustTier,
+        // Lets the app deep-link straight to the reputation screen.
+        screen: 'reputation',
+      },
+    });
+  } catch (err) {
+    console.error('[reputation] failed to notify driver of performance alert:', err);
+  }
 }
 
 /**

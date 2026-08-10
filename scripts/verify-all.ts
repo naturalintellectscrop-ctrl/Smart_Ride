@@ -58,6 +58,11 @@ const SUITES: Suite[] = [
     covers: 'cron auth, each ?task= in isolation, run logging, health surface',
   },
   {
+    name: 'intelligence-product',
+    file: 'scripts/verify-intelligence-product.ts',
+    covers: 'surge -> fare, tier change -> driver notified, fraud -> admin paged',
+  },
+  {
     name: 'core-journey',
     file: 'scripts/verify-client-driver-journey.ts',
     covers: 'book -> dispatch -> ride -> pay -> rate -> receipt -> notify',
@@ -74,8 +79,13 @@ const SUITES: Suite[] = [
   },
 ];
 
-/** Seconds to wait between suites so pooler connections can drain. */
-const COOLDOWN_SECONDS = 5;
+/**
+ * Seconds to wait between suites so pooler connections can drain. Five was
+ * enough at ten suites; at eleven the pooler started refusing connections
+ * mid-run and suites failed non-deterministically — a different one each time,
+ * which is the signature of contention rather than a real regression.
+ */
+const COOLDOWN_SECONDS = 12;
 
 function run(file: string): Promise<{ code: number; output: string }> {
   return new Promise(resolve => {

@@ -257,20 +257,28 @@ export class PlatformIntelligence {
     // Escalate to a reviewable alert once, on the crossing — not on every
     // recalculation, or a persistently risky account floods the queue.
     if (score >= REVIEW_THRESHOLD && previous < REVIEW_THRESHOLD) {
-      await db.fraudAlert.create({
+      const severity = score >= AUTO_RESTRICT_THRESHOLD ? 'CRITICAL' : 'HIGH';
+      const alert = await db.fraudAlert.create({
         data: {
           entityType,
           entityId,
           riderId: entityType === RiskEntityType.RIDER ? entityId : null,
           userId: entityType === RiskEntityType.CLIENT ? entityId : null,
           alertType: 'UNUSUAL_PATTERN',
-          severity: score >= AUTO_RESTRICT_THRESHOLD ? 'CRITICAL' : 'HIGH',
+          severity,
           riskScore: Math.round(score),
           riskScoreAtDetection: score,
           detectionMethod: 'RULE_BASED',
           description: `Risk score crossed review threshold (${previous.toFixed(1)} → ${score.toFixed(1)}): ${reason}`,
         },
       });
+
+      // A row in a table nobody is watching is not an alert. An auto-restrict
+      // has already started blocking that account's transactions, so a human
+      // needs to confirm or reverse it — page the admins directly.
+      if (shouldRestrict) {
+        await notifyAdminsOfFraudAlert(alert.id, entityType, entityId, score, reason);
+      }
     }
   }
 
@@ -583,6 +591,48 @@ export interface TransactionGateResult {
   riskScore: number;
   /** Safe to show a user — never names the rule that fired. */
   reason?: string;
+}
+
+/**
+ * Page every admin about a fraud decision that has already taken effect.
+ *
+ * Only fired for auto-restrictions — the case where the platform has acted on
+ * its own and a human must confirm or reverse it. Non-throwing: failing to
+ * notify must not roll back the restriction that protects the platform.
+ */
+async function notifyAdminsOfFraudAlert(
+  alertId: string,
+  entityType: RiskEntityType,
+  entityId: string,
+  score: number,
+  reason: string
+): Promise<void> {
+  try {
+    const admins = await db.user.findMany({
+      where: { role: 'ADMIN', status: 'ACTIVE' },
+      select: { id: true },
+    });
+    if (admins.length === 0) return;
+
+    const { createNotificationsForUsers } = await import(
+      '@/lib/services/notification.service'
+    );
+    await createNotificationsForUsers(
+      admins.map(a => a.id),
+      {
+        type: 'SYSTEM',
+        title: 'Account auto-restricted for fraud risk',
+        message:
+          `A ${entityType.toLowerCase()} was automatically restricted at risk score ` +
+          `${score.toFixed(1)}. Reason: ${reason}. Review and confirm or reverse.`,
+        referenceId: alertId,
+        referenceType: 'FRAUD_ALERT',
+        data: { entityType, entityId, riskScore: score, screen: 'fraud-alerts' },
+      }
+    );
+  } catch (err) {
+    console.error('[fraud] failed to notify admins of auto-restriction:', err);
+  }
 }
 
 /**

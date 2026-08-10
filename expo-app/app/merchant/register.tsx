@@ -30,6 +30,12 @@ import { api } from '@/src/services';
 import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import {
+  AppHeader,
+  Card,
+  GradientButton,
+  IconInput,
+} from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
 import { pickImage } from '@/src/utils/imagePicker';
 import { useAuthStore } from '@/src/store/authStore';
@@ -215,20 +221,15 @@ export default function MerchantRegisterScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.md || 56 }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>{isPharmacy ? 'Register Pharmacy' : 'Become a Merchant'}</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <Text style={styles.headerSubtitle}>
-          {isPharmacy
-            ? 'Register your pharmacy to fulfil medicine orders on Smart Ride'
-            : 'Register your business to start receiving orders on Smart Ride'}
-        </Text>
-      </View>
+      <AppHeader
+        title={isPharmacy ? 'Register Pharmacy' : 'Become a Merchant'}
+        subtitle={
+          isPharmacy
+            ? 'Fulfil medicine orders on Smart Ride'
+            : 'Start receiving orders on Smart Ride'
+        }
+        onBack={() => router.back()}
+      />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Business Name */}

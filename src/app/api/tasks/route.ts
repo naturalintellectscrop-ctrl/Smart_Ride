@@ -231,6 +231,9 @@ export async function POST(request: NextRequest) {
       itemWeight: validatedData.itemWeight,
       isNightTime,
       isPeakHours,
+      // Resolves any ACTIVE surge for the zone containing this pickup.
+      pickupLatitude: validatedData.pickupLatitude,
+      pickupLongitude: validatedData.pickupLongitude,
     });
 
     // Create task

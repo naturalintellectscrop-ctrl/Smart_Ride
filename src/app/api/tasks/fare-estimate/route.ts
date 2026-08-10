@@ -27,6 +27,10 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const distanceKm  = parseFloat(searchParams.get('distanceKm')  || '0');
   const durationMin = parseInt(searchParams.get('durationMin') || '0', 10);
+  const rawLat = searchParams.get('pickupLatitude');
+  const rawLng = searchParams.get('pickupLongitude');
+  const pickupLatitude = rawLat !== null ? parseFloat(rawLat) : null;
+  const pickupLongitude = rawLng !== null ? parseFloat(rawLng) : null;
 
   if (!distanceKm || distanceKm <= 0) {
     return NextResponse.json(
@@ -63,6 +67,10 @@ export async function GET(request: NextRequest) {
       durationMinutes: durationMin,
       isNightTime,
       isPeakHours,
+      // Optional: when the caller sends a pickup, the estimate includes surge
+      // so the quoted price matches what task creation will charge.
+      pickupLatitude,
+      pickupLongitude,
     });
 
     // Detect whether minimum fare was the deciding factor. rawTotal mirrors the

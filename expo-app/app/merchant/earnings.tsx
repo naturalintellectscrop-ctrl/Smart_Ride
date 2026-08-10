@@ -21,6 +21,14 @@ import { useMerchantStore } from '@/src/store';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import {
+  AppHeader,
+  Card,
+  EmptyState,
+  ErrorState,
+  ListSkeleton,
+  SegmentedControl,
+} from '@/src/components';
 import { api } from '@/src/services';
 import { MerchantTransaction } from '@/src/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,15 +114,7 @@ export default function MerchantEarningsScreen() {
   return (
     <View style={styles.container}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + SPACING.md || 56 }]}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Earnings</Text>
-          <View style={styles.headerSpacer} />
-        </View>
-      </View>
+      <AppHeader title="Earnings" onBack={() => router.back()} />
 
       <ScrollView
         style={styles.scrollView}
@@ -136,21 +136,13 @@ export default function MerchantEarningsScreen() {
         </View>
 
         {isLoadingEarnings && !refreshing ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.loadingText}>Loading earnings...</Text>
-          </View>
+          <ListSkeleton rows={3} />
         ) : earningsError ? (
-          <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle-outline" size={20} color={COLORS.error} />
-            <Text style={styles.errorText}>{earningsError}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => merchantId && fetchEarnings(merchantId, activePeriod)}
-            >
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </View>
+          <ErrorState
+            title="Couldn't load earnings"
+            subtitle={earningsError}
+            onRetry={() => merchantId && fetchEarnings(merchantId, activePeriod)}
+          />
         ) : (
           <>
             {/* Balance Cards */}
