@@ -137,10 +137,15 @@ export function stateColor(kind: ProviderKind, state: RiderState): string {
 }
 
 export function providerKindFor(d: { vehicleType?: string | null; riderRole?: string | null }): ProviderKind {
-  // Future service classes map to their own markers; unknown roles fall back to
-  // the green rider family so nothing ever renders a generic pin.
-  if (d.riderRole === 'ERRAND_RUNNER') return 'errand';
-  if (d.riderRole === 'PARCEL_DRIVER' || d.vehicleType === 'VAN' || d.vehicleType === 'TRUCK') return 'parcel';
+  // Unknown roles fall back to the green rider family so nothing ever renders a
+  // generic pin.
+  //
+  // This used to branch on riderRole 'ERRAND_RUNNER' and 'PARCEL_DRIVER', which
+  // exist in neither the RiderRole union nor the Prisma enum and are never
+  // written by anything — dead branches for roles that were only ever planned.
+  // Vehicle-based parcel detection is kept because VAN and TRUCK are real
+  // VehicleType members.
+  if (d.vehicleType === 'VAN' || d.vehicleType === 'TRUCK') return 'parcel';
   if (d.riderRole === 'DELIVERY_PERSONNEL') return 'delivery';
   if (d.riderRole === 'SMART_CAR_DRIVER' || d.vehicleType === 'CAR') return 'car';
   return 'boda';

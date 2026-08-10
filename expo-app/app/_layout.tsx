@@ -319,6 +319,7 @@ function ThemedRootLayout() {
           <Stack.Screen name="rider/ride-tracking" />
           <Stack.Screen name="driver/index" />
           <Stack.Screen name="driver/driver-task" />
+          <Stack.Screen name="driver/deliveries" />
           <Stack.Screen name="wallet/index" />
           <Stack.Screen name="wallet/transactions" />
           <Stack.Screen name="health/index" />

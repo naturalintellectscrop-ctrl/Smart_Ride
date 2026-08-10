@@ -422,7 +422,7 @@ export default function DriverHomeScreen() {
     const ring = () => {
       Notifications.scheduleNotificationAsync({
         content: {
-          title: 'New ride request',
+          title: 'New request',
           body: incomingRequest.pickup?.address || 'Respond before it expires',
           sound: true,
         },
@@ -462,7 +462,7 @@ export default function DriverHomeScreen() {
           <EmptyState
             icon="bicycle-outline"
             title="Complete your profile"
-            subtitle="You need to complete rider onboarding before you can go online and accept trips."
+            subtitle="You need to finish onboarding before you can go online and accept work."
             actionLabel="Start Onboarding"
             onAction={() => router.replace('/rider/onboarding')}
           />
@@ -494,7 +494,7 @@ export default function DriverHomeScreen() {
       ? (reason ? `Your application was not approved. Reason: ${reason}` : 'Your application was not approved. Please contact Smart Ride support.')
       : suspended
         ? 'Your account has been suspended. Please contact Smart Ride support.'
-        : "Your application has been submitted and is being reviewed. You'll be able to go online and accept trips once an admin approves it.";
+        : "Your application has been submitted and is being reviewed. You'll be able to go online and accept work once an admin approves it.";
     return (
       <View style={styles.gateContainer}>
         {rejected || suspended ? (
@@ -517,11 +517,24 @@ export default function DriverHomeScreen() {
     );
   }
 
+  // ── Role framing ──────────────────────────────────────────
+  // Golden Screen #40: DELIVERY_PERSONNEL sees the same dashboard with delivery
+  // wording. The backend already routes FOOD_DELIVERY / SHOPPING /
+  // ITEM_DELIVERY / SMART_HEALTH_DELIVERY exclusively to this role, so without
+  // this branch those providers were being offered work the UI called a "ride".
+  const isDeliveryRole = rider?.riderRole === 'DELIVERY_PERSONNEL';
+  const workNoun = isDeliveryRole ? 'delivery' : 'ride';
+  const workNounPlural = isDeliveryRole ? 'deliveries' : 'requests';
+
   // ── Live status line (drives the operations panel header) ──
   const liveStatus = incomingRequest
-    ? { dot: COLORS.warning, text: 'New ride request', sub: 'Respond before the timer runs out' }
+    ? { dot: COLORS.warning, text: `New ${workNoun} request`, sub: 'Respond before the timer runs out' }
     : isOnline
-      ? { dot: COLORS.success, text: 'Waiting for requests', sub: 'Finding nearby passengers…' }
+      ? {
+          dot: COLORS.success,
+          text: `Waiting for ${workNounPlural}`,
+          sub: isDeliveryRole ? 'Finding nearby orders…' : 'Finding nearby passengers…',
+        }
       : { dot: COLORS.onSurfaceVariant, text: "You're offline", sub: 'Go online to start earning' };
 
   const firstName = (rider?.fullName || 'Rider').split(' ')[0];
@@ -605,7 +618,11 @@ export default function DriverHomeScreen() {
               <Shortcut icon="wallet-outline" label="Wallet" onPress={() => router.push('/rider/wallet' as never)} COLORS={COLORS} styles={styles} />
               <Shortcut icon="arrow-up-circle-outline" label="Withdraw" onPress={() => router.push('/rider/wallet' as never)} COLORS={COLORS} styles={styles} />
               <Shortcut icon="time-outline" label="History" onPress={() => router.push('/rider/history' as never)} COLORS={COLORS} styles={styles} />
-              <Shortcut icon="stats-chart-outline" label="Earnings" onPress={() => router.push('/rider/earnings' as never)} COLORS={COLORS} styles={styles} />
+              {isDeliveryRole ? (
+                <Shortcut icon="cube-outline" label="Deliveries" onPress={() => router.push('/driver/deliveries' as never)} COLORS={COLORS} styles={styles} />
+              ) : (
+                <Shortcut icon="stats-chart-outline" label="Earnings" onPress={() => router.push('/rider/earnings' as never)} COLORS={COLORS} styles={styles} />
+              )}
               {/* Driver Reputation engine — trust score, tier, benefits, bonuses */}
               <Shortcut icon="ribbon-outline" label="Reputation" onPress={() => router.push('/driver/reputation' as never)} COLORS={COLORS} styles={styles} />
             </View>
@@ -653,7 +670,7 @@ export default function DriverHomeScreen() {
                 <View style={styles.requestIcon}>
                   <Ionicons name="navigate" size={ICON.sm} color={COLORS.onPrimary} />
                 </View>
-                <Text style={styles.requestTitle}>New ride request</Text>
+                <Text style={styles.requestTitle}>New {workNoun} request</Text>
               </View>
               <Animated.View entering={ZoomIn.duration(MOTION.duration.base)}>
                 <View style={[styles.timerRing, { borderColor: (requestTimer || 0) < 10 ? COLORS.error : COLORS.primary }]}>

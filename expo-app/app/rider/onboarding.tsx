@@ -24,6 +24,7 @@ import { api } from '@/src/services';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import type { RiderRole } from '@/src/types';
 import { GlassCard, GradientButton } from '@/src/components';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -40,10 +41,17 @@ const VEHICLE_TYPES = [
   { id: 'SCOOTER', label: 'Scooter', icon: 'speedometer-outline', description: 'Scooter delivery' },
 ];
 
-// Map UI vehicle type id to rider role (used during registration)
-const VEHICLE_TYPE_TO_RIDER_ROLE: Record<string, string> = {
-  MOTORCYCLE: 'SMART_BODA',
-  CAR: 'SMART_CAR',
+// Map UI vehicle type id to rider role (used during registration).
+//
+// MOTORCYCLE and CAR previously wrote 'SMART_BODA' and 'SMART_CAR', which are
+// not members of RiderRole ('SMART_BODA_RIDER' | 'SMART_CAR_DRIVER' |
+// 'DELIVERY_PERSONNEL'). Nothing downstream matched those values, so the map
+// marker system, dispatch eligibility and the dashboard's role branch all fell
+// through to their defaults for every rider onboarded this way. Typed against
+// RiderRole so the union is enforced at compile time rather than by hope.
+const VEHICLE_TYPE_TO_RIDER_ROLE: Record<string, RiderRole> = {
+  MOTORCYCLE: 'SMART_BODA_RIDER',
+  CAR: 'SMART_CAR_DRIVER',
   BICYCLE: 'DELIVERY_PERSONNEL',
   SCOOTER: 'DELIVERY_PERSONNEL',
 };

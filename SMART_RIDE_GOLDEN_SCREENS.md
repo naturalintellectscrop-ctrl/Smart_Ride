@@ -124,6 +124,40 @@ Format per screen: **Inherits** · **Composition** (component tree) · **States*
 
 **39. Receipt (Ride / Food / Delivery / Wallet)** — *AR‑5, single `ReceiptCard` architecture.* Composition: header (logo, receipt #, date, `StatusBadge`) → **service block** (varies by type: ride route / food items / delivery pickup-dropoff / wallet txn) → **fare/amount breakdown** (itemized, sums to total, tabular) → payment method → provider (first-name only, privacy-safe) → footer (support). Notes: **one architecture, four content blocks** — never four receipt designs; amounts must sum; reference for all receipts (deliverable #10 of prior phase, unified here).
 
+### Delivery Personnel (added per §17 governance)
+
+`DELIVERY_PERSONNEL` is a `Rider.riderRole`, not a `UserRole` — a delivery
+provider signs up as `RIDER` and is distinguished by that attribute. The
+backend already dispatches `FOOD_DELIVERY`, `SHOPPING`, `ITEM_DELIVERY` and
+`SMART_HEALTH_DELIVERY` to this role (`dispatch/types.ts`,
+`api/state-machine.ts`; health orders are DP-only), so these screens close a
+gap where work was being assigned to providers who had no interface to see it.
+They inherit existing archetypes and introduce no new primitives.
+
+**40. Delivery Dashboard** — *AR‑3, inherits #13.* Same composition as the Driver
+Dashboard, branched on `riderRole === 'DELIVERY_PERSONNEL'`: `AppHeader`
+(greeting + `OnlinePill` + notifications) → map workspace + FAB cluster →
+operations panel: live status ("Waiting for deliveries") + `Rating` + earnings
+`Card` + stats + `Button` Go Online/Offline. Differences from #13: vehicle label
+reads the delivery vehicle (bicycle/scooter/boda), the status copy says
+*deliveries* not *rides*, and the panel adds a **queue entry point** when the
+provider holds more than one assignment. Notes: one dashboard, two framings —
+never a second dashboard file.
+
+**41. Incoming Delivery Offer** — *AR‑3 + `SmartBottomSheet`, inherits #14.* Sheet:
+title ("New delivery") + countdown ring → **merchant pickup** → **customer
+dropoff** → item summary (order number + item count) → payout ("You earn") →
+`Button` Decline + `Button` Accept. Differences from #14: the route block names
+the merchant rather than a pickup address, and the offer carries what is being
+collected. Notes: scrim must not dismiss — declining is a decision, not a
+mis-tap.
+
+**42. Delivery Queue** — *AR‑4.* `AppHeader` → `SegmentedControl` (Active /
+Completed) → `ListRow` per assignment inside a `Card` (merchant → customer,
+`StatusBadge`, payout) → `EmptyState` / `ErrorState` / `ListSkeleton`. Notes:
+a delivery provider can hold several assignments at once, which a ride driver
+cannot; this list is the only screen unique to the role.
+
 ---
 
 ## Part C — Component Usage Map
