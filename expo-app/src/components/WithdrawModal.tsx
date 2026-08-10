@@ -45,6 +45,17 @@ interface WithdrawModalProps {
   onSuccess?: (newBalance?: number) => void;
   /** Pre-fill phone number from user's profile */
   defaultPhoneNumber?: string;
+  /**
+   * Override how the withdrawal is submitted. Defaults to
+   * `api.requestWithdrawal` (POST /wallet/withdraw).
+   *
+   * The driver earnings screen posts to /riders/withdraw instead — a separate
+   * backend implementation of the same operation that goes through the atomic
+   * wallet-service and records a payout, where /wallet/withdraw hand-rolls the
+   * balance update. Rather than silently move one caller onto the other's
+   * endpoint, each keeps its own and they share this UI.
+   */
+  onSubmit?: (amount: number, phone: string, provider: string) => Promise<{ success: boolean; error?: string; data?: any }>;
 }
 
 const money = (value: number) => `UGX ${value.toLocaleString()}`;
@@ -55,6 +66,7 @@ export function WithdrawModal({
   balance,
   onSuccess,
   defaultPhoneNumber,
+  onSubmit,
 }: WithdrawModalProps) {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
@@ -112,11 +124,8 @@ export function WithdrawModal({
 
     setIsSubmitting(true);
     try {
-      const response = await api.requestWithdrawal(
-        numericAmount,
-        phoneNumber.trim(),
-        provider
-      );
+      const submit = onSubmit ?? ((a: number, p: string, pr: string) => api.requestWithdrawal(a, p, pr));
+      const response = await submit(numericAmount, phoneNumber.trim(), provider);
 
       if (response.success) {
         const newBalance = (response.data as any)?.newBalance;

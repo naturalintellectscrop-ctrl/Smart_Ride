@@ -14,21 +14,17 @@ import {
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  Modal,
-  TextInput,
-  KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
-import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { useAuthStore } from '@/src/store';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard, GradientButton } from '@/src/components';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  AppHeader,
+  Card,
+  WithdrawModal,
+} from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
 
 // Period type
@@ -76,8 +72,6 @@ export default function RiderEarningsScreen() {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const insets = useSafeAreaInsets();
-  const { user } = useAuthStore();
 
   // Data state
   const [earningsData, setEarningsData] = useState<EarningsData | null>(null);
@@ -91,10 +85,6 @@ export default function RiderEarningsScreen() {
 
   // Withdrawal modal state
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
-  const [withdrawAmount, setWithdrawAmount] = useState('');
-  const [withdrawPhone, setWithdrawPhone] = useState('');
-  const [withdrawProvider, setWithdrawProvider] = useState<'MTN' | 'AIRTEL'>('MTN');
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
 
   const loadData = useCallback(async () => {
     setError(null);
@@ -162,42 +152,9 @@ export default function RiderEarningsScreen() {
   const { riderPct, platformPct } = getEffectiveCommissionSplit();
 
   // Withdrawal handler
-  const handleWithdraw = async () => {
-    const amount = parseFloat(withdrawAmount);
-    if (!amount || amount < 1000) {
-      Alert.alert('Invalid Amount', 'Minimum withdrawal is UGX 1,000');
-      return;
-    }
-    if (!withdrawPhone || withdrawPhone.length < 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid phone number');
-      return;
-    }
-    if (walletData && amount > walletData.balance) {
-      Alert.alert('Insufficient Balance', `Your available balance is ${formatCurrency(walletData.balance)}`);
-      return;
-    }
 
-    setIsWithdrawing(true);
-    try {
-      const result = await api.requestRiderWithdrawal(amount, withdrawPhone, withdrawProvider);
-      if (result.success) {
-        Alert.alert(
-          'Withdrawal Initiated',
-          `${formatCurrency(amount)} is being sent to ${withdrawProvider} (${withdrawPhone}). You will receive a notification when it's processed.`,
-          [{ text: 'OK', onPress: () => { setShowWithdrawModal(false); setWithdrawAmount(''); setWithdrawPhone(''); loadData(); } }]
-        );
-      } else {
-        Alert.alert('Withdrawal Failed', result.error || 'Could not process withdrawal. Please try again.');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
-    } finally {
-      setIsWithdrawing(false);
-    }
-  };
 
   // Quick withdrawal amount buttons
-  const quickAmounts = [5000, 10000, 20000, 50000];
 
   if (isLoading) {
     return (
@@ -250,27 +207,11 @@ export default function RiderEarningsScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <LinearGradient
-        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
-        style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
-      >
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <Text style={styles.backText}>←</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Earnings</Text>
-          <TouchableOpacity onPress={() => setShowWithdrawModal(true)} style={styles.walletBtn}>
-            <Text style={styles.walletBtnText}>Withdraw</Text>
-          </TouchableOpacity>
-        </View>
-        <LinearGradient
-          colors={['#4ae176', '#98f6be', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
-        />
-      </LinearGradient>
+      <AppHeader
+        title="Earnings"
+        onBack={() => router.back()}
+        rightActions={[{ icon: 'arrow-up-circle-outline', onPress: () => setShowWithdrawModal(true), label: 'Withdraw' }]}
+      />
 
       <ScrollView
         style={styles.scrollView}
@@ -278,7 +219,7 @@ export default function RiderEarningsScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
       >
         {/* Main Earnings Card */}
-        <GlassCard variant="accent" style={styles.mainEarningsCard}>
+        <Card variant="accent" style={styles.mainEarningsCard}>
           <Text style={styles.earningsLabel}>Earnings</Text>
           <Text style={styles.earningsAmount}>{formatCurrency(activeEarnings.totalEarnings)}</Text>
 
@@ -296,29 +237,29 @@ export default function RiderEarningsScreen() {
               </TouchableOpacity>
             ))}
           </View>
-        </GlassCard>
+        </Card>
 
         {/* Balance & Pending */}
         <View style={styles.statsRow}>
-          <GlassCard style={styles.statCard}>
+          <Card style={styles.statCard}>
             <Ionicons name="cash-outline" size={20} color={COLORS.success} />
             <Text style={styles.statAmount}>{formatCurrency(walletData?.balance || 0)}</Text>
             <Text style={styles.statLabel}>Available Balance</Text>
             <TouchableOpacity onPress={() => setShowWithdrawModal(true)}>
               <Text style={styles.statLink}>Withdraw →</Text>
             </TouchableOpacity>
-          </GlassCard>
+          </Card>
 
-          <GlassCard variant="cyan" style={styles.statCard}>
+          <Card variant="accent" style={styles.statCard}>
             <Text style={styles.statIcon}>⏳</Text>
             <Text style={styles.statAmount}>{formatCurrency(walletData?.pendingBalance || 0)}</Text>
             <Text style={styles.statLabel}>Pending</Text>
-          </GlassCard>
+          </Card>
         </View>
 
         {/* Commission Split */}
         <Text style={styles.sectionTitle}>Commission Split</Text>
-        <GlassCard>
+        <Card>
           <View style={styles.commissionContainer}>
             {/* Visual bar */}
             <View style={styles.commissionBarBg}>
@@ -355,11 +296,11 @@ export default function RiderEarningsScreen() {
               </View>
             )}
           </View>
-        </GlassCard>
+        </Card>
 
         {/* Performance Metrics */}
         <Text style={styles.sectionTitle}>Performance</Text>
-        <GlassCard>
+        <Card>
           <View style={styles.metricsGrid}>
             <View style={styles.metricItem}>
               <Text style={styles.metricValue}>{riderData?.totalTrips || 0}</Text>
@@ -383,7 +324,7 @@ export default function RiderEarningsScreen() {
             </View>
             <View style={styles.metricDivider} />
             <View style={styles.metricItem}>
-              <Text style={[styles.metricValue, { color: '#06B6D4' }]}>{activeEarnings.deliveries}</Text>
+              <Text style={[styles.metricValue, { color: COLORS.info }]}>{activeEarnings.deliveries}</Text>
               <Text style={styles.metricLabel}>Deliveries</Text>
             </View>
             <View style={styles.metricDivider} />
@@ -392,7 +333,7 @@ export default function RiderEarningsScreen() {
               <Text style={styles.metricLabel}>Rating</Text>
             </View>
           </View>
-        </GlassCard>
+        </Card>
 
         {/* Earnings Breakdown */}
         <Text style={styles.sectionTitle}>Earnings Breakdown</Text>
@@ -403,18 +344,18 @@ export default function RiderEarningsScreen() {
             { key: 'month' as EarningsPeriod, icon: 'wallet-outline', label: 'This Month', data: earningsData.month },
             { key: 'lifetime' as EarningsPeriod, icon: 'trophy-outline', label: 'All Time', data: earningsData.lifetime },
           ]).map(item => (
-            <GlassCard key={item.key} style={styles.breakdownCard}>
+            <Card key={item.key} style={styles.breakdownCard}>
               <Ionicons name={item.icon as any} size={20} color={COLORS.primary} />
               <Text style={styles.breakdownAmount}>{formatCurrency(item.data.totalEarnings)}</Text>
               <Text style={styles.breakdownLabel}>{item.label}</Text>
               <Text style={styles.breakdownTrips}>{item.data.tripCount} trips</Text>
-            </GlassCard>
+            </Card>
           ))}
         </View>
 
         {/* Wallet Summary */}
         <Text style={styles.sectionTitle}>Wallet Summary</Text>
-        <GlassCard>
+        <Card>
           <View style={styles.walletRow}>
             <Text style={styles.walletLabel}>Total Deposited</Text>
             <Text style={styles.walletValue}>{formatCurrency(walletData?.totalDeposited || 0)}</Text>
@@ -434,107 +375,21 @@ export default function RiderEarningsScreen() {
             <Text style={styles.walletLabel}>Pending Clearance</Text>
             <Text style={[styles.walletValue, { color: COLORS.warning }]}>{formatCurrency(walletData?.pendingBalance || 0)}</Text>
           </View>
-        </GlassCard>
+        </Card>
       </ScrollView>
 
       {/* Withdrawal Modal */}
-      <Modal
+      {/* Shared sheet, this screen's endpoint. /riders/withdraw and
+          /wallet/withdraw are two backend implementations of the same
+          operation, so the caller keeps its own rather than being silently
+          moved onto the other. */}
+      <WithdrawModal
         visible={showWithdrawModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowWithdrawModal(false)}
-      >
-        <KeyboardAvoidingView
-          style={styles.modalOverlay}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Withdraw Funds</Text>
-              <TouchableOpacity onPress={() => setShowWithdrawModal(false)} style={styles.modalCloseBtn}>
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Available balance display */}
-            <View style={styles.modalBalanceRow}>
-              <Text style={styles.modalBalanceLabel}>Available:</Text>
-              <Text style={styles.modalBalanceValue}>{formatCurrency(walletData?.balance || 0)}</Text>
-            </View>
-
-            {/* Provider Selection */}
-            <Text style={styles.modalFieldLabel}>Mobile Money Provider</Text>
-            <View style={styles.providerRow}>
-              <TouchableOpacity
-                style={[styles.providerBtn, withdrawProvider === 'MTN' && styles.providerBtnActive]}
-                onPress={() => setWithdrawProvider('MTN')}
-              >
-                <View style={[styles.providerDot, { backgroundColor: '#FFCC00' }]} />
-                <Text style={[styles.providerText, withdrawProvider === 'MTN' && styles.providerTextActive]}>MTN MoMo</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.providerBtn, withdrawProvider === 'AIRTEL' && styles.providerBtnActive]}
-                onPress={() => setWithdrawProvider('AIRTEL')}
-              >
-                <View style={[styles.providerDot, { backgroundColor: '#ED1C24' }]} />
-                <Text style={[styles.providerText, withdrawProvider === 'AIRTEL' && styles.providerTextActive]}>Airtel Money</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Quick Amount Buttons */}
-            <Text style={styles.modalFieldLabel}>Quick Amount</Text>
-            <View style={styles.quickAmountRow}>
-              {quickAmounts.map(amt => (
-                <TouchableOpacity
-                  key={amt}
-                  style={[
-                    styles.quickAmountBtn,
-                    withdrawAmount === String(amt) && styles.quickAmountBtnActive,
-                  ]}
-                  onPress={() => setWithdrawAmount(String(amt))}
-                >
-                  <Text style={[styles.quickAmountText, withdrawAmount === String(amt) && styles.quickAmountTextActive]}>
-                    {formatCurrency(amt)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Custom Amount */}
-            <Text style={styles.modalFieldLabel}>Custom Amount (UGX)</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={withdrawAmount}
-              onChangeText={setWithdrawAmount}
-              placeholder="Enter amount (min 1,000)"
-              placeholderTextColor={COLORS.onSurfaceVariant}
-              keyboardType="number-pad"
-            />
-
-            {/* Phone Number */}
-            <Text style={styles.modalFieldLabel}>{withdrawProvider === 'MTN' ? 'MTN' : 'Airtel'} Phone Number</Text>
-            <TextInput
-              style={styles.modalInput}
-              value={withdrawPhone}
-              onChangeText={setWithdrawPhone}
-              placeholder={`e.g. 077${withdrawProvider === 'MTN' ? '7' : '0'}123456`}
-              placeholderTextColor={COLORS.onSurfaceVariant}
-              keyboardType="phone-pad"
-            />
-
-            {/* Withdraw Button */}
-            <GradientButton
-              title={isWithdrawing ? 'Processing...' : `Withdraw ${withdrawAmount ? formatCurrency(parseFloat(withdrawAmount) || 0) : ''}`}
-              onPress={handleWithdraw}
-              disabled={isWithdrawing}
-            />
-
-            <Text style={styles.modalNote}>
-              Withdrawals are processed within 24 hours. Minimum UGX 1,000.
-            </Text>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+        onClose={() => setShowWithdrawModal(false)}
+        balance={walletData?.balance || 0}
+                onSubmit={(amount, phone, provider) => api.requestRiderWithdrawal(amount, phone, provider)}
+        onSuccess={() => loadData()}
+      />
     </View>
   );
 }
@@ -553,44 +408,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   loadingText: {
     ...TYPOGRAPHY.bodyMd,
     color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.md,
-  },
-  header: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-  backText: {
-    ...TYPOGRAPHY.headlineLg,
-    color: COLORS.onSurface,
-  },
-  headerTitle: {
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-  },
-  walletBtn: {
-    backgroundColor: `${COLORS.primary}20`,
-    paddingHorizontal: 14,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.xl,
-  },
-  walletBtnText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  glowBorder: {
-    height: 1,
     marginTop: SPACING.md,
   },
   scrollView: {
@@ -789,10 +606,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 14,
   },
-  breakdownEmoji: {
-    fontSize: 20,
-    marginBottom: SPACING.xs,
-  },
   breakdownAmount: {
     ...TYPOGRAPHY.bodyMd,
     fontWeight: 'bold',
@@ -829,147 +642,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     backgroundColor: COLORS.outlineVariant,
   },
   // Modal styles
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-  },
-  modalContent: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    padding: SPACING.lg,
-    paddingBottom: 40,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  modalTitle: {
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-  },
-  modalCloseBtn: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
-  modalCloseText: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodyMd,
-  },
-  modalBalanceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: `${COLORS.primary}15`,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.md,
-    marginBottom: 20,
-  },
-  modalBalanceLabel: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-  },
-  modalBalanceValue: {
-    ...TYPOGRAPHY.bodyLg,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  modalFieldLabel: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    fontWeight: '600',
-    marginBottom: SPACING.sm,
-    marginTop: SPACING.xs,
-  },
   // Provider selection
-  providerRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
-    marginBottom: SPACING.md,
-  },
-  providerBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    paddingVertical: 14,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
-  providerBtnActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: `${COLORS.primary}15`,
-  },
-  providerDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  providerText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    fontWeight: '500',
-  },
-  providerTextActive: {
-    color: COLORS.onSurface,
-    fontWeight: '700',
-  },
   // Quick amounts
-  quickAmountRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  quickAmountBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
-  quickAmountBtnActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: `${COLORS.primary}15`,
-  },
-  quickAmountText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    fontWeight: '500',
-  },
-  quickAmountTextActive: {
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
   // Input
-  modalInput: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 14,
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurface,
-    marginBottom: SPACING.md,
-  },
-  modalNote: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    marginTop: SPACING.md,
-  },
 });
