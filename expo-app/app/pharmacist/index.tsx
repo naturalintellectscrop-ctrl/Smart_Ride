@@ -322,7 +322,11 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   actionCard: {
-    width: '47%',
+    // Two tiles plus the row gap overflowed 100%, squeezing the second
+    // tile and wrapping its label. flexBasis reflows instead.
+    flexBasis: '48%',
+    flexGrow: 1,
+    minWidth: 150,
     alignItems: 'center',
   },
   actionTitle: {

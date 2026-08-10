@@ -46,6 +46,9 @@ export { Chip } from './Chip';
 export { OnlinePill } from './OnlinePill';
 export { SmartBottomSheet } from './SmartBottomSheet';
 export { RideTimeline } from './RideTimeline';
+export { ResizablePanel } from './ResizablePanel';
+export type { PanelSnap } from './ResizablePanel';
+export type { SheetSnap } from './SmartBottomSheet';
 // Dialogs: the imperative `Alert` / `toast` from './feedback' is the primary
 // system (see DS spec §9). `ConfirmDialog` above is its declarative half — the
 // only confirm that can stay mounted in a `loading` state while the action it

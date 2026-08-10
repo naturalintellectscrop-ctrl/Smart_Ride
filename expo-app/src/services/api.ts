@@ -638,7 +638,10 @@ class ApiService {
   async quoteOrder(data: {
     merchantId: string;
     orderType: 'FOOD_DELIVERY' | 'SHOPPING';
-    items: Array<{ quantity: number; unitPrice: number }>;
+    // Send menuItemId so the server prices from the catalogue. Without it the
+    // quote can only echo back what this client believes, and a stale price
+    // surfaces as an unexplained failure at checkout instead of here.
+    items: Array<{ menuItemId?: string; quantity: number; unitPrice: number }>;
     deliveryLatitude?: number | null;
     deliveryLongitude?: number | null;
   }): Promise<ApiResponse<{
@@ -649,6 +652,12 @@ class ApiService {
     totalAmount: number;
     distanceKm: number;
     currency: string;
+    /** Lines whose catalogue price rose since they were added to the cart. */
+    priceChanges?: Array<{ menuItemId: string; itemName: string; was: number; now: number }>;
+    /** Lines that can no longer be ordered, with a reason. */
+    unavailable?: Array<{ menuItemId?: string; itemName?: string; reason: string }>;
+    /** False when the cart sent no menuItemIds, so prices were not verified. */
+    pricedFromCatalogue?: boolean;
   }>> {
     return this.request('/orders/quote', 'POST', data);
   }

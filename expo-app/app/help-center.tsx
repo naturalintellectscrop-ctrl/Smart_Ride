@@ -108,12 +108,11 @@ export default function HelpCenterScreen() {
 
         <View style={styles.shortcutRow}>
           <GradientButton
-            title="Chat with Support"
+            title="Chat with support"
             onPress={chatSupport}
             variant="primary"
             size="lg"
-            fullWidth={false}
-            style={styles.shortcut}
+            fullWidth
             icon={<Ionicons name="logo-whatsapp" size={ICON.md} color={COLORS.onPrimary} />}
           />
           <GradientButton
@@ -121,8 +120,7 @@ export default function HelpCenterScreen() {
             onPress={callSupport}
             variant="outline"
             size="lg"
-            fullWidth={false}
-            style={styles.shortcut}
+            fullWidth
             icon={<Ionicons name="call" size={ICON.md} color={COLORS.primary} />}
           />
         </View>
@@ -140,7 +138,7 @@ export default function HelpCenterScreen() {
               accessibilityLabel={c.label}
             >
               <Ionicons name={c.icon as any} size={ICON.xl} color={COLORS.primary} />
-              <Text style={styles.categoryLabel}>{c.label}</Text>
+              <Text style={styles.categoryLabel} numberOfLines={2}>{c.label}</Text>
             </Card>
           ))}
         </View>
@@ -205,12 +203,11 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   shortcutRow: {
-    flexDirection: 'row',
-    gap: SPACING.md,
+    // Stacked, not side by side. "Chat with support" cannot fit on one line in
+    // half the width of a small phone, and a wrapped button label reads as a
+    // layout bug rather than a deliberate two-line label.
+    gap: SPACING.sm,
     marginBottom: SPACING.lg,
-  },
-  shortcut: {
-    flex: 1,
   },
   categoryGrid: {
     flexDirection: 'row',
@@ -219,14 +216,21 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   categoryTile: {
-    width: '47%',
+    // `flexBasis` with a floor rather than a fixed `width: '47%'`: two tiles
+    // plus the gap overflowed 100% on narrow screens, which is what pushed the
+    // labels into a second line.
+    flexBasis: '48%',
     flexGrow: 1,
+    minWidth: 140,
     gap: SPACING.sm,
   },
   categoryLabel: {
     ...TYPOGRAPHY.bodySm,
     fontWeight: '600',
     color: COLORS.onSurface,
+    // Long category names get an ellipsis instead of reflowing the tile and
+    // leaving the grid ragged.
+    flexShrink: 1,
   },
   articleCard: {
     marginBottom: SPACING.lg,

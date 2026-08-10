@@ -29,7 +29,6 @@ import * as Notifications from 'expo-notifications';
 import Animated, {
   FadeIn,
   FadeInDown,
-  SlideInUp,
   ZoomIn,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
@@ -56,6 +55,7 @@ import {
   GradientButton,
   OnlinePill,
   Rating,
+  ResizablePanel,
   Skeleton,
   SmartBottomSheet,
   SmartRideMap,
@@ -585,8 +585,7 @@ export default function DriverHomeScreen() {
       </View>
 
       {/* ── OPERATIONS PANEL (lower) ── */}
-      <Animated.View entering={SlideInUp.duration(MOTION.duration.slower).springify()} style={styles.panel}>
-        <View style={styles.grabber} />
+      <ResizablePanel initialSnap="half">
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, 12) + SPACING.sm }}>
           {/* Live status */}
           <View style={styles.statusRow}>
@@ -653,7 +652,7 @@ export default function DriverHomeScreen() {
             />
           </View>
         </ScrollView>
-      </Animated.View>
+      </ResizablePanel>
 
       {/* ── INCOMING REQUEST (Golden Screen #14) ── */}
       {/* Declining is an explicit decision — a stray tap beside the sheet must

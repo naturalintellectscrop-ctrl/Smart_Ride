@@ -540,8 +540,8 @@ Re-verified every finding against the tree at commit `94fec96`.
 | ID | Status at audit | Evidence |
 |---|---|---|
 | BE-001 | FIXED_PENDING_VERIFICATION | `src/app/api/orders/route.ts` money fields are `.optional()` and ignored; `pricing.*` written server-side |
-| BE-002 | **still OPEN** | `route.ts:137` still `unitPrice: z.number().min(0)`; `:251-252` still persists the client value and derives `totalPrice` from it |
-| BE-003 | **still OPEN** | both `src/app/api/riders/withdraw/route.ts` and `src/app/api/wallet/withdraw/route.ts` present. The UI no longer forces a choice — `WithdrawModal` takes an `onSubmit` override so both callers share one sheet — but the duplication is unresolved and is the backend session's to settle |
+| BE-002 | **RESOLVED by the backend session** | re-verified 2026-08-10 after their working-tree changes: `route.ts:210` now documents `unitPrice` as advisory only, and `:254` prices from `priced.items` rather than the request body |
+| BE-003 | **RESOLVED by the backend session** | re-verified 2026-08-10: both routes still exist as endpoints, but each now delegates to the single `withdrawFromWallet` in `src/lib/wallet/wallet-service.ts` — the *divergent implementations* are gone. The UI-side `WithdrawModal` `onSubmit` override remains valid and now sits over one behaviour instead of two |
 | BE-004 | FIXED_PENDING_VERIFICATION | the false badge is gone from `chat/[id].tsx`; the replacement comment records why |
 | BE-005 | FIXED_PENDING_VERIFICATION | DP dashboard, offer sheet and queue built (Golden Screens #40–#42) |
 | BE-006 | FIXED_PENDING_VERIFICATION | `rider/onboarding.tsx` writes the real `RiderRole` values. **Rows written before this fix still hold the bad values** — a data backfill is still owed and is not something the UI can do |
@@ -557,3 +557,33 @@ fixed from a UI session.
 
 **One item is owed that no session has claimed:** the BE-006 data backfill.
 Fixing the writer does not fix rows already written.
+
+---
+
+# Re-verification — 2026-08-10, after the backend session's working-tree changes
+
+Checked before the next APK build, at the user's instruction, because several
+findings were being worked on in parallel.
+
+**Now resolved (theirs):**
+
+- **BE-002** — order line-item pricing is server-derived. The request's
+  `unitPrice` is kept in the schema but treated as advisory, used only to detect
+  a stale cart; the persisted price comes from the server's own `priced.items`.
+  This also completes BE-001 — the whole money path is now server-authoritative.
+- **BE-003** — the two withdrawal implementations were consolidated onto
+  `withdrawFromWallet` in `src/lib/wallet/wallet-service.ts`. Both
+  `/api/riders/withdraw` and `/api/wallet/withdraw` are now thin callers.
+  The service debits atomically rather than read-then-write, closing the race
+  the original divergence hid.
+
+**Still open, and now attributable:**
+
+- **BE-003 follow-on.** The original finding also noted that top-up enforced a
+  UGX 1,000 minimum while withdrawal enforced none. The consolidated
+  `withdrawFromWallet` validates only `amount > 0`, so the asymmetry survived
+  consolidation. Not fixed here: a withdrawal floor is a financial-policy
+  decision, not a UI one.
+- **BE-007** — dead wallet API surface, unchanged.
+- **BE-010** — push registration failure, unchanged.
+- **BE-006 backfill** — still owed; fixing the writer did not fix existing rows.

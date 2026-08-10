@@ -899,7 +899,11 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginTop: SPACING.xs,
   },
   vehicleTypeCard: {
-    width: '48%',
+    // Two tiles plus the row gap overflowed 100%, squeezing the second
+    // tile and wrapping its label. flexBasis reflows instead.
+    flexBasis: '48%',
+    flexGrow: 1,
+    minWidth: 150,
     backgroundColor: COLORS.surfaceContainerLow,
     borderRadius: RADIUS.md,
     padding: 14,

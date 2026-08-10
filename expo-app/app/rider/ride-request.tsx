@@ -53,6 +53,7 @@ import {
   EmptyState,
   GradientButton,
   IconInput,
+  ResizablePanel,
   SearchInput,
   SectionHeader,
   SegmentedControl,
@@ -491,10 +492,7 @@ export default function RideRequestScreen() {
       </View>
 
       {/* ─── Operations panel ──────────────────────────── */}
-      <View style={styles.panel}>
-        <View style={styles.grabberWrap}>
-          <View style={styles.grabber} />
-        </View>
+      <ResizablePanel initialSnap="half">
 
         <ScrollView
           style={styles.scrollView}
@@ -551,7 +549,7 @@ export default function RideRequestScreen() {
             />
           )}
         </ScrollView>
-      </View>
+      </ResizablePanel>
 
       {/* ─── Payment selection (overlay, Golden Screen #10) ─── */}
       <SmartBottomSheet
@@ -1040,24 +1038,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Operations panel (AR-3 ~45%, rounded-26 + grabber to match SmartBottomSheet)
-  panel: {
-    flex: 1.2,
-    backgroundColor: COLORS.surface,
-    borderTopLeftRadius: RADIUS.xl + 2,
-    borderTopRightRadius: RADIUS.xl + 2,
-    marginTop: -(RADIUS.xl + 2),
-    overflow: 'hidden',
-  },
-  grabberWrap: {
-    alignItems: 'center',
-    paddingVertical: SPACING.sm,
-  },
-  grabber: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: COLORS.outlineVariant,
-  },
   scrollView: {
     flex: 1,
   },

@@ -37,10 +37,11 @@ import {
   ErrorState,
   GradientButton,
   Rating,
+  ResizablePanel,
   RideTimeline,
+  Skeleton,
   SmartRideMap,
   StatusBadge,
-  Skeleton,
 } from '@/src/components';
 import type { TimelineStep } from '@/src/components/RideTimeline';
 import { useTaskStore } from '@/src/store';
@@ -602,11 +603,7 @@ export default function RideTrackingScreen() {
       </View>
 
       {/* ─── Operations panel ──────────────────────────── */}
-      <View style={styles.panel}>
-        <View style={styles.grabberWrap}>
-          <View style={styles.grabber} />
-        </View>
-
+      <ResizablePanel initialSnap="half">
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.panelContent}
@@ -817,7 +814,7 @@ export default function RideTrackingScreen() {
             </View>
           )}
         </ScrollView>
-      </View>
+      </ResizablePanel>
 
       <ConfirmDialog
         visible={showCancelConfirm}

@@ -74,7 +74,7 @@ export function GradientButton({
         ) : (
           <>
             {icon}
-            <Text style={styles.outlineText}>{title}</Text>
+            <Text style={styles.outlineText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text>
           </>
         )}
       </AnimatedTouchable>
@@ -98,7 +98,7 @@ export function GradientButton({
         ) : (
           <>
             {icon}
-            <Text style={styles.secondaryText}>{title}</Text>
+            <Text style={styles.secondaryText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text>
           </>
         )}
       </AnimatedTouchable>
@@ -130,7 +130,7 @@ export function GradientButton({
         ) : (
           <>
             {icon}
-            <Text style={styles.text}>{title}</Text>
+            <Text style={styles.text} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text>
           </>
         )}
       </LinearGradient>

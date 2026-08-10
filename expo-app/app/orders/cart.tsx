@@ -67,7 +67,7 @@ export default function CartScreen() {
     api.quoteOrder({
       merchantId,
       orderType: 'FOOD_DELIVERY',
-      items: items.map((i) => ({ quantity: i.quantity, unitPrice: i.price })),
+      items: items.map((i) => ({ menuItemId: i.productId, quantity: i.quantity, unitPrice: i.price })),
       deliveryLatitude: latitude,
       deliveryLongitude: longitude,
     })

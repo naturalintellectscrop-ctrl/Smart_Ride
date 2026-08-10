@@ -243,16 +243,16 @@ export default function RiderEarningsScreen() {
         <View style={styles.statsRow}>
           <Card style={styles.statCard}>
             <Ionicons name="cash-outline" size={20} color={COLORS.success} />
-            <Text style={styles.statAmount}>{formatCurrency(walletData?.balance || 0)}</Text>
-            <Text style={styles.statLabel}>Available Balance</Text>
+            <Text style={styles.statAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatCurrency(walletData?.balance || 0)}</Text>
+            <Text style={styles.statLabel} numberOfLines={1}>Available</Text>
             <TouchableOpacity onPress={() => setShowWithdrawModal(true)}>
               <Text style={styles.statLink}>Withdraw →</Text>
             </TouchableOpacity>
           </Card>
 
           <Card variant="accent" style={styles.statCard}>
-            <Text style={styles.statIcon}>⏳</Text>
-            <Text style={styles.statAmount}>{formatCurrency(walletData?.pendingBalance || 0)}</Text>
+            <Ionicons name="time-outline" size={20} color={COLORS.warning} />
+            <Text style={styles.statAmount} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{formatCurrency(walletData?.pendingBalance || 0)}</Text>
             <Text style={styles.statLabel}>Pending</Text>
           </Card>
         </View>
@@ -465,10 +465,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  statIcon: {
-    fontSize: 20,
-    marginBottom: SPACING.sm,
-  },
   statAmount: {
     ...TYPOGRAPHY.bodyLg,
     fontWeight: 'bold',
@@ -602,7 +598,11 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   breakdownCard: {
-    width: '48%',
+    // Two tiles plus the row gap overflowed 100%, squeezing the second
+    // tile and wrapping its label. flexBasis reflows instead.
+    flexBasis: '48%',
+    flexGrow: 1,
+    minWidth: 150,
     alignItems: 'center',
     paddingVertical: 14,
   },
