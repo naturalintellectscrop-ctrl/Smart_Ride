@@ -7,12 +7,12 @@
 
 import { useState, useMemo } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
   ScrollView,
-  ActivityIndicator,
   StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -50,6 +50,8 @@ export default function TripSummaryScreen() {
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [comment, setComment] = useState('');
+  const [ratingError, setRatingError] = useState<string | null>(null);
 
   const totalAmount  = parseInt(params.totalAmount  || '0', 10);
   const distanceKm   = parseFloat(params.distanceKm  || '0');
@@ -69,16 +71,23 @@ export default function TripSummaryScreen() {
 
   const isCash = paymentMethod === 'CASH';
 
-  const handleRating = async (stars: number) => {
+  const handleRating = (stars: number) => {
     if (ratingSubmitted) return;
     setSelectedRating(stars);
-    if (!params.taskId) return;
+  };
+
+  const submitRating = async () => {
+    if (ratingSubmitted || !selectedRating || !params.taskId) return;
     setIsSubmitting(true);
+    setRatingError(null);
     try {
-      await api.rateTask(params.taskId, stars);
+      const res = await api.rateTask(params.taskId, selectedRating, comment.trim() || undefined);
+      if (res?.success === false) throw new Error(res.error || 'Could not submit');
       setRatingSubmitted(true);
     } catch {
-      // silently fail — rating is not critical
+      // A failure used to be swallowed entirely, so a rider who rated a bad
+      // trip believed it was recorded when nothing had been sent.
+      setRatingError('Could not submit your rating. Tap to try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -200,7 +209,36 @@ export default function TripSummaryScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          {isSubmitting && <ActivityIndicator size="small" color={COLORS.primary} style={styles.ratingSpinner} />}
+          {/* Comment is optional and only worth asking for once a score is
+              chosen — an empty box above an unrated trip is just noise. */}
+          {selectedRating > 0 && !ratingSubmitted && (
+            <>
+              <TextInput
+                style={styles.commentInput}
+                value={comment}
+                onChangeText={setComment}
+                placeholder={selectedRating <= 3 ? 'What went wrong? (optional)' : 'Add a comment (optional)'}
+                placeholderTextColor={COLORS.onSurfaceVariant}
+                multiline
+                maxLength={500}
+                editable={!isSubmitting}
+                accessibilityLabel="Rating comment"
+              />
+              <GradientButton
+                title="Submit rating"
+                onPress={submitRating}
+                variant="primary"
+                size="md"
+                fullWidth
+                loading={isSubmitting}
+                disabled={isSubmitting}
+                style={styles.ratingSubmit}
+              />
+            </>
+          )}
+          {ratingError && (
+            <Text style={styles.ratingError} onPress={submitRating}>{ratingError}</Text>
+          )}
           {ratingSubmitted && <Text style={styles.ratingThanks}>Thanks for your feedback!</Text>}
         </Card>
 
@@ -237,7 +275,25 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   metaTextAccent: {
     color: COLORS.primary,
   },
-  ratingSpinner: {
+  commentInput: {
+    ...TYPOGRAPHY.bodyMd,
+    color: COLORS.onSurface,
+    backgroundColor: COLORS.surfaceContainerLow,
+    borderRadius: RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    padding: SPACING.md,
+    marginTop: SPACING.md,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  ratingSubmit: {
+    marginTop: SPACING.md,
+  },
+  ratingError: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.error,
+    textAlign: 'center',
     marginTop: SPACING.sm,
   },
   footerButton: {

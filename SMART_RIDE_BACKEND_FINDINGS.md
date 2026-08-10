@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-012**.
+**ID allocation:** next free ID is **BE-014**.
 
 ---
 
@@ -23,11 +23,14 @@ finding is explicitly marked as already fixed locally.
 | BE-001 | Order creation trusted client-supplied prices | P0 | FIXED_PENDING_VERIFICATION | Financial |
 | BE-002 | Order line-item `unitPrice` still comes from the client | P0 | RESOLVED | Financial |
 | BE-003 | Two divergent withdrawal implementations | P1 | RESOLVED | Financial |
-| BE-004 | Chat claimed end-to-end encryption that does not exist | P1 | FIXED_PENDING_VERIFICATION | Security |
+| BE-004 | Chat claimed end-to-end encryption that does not exist | P1 | RESOLVED | Security |
 | BE-005 | `DELIVERY_PERSONNEL` dispatched work it had no UI to accept | P1 | FIXED_PENDING_VERIFICATION | Workflow |
 | BE-006 | `riderRole` enum drift written by onboarding | P1 | RESOLVED — no backfill owed | Data |
-| BE-007 | Dead wallet API surface with no callers | P3 | ANSWERED — awaiting product decision | Backend |
+| BE-007 | Dead wallet API surface with no callers | P3 | RESOLVED — receipts screen specced as Golden Screen #43 | Backend |
 | BE-008 | `getFareEstimate` signature left incomplete mid-edit | P2 | FIXED_PENDING_VERIFICATION | Backend |
+| BE-009 | Surge applied silently, broke the minimum-fare flag | P2 | FIXED_PENDING_VERIFICATION | Backend |
+| BE-010 | Push registration fails on the release build | P1 | OPEN | Infrastructure |
+| BE-011 | Withdrawals were not idempotent | P1 | RESOLVED | Financial |
 
 ---
 
@@ -299,7 +302,7 @@ is left as a separate item rather than smuggled into this one.
 
 ## BE-004 — Chat claimed end-to-end encryption that does not exist
 
-**Status:** FIXED_PENDING_VERIFICATION
+**Status:** RESOLVED
 **Priority:** P1
 **Category:** Security
 **Discovered by:** Screen Migration Session
@@ -346,6 +349,90 @@ Search the web app and marketing copy for equivalent claims. If E2E is
 implemented, verify ciphertext at rest in the `Message` table.
 
 **Dependencies:** None.
+
+### Resolution — Backend session, 2026-08-10
+
+**The mobile badge was fixed, but the same false claim was still live on the
+web.** The "do not assume" note was right: `src/components/smart-ride/messaging/
+enhanced-messaging-screen.tsx:532` and `messaging-screen.tsx:416` both rendered
+"End-to-end encrypted • Phone numbers hidden", and the first of those is
+reachable — `client-messages.tsx` imports it into the client dashboard.
+
+**A third claim was found that no session had recorded.**
+`pharmacy-prescriptions.tsx:161` labelled prescription images "Encrypted image
+storage". `POST /api/prescriptions` stores `imageUrl` as a plain URL and sets
+`imageHash: Date.now().toString(36)` — a timestamp, not a digest. Nothing
+encrypts the file. That is a health record, so the claim mattered more than the
+chat one.
+
+**Decision on the platform claim: E2E is not implemented and is not being
+implemented here.** Whether messages *should* be encrypted at rest remains the
+product decision this finding was opened to force. What has been removed is the
+assertion that it already is.
+
+All three now state properties that actually hold — contact details stay
+private, in-app only; prescriptions are visible only to the patient and their
+pharmacist. That wording is backed by a real mechanism (`redactPerson` in
+`src/lib/privacy/public-contact.ts`), which the harness also asserts still
+exists, so the replacement claim cannot quietly become false either.
+
+**Claims audited and deliberately left alone, because they are true:**
+- "encrypted in transit and at rest" (help, landing, privacy pages) — holds at
+  the platform level: Supabase/AWS encrypt volumes and TLS covers transit.
+  Nothing in the application enforces it, so it is a **platform** guarantee, not
+  an application one. Worth knowing if the hosting ever moves.
+- "Your code is encrypted" (`verify-otp.tsx`) — the OTP is bcrypt-hashed
+  (`otpHash`, `bcryptjs`) before storage. "Encrypted" is loose for "hashed", but
+  the user-facing meaning — we do not keep your code in readable form — is true.
+
+**Verification:** `bun scripts/verify-security-claims.ts` — 10 checks scanning
+**612 UI files across 4 roots** for banned claims (end-to-end encrypted, E2EE,
+encrypted image storage, zero-knowledge, "we cannot read your messages").
+Comments are stripped before scanning, so the notes explaining why each claim
+was removed do not trip the scanner. This is a regression guard: a removed
+claim cannot come back in a later redesign without failing the suite.
+
+---
+
+## BE-011 — Withdrawals were not idempotent
+
+**Status:** RESOLVED
+**Priority:** P1
+**Category:** Financial
+**Discovered by:** Backend session, while closing BE-003
+**Discovered at:** 2026-08-10
+
+**Location:** `src/lib/wallet/wallet-service.ts`,
+`src/app/api/wallet/withdraw/route.ts`, `src/app/api/riders/withdraw/route.ts`
+
+**Evidence:**
+Recorded as "still owed" when BE-003 closed. A retried withdrawal debited
+twice. On a mobile connection a dropped response is indistinguishable from a
+failure, so the user taps again — and the second tap took their money again.
+
+**Fix:**
+`WalletTransaction.idempotencyKey`, unique, holding `<walletId>:<clientKey>` so
+the same key from two different users cannot collide. Callers pass a key via
+the standard `Idempotency-Key` header (body accepted as a fallback).
+
+The guarantee is the **unique constraint**, not a lookup. A check-then-act read
+is exactly what fails under concurrency: two simultaneous retries both find no
+prior transaction and both debit. Because the ledger insert shares a
+transaction with the balance decrement, a duplicate key rolls the debit back
+with it — so the wallet moves exactly once and the loser returns the winner's
+result. The prior-transaction lookup is kept as a fast path for the ordinary
+sequential retry, but it is an optimisation, not the guard.
+
+A replayed request also short-circuits before the audit log and the
+notification, so a driver is not told twice that they withdrew.
+
+**Verification:** covered by `verify-wallet-withdrawal` (26 checks total).
+Ten sequential and six *simultaneous* retries with one key produce **one**
+transaction and **one** debit. Also asserts a different key is a genuinely new
+withdrawal, the same key on a different wallet is not blocked, and a **refused**
+withdrawal leaves no key behind to block a later real one.
+
+**Dependencies:** BE-003.
 
 ---
 
@@ -549,7 +636,30 @@ The "do not assume" note asked whether the web app calls these. It was audited:
   `orders/[id]`, `tasks`, and `tasks/[id]`. Deleting the route would break
   receipt generation.
 
-**What is left is genuinely a product decision and is not being made here:**
+### Product decision — resolved, 2026-08-10
+
+**Receipt history is required, and the backend needs no work.** Receipts are
+generated automatically for every completed task, so the data already exists for
+every user — it is simply unreachable: `receipt/[id]` can only be opened from a
+task still in view, so nobody can retrieve last month's receipt for an expense
+claim or a dispute.
+
+`GET /api/receipts` already supports the journey: scoped to the caller under
+RLS, newest first, capped at 50. `api.getReceipts()` is already declared in the
+mobile client. Nothing was rebuilt.
+
+Specced as **Golden Screen #43 (Receipt History)** in
+`SMART_RIDE_GOLDEN_SCREENS.md`, inheriting the #39 `ReceiptCard` architecture in
+its compact variant so the list row and the detail page cannot diverge into two
+receipt designs. One limitation flagged for the UI session: the endpoint has no
+pagination parameter, which is ample for a first version — if infinite scroll is
+wanted, that is a small backend request rather than something to work around.
+
+`GET /api/wallet/balance` remains uncalled by anything; the web duplicate was
+removed. The remaining wrapper is three lines over a working endpoint, so it
+stays.
+
+**Superseded note:**
 whether a receipts-list screen is wanted. If yes, `GET /api/receipts` and the
 mobile `getReceipts()` wrapper are already in place for it. If no, both can go.
 `GET /api/wallet/balance` and the mobile `getWalletBalance()` wrapper can be
@@ -781,3 +891,114 @@ money provider's settlement records. That is a financial-data-model decision.
 
 The three `if (res.ok)` blocks all fail silently the same way. A failed admin
 finance fetch should not be indistinguishable from an empty result set.
+
+---
+
+## BE-012 — Rating is one-directional: drivers can never rate clients
+
+**Status:** OPEN
+**Severity:** P2 — a documented model field is permanently unpopulated
+**Owner:** backend session (needs an endpoint + a policy decision)
+**Found:** 2026-08-10, tracing the rating system end to end.
+
+### What was verified
+
+`POST /api/tasks/[id]/rate` is the only rating write path in the tree. It
+enforces at `route.ts:86`:
+
+```ts
+if (task.clientId !== user.userId) { ... 403 ... }
+```
+
+Only the task's client may rate. There is no driver-side equivalent — a search
+across `src/app/api/tasks/` and `src/app/api/riders/` finds no other route that
+writes a `Rating`.
+
+The consequence is a schema field that can never hold what it describes.
+`Rating.toUserId` is set at `:103` to `task.rider?.userId` — the *driver's*
+user id — on a row whose `fromUserId` is the client. So `toUserId` is only ever
+a driver, and `User.ratingsReceived` never contains a client's rating.
+A rider with a history of no-shows or abuse accumulates nothing.
+
+### Also unpopulated
+
+`Rating` declares `punctualityScore`, `professionalismScore` and
+`vehicleConditionScore`. No write path sets any of them — the endpoint's Zod
+schema accepts only `rating` and `comment`. They are dead columns today.
+
+### Decision needed before building
+
+Whether client ratings are visible to drivers at dispatch time. That changes
+whether this is a private quality signal or something that can be used to
+refuse a passenger, which is a policy question, not an implementation one.
+
+---
+
+## BE-013 — `DriverReputation.averageRating` duplicates `Rider.rating` with no reconciliation
+
+**Status:** OPEN
+**Severity:** P2 — two competing sources of the same number
+**Owner:** backend session
+**Found:** 2026-08-10, same trace.
+
+### What was verified
+
+Three separate stores hold a driver's rating:
+
+1. `Rider.rating` — a `Float @default(5.0)` column, recomputed by
+   `tasks/[id]/rate/route.ts:112-124` on every submission.
+2. `Rating` rows — the source of truth, aggregated on demand by
+   `riders/profile/route.ts:85`, `dispatch/[id]/accept/route.ts:122` and
+   `rider-onboarding.service.ts:609`.
+3. `DriverReputation.averageRating` + the five star-bucket counters
+   (`schema.prisma:3215-3222`), fed separately via
+   `PlatformIntelligence.onRatingSubmitted`.
+
+Nothing reconciles them. `Rider.rating` and `DriverReputation.averageRating`
+both default to 5, so an unrated driver reads as a perfect 5.0 in both. The
+count-aware path (`riders/profile`) correctly returns `rating: null` until a
+real rating exists — but any consumer reading `Rider.rating` or
+`DriverReputation.averageRating` directly gets the fabricated 5.0 instead.
+
+**The mobile side of this is fixed** in the same commit: the shared `Rating`
+component now renders "New" when `value == null` or `count <= 0`, matching
+`formatRating` in `utils/money.ts`, which already did. Previously the same
+unrated driver could read "New" and "5.00" on one screen.
+
+What remains is server-side: decide which store is authoritative and make the
+others derive from it, or drop the duplicates.
+
+---
+
+# Session-end audit — Backend session, 2026-08-10
+
+Re-verified every finding against the tree after closing P1–P4.
+
+| ID | Status | Evidence |
+|---|---|---|
+| BE-001 | FIXED_PENDING_VERIFICATION | unchanged; superseded in practice by BE-002, which now prices the lines the fees are computed from |
+| BE-002 | **RESOLVED** | `priceItemsFromCatalogue` scoped to `merchantId`; `verify-order-pricing` 16 checks |
+| BE-003 | **RESOLVED** | one atomic implementation, all four call sites on the USER wallet; `verify-wallet-withdrawal` |
+| BE-004 | **RESOLVED** | three false claims removed (two of them web, never previously audited); `verify-security-claims` 13 checks over 612 files |
+| BE-005 | FIXED_PENDING_VERIFICATION | unchanged — the two remaining questions (proof-of-delivery, concurrent DP assignments) are still owed |
+| BE-006 | **RESOLVED** | no backfill owed; the enum column rejected bad values, so onboarding 400'd rather than writing drift |
+| BE-007 | **RESOLVED** | receipts API confirmed sufficient; screen specced as Golden Screen #43, no backend built |
+| BE-008 | FIXED_PENDING_VERIFICATION | signature intact; the `estimates` response type has been widened to carry the surge fields it returns |
+| BE-009 | FIXED_PENDING_VERIFICATION | unchanged |
+| BE-010 | **OPEN** | Firebase Console configuration — outside what a code session can change |
+| BE-011 | **RESOLVED** | DB-enforced idempotency key; six simultaneous retries produce one debit |
+
+**Still owed, and deliberately not smuggled into another finding:**
+- **BE-005's two open questions.** Is there a proof-of-delivery requirement the
+  mobile app does not collect, and does `GET /tasks` return *all* concurrent
+  assignments for a DP rider? Neither was tested this session.
+- **BE-010.** Needs someone with access to the Firebase project.
+- **Whether messages should be encrypted at rest.** BE-004 removed the false
+  claim; it did not answer the product question underneath it.
+
+**Not a defect, recorded so it is not re-investigated:** the zero
+`SMART_CAR_DRIVER` rows noted at the last audit. The role was driven end to end
+— registration, approval, dispatch eligibility, the full ride lifecycle,
+earnings into a withdrawable wallet, and a receipt naming the car service — and
+passes at every step (`verify-car-driver-journey`, 15 checks). The absence is a
+small dataset, not a broken role.

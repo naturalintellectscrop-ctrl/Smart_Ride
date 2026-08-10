@@ -23,9 +23,29 @@ export function Rating({ value, count, size = 'sm', style }: RatingProps) {
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const iconSize = size === 'md' ? ICON.md : ICON.xs;
   const fontSize = size === 'md' ? 15 : 12.5;
+  // An unrated driver must not render as a fabricated "5.00". The API already
+  // distinguishes the two — `/riders/profile` returns `rating: null` until at
+  // least one real rating exists, precisely because `Rider.rating` defaults to
+  // 5.0 — and `formatRating` in utils/money honours that. This component did
+  // not, so the same unrated driver read "New" in one place and "5.00" in
+  // another on the same screen.
+  const unrated = value == null || (count != null && count <= 0);
   const v = (value ?? 0).toFixed(2);
+
+  if (unrated) {
+    return (
+      <View style={[styles.row, style]} accessibilityLabel="Not yet rated">
+        <Ionicons name="star-outline" size={iconSize} color={COLORS.onSurfaceVariant} />
+        <Text style={{ fontSize, fontWeight: '700', color: COLORS.onSurfaceVariant }}>New</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.row, style]} accessibilityLabel={`Rating ${v}${count != null ? `, ${count} trips` : ''}`}>
+    <View
+      style={[styles.row, style]}
+      accessibilityLabel={`Rated ${v} out of 5${count != null ? `, from ${count} ${count === 1 ? 'rating' : 'ratings'}` : ''}`}
+    >
       <Ionicons name="star" size={iconSize} color={COLORS.warning} />
       <Text style={{ fontSize, fontWeight: '700', color: COLORS.onSurface }}>{v}</Text>
       {count != null ? (
