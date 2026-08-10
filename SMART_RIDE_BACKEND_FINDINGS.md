@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-009**.
+**ID allocation:** next free ID is **BE-010**.
 
 ---
 
@@ -453,3 +453,65 @@ Confirm the signature matches the backend session's intent, then decide whether
 the booking screen should pass coordinates so quotes include surge.
 
 **Dependencies:** None.
+
+---
+
+## BE-009 — Surge was applied silently and broke the minimum-fare flag
+
+**Status:** FIXED_PENDING_VERIFICATION
+**Severity:** P2 — pricing transparency
+**Owner:** UI session (fixed); the surge *engine* itself belongs to the backend session
+**File:** `src/app/api/tasks/fare-estimate/route.ts`
+**Found:** Stage 3 exit, while completing the incomplete `getFareEstimate`
+signature recorded as BE-008.
+
+### What was verified
+
+`getFareEstimate` returns `surgeMultiplier`, `surgeAmount` and `surgeReason` in
+its breakdown. The estimate route consumed none of them — it folded
+`breakdown.totalAmount` (surge included) into the response and dropped the three
+explanatory fields. A rider on a surging route saw a higher number with nothing
+to attribute it to.
+
+Second, concrete bug: `minimumApplied` was computed as
+`breakdown.totalAmount > rawTotal`. Surge is added *on top of* a fare that has
+already cleared the minimum floor, so any surge at all made the post-surge total
+exceed the raw fare and the response claimed "minimum fare applied" on every
+surging trip — including long, expensive ones nowhere near the floor.
+
+### What was changed
+
+`minimumApplied` now compares the **pre-surge** total against `rawTotal`, and
+the three surge fields are passed through to the client so the price can be
+explained rather than merely charged.
+
+### What the backend session should confirm
+
+Whether any consumer of this endpoint reads `minimumApplied` for accounting
+rather than display. If so, its historical values were wrong during surge.
+
+---
+
+# Session-end audit — Stage 3 exit
+
+Re-verified every finding against the tree at commit `94fec96`.
+
+| ID | Status at audit | Evidence |
+|---|---|---|
+| BE-001 | FIXED_PENDING_VERIFICATION | `src/app/api/orders/route.ts` money fields are `.optional()` and ignored; `pricing.*` written server-side |
+| BE-002 | **still OPEN** | `route.ts:137` still `unitPrice: z.number().min(0)`; `:251-252` still persists the client value and derives `totalPrice` from it |
+| BE-003 | **still OPEN** | both `src/app/api/riders/withdraw/route.ts` and `src/app/api/wallet/withdraw/route.ts` present. The UI no longer forces a choice — `WithdrawModal` takes an `onSubmit` override so both callers share one sheet — but the duplication is unresolved and is the backend session's to settle |
+| BE-004 | FIXED_PENDING_VERIFICATION | the false badge is gone from `chat/[id].tsx`; the replacement comment records why |
+| BE-005 | FIXED_PENDING_VERIFICATION | DP dashboard, offer sheet and queue built (Golden Screens #40–#42) |
+| BE-006 | FIXED_PENDING_VERIFICATION | `rider/onboarding.tsx` writes the real `RiderRole` values. **Rows written before this fix still hold the bad values** — a data backfill is still owed and is not something the UI can do |
+| BE-007 | **still OPEN** | `getWalletBalance` (`api.ts:993`) and `getReceipts` (`api.ts:1300`) still have zero callers |
+| BE-008 | FIXED_PENDING_VERIFICATION | signature completed with the two optional coordinate params only; the parallel session's surge logic untouched |
+| BE-009 | FIXED_PENDING_VERIFICATION | see above |
+
+**Nothing in this ledger was renumbered.** BE-002, BE-003 and BE-007 are left
+open deliberately: each is backend architecture or financial infrastructure, and
+under the issue-handling rules those are documented and handed over rather than
+fixed from a UI session.
+
+**One item is owed that no session has claimed:** the BE-006 data backfill.
+Fixing the writer does not fix rows already written.
