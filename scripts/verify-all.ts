@@ -48,6 +48,16 @@ const SUITES: Suite[] = [
     covers: 'scheduled work: zone sampling, auto surge, decay, incentive expiry',
   },
   {
+    name: 'cron-idempotency',
+    file: 'scripts/verify-cron-idempotency.ts',
+    covers: 'repeated + concurrent scheduler runs cause no drift',
+  },
+  {
+    name: 'cron-endpoint',
+    file: 'scripts/verify-cron-endpoint.ts',
+    covers: 'cron auth, each ?task= in isolation, run logging, health surface',
+  },
+  {
     name: 'core-journey',
     file: 'scripts/verify-client-driver-journey.ts',
     covers: 'book -> dispatch -> ride -> pay -> rate -> receipt -> notify',

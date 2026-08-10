@@ -58,6 +58,13 @@ export class ReputationMaintenance {
    * config.scoreDecayDays, by config.scoreDecayRate points per day of
    * inactivity beyond the threshold.
    *
+   * IDEMPOTENT BY CONSTRUCTION. Decay is a function of ELAPSED TIME, so it
+   * charges only whole days since `lastDecayAt` (or since the driver first
+   * crossed the inactivity threshold, if never decayed). Running this twice in
+   * the same hour is a no-op — which matters because the scheduler fires every
+   * 15 minutes, and a naive `score -= penalty` would apply a full day's
+   * penalty 96 times a day and floor every idle driver within hours.
+   *
    * Decay floors at 50 rather than 0: the purpose is to stop a stale score
    * outranking an active driver, not to punish someone back to unusable. A
    * returning driver climbs back on real events.
@@ -79,6 +86,7 @@ export class ReputationMaintenance {
         trustScore: true,
         trustTier: true,
         lastTaskAt: true,
+        lastDecayAt: true,
         createdAt: true,
       },
     });
@@ -94,10 +102,30 @@ export class ReputationMaintenance {
       const daysBeyond = inactiveDays - config.scoreDecayDays;
       if (daysBeyond <= 0) continue;
 
-      const rawPenalty = daysBeyond * config.scoreDecayRate;
+      // Charge only the days not already charged. The watermark is either the
+      // last decay, or the moment this driver first became eligible.
+      const becameEligibleAt = new Date(
+        reference.getTime() + config.scoreDecayDays * 86_400_000
+      );
+      const chargedThrough = rep.lastDecayAt ?? becameEligibleAt;
+      const daysToCharge = Math.floor((now.getTime() - chargedThrough.getTime()) / 86_400_000);
+
+      // Less than a full day since the last charge — nothing owed. This is
+      // what makes repeated scheduler runs safe.
+      if (daysToCharge < 1) continue;
+
+      const rawPenalty = daysToCharge * config.scoreDecayRate;
       const newScore = Math.max(DECAY_FLOOR, rep.trustScore - rawPenalty);
       const applied = rep.trustScore - newScore;
-      if (applied <= 0) continue;
+      if (applied <= 0) {
+        // Already at the floor — still advance the watermark so we do not
+        // recompute this driver every run.
+        await db.driverReputation.update({
+          where: { id: rep.id },
+          data: { lastDecayAt: now },
+        });
+        continue;
+      }
 
       await db.driverReputation.update({
         where: { id: rep.id },
@@ -105,6 +133,7 @@ export class ReputationMaintenance {
           trustScore: newScore,
           previousTrustScore: rep.trustScore,
           lastScoreUpdateAt: now,
+          lastDecayAt: now,
         },
       });
 
@@ -117,7 +146,7 @@ export class ReputationMaintenance {
           trustTier: rep.trustTier,
           previousTrustTier: rep.trustTier,
           triggerType: ScoreTriggerType.SCORE_DECAY,
-          reason: `Inactive for ${inactiveDays} days (${daysBeyond} beyond the ${config.scoreDecayDays}-day threshold)`,
+          reason: `Inactive for ${inactiveDays} days; charged ${daysToCharge} day(s) of decay beyond the ${config.scoreDecayDays}-day threshold`,
         },
       });
 

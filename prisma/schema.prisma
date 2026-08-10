@@ -3270,6 +3270,12 @@ model DriverReputation {
   totalBonusEarned    Decimal   @default(0)
   lastBonusAt         DateTime?
 
+  /// Watermark for inactivity decay. Decay is a function of elapsed time, so
+  /// without this a scheduler running every 15 minutes would re-apply a full
+  /// day's penalty 96 times a day. Only whole days since this timestamp are
+  /// ever charged, which makes repeated runs a no-op.
+  lastDecayAt         DateTime?
+
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
@@ -3662,6 +3668,15 @@ model SurgeRecord {
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
 
+  /// Concurrency guard. Holds the zoneId while this surge is ACTIVE and NULL
+  /// once it ends. Postgres treats NULLs as distinct in a unique index, so
+  /// many ENDED rows coexist per zone but only ONE can be active — the
+  /// partial-unique-index effect, expressible in Prisma.
+  ///
+  /// Without this, two overlapping scheduler runs could both read
+  /// "no active surge" and both open one, so a zone would surge twice.
+  activeKey String? @unique
+
   zone GeographicZone @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
   @@index([zoneId])
@@ -3866,4 +3881,29 @@ model MedicineInventoryReservation {
   @@index([healthOrderId])
   @@index([status])
   @@index([expiresAt])
+}
+
+/// Execution record for every scheduled intelligence run.
+///
+/// Without this, a failing cron is only visible in GitHub Actions logs — which
+/// nobody watches. Persisting each run makes failure visible in the admin
+/// dashboard and gives "when did the scheduler last succeed?" a real answer.
+model CronRun {
+  id          String    @id @default(cuid())
+  job         String
+  /// Null when the whole run is requested; otherwise the ?task= filter used.
+  task        String?
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  durationMs  Int?
+  success     Boolean   @default(false)
+  stepsTotal  Int       @default(0)
+  stepsFailed Int       @default(0)
+  /// JSON array of per-step {name, ok, ms, error?} for post-mortem.
+  steps       String?
+  error       String?
+
+  @@index([job, startedAt])
+  @@index([success])
+  @@index([startedAt])
 }

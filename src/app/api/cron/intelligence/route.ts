@@ -19,7 +19,7 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { MarketplaceScheduler } from '@/lib/marketplace/marketplace-scheduler.service';
 import { ReputationMaintenance } from '@/lib/reputation/reputation-maintenance.service';
 import { PlatformIntelligence } from '@/lib/intelligence/platform-events.service';
@@ -73,6 +73,13 @@ export async function GET(request: NextRequest) {
   const now = new Date();
 
   await setServiceRoleContext();
+
+  // Record the run BEFORE doing the work, so a run that crashes hard still
+  // leaves a trace. A cron that fails silently is worse than one that fails.
+  const run = await db.cronRun
+    .create({ data: { job: 'intelligence', task: task ?? null, startedAt: now } })
+    .catch(() => null);
+
   try {
     const steps: Awaited<ReturnType<typeof step>>[] = [];
 
@@ -106,6 +113,26 @@ export async function GET(request: NextRequest) {
     }
 
     const failed = steps.filter(s => !s.ok);
+    const totalMs = steps.reduce((sum, s) => sum + s.ms, 0);
+
+    if (run) {
+      await db.cronRun
+        .update({
+          where: { id: run.id },
+          data: {
+            finishedAt: new Date(),
+            durationMs: totalMs,
+            success: failed.length === 0,
+            stepsTotal: steps.length,
+            stepsFailed: failed.length,
+            steps: JSON.stringify(steps),
+            error: failed.length
+              ? failed.map(f => `${f.name}: ${'error' in f ? f.error : 'failed'}`).join('; ')
+              : null,
+          },
+        })
+        .catch(() => {});
+    }
 
     return NextResponse.json(
       {
@@ -113,13 +140,26 @@ export async function GET(request: NextRequest) {
         // marked failed and someone looks at it.
         success: failed.length === 0,
         ranAt: now.toISOString(),
-        totalMs: steps.reduce((sum, s) => sum + s.ms, 0),
+        totalMs,
+        runId: run?.id,
         steps,
       },
       { status: failed.length === 0 ? 200 : 500 }
     );
   } catch (error) {
     console.error('[cron/intelligence] fatal:', error);
+    if (run) {
+      await db.cronRun
+        .update({
+          where: { id: run.id },
+          data: {
+            finishedAt: new Date(),
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown fatal error',
+          },
+        })
+        .catch(() => {});
+    }
     return NextResponse.json(
       { success: false, error: 'Intelligence maintenance failed' },
       { status: 500 }

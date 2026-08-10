@@ -165,21 +165,33 @@ export class MarketplaceScheduler {
 
       if (shouldStartSurge(ratio, surgeActive, DEFAULT_SURGE_CONFIG)) {
         surgeMultiplier = calculateSurgeMultiplier(ratio, DEFAULT_SURGE_CONFIG);
-        await db.surgeRecord.create({
-          data: {
-            zoneId: zone.id,
-            status: 'ACTIVE',
-            multiplier: surgeMultiplier,
-            startMultiplier: surgeMultiplier,
-            peakMultiplier: surgeMultiplier,
-            avgMultiplier: surgeMultiplier,
-            triggerRatio: ratio,
-            triggerReason: `Automatic: demand/supply ${ratio.toFixed(2)} (${engineStatus})`,
-            driversBefore: availableDrivers,
-            demandBefore: demandCount,
-          },
-        });
-        surgeStarted = true;
+        try {
+          await db.surgeRecord.create({
+            data: {
+              zoneId: zone.id,
+              // Unique while ACTIVE — the DB, not this read-then-write, is
+              // what guarantees one surge per zone under concurrent runs.
+              activeKey: zone.id,
+              status: 'ACTIVE',
+              multiplier: surgeMultiplier,
+              startMultiplier: surgeMultiplier,
+              peakMultiplier: surgeMultiplier,
+              avgMultiplier: surgeMultiplier,
+              triggerRatio: ratio,
+              triggerReason: `Automatic: demand/supply ${ratio.toFixed(2)} (${engineStatus})`,
+              driversBefore: availableDrivers,
+              demandBefore: demandCount,
+            },
+          });
+          surgeStarted = true;
+        } catch (err) {
+          // P2002 = another run opened this surge first. That is the guard
+          // working, not an error: the zone is surging, which is the outcome
+          // we wanted. Anything else is real.
+          const code = (err as { code?: string }).code;
+          if (code !== 'P2002') throw err;
+          surgeStarted = false;
+        }
       } else if (surgeActive && shouldEndSurge(ratio, DEFAULT_SURGE_CONFIG)) {
         const durationMinutes = Math.max(
           1,
@@ -189,6 +201,8 @@ export class MarketplaceScheduler {
           where: { id: openSurge!.id },
           data: {
             status: 'ENDED',
+            // Release the guard so a future surge can open in this zone.
+            activeKey: null,
             endedAt: now,
             durationMinutes,
             endReason: `Automatic: demand/supply fell to ${ratio.toFixed(2)}`,
