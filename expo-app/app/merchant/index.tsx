@@ -12,24 +12,31 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  Switch,
   ActivityIndicator,
   RefreshControl,
   StyleSheet,
   } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useMerchantStore } from '@/src/store';
 import { useProviderApprovalGate } from '@/src/hooks/useProviderApprovalGate';
 import { MerchantOrder } from '@/src/types';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard } from '@/src/components/GlassCard';
 import { GradientButton } from '@/src/components/GradientButton';
-import { GlowHeader } from '@/src/components/GlowHeader';
+import {
+  AppHeader,
+  Card,
+  EmptyState,
+  ErrorState,
+  ListSkeleton,
+  OnlinePill,
+  SegmentedControl,
+  StatusBadge,
+} from '@/src/components';
+import { statusColor } from '@/src/theme/statusColors';
 
 // ============================================
 // LOCAL CONSTANTS
@@ -44,17 +51,8 @@ const ORDER_TABS: { key: OrderTab; label: string; icon: keyof typeof Ionicons.gl
   { key: 'COMPLETED', label: 'Completed', icon: 'checkmark-done-circle-outline', statuses: ['COMPLETED', 'DELIVERED'] },
 ];
 
-const ORDER_STATUS_COLORS: Record<string, string> = {
-  PENDING: '#4b5264',
-  NEW: '#F59E0B',
-  CONFIRMED: '#005f3a',
-  PREPARING: '#0e7a4d',
-  READY: '#006e2f',
-  COMPLETED: '#005f3a',
-  DELIVERED: '#005f3a',
-  CANCELLED: '#ba1a1a',
-  REJECTED: '#ba1a1a',
-};
+// Status colours come from the shared semantic mapping. This table was the
+// seventh hardcoded copy found during the migration.
 
 const ORDER_STATUS_LABELS: Record<string, string> = {
   PENDING: 'Pending',
@@ -73,12 +71,6 @@ const ORDER_STATUS_LABELS: Record<string, string> = {
 // ============================================
 
 /** Map a MerchantOrder status to a tab key for filtering */
-function statusToTab(status: string): OrderTab {
-  for (const tab of ORDER_TABS) {
-    if (tab.statuses.includes(status)) return tab.key;
-  }
-  return 'NEW';
-}
 
 /** Format an ISO date string into a relative time string */
 function formatRelativeTime(dateStr: string): string {
@@ -102,13 +94,12 @@ function formatRelativeTime(dateStr: string): string {
 // MAIN SCREEN
 // ============================================
 
-let COLORS: ThemedColors;
-let styles: any;
 
 export default function MerchantDashboardScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
   // Approval gate: a merchant can't use the dashboard until an admin approves.
   const approvalGate = useProviderApprovalGate('MERCHANT');
@@ -265,40 +256,25 @@ export default function MerchantDashboardScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Header with GlowHeader */}
-      <GlowHeader
+      <AppHeader
         title="Merchant Dashboard"
         subtitle={merchant?.name || user?.name || 'Merchant'}
-        rightAction={{
-          icon: 'notifications-outline' as const,
-          onPress: () => router.push('/notifications'),
-        }}
-      >
-        {/* Online/Offline toggle + Revenue summary */}
-        <View style={styles.headerContent}>
-          {/* Toggle */}
-          <View style={styles.availabilityRow}>
-            <View style={styles.availabilityPill}>
-              <View style={[
-                styles.availabilityDot,
-                merchant?.isOpen ? styles.availabilityDotOpen : styles.availabilityDotClosed,
-              ]} />
-              <Text style={[
-                styles.availabilityLabel,
-                merchant?.isOpen ? styles.openText : styles.closedText,
-              ]}>
-                {merchant?.isOpen ? 'Open' : 'Closed'}
-              </Text>
-            </View>
-            <Switch
-              value={merchant?.isOpen ?? false}
-              onValueChange={handleToggleAvailability}
-              disabled={isTogglingAvailability || !merchant}
-              trackColor={{ false: COLORS.surfaceContainerHigh, true: COLORS.primary }}
-              thumbColor={merchant?.isOpen ? COLORS.onPrimary : COLORS.outlineVariant}
-            />
-          </View>
+        rightSlot={
+          <OnlinePill
+            isOnline={merchant?.isOpen ?? false}
+            onToggle={handleToggleAvailability}
+            labels={{ on: 'OPEN', off: 'CLOSED' }}
+            disabled={isTogglingAvailability || !merchant}
+          />
+        }
+        rightActions={[
+          { icon: 'notifications-outline', onPress: () => router.push('/notifications'), label: 'Notifications' },
+        ]}
+      />
 
+        {/* Availability now lives in the header as OnlinePill; this block kept
+            its own duplicate pill and a bare RN <Switch>, which §4 bans. */}
+        <View style={styles.headerContent}>
           {/* Quick Revenue Stats */}
           <View style={styles.revenueRow}>
             <View style={styles.revenueItem}>
@@ -326,7 +302,7 @@ export default function MerchantDashboardScreen() {
             </View>
           </View>
         </View>
-      </GlowHeader>
+
 
       <ScrollView
         style={styles.scrollView}
@@ -334,27 +310,17 @@ export default function MerchantDashboardScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
         showsVerticalScrollIndicator={false}
       >
-        {/* Order Tabs — count above label (Stitch style) */}
-        <View style={styles.tabsContainer}>
-          {ORDER_TABS.map((tab) => {
-            const isActive = activeTab === tab.key;
-            const count = getTabCount(tab.key);
-            return (
-              <TouchableOpacity
-                key={tab.key}
-                style={[styles.tab, isActive && styles.tabActive]}
-                onPress={() => setActiveTab(tab.key)}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.tabCount, isActive && styles.tabCountActive]}>
-                  {count}
-                </Text>
-                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                  {tab.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+        {/* Status filter. Counts ride in the label so the segmented control
+            carries the same information the bespoke tabs did. */}
+        <View style={styles.tabsWrap}>
+          <SegmentedControl
+            segments={ORDER_TABS.map((tab) => ({
+              value: tab.key,
+              label: `${tab.label} ${getTabCount(tab.key)}`,
+            }))}
+            value={activeTab}
+            onChange={(v) => setActiveTab(v as typeof activeTab)}
+          />
         </View>
 
         {/* Section label with auto-refresh indicator */}
@@ -370,49 +336,34 @@ export default function MerchantDashboardScreen() {
 
         {/* Orders Loading State */}
         {isLoadingOrders && orders.length === 0 && (
-          <View style={styles.ordersLoadingContainer}>
-            <ActivityIndicator size="large" color={COLORS.primary} />
-            <Text style={styles.ordersLoadingText}>Loading orders...</Text>
-          </View>
+          <ListSkeleton rows={3} />
         )}
 
         {/* Orders Error State */}
         {ordersError && orders.length === 0 && !isLoadingOrders && (
-          <GlassCard variant="default" padding={SPACING.xl} borderRadius={RADIUS.xl} style={styles.emptyCard}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="cloud-offline-outline" size={32} color={COLORS.error} />
-            </View>
-            <Text style={styles.emptyTitle}>Failed to load orders</Text>
-            <Text style={styles.emptySubtitle}>{ordersError}</Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => {
-                if (merchant?.id) {
-                  const tab = ORDER_TABS.find(t => t.key === activeTab);
-                  fetchOrders(merchant.id, tab?.statuses[0], 1);
-                }
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="refresh-outline" size={16} color={COLORS.onPrimary} />
-              <Text style={styles.retryButtonText}>Retry</Text>
-            </TouchableOpacity>
-          </GlassCard>
+          <ErrorState
+            title="Failed to load orders"
+            subtitle={ordersError}
+            onRetry={() => {
+              if (merchant?.id) {
+                const tab = ORDER_TABS.find((t) => t.key === activeTab);
+                fetchOrders(merchant.id, tab?.statuses[0], 1);
+              }
+            }}
+          />
         )}
 
         {/* Order Cards */}
         {!isLoadingOrders && !ordersError && filteredOrders.length === 0 ? (
-          <GlassCard variant="default" padding={SPACING.xl} borderRadius={RADIUS.xl} style={styles.emptyCard}>
-            <View style={styles.emptyIconCircle}>
-              <Ionicons name="receipt-outline" size={32} color={COLORS.onSurfaceVariant} />
-            </View>
-            <Text style={styles.emptyTitle}>No {activeTab.toLowerCase()} orders</Text>
-            <Text style={styles.emptySubtitle}>
-              {activeTab === 'NEW'
-                ? 'New orders will appear here when customers place them'
-                : `No orders in ${activeTab.toLowerCase()} status right now`}
-            </Text>
-          </GlassCard>
+          <EmptyState
+            icon="receipt-outline"
+            title={`No ${activeTab.toLowerCase()} orders`}
+            subtitle={
+              activeTab === 'NEW'
+                ? 'New orders will appear here when customers place them.'
+                : `No orders in ${activeTab.toLowerCase()} status right now.`
+            }
+          />
         ) : (
           filteredOrders.map((order) => (
             <OrderCard
@@ -513,8 +464,11 @@ function OrderCard({
   onReject: () => void;
   onTap: () => void;
 }) {
-  const statusColor = ORDER_STATUS_COLORS[order.status] || COLORS.onSurfaceVariant;
-  const statusLabel = ORDER_STATUS_LABELS[order.status] || order.status;
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+  const statusTint = statusColor(order.status, COLORS);
+  const statusText = ORDER_STATUS_LABELS[order.status] || order.status;
   const isNew = ['NEW', 'PENDING'].includes(order.status);
   const itemCount = order.items?.length || 0;
 
@@ -524,10 +478,10 @@ function OrderCard({
     ? 'Mobile Money Paid'
     : (order as any).paymentMethod === 'AIRTEL_MONEY'
     ? 'Airtel Money Paid'
-    : statusLabel;
+    : statusText;
 
   return (
-    <GlassCard variant="default" padding={0} borderRadius={RADIUS.xl} style={styles.orderCard}>
+    <Card variant="raised" padding={0} radius={RADIUS.xl} style={styles.orderCard}>
       <TouchableOpacity onPress={onTap} activeOpacity={0.7} disabled={isUpdating}>
         <View style={styles.orderCardInner}>
           {/* Order header: number + time left, amount + payment badge */}
@@ -543,6 +497,7 @@ function OrderCard({
             </View>
             <View style={styles.orderAmountBlock}>
               <Text style={styles.orderTotal}>UGX {(order.totalAmount || 0).toLocaleString()}</Text>
+              <StatusBadge label={statusText} color={statusTint} size="sm" />
               <View style={[styles.paymentBadge, { backgroundColor: isNew ? COLORS.primaryFixed : COLORS.surfaceContainerHigh }]}>
                 <Text style={[styles.paymentBadgeText, { color: isNew ? COLORS.primary : COLORS.onSurfaceVariant }]}>
                   {paymentLabel}
@@ -614,7 +569,7 @@ function OrderCard({
           )}
         </View>
       </TouchableOpacity>
-    </GlassCard>
+    </Card>
   );
 }
 
@@ -623,6 +578,7 @@ function OrderCard({
 // ============================================
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  tabsWrap: { paddingHorizontal: SPACING.md, paddingBottom: SPACING.gutter },
   root: {
     flex: 1,
     backgroundColor: COLORS.surface,
@@ -669,41 +625,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   // Header content
   headerContent: {
     marginTop: SPACING.sm,
-  },
-  availabilityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  availabilityPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.surfaceContainerHigh,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm - 2,
-  },
-  availabilityDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  availabilityDotOpen: {
-    backgroundColor: COLORS.primary,
-  },
-  availabilityDotClosed: {
-    backgroundColor: COLORS.error,
-  },
-  availabilityLabel: {
-    ...TYPOGRAPHY.labelLg,
-    fontWeight: '600',
-  },
-  openText: {
-    color: COLORS.primary,
-  },
-  closedText: {
-    color: COLORS.error,
   },
 
   // Revenue stats row
@@ -755,94 +676,12 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
 
   // Tabs
-  tabsContainer: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-    marginBottom: SPACING.md,
-  },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: SPACING.sm + 2,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabActive: {
-    borderBottomColor: COLORS.primary,
-  },
-  tabCount: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.onSurfaceVariant,
-    lineHeight: 24,
-  },
-  tabCountActive: {
-    color: COLORS.primary,
-  },
-  tabLabel: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-  },
-  tabLabelActive: {
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
 
   // Orders loading
-  ordersLoadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.xl * 2,
-  },
-  ordersLoadingText: {
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.md,
-    ...TYPOGRAPHY.bodySm,
-  },
 
   // Empty state
-  emptyCard: {
-    alignItems: 'center',
-  },
-  emptyIconCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: COLORS.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-  },
-  emptyTitle: {
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '600',
-    color: COLORS.onSurface,
-    marginBottom: SPACING.xs,
-  },
-  emptySubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-  },
 
   // Retry button
-  retryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    marginTop: SPACING.md,
-  },
-  retryButtonText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onPrimary,
-    fontWeight: '600',
-  },
 
   // Order card
   orderCard: {

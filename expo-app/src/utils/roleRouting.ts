@@ -14,7 +14,8 @@
 //   CLIENT      → /(tabs)              (main app: rides, orders, wallet…)
 //   RIDER       → /driver              (boda / bike / scooter dashboard)
 //   DRIVER      → /driver              (professional driver dashboard)
-//   MERCHANT    → /merchant/register   (restaurant / shop / pharmacy setup)
+//   MERCHANT    → /merchant            (dashboard; the approval gate sends
+//                                       unregistered merchants to onboarding)
 //   PHARMACIST  → /pharmacist          (medicine catalog & prescriptions)
 //   (none)      → /auth/role-selection (let the user choose)
 //
@@ -40,7 +41,13 @@ export function getHomeRouteForRole(role?: string | null): string {
       // "/driver/index" (that path is unmatched → "Unmatched Route" screen).
       return '/driver';
     case 'MERCHANT':
-      return '/merchant/register';
+      // Was '/merchant/register', so EVERY merchant login rendered the
+      // registration form and a network round-trip before redirecting to the
+      // dashboard — the returning merchant, i.e. the common case, always saw a
+      // form shell flash first. The dashboard's useProviderApprovalGate already
+      // redirects to onboarding when no merchant profile exists, so landing
+      // here is safe and the flash only happens for genuinely new merchants.
+      return '/merchant';
     case 'PHARMACIST':
       return '/pharmacist';
     default:
