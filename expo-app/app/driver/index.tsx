@@ -613,7 +613,11 @@ export default function DriverHomeScreen() {
                 <Text style={styles.walletChipText}>{formatUGX(rider?.walletBalance ?? 0)}</Text>
               </View>
             </View>
-            <View style={styles.shortcutRow}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.shortcutRow}
+            >
               <Shortcut icon="wallet-outline" label="Wallet" onPress={() => router.push('/rider/wallet' as never)} COLORS={COLORS} styles={styles} />
               <Shortcut icon="arrow-up-circle-outline" label="Withdraw" onPress={() => router.push('/rider/wallet' as never)} COLORS={COLORS} styles={styles} />
               <Shortcut icon="time-outline" label="History" onPress={() => router.push('/rider/history' as never)} COLORS={COLORS} styles={styles} />
@@ -624,7 +628,7 @@ export default function DriverHomeScreen() {
               )}
               {/* Driver Reputation engine — trust score, tier, benefits, bonuses */}
               <Shortcut icon="ribbon-outline" label="Reputation" onPress={() => router.push('/driver/reputation' as never)} COLORS={COLORS} styles={styles} />
-            </View>
+            </ScrollView>
           </Card>
 
           {/* Rider stats */}
@@ -763,7 +767,7 @@ function Shortcut({ icon, label, onPress, COLORS, styles }: { icon: string; labe
       accessibilityLabel={label}
     >
       <View style={styles.shortcutIcon}><Ionicons name={icon as any} size={ICON.md} color={COLORS.primary} /></View>
-      <Text style={styles.shortcutLabel}>{label}</Text>
+      <Text style={styles.shortcutLabel} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -847,14 +851,14 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingHorizontal: SPACING.sm + 2, paddingVertical: 6,
   },
   walletChipText: { ...TYPOGRAPHY.labelMd, fontWeight: '700', color: COLORS.onPrimary },
-  shortcutRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: SPACING.md },
-  shortcut: { alignItems: 'center', gap: SPACING.xs + 2, flex: 1, minHeight: 44 },
+  shortcutRow: { flexDirection: 'row', gap: SPACING.sm, marginTop: SPACING.md, paddingRight: SPACING.xs },
+  shortcut: { alignItems: 'center', gap: SPACING.xs + 2, width: 76, minHeight: 44 },
   shortcutIcon: {
     width: 46, height: 46, borderRadius: RADIUS.md + 3,
     backgroundColor: COLORS.surfaceContainerLow,
     alignItems: 'center', justifyContent: 'center',
   },
-  shortcutLabel: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, fontWeight: '600' },
+  shortcutLabel: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, fontWeight: '600', textAlign: 'center' },
 
   // Stats
   statsCard: { marginTop: SPACING.md },
