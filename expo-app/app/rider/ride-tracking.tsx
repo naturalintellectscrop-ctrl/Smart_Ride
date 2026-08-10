@@ -43,7 +43,7 @@ import {
   Skeleton,
 } from '@/src/components';
 import type { TimelineStep } from '@/src/components/RideTimeline';
-import { useTaskStore, useAuthStore } from '@/src/store';
+import { useTaskStore } from '@/src/store';
 import { useChatStore } from '@/src/store/chatStore';
 import { api, socketService } from '@/src/services';
 import {
@@ -73,7 +73,6 @@ import { Ionicons } from '@expo/vector-icons';
 
 // Polling intervals (in ms)
 const POLL_INTERVAL_FAST = 3000;  // 3 seconds for active rides
-const POLL_INTERVAL_SLOW = 10000; // 10 seconds for searching/matching
 
 // SLA: the customer must never wait forever. Mirrors the backend hard cap
 // (DEFAULT_DISPATCH_CONFIG.matchingTimeoutMs). After this, show a clear failure.
@@ -87,7 +86,6 @@ export default function RideTrackingScreen() {
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const params = useLocalSearchParams<{ taskId: string }>();
   const { pendingTask, setCurrentTask, updateTaskStatus, clearPendingTask } = useTaskStore();
-  const { user, accessToken } = useAuthStore();
   const sendChatMessage = useChatStore((s) => s.sendMessage);
 
   const [task, setTask] = useState<Task | null>(pendingTask);

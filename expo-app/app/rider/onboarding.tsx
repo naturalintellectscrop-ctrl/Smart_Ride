@@ -14,8 +14,6 @@ import {
   TextInput,
   ActivityIndicator,
   StyleSheet,
-  Dimensions,
-  Image,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -25,12 +23,15 @@ import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import type { RiderRole } from '@/src/types';
-import { GlassCard, GradientButton } from '@/src/components';
-import { LinearGradient } from 'expo-linear-gradient';
+import {
+  AppHeader,
+  Card,
+  GradientButton,
+  UploadField,
+} from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
-import { pickImage } from '@/src/utils/imagePicker';
+import { ImagePickerResult } from '@/src/utils/imagePicker';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const TOTAL_STEPS = 4;
 
@@ -62,75 +63,59 @@ const VEHICLE_TYPE_TO_RIDER_ROLE: Record<string, RiderRole> = {
 
 interface DocumentUploadCardProps {
   label: string;
-  imageUrl: string;
-  onUpload: () => void;
+  imageUrl?: string;
+  /** Fired with the picked file; the screen uploads it. */
+  onPicked: (file: ImagePickerResult) => void;
   onRemove: () => void;
   required?: boolean;
   uploading?: boolean;
   hint?: string;
 }
 
+/**
+ * A single onboarding document. Composes the shared `UploadField` rather than
+ * re-implementing the dashed picker, preview, retake and remove chrome — which
+ * is what this component used to do, in hardcoded hex that ignored the theme.
+ *
+ * Picking moves into the primitive; the screen keeps ownership of the upload
+ * itself, since that posts to /documents and stores a URL.
+ */
 function DocumentUploadCard({
   label,
   imageUrl,
-  onUpload,
+  onPicked,
   onRemove,
   required,
   uploading,
   hint,
 }: DocumentUploadCardProps) {
   return (
-    <View style={styles.docCard}>
-      <Text style={styles.docLabel}>
-        {label} {required ? <Text style={styles.required}>*</Text> : null}
-      </Text>
-      {uploading ? (
-        <View style={styles.docUploading}>
-          <ActivityIndicator size="small" color={'#005f3a'} />
-          <Text style={styles.docUploadingText}>Uploading...</Text>
-        </View>
-      ) : imageUrl ? (
-        <View style={styles.docPreview}>
-          <Image source={{ uri: imageUrl }} style={styles.docImage} resizeMode="cover" />
-          <View style={styles.docActions}>
-              <TouchableOpacity onPress={onUpload} style={styles.docRetakeBtn}>
-              <Ionicons name="camera-outline" size={16} color={'#005f3a'} />
-                <Text style={styles.docRetakeText}>Retake</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onRemove} style={styles.docRemoveBtn}>
-              <Ionicons name="trash-outline" size={16} color={'#ba1a1a'} />
-                <Text style={styles.docRemoveText}>Remove</Text>
-              </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        <TouchableOpacity onPress={onUpload} style={styles.docUploadBtn} activeOpacity={0.7}>
-          <Ionicons name="cloud-upload-outline" size={32} color={'#6f7a71'} />
-          <Text style={styles.docUploadText}>Tap to upload</Text>
-          <Text style={styles.docUploadHint}>{hint || 'JPG, PNG up to 5MB'}</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+    <UploadField
+      label={required ? `${label} *` : label}
+      hint={hint}
+      value={imageUrl || null}
+      uploading={uploading}
+      onChange={(file) => (file ? onPicked(file) : onRemove())}
+    />
   );
 }
+
 
 // ============================================
 // MAIN COMPONENT
 // ============================================
 
-let COLORS: ThemedColors;
-let styles: any;
-let reviewStyles: any;
 
 export default function RiderOnboardingScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); reviewStyles = createReviewStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [currentStep, setCurrentStep] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSwitchingRole, setIsSwitchingRole] = useState(false);
-  const [existingOnboarding, setExistingOnboarding] = useState<any>(null);
 
   // ─── Switch Role (escape hatch) ───────────────
   // If a user landed here by accident (e.g., their account has role=RIDER
@@ -138,6 +123,7 @@ export default function RiderOnboardingScreen() {
   // CLIENT role and go straight to the main app without completing the
   // rider onboarding flow.
   const handleSwitchRole = () => {
+    if (isSwitchingRole) return;
     Alert.alert(
       'Not a Rider?',
       'You can switch your account back to Client role and go to the main app. You can always become a rider later from your Profile settings.',
@@ -220,7 +206,6 @@ export default function RiderOnboardingScreen() {
       const response = await api.getRiderOnboarding();
       if (response.success && response.data) {
         const data = response.data.onboarding || response.data;
-        setExistingOnboarding(data);
 
         if (data?.status === 'APPROVED') {
           Alert.alert('Already Approved', 'Your rider account is already approved!', [
@@ -278,10 +263,7 @@ export default function RiderOnboardingScreen() {
   // Document upload handler
   // ----------------------------------------
 
-  const handleUploadDocument = useCallback(async (field: keyof typeof documents | string) => {
-    const image = await pickImage({ allowsEditing: true, aspect: [4, 3], quality: 0.7 });
-    if (!image) return;
-
+  const handleUploadDocument = useCallback(async (field: keyof typeof documents | string, image: ImagePickerResult) => {
     setUploadingField(field as string);
     try {
       const uploadResponse = await api.uploadDocument(image, 'rider_document');
@@ -472,53 +454,21 @@ export default function RiderOnboardingScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <LinearGradient
-        colors={[COLORS.surface, COLORS.surfaceContainerLowest]}
-        style={[styles.header, { paddingTop: insets.top + 16 || 56 }]}
-      >
-        <View style={styles.headerRow}>
-          {currentStep > 1 ? (
-            <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-              <Text style={styles.backText}>←</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity
-              onPress={handleSwitchRole}
-              disabled={isSwitchingRole}
-              style={styles.backBtn}
-            >
-              <Text style={styles.backText}>←</Text>
-            </TouchableOpacity>
-          )}
-          <Text style={styles.headerTitle}>Become a Rider</Text>
-          <TouchableOpacity
-            onPress={handleSwitchRole}
-            disabled={isSwitchingRole}
-            style={styles.switchRoleBtn}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
-            <Text style={styles.switchRoleText}>
-              {isSwitchingRole ? '…' : 'Not a rider?'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+      {/* Both back controls were the text glyph "←" rather than an icon. */}
+      <AppHeader
+        title="Become a Rider"
+        subtitle={`Step ${currentStep} of ${TOTAL_STEPS}`}
+        onBack={currentStep > 1 ? handleBack : handleSwitchRole}
+        rightActions={[
+          { icon: 'swap-horizontal-outline', onPress: handleSwitchRole, label: 'Not a rider?' },
+        ]}
+      />
 
-        {/* Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressTrack}>
-            <View style={[styles.progressFill, { width: `${(currentStep / TOTAL_STEPS) * 100}%` }]} />
-          </View>
-          <Text style={styles.progressText}>Step {currentStep} of {TOTAL_STEPS}</Text>
+      <View style={styles.progressContainer}>
+        <View style={styles.progressTrack}>
+          <View style={[styles.progressFill, { width: `${(currentStep / TOTAL_STEPS) * 100}%` }]} />
         </View>
-
-        <LinearGradient
-          colors={['#4ae176', '#98f6be', 'transparent']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.glowBorder}
-        />
-      </LinearGradient>
+      </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Step 1: Personal Info */}
@@ -578,7 +528,7 @@ export default function RiderOnboardingScreen() {
             <DocumentUploadCard
               label="Rider Selfie Photo"
               imageUrl={documents.photoUrl}
-              onUpload={() => handleUploadDocument('photoUrl')}
+              onPicked={(file) => handleUploadDocument('photoUrl', file)}
               onRemove={() => handleRemoveDocument('photoUrl')}
               required
               uploading={uploadingField === 'photoUrl'}
@@ -589,7 +539,7 @@ export default function RiderOnboardingScreen() {
             <DocumentUploadCard
               label="National ID (Front)"
               imageUrl={documents.nationalIdFront}
-              onUpload={() => handleUploadDocument('nationalIdFront')}
+              onPicked={(file) => handleUploadDocument('nationalIdFront', file)}
               onRemove={() => handleRemoveDocument('nationalIdFront')}
               required
               uploading={uploadingField === 'nationalIdFront'}
@@ -599,7 +549,7 @@ export default function RiderOnboardingScreen() {
             <DocumentUploadCard
               label="National ID (Back)"
               imageUrl={documents.nationalIdBack}
-              onUpload={() => handleUploadDocument('nationalIdBack')}
+              onPicked={(file) => handleUploadDocument('nationalIdBack', file)}
               onRemove={() => handleRemoveDocument('nationalIdBack')}
               required
               uploading={uploadingField === 'nationalIdBack'}
@@ -628,7 +578,7 @@ export default function RiderOnboardingScreen() {
             <DocumentUploadCard
               label="Driving License Photo"
               imageUrl={documents.licensePhoto}
-              onUpload={() => handleUploadDocument('licensePhoto')}
+              onPicked={(file) => handleUploadDocument('licensePhoto', file)}
               onRemove={() => handleRemoveDocument('licensePhoto')}
               required={isDriver}
               uploading={uploadingField === 'licensePhoto'}
@@ -639,19 +589,19 @@ export default function RiderOnboardingScreen() {
             <DocumentUploadCard
               label="Vehicle Photo"
               imageUrl={documents.vehiclePhoto}
-              onUpload={() => handleUploadDocument('vehiclePhoto')}
+              onPicked={(file) => handleUploadDocument('vehiclePhoto', file)}
               onRemove={() => handleRemoveDocument('vehiclePhoto')}
               uploading={uploadingField === 'vehiclePhoto'}
               hint="A clear photo of your vehicle"
             />
 
-            <GlassCard variant="accent" style={styles.infoCard}>
+            <Card variant="accent" style={styles.infoCard}>
               <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
               <Text style={styles.infoText}>
                 Make sure all photos are clear, well-lit, and show all four corners of the document.
                 Your application will be reviewed within 24-48 hours.
               </Text>
-            </GlassCard>
+            </Card>
           </View>
         )}
 
@@ -751,7 +701,7 @@ export default function RiderOnboardingScreen() {
             <Text style={styles.stepSubtitle}>Please review your information before submitting</Text>
 
             {/* Personal Info Review */}
-            <GlassCard style={styles.reviewCard}>
+            <Card style={styles.reviewCard}>
               <View style={styles.reviewHeader}>
                 <Text style={styles.reviewTitle}>Personal Information</Text>
                 <TouchableOpacity onPress={() => setCurrentStep(1)}>
@@ -762,10 +712,10 @@ export default function RiderOnboardingScreen() {
               <ReviewRow label="Phone" value={personalInfo.phone} />
               <ReviewRow label="Email" value={personalInfo.email || 'Not provided'} />
               <ReviewRow label="Address" value={personalInfo.address} />
-            </GlassCard>
+            </Card>
 
             {/* Documents Review */}
-            <GlassCard style={styles.reviewCard}>
+            <Card style={styles.reviewCard}>
               <View style={styles.reviewHeader}>
                 <Text style={styles.reviewTitle}>Documents</Text>
                 <TouchableOpacity onPress={() => setCurrentStep(2)}>
@@ -779,10 +729,10 @@ export default function RiderOnboardingScreen() {
               <ReviewRow label="License Expiry" value={documents.licenseExpiry || 'Not provided'} />
               <ReviewRow label="License Photo" value={documents.licensePhoto ? 'Uploaded' : 'Not uploaded'} />
               <ReviewRow label="Vehicle Photo" value={documents.vehiclePhoto ? 'Uploaded' : 'Not uploaded'} />
-            </GlassCard>
+            </Card>
 
             {/* Vehicle Review */}
-            <GlassCard style={styles.reviewCard}>
+            <Card style={styles.reviewCard}>
               <View style={styles.reviewHeader}>
                 <Text style={styles.reviewTitle}>Vehicle Information</Text>
                 <TouchableOpacity onPress={() => setCurrentStep(3)}>
@@ -794,7 +744,7 @@ export default function RiderOnboardingScreen() {
               <ReviewRow label="Year" value={vehicleInfo.year || 'Not provided'} />
               <ReviewRow label="Color" value={vehicleInfo.color || 'Not provided'} />
               <ReviewRow label="Plate Number" value={vehicleInfo.plateNumber || 'Not provided'} />
-            </GlassCard>
+            </Card>
           </View>
         )}
       </ScrollView>
@@ -826,6 +776,9 @@ export default function RiderOnboardingScreen() {
 // ============================================
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const reviewStyles = useMemo(() => createReviewStyles(COLORS), [COLORS]);
   return (
     <View style={reviewStyles.row}>
       <Text style={reviewStyles.label}>{label}</Text>
@@ -875,45 +828,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     marginTop: SPACING.md,
   },
-  header: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.md,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-  backText: {
-    ...TYPOGRAPHY.headlineLg,
-    color: COLORS.onSurface,
-  },
-  headerTitle: {
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: 'bold',
-    color: COLORS.onSurface,
-  },
-  switchRoleBtn: {
-    paddingHorizontal: SPACING.xs,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.DEFAULT,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    minWidth: 40,
-    alignItems: 'center',
-  },
-  switchRoleText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
   progressContainer: {
     marginTop: SPACING.xs,
   },
@@ -927,15 +841,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     height: '100%',
     backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
-  },
-  progressText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.sm,
-  },
-  glowBorder: {
-    height: 1,
-    marginTop: SPACING.md,
   },
   scrollView: {
     flex: 1,
@@ -986,105 +891,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     lineHeight: 18,
   },
   // Document upload card
-  docCard: {
-    marginTop: SPACING.md,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    padding: SPACING.md,
-    ...SHADOWS.card,
-  },
-  docLabel: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurface,
-    fontWeight: '600',
-    marginBottom: SPACING.sm,
-  },
-  required: {
-    color: COLORS.error,
-  },
-  docUploadBtn: {
-    borderWidth: 2,
-    borderStyle: 'dashed',
-    borderColor: COLORS.outlineVariant,
-    borderRadius: RADIUS.md,
-    paddingVertical: SPACING.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
-  docUploadText: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurface,
-    fontWeight: '600',
-    marginTop: SPACING.sm,
-  },
-  docUploadHint: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.outline,
-    marginTop: 2,
-  },
-  docPreview: {
-    borderRadius: RADIUS.md,
-    overflow: 'hidden',
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
-  docImage: {
-    width: '100%',
-    height: 140,
-    backgroundColor: COLORS.surfaceContainerLow,
-  },
-  docActions: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.outlineVariant,
-  },
-  docRetakeBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    paddingVertical: SPACING.md,
-  },
-  docRetakeText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-  docRemoveBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    paddingVertical: SPACING.md,
-    borderLeftWidth: 1,
-    borderLeftColor: COLORS.outlineVariant,
-  },
-  docRemoveText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.error,
-    fontWeight: '600',
-  },
-  docUploading: {
-    paddingVertical: SPACING.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    gap: SPACING.sm,
-  },
-  docUploadingText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
   // Vehicle type grid
   vehicleTypeGrid: {
     flexDirection: 'row',

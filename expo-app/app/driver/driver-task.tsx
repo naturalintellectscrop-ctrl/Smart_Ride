@@ -1,7 +1,7 @@
 // ============================================
 // SMART RIDE MOBILE - DRIVER TASK SCREEN
 // ============================================
-// Dark theme with StyleSheet, GlassCard, GradientButton,
+// Design System primitives — Card, GradientButton, StatusBadge,
 // StatusBadge, and Reanimated animations
 // ============================================
 
@@ -15,7 +15,6 @@ import {
   Linking,
   Platform,
   StyleSheet,
-  Dimensions,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -23,30 +22,31 @@ import Animated, {
   FadeInUp,
   FadeInDown,
   SlideInDown,
-  withSpring,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { SmartRideMap } from '@/src/components/SmartRideMap';
+import { statusColor as semanticStatusColor } from '@/src/theme/statusColors';
+import {
+  Card,
+  GradientButton,
+  SmartRideMap,
+  StatusBadge,
+} from '@/src/components';
 import * as Location from 'expo-location';
-import { useTaskStore, useLocationStore } from '@/src/store';
+import { useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { locationService } from '@/src/services/location.service';
-import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '@/src/constants';
+import { TASK_STATUS_LABELS, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { GlassCard } from '@/src/components/GlassCard';
-import { GradientButton } from '@/src/components/GradientButton';
-import { StatusBadge } from '@/src/components/StatusBadge';
 import { Task, TaskStatus } from '@/src/types';
 import { firstName } from '@/src/utils/formatName';
 import { isWithinGeofence, ARRIVAL_RADIUS_M } from '@/src/utils/geofence';
 import { Ionicons } from '@expo/vector-icons';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Driver-side task flow MUST match the backend state machine's per-task-type
 // transition graph, or the transition API rejects the tap with a 400.
@@ -101,7 +101,6 @@ export default function DriverTaskScreen() {
 
   // Reanimated shared values
   const pulseScale = useSharedValue(1);
-  const cardTranslateY = useSharedValue(0);
 
   useEffect(() => {
     // Pulsing animation for active status indicator
@@ -289,14 +288,6 @@ export default function DriverTaskScreen() {
     }
   };
 
-  const handleNextAction = () => {
-    if (!task) return;
-
-    const nextStatus = nextStatusFor(task);
-    if (nextStatus) {
-      updateStatus(nextStatus);
-    }
-  };
 
   const handleCancelTask = () => {
     Alert.alert(
@@ -340,10 +331,6 @@ export default function DriverTaskScreen() {
   };
 
   const openNavigation = (destLat: number, destLng: number) => {
-    const scheme = Platform.select({
-      ios: 'maps:',
-      android: 'geo:',
-    });
     const url = Platform.select({
       ios: `maps:?daddr=${destLat},${destLng}`,
       android: `geo:?daddr=${destLat},${destLng}`,
@@ -368,7 +355,7 @@ export default function DriverTaskScreen() {
     );
   }
 
-  const statusColor = TASK_STATUS_COLORS[task.status] || COLORS.primary;
+  const statusColor = semanticStatusColor(task.status, COLORS);
   const statusLabel = TASK_STATUS_LABELS[task.status] || task.status;
   const nextStatus = nextStatusFor(task);
 
@@ -431,7 +418,7 @@ export default function DriverTaskScreen() {
         entering={SlideInDown.duration(400).springify()}
         style={styles.bottomCardWrapper}
       >
-        <GlassCard variant="elevated" padding={20} borderRadius={24} style={styles.bottomCard}>
+        <Card variant="elevated" padding={SPACING.lg} radius={RADIUS.xl} style={styles.bottomCard}>
           <ScrollView
             showsVerticalScrollIndicator={false}
             bounces={false}
@@ -611,7 +598,7 @@ export default function DriverTaskScreen() {
               </Animated.View>
             )}
           </ScrollView>
-        </GlassCard>
+        </Card>
       </Animated.View>
     </View>
   );
@@ -705,9 +692,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     justifyContent: 'center',
     marginRight: 12,
   },
-  clientAvatarEmoji: {
-    fontSize: 22,
-  },
   clientInfo: {
     flex: 1,
   },
@@ -730,9 +714,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     borderColor: `${COLORS.secondary}30`,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  callButtonEmoji: {
-    fontSize: 18,
   },
 
   // Route info
@@ -809,9 +790,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 12,
   },
-  navigateButtonIcon: {
-    fontSize: 18,
-  },
   navigateButtonText: {
     fontSize: 14,
     fontWeight: '600',
@@ -833,7 +811,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: 'rgba(0, 95, 58, 0.12)',
+    backgroundColor: `${COLORS.primary}1F`,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -849,9 +827,9 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   // Completed
   completedCard: {
     marginTop: 16,
-    backgroundColor: '#98f6be',
+    backgroundColor: COLORS.primaryFixed,
     borderWidth: 1,
-    borderColor: '#4ae176',
+    borderColor: COLORS.primary,
     borderRadius: 16,
     padding: 16,
     alignItems: 'center',
