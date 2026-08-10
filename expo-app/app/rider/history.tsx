@@ -8,7 +8,7 @@
 // ============================================
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, FlatList, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, RefreshControl, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,6 +16,15 @@ import { api } from '@/src/services';
 import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import { statusColor as semanticStatusColor, statusLabel } from '@/src/theme/statusColors';
+import {
+  AppHeader,
+  Card,
+  EmptyState,
+  ErrorState,
+  ListSkeleton,
+  StatusBadge,
+} from '@/src/components';
 
 const TERMINAL = new Set(['COMPLETED', 'DELIVERED', 'CANCELLED', 'REJECTED', 'FAILED', 'EXPIRED']);
 
@@ -28,14 +37,6 @@ const SERVICE_LABEL: Record<string, string> = {
   SMART_HEALTH_DELIVERY: 'Pharmacy Delivery',
 };
 
-const STATUS_COLOR = (COLORS: ThemedColors): Record<string, string> => ({
-  COMPLETED: COLORS.primary,
-  DELIVERED: COLORS.primary,
-  CANCELLED: COLORS.error,
-  REJECTED: COLORS.error,
-  FAILED: COLORS.error,
-  EXPIRED: COLORS.onSurfaceVariant,
-});
 
 const money = (n: unknown) => `UGX ${Math.round(Number(n) || 0).toLocaleString()}`;
 const fmtDate = (d?: string) => (d ? new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '');
@@ -45,7 +46,6 @@ export default function RiderHistoryScreen() {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const statusColor = useMemo(() => STATUS_COLOR(COLORS), [COLORS]);
   const insets = useSafeAreaInsets();
 
   const [tasks, setTasks] = useState<any[]>([]);
@@ -77,18 +77,19 @@ export default function RiderHistoryScreen() {
   useEffect(() => { load(1, false); }, [load]);
 
   const renderItem = ({ item }: { item: any }) => {
-    const color = statusColor[item.status] || COLORS.onSurfaceVariant;
+    const color = semanticStatusColor(item.status, COLORS);
     return (
-      <TouchableOpacity
+      <Card
+        variant="raised"
+        padding={SPACING.md}
+        radius={RADIUS.xl}
         style={styles.card}
-        activeOpacity={0.8}
         onPress={() => router.push(`/rider/trip-details?taskId=${item.id}` as any)}
+        accessibilityLabel={`${SERVICE_LABEL[item.taskType] || item.taskType}, ${statusLabel(item.status)}`}
       >
         <View style={styles.cardTop}>
           <Text style={styles.service}>{SERVICE_LABEL[item.taskType] || item.taskType}</Text>
-          <View style={[styles.statusPill, { backgroundColor: `${color}18` }]}>
-            <Text style={[styles.statusText, { color }]}>{String(item.status).replace(/_/g, ' ')}</Text>
-          </View>
+          <StatusBadge label={statusLabel(item.status)} color={color} size="sm" />
         </View>
 
         <View style={styles.routeRow}>
@@ -111,36 +112,27 @@ export default function RiderHistoryScreen() {
             <Ionicons name="chevron-forward" size={16} color={COLORS.onSurfaceVariant} />
           </View>
         </View>
-      </TouchableOpacity>
+      </Card>
     );
   };
 
   return (
     <View style={styles.container}>
-      <View style={[styles.appbar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.onSurface} />
-        </TouchableOpacity>
-        <Text style={styles.appbarTitle}>History</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <AppHeader title="History" onBack={() => router.back()} />
 
       {loading ? (
-        <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /><Text style={styles.hint}>Loading history…</Text></View>
+        <View style={styles.listPad}><ListSkeleton /></View>
       ) : error && tasks.length === 0 ? (
-        <View style={styles.center}>
-          <Ionicons name="cloud-offline-outline" size={44} color={COLORS.onSurfaceVariant} />
-          <Text style={styles.hint}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => load(1, false)}>
-            <Ionicons name="refresh" size={16} color={COLORS.onPrimary} />
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
+        <View style={styles.stateWrap}>
+          <ErrorState title="Couldn't load your history" subtitle={error} onRetry={() => load(1, false)} />
         </View>
       ) : tasks.length === 0 ? (
-        <View style={styles.center}>
-          <Ionicons name="receipt-outline" size={44} color={COLORS.onSurfaceVariant} />
-          <Text style={styles.emptyTitle}>No trips yet</Text>
-          <Text style={styles.hint}>Your completed trips and deliveries will appear here.</Text>
+        <View style={styles.stateWrap}>
+          <EmptyState
+            icon="receipt-outline"
+            title="No trips yet"
+            subtitle="Your completed trips and deliveries will appear here."
+          />
         </View>
       ) : (
         <FlatList
@@ -159,19 +151,12 @@ export default function RiderHistoryScreen() {
 }
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  listPad: { padding: SPACING.md },
+  stateWrap: { flex: 1, justifyContent: 'center', paddingHorizontal: SPACING.md },
   container: { flex: 1, backgroundColor: COLORS.surface },
-  appbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.outlineVariant },
-  appbarTitle: { ...TYPOGRAPHY.headlineMd, color: COLORS.onSurface },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl, gap: SPACING.sm },
-  hint: { ...TYPOGRAPHY.bodyMd, color: COLORS.onSurfaceVariant, textAlign: 'center' },
-  emptyTitle: { ...TYPOGRAPHY.headlineMd, color: COLORS.onSurface, marginTop: SPACING.xs },
-  retryBtn: { flexDirection: 'row', gap: SPACING.sm, alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: SPACING.sm + 2, paddingHorizontal: SPACING.lg, borderRadius: RADIUS.lg, marginTop: SPACING.sm },
-  retryText: { ...TYPOGRAPHY.bodyMd, color: COLORS.onPrimary, fontWeight: '600' },
   card: { backgroundColor: COLORS.surfaceContainerLow, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.outlineVariant },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACING.sm },
   service: { ...TYPOGRAPHY.bodyMd, color: COLORS.onSurface, fontWeight: '700' },
-  statusPill: { paddingHorizontal: SPACING.sm, paddingVertical: 3, borderRadius: RADIUS.full },
-  statusText: { ...TYPOGRAPHY.labelMd, fontWeight: '700' },
   routeRow: { flexDirection: 'row', gap: SPACING.sm },
   dots: { alignItems: 'center', paddingTop: 4 },
   dot: { width: 8, height: 8, borderRadius: 4 },

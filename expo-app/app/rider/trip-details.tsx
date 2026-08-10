@@ -8,14 +8,22 @@
 // ============================================
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
 import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import { statusColor, statusLabel } from '@/src/theme/statusColors';
+import {
+  AppHeader,
+  Card,
+  DetailSkeleton,
+  ErrorState,
+  SectionHeader,
+  StatusBadge,
+} from '@/src/components';
 
 const SERVICE_LABEL: Record<string, string> = {
   SMART_BODA_RIDE: 'Boda Ride',
@@ -67,16 +75,11 @@ export default function TripDetailsScreen() {
   );
 
   const body = () => {
-    if (loading) return <View style={styles.center}><ActivityIndicator size="large" color={COLORS.primary} /></View>;
+    if (loading) return <DetailSkeleton />;
     if (error || !task) {
       return (
-        <View style={styles.center}>
-          <Ionicons name="alert-circle-outline" size={44} color={COLORS.onSurfaceVariant} />
-          <Text style={styles.hint}>{error || 'Trip not found'}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={load}>
-            <Ionicons name="refresh" size={16} color={COLORS.onPrimary} />
-            <Text style={styles.retryText}>Retry</Text>
-          </TouchableOpacity>
+        <View style={styles.stateWrap}>
+          <ErrorState title="Trip not found" subtitle={error ?? undefined} onRetry={load} />
         </View>
       );
     }
@@ -95,20 +98,25 @@ export default function TripDetailsScreen() {
 
     return (
       <ScrollView contentContainerStyle={{ padding: SPACING.md, paddingBottom: insets.bottom + 24 }} showsVerticalScrollIndicator={false}>
-        <View style={styles.card}>
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
           <View style={styles.headerRow}>
             <Text style={styles.service}>{SERVICE_LABEL[task.taskType] || task.taskType}</Text>
             <Text style={styles.taskNumber}>{task.taskNumber}</Text>
           </View>
           <Text style={styles.date}>{fmtDateTime(task.completedAt || task.createdAt)}</Text>
-          <View style={[styles.statusPill, { backgroundColor: `${COLORS.primary}18`, alignSelf: 'flex-start', marginTop: SPACING.sm }]}>
-            <Text style={[styles.statusText, { color: COLORS.primary }]}>{String(task.status).replace(/_/g, ' ')}</Text>
-          </View>
-        </View>
+          {/* The pill was hardcoded to the brand green regardless of status, so
+              a cancelled trip read as if it had gone fine. */}
+          <StatusBadge
+            label={statusLabel(task.status)}
+            color={statusColor(task.status, COLORS)}
+            size="sm"
+            style={styles.statusBadge}
+          />
+        </Card>
 
         {/* Route */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Route</Text>
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
+          <SectionHeader title="Route" />
           <View style={styles.routeRow}>
             <View style={styles.dots}>
               <View style={[styles.dot, { backgroundColor: COLORS.secondary }]} />
@@ -125,58 +133,45 @@ export default function TripDetailsScreen() {
           <View style={styles.divider} />
           {task.distanceKm ? <Row label="Distance" value={`${Number(task.distanceKm).toFixed(1)} km`} /> : null}
           {duration ? <Row label="Duration" value={`${duration} min`} /> : null}
-        </View>
+        </Card>
 
         {/* Fare / earnings */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Fare & Earnings</Text>
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
+          <SectionHeader title="Fare & Earnings" />
           {breakdown.map(([label, v]) => <Row key={label} label={label} value={money(v)} />)}
           <View style={styles.divider} />
           <Row label="Total Fare" value={money(fare)} strong />
           {commission > 0 ? <Row label="Platform Commission" value={`- ${money(commission)}`} /> : null}
           <Row label="Your Net Earnings" value={money(net)} strong />
-        </View>
+        </Card>
 
         {/* Payment */}
-        <View style={styles.card}>
-          <Text style={styles.sectionTitle}>Payment</Text>
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
+          <SectionHeader title="Payment" />
           <Row label="Method" value={PAYMENT_LABEL[task.paymentMethod] || task.paymentMethod || '—'} />
           <Row label="Status" value={String(task.paymentStatus || '—').replace(/_/g, ' ')} />
-        </View>
+        </Card>
       </ScrollView>
     );
   };
 
   return (
     <View style={styles.container}>
-      <View style={[styles.appbar, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-          <Ionicons name="arrow-back" size={24} color={COLORS.onSurface} />
-        </TouchableOpacity>
-        <Text style={styles.appbarTitle}>Trip Details</Text>
-        <View style={{ width: 24 }} />
-      </View>
+      <AppHeader title="Trip details" onBack={() => router.back()} />
       {body()}
     </View>
   );
 }
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  stateWrap: { flex: 1, justifyContent: 'center', paddingHorizontal: SPACING.md },
+  statusBadge: { alignSelf: 'flex-start', marginTop: SPACING.sm },
   container: { flex: 1, backgroundColor: COLORS.surface },
-  appbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.outlineVariant },
-  appbarTitle: { ...TYPOGRAPHY.headlineMd, color: COLORS.onSurface },
-  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl, gap: SPACING.sm },
-  hint: { ...TYPOGRAPHY.bodyMd, color: COLORS.onSurfaceVariant, textAlign: 'center' },
-  retryBtn: { flexDirection: 'row', gap: SPACING.sm, alignItems: 'center', backgroundColor: COLORS.primary, paddingVertical: SPACING.sm + 2, paddingHorizontal: SPACING.lg, borderRadius: RADIUS.lg, marginTop: SPACING.sm },
-  retryText: { ...TYPOGRAPHY.bodyMd, color: COLORS.onPrimary, fontWeight: '600' },
   card: { backgroundColor: COLORS.surfaceContainerLow, borderRadius: RADIUS.lg, padding: SPACING.md, marginBottom: SPACING.sm, borderWidth: 1, borderColor: COLORS.outlineVariant },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   service: { ...TYPOGRAPHY.headlineMd, color: COLORS.onSurface, fontWeight: '700' },
   taskNumber: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant },
   date: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant, marginTop: 2 },
-  statusPill: { paddingHorizontal: SPACING.sm, paddingVertical: 3, borderRadius: RADIUS.full },
-  statusText: { ...TYPOGRAPHY.labelMd, fontWeight: '700' },
-  sectionTitle: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: SPACING.sm },
   routeRow: { flexDirection: 'row', gap: SPACING.sm },
   dots: { alignItems: 'center', paddingTop: 4 },
   dot: { width: 8, height: 8, borderRadius: 4 },
