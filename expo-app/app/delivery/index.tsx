@@ -2,7 +2,7 @@
 // SMART RIDE MOBILE - DELIVERY SCREEN
 // ============================================
 // Stitch Design System — Parcel Price Estimate layout
-// GlowHeader, Route summary, Service type selection,
+// AppHeader, RideTimeline progress, Route summary, Service type selection,
 // Package size selector, Price estimate card, CTA button
 // ============================================
 
@@ -20,18 +20,22 @@ import {
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import Animated, {
-  FadeIn,
   FadeInUp,
-  ZoomIn,
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore, useLocationStore, useTaskStore } from '@/src/store';
 import { api } from '@/src/services';
-import { PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS, GRADIENTS } from '@/src/constants';
+import { PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { PaymentMethod } from '@/src/types';
-import { GlowHeader, GlassCard, GradientButton, IconInput } from '@/src/components';
+import {
+  AppHeader,
+  Card,
+  GradientButton,
+  RideTimeline,
+  SearchInput,
+} from '@/src/components';
 
 // ============================================
 // TYPES
@@ -39,6 +43,13 @@ import { GlowHeader, GlassCard, GradientButton, IconInput } from '@/src/componen
 
 type DeliveryType = 'BODA' | 'CAR' | 'STANDARD';
 type Step = 'type' | 'locations' | 'confirm';
+
+/** Wizard step labels, shown on the shared RideTimeline. */
+const STEP_LABELS: Record<Step, string> = {
+  type: 'Package',
+  locations: 'Route',
+  confirm: 'Confirm',
+};
 
 interface DeliveryOption {
   id: DeliveryType;
@@ -48,7 +59,7 @@ interface DeliveryOption {
   vehicleLabel: string;
   estimatedTime: string;
   icon: keyof typeof Ionicons.glyphMap;
-  iconColor: string;
+  colorKey: 'primary' | 'primaryContainer' | 'secondary';
 }
 
 interface PlaceResult {
@@ -79,7 +90,7 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
     vehicleLabel: 'Motorcycle',
     estimatedTime: '15-30 min',
     icon: 'bicycle',
-    iconColor: '#005f3a',
+    colorKey: 'primary' as const,
   },
   {
     id: 'CAR',
@@ -89,7 +100,7 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
     vehicleLabel: 'Car',
     estimatedTime: '30-45 min',
     icon: 'car',
-    iconColor: '#0e7a4d',
+    colorKey: 'primaryContainer' as const,
   },
   {
     id: 'STANDARD',
@@ -99,7 +110,7 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
     vehicleLabel: 'Van/Truck',
     estimatedTime: '1-3 hours',
     icon: 'bus',
-    iconColor: '#4b5264',
+    colorKey: 'secondary' as const,
   },
 ];
 
@@ -142,11 +153,10 @@ function calculateFare(distanceKm: number): number {
 // MAIN COMPONENT
 // ============================================
 
-let COLORS: ThemedColors;
-let styles: any;
-
 export default function DeliveryScreen() {
-  { const t = useTheme(); COLORS = makeThemedColors(t.isDark); styles = createStyles(COLORS); }
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
   const { user } = useAuthStore();
   const { latitude, longitude, address, getCurrentLocation } = useLocationStore();
@@ -436,48 +446,23 @@ export default function DeliveryScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <GlowHeader
-        title="Delivery"
-        subtitle={stepSubtitle}
-        rightAction={{
-          icon: 'arrow-back' as const,
-          onPress: goBack,
-        }}
-      >
-        {/* Step Indicators inside header */}
-        <View style={styles.stepIndicatorRow}>
-          {(['type', 'locations', 'confirm'] as Step[]).map((s, i) => {
-            const isActive = step === s;
-            const isCompleted =
-              (step === 'locations' && s === 'type') ||
-              (step === 'confirm' && (s === 'type' || s === 'locations'));
-            return (
-              <View key={s} style={styles.stepItem}>
-                <View
-                  style={[
-                    styles.stepDot,
-                    isActive && styles.stepDotActive,
-                    isCompleted && styles.stepDotCompleted,
-                  ]}
-                >
-                  {isCompleted && (
-                    <Ionicons name="checkmark" size={10} color={COLORS.onPrimary} />
-                  )}
-                </View>
-                {i < 2 && (
-                  <View
-                    style={[
-                      styles.stepLine,
-                      isCompleted && styles.stepLineCompleted,
-                    ]}
-                  />
-                )}
-              </View>
-            );
-          })}
-        </View>
-      </GlowHeader>
+      <AppHeader title="Send a parcel" subtitle={stepSubtitle} onBack={goBack} />
+
+      {/* Progress. The three-step wizard drew its own dots and connector lines;
+          RideTimeline already renders exactly this and is used by ride tracking
+          and order tracking. */}
+      <View style={styles.progressWrap}>
+        <RideTimeline
+          steps={(['type', 'locations', 'confirm'] as Step[]).map((sKey, i) => ({
+            id: sKey,
+            label: STEP_LABELS[sKey],
+            status:
+              step === sKey ? 'active'
+              : i < (['type', 'locations', 'confirm'] as Step[]).indexOf(step) ? 'completed'
+              : 'pending',
+          }))}
+        />
+      </View>
 
       {/* Content */}
       <ScrollView
@@ -555,6 +540,9 @@ function StepType({
   onSelectPackageSize: (size: string) => void;
   onContinue: () => void;
 }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   return (
     <View style={styles.stepContainer}>
       {/* Service Type Selection */}
@@ -654,7 +642,7 @@ function StepType({
       </View>
 
       {/* Price Estimate Card */}
-      <GlassCard variant="elevated" borderRadius={RADIUS.xl} style={styles.priceEstimateCard}>
+      <Card variant="elevated" radius={RADIUS.xl} style={styles.priceEstimateCard}>
         <View style={styles.priceEstimateHeader}>
           <Ionicons name="calculator" size={20} color={COLORS.primary} />
           <Text style={styles.priceEstimateTitle}>Price Estimate</Text>
@@ -671,7 +659,7 @@ function StepType({
         <Text style={styles.priceEstimateNote}>
           Final price calculated after setting locations
         </Text>
-      </GlassCard>
+      </Card>
 
       {/* Continue CTA */}
       <Animated.View entering={FadeInUp.delay(300).duration(400)}>
@@ -733,12 +721,15 @@ function StepLocations({
   onClearDropoff: () => void;
   onContinue: () => void;
 }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const canContinue = pickupAddress.length > 0 && dropoffAddress.length > 0;
 
   return (
     <View style={styles.stepContainer}>
       {/* Route Summary Card */}
-      <GlassCard variant="elevated" borderRadius={RADIUS.xl} style={styles.routeCard}>
+      <Card variant="elevated" radius={RADIUS.xl} style={styles.routeCard}>
         {/* Pickup */}
         <View style={styles.routeRow}>
           <View style={styles.routeDotGreen} />
@@ -757,13 +748,10 @@ function StepLocations({
                   <Text style={styles.currentLocationLabel}>Use Current Location</Text>
                 </TouchableOpacity>
                 <Text style={styles.orText}>or search for a pickup point</Text>
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search pickup location..."
-                  placeholderTextColor={COLORS.outlineVariant}
+                <SearchInput
+                  placeholder="Search pickup location"
                   value={pickupSearchQuery}
-                  onChangeText={onPickupSearchChange}
-                  onFocus={() => setActiveSearchField('pickup')}
+                  onChangeText={(t) => { setActiveSearchField('pickup'); onPickupSearchChange(t); }}
                 />
               </View>
             )}
@@ -782,18 +770,15 @@ function StepLocations({
                 <Text style={styles.routeChangeText}>Change</Text>
               </TouchableOpacity>
             ) : (
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search drop-off location..."
-                placeholderTextColor={COLORS.outlineVariant}
+              <SearchInput
+                placeholder="Search drop-off location"
                 value={dropoffSearchQuery}
-                onChangeText={onDropoffSearchChange}
-                onFocus={() => setActiveSearchField('dropoff')}
+                onChangeText={(t) => { setActiveSearchField('dropoff'); onDropoffSearchChange(t); }}
               />
             )}
           </View>
         </View>
-      </GlassCard>
+      </Card>
 
       {/* Search Results */}
       {(activeSearchField === 'pickup' && !pickupAddress) || (activeSearchField === 'dropoff' && !dropoffAddress) ? (
@@ -822,7 +807,7 @@ function StepLocations({
 
       {/* Package Description */}
       <Text style={styles.sectionTitle}>Package Description</Text>
-      <GlassCard variant="default" borderRadius={RADIUS.xl} style={styles.descriptionCard}>
+      <Card variant="raised" radius={RADIUS.xl} style={styles.descriptionCard}>
         <TextInput
           style={styles.descriptionInput}
           placeholder="Describe what you are sending (e.g. documents, small box, electronics)"
@@ -833,7 +818,7 @@ function StepLocations({
           numberOfLines={3}
           textAlignVertical="top"
         />
-      </GlassCard>
+      </Card>
 
       {/* Continue CTA */}
       <Animated.View entering={FadeInUp.delay(200).duration(400)} style={{ marginTop: SPACING.lg }}>
@@ -882,10 +867,13 @@ function StepConfirm({
   error: string | null;
   onSubmit: () => void;
 }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   return (
     <View style={styles.stepContainer}>
       {/* Route Summary (compact) */}
-      <GlassCard variant="elevated" borderRadius={RADIUS.xl} style={styles.summaryRouteCard}>
+      <Card variant="elevated" radius={RADIUS.xl} style={styles.summaryRouteCard}>
         <View style={styles.summaryRouteRow}>
           <View style={styles.summaryRouteDots}>
             <View style={styles.summaryDotGreen} />
@@ -903,21 +891,21 @@ function StepConfirm({
             </View>
           </View>
         </View>
-      </GlassCard>
+      </Card>
 
       {/* Delivery Details Card */}
-      <GlassCard variant="default" borderRadius={RADIUS.xl} style={styles.detailsCard}>
+      <Card variant="raised" radius={RADIUS.xl} style={styles.detailsCard}>
         {/* Service type row */}
         <View style={styles.detailRow}>
           <View style={styles.detailIconCircle}>
-            <Ionicons name={deliveryOption.icon} size={18} color={deliveryOption.iconColor} />
+            <Ionicons name={deliveryOption.icon} size={18} color={COLORS[deliveryOption.colorKey]} />
           </View>
           <View style={styles.detailInfo}>
             <Text style={styles.detailLabel}>Delivery Type</Text>
             <Text style={styles.detailValue}>{deliveryOption.name}</Text>
           </View>
-          <View style={[styles.detailBadge, { backgroundColor: `${deliveryOption.iconColor}15` }]}>
-            <Text style={[styles.detailBadgeText, { color: deliveryOption.iconColor }]}>{deliveryOption.label}</Text>
+          <View style={[styles.detailBadge, { backgroundColor: `${COLORS[deliveryOption.colorKey]}15` }]}>
+            <Text style={[styles.detailBadgeText, { color: COLORS[deliveryOption.colorKey] }]}>{deliveryOption.label}</Text>
           </View>
         </View>
 
@@ -954,10 +942,10 @@ function StepConfirm({
             <Text style={styles.detailValue}>{deliveryOption.estimatedTime}</Text>
           </View>
         </View>
-      </GlassCard>
+      </Card>
 
       {/* Price Estimate Card */}
-      <GlassCard variant="elevated" borderRadius={RADIUS.xl} style={styles.priceCard}>
+      <Card variant="elevated" radius={RADIUS.xl} style={styles.priceCard}>
         <View style={styles.priceHeader}>
           <Ionicons name="wallet" size={20} color={COLORS.primary} />
           <Text style={styles.priceTitle}>Price Estimate</Text>
@@ -977,7 +965,7 @@ function StepConfirm({
           <Text style={styles.totalLabel}>Total Estimate</Text>
           <Text style={styles.totalValue}>UGX {(estimatedFare ?? 0).toLocaleString()}</Text>
         </View>
-      </GlassCard>
+      </Card>
 
       {/* Payment Method */}
       <Text style={styles.sectionTitle}>Payment Method</Text>
@@ -1042,49 +1030,16 @@ function StepConfirm({
 // ============================================
 
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
+  progressWrap: {
+    paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.gutter,
+  },
   container: {
     flex: 1,
     backgroundColor: COLORS.surface,
   },
 
   // Step indicators
-  stepIndicatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.md,
-  },
-  stepItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stepDot: {
-    width: 24,
-    height: 24,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 2,
-    borderColor: COLORS.outlineVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepDotActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  stepDotCompleted: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  stepLine: {
-    width: 40,
-    height: 2,
-    backgroundColor: COLORS.outlineVariant,
-    marginHorizontal: SPACING.xs,
-  },
-  stepLineCompleted: {
-    backgroundColor: COLORS.primary,
-  },
 
   // Content
   content: {
@@ -1347,14 +1302,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     ...TYPOGRAPHY.labelMd,
     color: COLORS.outlineVariant,
     marginBottom: SPACING.xs,
-  },
-  searchInput: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm + 2,
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.bodySm,
   },
 
   // Search Results
