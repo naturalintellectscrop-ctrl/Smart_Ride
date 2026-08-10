@@ -901,6 +901,8 @@ class ApiService {
   async getFareEstimate(
     distanceKm: number,
     durationMin: number,
+    pickupLatitude?: number | null,
+    pickupLongitude?: number | null,
   ): Promise<ApiResponse<{
     estimates: Record<string, {
       totalAmount: number;
@@ -911,13 +913,28 @@ class ApiService {
       serviceFee: number;
       surcharges: number;
       minimumApplied: boolean;
+      /** 1 when the pickup zone is not surging. */
+      surgeMultiplier: number;
+      surgeAmount: number;
+      /** Customer-facing explanation, e.g. "High demand in Kampala Central". */
+      surgeReason: string | null;
     }>;
     distanceKm: number;
     durationMin: number;
     isNightTime: boolean;
     isPeakHours: boolean;
   }>> {
-    return this.request(`/tasks/fare-estimate?distanceKm=${distanceKm}&durationMin=${durationMin}`);
+    // Pickup coordinates are optional but matter: without them the quote
+    // cannot include surge and would undercut what the trip actually costs.
+    const params = new URLSearchParams({
+      distanceKm: String(distanceKm),
+      durationMin: String(durationMin),
+    });
+    if (pickupLatitude != null && pickupLongitude != null) {
+      params.set('pickupLatitude', String(pickupLatitude));
+      params.set('pickupLongitude', String(pickupLongitude));
+    }
+    return this.request(`/tasks/fare-estimate?${params.toString()}`);
   }
 
   /**

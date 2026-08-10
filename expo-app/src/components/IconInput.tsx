@@ -32,7 +32,8 @@ interface IconInputProps {
   onRightIconPress?: () => void;
   secureTextEntry?: boolean;
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'numeric';
-  autoCapitalize?: 'none' | 'sentences' | 'words';
+  /** 'characters' is needed for fields like licence and plate numbers. */
+  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   editable?: boolean;
   style?: ViewStyle;
   multiline?: boolean;

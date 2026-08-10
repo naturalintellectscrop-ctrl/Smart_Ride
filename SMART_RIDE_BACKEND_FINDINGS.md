@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-008**.
+**ID allocation:** next free ID is **BE-009**.
 
 ---
 
@@ -27,6 +27,7 @@ finding is explicitly marked as already fixed locally.
 | BE-005 | `DELIVERY_PERSONNEL` dispatched work it had no UI to accept | P1 | FIXED_PENDING_VERIFICATION | Workflow |
 | BE-006 | `riderRole` enum drift written by onboarding | P1 | FIXED_PENDING_VERIFICATION | Data |
 | BE-007 | Dead wallet API surface with no callers | P3 | OPEN | Backend |
+| BE-008 | `getFareEstimate` signature left incomplete mid-edit | P2 | FIXED_PENDING_VERIFICATION | Backend |
 
 ---
 
@@ -396,5 +397,59 @@ and their routes.
 **Related screens/journeys:** Journey 1 — Client Money.
 
 **Verification required:** N/A — a product decision.
+
+**Dependencies:** None.
+
+
+---
+
+## BE-008 — `getFareEstimate` signature left incomplete mid-edit
+
+**Status:** FIXED_PENDING_VERIFICATION
+**Priority:** P2
+**Category:** Backend
+**Discovered by:** Screen Migration Session
+**Discovered at:** Journey 7 (Merchant), 2026-08-10
+
+**Location:**
+- `expo-app/src/services/api.ts` — `getFareEstimate`
+- related in-flight: `src/app/api/tasks/fare-estimate/route.ts`
+
+**Evidence:**
+While migrating the merchant screens, `npx tsc --noEmit` began failing on four
+errors in `expo-app/src/services/api.ts:931-933` — `Cannot find name
+'pickupLatitude'` / `'pickupLongitude'`. `git status` showed both that file and
+`src/app/api/tasks/fare-estimate/route.ts` modified but uncommitted, i.e. the
+backend session's working tree. The diff adds surge fields to the response type
+and builds a query string from `pickupLatitude` / `pickupLongitude`, but those
+two parameters were never added to the function signature, so the file did not
+compile.
+
+**Why it matters:**
+Not a product defect — an in-flight edit. But it blocked *all* typecheck and
+bundle verification across the whole mobile app, so the migration session could
+not verify any screen until it was resolved.
+
+**Fix applied by this session (rule 13 — tiny, obvious, directly blocking):**
+Added `pickupLatitude?: number | null` and `pickupLongitude?: number | null` to
+the signature. Nothing else touched; the surge logic, response type and route
+are the backend session's and were left exactly as found.
+
+**Do not assume:**
+- That this is the intended final signature. If the backend session meant to
+  pass a coordinate object rather than two positional params, they should
+  change it — this was the minimum needed to make the tree compile.
+- **No caller passes the new arguments yet.** `expo-app/app/rider/ride-request.tsx`
+  still calls `api.getFareEstimate(roadKm, driveMin)`, so every fare quote is
+  currently computed *without* surge. Wiring the booking screen to pass pickup
+  coordinates is a small change the migration session can make on request —
+  flagged rather than done, because whether surge should apply at quote time is
+  a pricing decision.
+
+**Related screens/journeys:** Journey 1 — Client Money (fare quotes); ride booking.
+
+**Verification required:**
+Confirm the signature matches the backend session's intent, then decide whether
+the booking screen should pass coordinates so quotes include surge.
 
 **Dependencies:** None.

@@ -14,23 +14,20 @@ import {
   StyleSheet,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useMerchantStore } from '@/src/store';
 import { api } from '@/src/services';
-import { ORDER_STATUS_LABELS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { ORDER_STATUS_LABELS, SPACING } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { statusColor as semanticStatusColor } from '@/src/theme/statusColors';
 import {
   AppHeader,
-  Card,
   DetailSkeleton,
   ErrorState,
-  GradientButton,
-  StatusBadge,
 } from '@/src/components';
-import { MerchantOrder, OrderItem } from '@/src/types';
+import { MerchantOrder } from '@/src/types';
 import { Ionicons } from '@expo/vector-icons';
 
 
@@ -45,14 +42,13 @@ const STATUS_FLOW = [
 ];
 
 export default function MerchantOrderDetailScreen() {
+  const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => create_styles(COLORS), [COLORS]);
   const router = useRouter();
   const params = useLocalSearchParams();
-  const insets = useSafeAreaInsets();
   const orderId = params.id as string;
-  const merchantId = params.merchantId as string;
 
   const { updateOrderStatus, isUpdatingOrder } = useMerchantStore();
 
@@ -171,7 +167,6 @@ export default function MerchantOrderDetailScreen() {
   }
 
   const actions = getAvailableActions(order.status);
-  const statusColor = semanticStatusColor(order.status, COLORS);
   const currentStatusIndex = getStatusIndex(order.status);
 
   return (
@@ -352,108 +347,6 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loadingText: {
-    color: COLORS.outline,
-    marginTop: 12,
-    fontSize: 14,
-  },
-  errorContainer: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  errorEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  errorTitle: {
-    color: COLORS.error,
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  errorText: {
-    color: COLORS.outline,
-    fontSize: 14,
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  retryButtonText: {
-    color: COLORS.onPrimary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  backButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-  },
-  backButtonText: {
-    color: COLORS.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  header: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    color: COLORS.onSurface,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerCenter: {
-    alignItems: 'center',
-  },
-  headerTitle: {
-    color: COLORS.onSurface,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  headerSpacer: {
-    width: 36,
-  },
   section: {
     paddingHorizontal: 20,
     marginTop: 20,
@@ -561,17 +454,14 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     marginVertical: 4,
   },
   kotCard: {
-    backgroundColor: 'rgba(0, 95, 58, 0.05)',
+    backgroundColor: `${COLORS.primary}0D`,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(0, 95, 58, 0.15)',
+    borderColor: `${COLORS.primary}26`,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-  },
-  kotIcon: {
-    fontSize: 22,
   },
   kotText: {
     color: COLORS.primary,
@@ -579,11 +469,11 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     fontWeight: '600',
   },
   notesCard: {
-    backgroundColor: 'rgba(245, 158, 11, 0.05)',
+    backgroundColor: `${COLORS.warning}0D`,
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(245, 158, 11, 0.15)',
+    borderColor: `${COLORS.warning}26`,
   },
   notesText: {
     color: COLORS.onSurfaceSecondary,
@@ -610,9 +500,9 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   bottomDanger: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: `${COLORS.error}26`,
     borderWidth: 1,
-    borderColor: 'rgba(239, 68, 68, 0.3)',
+    borderColor: `${COLORS.error}4D`,
   },
   bottomDisabled: {
     opacity: 0.5,
@@ -625,7 +515,7 @@ const create_styles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.onPrimary,
   },
   bottomDangerText: {
-    color: '#EF4444',
+    color: COLORS.error,
   },
 });
 
@@ -633,10 +523,6 @@ const create_infoStyles = (COLORS: ThemedColors) => StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-  },
-  icon: {
-    fontSize: 16,
-    width: 24,
   },
   label: {
     color: COLORS.outline,

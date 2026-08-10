@@ -10,27 +10,22 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   StyleSheet,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMerchantStore } from '@/src/store';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import {
   AppHeader,
-  Card,
-  EmptyState,
   ErrorState,
   ListSkeleton,
   SegmentedControl,
 } from '@/src/components';
 import { api } from '@/src/services';
-import { MerchantTransaction } from '@/src/types';
 import { Ionicons } from '@expo/vector-icons';
 
 const PERIOD_TABS = [
@@ -46,7 +41,6 @@ export default function MerchantEarningsScreen() {
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const params = useLocalSearchParams();
-  const insets = useSafeAreaInsets();
   const merchantId = params.merchantId as string;
 
   const {
@@ -95,7 +89,7 @@ export default function MerchantEarningsScreen() {
   const getTransactionColor = (type: string) => {
     switch (type) {
       case 'ORDER_PAYMENT': return COLORS.primary;
-      case 'PAYOUT': return '#F59E0B';
+      case 'PAYOUT': return COLORS.warning;
       case 'REFUND': return COLORS.error;
       case 'ADJUSTMENT': return COLORS.info;
       default: return COLORS.outline;
@@ -105,7 +99,7 @@ export default function MerchantEarningsScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'COMPLETED': return COLORS.primary;
-      case 'PENDING': return '#F59E0B';
+      case 'PENDING': return COLORS.warning;
       case 'FAILED': return COLORS.error;
       default: return COLORS.outline;
     }
@@ -120,19 +114,12 @@ export default function MerchantEarningsScreen() {
         style={styles.scrollView}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
       >
-        {/* Period Tabs */}
         <View style={styles.periodTabs}>
-          {PERIOD_TABS.map(tab => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.periodTab, activePeriod === tab.key && styles.activePeriodTab]}
-              onPress={() => setActivePeriod(tab.key)}
-            >
-              <Text style={[styles.periodTabText, activePeriod === tab.key && styles.activePeriodTabText]}>
-                {tab.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          <SegmentedControl
+            segments={PERIOD_TABS.map((tab) => ({ value: tab.key, label: tab.label }))}
+            value={activePeriod}
+            onChange={setActivePeriod}
+          />
         </View>
 
         {isLoadingEarnings && !refreshing ? (
@@ -166,10 +153,10 @@ export default function MerchantEarningsScreen() {
                 </View>
 
                 {/* Pending Payout */}
-                <View style={[styles.balanceCard, { borderColor: 'rgba(245, 158, 11, 0.2)' }]}>
+                <View style={[styles.balanceCard, { borderColor: `${COLORS.warning}33` }]}>
                   <Text style={styles.balanceIcon}>⏳</Text>
                   <Text style={styles.balanceLabel}>Pending</Text>
-                  <Text style={[styles.balanceAmount, { color: '#F59E0B' }]}>
+                  <Text style={[styles.balanceAmount, { color: COLORS.warning }]}>
                     {formatCurrency(earnings?.pendingPayout || 0)}
                   </Text>
                 </View>
@@ -295,38 +282,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.surface,
   },
-  header: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    paddingHorizontal: SPACING.md + 4,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    color: COLORS.onSurface,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
-  },
-  headerSpacer: {
-    width: 36,
-  },
   scrollView: {
     flex: 1,
   },
@@ -334,64 +289,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     padding: SPACING.md,
     gap: SPACING.sm,
-  },
-  periodTab: {
-    flex: 1,
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
-  activePeriodTab: {
-    backgroundColor: COLORS.primary,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-  },
-  periodTabText: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.labelMd,
-    fontWeight: '600',
-  },
-  activePeriodTabText: {
-    color: COLORS.onPrimary,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.md,
-    ...TYPOGRAPHY.bodySm,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  errorEmoji: {
-    fontSize: 40,
-    marginBottom: SPACING.md - 4,
-  },
-  errorText: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
-  },
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.md,
-  },
-  retryButtonText: {
-    color: COLORS.onPrimary,
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '600',
   },
   balanceSection: {
     paddingHorizontal: SPACING.md,
@@ -452,10 +349,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     ...SHADOWS.card,
   },
-  lastPayoutIcon: {
-    fontSize: 22,
-    marginRight: SPACING.md - 4,
-  },
   lastPayoutInfo: {
     flex: 1,
   },
@@ -506,10 +399,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   chartPlaceholder: {
     alignItems: 'center',
   },
-  chartIcon: {
-    fontSize: 36,
-    marginBottom: SPACING.md - 4,
-  },
   chartText: {
     color: COLORS.onSurfaceVariant,
     ...TYPOGRAPHY.bodySm,
@@ -533,10 +422,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-  },
-  transactionIcon: {
-    fontSize: 20,
-    marginRight: SPACING.sm + 2,
   },
   transactionInfo: {
     flex: 1,
@@ -576,10 +461,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
     ...SHADOWS.card,
-  },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: SPACING.md - 4,
   },
   emptyTitle: {
     color: COLORS.onSurface,

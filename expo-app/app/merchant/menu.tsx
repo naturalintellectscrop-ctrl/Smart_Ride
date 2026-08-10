@@ -10,22 +10,17 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   StyleSheet,
-  Modal,
-  TextInput,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMerchantStore } from '@/src/store';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import {
   AppHeader,
-  Card,
   EmptyState,
   ErrorState,
   GradientButton,
@@ -35,7 +30,6 @@ import {
   Toggle,
 } from '@/src/components';
 import { MenuItem } from '@/src/types';
-import { Ionicons } from '@expo/vector-icons';
 
 export default function MerchantMenuScreen() {
   const router = useRouter();
@@ -43,7 +37,6 @@ export default function MerchantMenuScreen() {
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const params = useLocalSearchParams();
-  const insets = useSafeAreaInsets();
   const merchantId = params.merchantId as string;
 
   const {
@@ -343,118 +336,11 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.surface,
   },
-  header: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    paddingHorizontal: SPACING.md + 4,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    color: COLORS.onSurface,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
-  },
-  addButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.md - 2,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.md,
-  },
-  addButtonText: {
-    color: COLORS.onPrimary,
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '600',
-  },
   listContainer: {
     flex: 1,
   },
   listContent: {
     padding: SPACING.md,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  loadingText: {
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.md,
-    ...TYPOGRAPHY.bodySm,
-  },
-  errorContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  errorEmoji: {
-    fontSize: 40,
-    marginBottom: SPACING.md - 4,
-  },
-  errorText: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
-    textAlign: 'center',
-    marginBottom: SPACING.md,
-  },
-  retryButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.md,
-  },
-  retryButtonText: {
-    color: COLORS.onPrimary,
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '600',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: SPACING.md,
-  },
-  emptyTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
-    marginBottom: SPACING.sm,
-  },
-  emptySubtitle: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
-    textAlign: 'center',
-    marginBottom: SPACING.md + 4,
-  },
-  emptyButton: {
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md - 4,
-    borderRadius: RADIUS.lg,
-  },
-  emptyButtonText: {
-    color: COLORS.onPrimary,
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '600',
   },
   categorySection: {
     marginBottom: SPACING.md + 4,
@@ -557,38 +443,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontWeight: '600',
   },
   // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderTopLeftRadius: RADIUS.xl,
-    borderTopRightRadius: RADIUS.xl,
-    maxHeight: '85%',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.md + 4,
-    paddingTop: SPACING.md + 4,
-    paddingBottom: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  modalTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
-  },
-  modalClose: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.headlineMd,
-  },
-  modalForm: {
-    padding: SPACING.md + 4,
-  },
   formLabel: {
     color: COLORS.onSurfaceVariant,
     ...TYPOGRAPHY.bodySm,
@@ -596,41 +450,10 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginBottom: SPACING.sm - 2,
     marginTop: SPACING.md - 4,
   },
-  formInput: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md - 2,
-    paddingVertical: SPACING.md - 4,
-    color: COLORS.onSurface,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
-  formInputMultiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-    paddingTop: SPACING.md - 4,
-  },
   formToggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: SPACING.md - 4,
-  },
-  saveButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md - 2,
-    borderRadius: RADIUS.lg,
-    alignItems: 'center',
-    marginTop: SPACING.lg,
-    marginBottom: 40,
-  },
-  saveButtonDisabled: {
-    opacity: 0.6,
-  },
-  saveButtonText: {
-    color: COLORS.onPrimary,
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '600',
   },
 });

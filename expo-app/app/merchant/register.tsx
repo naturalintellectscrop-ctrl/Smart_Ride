@@ -18,22 +18,18 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
   StyleSheet,
   Image,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
 import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import {
   AppHeader,
-  Card,
-  GradientButton,
   IconInput,
 } from '@/src/components';
 import { Ionicons } from '@expo/vector-icons';
@@ -55,7 +51,6 @@ export default function MerchantRegisterScreen() {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ type?: string }>();
   const { user } = useAuthStore();
 
@@ -233,13 +228,12 @@ export default function MerchantRegisterScreen() {
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Business Name */}
-        <Text style={styles.formLabel}>{isPharmacy ? 'Pharmacy Name *' : 'Business Name *'}</Text>
-        <TextInput
-          style={styles.formInput}
+        <IconInput
+          label={isPharmacy ? 'Pharmacy Name *' : 'Business Name *'}
+          placeholder={isPharmacy ? 'Enter your pharmacy name' : 'Enter your business name'}
           value={businessName}
           onChangeText={setBusinessName}
-          placeholder={isPharmacy ? 'Enter your pharmacy name' : 'Enter your business name'}
-          placeholderTextColor={COLORS.outline}
+          icon="create-outline"
         />
 
         {/* Business Type — locked to Pharmacy in pharmacy mode */}
@@ -265,67 +259,60 @@ export default function MerchantRegisterScreen() {
         )}
 
         {/* Description */}
-        <Text style={styles.formLabel}>Description</Text>
-        <TextInput
-          style={[styles.formInput, styles.formInputMultiline]}
+        <IconInput
+          label="Description"
+          placeholder={isPharmacy ? 'Brief description of your pharmacy' : 'Brief description of your business'}
           value={description}
           onChangeText={setDescription}
-          placeholder={isPharmacy ? 'Brief description of your pharmacy' : 'Brief description of your business'}
-          placeholderTextColor={COLORS.outline}
+          icon="create-outline"
           multiline
-          numberOfLines={3}
         />
 
         {/* Phone */}
-        <Text style={styles.formLabel}>{isPharmacy ? 'Pharmacy Phone *' : 'Business Phone *'}</Text>
-        <TextInput
-          style={styles.formInput}
+        <IconInput
+          label={isPharmacy ? 'Pharmacy Phone *' : 'Business Phone *'}
+          placeholder="+256 700 000 000"
           value={phone}
           onChangeText={setPhone}
-          placeholder="+256 700 000 000"
-          placeholderTextColor={COLORS.outline}
+          icon="create-outline"
           keyboardType="phone-pad"
         />
 
         {/* Address */}
-        <Text style={styles.formLabel}>{isPharmacy ? 'Pharmacy Address *' : 'Business Address *'}</Text>
-        <TextInput
-          style={styles.formInput}
+        <IconInput
+          label={isPharmacy ? 'Pharmacy Address *' : 'Business Address *'}
+          placeholder="Enter your address"
           value={address}
           onChangeText={setAddress}
-          placeholder="Enter your address"
-          placeholderTextColor={COLORS.outline}
+          icon="create-outline"
         />
 
         {/* Pharmacy-specific licensing */}
         {isPharmacy && (
           <>
-            <Text style={styles.formLabel}>Pharmacy Licence Number *</Text>
-            <TextInput
-              style={styles.formInput}
-              value={pharmacyLicense}
-              onChangeText={setPharmacyLicense}
-              placeholder="e.g. NDA/PH/2024/0123"
-              placeholderTextColor={COLORS.outline}
-              autoCapitalize="characters"
-            />
-            <Text style={styles.formLabel}>Pharmacist In Charge *</Text>
-            <TextInput
-              style={styles.formInput}
-              value={pharmacistInCharge}
-              onChangeText={setPharmacistInCharge}
-              placeholder="Full name of the supervising pharmacist"
-              placeholderTextColor={COLORS.outline}
-            />
-            <Text style={styles.formLabel}>Pharmacist Licence Number *</Text>
-            <TextInput
-              style={styles.formInput}
-              value={pharmacistLicense}
-              onChangeText={setPharmacistLicense}
-              placeholder="Pharmacist's professional licence number"
-              placeholderTextColor={COLORS.outline}
-              autoCapitalize="characters"
-            />
+            <IconInput
+          label="Pharmacy Licence Number *"
+          placeholder="e.g. NDA/PH/2024/0123"
+          value={pharmacyLicense}
+          onChangeText={setPharmacyLicense}
+          icon="create-outline"
+          autoCapitalize="characters"
+        />
+            <IconInput
+          label="Pharmacist In Charge *"
+          placeholder="Full name of the supervising pharmacist"
+          value={pharmacistInCharge}
+          onChangeText={setPharmacistInCharge}
+          icon="create-outline"
+        />
+            <IconInput
+          label="Pharmacist Licence Number *"
+          placeholder="Pharmacist's professional licence number"
+          value={pharmacistLicense}
+          onChangeText={setPharmacistLicense}
+          icon="create-outline"
+          autoCapitalize="characters"
+        />
           </>
         )}
 
@@ -387,44 +374,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  header: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    paddingHorizontal: SPACING.md + 4,
-    paddingBottom: SPACING.md + 4,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backIcon: {
-    color: COLORS.onSurface,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  headerTitle: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.headlineMd,
-  },
-  headerSpacer: {
-    width: 36,
-  },
-  headerSubtitle: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
-    marginTop: SPACING.sm,
-    lineHeight: 20,
-  },
   scrollView: {
     flex: 1,
   },
@@ -437,21 +386,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     fontWeight: '600',
     marginBottom: SPACING.sm,
     marginTop: SPACING.md,
-  },
-  formInput: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md - 2,
-    paddingVertical: SPACING.md - 4,
-    color: COLORS.onSurface,
-    fontSize: 15,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
-  formInputMultiline: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-    paddingTop: SPACING.md - 4,
   },
   typeGrid: {
     gap: SPACING.sm,
@@ -571,9 +505,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     marginTop: SPACING.md + 4,
     gap: SPACING.sm + 2,
-  },
-  infoIcon: {
-    fontSize: 18,
   },
   infoText: {
     color: COLORS.onSurfaceVariant,
