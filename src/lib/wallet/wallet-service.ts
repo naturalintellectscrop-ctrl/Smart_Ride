@@ -2,7 +2,7 @@
 // Handles all wallet operations: deposits, withdrawals, payments, rewards
 
 import { db } from '@/lib/db';
-import { WalletStatus, WalletTransactionType, WalletOwnerType } from '@prisma/client';
+import { WalletStatus, WalletTransactionType, WalletOwnerType, WalletTransactionStatus } from '@prisma/client';
 import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
@@ -31,6 +31,13 @@ export interface WithdrawInput {
   externalReference?: string;
   externalProvider?: string;
   description?: string;
+  /**
+   * Ledger status for the resulting WalletTransaction. Defaults to COMPLETED.
+   * Mobile-money payouts should pass PENDING: the wallet is debited
+   * immediately so the money cannot be spent twice, but the payout is not
+   * settled until the provider confirms it.
+   */
+  status?: WalletTransactionStatus;
 }
 
 export interface PaymentInput {
@@ -236,31 +243,50 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
       return { success: false, error: 'Wallet not found' };
     }
 
-    // Create transaction and update wallet atomically
-    // Read balance INSIDE the transaction to avoid stale reads
+    // Debit atomically, then record it.
+    //
+    // Reading the balance and then writing `balance = read - amount` is a
+    // lost update, even inside a transaction: under READ COMMITTED (Prisma's
+    // default) two concurrent withdrawals both read the same balance, both
+    // pass the sufficiency check, and the second overwrites the first. A
+    // wallet holding 10,000 could pay out 10,000 twice and end at 5,000.
+    //
+    // The guard is a single conditional UPDATE — decrement, but only if the
+    // row still satisfies the balance and status conditions. Postgres
+    // evaluates the WHERE and applies the decrement in one statement, so the
+    // loser of a race matches zero rows instead of over-drawing. `count` is
+    // the answer to "did I get the money", and no read can go stale between
+    // the check and the write because there is no gap.
     const result = await db.$transaction(async (tx) => {
-      const walletRecord = await tx.wallet.findUnique({
-        where: { id: wallet.id },
-      });
+      // RETURNING gives us the post-debit balance from the same statement that
+      // applied it. Doing this as updateMany + findUnique would be three round
+      // trips holding an open transaction; under real concurrency that is what
+      // exhausts the connection pool, so the transaction is kept as short as
+      // the work allows.
+      const rows = await tx.$queryRaw<Array<{ balance: unknown }>>`
+        UPDATE "Wallet"
+           SET "balance"           = "balance" - ${input.amount}::numeric,
+               "totalWithdrawn"    = "totalWithdrawn" + ${input.amount}::numeric,
+               "lastWithdrawalAt"  = NOW(),
+               "lastTransactionAt" = NOW()
+         WHERE "id"      = ${wallet.id}
+           AND "status"  = 'ACTIVE'::"WalletStatus"
+           AND "balance" >= ${input.amount}::numeric
+        RETURNING "balance"
+      `;
 
-      if (!walletRecord) {
-        throw new Error('Wallet not found');
-      }
-
-      // Check balance with fresh value
-      if (toNumber(walletRecord.balance) < input.amount) {
+      if (rows.length === 0) {
+        // Either not enough money or the wallet is not active. Re-read to say
+        // which, so the caller can show the right message.
+        const current = await tx.wallet.findUnique({ where: { id: wallet.id } });
+        if (!current) throw new Error('Wallet not found');
+        if (current.status !== 'ACTIVE') throw new Error('Wallet is not active');
         throw new Error('Insufficient balance');
       }
 
-      // Check wallet status
-      if (walletRecord.status !== 'ACTIVE') {
-        throw new Error('Wallet is not active');
-      }
+      const balanceAfter = toNumber(rows[0].balance as never);
+      const balanceBefore = balanceAfter + input.amount;
 
-      const balanceBefore = toNumber(walletRecord.balance);
-      const balanceAfter = balanceBefore - input.amount;
-
-      // Create transaction record
       const transaction = await tx.walletTransaction.create({
         data: {
           walletId: wallet.id,
@@ -271,18 +297,9 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
           externalReference: input.externalReference || null,
           externalProvider: input.externalProvider || null,
           description: input.description || 'Wallet withdrawal',
-          status: 'COMPLETED',
-        },
-      });
-
-      // Update wallet
-      await tx.wallet.update({
-        where: { id: wallet.id },
-        data: {
-          balance: balanceAfter,
-          totalWithdrawn: { increment: input.amount },
-          lastWithdrawalAt: new Date(),
-          lastTransactionAt: new Date(),
+          // A mobile-money payout is not settled until the provider confirms.
+          // Callers that complete the payout inline may override this.
+          status: input.status ?? 'COMPLETED',
         },
       });
 
@@ -291,8 +308,16 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
 
     return { success: true, ...result };
   } catch (error) {
-    console.error('Withdrawal error:', error);
-    return { success: false, error: 'Failed to process withdrawal' };
+    // Surface the specific reason — "insufficient balance" is actionable,
+    // "failed to process" leaves the user with nothing to do.
+    const message = error instanceof Error ? error.message : 'Failed to process withdrawal';
+    const expected = [
+      'Insufficient balance',
+      'Wallet is not active',
+      'Wallet not found',
+    ].includes(message);
+    if (!expected) console.error('Withdrawal error:', error);
+    return { success: false, error: expected ? message : 'Failed to process withdrawal' };
   }
 }
 

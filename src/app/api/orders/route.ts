@@ -15,7 +15,7 @@ import { z } from 'zod';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { redactPerson } from '@/lib/privacy/public-contact';
 import { resetRLSContext } from '@/lib/auth-utils';
-import { quoteOrder } from '@/lib/api/order-pricing';
+import { quoteOrder, priceItemsFromCatalogue } from '@/lib/api/order-pricing';
 
 /**
  * GET /api/orders
@@ -206,12 +206,52 @@ export async function POST(request: NextRequest) {
       return errorResponse('Merchant is not active');
     }
 
+    // Price every LINE from the merchant's catalogue before pricing the order.
+    // The request's `unitPrice` is advisory only — it is used to detect a stale
+    // cart, never to decide what is charged (BE-002).
+    const priced = await priceItemsFromCatalogue(
+      validatedData.merchantId,
+      validatedData.items
+    );
+
+    if (priced.rejected.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Some items are no longer available',
+          code: 'ITEMS_UNAVAILABLE',
+          // Per-item so the cart can mark exactly which lines to fix rather
+          // than making the customer guess.
+          items: priced.rejected,
+        },
+        { status: 409 }
+      );
+    }
+    if (priced.items.length === 0) {
+      return errorResponse('Order must contain at least one item');
+    }
+
+    // A price rise between building the cart and checking out means charging
+    // more than the customer agreed to. Stop and let them re-confirm rather
+    // than silently taking the difference.
+    if (priced.increased.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Prices have changed since you added these items',
+          code: 'PRICE_CHANGED',
+          items: priced.increased,
+        },
+        { status: 409 }
+      );
+    }
+
     // Price the order server-side. The request body's subtotal/fees/total are
     // ignored: this route used to write whatever the client sent, so a
     // modified client could zero its own delivery fee.
     const pricing = await quoteOrder({
       orderType: validatedData.orderType,
-      items: validatedData.items.map((i) => ({ quantity: i.quantity, unitPrice: i.unitPrice })),
+      items: priced.items.map((i) => ({ quantity: i.quantity, unitPrice: i.unitPrice })),
       merchant: { latitude: (merchant as any).latitude, longitude: (merchant as any).longitude },
       delivery: {
         latitude: validatedData.deliveryLatitude,
@@ -243,13 +283,17 @@ export async function POST(request: NextRequest) {
           recipientName: validatedData.recipientName || null,
           recipientPhone: validatedData.recipientPhone || null,
           items: {
-            create: validatedData.items.map(item => ({
+            // Catalogue values, not the request's. Name and description come
+            // from the menu too: a client that could relabel a line could buy
+            // a cheap item under an expensive item's name, which matters once
+            // a human is picking the order.
+            create: priced.items.map(item => ({
               menuItemId: item.menuItemId,
               itemName: item.itemName,
               itemDescription: item.itemDescription,
               quantity: item.quantity,
               unitPrice: item.unitPrice,
-              totalPrice: item.unitPrice * item.quantity,
+              totalPrice: item.totalPrice,
               specialInstructions: item.specialInstructions,
             })),
           },

@@ -121,9 +121,11 @@ export async function GET(request: NextRequest) {
     const month = calcEarnings(mapTasks(monthTasks));
     const lifetime = calcEarnings(mapTasks(allTasks));
 
-    // Get wallet balance
+    // Get wallet balance. Must be the same wallet /riders/withdraw debits —
+    // reading a RIDER-owned wallet while the withdrawal debited a USER-owned
+    // one meant the screen showed a balance nobody could withdraw (BE-003).
     const wallet = await db.wallet.findUnique({
-      where: { ownerId_ownerType: { ownerId: rider.id, ownerType: 'RIDER' } },
+      where: { ownerId_ownerType: { ownerId: rider.userId, ownerType: 'USER' } },
     });
 
     // Determine the active period earnings for quick access

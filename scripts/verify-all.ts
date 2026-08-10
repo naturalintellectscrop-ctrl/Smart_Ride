@@ -63,6 +63,16 @@ const SUITES: Suite[] = [
     covers: 'surge -> fare, tier change -> driver notified, fraud -> admin paged',
   },
   {
+    name: 'order-pricing',
+    file: 'scripts/verify-order-pricing.ts',
+    covers: 'BE-001/BE-002: catalogue prices the order, not the request body',
+  },
+  {
+    name: 'wallet-withdrawal',
+    file: 'scripts/verify-wallet-withdrawal.ts',
+    covers: 'BE-003: one atomic withdrawal path, concurrent debits cannot over-draw',
+  },
+  {
     name: 'core-journey',
     file: 'scripts/verify-client-driver-journey.ts',
     covers: 'book -> dispatch -> ride -> pay -> rate -> receipt -> notify',

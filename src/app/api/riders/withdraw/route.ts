@@ -58,13 +58,23 @@ export async function POST(request: NextRequest) {
       return errorResponse('Maximum withdrawal is UGX 5,000,000', 400);
     }
 
-    // Withdraw from wallet atomically
+    // Withdraw from the USER wallet.
+    //
+    // This used to address `ownerType: 'RIDER'` keyed on rider.id. No such
+    // wallet has ever existed — every Wallet row in the database is USER-owned
+    // — so every withdrawal from the earnings screen failed with "Wallet not
+    // found" (BE-003). A person has one balance; splitting it by which screen
+    // they withdrew from was the accident, not the design.
+    //
+    // PENDING because the mobile-money payout is not settled until the
+    // provider confirms; the debit itself is immediate.
     const result = await withdrawFromWallet({
-      ownerId: rider.id,
-      ownerType: 'RIDER',
+      ownerId: userId,
+      ownerType: 'USER',
       amount,
       externalProvider: provider,
       description: `Withdrawal to ${provider} (${phoneNumber})`,
+      status: 'PENDING',
     });
 
     if (!result.success) {

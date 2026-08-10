@@ -500,10 +500,14 @@ export async function completeIncentiveAndReward(participationId: string): Promi
         },
       });
       
-      // Also credit to the real wallet system
+      // Also credit to the real wallet system.
+      //
+      // USER-owned, not RIDER-owned: no RIDER wallet has ever existed, so this
+      // credit was creating a second, parallel balance the driver could never
+      // withdraw from (BE-003). One person, one balance.
       await creditRewardToWallet({
-        ownerId: participation.riderId,
-        ownerType: 'RIDER',
+        ownerId: participation.rider.userId,
+        ownerType: 'USER',
         amount: rewardAmount,
         referenceId: participationId,
         referenceType: 'INCENTIVE',

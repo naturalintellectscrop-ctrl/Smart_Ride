@@ -21,12 +21,12 @@ finding is explicitly marked as already fixed locally.
 | ID | Title | Priority | Status | Category |
 |---|---|---|---|---|
 | BE-001 | Order creation trusted client-supplied prices | P0 | FIXED_PENDING_VERIFICATION | Financial |
-| BE-002 | Order line-item `unitPrice` still comes from the client | P0 | OPEN | Financial |
-| BE-003 | Two divergent withdrawal implementations | P1 | OPEN | Financial |
+| BE-002 | Order line-item `unitPrice` still comes from the client | P0 | RESOLVED | Financial |
+| BE-003 | Two divergent withdrawal implementations | P1 | RESOLVED | Financial |
 | BE-004 | Chat claimed end-to-end encryption that does not exist | P1 | FIXED_PENDING_VERIFICATION | Security |
 | BE-005 | `DELIVERY_PERSONNEL` dispatched work it had no UI to accept | P1 | FIXED_PENDING_VERIFICATION | Workflow |
-| BE-006 | `riderRole` enum drift written by onboarding | P1 | FIXED_PENDING_VERIFICATION | Data |
-| BE-007 | Dead wallet API surface with no callers | P3 | OPEN | Backend |
+| BE-006 | `riderRole` enum drift written by onboarding | P1 | RESOLVED — no backfill owed | Data |
+| BE-007 | Dead wallet API surface with no callers | P3 | ANSWERED — awaiting product decision | Backend |
 | BE-008 | `getFareEstimate` signature left incomplete mid-edit | P2 | FIXED_PENDING_VERIFICATION | Backend |
 
 ---
@@ -93,7 +93,7 @@ return the same figures for identical input.
 
 ## BE-002 — Order line-item `unitPrice` still comes from the client
 
-**Status:** OPEN
+**Status:** RESOLVED
 **Priority:** P0
 **Category:** Financial
 **Discovered by:** Screen Migration Session
@@ -139,11 +139,54 @@ order uses the catalogue price.
 
 **Dependencies:** BE-001.
 
+### Resolution — Backend session, 2026-08-10
+
+`priceItemsFromCatalogue()` in `src/lib/api/order-pricing.ts` resolves every
+line against the **merchant's own** `MenuItem` rows and returns the prices that
+will be charged. `POST /api/orders` writes `priced.items`; the request's
+`unitPrice` is never persisted.
+
+Scoping to the merchant matters as much as the lookup: without it a client
+could reference a cheaper item belonging to a *different* merchant and buy this
+merchant's goods at that price. That case is now rejected, and is asserted.
+
+Name and description also come from the catalogue. A client that could relabel
+a line could buy a cheap item under an expensive item's name, which matters
+once a human is picking the order.
+
+Answers to the two "do not assume" questions:
+- **Every cart line does carry a resolvable `menuItemId`.** `cart.tsx` sends
+  `menuItemId: item.productId`, and `productId` is `product.id` from the
+  merchant's own menu API (`orders/merchant/[id].tsx:126`). A line without one
+  is now rejected rather than trusted.
+- **Shopping and food items share one table** (`MenuItem`, scoped by
+  `merchantId`), so one lookup covers both order types.
+
+On the behaviour question the ledger left open — silently repricing vs failing
+— neither. Repricing *upward* returns **409 `PRICE_CHANGED`** with the affected
+lines, because charging more than the customer agreed to at checkout is the
+thing to avoid; repricing *downward* just charges the lower real price. Items
+that cannot be honoured at all return **409 `ITEMS_UNAVAILABLE`** with a
+per-item reason so the cart can mark exactly which lines to fix. Availability
+and stock are enforced at the same point.
+
+`POST /api/orders/quote` now performs the same resolution and returns
+`priceChanges` / `unavailable` / `pricedFromCatalogue`, so a stale cart is
+corrected while the customer can still react instead of failing at checkout.
+The mobile cart sends `menuItemId` to the quote.
+
+**Verification:** `bun scripts/verify-order-pricing.ts` — 16 checks. Attacks the
+resolver the way a tampered client would: `unitPrice: 0` on a real item (charged
+25,000, not 0), another merchant's cheap item, an unavailable item, more than
+stock, a line with no `menuItemId`, and zero quantity. Also asserts a truthful
+cart produces no warnings, that a client offering to *overpay* is charged the
+lower real price, and that delivery is never free even on a zero-value cart.
+
 ---
 
 ## BE-003 — Two divergent withdrawal implementations
 
-**Status:** OPEN
+**Status:** RESOLVED
 **Priority:** P1
 **Category:** Financial
 **Discovered by:** Screen Migration Session
@@ -195,6 +238,62 @@ Concurrent withdrawal requests against the same wallet must not over-draw.
 Both paths must produce equivalent transaction/payout records.
 
 **Dependencies:** None.
+
+### Resolution — Backend session, 2026-08-10
+
+**They differed by accident, and the difference had already killed one of
+them.** Both endpoints are RIDER-only, but they addressed *different wallets*:
+
+- `/riders/withdraw` → `ownerType: 'RIDER'`, keyed on `rider.id`
+- `/wallet/withdraw` → `ownerType: 'USER'`, keyed on `user.userId`
+
+`SELECT "ownerType", COUNT(*) FROM "Wallet" GROUP BY 1` returns **`USER` only —
+zero RIDER-owned wallets have ever existed.** So every withdrawal from the
+earnings screen failed with "Wallet not found", and `/riders/earnings` displayed
+a balance read from that same non-existent wallet. Two more call sites shared
+the mistake: `riders/earnings/route.ts:126` and
+`marketplace/incentive-fulfillment.ts:506`, the latter *crediting* incentive
+payouts into a parallel balance no driver could ever withdraw from.
+
+**USER is canonical.** Every existing wallet row is USER-owned, so nothing needs
+migrating and no driver loses money; and a person who both rides and drives
+should have one balance, not two. All four call sites now agree.
+
+**The deeper defect was shared by both implementations.** Each read the balance
+and then wrote `balance = read - amount`. That is a lost update even inside a
+transaction: under READ COMMITTED (Prisma's default) two concurrent withdrawals
+both read the same balance, both pass the sufficiency check, and the second
+overwrites the first — a wallet holding 10,000 pays out 10,000 twice and ends at
+5,000. `/wallet/withdraw` was worse (it read *outside* the transaction), but
+`withdrawFromWallet` was not safe either.
+
+The debit is now a single conditional statement — `UPDATE … SET balance =
+balance - :amount WHERE id = :id AND status = 'ACTIVE' AND balance >= :amount
+RETURNING balance`. Postgres evaluates the condition and applies the decrement
+atomically, so the loser of a race matches zero rows instead of over-drawing,
+and there is no gap between the check and the write for a read to go stale in.
+`RETURNING` also supplies the post-debit balance from the same statement, which
+keeps the transaction to two round trips instead of four — that footprint is
+what exhausts the connection pool under real concurrency.
+
+Payouts are recorded **PENDING**, not COMPLETED: the balance is debited
+immediately so the money cannot be spent twice, but a mobile-money payout is not
+settled until the provider confirms it. Errors now surface the specific reason
+("Insufficient balance", "Wallet is not active") rather than a generic failure.
+
+**Verification:** `bun scripts/verify-wallet-withdrawal.ts` — 15 checks,
+including ten genuinely concurrent withdrawals of 2,000 against a 10,000 wallet.
+Asserts both halves of the property: **safety** (never more successes than the
+balance funds, never negative, ledger reconciles `before - amount = after`) and
+**liveness** (the wallet still drains to exactly zero afterwards, so an
+over-eager guard cannot strand money). Some racers lose to Prisma `P2028`
+connection-pool pressure rather than to the balance guard; that is
+infrastructure, not correctness, which is why the assertion is `succeeded <= 5`
+plus a sequential drain to zero rather than `succeeded === 5`.
+
+**Still owed:** neither endpoint is idempotent. A retried request with the same
+intent will debit twice. Fixing that needs a client-supplied idempotency key and
+is left as a separate item rather than smuggled into this one.
 
 ---
 
@@ -308,7 +407,7 @@ Assign two concurrent deliveries to one DP rider and confirm both appear in
 
 ## BE-006 — `riderRole` enum drift written by onboarding
 
-**Status:** FIXED_PENDING_VERIFICATION
+**Status:** RESOLVED — the backfill is not owed
 **Priority:** P1
 **Category:** Data
 **Discovered by:** Screen Migration Session
@@ -360,11 +459,48 @@ members are present, and migrate any that are not.
 
 **Dependencies:** BE-005.
 
+### Resolution — Backend session, 2026-08-10
+
+**The backfill this ledger called "owed that no session has claimed" is not
+owed. No drift rows exist, and none could have.**
+
+The verification the ledger asked for, run against the live database:
+
+```
+SELECT "riderRole", COUNT(*) FROM "Rider" GROUP BY 1
+  -> SMART_BODA_RIDER  6
+```
+
+Only valid members are present. The "do not assume" note asked whether Prisma
+had rejected the invalid values, or whether `riderRole` was stored as a String
+somewhere in the write path. It is not:
+
+```
+information_schema.columns -> data_type: USER-DEFINED, udt_name: RiderRole, is_nullable: NO
+pg_enum                    -> SMART_BODA_RIDER, SMART_CAR_DRIVER, DELIVERY_PERSONNEL
+```
+
+It is a real Postgres enum, NOT NULL. And the only writer —
+`POST /api/riders` (`route.ts:107`) — validates with
+`z.enum(['SMART_BODA_RIDER','SMART_CAR_DRIVER','DELIVERY_PERSONNEL'])` with no
+default. `/api/riders/onboarding` only *reads* `riderRole`; it never writes it.
+
+**So the failure mode was not silently-wrong data — it was a 400.** A rider
+onboarding through the mobile path that sent `'SMART_BODA'` was rejected by zod
+before reaching the database. Registration failed outright rather than
+persisting a role no consumer recognised. The mobile fix in `a45cb28` is
+therefore the whole fix, and it unblocked signups rather than merely correcting
+future rows.
+
+**One thing worth watching, not a defect:** there are zero `SMART_CAR_DRIVER`
+rows. With only six riders that is unremarkable, but if car-driver signups are
+expected and still absent after this fix ships, that is the thread to pull.
+
 ---
 
 ## BE-007 — Dead wallet API surface with no callers
 
-**Status:** OPEN
+**Status:** ANSWERED — the factual questions are settled; the removal is a product decision
 **Priority:** P3
 **Category:** Backend
 **Discovered by:** Screen Migration Session
@@ -399,6 +535,27 @@ and their routes.
 **Verification required:** N/A — a product decision.
 
 **Dependencies:** None.
+
+### Findings — Backend session, 2026-08-10
+
+The "do not assume" note asked whether the web app calls these. It was audited:
+
+- **`/api/wallet/balance` has zero callers anywhere.** Not just mobile — the web
+  client declared it *twice*, as `getWallet()` and `getWalletBalance()`, byte-
+  identical, and **neither is called by any component**. The duplicate has been
+  removed (`src/services/api.ts`); one name is kept.
+- **`/api/receipts` is live and must stay.** `GET` has no client caller, but
+  `POST` is reachable and the route's `ensureReceiptForTask` is imported by
+  `orders/[id]`, `tasks`, and `tasks/[id]`. Deleting the route would break
+  receipt generation.
+
+**What is left is genuinely a product decision and is not being made here:**
+whether a receipts-list screen is wanted. If yes, `GET /api/receipts` and the
+mobile `getReceipts()` wrapper are already in place for it. If no, both can go.
+`GET /api/wallet/balance` and the mobile `getWalletBalance()` wrapper can be
+removed either way — the home screen uses the heavier `getWallet()` — but they
+are three-line wrappers over a working endpoint, so leaving them costs nothing
+and the call is the product owner's.
 
 
 ---

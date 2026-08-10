@@ -16,6 +16,8 @@
 import { TaskType } from '@prisma/client';
 import { calculatePricingAsync } from './pricing';
 import { calculateDistance } from '@/lib/mapbox/mapbox-service';
+import { db } from '@/lib/db';
+import { toNumber } from '@/lib/decimal-utils';
 
 export type OrderPricingType = 'FOOD_DELIVERY' | 'SHOPPING';
 
@@ -104,4 +106,163 @@ function isNightTime(): boolean {
 function isPeakHours(): boolean {
   const h = new Date().getHours();
   return (h >= 7 && h < 9) || (h >= 17 && h < 20);
+}
+
+
+// ============================================
+// CATALOGUE-AUTHORITATIVE LINE ITEMS (BE-002)
+// ============================================
+// BE-001 stopped the client setting fees and totals, but the subtotal was
+// still derived from `unitPrice` values in the request body. A modified client
+// could post `unitPrice: 0` for a real menu item and the server would compute
+// a subtotal of zero — correctly and consistently, from a false input.
+//
+// Every line is now resolved against the MERCHANT'S OWN menu. Scoping to the
+// merchant matters as much as the lookup itself: without it a client could
+// reference a cheaper item belonging to a different merchant and buy this
+// merchant's goods at that price.
+
+/** A line item as submitted by a client. Prices here are advisory only. */
+export interface SubmittedItem {
+  menuItemId?: string;
+  itemName?: string;
+  itemDescription?: string;
+  quantity: number;
+  /** What the client believed the price was. Used only to detect staleness. */
+  unitPrice?: number;
+  specialInstructions?: string;
+}
+
+/** A line item after the catalogue has spoken. This is what gets charged. */
+export interface PricedItem {
+  menuItemId: string;
+  itemName: string;
+  itemDescription: string | null;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+  specialInstructions?: string;
+}
+
+export interface ItemPricingResult {
+  items: PricedItem[];
+  /**
+   * Lines whose catalogue price is HIGHER than the client believed. Charging
+   * these without asking would mean taking more money than the customer agreed
+   * to at checkout, so the caller is expected to stop and re-confirm.
+   */
+  increased: Array<{ menuItemId: string; itemName: string; was: number; now: number }>;
+  /** Lines that could not be honoured at all, with the reason. */
+  rejected: Array<{ menuItemId?: string; itemName?: string; reason: string }>;
+}
+
+/**
+ * Price a cart from the merchant's catalogue.
+ *
+ * Name and description are taken from the catalogue too — a client that could
+ * relabel a line would be able to buy a cheap item under an expensive item's
+ * name, which matters once a human is picking the order.
+ */
+export async function priceItemsFromCatalogue(
+  merchantId: string,
+  submitted: SubmittedItem[],
+  /** Optional transaction client so pricing happens inside the order's tx. */
+  client: { menuItem: { findMany: typeof db.menuItem.findMany } } = db,
+): Promise<ItemPricingResult> {
+  const increased: ItemPricingResult['increased'] = [];
+  const rejected: ItemPricingResult['rejected'] = [];
+
+  const ids = submitted
+    .map(i => i.menuItemId)
+    .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+  // Scoped to this merchant — an id belonging to someone else simply will not
+  // be found, and is rejected below like any unknown item.
+  const rows = ids.length
+    ? await client.menuItem.findMany({
+        where: { id: { in: ids }, merchantId },
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          price: true,
+          isAvailable: true,
+          stockQuantity: true,
+        },
+      })
+    : [];
+  const byId = new Map(rows.map(r => [r.id, r]));
+
+  const items: PricedItem[] = [];
+  for (const line of submitted) {
+    const quantity = Math.floor(line.quantity);
+    if (!Number.isFinite(quantity) || quantity < 1) {
+      rejected.push({
+        menuItemId: line.menuItemId,
+        itemName: line.itemName,
+        reason: 'Invalid quantity',
+      });
+      continue;
+    }
+
+    if (!line.menuItemId) {
+      rejected.push({
+        itemName: line.itemName,
+        reason: 'Item is not linked to the merchant catalogue',
+      });
+      continue;
+    }
+
+    const menuItem = byId.get(line.menuItemId);
+    if (!menuItem) {
+      rejected.push({
+        menuItemId: line.menuItemId,
+        itemName: line.itemName,
+        reason: 'Item is not on this merchant\'s menu',
+      });
+      continue;
+    }
+    if (!menuItem.isAvailable) {
+      rejected.push({
+        menuItemId: menuItem.id,
+        itemName: menuItem.name,
+        reason: 'Item is currently unavailable',
+      });
+      continue;
+    }
+    if (menuItem.stockQuantity != null && menuItem.stockQuantity < quantity) {
+      rejected.push({
+        menuItemId: menuItem.id,
+        itemName: menuItem.name,
+        reason: `Only ${menuItem.stockQuantity} left in stock`,
+      });
+      continue;
+    }
+
+    // Decimal, so convert explicitly — `Decimal + number` concatenates.
+    const unitPrice = Math.max(0, Math.round(toNumber(menuItem.price)));
+
+    // A cart built before a price rise would otherwise be charged the new,
+    // higher price without the customer ever seeing it.
+    if (typeof line.unitPrice === 'number' && unitPrice > Math.round(line.unitPrice)) {
+      increased.push({
+        menuItemId: menuItem.id,
+        itemName: menuItem.name,
+        was: Math.round(line.unitPrice),
+        now: unitPrice,
+      });
+    }
+
+    items.push({
+      menuItemId: menuItem.id,
+      itemName: menuItem.name,
+      itemDescription: menuItem.description,
+      quantity,
+      unitPrice,
+      totalPrice: unitPrice * quantity,
+      specialInstructions: line.specialInstructions,
+    });
+  }
+
+  return { items, increased, rejected };
 }

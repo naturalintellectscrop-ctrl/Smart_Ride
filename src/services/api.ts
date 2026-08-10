@@ -1034,11 +1034,9 @@ class ApiService {
     return this.request<User>('/users/me', 'PATCH', data, accessToken);
   }
 
+  // Was duplicated verbatim as getWalletBalance(); both hit the same endpoint
+  // and neither had a caller (BE-007). One name kept.
   async getWallet(accessToken?: string): Promise<ApiResponse<{ balance: number }>> {
-    return this.request<{ balance: number }>('/wallet/balance', 'GET', undefined, accessToken);
-  }
-
-  async getWalletBalance(accessToken?: string): Promise<ApiResponse<{ balance: number }>> {
     return this.request<{ balance: number }>('/wallet/balance', 'GET', undefined, accessToken);
   }
 

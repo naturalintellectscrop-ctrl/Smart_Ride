@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { db, resetRLSContext } from '@/lib/db';
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
-import { toNumber } from '@/lib/decimal-utils';
+import { withdrawFromWallet } from '@/lib/wallet/wallet-service';
 
 const VALID_PROVIDERS = ['MTN_MOMO', 'AIRTEL_MONEY'];
 
@@ -68,91 +68,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find or create wallet
-    let wallet = await db.wallet.findFirst({
-      where: { ownerId: user.userId, ownerType: 'USER' },
+    // Ensure the wallet exists. A rider who has never transacted has no row,
+    // and "no wallet" is not a withdrawal error — it is a zero balance.
+    const wallet = await db.wallet.upsert({
+      where: { ownerId_ownerType: { ownerId: user.userId, ownerType: 'USER' } },
+      create: {
+        ownerId: user.userId,
+        ownerType: 'USER',
+        balance: 0,
+        pendingBalance: 0,
+        status: 'ACTIVE',
+      },
+      update: {},
     });
 
-    if (!wallet) {
-      wallet = await db.wallet.create({
-        data: {
-          ownerId: user.userId,
-          ownerType: 'USER',
-          balance: 0,
-          pendingBalance: 0,
-          status: 'ACTIVE',
-          totalDeposited: 0,
-          totalWithdrawn: 0,
-          totalSpent: 0,
-          totalReceived: 0,
-        },
-      });
-    }
+    // Delegate to the shared wallet service rather than hand-rolling the
+    // debit (BE-003). This route previously read the balance OUTSIDE the
+    // transaction and then wrote `balance = staleRead - amount`, so two
+    // concurrent withdrawals could each pass the sufficiency check and the
+    // second would overwrite the first — the wallet paying out twice and
+    // losing the amount only once.
+    //
+    // PENDING, not COMPLETED: the balance is debited immediately so the money
+    // cannot be spent twice, but a mobile-money payout is not settled until
+    // the provider confirms it.
+    const result = await withdrawFromWallet({
+      ownerId: user.userId,
+      ownerType: 'USER',
+      amount,
+      externalProvider: provider,
+      description: `Withdrawal to ${provider} (${phone})`,
+      status: 'PENDING',
+    });
 
-    // Check sufficient balance
-    if (toNumber(wallet.balance) < amount) {
+    if (!result.success) {
       return NextResponse.json(
-        { success: false, error: 'Insufficient wallet balance' },
+        { success: false, error: result.error || 'Withdrawal failed' },
         { status: 400 }
       );
     }
-
-    // Check wallet is active
-    if (wallet.status !== 'ACTIVE') {
-      return NextResponse.json(
-        { success: false, error: 'Wallet is not active' },
-        { status: 400 }
-      );
-    }
-
-    // Execute withdrawal in a transaction
-    const result = await db.$transaction(async (tx) => {
-      // Deduct from wallet balance
-      const newBalance = toNumber(wallet!.balance) - amount;
-      const newWithdrawn = toNumber(wallet!.totalWithdrawn) + amount;
-
-      const updatedWallet = await tx.wallet.update({
-        where: { id: wallet!.id },
-        data: {
-          balance: newBalance,
-          totalWithdrawn: newWithdrawn,
-          lastWithdrawalAt: new Date(),
-          lastTransactionAt: new Date(),
-        },
-      });
-
-      // Create WalletTransaction record
-      const transaction = await tx.walletTransaction.create({
-        data: {
-          walletId: wallet!.id,
-          transactionType: 'WITHDRAWAL',
-          amount,
-          balanceBefore: wallet!.balance,
-          balanceAfter: newBalance,
-          externalProvider: provider,
-          description: `Withdrawal to ${provider} (${phone})`,
-          status: 'PENDING',
-          metadata: JSON.stringify({
-            phone,
-            provider,
-            userId: user.userId,
-            requestedAt: new Date().toISOString(),
-          }),
-        },
-      });
-
-      return { wallet: updatedWallet, transaction };
-    });
 
     return NextResponse.json({
       success: true,
       data: {
-        transactionId: result.transaction.id,
+        transactionId: result.transactionId,
         amount,
         provider,
         phone,
         status: 'PENDING',
-        newBalance: result.wallet.balance,
+        newBalance: result.newBalance,
       },
     });
   } catch (error: unknown) {
