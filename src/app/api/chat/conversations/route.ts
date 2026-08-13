@@ -8,6 +8,7 @@ import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken, extractTokenFromHeader } from '@/lib/auth/jwt';
 import { successResponse, errorResponse, unauthorizedResponse, serverErrorResponse } from '@/lib/api/response';
 import { firstNameOf } from '@/lib/privacy/public-contact';
+import { decryptField } from '@/lib/crypto/field-encryption';
 
 export async function GET(request: NextRequest) {
   // Verify auth
@@ -116,7 +117,7 @@ export async function GET(request: NextRequest) {
         lastMessage: lastMessage
           ? {
               id: lastMessage.id,
-              content: lastMessage.content,
+              content: decryptField(lastMessage.content),
               type: lastMessage.type,
               createdAt: lastMessage.createdAt.toISOString(),
               senderId: lastMessage.senderId,

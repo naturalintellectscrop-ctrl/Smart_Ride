@@ -447,6 +447,30 @@ model Task {
   pickedUpAt          DateTime?
   inProgressAt        DateTime?
   deliveringAt        DateTime?
+
+  // ── Proof of delivery (BE-005) ────────────────────────────────────
+  // A delivery had no evidence it ever happened: no photo, no signature, no
+  // handover code. A courier could mark a parcel DELIVERED from anywhere, and
+  // a customer disputing "I never got it" left the platform with nothing to
+  // adjudicate on. Required for delivery task types, ignored for rides.
+
+  /// Short code the RECIPIENT reads out to the courier at handover. Generated
+  /// when the task is created and never shown to the courier until they
+  /// submit it, so possessing it is evidence of being face to face.
+  deliveryCode        String?
+  /// How this delivery was proven. Null until proof is captured.
+  proofType           ProofOfDeliveryType?
+  /// Uploaded photo of the parcel at the door / with the recipient.
+  proofPhotoUrl       String?
+  /// Captured signature image.
+  proofSignatureUrl   String?
+  /// Who actually took it — may differ from the ordering customer.
+  proofRecipientName  String?
+  /// Where the courier was when they captured proof. A delivery proven two
+  /// kilometres from the drop-off is the signature of a fake completion.
+  proofLatitude       Float?
+  proofLongitude      Float?
+  proofCapturedAt     DateTime?
   completedAt         DateTime?
   cancelledAt         DateTime?
   lastHeartbeatAt     DateTime?
@@ -2214,6 +2238,19 @@ enum KOTStatus {
   IN_PROGRESS
   COMPLETED
   CANCELLED
+}
+
+/// How a delivery was proven to have reached its recipient.
+enum ProofOfDeliveryType {
+  /// Recipient read out the code the platform issued them.
+  CODE
+  /// Photo of the parcel with the recipient or at the door.
+  PHOTO
+  /// Recipient signed on the courier's device.
+  SIGNATURE
+  /// Courier recorded that nobody was available and left it per instructions.
+  /// Deliberately distinct from the others: it is a claim, not evidence.
+  LEFT_WITH_NOTE
 }
 
 enum TaskType {

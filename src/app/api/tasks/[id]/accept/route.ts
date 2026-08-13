@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { db, resetRLSContext } from '@/lib/db';
+import { claimTask, releaseClaim } from '@/lib/delivery/delivery-service';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -71,6 +72,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Claim the task BEFORE transitioning it.
+    //
+    // This route used to read the task, then let the state machine write its
+    // own riderId unconditionally — a read-then-write, so two providers
+    // accepting the same offer within the dispatch window both passed the
+    // check and both wrote. The second silently won and the first spent the
+    // trip believing they held a job that had been reassigned under them
+    // (BE-005). The claim is now one conditional UPDATE, so the loser is told.
+    const claim = await claimTask(taskId, rider.id);
+    if (!claim.success) {
+      return NextResponse.json(
+        { success: false, error: claim.error },
+        { status: 409 }
+      );
+    }
+
     // Use the state machine to transition to ACCEPTED
     const result = await EnhancedTaskStateMachine.transition(taskId, 'ACCEPTED', {
       triggeredByType: 'RIDER',
@@ -79,20 +96,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     });
 
     if (!result.success) {
+      // The claim succeeded but the transition did not. Releasing it puts the
+      // job back in the pool instead of stranding it against a provider who
+      // never actually accepted it.
+      if (claim.claimed) await releaseClaim(taskId, rider.id);
       return NextResponse.json(
         { success: false, error: result.error },
         { status: 400 }
       );
     }
 
-    // Also update the task's riderId if the state machine didn't already set it
-    // (the state machine sets riderId in context, but let's ensure it's set)
-    if (task.riderId !== rider.id) {
-      await db.task.update({
-        where: { id: taskId },
-        data: { riderId: rider.id },
-      });
-    }
+    // The claim above already set riderId atomically; no second write is
+    // needed, and an unconditional one here would reintroduce the race.
 
     // Fetch the updated task with rider relation
     const updatedTask = await db.task.findUnique({

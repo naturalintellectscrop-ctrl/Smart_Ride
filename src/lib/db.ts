@@ -163,6 +163,28 @@ function getDb(): PrismaClient {
     globalForPrisma.prisma = new PrismaClient({
       log: ['error'],
       datasourceUrl: getDatasourceUrl(databaseUrl),
+      transactionOptions: {
+        // Prisma's default maxWait is 2000ms — how long a transaction will
+        // queue for a connection before giving up with P2028 ("Unable to
+        // start a transaction in the given time").
+        //
+        // A single round-trip to the eu-west-1 Supabase pooler measures
+        // ~750ms-2.5s from here, so the default covers roughly ZERO queued
+        // transactions: the moment a handful of writes overlap, most of them
+        // fail before they ever reach the database. Measured directly —
+        // 12 concurrent plain queries all succeed, while 12 concurrent
+        // interactive transactions returned 3/12 at the default and 12/12 at
+        // 10s. It was never pool exhaustion; the pool is 17 and the failures
+        // started at a concurrency of 4.
+        //
+        // This is latency headroom, not a licence for slow transactions. The
+        // timeout below still caps how long one may HOLD a connection.
+        maxWait: 15_000,
+        // Ceiling on the work inside a transaction. Kept close to the
+        // default: a transaction that needs longer than this is holding a
+        // connection far too long and should be restructured, not indulged.
+        timeout: 15_000,
+      },
     })
   }
   return globalForPrisma.prisma

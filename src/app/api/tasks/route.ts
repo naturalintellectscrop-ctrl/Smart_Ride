@@ -33,6 +33,7 @@ import { UserRole } from '@prisma/client';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 import { checkRateLimit, apiRateLimit } from '@/lib/security/rate-limit';
+import { isDeliveryTask, generateDeliveryCode } from '@/lib/delivery/delivery-service';
 
 /**
  * GET /api/tasks
@@ -243,6 +244,12 @@ export async function POST(request: NextRequest) {
         taskType: validatedData.taskType as TaskType,
         clientId: effectiveClientId,
         orderId: validatedData.orderId || null,
+        // Handover code for deliveries. Issued to the CUSTOMER and withheld
+        // from the courier, so being able to produce it is evidence the
+        // courier was face to face with the recipient (BE-005).
+        deliveryCode: isDeliveryTask(validatedData.taskType as TaskType)
+          ? generateDeliveryCode()
+          : null,
         status: 'CREATED',
         
         pickupAddress: validatedData.pickupAddress,

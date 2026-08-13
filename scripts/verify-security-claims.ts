@@ -209,7 +209,56 @@ function main() {
       : 'ratings are never returned with the rater attached'
   );
 
-  stage('STAGE 4  claims that ARE true are left alone');
+  stage('STAGE 4  messages are encrypted at rest (the BE-004 decision)');
+
+  // The product decision: accurate non-E2EE messaging WITH real encryption at
+  // rest, rather than prematurely shipping end-to-end encryption. Both halves
+  // are asserted — the encryption exists, and no surface overclaims it.
+  const crypto = readFileSync('src/lib/crypto/field-encryption.ts', 'utf8');
+  check(
+    'message contents are encrypted before storage',
+    crypto.includes('aes-256-gcm') && crypto.includes('encryptField'),
+    'AES-256-GCM, authenticated — tampered ciphertext fails rather than decrypting to altered text'
+  );
+  check(
+    'each record gets a fresh random IV',
+    /randomBytes\(IV_LENGTH\)/.test(crypto),
+    'without it, identical messages produce identical ciphertext and short replies leak by pattern'
+  );
+  check(
+    'the stored format is versioned for key rotation',
+    crypto.includes("const VERSION = 'v1'") && crypto.includes('isEncrypted'),
+    'old rows keep decrypting under their own scheme; no flag-day migration'
+  );
+
+  // Every read path must decrypt, or users see ciphertext; every write path
+  // must encrypt, or the protection is partial and silently so.
+  const chatPaths: Array<[string, 'read' | 'write']> = [
+    ['src/app/api/messages/route.ts', 'write'],
+    ['src/app/api/chat/[conversationId]/send/route.ts', 'write'],
+    ['src/app/api/chat/[conversationId]/messages/route.ts', 'read'],
+    ['src/app/api/chat/conversations/route.ts', 'read'],
+  ];
+  const unwired = chatPaths.filter(([f, dir]) => {
+    const src = readFileSync(f, 'utf8');
+    return dir === 'write' ? !src.includes('encryptField') : !src.includes('decryptField');
+  });
+  check(
+    'every chat read and write path is wired to the cipher',
+    unwired.length === 0,
+    unwired.length
+      ? `NOT WIRED: ${unwired.map(([f]) => f).join(', ')}`
+      : `${chatPaths.length} paths encrypt on write and decrypt on read`
+  );
+
+  const sendSrc = readFileSync('src/app/api/chat/[conversationId]/send/route.ts', 'utf8');
+  check(
+    'the audit log does not store message bodies in the clear',
+    sendSrc.includes('contentLength') && !/newValues: \{ content: body\.content/.test(sendSrc),
+    'an audit trail holding plaintext would undo the encryption beside it'
+  );
+
+  stage('STAGE 5  claims that ARE true are left alone');
 
   // Stated for the record: these survive the audit deliberately.
   const otp = readFileSync('src/lib/auth/otp-service.ts', 'utf8');

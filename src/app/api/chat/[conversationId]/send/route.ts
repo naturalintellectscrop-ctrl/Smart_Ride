@@ -13,6 +13,7 @@ import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 import { z } from 'zod';
 import { NextResponse } from 'next/server';
+import { encryptField } from '@/lib/crypto/field-encryption';
 
 // Zod schema for message validation
 const sendMessageSchema = z.object({
@@ -90,7 +91,8 @@ export async function POST(
       data: {
         conversationId,
         senderId: decoded.userId,
-        content: body.content,
+        // Encrypted at rest (BE-004); the server keeps the key.
+        content: encryptField(body.content),
         type: body.type,
         metadata: body.metadata ? JSON.stringify(body.metadata) : null,
         isRead: false,
@@ -108,7 +110,7 @@ export async function POST(
       id: message.id,
       conversationId: message.conversationId,
       senderId: message.senderId,
-      content: message.content,
+      content: body.content,
       type: message.type,
       mediaUrl: message.mediaUrl,
       mediaType: message.mediaType,
@@ -127,7 +129,9 @@ export async function POST(
       actorId: decoded.userId,
       userId: decoded.userId,
       description: `Message sent in conversation ${conversationId}`,
-      newValues: { content: body.content, type: body.type },
+      // Length only: an audit trail that stores message bodies in the clear
+      // would undo the encryption it sits beside.
+      newValues: { contentLength: body.content.length, type: body.type },
       source: 'MOBILE_APP',
     });
 
@@ -148,7 +152,7 @@ export async function POST(
             id: message.id,
             conversationId,
             senderId: decoded.userId,
-            content: message.content,
+            content: body.content,
             type: message.type,
             createdAt: message.createdAt.toISOString(),
           });

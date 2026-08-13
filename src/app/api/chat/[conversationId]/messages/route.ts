@@ -7,6 +7,7 @@ import { NextRequest } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken, extractTokenFromHeader } from '@/lib/auth/jwt';
 import { successResponse, errorResponse, unauthorizedResponse, serverErrorResponse, forbiddenResponse, notFoundResponse } from '@/lib/api/response';
+import { decryptField } from '@/lib/crypto/field-encryption';
 
 export async function GET(
   request: NextRequest,
@@ -71,7 +72,7 @@ export async function GET(
       id: msg.id,
       conversationId: msg.conversationId,
       senderId: msg.senderId,
-      content: msg.content,
+      content: decryptField(msg.content),
       type: msg.type,
       mediaUrl: msg.mediaUrl,
       mediaType: msg.mediaType,

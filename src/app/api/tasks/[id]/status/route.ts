@@ -11,6 +11,7 @@ import { TaskStatus } from '@prisma/client';
 import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { db, resetRLSContext, setServiceRoleContext } from '@/lib/db';
+import { canCompleteDelivery } from '@/lib/delivery/delivery-service';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -90,6 +91,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { success: false, error: 'Not authorized to transition this task' },
         { status: 403 }
       );
+    }
+
+    // A delivery cannot complete without proof (BE-005). Enforced here rather
+    // than in the client, because if completion were still possible without
+    // proof then capturing it would be optional in practice — and the
+    // deliveries missing proof would be exactly the disputed ones.
+    // Admins may override: a genuine delivery whose photo upload failed still
+    // has to be closable by a human.
+    if (
+      (status === TaskStatus.DELIVERED || status === TaskStatus.COMPLETED) &&
+      !isAdmin
+    ) {
+      const gate = await canCompleteDelivery(taskId);
+      if (!gate.allowed) {
+        return NextResponse.json(
+          { success: false, error: gate.reason, code: 'PROOF_REQUIRED' },
+          { status: 409 }
+        );
+      }
     }
 
     // Execute transition via state machine

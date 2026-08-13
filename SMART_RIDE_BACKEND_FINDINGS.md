@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-014**.
+**ID allocation:** next free ID is **BE-015**.
 
 ---
 
@@ -24,15 +24,16 @@ finding is explicitly marked as already fixed locally.
 | BE-002 | Order line-item `unitPrice` still comes from the client | P0 | RESOLVED | Financial |
 | BE-003 | Two divergent withdrawal implementations | P1 | RESOLVED | Financial |
 | BE-004 | Chat claimed end-to-end encryption that does not exist | P1 | RESOLVED | Security |
-| BE-005 | `DELIVERY_PERSONNEL` dispatched work it had no UI to accept | P1 | FIXED_PENDING_VERIFICATION | Workflow |
+| BE-005 | `DELIVERY_PERSONNEL` dispatched work it had no UI to accept | P1 | RESOLVED | Workflow |
 | BE-006 | `riderRole` enum drift written by onboarding | P1 | RESOLVED — no backfill owed | Data |
 | BE-007 | Dead wallet API surface with no callers | P3 | RESOLVED — receipts screen specced as Golden Screen #43 | Backend |
 | BE-008 | `getFareEstimate` signature left incomplete mid-edit | P2 | FIXED_PENDING_VERIFICATION | Backend |
 | BE-009 | Surge applied silently, broke the minimum-fare flag | P2 | FIXED_PENDING_VERIFICATION | Backend |
-| BE-010 | Push registration fails on the release build | P1 | OPEN | Infrastructure |
+| BE-010 | Push registration fails on the release build | P1 | DIAGNOSED — one Console change owed | Infrastructure |
 | BE-011 | Withdrawals were not idempotent | P1 | RESOLVED | Financial |
 | BE-012 | Ratings were one-way; sub-scores written by nothing | P1 | RESOLVED | Data |
 | BE-013 | Three unreconciled stores held the same rating | P1 | RESOLVED | Data |
+| BE-014 | Intermittent P2028 in verification runs | P2 | RESOLVED | Infrastructure |
 
 ---
 
@@ -367,10 +368,37 @@ storage". `POST /api/prescriptions` stores `imageUrl` as a plain URL and sets
 encrypts the file. That is a health record, so the claim mattered more than the
 chat one.
 
-**Decision on the platform claim: E2E is not implemented and is not being
-implemented here.** Whether messages *should* be encrypted at rest remains the
-product decision this finding was opened to force. What has been removed is the
-assertion that it already is.
+**Decision on the platform claim — MADE, 2026-08-10.** The product decision:
+**accurate non-E2EE messaging with real encryption at rest**, rather than
+prematurely shipping end-to-end encryption.
+
+`src/lib/crypto/field-encryption.ts` encrypts message bodies with AES-256-GCM
+before storage. Authenticated, so a tampered ciphertext fails to decrypt rather
+than silently yielding altered plaintext; a fresh random IV per record, so
+identical messages do not produce identical ciphertext — without that, "yes" and
+"no" replies would be distinguishable by pattern alone. The stored format is
+version-prefixed (`v1:iv:tag:ciphertext`) so a future key rotation does not need
+a flag-day migration, and rows written before a key existed keep reading.
+
+**What this protects, stated precisely, because the whole finding is about not
+overclaiming:**
+
+- IT DOES protect message contents against someone who obtains the database — a
+  leaked backup, a stolen dump, a misconfigured replica, a support engineer
+  browsing rows. That is the realistic threat.
+- IT DOES NOT make messages unreadable to Smart Ride. The server holds the key,
+  deliberately, because the platform must be able to read a conversation to
+  adjudicate a dispute, investigate harassment, or answer a lawful request.
+
+All four chat read/write paths are wired (`api/messages`, `api/chat/*`), and the
+audit log now records message *length* rather than content — an audit trail
+holding plaintext would have undone the encryption sitting beside it.
+
+**Operational note:** encryption activates only when `MESSAGE_ENCRYPTION_KEY` is
+set (32+ random characters). Absent, the code degrades to plaintext rather than
+refusing to start — a platform that will not boot is worse than one storing what
+it stored yesterday — but `verify-production-config` reports it as a warning
+every run so it cannot pass unnoticed.
 
 All three now state properties that actually hold — contact details stay
 private, in-app only; prescriptions are visible only to the patient and their
@@ -440,7 +468,7 @@ withdrawal leaves no key behind to block a later real one.
 
 ## BE-005 — `DELIVERY_PERSONNEL` was dispatched work it had no UI to accept
 
-**Status:** FIXED_PENDING_VERIFICATION
+**Status:** RESOLVED
 **Priority:** P1
 **Category:** Workflow
 **Discovered by:** Screen Migration Session
@@ -491,6 +519,65 @@ Assign two concurrent deliveries to one DP rider and confirm both appear in
 `GET /tasks` and can be progressed independently.
 
 **Dependencies:** BE-006.
+
+### Resolution — Backend session, 2026-08-10
+
+Both remaining questions answered, and a third defect found while answering
+them.
+
+**1. Proof of delivery did not exist at all.** Not "the app does not collect
+it" — there was no photo, signature, code or timestamp field anywhere on
+`Task`. A courier could mark a parcel DELIVERED from anywhere, and a customer
+disputing "I never received it" left the platform with nothing to adjudicate
+on.
+
+Added: `deliveryCode`, `proofType`, `proofPhotoUrl`, `proofSignatureUrl`,
+`proofRecipientName`, `proofLatitude/Longitude`, `proofCapturedAt`, and a
+`ProofOfDeliveryType` enum (CODE / PHOTO / SIGNATURE / LEFT_WITH_NOTE —
+the last deliberately distinct, because it is a *claim*, not evidence, and so
+carries a higher bar: a photo of where the parcel was left).
+
+The important asymmetry: the handover code is issued to the **customer** and
+never returned to the courier. `GET /api/tasks/[id]/proof` returns it only when
+the caller is the client, and no task listing selects the column. A courier who
+could read it could "prove" a delivery they never made, which is the exact
+thing the code exists to prevent.
+
+Proof is validated, not merely accepted — a wrong code, a PHOTO with no photo,
+or a capture more than 1 km from the recorded drop-off are all refused. And it
+is a one-time act: re-submitting is rejected, so a courier cannot replace weak
+evidence after a dispute is raised.
+
+**Completion is gated on it.** `POST /api/tasks/[id]/status` refuses
+DELIVERED/COMPLETED with 409 `PROOF_REQUIRED` when a delivery has no proof —
+enforced server-side, because if completion were still possible without proof,
+capturing it would be optional in practice and the missing ones would be
+exactly the disputed ones. An **admin can override**: a genuine delivery whose
+photo upload failed still has to be closable by a human.
+
+**2. `GET /tasks` does return all concurrent assignments** for a DP rider — it
+is role-scoped with no artificial limit. `/tasks/active` uses `findFirst` and
+returns one by design; `getActiveAssignments()` is the multi-job accessor, and
+a courier holding three parcels sees all three, ordered by urgency. A courier
+sees only their own.
+
+**3. A defect found while testing: claiming was a race.** `POST
+/tasks/[id]/accept` read the task, checked it was unclaimed, then let the state
+machine write `riderId` unconditionally — the same read-then-write that let two
+withdrawals drain one wallet. Two couriers accepting the same offer within the
+dispatch window both passed the check and both wrote; the second silently won,
+and the first spent the trip believing they held a job that had been reassigned
+under them.
+
+`claimTask()` is now a single conditional UPDATE — assign only if the row still
+has no rider (or already has this one) and is still claimable — so the loser
+matches zero rows and is *told*, rather than being overwritten. Idempotent, so
+a courier re-sending their own accept keeps the job. If the state transition
+then fails, the claim is released rather than stranding the job.
+
+**Verification:** `bun scripts/verify-delivery-personnel.ts` — 27 checks,
+including a real race (two couriers, then a four-way stampede, against one
+task) rather than an assertion about the shape of the code.
 
 ---
 
@@ -793,6 +880,40 @@ Installations API disabled on the Cloud project, an API-key application
 restriction that does not include the release signing certificate's SHA-1, or a
 `google-services.json` regenerated without the release key.
 
+### Diagnosis — Backend session, 2026-08-10
+
+**Root cause identified: `API_KEY_ANDROID_APP_BLOCKED`.**
+
+`scripts/verify-firebase-config.ts` probes the Firebase Installations API with
+the exact key the app ships, and gets:
+
+```
+HTTP 403  API_KEY_ANDROID_APP_BLOCKED
+"Requests from this Android client application <empty> are blocked."
+```
+
+That is the server-side form of the device's `FIS_AUTH_ERROR`. Of the three
+candidates recorded above, the evidence rules two out:
+
+- **Signing certificate — RULED OUT.** The release keystore's SHA-1
+  (`98EA9B4B1847…`) *is* registered; it is one of three certificate hashes in
+  `google-services.json`.
+- **Package mismatch — RULED OUT** (already, and re-asserted by the suite):
+  gradle `applicationId` and the Firebase package both read `ug.smartride.app`.
+- **API key restriction — CONFIRMED.** The key carries an Android application
+  restriction that does not admit this app.
+
+**The single change owed, in Google Cloud Console** (not Firebase Console —
+this is the key's own restriction): *APIs & Services > Credentials > the
+Android API key > Application restrictions* — add package `ug.smartride.app`
+with the release SHA-1, or relax the restriction. Re-run
+`bun scripts/verify-firebase-config.ts` afterwards; STAGE 3 turning green means
+devices will obtain tokens.
+
+**Also resolved:** the `scheme` gap recorded below is closed —
+`app.json` declares `scheme: "smartride"`, so a tapped notification can
+deep-link once tokens are issued.
+
 ### Related gap, not a defect
 
 `app.json` declares no `scheme`. Nothing in the app depends on one today —
@@ -1030,6 +1151,83 @@ ripple through every consumer - but `totalRatings` is written truthfully, so
 "5.0 from zero ratings" stays detectable.
 
 **Verification:** `bun scripts/verify-two-way-ratings.ts` - 20 checks.
+
+---
+
+## ARCHITECTURE DECISION — passenger ratings do not influence dispatch
+
+**Recorded:** 2026-08-10 | **Arises from:** BE-012 | **Status:** standing decision
+
+Drivers can now rate passengers (BE-012). Those scores are **stored and shown
+to nobody automatically**. Specifically, `User.passengerRating` does not feed:
+
+- dispatch ranking or matching order
+- pricing, surge, or any fee
+- what a driver sees on an incoming offer
+- any automated suspension, restriction or fraud signal
+
+**Why this is a decision rather than an omission.** Letting a passenger score
+affect dispatch changes who gets served, and it does so through a signal with
+known failure modes: drivers rate down for reasons unrelated to conduct — a
+short fare, a walk-up flight of stairs, a neighbourhood — and a low-rated
+passenger has no equivalent recourse to a driver, who has an appeals path
+through the reputation system. Wiring it in silently would embed that into who
+can get a ride, without anyone choosing it.
+
+**What would have to be settled before changing this:** whether a passenger can
+see their own score, whether they can contest it, what a driver is told when
+they decline, and what score is low enough to matter. Those are product and
+policy questions, not implementation ones.
+
+**How the decision is held in place.** `verify-two-way-ratings` asserts that
+`src/lib/dispatch/types.ts` does not reference `passengerRating`, and that the
+rate route contains no automated consumer. Turning this on is therefore a
+deliberate act that fails a test first — which is the point.
+
+---
+
+## BE-014 — Intermittent P2028 in verification runs
+
+**Status:** RESOLVED | **Priority:** P2 | **Category:** Infrastructure
+**Resolved by:** Backend session, 2026-08-10
+
+**Evidence:** suites failed non-deterministically inside `verify-all` — a
+different one each time — and passed standalone. It had been assumed to be
+connection-pool exhaustion and papered over by raising the inter-suite cooldown
+to 12 seconds. That assumption was wrong.
+
+**Measured, not guessed:**
+
+```
+12 concurrent PLAIN queries        -> 12/12 succeed
+12 concurrent interactive TXNS     ->  3/12 succeed      P2028
+failures begin at concurrency       ->  4                (pool allowed 17)
+single round trip to the pooler     -> 750ms - 2539ms
+maxWait 2000ms (default) @ 12 conc  ->  2/12
+maxWait 10000ms          @ 12 conc  -> 12/12
+connection_limit=10      @ 24 conc  -> 24/24
+```
+
+**Two real causes, neither of them the pool being too small:**
+
+1. **Prisma's default transaction `maxWait` is 2000 ms** — how long a
+   transaction queues for a connection before giving up. A single round trip to
+   the eu-west-1 pooler measures up to 2.5 s from here, so the default covered
+   roughly *zero* queued transactions. Fixed at the client with `maxWait:
+   15000`, paired with `timeout: 15000` so a transaction still cannot hold a
+   connection indefinitely.
+
+2. **`connection_limit` is deliberately 1** — and correctly so: RLS context
+   lives in PostgreSQL *session* state (`SET ROLE`, `SET app.current_user_id`),
+   so a `SET` and the queries depending on it must share one connection.
+   Production keeps that. The **test runner** now sets
+   `DB_CONNECTION_LIMIT=10` for its own processes only; the suites use the
+   service role rather than per-user RLS context, so the constraint does not
+   apply to them.
+
+**No production database setting was changed.** The cooldown is back to 5 s,
+because it is once again only covering what it was ever for — letting sockets
+close between processes — rather than masking a defect.
 
 ---
 

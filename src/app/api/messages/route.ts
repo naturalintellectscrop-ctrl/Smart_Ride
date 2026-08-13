@@ -7,6 +7,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { verifyAccessToken } from '@/lib/auth/jwt';
+import { encryptField, decryptField } from '@/lib/crypto/field-encryption';
+
+/**
+ * Decrypt every message body inside a conversation payload.
+ *
+ * Written as a shape-tolerant walk rather than a typed mapper because the two
+ * call sites include different relations; the only invariant is that any
+ * `messages[].content` is a stored field that may be ciphertext.
+ */
+function decryptConversation<T>(conversation: T): T {
+  const c = conversation as unknown as {
+    messages?: Array<{ content?: string | null }>;
+    lastMessage?: { content?: string | null } | null;
+  };
+  if (Array.isArray(c?.messages)) {
+    for (const m of c.messages) {
+      if (typeof m?.content === 'string') m.content = decryptField(m.content);
+    }
+  }
+  if (c?.lastMessage && typeof c.lastMessage.content === 'string') {
+    c.lastMessage.content = decryptField(c.lastMessage.content);
+  }
+  return conversation;
+}
+
 
 // ============================================
 // RLS context choice for this route
@@ -91,7 +116,10 @@ export async function GET(request: NextRequest) {
         data: { isRead: true }
       });
 
-      return NextResponse.json({ conversation });
+      // Decrypt on the way out. Rows written before a key was configured pass
+      // through untouched — the version prefix distinguishes them — so
+      // enabling encryption does not require backfilling history.
+      return NextResponse.json({ conversation: decryptConversation(conversation) });
     }
 
     // Get all conversations for the user
@@ -141,7 +169,9 @@ export async function GET(request: NextRequest) {
       unreadCount: unreadMap.get(conv.id) || 0,
     }));
 
-    return NextResponse.json({ conversations: conversationsWithUnread });
+    return NextResponse.json({
+      conversations: conversationsWithUnread.map(decryptConversation),
+    });
   } catch (error) {
     console.error('Error fetching conversations:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch conversations' },
@@ -210,7 +240,10 @@ export async function POST(request: NextRequest) {
         data: {
           conversationId,
           senderId: decoded.userId,
-          content: message,
+          // Encrypted at rest (BE-004). The server holds the key and can still
+          // read this for moderation and dispute resolution — that is the
+          // deliberate non-E2EE model, and no UI may claim otherwise.
+          content: encryptField(message),
           type: 'TEXT',
           isRead: false,
         }
@@ -245,7 +278,7 @@ export async function POST(request: NextRequest) {
           data: {
             conversationId: existingConv.id,
             senderId: decoded.userId,
-            content: message,
+            content: encryptField(message),
             type: 'TEXT',
             isRead: false,
           }
@@ -273,7 +306,7 @@ export async function POST(request: NextRequest) {
           messages: {
             create: {
               senderId: decoded.userId,
-              content: message,
+              content: encryptField(message),
               type: 'TEXT',
               isRead: false,
             }

@@ -93,6 +93,11 @@ const SUITES: Suite[] = [
     covers: 'a ride offer rings audibly, foreground and backgrounded',
   },
   {
+    name: 'delivery-personnel',
+    file: 'scripts/verify-delivery-personnel.ts',
+    covers: 'BE-005: atomic claiming, concurrent assignments, proof of delivery',
+  },
+  {
     name: 'core-journey',
     file: 'scripts/verify-client-driver-journey.ts',
     covers: 'book -> dispatch -> ride -> pay -> rate -> receipt -> notify',
@@ -110,16 +115,43 @@ const SUITES: Suite[] = [
 ];
 
 /**
- * Seconds to wait between suites so pooler connections can drain. Five was
- * enough at ten suites; at eleven the pooler started refusing connections
- * mid-run and suites failed non-deterministically — a different one each time,
- * which is the signature of contention rather than a real regression.
+ * Seconds to wait between suites so pooler connections can drain.
+ *
+ * This was raised to 12 while the intermittent failures were assumed to be
+ * pool exhaustion. They were not: measurement showed 12 concurrent PLAIN
+ * queries all succeed while 12 concurrent interactive TRANSACTIONS returned
+ * 3/12, and the failures began at a concurrency of four against a pool that
+ * allowed seventeen. The causes were Prisma's 2000ms default transaction
+ * `maxWait` against a multi-second round trip, and the deliberate
+ * single-connection pool — both now addressed directly, so the cooldown is
+ * back to covering what it was ever for: letting sockets close between
+ * processes.
  */
-const COOLDOWN_SECONDS = 12;
+const COOLDOWN_SECONDS = 5;
 
 function run(file: string): Promise<{ code: number; output: string }> {
   return new Promise(resolve => {
-    const child = spawn('bun', [file], { shell: true });
+    const child = spawn('bun', [file], {
+      shell: true,
+      env: {
+        ...process.env,
+        // Production pins connection_limit to 1 on purpose: RLS context lives
+        // in PostgreSQL *session* state (SET ROLE + SET app.current_user_id),
+        // so a SET and the queries depending on it must share one connection.
+        // Correct, and it also means concurrent transactions serialise.
+        //
+        // These suites deliberately fire concurrent writes to prove the
+        // atomicity guards hold. With a pool of 1 and a ~750ms-2.5s round trip
+        // to the eu-west-1 pooler, every racer after the first queues behind a
+        // connection and trips P2028 before it reaches the database — which
+        // looked like flakiness but was the runner starving itself.
+        //
+        // Raised HERE, for the test process only. The suites use the service
+        // role rather than per-user RLS context, so the single-connection
+        // constraint does not apply to them.
+        DB_CONNECTION_LIMIT: process.env.DB_CONNECTION_LIMIT || '10',
+      },
+    });
     let output = '';
     child.stdout.on('data', d => (output += d.toString()));
     child.stderr.on('data', d => (output += d.toString()));
