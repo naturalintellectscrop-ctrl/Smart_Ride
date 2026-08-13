@@ -95,7 +95,7 @@ function stripComments(src: string): string {
     .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, ' ');
 }
 
-function main() {
+async function main() {
   console.log('\n=== Security Claims (BE-004) ===');
 
   stage('STAGE 1  no surface claims a property the backend lacks');
@@ -257,6 +257,58 @@ function main() {
     sendSrc.includes('contentLength') && !/newValues: \{ content: body\.content/.test(sendSrc),
     'an audit trail holding plaintext would undo the encryption beside it'
   );
+
+  // Static assertions prove the cipher is WIRED. These prove it WORKS —
+  // running it with a real key, because "AES-256-GCM appears in the source"
+  // and "this actually protects a message" are different claims.
+  {
+    const prevKey = process.env.MESSAGE_ENCRYPTION_KEY;
+    process.env.MESSAGE_ENCRYPTION_KEY =
+      'verify-security-claims-fixed-test-key-32chars-min';
+    // Fresh module instance: the key is cached on first use.
+    delete require.cache?.[require.resolve?.('../src/lib/crypto/field-encryption') ?? ''];
+    const mod = await import('../src/lib/crypto/field-encryption?probe=' + Date.now());
+    const { encryptField, decryptField, isEncrypted } = mod as unknown as {
+      encryptField: (s: string) => string;
+      decryptField: (s: string) => string;
+      isEncrypted: (s: string) => boolean;
+    };
+
+    const msg = 'Meet me at the blue gate, I have your parcel';
+    const c1 = encryptField(msg);
+    const c2 = encryptField(msg);
+
+    check(
+      'a message round-trips through the cipher unchanged',
+      decryptField(c1) === msg,
+      'encrypt then decrypt returns the original text'
+    );
+    check(
+      'the same message encrypts to DIFFERENT ciphertext each time',
+      c1 !== c2 && isEncrypted(c1),
+      'a fixed IV would make short replies distinguishable by pattern alone'
+    );
+    check(
+      'rows written before a key existed still read',
+      decryptField('legacy plaintext row') === 'legacy plaintext row',
+      'the version prefix distinguishes them; enabling the key needs no backfill'
+    );
+
+    // The authentication half of AES-GCM: altered ciphertext must FAIL rather
+    // than decrypt to altered plaintext.
+    const parts = c1.split(':');
+    const body = Buffer.from(parts[3], 'base64');
+    body[0] ^= 0xff;
+    parts[3] = body.toString('base64');
+    check(
+      'tampered ciphertext is refused, not silently altered',
+      decryptField(parts.join(':')) === '[unable to decrypt]',
+      'GCM authentication rejects a modified record'
+    );
+
+    if (prevKey === undefined) delete process.env.MESSAGE_ENCRYPTION_KEY;
+    else process.env.MESSAGE_ENCRYPTION_KEY = prevKey;
+  }
 
   stage('STAGE 5  claims that ARE true are left alone');
 
