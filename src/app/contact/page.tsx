@@ -1,9 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
-import Logo from '@/components/Logo';
-import { MOBILE_APP_CONFIG } from '@/lib/config/mobile-access';
+import { MarketingHeader } from '@/components/marketing/MarketingHeader';
+import { MarketingFooter } from '@/components/marketing/MarketingFooter';
+import { Section } from '@/components/marketing/Section';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Mail, Phone, MapPin, MessageCircle, Check } from 'lucide-react';
 
 const contactChannels = [
@@ -77,221 +80,154 @@ export default function ContactPage() {
     }
   };
 
-  const inputClass =
-    'w-full rounded-xl border border-white/5 bg-[#252530] px-4 py-3.5 text-white placeholder-white/30 transition-colors focus:border-[#00FF88]/50 focus:outline-none focus:ring-1 focus:ring-[#00FF88]/50';
+  const fieldClass =
+    'border-white/15 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#00D97E] focus-visible:ring-[#00D97E]/30';
 
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
-      <nav className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-[#0D0D12]/90 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <Logo variant="dark" />
+    <div className="flex min-h-screen flex-col bg-[#0B0C0E] text-white">
+      <MarketingHeader />
 
-            <div className="hidden items-center gap-8 md:flex">
-              <Link href="/about" className="text-sm font-medium text-white/70 transition-colors hover:text-white">About</Link>
-              <Link href="/help" className="text-sm font-medium text-white/70 transition-colors hover:text-white">Help</Link>
-              <Link href="/contact" className="text-sm font-medium text-[#00FF88]">Contact</Link>
-              <Link href="/blog" className="text-sm font-medium text-white/70 transition-colors hover:text-white">Blog</Link>
-            </div>
+      <Section className="pb-12 pt-20 lg:pt-24">
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#00D97E]">
+          Contact
+        </span>
+        <h1 className="mt-5 text-balance font-[family-name:var(--font-plus-jakarta)] text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
+          Get in touch
+        </h1>
+        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/55">
+          If something went wrong on a trip, in-app support is quickest. For
+          everything else, use whichever of these suits you.
+        </p>
+      </Section>
 
-            <a
-              href={MOBILE_APP_CONFIG.storeLinks.playStore}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-xl bg-[#00FF88] px-5 py-2.5 text-sm font-semibold text-[#0D0D12] transition-colors hover:bg-[#00e07a]"
-            >
-              Get the app
-            </a>
-          </div>
-        </div>
-      </nav>
-
-      <section className="px-4 pb-12 pt-32 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <h1 className="text-4xl font-bold leading-tight text-white sm:text-5xl">
-            Get in touch
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg text-white/60">
-            If something went wrong on a trip, in-app support is quickest. For
-            everything else, use whichever of these suits you.
-          </p>
-        </div>
-      </section>
-
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
-            <div className="rounded-3xl border border-white/5 bg-[#1A1A1F] p-8">
-              <h2 className="mb-6 text-2xl font-bold text-white">Send us a message</h2>
-
-              {submitted ? (
-                <div className="rounded-xl border border-[#00FF88]/20 bg-[#00FF88]/10 p-6 text-center">
-                  <Check className="mx-auto mb-4 h-12 w-12 text-[#00FF88]" />
-                  <h3 className="mb-2 text-xl font-semibold text-white">Message sent</h3>
-                  <p className="text-white/60">
-                    It has reached our support inbox. We reply by email, so keep an
-                    eye on the address you gave us.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setSubmitted(false)}
-                    className="mt-6 text-sm font-semibold text-[#00FF88] hover:underline"
-                  >
-                    Send another message
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label htmlFor="name" className="mb-2 block text-sm font-medium text-white">
-                      Full name
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-                      required
-                      maxLength={100}
-                      className={inputClass}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="email" className="mb-2 block text-sm font-medium text-white">
-                      Email address
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
-                      required
-                      maxLength={200}
-                      className={inputClass}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="subject" className="mb-2 block text-sm font-medium text-white">
-                      Subject
-                    </label>
-                    <input
-                      type="text"
-                      id="subject"
-                      value={formData.subject}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, subject: e.target.value }))}
-                      required
-                      maxLength={150}
-                      className={inputClass}
-                    />
-                  </div>
-
-                  <div>
-                    <label htmlFor="message" className="mb-2 block text-sm font-medium text-white">
-                      Message
-                    </label>
-                    <textarea
-                      id="message"
-                      value={formData.message}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
-                      required
-                      rows={5}
-                      maxLength={4000}
-                      className={`${inputClass} resize-none`}
-                    />
-                  </div>
-
-                  {error && (
-                    <p
-                      role="alert"
-                      className="rounded-xl border border-[#F43F5E]/30 bg-[#F43F5E]/10 px-4 py-3 text-sm text-[#F43F5E]"
-                    >
-                      {error}
-                    </p>
+      <Section className="pt-4">
+        <div className="grid grid-cols-1 gap-16 lg:grid-cols-2">
+          <dl className="divide-y divide-white/10 border-t border-white/10 lg:order-2">
+            {contactChannels.map((channel) => (
+              <div key={channel.title} className="py-6">
+                <dt className="flex items-center gap-2.5">
+                  <channel.icon className="h-4 w-4 shrink-0 text-[#00D97E]" />
+                  <span className="font-semibold text-white">{channel.title}</span>
+                </dt>
+                <dd className="mt-2 pl-[26px]">
+                  <p className="mb-1 text-sm text-white/45">{channel.detail}</p>
+                  {channel.href ? (
+                    <a href={channel.href} className="text-white transition-colors hover:text-[#00D97E]">
+                      {channel.value}
+                    </a>
+                  ) : (
+                    <p className="text-white/70">{channel.value}</p>
                   )}
+                </dd>
+              </div>
+            ))}
+          </dl>
 
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full rounded-xl bg-[#00FF88] py-4 font-semibold text-[#0D0D12] transition-colors hover:bg-[#00e07a] disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {isSubmitting ? 'Sending...' : 'Send message'}
-                  </button>
-                </form>
-              )}
-            </div>
+          <div className="lg:order-1">
+            <h2 className="mb-8 text-2xl font-semibold text-white">Send us a message</h2>
 
-            <dl className="divide-y divide-white/10 border-t border-white/10">
-              {contactChannels.map((channel) => (
-                <div key={channel.title} className="py-6">
-                  <dt className="flex items-center gap-2.5">
-                    <channel.icon className="h-4 w-4 shrink-0 text-[#00FF88]" />
-                    <span className="font-semibold text-white">{channel.title}</span>
-                  </dt>
-                  <dd className="mt-2 pl-[26px]">
-                    <p className="mb-1 text-sm text-white/50">{channel.detail}</p>
-                    {channel.href ? (
-                      <a href={channel.href} className="text-[#00FF88] hover:underline">
-                        {channel.value}
-                      </a>
-                    ) : (
-                      <p className="text-white/70">{channel.value}</p>
-                    )}
-                  </dd>
+            {submitted ? (
+              <div className="rounded-2xl border border-white/10 p-8 text-center">
+                <Check className="mx-auto mb-4 h-10 w-10 text-[#00D97E]" />
+                <h3 className="mb-2 text-xl font-semibold text-white">Message sent</h3>
+                <p className="text-white/55">
+                  It has reached our support inbox. We reply by email, so keep an
+                  eye on the address you gave us.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setSubmitted(false)}
+                  className="mt-6 text-sm font-semibold text-[#00D97E] hover:underline"
+                >
+                  Send another message
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div>
+                  <label htmlFor="name" className="mb-1.5 block text-sm font-medium text-white/70">
+                    Full name
+                  </label>
+                  <Input
+                    type="text"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+                    required
+                    maxLength={100}
+                    className={fieldClass}
+                  />
                 </div>
-              ))}
-            </dl>
+
+                <div>
+                  <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-white/70">
+                    Email address
+                  </label>
+                  <Input
+                    type="email"
+                    id="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                    required
+                    maxLength={200}
+                    className={fieldClass}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="subject" className="mb-1.5 block text-sm font-medium text-white/70">
+                    Subject
+                  </label>
+                  <Input
+                    type="text"
+                    id="subject"
+                    value={formData.subject}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, subject: e.target.value }))}
+                    required
+                    maxLength={150}
+                    className={fieldClass}
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="message" className="mb-1.5 block text-sm font-medium text-white/70">
+                    Message
+                  </label>
+                  <Textarea
+                    id="message"
+                    value={formData.message}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, message: e.target.value }))}
+                    required
+                    rows={5}
+                    maxLength={4000}
+                    className={fieldClass}
+                  />
+                </div>
+
+                {error && (
+                  <p
+                    role="alert"
+                    className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+                  >
+                    {error}
+                  </p>
+                )}
+
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={isSubmitting}
+                  className="w-full rounded-full bg-white text-[#0B0C0E] hover:bg-white/90"
+                >
+                  {isSubmitting ? 'Sending...' : 'Send message'}
+                </Button>
+              </form>
+            )}
           </div>
         </div>
-      </section>
+      </Section>
 
-      <footer className="border-t border-white/5 bg-[#0A0A0F] px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-12 grid grid-cols-1 gap-12 md:grid-cols-4">
-            <div className="col-span-1 md:col-span-2">
-              <Logo variant="dark" />
-              <p className="mt-6 max-w-md leading-relaxed text-white/50">
-                Rides, food, shopping, pharmacy and payments in one app. Built in
-                Kampala by Natural Intellects Corp.
-              </p>
-            </div>
-
-            <div>
-              <h4 className="mb-6 font-semibold text-white">Company</h4>
-              <ul className="space-y-4">
-                <li><Link href="/about" className="text-white/50 transition-colors hover:text-[#00FF88]">About</Link></li>
-                <li><Link href="/help" className="text-white/50 transition-colors hover:text-[#00FF88]">Help centre</Link></li>
-                <li><Link href="/contact" className="text-white/50 transition-colors hover:text-[#00FF88]">Contact</Link></li>
-                <li><Link href="/blog" className="text-white/50 transition-colors hover:text-[#00FF88]">Blog</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="mb-6 font-semibold text-white">Contact</h4>
-              <ul className="space-y-4">
-                <li className="text-white/50">
-                  <span className="text-white">Email:</span>{' '}
-                  <a href="mailto:support@smartride.ug" className="transition-colors hover:text-[#00FF88]">support@smartride.ug</a>
-                </li>
-                <li className="text-white/50">
-                  <span className="text-white">Phone:</span>{' '}
-                  <a href="tel:+256785710818" className="transition-colors hover:text-[#00FF88]">+256 785 710 818</a>
-                </li>
-                <li className="text-white/50">
-                  <span className="text-white">Location:</span> Kampala, Uganda
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-white/5 pt-8">
-            <p className="text-sm text-white/30">
-              © {new Date().getFullYear()} Smart Ride, Natural Intellects Corp.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }

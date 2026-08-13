@@ -1,17 +1,20 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
-import Logo from '@/components/Logo';
-import { MOBILE_APP_CONFIG } from '@/lib/config/mobile-access';
-import { ChevronDown, ShieldCheck, MapPin, Headphones, ArrowRight } from 'lucide-react';
+import { MarketingHeader } from '@/components/marketing/MarketingHeader';
+import { MarketingFooter } from '@/components/marketing/MarketingFooter';
+import { Section } from '@/components/marketing/Section';
+import { SectionHeading } from '@/components/marketing/SectionHeading';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { ShieldCheck, MapPin, Headphones, ArrowRight } from 'lucide-react';
 
-interface FAQItem {
-  question: string;
-  answer: string;
-}
-
-const faqData: FAQItem[] = [
+const faqData = [
   {
     question: 'How do I book a ride?',
     answer:
@@ -60,257 +63,114 @@ const faqData: FAQItem[] = [
 ];
 
 const safetyFeatures = [
-  {
-    icon: ShieldCheck,
-    title: 'Verified riders',
-    description:
-      'Every rider submits an ID, a licence and vehicle registration, and we check them before their first trip.',
-  },
-  {
-    icon: MapPin,
-    title: 'Live trip sharing',
-    description:
-      'Share your trip with someone you trust and they can follow your location until you arrive.',
-  },
-  {
-    icon: Headphones,
-    title: 'SOS button',
-    description:
-      'One tap alerts our support team and shares your live location with your emergency contacts.',
-  },
+  { icon: ShieldCheck, title: 'Verified riders', description: 'Every rider submits an ID, a licence and vehicle registration, and we check them before their first trip.' },
+  { icon: MapPin, title: 'Live trip sharing', description: 'Share your trip with someone you trust and they can follow your location until you arrive.' },
+  { icon: Headphones, title: 'SOS button', description: 'One tap alerts our support team and shares your live location with your emergency contacts.' },
 ];
 
 const paymentOptions = [
-  {
-    label: 'MTN',
-    name: 'MTN MoMo',
-    description: 'Pay straight from your MTN Mobile Money account',
-    swatch: '#FFCC00',
-    text: '#0D0D12',
-  },
-  {
-    label: 'A',
-    name: 'Airtel Money',
-    description: 'Pay from your Airtel Money wallet',
-    swatch: '#ED1C24',
-    text: '#FFFFFF',
-  },
-  {
-    label: 'UGX',
-    name: 'Cash',
-    description: 'Pay the rider in cash at the end of your trip',
-    swatch: '#00FF88',
-    text: '#0D0D12',
-  },
+  { label: 'MTN', name: 'MTN MoMo', description: 'Pay straight from your MTN Mobile Money account', swatch: '#FFCC00', text: '#0B0C0E' },
+  { label: 'A', name: 'Airtel Money', description: 'Pay from your Airtel Money wallet', swatch: '#ED1C24', text: '#FFFFFF' },
+  { label: 'UGX', name: 'Cash', description: 'Pay the rider in cash at the end of your trip', swatch: '#00D97E', text: '#0B0C0E' },
 ];
 
-function FAQAccordion({
-  item,
-  isOpen,
-  onClick,
-}: {
-  item: FAQItem;
-  isOpen: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <div className="border-b border-white/5 last:border-0">
-      <button
-        onClick={onClick}
-        aria-expanded={isOpen}
-        className="flex w-full items-center justify-between py-5 text-left"
-      >
-        <span className="pr-8 font-medium text-white">{item.question}</span>
-        <ChevronDown
-          className={`h-5 w-5 shrink-0 text-[#00FF88] transition-transform ${
-            isOpen ? 'rotate-180' : ''
-          }`}
-        />
-      </button>
-      {isOpen && (
-        <p className="pb-5 leading-relaxed text-white/60">{item.answer}</p>
-      )}
-    </div>
-  );
-}
-
 export default function HelpPage() {
-  const [openFAQ, setOpenFAQ] = useState<number | null>(0);
-
   return (
-    <div className="min-h-screen bg-[#0D0D12]">
-      <nav className="fixed inset-x-0 top-0 z-50 border-b border-white/5 bg-[#0D0D12]/90 backdrop-blur-md">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <Logo variant="dark" />
+    <div className="flex min-h-screen flex-col bg-[#0B0C0E] text-white">
+      <MarketingHeader />
 
-            <div className="hidden items-center gap-8 md:flex">
-              <Link href="/about" className="text-sm font-medium text-white/70 transition-colors hover:text-white">About</Link>
-              <Link href="/help" className="text-sm font-medium text-[#00FF88]">Help</Link>
-              <Link href="/contact" className="text-sm font-medium text-white/70 transition-colors hover:text-white">Contact</Link>
-              <Link href="/blog" className="text-sm font-medium text-white/70 transition-colors hover:text-white">Blog</Link>
-            </div>
+      <Section className="pb-12 pt-20 lg:pt-24">
+        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#00D97E]">
+          Help centre
+        </span>
+        <h1 className="mt-5 text-balance font-[family-name:var(--font-plus-jakarta)] text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
+          Answers to what people ask most
+        </h1>
+        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/55">
+          If yours isn&apos;t here, our support team can pick it up from the app.
+        </p>
+      </Section>
 
-            <a
-              href={MOBILE_APP_CONFIG.storeLinks.playStore}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-xl bg-[#00FF88] px-5 py-2.5 text-sm font-semibold text-[#0D0D12] transition-colors hover:bg-[#00e07a]"
-            >
-              Get the app
-            </a>
-          </div>
-        </div>
-      </nav>
-
-      <section className="px-4 pb-12 pt-32 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <h1 className="text-4xl font-bold leading-tight text-white sm:text-5xl">
-            Help
-          </h1>
-          <p className="mt-6 max-w-2xl text-lg text-white/60">
-            Answers to the questions we get most. If yours is not here, our
-            support team can pick it up from the app.
-          </p>
-        </div>
-      </section>
-
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl [&>*]:max-w-3xl">
-          <h2 className="mb-8 text-3xl font-bold text-white">
-            Frequently asked questions
-          </h2>
-
-          <div className="rounded-2xl border border-white/5 bg-[#1A1A1F] px-6">
-            {faqData.map((item, index) => (
-              <FAQAccordion
-                key={item.question}
-                item={item}
-                isOpen={openFAQ === index}
-                onClick={() => setOpenFAQ(openFAQ === index ? null : index)}
-              />
+      <Section className="pt-4">
+        <div className="max-w-3xl">
+          <h2 className="mb-6 text-2xl font-semibold text-white">Frequently asked questions</h2>
+          <Accordion type="single" collapsible defaultValue={faqData[0].question} className="border-t border-white/10">
+            {faqData.map((item) => (
+              <AccordionItem key={item.question} value={item.question} className="border-white/10">
+                <AccordionTrigger className="py-5 text-base font-medium text-white hover:no-underline">
+                  {item.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm leading-relaxed text-white/55">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
             ))}
-          </div>
+          </Accordion>
         </div>
-      </section>
+      </Section>
 
-      <section className="bg-[#0A0A0F] px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="mb-8 text-3xl font-bold text-white">Staying safe</h2>
+      <Section tone="contrast">
+        <SectionHeading eyebrow="Safety" title="Staying safe" />
+        <div className="mt-12 grid grid-cols-1 border-t border-white/10 md:grid-cols-3">
+          {safetyFeatures.map((feature) => (
+            <div
+              key={feature.title}
+              className="border-b border-white/10 py-6 md:border-l md:px-8 md:first:border-l-0 md:first:pl-0"
+            >
+              <div className="flex items-center gap-2.5">
+                <feature.icon className="h-4 w-4 shrink-0 text-[#00D97E]" />
+                <h3 className="font-semibold text-white">{feature.title}</h3>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-white/50">{feature.description}</p>
+            </div>
+          ))}
+        </div>
+      </Section>
 
-          <div className="grid grid-cols-1 border-t border-white/10 md:grid-cols-3">
-            {safetyFeatures.map((feature) => (
-              <div
-                key={feature.title}
-                className="border-b border-white/10 py-6 md:border-l md:px-8 md:first:border-l-0 md:first:pl-0"
+      <Section>
+        <SectionHeading eyebrow="Payments" title="Ways to pay" />
+        <dl className="mt-12 max-w-3xl divide-y divide-white/10 border-t border-white/10">
+          {paymentOptions.map((option) => (
+            <div key={option.name} className="flex items-center gap-5 py-5">
+              <span
+                className="flex h-11 w-16 shrink-0 items-center justify-center rounded-md text-sm font-bold"
+                style={{ backgroundColor: option.swatch, color: option.text }}
               >
-                <div className="flex items-center gap-2.5">
-                  <feature.icon className="h-4 w-4 shrink-0 text-[#00FF88]" />
-                  <h3 className="font-semibold text-white">{feature.title}</h3>
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-white/55">
-                  {feature.description}
-                </p>
+                {option.label}
+              </span>
+              <div>
+                <dt className="font-semibold text-white">{option.name}</dt>
+                <dd className="text-sm text-white/45">{option.description}</dd>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="mb-8 text-3xl font-bold text-white">Ways to pay</h2>
-
-          <dl className="max-w-3xl divide-y divide-white/10 border-t border-white/10">
-            {paymentOptions.map((option) => (
-              <div key={option.name} className="flex items-center gap-5 py-5">
-                <span
-                  className="flex h-11 w-16 shrink-0 items-center justify-center rounded-md text-sm font-bold"
-                  style={{ backgroundColor: option.swatch, color: option.text }}
-                >
-                  {option.label}
-                </span>
-                <div>
-                  <dt className="font-semibold text-white">{option.name}</dt>
-                  <dd className="text-sm text-white/50">{option.description}</dd>
-                </div>
-              </div>
-            ))}
-          </dl>
-        </div>
-      </section>
-
-      <section className="bg-[#0A0A0F] px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <h2 className="mb-4 text-3xl font-bold text-white">Still stuck?</h2>
-          <p className="mb-8 max-w-2xl text-white/60">
-            For a problem with a trip that is happening now, use in-app support.
-            It reaches us with your trip details attached.
-          </p>
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <Link
-              href="/contact"
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00FF88] px-8 py-4 font-semibold text-[#0D0D12] transition-colors hover:bg-[#00e07a]"
-            >
-              Contact support
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-            <a
-              href="mailto:support@smartride.ug"
-              className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-white/20 px-8 py-4 font-semibold text-white transition-colors hover:bg-white/5"
-            >
-              Email us
-            </a>
-          </div>
-        </div>
-      </section>
-
-      <footer className="border-t border-white/5 bg-[#0A0A0F] px-4 py-16 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-7xl">
-          <div className="mb-12 grid grid-cols-1 gap-12 md:grid-cols-4">
-            <div className="col-span-1 md:col-span-2">
-              <Logo variant="dark" />
-              <p className="mt-6 max-w-md leading-relaxed text-white/50">
-                Rides, food, shopping, pharmacy and payments in one app. Built in
-                Kampala by Natural Intellects Corp.
-              </p>
             </div>
+          ))}
+        </dl>
+      </Section>
 
-            <div>
-              <h4 className="mb-6 font-semibold text-white">Company</h4>
-              <ul className="space-y-4">
-                <li><Link href="/about" className="text-white/50 transition-colors hover:text-[#00FF88]">About</Link></li>
-                <li><Link href="/help" className="text-white/50 transition-colors hover:text-[#00FF88]">Help centre</Link></li>
-                <li><Link href="/contact" className="text-white/50 transition-colors hover:text-[#00FF88]">Contact</Link></li>
-                <li><Link href="/blog" className="text-white/50 transition-colors hover:text-[#00FF88]">Blog</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="mb-6 font-semibold text-white">Contact</h4>
-              <ul className="space-y-4">
-                <li className="text-white/50">
-                  <span className="text-white">Email:</span>{' '}
-                  <a href="mailto:support@smartride.ug" className="transition-colors hover:text-[#00FF88]">support@smartride.ug</a>
-                </li>
-                <li className="text-white/50">
-                  <span className="text-white">Phone:</span>{' '}
-                  <a href="tel:+256785710818" className="transition-colors hover:text-[#00FF88]">+256 785 710 818</a>
-                </li>
-                <li className="text-white/50">
-                  <span className="text-white">Location:</span> Kampala, Uganda
-                </li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-white/5 pt-8">
-            <p className="text-sm text-white/30">
-              © {new Date().getFullYear()} Smart Ride, Natural Intellects Corp.
-            </p>
-          </div>
+      <Section tone="contrast">
+        <h2 className="mb-4 text-3xl font-semibold text-white">Still stuck?</h2>
+        <p className="mb-8 max-w-2xl text-white/55">
+          For a problem with a trip that is happening now, use in-app support.
+          It reaches us with your trip details attached.
+        </p>
+        <div className="flex flex-col gap-4 sm:flex-row">
+          <Link
+            href="/contact"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 font-semibold text-[#0B0C0E] transition-colors hover:bg-white/90"
+          >
+            Contact support
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <a
+            href="mailto:support@smartride.ug"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-7 py-3.5 font-semibold text-white transition-colors hover:bg-white/5"
+          >
+            Email us
+          </a>
         </div>
-      </footer>
+      </Section>
+
+      <MarketingFooter />
     </div>
   );
 }
