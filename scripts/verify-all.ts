@@ -145,21 +145,24 @@ function run(file: string): Promise<{ code: number; output: string }> {
       shell: true,
       env: {
         ...process.env,
-        // Production pins connection_limit to 1 on purpose: RLS context lives
-        // in PostgreSQL *session* state (SET ROLE + SET app.current_user_id),
-        // so a SET and the queries depending on it must share one connection.
-        // Correct, and it also means concurrent transactions serialise.
+        // DO NOT raise DB_CONNECTION_LIMIT here.
         //
-        // These suites deliberately fire concurrent writes to prove the
-        // atomicity guards hold. With a pool of 1 and a ~750ms-2.5s round trip
-        // to the eu-west-1 pooler, every racer after the first queues behind a
-        // connection and trips P2028 before it reaches the database — which
-        // looked like flakiness but was the runner starving itself.
+        // It was set to 10 to relieve P2028 timeouts, and that was a mistake.
+        // RLS context is PostgreSQL *session* state (SET ROLE, SET
+        // app.current_user_id), so it lives on ONE connection. With a pool of
+        // 10, a route's setServiceRoleContext() lands on connection A while the
+        // queries that follow land on connection B — which carries no context,
+        // so RLS filters their rows out. Suites that drive real HTTP handlers
+        // then read a row that plainly exists and get null back: the
+        // delivery-adversarial suite reported `status=GONE` on a task it had
+        // just successfully transitioned.
         //
-        // Raised HERE, for the test process only. The suites use the service
-        // role rather than per-user RLS context, so the single-connection
-        // constraint does not apply to them.
-        DB_CONNECTION_LIMIT: process.env.DB_CONNECTION_LIMIT || '10',
+        // The pool of 1 is the same constraint production runs under, which is
+        // the point: a test that relaxes it is no longer testing the system.
+        // The genuine P2028 fix is the transactionOptions.maxWait raise in
+        // src/lib/db.ts — that one addressed the real cause (a 2000ms default
+        // against a multi-second round trip) without weakening a correctness
+        // guarantee.
       },
     });
     let output = '';

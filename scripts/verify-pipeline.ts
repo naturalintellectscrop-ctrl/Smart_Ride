@@ -115,10 +115,24 @@ function run(command: string): Promise<{ code: number; output: string }> {
       shell: true,
       env: {
         ...process.env,
-        // See verify-all.ts: production pins connection_limit to 1 for RLS
-        // session correctness, which serialises the concurrent writes these
-        // suites deliberately generate.
-        DB_CONNECTION_LIMIT: process.env.DB_CONNECTION_LIMIT || '10',
+        // DO NOT raise DB_CONNECTION_LIMIT here.
+        //
+        // It was set to 10 to relieve P2028 timeouts, and that was a mistake.
+        // RLS context is PostgreSQL *session* state (SET ROLE, SET
+        // app.current_user_id), so it lives on ONE connection. With a pool of
+        // 10, a route's setServiceRoleContext() lands on connection A while the
+        // queries that follow land on connection B — which carries no context,
+        // so RLS filters their rows out. Suites that drive real HTTP handlers
+        // then read a row that plainly exists and get null back: the
+        // delivery-adversarial suite reported `status=GONE` on a task it had
+        // just successfully transitioned.
+        //
+        // The pool of 1 is the same constraint production runs under, which is
+        // the point: a test that relaxes it is no longer testing the system.
+        // The genuine P2028 fix is the transactionOptions.maxWait raise in
+        // src/lib/db.ts — that one addressed the real cause (a 2000ms default
+        // against a multi-second round trip) without weakening a correctness
+        // guarantee.
       },
     });
     let output = '';

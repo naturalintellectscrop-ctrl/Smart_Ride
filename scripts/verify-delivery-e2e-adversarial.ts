@@ -467,6 +467,14 @@ async function main() {
     );
   } finally {
     stage('cleanup');
+    // Completing a CASH delivery writes a CashCollection against the rider, so
+    // deleting the rider first violates its FK and aborts the whole cleanup —
+    // which is how this suite leaked fixtures that then skewed later suites.
+    // Children before parents.
+    await db.cashCollection.deleteMany({
+      where: { OR: [{ riderId: { in: created.riderIds } }, { taskId: { in: created.taskIds } }] },
+    });
+    await db.dispatchMatch.deleteMany({ where: { riderId: { in: created.riderIds } } });
     await db.task.deleteMany({ where: { id: { in: created.taskIds } } });
     await db.rider.deleteMany({ where: { id: { in: created.riderIds } } });
     await db.user.deleteMany({ where: { id: { in: created.userIds } } });
