@@ -91,7 +91,7 @@ export function LeafletMapInner({ riders, selectedRider, onSelectRider }: Leafle
   // Get marker color based on status
   const getMarkerColor = (status: string) => {
     switch (status) {
-      case 'ACTIVE': return '#00FF88';
+      case 'ACTIVE': return '#00D97E';
       case 'UNSTABLE': return '#FBBF24';
       case 'DISCONNECTED': return '#EF4444';
       default: return '#6B7280';
@@ -176,7 +176,7 @@ export function LeafletMapInner({ riders, selectedRider, onSelectRider }: Leafle
         <p className="text-xs font-medium text-white mb-2">Connection Status</p>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-[#00FF88]" />
+            <div className="w-3 h-3 rounded-full bg-[#00D97E]" />
             <span className="text-xs text-gray-300">Active</span>
           </div>
           <div className="flex items-center gap-2">

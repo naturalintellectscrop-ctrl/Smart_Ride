@@ -32,7 +32,7 @@ const MapComponent = dynamic(
     loading: () => (
       <div className="h-[400px] bg-white/5 rounded-xl flex items-center justify-center border border-white/10">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#00FF88] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <div className="w-8 h-8 border-2 border-[#00D97E] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
           <p className="text-gray-400 text-sm">Loading map...</p>
         </div>
       </div>
