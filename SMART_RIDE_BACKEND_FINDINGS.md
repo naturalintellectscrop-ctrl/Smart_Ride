@@ -575,9 +575,30 @@ matches zero rows and is *told*, rather than being overwritten. Idempotent, so
 a courier re-sending their own accept keeps the job. If the state transition
 then fails, the claim is released rather than stranding the job.
 
-**Verification:** `bun scripts/verify-delivery-personnel.ts` — 27 checks,
+**4. A fourth defect, found by testing the ROUTE rather than the service.**
+The rider actor list in the state machine permitted the shortcut
+`IN_TRANSIT -> DELIVERED` but omitted both `IN_TRANSIT -> DELIVERING` and
+`DELIVERING -> DELIVERED`. The transition *tables* allowed the handover step,
+so every existing test passed — `verify-delivery-journey` walks a delivery to
+COMPLETED with `db.task.update` directly and never touches the authorisation
+check. Driven through the real endpoint it returns:
+
+```
+400  Actor 'RIDER' is not authorized to transition from DELIVERING to DELIVERED
+```
+
+A courier who used the handover step could move a parcel INTO delivering and
+then had no authority to finish it. Both pairs added.
+
+The general lesson, recorded because it will recur: a guard tested only at
+service level can be bypassed by a route that forgets to call it, and a
+lifecycle tested by writing the status column directly proves nothing about who
+is allowed to write it.
+
+**Verification:** `bun scripts/verify-delivery-personnel.ts` — 29 checks,
 including a real race (two couriers, then a four-way stampede, against one
-task) rather than an assertion about the shape of the code.
+task) and a real HTTP call through `POST /api/tasks/[id]/status` proving the
+proof gate returns 409 `PROOF_REQUIRED` before proof and 200 after.
 
 ---
 

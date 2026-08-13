@@ -1424,6 +1424,15 @@ export class EnhancedTaskStateMachine {
       [TaskStatus.PICKED_UP, TaskStatus.DELIVERED],
       [TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED],
       [TaskStatus.IN_TRANSIT, TaskStatus.DELIVERED],
+      // The DELIVERING handover step. The transition tables allow
+      // IN_TRANSIT -> DELIVERING -> DELIVERED, but the RIDER actor list only
+      // permitted the shortcut IN_TRANSIT -> DELIVERED — so a courier who
+      // actually used the handover step could move a parcel INTO delivering
+      // and then had no authority to finish it. Surfaced by driving the real
+      // status route rather than writing the column directly: 400 "Actor
+      // 'RIDER' is not authorized to transition from DELIVERING to DELIVERED".
+      [TaskStatus.IN_TRANSIT, TaskStatus.DELIVERING],
+      [TaskStatus.DELIVERING, TaskStatus.DELIVERED],
       [TaskStatus.DELIVERED, TaskStatus.COMPLETED],
       [TaskStatus.ASSIGNED, TaskStatus.PICKED_UP],
       [TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS],

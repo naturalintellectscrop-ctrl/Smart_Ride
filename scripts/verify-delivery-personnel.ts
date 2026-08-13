@@ -67,7 +67,10 @@ async function makeCourier(label: string) {
     },
   });
   created.riderIds.push(rider.id);
-  return rider;
+  // Carry the userId: the auth token has to belong to THIS courier, and
+  // reaching for "the last id pushed" breaks the moment another fixture is
+  // created in between.
+  return { ...rider, userId: user.id };
 }
 
 async function makeDelivery(clientId: string, code?: string, taskType: TaskType = TaskType.ITEM_DELIVERY) {
@@ -418,6 +421,67 @@ async function main() {
       createRoute.includes('generateDeliveryCode') && createRoute.includes('isDeliveryTask'),
       'rides get none — there is nothing to hand over'
     );
+
+    // ── 8. The gate through the actual route ─────────────────────────
+    stage('STAGE 8  the HTTP route refuses completion, not just the service');
+
+    // canCompleteDelivery() is asserted above, but a gate that is only ever
+    // tested at service level can be bypassed by a route that forgets to call
+    // it. verify-delivery-journey walks a delivery to COMPLETED with
+    // db.task.update directly, so it would never notice. This drives the real
+    // handler.
+    {
+      const { POST: statusPost } = await import('../src/app/api/tasks/[id]/status/route');
+      const { NextRequest } = await import('next/server');
+
+      const gated = await makeDelivery(client.id);
+      const gatedCourier = await makeCourier('Gated');
+      await claimTask(gated.id, gatedCourier.id);
+      await db.task.update({ where: { id: gated.id }, data: { status: 'DELIVERING' } });
+
+      const jwtMod = (await import('../src/lib/auth/jwt')) as unknown as {
+        generateAccessToken: (p: unknown) => string;
+      };
+      const token = jwtMod.generateAccessToken({
+        id: gatedCourier.userId,
+        email: `${TAG}-gated@smartride.test`,
+        role: 'RIDER',
+        name: `${TAG} Gated`,
+      });
+
+      const call = (status: string) =>
+        statusPost(
+          new NextRequest(new URL(`http://localhost/api/tasks/${gated.id}/status`), {
+            method: 'POST',
+            headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+            body: JSON.stringify({ status, riderId: gatedCourier.id }),
+          } as never),
+          { params: Promise.resolve({ id: gated.id }) }
+        );
+
+      const blocked = await call('DELIVERED');
+      const blockedBody = (await blocked.json()) as { error?: string; code?: string };
+      check(
+        'the route REFUSES DELIVERED while proof is missing',
+        blocked.status === 409 && blockedBody.code === 'PROOF_REQUIRED',
+        `HTTP ${blocked.status} code=${blockedBody.code} — "${blockedBody.error}"`
+      );
+
+      // Capture proof, then the same call must succeed.
+      await submitProofOfDelivery(gated.id, gatedCourier.id, {
+        proofType: 'CODE',
+        code: gated.deliveryCode!,
+        latitude: DROPOFF.lat,
+        longitude: DROPOFF.lng,
+      });
+      const allowed = await call('DELIVERED');
+      const allowedBody = (await allowed.json()) as { error?: string };
+      check(
+        'the same call succeeds once proof exists',
+        allowed.status === 200,
+        `HTTP ${allowed.status} after proof was captured${allowedBody.error ? ` — "${allowedBody.error}"` : ''}`
+      );
+    }
   } finally {
     stage('cleanup');
     await db.task.deleteMany({ where: { id: { in: created.taskIds } } });
