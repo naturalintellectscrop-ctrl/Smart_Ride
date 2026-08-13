@@ -8,7 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { RiderOnboardingService } from '@/lib/rider/rider-onboarding.service';
-import { verifyAccessToken } from '@/lib/auth/jwt';
+import { verifyAccessToken, isProvider } from '@/lib/auth/jwt';
 import { setRLSContext, resetRLSContext } from '@/lib/db';
 
 export async function GET(
@@ -29,7 +29,7 @@ export async function GET(
   }
 
   // Allow riders to view their own metrics, or admins
-  const isRider = decoded.role === 'RIDER';
+  const isRider = isProvider(decoded.role);
   const isAdmin = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'].includes(decoded.role);
 
   if (!isRider && !isAdmin) {

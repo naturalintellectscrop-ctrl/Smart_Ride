@@ -234,12 +234,12 @@ export function AuditLogs() {
   if (error) {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[400px]">
-        <div className="glass-card rounded-2xl p-8 text-center">
+        <div className="rounded-2xl p-8 text-center">
           <AlertCircle className="h-12 w-12 text-red-400 mb-4 mx-auto" />
           <p className="text-red-400 mb-4">{error}</p>
           <button
             onClick={() => fetchLogs(1)}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium rounded-xl hover:opacity-90 transition-opacity"
+            className="px-6 py-2.5 bg-[#00D97E] text-[#0B0C0E] font-medium rounded-xl hover:opacity-90 transition-opacity"
           >
             Retry
           </button>
@@ -276,12 +276,12 @@ export function AuditLogs() {
             onClick={() => setShowFilters(!showFilters)}
             variant="outline"
             size="sm"
-            className={`border-white/10 ${showFilters ? 'bg-[#00FF88]/10 text-[#00FF88] border-[#00FF88]/30' : 'text-gray-400 hover:text-white'}`}
+            className={`border-white/10 ${showFilters ? 'bg-[#00D97E]/10 text-[#00D97E] border-[#00D97E]/30' : 'text-gray-400 hover:text-white'}`}
           >
             <Filter className="h-4 w-4 mr-2" />
             Filters
             {hasActiveFilters && (
-              <span className="ml-1.5 w-2 h-2 rounded-full bg-[#00FF88]" />
+              <span className="ml-1.5 w-2 h-2 rounded-full bg-[#00D97E]" />
             )}
           </Button>
           <Button
@@ -298,7 +298,7 @@ export function AuditLogs() {
             onClick={handleExportDocx}
             size="sm"
             disabled={isExporting}
-            className="bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium hover:opacity-90"
+            className="bg-[#00D97E] text-[#0B0C0E] font-medium hover:opacity-90"
           >
             {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4 mr-2" />}
             Export DOCX
@@ -308,17 +308,17 @@ export function AuditLogs() {
 
       {/* Filters Panel */}
       {showFilters && (
-        <Card className="glass-card rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-medium text-white flex items-center gap-2">
-                <Filter className="h-4 w-4 text-[#00FF88]" />
+                <Filter className="h-4 w-4 text-[#00D97E]" />
                 Filter Audit Logs
               </h3>
               {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
-                  className="text-xs text-gray-400 hover:text-[#00FF88] flex items-center gap-1 transition-colors"
+                  className="text-xs text-gray-400 hover:text-[#00D97E] flex items-center gap-1 transition-colors"
                 >
                   <X className="h-3 w-3" />
                   Clear all
@@ -334,7 +334,7 @@ export function AuditLogs() {
                   placeholder="Search actions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#00FF88]/50 transition-colors"
+                  className="w-full pl-9 pr-3 py-2 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-[#00D97E]/50 transition-colors"
                 />
               </div>
 
@@ -391,7 +391,7 @@ export function AuditLogs() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -404,7 +404,7 @@ export function AuditLogs() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -417,7 +417,7 @@ export function AuditLogs() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -430,7 +430,7 @@ export function AuditLogs() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -446,12 +446,12 @@ export function AuditLogs() {
       </div>
 
       {/* Logs Table */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-white flex items-center gap-2">
-                <Activity className="h-5 w-5 text-[#00FF88]" />
+                <Activity className="h-5 w-5 text-[#00D97E]" />
                 Activity Log
               </CardTitle>
               <CardDescription className="text-gray-500">
@@ -463,7 +463,7 @@ export function AuditLogs() {
         <CardContent>
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-10 w-10 animate-spin text-[#00FF88]" />
+              <Loader2 className="h-10 w-10 animate-spin text-[#00D97E]" />
               <p className="text-gray-400 text-sm mt-3">Loading audit logs...</p>
             </div>
           ) : logs.length === 0 ? (
@@ -567,7 +567,7 @@ export function AuditLogs() {
                           size="sm"
                           onClick={() => fetchLogs(pageNum)}
                           className={pageNum === pagination.page
-                            ? 'bg-[#00FF88]/20 text-[#00FF88] border border-[#00FF88]/30'
+                            ? 'bg-[#00D97E]/20 text-[#00D97E] border border-[#00D97E]/30'
                             : 'text-gray-400 hover:text-white'
                           }
                         >

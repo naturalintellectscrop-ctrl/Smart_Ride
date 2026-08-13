@@ -124,7 +124,7 @@ export function PaymentFinance() {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin text-[#00FF88]" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#00D97E]" />
           <p className="text-gray-400 text-sm">Loading financial data...</p>
         </div>
       </div>
@@ -134,12 +134,12 @@ export function PaymentFinance() {
   if (error) {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[400px]">
-        <div className="glass-card rounded-2xl p-8 text-center">
+        <div className="rounded-2xl p-8 text-center">
           <AlertCircle className="h-12 w-12 text-red-400 mb-4 mx-auto" />
           <p className="text-red-400 mb-4">{error}</p>
           <button 
             onClick={fetchData}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium rounded-xl hover:opacity-90 transition-opacity"
+            className="px-6 py-2.5 bg-[#00D97E] text-[#0B0C0E] font-medium rounded-xl hover:opacity-90 transition-opacity"
           >
             Retry
           </button>
@@ -164,7 +164,7 @@ export function PaymentFinance() {
         <Button 
           variant="outline" 
           size="sm" 
-          className="glass-button text-gray-300 border-white/10 hover:bg-white/5"
+          className="text-white/70 border-white/10 hover:bg-white/5 hover:text-white"
           disabled={isExporting}
           onClick={async () => {
             setIsExporting(true);
@@ -192,7 +192,7 @@ export function PaymentFinance() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -205,7 +205,7 @@ export function PaymentFinance() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -218,7 +218,7 @@ export function PaymentFinance() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -232,7 +232,7 @@ export function PaymentFinance() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -249,16 +249,16 @@ export function PaymentFinance() {
 
       {/* Tabs */}
       <Tabs defaultValue="transactions" className="space-y-4">
-        <TabsList className="glass-card border-white/10 p-1">
-          <TabsTrigger value="transactions" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">Transactions</TabsTrigger>
-          <TabsTrigger value="payouts" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">Rider Payouts</TabsTrigger>
+        <TabsList className="border border-white/10 bg-[#111214] p-1">
+          <TabsTrigger value="transactions" className="data-[state=active]:bg-[#00D97E]/20 data-[state=active]:text-[#00D97E]">Transactions</TabsTrigger>
+          <TabsTrigger value="payouts" className="data-[state=active]:bg-[#00D97E]/20 data-[state=active]:text-[#00D97E]">Rider Payouts</TabsTrigger>
         </TabsList>
 
         <TabsContent value="transactions">
-          <Card className="glass-card rounded-2xl">
+          <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <CreditCard className="h-5 w-5 text-[#00FF88]" />
+                <CreditCard className="h-5 w-5 text-[#00D97E]" />
                 Recent Transactions
               </CardTitle>
               <CardDescription className="text-gray-500">All payment transactions</CardDescription>
@@ -310,10 +310,10 @@ export function PaymentFinance() {
         </TabsContent>
 
         <TabsContent value="payouts">
-          <Card className="glass-card rounded-2xl">
+          <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
-                <Wallet className="h-5 w-5 text-[#00FF88]" />
+                <Wallet className="h-5 w-5 text-[#00D97E]" />
                 Rider Payouts
               </CardTitle>
               <CardDescription className="text-gray-500">Weekly and monthly rider earnings</CardDescription>

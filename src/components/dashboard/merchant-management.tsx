@@ -215,7 +215,7 @@ export function MerchantManagement() {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin text-[#00FF88]" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#00D97E]" />
           <p className="text-gray-400 text-sm">Loading merchants...</p>
         </div>
       </div>
@@ -230,7 +230,7 @@ export function MerchantManagement() {
           <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Merchant Management</h1>
           <p className="text-gray-400 mt-1">Manage and verify merchant registrations</p>
         </div>
-        <Button onClick={fetchMerchants} variant="outline" size="sm" className="glass-button text-gray-300 border-white/10 hover:bg-white/5">
+        <Button onClick={fetchMerchants} variant="outline" size="sm" className="text-white/70 border-white/10 hover:bg-white/5 hover:text-white">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -238,7 +238,7 @@ export function MerchantManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Total Merchants</CardTitle>
             <div className="w-9 h-9 rounded-xl bg-purple-500/10 flex items-center justify-center border border-purple-500/20">
@@ -249,7 +249,7 @@ export function MerchantManagement() {
             <div className="text-2xl font-bold text-white">{merchants.length}</div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Pending Approval</CardTitle>
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
@@ -262,7 +262,7 @@ export function MerchantManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Approved</CardTitle>
             <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
@@ -275,15 +275,15 @@ export function MerchantManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Open Now</CardTitle>
-            <div className="w-9 h-9 rounded-xl bg-[#00FF88]/10 flex items-center justify-center border border-[#00FF88]/20">
-              <div className="w-2 h-2 bg-[#00FF88] rounded-full animate-pulse" />
+            <div className="w-9 h-9 rounded-xl bg-[#00D97E]/10 flex items-center justify-center border border-[#00D97E]/20">
+              <div className="w-2 h-2 bg-[#00D97E] rounded-full animate-pulse" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#00FF88]">
+            <div className="text-2xl font-bold text-[#00D97E]">
               {merchants.filter(m => m.isOpen).length}
             </div>
           </CardContent>
@@ -291,7 +291,7 @@ export function MerchantManagement() {
       </div>
 
       {/* Filters */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -300,14 +300,14 @@ export function MerchantManagement() {
                 placeholder="Search merchants..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 glass-input border-white/10 text-white placeholder:text-gray-500"
+                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40 glass-input border-white/10 text-white">
+              <SelectTrigger className="w-full sm:w-40 bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="glass-card border-white/10">
+              <SelectContent className="border-white/10">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="PENDING_APPROVAL">Pending</SelectItem>
                 <SelectItem value="APPROVED">Approved</SelectItem>
@@ -316,10 +316,10 @@ export function MerchantManagement() {
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-40 glass-input border-white/10 text-white">
+              <SelectTrigger className="w-full sm:w-40 bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
-              <SelectContent className="glass-card border-white/10">
+              <SelectContent className="border-white/10">
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="RESTAURANT">Restaurant</SelectItem>
                 <SelectItem value="SUPERMARKET">Supermarket</SelectItem>
@@ -341,7 +341,7 @@ export function MerchantManagement() {
       )}
 
       {/* Table */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-white">Merchants</CardTitle>
           <CardDescription className="text-gray-500">Manage merchant registrations and status</CardDescription>
@@ -478,40 +478,40 @@ export function MerchantManagement() {
 
       {/* Merchant Details Dialog */}
       <Dialog open={!!selectedMerchant} onOpenChange={() => setSelectedMerchant(null)}>
-        <DialogContent className="max-w-2xl glass-card border-white/10 text-white max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl border-white/10 text-white max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white">Merchant Details</DialogTitle>
           </DialogHeader>
           {selectedMerchant && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Business Name</p>
                   <p className="font-medium text-white">{selectedMerchant.name}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Type</p>
                   <p className="font-medium text-white">{getTypeLabel(selectedMerchant.type)}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Phone</p>
                   <p className="font-medium text-white">{selectedMerchant.phone}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Email</p>
                   <p className="font-medium text-white">{selectedMerchant.email || '-'}</p>
                 </div>
-                <div className="col-span-2 glass p-4 rounded-xl border border-white/5">
+                <div className="col-span-2 bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Address</p>
                   <p className="font-medium text-white">{selectedMerchant.address}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Status</p>
                   <Badge className={`${getStatusStyle(selectedMerchant.status).bg} ${getStatusStyle(selectedMerchant.status).text} ${getStatusStyle(selectedMerchant.status).border} border mt-1`}>
                     {selectedMerchant.status.replace('_', ' ')}
                   </Badge>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Rating</p>
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 text-amber-400 fill-amber-400" />

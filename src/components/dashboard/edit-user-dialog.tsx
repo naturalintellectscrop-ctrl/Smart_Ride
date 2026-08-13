@@ -112,7 +112,7 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
       <DialogContent className="max-w-md bg-gray-900 border-gray-800">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-white">
-            <User className="h-5 w-5 text-[#00FF88]" />
+            <User className="h-5 w-5 text-[#00D97E]" />
             Edit User
           </DialogTitle>
           <DialogDescription className="text-gray-400">
@@ -203,7 +203,7 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }: EditUser
           <Button 
             onClick={handleSubmit}
             disabled={loading}
-            className="bg-[#00FF88] text-black hover:bg-[#00CC6A]"
+            className="bg-[#00D97E] text-[#0B0C0E] hover:bg-[#00c470]"
           >
             {loading ? (
               <>

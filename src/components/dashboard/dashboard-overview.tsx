@@ -136,7 +136,7 @@ export function DashboardOverview() {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin text-[#00FF88]" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#00D97E]" />
           <p className="text-gray-400 text-sm">Loading dashboard data...</p>
         </div>
       </div>
@@ -146,12 +146,12 @@ export function DashboardOverview() {
   if (error) {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[400px]">
-        <div className="glass-card rounded-2xl p-8 text-center">
+        <div className="rounded-2xl p-8 text-center">
           <AlertCircle className="h-12 w-12 text-red-400 mb-4 mx-auto" />
           <p className="text-red-400 mb-4">{error}</p>
           <button 
             onClick={fetchStats}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium rounded-xl hover:opacity-90 transition-opacity"
+            className="px-6 py-2.5 bg-[#00D97E] text-[#0B0C0E] font-medium rounded-xl hover:opacity-90 transition-opacity"
           >
             Retry
           </button>
@@ -169,7 +169,7 @@ export function DashboardOverview() {
           <p className="text-gray-400 mt-1">Welcome back! Here's what's happening with Smart Ride today.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="glass-button text-[#00FF88] border-[#00FF88]/30 px-3 py-1">
+          <Badge variant="outline" className=" text-[#00D97E] border-[#00D97E]/30 px-3 py-1">
             <Activity className="h-3.5 w-3.5 mr-1.5" />
             Live
           </Badge>
@@ -180,7 +180,7 @@ export function DashboardOverview() {
       {/* Key Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Clients */}
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Total Clients</CardTitle>
             <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
@@ -194,11 +194,11 @@ export function DashboardOverview() {
         </Card>
 
         {/* Active Riders */}
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Active Riders</CardTitle>
-            <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center border border-[#00FF88]/20">
-              <Bike className="h-5 w-5 text-[#00FF88]" />
+            <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center border border-[#00D97E]/20">
+              <Bike className="h-5 w-5 text-[#00D97E]" />
             </div>
           </CardHeader>
           <CardContent>
@@ -208,7 +208,7 @@ export function DashboardOverview() {
         </Card>
 
         {/* Today's Tasks */}
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Today's Tasks</CardTitle>
             <div className="w-10 h-10 rounded-xl bg-[#00D4FF]/10 flex items-center justify-center border border-[#00D4FF]/20">
@@ -222,7 +222,7 @@ export function DashboardOverview() {
         </Card>
 
         {/* Today's Revenue */}
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Today's Revenue</CardTitle>
             <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
@@ -239,10 +239,10 @@ export function DashboardOverview() {
       {/* Service Stats & Pending Items */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Service Statistics */}
-        <Card className="lg:col-span-2 glass-card rounded-2xl">
+        <Card className="lg:col-span-2 rounded-2xl">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-[#00FF88]" />
+              <TrendingUp className="h-5 w-5 text-[#00D97E]" />
               Service Performance
             </CardTitle>
             <CardDescription className="text-gray-500">Revenue and orders by service type today</CardDescription>
@@ -286,7 +286,7 @@ export function DashboardOverview() {
         </Card>
 
         {/* Pending Items */}
-        <Card className="glass-card rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader>
             <CardTitle className="text-white flex items-center gap-2">
               <Clock className="h-5 w-5 text-amber-400" />
@@ -328,17 +328,17 @@ export function DashboardOverview() {
             </div>
 
             {/* Active Merchants */}
-            <div className="flex items-center justify-between p-4 bg-[#00FF88]/10 rounded-xl border border-[#00FF88]/20 backdrop-blur-sm">
+            <div className="flex items-center justify-between p-4 bg-[#00D97E]/10 rounded-xl border border-[#00D97E]/20 backdrop-blur-sm">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 bg-[#00FF88]/20 rounded-xl flex items-center justify-center border border-[#00FF88]/30">
-                  <Store className="h-5 w-5 text-[#00FF88]" />
+                <div className="w-11 h-11 bg-[#00D97E]/20 rounded-xl flex items-center justify-center border border-[#00D97E]/30">
+                  <Store className="h-5 w-5 text-[#00D97E]" />
                 </div>
                 <div>
                   <p className="font-medium text-white">Active Merchants</p>
                   <p className="text-sm text-gray-500">Currently open</p>
                 </div>
               </div>
-              <Badge variant="secondary" className="bg-[#00FF88]/20 text-[#00FF88] border-[#00FF88]/30 text-base px-3">
+              <Badge variant="secondary" className="bg-[#00D97E]/20 text-[#00D97E] border-[#00D97E]/30 text-base px-3">
                 {stats?.activeMerchants || 0}
               </Badge>
             </div>
@@ -347,10 +347,10 @@ export function DashboardOverview() {
       </div>
 
       {/* Recent Activity */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
-            <Activity className="h-5 w-5 text-[#00FF88]" />
+            <Activity className="h-5 w-5 text-[#00D97E]" />
             Recent Activity
           </CardTitle>
           <CardDescription className="text-gray-500">Latest events across the platform</CardDescription>
@@ -372,8 +372,8 @@ export function DashboardOverview() {
                   className="flex items-center justify-between p-4 hover:bg-white/5 rounded-xl transition-colors border border-transparent hover:border-white/5 group"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#00FF88]/10 border border-[#00FF88]/20 group-hover:bg-[#00FF88]/20 transition-colors">
-                      <Activity className="h-5 w-5 text-[#00FF88]" />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#00D97E]/10 border border-[#00D97E]/20 group-hover:bg-[#00D97E]/20 transition-colors">
+                      <Activity className="h-5 w-5 text-[#00D97E]" />
                     </div>
                     <div>
                       <p className="font-medium text-white">{activity.action}</p>

@@ -113,7 +113,7 @@ export function TaskManagement() {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin text-[#00FF88]" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#00D97E]" />
           <p className="text-gray-400 text-sm">Loading tasks...</p>
         </div>
       </div>
@@ -123,12 +123,12 @@ export function TaskManagement() {
   if (error) {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[400px]">
-        <div className="glass-card rounded-2xl p-8 text-center">
+        <div className="rounded-2xl p-8 text-center">
           <AlertCircle className="h-12 w-12 text-red-400 mb-4 mx-auto" />
           <p className="text-red-400 mb-4">{error}</p>
           <button 
             onClick={fetchTasks}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium rounded-xl hover:opacity-90 transition-opacity"
+            className="px-6 py-2.5 bg-[#00D97E] text-[#0B0C0E] font-medium rounded-xl hover:opacity-90 transition-opacity"
           >
             Retry
           </button>
@@ -143,8 +143,8 @@ export function TaskManagement() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center border border-[#00FF88]/20">
-              <ListTodo className="h-5 w-5 text-[#00FF88]" />
+            <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center border border-[#00D97E]/20">
+              <ListTodo className="h-5 w-5 text-[#00D97E]" />
             </div>
             Task Management
           </h1>
@@ -154,7 +154,7 @@ export function TaskManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -167,7 +167,7 @@ export function TaskManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -180,7 +180,7 @@ export function TaskManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -193,7 +193,7 @@ export function TaskManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -209,7 +209,7 @@ export function TaskManagement() {
       </div>
 
       {/* Tasks Table */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-white">All Tasks</CardTitle>
           <CardDescription className="text-gray-500">Track rides and deliveries</CardDescription>
@@ -258,7 +258,7 @@ export function TaskManagement() {
                         <TableCell className="text-gray-300">{task.rider?.fullName || 'Unassigned'}</TableCell>
                         <TableCell>
                           <div className="flex items-start gap-1">
-                            <MapPin className="h-3.5 w-3.5 text-[#00FF88] mt-0.5 flex-shrink-0" />
+                            <MapPin className="h-3.5 w-3.5 text-[#00D97E] mt-0.5 flex-shrink-0" />
                             <div>
                               <p className="text-sm text-white truncate max-w-32">{task.pickupAddress}</p>
                               <p className="text-sm text-gray-500 truncate max-w-32">{task.dropoffAddress}</p>

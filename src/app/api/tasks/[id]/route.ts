@@ -8,6 +8,8 @@ import { requireAuth, isAdmin, AuthenticatedRequest } from '@/lib/auth/guards';
 import { redactPerson, redactBusiness } from '@/lib/privacy/public-contact';
 import { ensureReceiptForTask } from '@/lib/receipts/receipt-service';
 import { sendReceiptEmail } from '@/lib/receipts/send-receipt-email';
+import { isProvider } from '@/lib/auth/jwt';
+import type { UserRole } from '@prisma/client';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -76,7 +78,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       const isClient = task.clientId === user.userId;
       let isRider = false;
 
-      if (user.role === 'RIDER') {
+      if (isProvider(user.role as UserRole)) {
         const rider = await db.rider.findUnique({
           where: { userId: user.userId },
           select: { id: true },
@@ -441,7 +443,7 @@ async function handleCancel(taskId: string, body: Record<string, unknown>, user:
     const isClient = task.clientId === user.userId;
     let isRider = false;
     
-    if (user.role === 'RIDER') {
+    if (isProvider(user.role as UserRole)) {
       const rider = await db.rider.findUnique({
         where: { userId: user.userId },
         select: { id: true },
@@ -483,11 +485,11 @@ async function handleCancel(taskId: string, body: Record<string, unknown>, user:
   // Determine actor type for SM validation. Prefer the AUTHENTICATED caller's
   // role — the body's cancelledBy (if present) is only a fallback hint.
   const cancelledByStr = validatedData.cancelledBy
-    || (user.role === 'RIDER' ? 'rider' : 'client');
+    || (isProvider(user.role as UserRole) ? 'rider' : 'client');
   let triggeredByType: 'CLIENT' | 'RIDER' | 'SYSTEM' | 'ADMIN';
   if (isAdmin(user.role as any)) {
     triggeredByType = 'ADMIN';
-  } else if (user.role === 'RIDER' || cancelledByStr.includes('rider')) {
+  } else if (isProvider(user.role as UserRole) || cancelledByStr.includes('rider')) {
     triggeredByType = 'RIDER';
   } else {
     triggeredByType = 'CLIENT';

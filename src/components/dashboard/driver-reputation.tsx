@@ -275,7 +275,7 @@ export function DriverReputationDashboard() {
         <Button 
           onClick={() => fetchReputations(true)}
           disabled={refreshing}
-          className="bg-[#7CDA28] hover:bg-[#6BC41E] text-black"
+          className="bg-[#00D97E] hover:bg-[#00c470] text-[#0B0C0E]"
         >
           {refreshing ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -412,7 +412,7 @@ export function DriverReputationDashboard() {
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-[#7CDA28]" />
+              <Loader2 className="h-8 w-8 animate-spin text-[#00D97E]" />
             </div>
           ) : reputations.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
@@ -564,8 +564,8 @@ export function DriverReputationDashboard() {
             <div className="space-y-6">
               {/* Driver Info */}
               <div className="flex items-start gap-4">
-                <div className="w-16 h-16 rounded-full bg-[#7CDA28]/20 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-[#7CDA28]">
+                <div className="w-16 h-16 rounded-full bg-[#00D97E]/20 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-[#00D97E]">
                     {selectedDriver.rider.fullName.charAt(0)}
                   </span>
                 </div>
@@ -684,7 +684,7 @@ export function DriverReputationDashboard() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-500">Total Bonus Earned:</span>
-                      <span className="font-medium text-[#7CDA28]">
+                      <span className="font-medium text-[#00D97E]">
                         Ugx {selectedDriver.totalBonusEarned?.toLocaleString() || 0}
                       </span>
                     </div>
@@ -755,7 +755,7 @@ export function DriverReputationDashboard() {
             </Button>
             <Button 
               onClick={handleAdjustment}
-              className="bg-[#7CDA28] hover:bg-[#6BC41E] text-black"
+              className="bg-[#00D97E] hover:bg-[#00c470] text-[#0B0C0E]"
               disabled={!adjustmentReason}
             >
               Apply Adjustment

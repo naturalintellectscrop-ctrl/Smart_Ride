@@ -81,7 +81,7 @@ export default function DriverReputationCharts({ tierChartData, metricsChartData
                 <XAxis dataKey="name" className="text-xs" />
                 <YAxis domain={[0, 100]} className="text-xs" />
                 <Tooltip />
-                <Bar dataKey="value" fill="#7CDA28" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="value" fill="#00D97E" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -97,7 +97,7 @@ export function Settings() {
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
       {/* Background Glow Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00FF88]/5 rounded-full blur-[128px]" />
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00D97E]/5 rounded-full blur-[128px]" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00FFF3]/5 rounded-full blur-[128px]" />
       </div>
 
@@ -105,11 +105,11 @@ export function Settings() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 relative z-10">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold text-white flex items-center gap-2">
-            <SettingsIcon className="h-8 w-8 text-[#00FF88]" />
+            <SettingsIcon className="h-8 w-8 text-[#00D97E]" />
             Settings
           </h1>
           <p className="text-white/50 mt-1 flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-[#00FF88]" />
+            <Sparkles className="h-4 w-4 text-[#00D97E]" />
             Configure platform settings and preferences
           </p>
         </div>
@@ -133,10 +133,10 @@ export function Settings() {
 
       <Tabs defaultValue="general" className="space-y-4 relative z-10">
         <TabsList className="bg-[#1A1A24] border border-white/10">
-          <TabsTrigger value="general" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">General</TabsTrigger>
-          <TabsTrigger value="pricing" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">Pricing</TabsTrigger>
-          <TabsTrigger value="sla" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">SLA Timers</TabsTrigger>
-          <TabsTrigger value="notifications" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">Notifications</TabsTrigger>
+          <TabsTrigger value="general" className="data-[state=active]:bg-[#00D97E]/20 data-[state=active]:text-[#00D97E]">General</TabsTrigger>
+          <TabsTrigger value="pricing" className="data-[state=active]:bg-[#00D97E]/20 data-[state=active]:text-[#00D97E]">Pricing</TabsTrigger>
+          <TabsTrigger value="sla" className="data-[state=active]:bg-[#00D97E]/20 data-[state=active]:text-[#00D97E]">SLA Timers</TabsTrigger>
+          <TabsTrigger value="notifications" className="data-[state=active]:bg-[#00D97E]/20 data-[state=active]:text-[#00D97E]">Notifications</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -144,7 +144,7 @@ export function Settings() {
             <Card className="bg-[#1A1A24] border-white/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
-                  <Globe className="h-5 w-5 text-[#00FF88]" />
+                  <Globe className="h-5 w-5 text-[#00D97E]" />
                   Platform Settings
                 </CardTitle>
                 <CardDescription className="text-white/50">General platform configuration</CardDescription>
@@ -199,7 +199,7 @@ export function Settings() {
             <Card className="bg-[#1A1A24] border-white/10">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-white">
-                  <Shield className="h-5 w-5 text-[#00FF88]" />
+                  <Shield className="h-5 w-5 text-[#00D97E]" />
                   Security Settings
                 </CardTitle>
                 <CardDescription className="text-white/50">Configure security and access controls</CardDescription>
@@ -237,7 +237,7 @@ export function Settings() {
           <Card className="bg-[#1A1A24] border-white/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
-                <DollarSign className="h-5 w-5 text-[#00FF88]" />
+                <DollarSign className="h-5 w-5 text-[#00D97E]" />
                 Pricing Configuration
               </CardTitle>
               <CardDescription className="text-white/50">Set base fares and commission rates per service</CardDescription>
@@ -253,7 +253,7 @@ export function Settings() {
                 <div key={index} className="p-4 bg-[#252530] rounded-xl border border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
                     <h4 className="font-medium text-white">{item.service}</h4>
-                    <Badge className="bg-[#00FF88]/20 text-[#00FF88] border-[#00FF88]/30">{item.commission}% commission</Badge>
+                    <Badge className="bg-[#00D97E]/20 text-[#00D97E] border-[#00D97E]/30">{item.commission}% commission</Badge>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
@@ -279,7 +279,7 @@ export function Settings() {
           <Card className="bg-[#1A1A24] border-white/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
-                <Clock className="h-5 w-5 text-[#00FF88]" />
+                <Clock className="h-5 w-5 text-[#00D97E]" />
                 SLA Timer Configuration
               </CardTitle>
               <CardDescription className="text-white/50">Set timeout thresholds for order states</CardDescription>
@@ -332,7 +332,7 @@ export function Settings() {
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <h4 className="font-medium text-white">Ride Acceptance Timeouts</h4>
-                  <Badge variant="outline" className="border-[#00FF88]/30 text-[#00FF88] text-xs">Live — used by dispatch</Badge>
+                  <Badge variant="outline" className="border-[#00D97E]/30 text-[#00D97E] text-xs">Live — used by dispatch</Badge>
                 </div>
                 <p className="text-sm text-white/50">
                   How long a provider has to accept an offer before it rotates to the next
@@ -374,7 +374,7 @@ export function Settings() {
                   <Button
                     onClick={saveAcceptTimeouts}
                     disabled={slaSaving || slaLoading}
-                    className="bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium hover:opacity-90"
+                    className="bg-[#00D97E] text-[#0B0C0E] font-medium hover:opacity-90"
                   >
                     {slaSaving ? <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                     Save Acceptance Timeouts
@@ -390,7 +390,7 @@ export function Settings() {
           <Card className="bg-[#1A1A24] border-white/10">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-white">
-                <Bell className="h-5 w-5 text-[#00FF88]" />
+                <Bell className="h-5 w-5 text-[#00D97E]" />
                 Notification Settings
               </CardTitle>
               <CardDescription className="text-white/50">Configure system notifications and alerts</CardDescription>

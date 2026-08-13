@@ -250,7 +250,7 @@ export function UserManagement() {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin text-[#00FF88]" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#00D97E]" />
           <p className="text-gray-400 text-sm">Loading users...</p>
         </div>
       </div>
@@ -260,12 +260,12 @@ export function UserManagement() {
   if (error) {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[400px]">
-        <div className="glass-card rounded-2xl p-8 text-center">
+        <div className="rounded-2xl border border-white/10 bg-[#111214] p-8 text-center">
           <AlertCircle className="h-12 w-12 text-red-400 mb-4 mx-auto" />
           <p className="text-red-400 mb-4">{error}</p>
           <button 
             onClick={fetchUsers}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium rounded-xl hover:opacity-90 transition-opacity"
+            className="px-6 py-2.5 bg-[#00D97E] text-[#0B0C0E] font-medium rounded-xl hover:opacity-90 transition-opacity"
           >
             Retry
           </button>
@@ -286,7 +286,7 @@ export function UserManagement() {
           <Button 
             variant="outline" 
             size="sm" 
-            className="glass-button text-gray-300 border-white/10 hover:bg-white/5"
+            className="text-white/70 border-white/10 hover:bg-white/5 hover:text-white"
             disabled={isExporting}
             onClick={async () => {
               setIsExporting(true);
@@ -316,12 +316,12 @@ export function UserManagement() {
           </Button>
           <Dialog>
             <DialogTrigger asChild>
-              <Button size="sm" className="bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium hover:opacity-90">
+              <Button size="sm" className="bg-[#00D97E] text-[#0B0C0E] font-medium hover:opacity-90">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Add User
               </Button>
             </DialogTrigger>
-            <DialogContent className="glass-card border-white/10 text-white">
+            <DialogContent className="border-white/10 text-white">
               <DialogHeader>
                 <DialogTitle className="text-white">Add New User</DialogTitle>
                 <DialogDescription className="text-gray-400">
@@ -329,14 +329,14 @@ export function UserManagement() {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
-                <Input placeholder="Full Name" className="glass-input border-white/10 text-white placeholder:text-gray-500" />
-                <Input placeholder="Email Address" type="email" className="glass-input border-white/10 text-white placeholder:text-gray-500" />
-                <Input placeholder="Phone Number" type="tel" className="glass-input border-white/10 text-white placeholder:text-gray-500" />
+                <Input placeholder="Full Name" className="bg-white/5 border-white/10 text-white placeholder:text-gray-500" />
+                <Input placeholder="Email Address" type="email" className="bg-white/5 border-white/10 text-white placeholder:text-gray-500" />
+                <Input placeholder="Phone Number" type="tel" className="bg-white/5 border-white/10 text-white placeholder:text-gray-500" />
                 <Select>
-                  <SelectTrigger className="glass-input border-white/10 text-white">
+                  <SelectTrigger className="bg-white/5 border-white/10 text-white">
                     <SelectValue placeholder="Select Role" />
                   </SelectTrigger>
-                  <SelectContent className="glass-card border-white/10">
+                  <SelectContent className="border-white/10">
                     <SelectItem value="CLIENT">Client</SelectItem>
                     <SelectItem value="ADMIN">Admin</SelectItem>
                     <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
@@ -345,7 +345,7 @@ export function UserManagement() {
                     <SelectItem value="FINANCE_ADMIN">Finance Admin</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button className="w-full bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium">Create User</Button>
+                <Button className="w-full bg-[#00D97E] text-[#0B0C0E] font-medium">Create User</Button>
               </div>
             </DialogContent>
           </Dialog>
@@ -355,7 +355,7 @@ export function UserManagement() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-          <Card className="glass-card glow-hover rounded-2xl">
+          <Card className="rounded-2xl">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -368,7 +368,7 @@ export function UserManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card glow-hover rounded-2xl">
+          <Card className="rounded-2xl">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -381,7 +381,7 @@ export function UserManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card glow-hover rounded-2xl">
+          <Card className="rounded-2xl">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -394,7 +394,7 @@ export function UserManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card glow-hover rounded-2xl">
+          <Card className="rounded-2xl">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -407,7 +407,7 @@ export function UserManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card glow-hover rounded-2xl">
+          <Card className="rounded-2xl">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -424,7 +424,7 @@ export function UserManagement() {
       )}
 
       {/* Filters and Search */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardContent className="p-4">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
@@ -432,7 +432,7 @@ export function UserManagement() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
                 <Input
                   placeholder="Search by name, email, or phone..."
-                  className="pl-10 glass-input border-white/10 text-white placeholder:text-gray-500"
+                  className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -440,10 +440,10 @@ export function UserManagement() {
             </div>
             <div className="flex gap-3">
               <Select value={roleFilter} onValueChange={setRoleFilter}>
-                <SelectTrigger className="w-36 glass-input border-white/10 text-white">
+                <SelectTrigger className="w-36 bg-white/5 border-white/10 text-white">
                   <SelectValue placeholder="Role" />
                 </SelectTrigger>
-                <SelectContent className="glass-card border-white/10">
+                <SelectContent className="border-white/10">
                   <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="CLIENT">Client</SelectItem>
                   <SelectItem value="RIDER">Rider</SelectItem>
@@ -453,10 +453,10 @@ export function UserManagement() {
                 </SelectContent>
               </Select>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-36 glass-input border-white/10 text-white">
+                <SelectTrigger className="w-36 bg-white/5 border-white/10 text-white">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
-                <SelectContent className="glass-card border-white/10">
+                <SelectContent className="border-white/10">
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="ACTIVE">Active</SelectItem>
                   <SelectItem value="INACTIVE">Inactive</SelectItem>
@@ -470,7 +470,7 @@ export function UserManagement() {
       </Card>
 
       {/* Users Table */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-white">Users</CardTitle>
           <CardDescription className="text-gray-500">A list of all registered users</CardDescription>
@@ -508,7 +508,7 @@ export function UserManagement() {
                           <div className="flex items-center gap-3">
                             <Avatar className="h-10 w-10 border border-white/10">
                               <AvatarImage src={user.avatarUrl || ''} />
-                              <AvatarFallback className="bg-[#00FF88]/20 text-[#00FF88]">
+                              <AvatarFallback className="bg-[#00D97E]/20 text-[#00D97E]">
                                 {user.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                               </AvatarFallback>
                             </Avatar>
@@ -553,7 +553,7 @@ export function UserManagement() {
                                 <MoreHorizontal className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="glass-card border-white/10">
+                            <DropdownMenuContent align="end" className="border-white/10">
                               <DropdownMenuLabel className="text-white">Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator className="bg-white/5" />
                               <DropdownMenuItem 
@@ -581,7 +581,7 @@ export function UserManagement() {
                                   <Shield className="h-4 w-4 mr-2" />
                                   Change Role
                                 </DropdownMenuSubTrigger>
-                                <DropdownMenuSubContent className="glass-card border-white/10">
+                                <DropdownMenuSubContent className="border-white/10">
                                   {ROLE_OPTIONS.map((r) => (
                                     <DropdownMenuItem
                                       key={r.value}
@@ -649,7 +649,7 @@ export function UserManagement() {
 
       {/* View User Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-md glass-card border-white/10 text-white">
+        <DialogContent className="max-w-md border-white/10 text-white">
           <DialogHeader>
             <DialogTitle className="text-white">User Details</DialogTitle>
           </DialogHeader>
@@ -658,7 +658,7 @@ export function UserManagement() {
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 border border-white/10">
                   <AvatarImage src={selectedUser.avatarUrl || ''} />
-                  <AvatarFallback className="bg-[#00FF88]/20 text-[#00FF88] text-xl">
+                  <AvatarFallback className="bg-[#00D97E]/20 text-[#00D97E] text-xl">
                     {selectedUser.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
                   </AvatarFallback>
                 </Avatar>
@@ -668,31 +668,31 @@ export function UserManagement() {
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="glass p-3 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10">
                   <p className="text-xs text-gray-500">Email</p>
                   <p className="text-sm text-white truncate">{selectedUser.email}</p>
                 </div>
-                <div className="glass p-3 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10">
                   <p className="text-xs text-gray-500">Phone</p>
                   <p className="text-sm text-white">{selectedUser.phone || 'Not set'}</p>
                 </div>
-                <div className="glass p-3 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10">
                   <p className="text-xs text-gray-500">Role</p>
                   <Badge className={`${getRoleStyle(selectedUser.role).bg} ${getRoleStyle(selectedUser.role).text} ${getRoleStyle(selectedUser.role).border} border mt-1`}>
                     {selectedUser.role.replace('_', ' ')}
                   </Badge>
                 </div>
-                <div className="glass p-3 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10">
                   <p className="text-xs text-gray-500">Status</p>
                   <Badge className={`${getStatusStyle(selectedUser.status).bg} ${getStatusStyle(selectedUser.status).text} ${getStatusStyle(selectedUser.status).border} border mt-1`}>
                     {selectedUser.status}
                   </Badge>
                 </div>
-                <div className="glass p-3 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10">
                   <p className="text-xs text-gray-500">Joined</p>
                   <p className="text-sm text-white">{new Date(selectedUser.createdAt).toLocaleDateString()}</p>
                 </div>
-                <div className="glass p-3 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-3 rounded-xl border border-white/10">
                   <p className="text-xs text-gray-500">Orders</p>
                   <p className="text-sm text-white">{selectedUser.orderCount}</p>
                 </div>
@@ -704,7 +704,7 @@ export function UserManagement() {
 
       {/* Delete User Confirmation Dialog */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent className="glass-card border-red-500/20 text-white">
+        <AlertDialogContent className="border-red-500/20 text-white">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-white flex items-center gap-2">
               <Trash2 className="h-5 w-5 text-red-400" />

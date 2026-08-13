@@ -131,20 +131,13 @@ export function AdminDashboard() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gradient-to-br from-[#0D0D12] via-[#0F0F18] to-[#0D0D12]">
-      {/* Background gradient effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[#00FF88]/5 rounded-full blur-[128px]" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[#00D4FF]/5 rounded-full blur-[128px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-radial from-[#00FF88]/3 to-transparent rounded-full blur-[100px]" />
-      </div>
-      
+    <div className="flex min-h-screen bg-[#0B0C0E]">
       <Sidebar activeView={activeView} setActiveView={setActiveView} />
-      <main className="flex-1 overflow-auto relative z-10 glass-scrollbar">
+      <main className="flex-1 overflow-auto">
         {/* Header Bar with Export Button */}
-        <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-3 bg-[#0D0D12]/80 backdrop-blur-md border-b border-white/5">
+        <div className="sticky top-0 z-20 flex items-center justify-between px-6 py-3 bg-[#0B0C0E]/90 backdrop-blur-sm border-b border-white/10">
           <h2 className="text-sm font-medium text-white/50 uppercase tracking-wider">
-            {activeView === 'dashboard' ? 'Overview' : 
+            {activeView === 'dashboard' ? 'Overview' :
              activeView === 'audit' ? 'Audit Logs' :
              activeView.charAt(0).toUpperCase() + activeView.slice(1)}
           </h2>
@@ -153,7 +146,7 @@ export function AdminDashboard() {
               <button
                 onClick={handleExport}
                 disabled={isExporting}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00FF88]/10 border border-[#00FF88]/20 text-[#00FF88] hover:bg-[#00FF88]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
               >
                 {isExporting ? (
                   <>
@@ -177,7 +170,7 @@ export function AdminDashboard() {
               <button
                 onClick={handleExportAuditDocx}
                 disabled={isExporting}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#00FF88]/10 border border-[#00FF88]/20 text-[#00FF88] hover:bg-[#00FF88]/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-white/80 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
               >
                 {isExporting ? (
                   <>

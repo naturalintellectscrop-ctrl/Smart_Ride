@@ -295,7 +295,7 @@ export function MarketplaceBalance() {
     return (
       <div className="p-6 flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
-          <RefreshCw className="h-8 w-8 animate-spin text-[#7CDA28] mx-auto mb-4" />
+          <RefreshCw className="h-8 w-8 animate-spin text-[#00D97E] mx-auto mb-4" />
           <p className="text-gray-500">Loading marketplace data...</p>
         </div>
       </div>
@@ -311,7 +311,7 @@ export function MarketplaceBalance() {
           <p className="text-gray-500 mt-1">Real-time demand-supply equilibrium monitoring</p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant="outline" className="bg-[#7CDA28]/10 text-[#7CDA28] border-[#7CDA28]/30">
+          <Badge variant="outline" className="bg-[#00D97E]/10 text-[#00D97E] border-[#00D97E]/30">
             <Activity className="h-3 w-3 mr-1" />
             Live
           </Badge>
@@ -374,7 +374,7 @@ export function MarketplaceBalance() {
             <div className="text-3xl font-bold text-gray-900">
               {overview?.totalRideRequests.toLocaleString() || 0}
             </div>
-            <div className="flex items-center gap-1 mt-1 text-sm text-[#7CDA28]">
+            <div className="flex items-center gap-1 mt-1 text-sm text-[#00D97E]">
               <Users className="h-4 w-4" />
               <span>Active demand</span>
             </div>
@@ -422,10 +422,10 @@ export function MarketplaceBalance() {
             <div className="text-xs text-blue-600">Oversupplied</div>
           </CardContent>
         </Card>
-        <Card className="bg-[#7CDA28]/10 border-[#7CDA28]/30">
+        <Card className="bg-[#00D97E]/10 border-[#00D97E]/30">
           <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-[#7CDA28]">{overview?.balancedZones || 0}</div>
-            <div className="text-xs text-[#7CDA28]">Balanced</div>
+            <div className="text-2xl font-bold text-[#00D97E]">{overview?.balancedZones || 0}</div>
+            <div className="text-xs text-[#00D97E]">Balanced</div>
           </CardContent>
         </Card>
         <Card className="bg-amber-50 border-amber-100">
@@ -669,8 +669,8 @@ export function MarketplaceBalance() {
                   {incentives.map((incentive) => (
                     <div key={incentive.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-[#7CDA28]/20 rounded-full flex items-center justify-center">
-                          <Target className="h-5 w-5 text-[#7CDA28]" />
+                        <div className="w-10 h-10 bg-[#00D97E]/20 rounded-full flex items-center justify-center">
+                          <Target className="h-5 w-5 text-[#00D97E]" />
                         </div>
                         <div>
                           <div className="font-medium">{incentive.name}</div>
@@ -680,7 +680,7 @@ export function MarketplaceBalance() {
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="font-bold text-[#7CDA28]">
+                        <div className="font-bold text-[#00D97E]">
                           {formatCurrency(incentive.rewardAmount)}
                         </div>
                         <div className="text-xs text-gray-500">

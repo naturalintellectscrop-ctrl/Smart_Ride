@@ -39,9 +39,9 @@ const MapComponent = dynamic(
   { 
     ssr: false,
     loading: () => (
-      <div className="w-full h-full bg-[#1A1A24] flex items-center justify-center">
+      <div className="w-full h-full bg-[#111214] flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-2 border-[#00FF88] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <div className="w-8 h-8 border-2 border-[#00D97E] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
           <span className="text-white/50 text-sm">Loading map...</span>
         </div>
       </div>
@@ -295,17 +295,11 @@ export function ConnectionMonitoringDashboard() {
 
   return (
     <div className="space-y-6 p-4 md:p-6">
-      {/* Background Glow Effects */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-[#00FF88]/5 rounded-full blur-[128px]" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-[#00FFF3]/5 rounded-full blur-[128px]" />
-      </div>
-
       {/* Header */}
-      <div className="flex items-center justify-between relative z-10">
+      <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-            <Activity className="h-6 w-6 text-[#00FF88]" />
+            <Activity className="h-6 w-6 text-[#00D97E]" />
             Connection Monitoring
           </h2>
           <p className="text-white/50">
@@ -331,31 +325,31 @@ export function ConnectionMonitoringDashboard() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 relative z-10">
-        <Card className="bg-[#1A1A24] border-white/10">
+        <Card>
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-white/50">Active Riders</p>
                 <p className="text-2xl font-bold text-white">{stats.totalActiveRiders}</p>
               </div>
-              <Smartphone className="h-8 w-8 text-[#00FF88]" />
+              <Smartphone className="h-8 w-8 text-[#00D97E]" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1A1A24] border-white/10">
+        <Card>
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-white/50">Connected</p>
-                <p className="text-2xl font-bold text-[#00FF88]">{stats.activeConnections}</p>
+                <p className="text-2xl font-bold text-[#00D97E]">{stats.activeConnections}</p>
               </div>
-              <CheckCircle2 className="h-8 w-8 text-[#00FF88]" />
+              <CheckCircle2 className="h-8 w-8 text-[#00D97E]" />
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1A1A24] border-white/10">
+        <Card>
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
@@ -367,7 +361,7 @@ export function ConnectionMonitoringDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1A1A24] border-white/10">
+        <Card>
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
@@ -379,7 +373,7 @@ export function ConnectionMonitoringDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="bg-[#1A1A24] border-white/10">
+        <Card>
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div>
@@ -394,19 +388,19 @@ export function ConnectionMonitoringDashboard() {
 
       {/* Main Content */}
       <Tabs defaultValue="riders" className="space-y-4 relative z-10">
-        <TabsList className="bg-[#1A1A24] border border-white/10">
-          <TabsTrigger value="riders" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">
+        <TabsList className="bg-[#111214] border border-white/10">
+          <TabsTrigger value="riders" className="data-[state=active]:bg-[#00D97E]/20 data-[state=active]:text-[#00D97E]">
             <User className="h-4 w-4 mr-2" />
             Active Riders
           </TabsTrigger>
-          <TabsTrigger value="alerts" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">
+          <TabsTrigger value="alerts" className="data-[state=active]:bg-[#00D97E]/20 data-[state=active]:text-[#00D97E]">
             <Bell className="h-4 w-4 mr-2" />
             Alerts
             {stats.activeAlerts > 0 && (
               <Badge variant="destructive" className="ml-2">{stats.activeAlerts}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="map" className="data-[state=active]:bg-[#00FF88]/20 data-[state=active]:text-[#00FF88]">
+          <TabsTrigger value="map" className="data-[state=active]:bg-[#00D97E]/20 data-[state=active]:text-[#00D97E]">
             <Map className="h-4 w-4 mr-2" />
             Map View
           </TabsTrigger>
@@ -414,7 +408,7 @@ export function ConnectionMonitoringDashboard() {
 
         {/* Riders Tab */}
         <TabsContent value="riders">
-          <Card className="bg-[#1A1A24] border-white/10">
+          <Card>
             <CardHeader>
               <CardTitle className="text-white">Active Riders</CardTitle>
               <CardDescription className="text-white/50">
@@ -433,7 +427,7 @@ export function ConnectionMonitoringDashboard() {
                       <div
                         key={rider.riderId}
                         className={`p-4 rounded-lg border border-white/10 cursor-pointer transition-colors hover:bg-white/5 ${
-                          selectedRider?.riderId === rider.riderId ? 'border-[#00FF88]/50 bg-[#00FF88]/10' : ''
+                          selectedRider?.riderId === rider.riderId ? 'border-[#00D97E]/50 bg-[#00D97E]/10' : ''
                         }`}
                         onClick={() => setSelectedRider(rider)}
                       >
@@ -478,7 +472,7 @@ export function ConnectionMonitoringDashboard() {
 
         {/* Alerts Tab */}
         <TabsContent value="alerts">
-          <Card className="bg-[#1A1A24] border-white/10">
+          <Card>
             <CardHeader>
               <CardTitle className="text-white">Connection Alerts</CardTitle>
               <CardDescription className="text-white/50">
@@ -554,7 +548,7 @@ export function ConnectionMonitoringDashboard() {
 
         {/* Map Tab */}
         <TabsContent value="map">
-          <Card className="overflow-hidden bg-[#1A1A24] border-white/10">
+          <Card className="overflow-hidden bg-[#111214] border-white/10">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -563,7 +557,7 @@ export function ConnectionMonitoringDashboard() {
                     Real-time rider positions on map
                   </CardDescription>
                 </div>
-                <Badge variant="outline" className="flex items-center gap-1 border-[#00FF88]/30 text-[#00FF88]">
+                <Badge variant="outline" className="flex items-center gap-1 border-[#00D97E]/30 text-[#00D97E]">
                   <MapPin className="h-3 w-3" />
                   {riders.filter(r => r.lastKnownLocation).length} riders
                 </Badge>
@@ -587,7 +581,7 @@ export function ConnectionMonitoringDashboard() {
                 />
                 
                 {/* Map Legend */}
-                <div className="absolute bottom-4 left-4 bg-[#1A1A24]/95 backdrop-blur-sm rounded-lg p-3 border border-white/10">
+                <div className="absolute bottom-4 left-4 bg-[#111214]/95 backdrop-blur-sm rounded-lg p-3 border border-white/10">
                   <p className="text-xs text-white/50 mb-2">Connection Status</p>
                   <div className="flex flex-wrap gap-3">
                     <div className="flex items-center gap-1.5">
@@ -607,7 +601,7 @@ export function ConnectionMonitoringDashboard() {
               </div>
               
               {/* Rider List */}
-              <div className="p-4 border-t border-white/10 bg-[#0D0D12]">
+              <div className="p-4 border-t border-white/10 bg-[#0B0C0E]">
                 <p className="text-sm font-medium text-white/70 mb-3">Riders with Location Data</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                   {riders.filter(r => r.lastKnownLocation).length === 0 ? (
@@ -618,7 +612,7 @@ export function ConnectionMonitoringDashboard() {
                     riders.filter(r => r.lastKnownLocation).map((rider) => (
                       <div
                         key={rider.riderId}
-                        className="p-2 rounded-lg bg-[#1A1A24] border border-white/5 text-sm flex items-center gap-2 cursor-pointer hover:bg-white/5 transition-colors"
+                        className="p-2 rounded-lg bg-[#111214] border border-white/5 text-sm flex items-center gap-2 cursor-pointer hover:bg-white/5 transition-colors"
                         onClick={() => setSelectedRider(rider)}
                       >
                         <div className={`w-2 h-2 rounded-full ${getConnectionColor(rider.connectionStatus)}`} />
@@ -638,7 +632,7 @@ export function ConnectionMonitoringDashboard() {
 
       {/* Selected Rider Details */}
       {selectedRider && (
-        <Card className="border-[#00FF88]/50 bg-[#1A1A24]">
+        <Card className="border-[#00D97E]/50 bg-[#111214]">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -683,7 +677,7 @@ export function ConnectionMonitoringDashboard() {
             {selectedRider.lastKnownLocation && (
               <div className="mt-4 p-3 bg-[#252530] rounded-lg border border-white/5">
                 <p className="text-sm font-medium text-white flex items-center gap-1">
-                  <MapPin className="h-4 w-4 text-[#00FF88]" />
+                  <MapPin className="h-4 w-4 text-[#00D97E]" />
                   Last Known Location
                 </p>
                 <p className="text-sm text-white/50 mt-1">

@@ -143,12 +143,12 @@ export function SOSMonitoring() {
   if (error) {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[400px]">
-        <div className="glass-card rounded-2xl p-8 text-center">
+        <div className="rounded-2xl p-8 text-center">
           <AlertCircle className="h-12 w-12 text-red-400 mb-4 mx-auto" />
           <p className="text-red-400 mb-4">{error}</p>
           <button 
             onClick={fetchAlerts}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium rounded-xl hover:opacity-90 transition-opacity"
+            className="px-6 py-2.5 bg-[#00D97E] text-[#0B0C0E] font-medium rounded-xl hover:opacity-90 transition-opacity"
           >
             Retry
           </button>
@@ -175,7 +175,7 @@ export function SOSMonitoring() {
           </h1>
           <p className="text-gray-400 mt-1">Monitor and respond to emergency alerts</p>
         </div>
-        <Button onClick={fetchAlerts} variant="outline" size="sm" className="glass-button text-gray-300 border-white/10 hover:bg-white/5">
+        <Button onClick={fetchAlerts} variant="outline" size="sm" className="text-white/70 border-white/10 hover:bg-white/5 hover:text-white">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -183,7 +183,7 @@ export function SOSMonitoring() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className={`glass-card glow-hover rounded-2xl ${activeCount > 0 ? 'border-red-500/30' : ''}`}>
+        <Card className={`rounded-2xl ${activeCount > 0 ? 'border-red-500/30' : ''}`}>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -201,7 +201,7 @@ export function SOSMonitoring() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -214,7 +214,7 @@ export function SOSMonitoring() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -227,7 +227,7 @@ export function SOSMonitoring() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -243,7 +243,7 @@ export function SOSMonitoring() {
       </div>
 
       {/* Alerts Table */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <Shield className="h-5 w-5 text-red-400" />
@@ -296,7 +296,7 @@ export function SOSMonitoring() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4 text-[#00FF88]" />
+                            <MapPin className="h-4 w-4 text-[#00D97E]" />
                             <span className="text-sm text-gray-300 truncate max-w-32">{alert.locationAddress || `${alert.latitude}, ${alert.longitude}`}</span>
                           </div>
                         </TableCell>
@@ -353,7 +353,7 @@ export function SOSMonitoring() {
 
       {/* Alert Details Dialog */}
       <Dialog open={!!selectedAlert} onOpenChange={() => setSelectedAlert(null)}>
-        <DialogContent className="max-w-2xl glass-card border-white/10 text-white">
+        <DialogContent className="max-w-2xl border-white/10 text-white">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-red-400" />
@@ -363,29 +363,29 @@ export function SOSMonitoring() {
           {selectedAlert && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Alert Number</p>
                   <p className="font-medium text-white">{selectedAlert.alertNumber}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Status</p>
                   <Badge className={`${getStatusStyle(selectedAlert.status).bg} ${getStatusStyle(selectedAlert.status).text} ${getStatusStyle(selectedAlert.status).border} border mt-1`}>
                     {selectedAlert.status.replace('_', ' ')}
                   </Badge>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">User Name</p>
                   <p className="font-medium text-white">{selectedAlert.userName}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">User Phone</p>
                   <p className="font-medium text-white">{selectedAlert.userPhone}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">User Type</p>
                   <p className="font-medium text-white">{selectedAlert.userType}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Created At</p>
                   <p className="font-medium text-white">{new Date(selectedAlert.createdAt).toLocaleString()}</p>
                 </div>
@@ -393,11 +393,11 @@ export function SOSMonitoring() {
 
               {selectedAlert.riderName && (
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="glass p-4 rounded-xl border border-white/5">
+                  <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                     <p className="text-sm text-gray-500">Rider Name</p>
                     <p className="font-medium text-white">{selectedAlert.riderName}</p>
                   </div>
-                  <div className="glass p-4 rounded-xl border border-white/5">
+                  <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                     <p className="text-sm text-gray-500">Rider Phone</p>
                     <p className="font-medium text-white">{selectedAlert.riderPhone || '-'}</p>
                   </div>
@@ -405,16 +405,16 @@ export function SOSMonitoring() {
               )}
 
               {selectedAlert.vehicleInfo && (
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Vehicle Info</p>
                   <p className="font-medium text-white">{selectedAlert.vehicleInfo}</p>
                 </div>
               )}
 
-              <div className="glass p-4 rounded-xl border border-white/5">
+              <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                 <p className="text-sm text-gray-500 mb-2">Location</p>
                 <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-[#00FF88]" />
+                  <MapPin className="h-4 w-4 text-[#00D97E]" />
                   <span className="text-white">{selectedAlert.locationAddress || 'No address provided'}</span>
                 </div>
                 <div className="flex items-center gap-2 mt-2">
@@ -426,7 +426,7 @@ export function SOSMonitoring() {
                     href={`https://www.google.com/maps?q=${selectedAlert.latitude},${selectedAlert.longitude}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ml-auto text-sm text-[#00FF88] hover:underline"
+                    className="ml-auto text-sm text-[#00D97E] hover:underline"
                   >
                     Open in Maps
                   </a>
@@ -434,7 +434,7 @@ export function SOSMonitoring() {
               </div>
 
               {selectedAlert.taskNumber && (
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Associated Task</p>
                   <p className="font-medium text-white">{selectedAlert.taskNumber} ({selectedAlert.taskType})</p>
                 </div>

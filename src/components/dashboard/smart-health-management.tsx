@@ -166,7 +166,7 @@ export function SmartHealthManagement() {
           <p className="text-gray-400 mt-1">Manage pharmacies, prescriptions, and health orders</p>
         </div>
         <div className="flex gap-3">
-          <Button onClick={fetchData} variant="outline" size="sm" className="glass-button text-gray-300 border-white/10 hover:bg-white/5">
+          <Button onClick={fetchData} variant="outline" size="sm" className="text-white/70 border-white/10 hover:bg-white/5 hover:text-white">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
           </Button>
@@ -193,7 +193,7 @@ export function SmartHealthManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -207,7 +207,7 @@ export function SmartHealthManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -221,7 +221,7 @@ export function SmartHealthManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -234,7 +234,7 @@ export function SmartHealthManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -251,7 +251,7 @@ export function SmartHealthManagement() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="glass-card border-white/10 p-1 rounded-xl">
+        <TabsList className="border border-white/10 bg-[#111214] p-1 rounded-xl">
           <TabsTrigger value="overview" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">Overview</TabsTrigger>
           <TabsTrigger value="providers" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">Providers</TabsTrigger>
           <TabsTrigger value="orders" className="data-[state=active]:bg-white/10 data-[state=active]:text-white text-gray-400">Orders</TabsTrigger>
@@ -263,7 +263,7 @@ export function SmartHealthManagement() {
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Recent Orders */}
-            <Card className="glass-card rounded-2xl">
+            <Card className="rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-white">Recent Health Orders</CardTitle>
                 <CardDescription className="text-gray-500">Latest pharmacy delivery orders</CardDescription>
@@ -304,7 +304,7 @@ export function SmartHealthManagement() {
             </Card>
 
             {/* Pending Providers */}
-            <Card className="glass-card rounded-2xl">
+            <Card className="rounded-2xl">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-amber-400" />
@@ -347,7 +347,7 @@ export function SmartHealthManagement() {
 
         {/* Providers Tab */}
         <TabsContent value="providers" className="space-y-6">
-          <Card className="glass-card rounded-2xl">
+          <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-white">Registered Health providers</CardTitle>
               <CardDescription className="text-gray-500">Manage pharmacy and clinic partners</CardDescription>
@@ -403,7 +403,7 @@ export function SmartHealthManagement() {
 
         {/* Orders Tab */}
         <TabsContent value="orders" className="space-y-6">
-          <Card className="glass-card rounded-2xl">
+          <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-white">Health Orders</CardTitle>
               <CardDescription className="text-gray-500">All pharmacy delivery orders</CardDescription>
@@ -454,7 +454,7 @@ export function SmartHealthManagement() {
 
         {/* Prescriptions Tab */}
         <TabsContent value="prescriptions" className="space-y-6">
-          <Card className="glass-card rounded-2xl">
+          <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Shield className="h-5 w-5 text-emerald-400" />
@@ -498,7 +498,7 @@ export function SmartHealthManagement() {
 
         {/* Audit Tab */}
         <TabsContent value="audit" className="space-y-6">
-          <Card className="glass-card rounded-2xl">
+          <Card className="rounded-2xl">
             <CardHeader>
               <CardTitle className="text-white flex items-center gap-2">
                 <Shield className="h-5 w-5 text-emerald-400" />

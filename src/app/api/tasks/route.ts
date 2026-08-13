@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse, after } from 'next/server';
+import { isProvider } from '@/lib/auth/jwt';
 import { db } from '@/lib/db';
 import { nextTaskNumber } from '@/lib/tasks/task-number';
 import { 
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
     
     // SECURITY: Non-admin users can only see their own tasks
     if (!isAdmin(user.role)) {
-      if (user.role === 'RIDER') {
+      if (isProvider(user.role)) {
         // Riders see tasks assigned to them
         const rider = await db.rider.findUnique({
           where: { userId: user.userId },

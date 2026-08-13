@@ -226,7 +226,7 @@ export function RiderManagement() {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin text-[#00FF88]" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#00D97E]" />
           <p className="text-gray-400 text-sm">Loading riders...</p>
         </div>
       </div>
@@ -241,7 +241,7 @@ export function RiderManagement() {
           <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">Rider Management</h1>
           <p className="text-gray-400 mt-1">Manage and verify rider registrations</p>
         </div>
-        <Button onClick={fetchRiders} variant="outline" size="sm" className="glass-button text-gray-300 border-white/10 hover:bg-white/5">
+        <Button onClick={fetchRiders} variant="outline" size="sm" className="text-white/70 border-white/10 hover:bg-white/5 hover:text-white">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -249,7 +249,7 @@ export function RiderManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Total Riders</CardTitle>
             <div className="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
@@ -260,7 +260,7 @@ export function RiderManagement() {
             <div className="text-2xl font-bold text-white">{riders.length}</div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Pending</CardTitle>
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
@@ -273,7 +273,7 @@ export function RiderManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Approved</CardTitle>
             <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
@@ -286,15 +286,15 @@ export function RiderManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Online Now</CardTitle>
-            <div className="w-9 h-9 rounded-xl bg-[#00FF88]/10 flex items-center justify-center border border-[#00FF88]/20">
-              <div className="w-2 h-2 bg-[#00FF88] rounded-full animate-pulse" />
+            <div className="w-9 h-9 rounded-xl bg-[#00D97E]/10 flex items-center justify-center border border-[#00D97E]/20">
+              <div className="w-2 h-2 bg-[#00D97E] rounded-full animate-pulse" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#00FF88]">
+            <div className="text-2xl font-bold text-[#00D97E]">
               {riders.filter(r => r.isOnline).length}
             </div>
           </CardContent>
@@ -302,7 +302,7 @@ export function RiderManagement() {
       </div>
 
       {/* Filters */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -311,14 +311,14 @@ export function RiderManagement() {
                 placeholder="Search riders..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 glass-input border-white/10 text-white placeholder:text-gray-500"
+                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40 glass-input border-white/10 text-white">
+              <SelectTrigger className="w-full sm:w-40 bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="glass-card border-white/10">
+              <SelectContent className="border-white/10">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="PENDING_APPROVAL">Pending</SelectItem>
                 <SelectItem value="APPROVED">Approved</SelectItem>
@@ -327,10 +327,10 @@ export function RiderManagement() {
               </SelectContent>
             </Select>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full sm:w-40 glass-input border-white/10 text-white">
+              <SelectTrigger className="w-full sm:w-40 bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Role" />
               </SelectTrigger>
-              <SelectContent className="glass-card border-white/10">
+              <SelectContent className="border-white/10">
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="SMART_BODA_RIDER">Smart Boda</SelectItem>
                 <SelectItem value="SMART_CAR_DRIVER">Smart Car</SelectItem>
@@ -350,7 +350,7 @@ export function RiderManagement() {
       )}
 
       {/* Table */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-white">Riders</CardTitle>
           <CardDescription className="text-gray-500">Manage rider registrations and status</CardDescription>
@@ -389,9 +389,9 @@ export function RiderManagement() {
                       <TableRow key={rider.id} className="border-white/5 hover:bg-white/5">
                         <TableCell>
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center border border-[#00FF88]/20">
-                              {rider.isOnline && <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#00FF88] rounded-full border-2 border-[#13131A]" />}
-                              <span className="text-[#00FF88] font-medium text-sm">
+                            <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center border border-[#00D97E]/20">
+                              {rider.isOnline && <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-[#00D97E] rounded-full border-2 border-[#13131A]" />}
+                              <span className="text-[#00D97E] font-medium text-sm">
                                 {rider.fullName.split(' ').map(n => n[0]).join('').substring(0, 2)}
                               </span>
                             </div>
@@ -489,36 +489,36 @@ export function RiderManagement() {
 
       {/* Rider Details Dialog */}
       <Dialog open={!!selectedRider} onOpenChange={() => setSelectedRider(null)}>
-        <DialogContent className="max-w-2xl glass-card border-white/10 text-white max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-2xl border-white/10 text-white max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white">Rider Details</DialogTitle>
           </DialogHeader>
           {selectedRider && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Full Name</p>
                   <p className="font-medium text-white">{selectedRider.fullName}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Phone</p>
                   <p className="font-medium text-white">{selectedRider.phone}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Email</p>
                   <p className="font-medium text-white">{selectedRider.email || '-'}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Role</p>
                   <p className="font-medium text-white">{getRoleLabel(selectedRider.riderRole)}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Status</p>
                   <Badge className={`${getStatusStyle(selectedRider.status).bg} ${getStatusStyle(selectedRider.status).text} ${getStatusStyle(selectedRider.status).border} border mt-1`}>
                     {selectedRider.status.replace('_', ' ')}
                   </Badge>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Rating</p>
                   <div className="flex items-center gap-1">
                     <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
@@ -531,15 +531,15 @@ export function RiderManagement() {
                 <div>
                   <h4 className="font-medium text-white mb-3">Vehicle Information</h4>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="glass p-4 rounded-xl border border-white/5">
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                       <p className="text-sm text-gray-500">Make/Model</p>
                       <p className="text-white">{selectedRider.vehicle.make} {selectedRider.vehicle.model}</p>
                     </div>
-                    <div className="glass p-4 rounded-xl border border-white/5">
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                       <p className="text-sm text-gray-500">Plate Number</p>
                       <p className="text-white">{selectedRider.vehicle.plateNumber}</p>
                     </div>
-                    <div className="glass p-4 rounded-xl border border-white/5">
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                       <p className="text-sm text-gray-500">Color</p>
                       <p className="text-white">{selectedRider.vehicle.color}</p>
                     </div>

@@ -11,6 +11,7 @@ import { Prisma, TaskStatus } from '@prisma/client';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { redactPerson } from '@/lib/privacy/public-contact';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { isProvider } from '@/lib/auth/jwt';
 
 // NOTE: there is no TaskStatus.DELIVERING in the Prisma enum — the in-flight
 // delivery state is IN_TRANSIT. This list previously included
@@ -31,6 +32,10 @@ const ACTIVE_STATUSES: TaskStatus[] = [
   TaskStatus.PICKED_UP,
   TaskStatus.IN_PROGRESS,
   TaskStatus.IN_TRANSIT,
+  // The handover step. Omitting it meant a courier standing at the customer's
+  // door — the single most active moment of a delivery — had "no active task",
+  // so reopening the app during a handover lost the job entirely.
+  TaskStatus.DELIVERING,
 ];
 
 const ACTIVE_TASK_INCLUDE = {
@@ -80,7 +85,7 @@ export async function GET(request: NextRequest) {
         include: ACTIVE_TASK_INCLUDE,
         orderBy: { createdAt: 'desc' },
       });
-    } else if (user.role === 'RIDER') {
+    } else if (isProvider(user.role)) {
       // Rider: find their rider profile first, then find active tasks
       const rider = await db.rider.findFirst({
         where: { userId: user.userId },

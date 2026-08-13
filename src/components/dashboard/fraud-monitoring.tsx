@@ -110,7 +110,7 @@ export function FraudMonitoring() {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-10 w-10 animate-spin text-[#00FF88]" />
+          <Loader2 className="h-10 w-10 animate-spin text-[#00D97E]" />
           <p className="text-gray-400 text-sm">Loading fraud alerts...</p>
         </div>
       </div>
@@ -120,12 +120,12 @@ export function FraudMonitoring() {
   if (error) {
     return (
       <div className="p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[400px]">
-        <div className="glass-card rounded-2xl p-8 text-center">
+        <div className="rounded-2xl p-8 text-center">
           <AlertCircle className="h-12 w-12 text-red-400 mb-4 mx-auto" />
           <p className="text-red-400 mb-4">{error}</p>
           <button 
             onClick={fetchData}
-            className="px-6 py-2.5 bg-gradient-to-r from-[#00FF88] to-[#00CC6A] text-black font-medium rounded-xl hover:opacity-90 transition-opacity"
+            className="px-6 py-2.5 bg-[#00D97E] text-[#0B0C0E] font-medium rounded-xl hover:opacity-90 transition-opacity"
           >
             Retry
           </button>
@@ -149,7 +149,7 @@ export function FraudMonitoring() {
         </div>
         <button
           onClick={fetchData}
-          className="glass-button text-gray-300 border-white/10 hover:bg-white/5 px-4 py-2 rounded-xl flex items-center gap-2 text-sm"
+          className="text-white/70 border-white/10 hover:bg-white/5 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm"
         >
           <RefreshCw className="h-4 w-4" />
           Refresh
@@ -158,7 +158,7 @@ export function FraudMonitoring() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -171,7 +171,7 @@ export function FraudMonitoring() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl border-red-500/20">
+        <Card className="rounded-2xl border-red-500/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -184,7 +184,7 @@ export function FraudMonitoring() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl border-amber-500/20">
+        <Card className="rounded-2xl border-amber-500/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -197,7 +197,7 @@ export function FraudMonitoring() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl border-emerald-500/20">
+        <Card className="rounded-2xl border-emerald-500/20">
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -213,7 +213,7 @@ export function FraudMonitoring() {
       </div>
 
       {/* Alerts Table */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-white flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-400" />

@@ -218,7 +218,7 @@ export function HealthProviderManagement() {
           </h1>
           <p className="text-gray-400 mt-1">Verify and manage health provider registrations</p>
         </div>
-        <Button onClick={fetchProviders} variant="outline" size="sm" className="glass-button text-gray-300 border-white/10 hover:bg-white/5">
+        <Button onClick={fetchProviders} variant="outline" size="sm" className="text-white/70 border-white/10 hover:bg-white/5 hover:text-white">
           <RefreshCw className="h-4 w-4 mr-2" />
           Refresh
         </Button>
@@ -226,7 +226,7 @@ export function HealthProviderManagement() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Total Providers</CardTitle>
             <div className="w-9 h-9 rounded-xl bg-rose-500/10 flex items-center justify-center border border-rose-500/20">
@@ -237,7 +237,7 @@ export function HealthProviderManagement() {
             <div className="text-2xl font-bold text-white">{providers.length}</div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Pending Verification</CardTitle>
             <div className="w-9 h-9 rounded-xl bg-amber-500/10 flex items-center justify-center border border-amber-500/20">
@@ -250,7 +250,7 @@ export function HealthProviderManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Approved</CardTitle>
             <div className="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
@@ -263,15 +263,15 @@ export function HealthProviderManagement() {
             </div>
           </CardContent>
         </Card>
-        <Card className="glass-card glow-hover rounded-2xl">
+        <Card className="rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-gray-400">Open Now</CardTitle>
-            <div className="w-9 h-9 rounded-xl bg-[#00FF88]/10 flex items-center justify-center border border-[#00FF88]/20">
-              <div className="w-2 h-2 bg-[#00FF88] rounded-full animate-pulse" />
+            <div className="w-9 h-9 rounded-xl bg-[#00D97E]/10 flex items-center justify-center border border-[#00D97E]/20">
+              <div className="w-2 h-2 bg-[#00D97E] rounded-full animate-pulse" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#00FF88]">
+            <div className="text-2xl font-bold text-[#00D97E]">
               {providers.filter(p => p.isOpenNow).length}
             </div>
           </CardContent>
@@ -279,7 +279,7 @@ export function HealthProviderManagement() {
       </div>
 
       {/* Filters */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="relative flex-1">
@@ -288,14 +288,14 @@ export function HealthProviderManagement() {
                 placeholder="Search by name, phone, license..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 glass-input border-white/10 text-white placeholder:text-gray-500"
+                className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-500"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-40 glass-input border-white/10 text-white">
+              <SelectTrigger className="w-full sm:w-40 bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
-              <SelectContent className="glass-card border-white/10">
+              <SelectContent className="border-white/10">
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
                 <SelectItem value="APPROVED">Approved</SelectItem>
@@ -305,10 +305,10 @@ export function HealthProviderManagement() {
               </SelectContent>
             </Select>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full sm:w-40 glass-input border-white/10 text-white">
+              <SelectTrigger className="w-full sm:w-40 bg-white/5 border-white/10 text-white">
                 <SelectValue placeholder="Type" />
               </SelectTrigger>
-              <SelectContent className="glass-card border-white/10">
+              <SelectContent className="border-white/10">
                 <SelectItem value="all">All Types</SelectItem>
                 <SelectItem value="PHARMACY">Pharmacy</SelectItem>
                 <SelectItem value="DRUG_SHOP">Drug Shop</SelectItem>
@@ -333,7 +333,7 @@ export function HealthProviderManagement() {
       )}
 
       {/* Table */}
-      <Card className="glass-card rounded-2xl">
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle className="text-white">Health Providers</CardTitle>
           <CardDescription className="text-gray-500">Manage provider registrations and status</CardDescription>
@@ -460,40 +460,40 @@ export function HealthProviderManagement() {
 
       {/* Provider Details Dialog */}
       <Dialog open={!!selectedProvider} onOpenChange={() => setSelectedProvider(null)}>
-        <DialogContent className="max-w-2xl glass-card border-white/10 text-white">
+        <DialogContent className="max-w-2xl border-white/10 text-white">
           <DialogHeader>
             <DialogTitle className="text-white">Health Provider Details</DialogTitle>
           </DialogHeader>
           {selectedProvider && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Business Name</p>
                   <p className="font-medium text-white">{selectedProvider.businessName}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Type</p>
                   <p className="font-medium text-white">{getTypeLabel(selectedProvider.providerType)}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">License Number</p>
                   <p className="font-medium font-mono text-white">{selectedProvider.licenseNumber}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Phone</p>
                   <p className="font-medium text-white">{selectedProvider.ownerPhone}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Email</p>
                   <p className="font-medium text-white">{selectedProvider.ownerEmail || '-'}</p>
                 </div>
-                <div className="glass p-4 rounded-xl border border-white/5">
+                <div className="bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Status</p>
                   <Badge className={`${getStatusColor(selectedProvider.verificationStatus)} border mt-1`}>
                     {selectedProvider.verificationStatus.replace(/_/g, ' ')}
                   </Badge>
                 </div>
-                <div className="col-span-2 glass p-4 rounded-xl border border-white/5">
+                <div className="col-span-2 bg-white/5 p-4 rounded-xl border border-white/10">
                   <p className="text-sm text-gray-500">Address</p>
                   <p className="font-medium text-white">{selectedProvider.address}</p>
                 </div>

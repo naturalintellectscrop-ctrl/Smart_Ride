@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isProvider } from '@/lib/auth/jwt';
 import { db } from '@/lib/db';
 import { 
   successResponse, 
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
         } else {
           return paginatedResponse([], page, limit, 0);
         }
-      } else if (user.role === 'RIDER') {
+      } else if (isProvider(user.role)) {
         // Riders can see orders assigned to them
         const rider = await db.rider.findUnique({
           where: { userId: user.userId },
