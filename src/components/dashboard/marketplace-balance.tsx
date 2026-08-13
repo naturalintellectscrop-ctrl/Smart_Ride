@@ -31,7 +31,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useAuth } from '@/components/auth/auth-provider';
 import { canView, canEdit } from '@/lib/permissions';
 import { NotificationSender } from '@/components/notifications/notification-sender';
 import { 
@@ -108,7 +107,10 @@ interface Incentive {
 }
 
 export function MarketplaceBalance() {
-  const { user } = useAuth();
+  // Admin role isn't provided via a React context anywhere in the app — every
+  // other dashboard view reads it straight out of localStorage after login,
+  // so match that pattern here instead of the unwired useAuth()/AuthProvider.
+  const [adminRole, setAdminRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [overview, setOverview] = useState<MarketplaceOverview | null>(null);
@@ -133,8 +135,17 @@ export function MarketplaceBalance() {
   });
   const [submitting, setSubmitting] = useState(false);
 
-  const canEditMarketplace = user?.role && canEdit(user.role, 'pricing' as any);
-  const canViewMarketplace = user?.role && canView(user.role, 'pricing' as any);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('admin_user');
+      setAdminRole(stored ? JSON.parse(stored)?.role ?? null : null);
+    } catch {
+      setAdminRole(null);
+    }
+  }, []);
+
+  const canEditMarketplace = adminRole && canEdit(adminRole, 'pricing' as any);
+  const canViewMarketplace = adminRole && canView(adminRole, 'pricing' as any);
 
   const fetchData = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setRefreshing(true);
