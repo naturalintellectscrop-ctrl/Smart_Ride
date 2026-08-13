@@ -236,7 +236,14 @@ class SocketService {
       if (status === 'SUBSCRIBED') {
         console.log(`[Realtime] Subscribed to: ${name}`);
       } else if (status === 'CHANNEL_ERROR') {
+        // Observed on a real device. The reconnect below usually recovers it,
+        // but while the channel is down the rider receives NO in-app offer
+        // sheet — dispatch pushes a notification and nothing takes over the
+        // screen. Surfaced as a local event so the dashboard can fall back to
+        // asking the server what it holds, rather than the failure being
+        // visible only in logcat.
         console.error(`[Realtime] Channel error: ${name}`);
+        this.emitLocal('connection:changed', { connected: false });
         this.scheduleReconnect();
       } else if (status === 'TIMED_OUT') {
         console.warn(`[Realtime] Channel timed out: ${name}`);

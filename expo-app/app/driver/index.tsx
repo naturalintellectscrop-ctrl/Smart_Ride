@@ -110,9 +110,44 @@ export default function DriverHomeScreen() {
   const lastCoordsRef = useRef<{ latitude: number; longitude: number } | null>(null);
 
   // Load rider profile on mount - NON-BLOCKING
+  /**
+   * Recover a job we are already holding.
+   *
+   * The dashboard used to learn about work from exactly one source: a live
+   * `driver:request` socket event. Miss that single event — the socket dropped
+   * (CHANNEL_ERROR was observed on a real device), the app was backgrounded,
+   * the phone restarted, the accept response never came back — and the courier
+   * sat on "Waiting for deliveries" while holding an assigned delivery. There
+   * was no path back to it from this screen.
+   *
+   * Asking the server what we hold is not a second dispatch system: it reads
+   * the same task the socket would have told us about, and the server stays
+   * the only authority on whether we have it.
+   */
+  const recoverActiveTask = useCallback(async () => {
+    try {
+      const res = await api.getActiveTask();
+      const task: any = res?.data;
+      if (!res?.success || !task?.id) return;
+
+      // Anything past assignment is work in progress — open it rather than
+      // leaving the rider on an idle dashboard.
+      const IN_FLIGHT = [
+        'ASSIGNED', 'ACCEPTED', 'ARRIVING', 'ARRIVED',
+        'PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT', 'DELIVERING',
+      ];
+      if (IN_FLIGHT.includes(task.status)) {
+        router.push(`/driver/driver-task?taskId=${task.id}` as never);
+      }
+    } catch {
+      // Never block the dashboard on this — it is a recovery path, not a gate.
+    }
+  }, [router]);
+
   useEffect(() => {
     loadRiderProfile();
     loadEarnings();
+    recoverActiveTask();
 
     // Connect socket and listen for ride requests
     const initSocket = async () => {
