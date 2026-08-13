@@ -149,6 +149,24 @@ export function hasRole(userRole: UserRole, requiredRoles: UserRole[]): boolean 
 }
 
 /**
+ * Is this user a work-performing provider — someone who takes dispatch offers?
+ *
+ * UserRole has BOTH `RIDER` and `DRIVER`, and the app's own registration
+ * screen creates each of them: "Smart Boda" signs up as RIDER, "Smart Car"
+ * signs up as DRIVER. Five routes gated on `role !== 'RIDER'` alone, so a
+ * driver who registered through the supported path could not see offers,
+ * accept a task, decline one, accept a dispatch, or withdraw their earnings —
+ * every one returned 403 "Only riders can …".
+ *
+ * The distinction the routes actually care about is provider vs. customer, not
+ * two-wheels vs. four. Which VEHICLE someone drives is `Rider.riderRole`, and
+ * that is where dispatch eligibility is already decided.
+ */
+export function isProvider(role: UserRole): boolean {
+  return role === 'RIDER' || role === 'DRIVER';
+}
+
+/**
  * Check if user is admin (any admin type)
  */
 export function isAdmin(role: UserRole): boolean {

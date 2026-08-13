@@ -10,6 +10,7 @@ import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { db, resetRLSContext } from '@/lib/db';
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from '@/lib/security/rate-limit';
 import { withdrawFromWallet } from '@/lib/wallet/wallet-service';
+import { isProvider } from '@/lib/auth/jwt';
 
 const VALID_PROVIDERS = ['MTN_MOMO', 'AIRTEL_MONEY'];
 
@@ -33,9 +34,9 @@ export async function POST(request: NextRequest) {
   const user = authResult.user;
 
   // Only riders can withdraw
-  if (user.role !== 'RIDER') {
+  if (!isProvider(user.role)) {
     return NextResponse.json(
-      { success: false, error: 'Only riders can withdraw from wallet' },
+      { success: false, error: 'Only providers can withdraw from wallet' },
       { status: 403 }
     );
   }

@@ -10,6 +10,7 @@ import { db, setRLSContext, resetRLSContext, setServiceRoleContext } from '@/lib
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 import { firstNameOf } from '@/lib/privacy/public-contact';
 import { broadcastToUser, broadcastToTask } from '@/lib/realtime-server';
+import { isProvider } from '@/lib/auth/jwt';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -29,9 +30,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // SECURITY: Verify user is a rider
-    if (user.role !== 'RIDER') {
+    if (!isProvider(user.role)) {
       return NextResponse.json(
-        { success: false, error: 'Only riders can accept dispatches' },
+        { success: false, error: 'Only providers can accept dispatches' },
         { status: 403 }
       );
     }

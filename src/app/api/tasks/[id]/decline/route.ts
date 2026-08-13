@@ -10,6 +10,7 @@ import { TaskStatus } from '@prisma/client';
 import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { db, resetRLSContext } from '@/lib/db';
+import { isProvider } from '@/lib/auth/jwt';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -29,9 +30,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const user = authResult.user;
 
   // Only riders can decline tasks
-  if (user.role !== 'RIDER') {
+  if (!isProvider(user.role)) {
     return NextResponse.json(
-      { success: false, error: 'Only riders can decline tasks' },
+      { success: false, error: 'Only providers can decline tasks' },
       { status: 403 }
     );
   }

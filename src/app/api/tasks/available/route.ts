@@ -13,6 +13,7 @@ import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { redactPerson } from '@/lib/privacy/public-contact';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { canRiderPerformTask } from '@/lib/services/enhanced-task-state-machine.service';
+import { isProvider } from '@/lib/auth/jwt';
 
 // GET /api/tasks/available - Get available tasks for rider
 export async function GET(request: NextRequest) {
@@ -39,9 +40,9 @@ export async function GET(request: NextRequest) {
   const user = authResult.user;
 
   // Only riders can view available tasks
-  if (user.role !== 'RIDER') {
+  if (!isProvider(user.role)) {
     return NextResponse.json(
-      { success: false, error: 'Only riders can view available tasks' },
+      { success: false, error: 'Only providers can view available tasks' },
       { status: 403 }
     );
   }

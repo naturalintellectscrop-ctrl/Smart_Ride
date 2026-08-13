@@ -10,6 +10,7 @@ import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-mac
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { db, resetRLSContext } from '@/lib/db';
 import { claimTask, releaseClaim } from '@/lib/delivery/delivery-service';
+import { isProvider } from '@/lib/auth/jwt';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -29,9 +30,9 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const user = authResult.user;
 
   // Only riders can accept tasks
-  if (user.role !== 'RIDER') {
+  if (!isProvider(user.role)) {
     return NextResponse.json(
-      { success: false, error: 'Only riders can accept tasks' },
+      { success: false, error: 'Only providers can accept tasks' },
       { status: 403 }
     );
   }
