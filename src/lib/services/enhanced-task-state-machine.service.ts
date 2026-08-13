@@ -667,6 +667,15 @@ export class EnhancedTaskStateMachine {
           TaskStatus.CANCELLED,
           TaskStatus.FAILED,
           TaskStatus.CLOSED,
+          // DELIVERED frees the courier too. The parcel is with the recipient
+          // and proof is recorded — the work is done. COMPLETED is the
+          // platform closing the record afterwards, and holding the rider
+          // hostage to that extra tap meant a courier who finished a delivery
+          // received NO further offers until they remembered to press
+          // "Complete Task". Observed on a real device: a rider sat online,
+          // approved and heartbeating, and dispatch skipped them because
+          // currentTaskId still pointed at a task in DELIVERED.
+          TaskStatus.DELIVERED,
         ];
         if (terminalStatuses.includes(toStatus) && previousRiderId) {
           await tx.rider.updateMany({
@@ -1244,6 +1253,8 @@ export class EnhancedTaskStateMachine {
         TaskStatus.CANCELLED,
         TaskStatus.FAILED,
         TaskStatus.CLOSED,
+        // See the note on the other terminal list: DELIVERED frees the rider.
+        TaskStatus.DELIVERED,
       ];
       if (terminalStatuses.includes(toStatus) && previousRiderId) {
         await tx.rider.updateMany({
