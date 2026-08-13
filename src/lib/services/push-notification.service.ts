@@ -18,7 +18,28 @@ interface PushPayload {
   title: string;
   message: string;
   data?: Record<string, unknown>;
+  /**
+   * Android notification channel. On Android 8+ the channel — not this
+   * payload — decides whether a notification makes a sound, vibrates, or
+   * shows a heads-up banner. Omitting it drops the alert onto the default
+   * channel, which is why a backgrounded driver got a quiet tick for a ride
+   * offer that expires in seconds.
+   *
+   * Must match an id created in the app's notification-channels.ts.
+   */
+  channelId?: PushChannel;
 }
+
+/** Channel ids the mobile app creates at launch. Keep in sync with
+ *  `expo-app/src/services/notification-channels.ts`. */
+export type PushChannel = 'ride-offers-v1' | 'trip-updates-v1' | 'general-v1';
+
+/** Rings loudly and insistently — for time-critical job offers. */
+export const CHANNEL_RIDE_OFFERS: PushChannel = 'ride-offers-v1';
+/** Audible but ordinary — trip and order progress. */
+export const CHANNEL_TRIP_UPDATES: PushChannel = 'trip-updates-v1';
+/** Everything else. */
+export const CHANNEL_GENERAL: PushChannel = 'general-v1';
 
 /**
  * Check if push notification service is properly configured.
@@ -82,6 +103,8 @@ async function sendViaExpoPush(
     data: payload.data || {},
     sound: 'default' as const,
     priority: 'high' as const,
+    // Android routes the alert by channel; iOS ignores this field.
+    channelId: payload.channelId ?? CHANNEL_GENERAL,
   }));
 
   // Send to Expo Push API

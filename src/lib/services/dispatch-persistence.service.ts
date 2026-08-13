@@ -13,7 +13,7 @@ import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { DispatchMatchStatus, TaskStatus, TaskType } from '@prisma/client';
 import { CapabilityService } from './capability.service';
 import { sendDispatchReassignedNotification, sendSearchingNotification } from './notification.service';
-import { sendPushNotification } from './push-notification.service';
+import { sendPushNotification, CHANNEL_RIDE_OFFERS } from './push-notification.service';
 import { EnhancedTaskStateMachine } from './enhanced-task-state-machine.service';
 import { broadcastToUser } from '@/lib/realtime-server';
 import { DEFAULT_DISPATCH_CONFIG } from '@/lib/dispatch/types';
@@ -438,6 +438,10 @@ export class DispatchService {
         title: 'New ride request',
         message: `${task?.pickupAddress || 'Nearby pickup'}${fareText}`,
         data: { type: 'driver:request', taskId, matchId: match.id },
+        // The offer channel rings loudly and bypasses Do Not Disturb. Without
+        // it Android drops this on the default channel, which produces a quiet
+        // tick — easy to miss on an offer that expires in seconds.
+        channelId: CHANNEL_RIDE_OFFERS,
       }).catch((err) => console.error(`[Dispatch] Push to rider ${match.riderId} failed:`, err));
     }
 

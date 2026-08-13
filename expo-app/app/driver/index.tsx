@@ -20,8 +20,13 @@ import {
   StyleSheet,
   ScrollView,
   Vibration,
+  Platform,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
+import {
+  CHANNEL_RIDE_OFFERS,
+  OFFER_VIBRATION_PATTERN,
+} from '@/src/services/notification-channels';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Location from 'expo-location';
@@ -309,9 +314,11 @@ export default function DriverHomeScreen() {
   const handleIncomingRequest = (data: any) => {
     setIncomingRequest(data);
 
-    // Haptic alert so the driver notices a request even without looking at the
-    // screen (a distinct double-buzz). Push carries the sound when backgrounded.
-    Vibration.vibrate([0, 400, 200, 400]);
+    // Immediate alert on arrival. The repeating ring() effect below keeps it
+    // going until the offer is answered or expires; this is the first buzz,
+    // fired the instant the socket delivers the offer rather than waiting for
+    // the effect to schedule.
+    Vibration.vibrate(OFFER_VIBRATION_PATTERN);
 
     const expiresAt = new Date(data.expiresAt).getTime();
     const now = Date.now();
@@ -425,10 +432,18 @@ export default function DriverHomeScreen() {
           title: 'New request',
           body: incomingRequest.pickup?.address || 'Respond before it expires',
           sound: true,
+          // Routes onto the MAX-importance offer channel, which is what
+          // actually carries the sound on Android — the `sound` field above is
+          // ignored without it. Ordinary notifications stay on their quieter
+          // channels so an offer is distinguishable from a receipt.
+          ...(Platform.OS === 'android' ? { channelId: CHANNEL_RIDE_OFFERS } : {}),
         },
         trigger: null,
       }).catch(() => {});
-      Vibration.vibrate([0, 300, 150, 300]);
+      // Vibration alongside the sound, not instead of it: a driver on a boda
+      // in traffic may not hear a ring, and one with the phone in a mount may
+      // not feel a buzz.
+      Vibration.vibrate(OFFER_VIBRATION_PATTERN);
     };
 
     ring();

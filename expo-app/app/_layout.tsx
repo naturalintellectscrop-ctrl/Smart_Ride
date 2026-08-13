@@ -53,6 +53,7 @@ import { useIncomingCall } from '@/src/hooks/useIncomingCall';
 import { useAuthStore } from '@/src/store/authStore';
 import { OfflineBanner } from '@/src/components/OfflineBanner';
 import { FeedbackHost } from '@/src/components/feedback';
+import { configureNotificationChannels } from '@/src/services/notification-channels';
 
 // Without an explicit handler, expo-notifications does not play a sound or
 // show an alert while the app is foregrounded — the default behavior in
@@ -67,6 +68,12 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+// On Android 8+ the SOUND is a property of the notification CHANNEL, not the
+// payload — so `sound: true` above was being ignored, because no channel had
+// ever been created and everything landed on the implicit default one. Created
+// once at launch, before any notification can be scheduled.
+configureNotificationChannels();
 
 // Suppress known benign warnings in production
 LogBox.ignoreLogs([

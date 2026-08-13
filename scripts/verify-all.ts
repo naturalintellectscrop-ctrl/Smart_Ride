@@ -88,6 +88,11 @@ const SUITES: Suite[] = [
     covers: 'BE-012/BE-013: both parties rate; three rating stores reconcile',
   },
   {
+    name: 'offer-alert',
+    file: 'scripts/verify-offer-alert.ts',
+    covers: 'a ride offer rings audibly, foreground and backgrounded',
+  },
+  {
     name: 'core-journey',
     file: 'scripts/verify-client-driver-journey.ts',
     covers: 'book -> dispatch -> ride -> pay -> rate -> receipt -> notify',
