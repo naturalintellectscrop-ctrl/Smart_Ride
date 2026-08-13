@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-021**.
+**ID allocation:** next free ID is **BE-022**.
 
 ---
 
@@ -40,6 +40,7 @@ finding is explicitly marked as already fixed locally.
 | BE-018 | Proof gate absent from the route the mobile app calls | P0 | RESOLVED | Security |
 | BE-019 | Mobile app had no proof-of-delivery flow at all | P0 | RESOLVED | Workflow |
 | BE-020 | Mobile TaskStatus union missing DELIVERING | P1 | RESOLVED | Data |
+| BE-021 | No route could ever approve a rider | P0 | RESOLVED | Workflow |
 
 ---
 
@@ -1446,3 +1447,39 @@ but not in `expo-app/src/types`. The app could not represent a state the
 backend requires deliveries to pass through. Its status label and status colour
 were missing too, so the badge would have rendered the raw enum string to a
 courier.
+
+---
+
+## BE-021 — No route could ever approve a rider
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Workflow
+**Found:** preparing the device QA matrix, 2026-08-13
+
+Registration puts every new rider in `PENDING_APPROVAL`, and dispatch only
+offers work to `APPROVED` riders. **No route in the codebase ever set a rider to
+APPROVED.**
+
+Merchants have `/api/admin/merchants/verify`. Health providers have
+`/api/admin/health-providers/verify`. Riders had neither. The only rider status
+write that existed was the fraud path setting `SUSPENDED` — so the sole
+supported transition moved them the wrong way.
+
+**The effect:** a rider who registered through the app could never be activated
+by any supported path. The two APPROVED riders in the database were made so out
+of band. This is why the database holds zero `SMART_CAR_DRIVER` and zero
+`DELIVERY_PERSONNEL` rows — not because those roles are broken, but because
+nobody could finish onboarding one.
+
+**Fix:** `/api/admin/riders/verify`, mirroring the merchant route deliberately —
+same auth shape, same action vocabulary (`approve` / `reject` / `suspend` /
+`activate`), same response envelope, so an admin surface can treat all three
+provider types uniformly. GET lists pending riders with their uploaded
+documents, so an admin approves evidence rather than a name.
+
+Two details worth keeping: a non-approving decision also sets `isOnline: false`,
+because a suspended rider left online would keep receiving dispatch offers; and
+the rider is notified, because they have been waiting on the decision.
+
+**Verified against the live database:** GET returns pending riders, POST
+approves and the status becomes APPROVED, the rider receives a notification, and
+an unauthenticated POST returns 401.

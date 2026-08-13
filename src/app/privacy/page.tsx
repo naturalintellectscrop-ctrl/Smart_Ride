@@ -7,11 +7,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import Logo from '@/components/Logo';
+import { MarketingShell } from '@/components/marketing/MarketingShell';
+import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import {
   Shield,
-  ArrowLeft,
   Calendar,
   Mail,
   Globe,
@@ -54,9 +53,9 @@ function BulletList({ items }: { items: string[] }) {
       {items.map((item, i) => (
         <li
           key={i}
-          className="flex items-start gap-3 text-gray-300 text-[15px] leading-relaxed"
+          className="flex items-start gap-3 text-mkt-fg-muted text-[15px] leading-relaxed"
         >
-          <CheckCircle2 className="shrink-0 w-5 h-5 text-[#00D97E] mt-0.5" />
+          <CheckCircle2 className="shrink-0 w-5 h-5 text-mkt-accent mt-0.5" />
           <span>{item}</span>
         </li>
       ))}
@@ -76,11 +75,11 @@ function SectionHeading({
   return (
     <h2
       id={`section-${number}`}
-      className="border-l-4 border-[#00D97E] pl-4 flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white scroll-mt-24"
+      className="border-l-4 border-mkt-accent pl-4 flex items-center gap-3 text-2xl sm:text-3xl font-bold text-mkt-fg scroll-mt-24"
     >
-      <Icon className="w-6 h-6 text-[#00D97E] shrink-0" />
+      <Icon className="w-6 h-6 text-mkt-accent shrink-0" />
       <span>
-        <span className="text-[#00D97E] mr-2">{number}.</span>
+        <span className="text-mkt-accent mr-2">{number}.</span>
         {title}
       </span>
     </h2>
@@ -89,7 +88,7 @@ function SectionHeading({
 
 function SubHeading({ label }: { label: string }) {
   return (
-    <h3 className="text-base sm:text-lg font-semibold text-[#00D97E] mt-6 mb-1 flex items-center gap-2">
+    <h3 className="text-base sm:text-lg font-semibold text-mkt-accent mt-6 mb-1 flex items-center gap-2">
       <ChevronRight className="w-4 h-4" />
       {label}
     </h3>
@@ -99,21 +98,8 @@ function SubHeading({ label }: { label: string }) {
 // Page
 export default function PrivacyPage() {
   return (
-    <div className="min-h-screen bg-[#0B0C0E] text-white flex flex-col">
-      {/* Sticky header */}
-      <header className="sticky top-0 z-50 bg-[#0B0C0E]/85 backdrop-blur-md border-b border-white/10">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Logo variant="dark" />
-            <Link href="/">
-              <Button variant="outline" className="rounded-full border-white/15 bg-transparent text-white hover:bg-white/5 hover:text-white">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Home
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
+    <MarketingShell>
+      <MarketingHeader />
 
       {/* Hero */}
       <section className="py-16 px-4">
@@ -121,7 +107,7 @@ export default function PrivacyPage() {
           <div className="flex justify-center mb-6">
             <Badge
               variant="outline"
-              className="bg-[#00D97E]/10 border-[#00D97E]/30 text-[#00D97E] px-4 py-1.5 text-sm gap-2"
+              className="bg-mkt-accent/10 border-mkt-accent/30 text-mkt-accent px-4 py-1.5 text-sm gap-2"
             >
               <Shield className="w-4 h-4" />
               Privacy Policy
@@ -132,39 +118,39 @@ export default function PrivacyPage() {
             Smart Ride Privacy Policy
           </h1>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm text-gray-400">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm text-mkt-fg-muted">
             <span className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#00D97E]" />
+              <Calendar className="w-4 h-4 text-mkt-accent" />
               Effective Date:{' '}
-              <span className="text-white font-medium">June 18, 2026</span>
+              <span className="text-mkt-fg font-medium">June 18, 2026</span>
             </span>
-            <span className="hidden sm:inline w-px h-4 bg-white/20" />
+            <span className="hidden sm:inline w-px h-4 bg-mkt-fg-faint/20" />
             <span className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-[#00D97E]" />
+              <RefreshCw className="w-4 h-4 text-mkt-accent" />
               Last Updated:{' '}
-              <span className="text-white font-medium">June 18, 2026</span>
+              <span className="text-mkt-fg font-medium">June 18, 2026</span>
             </span>
           </div>
 
-          <Card className="bg-[#005f3a]/15 border-[#00D97E]/20 text-left">
+          <Card className="bg-mkt-accent/10 border-mkt-accent/20 text-left">
             <CardContent className="space-y-4">
-              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+              <p className="text-mkt-fg-muted leading-relaxed text-[15px] sm:text-base">
                 Smart Ride (&ldquo;Smart Ride&rdquo;, &ldquo;we&rdquo;,
                 &ldquo;our&rdquo;, or &ldquo;us&rdquo;) is operated by{' '}
-                <span className="text-white font-semibold">
+                <span className="text-mkt-fg font-semibold">
                   Natural Intellects Corp
                 </span>
                 , a company registered in the Republic of Uganda. We are
                 committed to protecting your privacy and safeguarding your
                 personal information.
               </p>
-              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+              <p className="text-mkt-fg-muted leading-relaxed text-[15px] sm:text-base">
                 This Privacy Policy explains how we collect, use, store, share,
                 and protect information when you use the Smart Ride mobile
                 application, website ({' '}
                 <a
                   href="https://smartrideug.vercel.app"
-                  className="text-[#00D97E] hover:underline"
+                  className="text-mkt-accent hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -172,7 +158,7 @@ export default function PrivacyPage() {
                 </a>{' '}
                 ), and related services.
               </p>
-              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+              <p className="text-mkt-fg-muted leading-relaxed text-[15px] sm:text-base">
                 By using Smart Ride, you agree to the practices described in
                 this Privacy Policy.
               </p>
@@ -192,19 +178,19 @@ export default function PrivacyPage() {
               Icon={Building2}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 This Privacy Policy applies to all users of Smart Ride,
                 including customers (riders), driver-partners, merchants,
                 pharmacy partners, and any other individuals who interact with
                 our platform.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride is a Ugandan ride-hailing and services super-app
                 that connects customers with transportation and on-demand
                 services including food delivery, shopping, parcel delivery,
                 health & pharmacy, and wallet services.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We are committed to handling your personal information in
                 accordance with the Uganda Data Protection and Privacy Act,
                 2019, and applicable international privacy standards.
@@ -220,13 +206,13 @@ export default function PrivacyPage() {
               Icon={Eye}
             />
             <div className="mt-4 space-y-2">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We collect information that you provide directly to us and
                 information collected automatically when you use Smart Ride.
               </p>
 
               <SubHeading label="A. Account Information" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 When you create an account, we collect:
               </p>
               <BulletList
@@ -241,7 +227,7 @@ export default function PrivacyPage() {
               />
 
               <SubHeading label="B. Location Data" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 To provide ride-hailing and delivery services, we collect:
               </p>
               <BulletList
@@ -255,7 +241,7 @@ export default function PrivacyPage() {
               />
 
               <SubHeading label="C. Payment Information" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 To process payments, we collect:
               </p>
               <BulletList
@@ -269,7 +255,7 @@ export default function PrivacyPage() {
               />
 
               <SubHeading label="D. Device Information" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We automatically collect:
               </p>
               <BulletList
@@ -284,7 +270,7 @@ export default function PrivacyPage() {
               />
 
               <SubHeading label="E. Usage Data" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We collect information about how you use Smart Ride:
               </p>
               <BulletList
@@ -308,7 +294,7 @@ export default function PrivacyPage() {
               Icon={BarChart3}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We use the information we collect to:
               </p>
               <BulletList
@@ -337,13 +323,13 @@ export default function PrivacyPage() {
               Icon={Share2}
             />
             <div className="mt-4 space-y-2">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We do not sell your personal information. We share information
                 only in the following circumstances:
               </p>
 
               <SubHeading label="A. Service Providers" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We share information with trusted third-party service providers
                 that help operate Smart Ride:
               </p>
@@ -359,7 +345,7 @@ export default function PrivacyPage() {
               />
 
               <SubHeading label="B. With Drivers, Merchants & Service Partners" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 To complete services, we share the minimum information
                 necessary:
               </p>
@@ -373,7 +359,7 @@ export default function PrivacyPage() {
               />
 
               <SubHeading label="C. Legal Compliance" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We may disclose information when required by:
               </p>
               <BulletList
@@ -386,7 +372,7 @@ export default function PrivacyPage() {
               />
 
               <SubHeading label="D. Safety & Protection" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We may share information to:
               </p>
               <BulletList
@@ -399,7 +385,7 @@ export default function PrivacyPage() {
               />
 
               <SubHeading label="E. Business Transfers" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 In the event of a merger, acquisition, or asset sale, user
                 information may be transferred as a business asset. We will
                 notify you before your information is transferred and becomes
@@ -416,48 +402,48 @@ export default function PrivacyPage() {
               Icon={Lock}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We implement industry-standard security measures to protect
                 your personal information:
               </p>
               <div className="grid sm:grid-cols-3 gap-4 mt-4">
-                <Card className="bg-white/5 border-white/10">
+                <Card className="bg-white/5 border-mkt-border">
                   <CardHeader>
-                    <Lock className="w-5 h-5 text-[#00D97E]" />
-                    <CardTitle className="text-white text-base">
+                    <Lock className="w-5 h-5 text-mkt-accent" />
+                    <CardTitle className="text-mkt-fg text-base">
                       Encryption
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 text-sm leading-relaxed">
+                    <p className="text-mkt-fg-muted text-sm leading-relaxed">
                       All data in transit is secured with TLS 1.2+ encryption.
                       Sensitive data at rest is encrypted with AES-256.
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-white/10">
+                <Card className="bg-white/5 border-mkt-border">
                   <CardHeader>
-                    <Database className="w-5 h-5 text-[#00D97E]" />
-                    <CardTitle className="text-white text-base">
+                    <Database className="w-5 h-5 text-mkt-accent" />
+                    <CardTitle className="text-mkt-fg text-base">
                       Secure Storage
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 text-sm leading-relaxed">
+                    <p className="text-mkt-fg-muted text-sm leading-relaxed">
                       Data is stored in secure, access-controlled databases
                       with regular backups and disaster recovery procedures.
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-white/10">
+                <Card className="bg-white/5 border-mkt-border">
                   <CardHeader>
-                    <Shield className="w-5 h-5 text-[#00D97E]" />
-                    <CardTitle className="text-white text-base">
+                    <Shield className="w-5 h-5 text-mkt-accent" />
+                    <CardTitle className="text-mkt-fg text-base">
                       Access Controls
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 text-sm leading-relaxed">
+                    <p className="text-mkt-fg-muted text-sm leading-relaxed">
                       Strict role-based access controls limit data access to
                       authorized personnel only. All access is logged and
                       audited.
@@ -465,7 +451,7 @@ export default function PrivacyPage() {
                   </CardContent>
                 </Card>
               </div>
-              <p className="text-gray-300 leading-relaxed mt-4">
+              <p className="text-mkt-fg-muted leading-relaxed mt-4">
                 Despite our safeguards, no system is 100% secure. If a data
                 breach occurs, we will notify affected users and the relevant
                 authorities in accordance with Ugandan law.
@@ -481,7 +467,7 @@ export default function PrivacyPage() {
               Icon={Database}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We retain your personal information for as long as your account
                 is active, and thereafter as needed to comply with legal
                 obligations, resolve disputes, and enforce our agreements.
@@ -496,12 +482,12 @@ export default function PrivacyPage() {
                   'Marketing consent records: retained until you withdraw consent',
                 ]}
               />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 When data is no longer needed, we delete it or anonymize it so
                 it can no longer be associated with you. See our{' '}
                 <Link
                   href="/delete-account"
-                  className="text-[#00D97E] hover:underline"
+                  className="text-mkt-accent hover:underline"
                 >
                   Account Deletion Policy
                 </Link>{' '}
@@ -518,7 +504,7 @@ export default function PrivacyPage() {
               Icon={UserCircle}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Under the Uganda Data Protection and Privacy Act, 2019, you
                 have the following rights regarding your personal information:
               </p>
@@ -533,11 +519,11 @@ export default function PrivacyPage() {
                   'Complain: Lodge a complaint with the Uganda Personal Data Protection Office',
                 ]}
               />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 To exercise any of these rights, contact us at{' '}
                 <a
                   href="mailto:support@smartride.ug"
-                  className="text-[#00D97E] hover:underline"
+                  className="text-mkt-accent hover:underline"
                 >
                   support@smartride.ug
                 </a>
@@ -554,7 +540,7 @@ export default function PrivacyPage() {
               Icon={Cookie}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride uses cookies and similar tracking technologies on
                 our website to:
               </p>
@@ -567,7 +553,7 @@ export default function PrivacyPage() {
                   'Serve relevant marketing content (with your consent)',
                 ]}
               />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 You can control cookies through your browser settings. Disabling
                 cookies may affect some website functionality. The mobile app
                 uses anonymous device identifiers for analytics and fraud
@@ -584,27 +570,27 @@ export default function PrivacyPage() {
               Icon={Baby}
             />
             <div className="mt-4 space-y-4">
-              <Card className="bg-[#005f3a]/10 border-[#00D97E]/20">
+              <Card className="bg-[#005f3a]/10 border-mkt-accent/20">
                 <CardContent>
-                  <p className="text-gray-200 leading-relaxed">
+                  <p className="text-mkt-fg-muted leading-relaxed">
                     Smart Ride is not intended for children under{' '}
-                    <span className="text-[#00D97E] font-semibold">13 years</span>{' '}
+                    <span className="text-mkt-accent font-semibold">13 years</span>{' '}
                     of age. We do not knowingly collect personal information
                     from children under 13.
                   </p>
                 </CardContent>
               </Card>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Users between 13 and 18 may use Smart Ride only with the
                 involvement of a parent or legal guardian. Driver-partners and
                 merchants must be at least 18 years old.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 If you believe we have collected information from a child under
                 13, please contact us at{' '}
                 <a
                   href="mailto:support@smartride.ug"
-                  className="text-[#00D97E] hover:underline"
+                  className="text-mkt-accent hover:underline"
                 >
                   support@smartride.ug
                 </a>{' '}
@@ -621,18 +607,18 @@ export default function PrivacyPage() {
               Icon={RefreshCw}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We may update this Privacy Policy from time to time to reflect
                 changes in our practices, technologies, legal requirements, or
                 other factors.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We will notify you of material changes by posting the updated
                 policy on this page and updating the &ldquo;Last Updated&rdquo;
                 date. For significant changes, we may also send a notification
                 through the app or via email.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Continued use of Smart Ride after the effective date of any
                 changes constitutes your acceptance of the updated Privacy
                 Policy.
@@ -648,41 +634,41 @@ export default function PrivacyPage() {
               Icon={Mail}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 If you have questions, concerns, or requests regarding this
                 Privacy Policy or your personal information, please contact
                 our Data Protection Officer:
               </p>
-              <Card className="bg-white/5 border-white/10">
+              <Card className="bg-white/5 border-mkt-border">
                 <CardContent className="space-y-3">
-                  <p className="text-white font-semibold text-lg">
+                  <p className="text-mkt-fg font-semibold text-lg">
                     Natural Intellects Corp
                   </p>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-mkt-fg-muted text-sm">
                     Operator of Smart Ride Uganda
                   </p>
-                  <div className="flex items-center gap-3 text-gray-300 pt-2">
-                    <Mail className="w-5 h-5 text-[#00D97E] shrink-0" />
+                  <div className="flex items-center gap-3 text-mkt-fg-muted pt-2">
+                    <Mail className="w-5 h-5 text-mkt-accent shrink-0" />
                     <a
                       href="mailto:support@smartride.ug"
-                      className="hover:text-[#00D97E] transition-colors"
+                      className="hover:text-mkt-accent transition-colors"
                     >
                       support@smartride.ug
                     </a>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-300">
-                    <Globe className="w-5 h-5 text-[#00D97E] shrink-0" />
+                  <div className="flex items-center gap-3 text-mkt-fg-muted">
+                    <Globe className="w-5 h-5 text-mkt-accent shrink-0" />
                     <a
                       href="https://smartrideug.vercel.app"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:text-[#00D97E] transition-colors"
+                      className="hover:text-mkt-accent transition-colors"
                     >
                       smartrideug.vercel.app
                     </a>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-300">
-                    <MapPin className="w-5 h-5 text-[#00D97E] shrink-0" />
+                  <div className="flex items-center gap-3 text-mkt-fg-muted">
+                    <MapPin className="w-5 h-5 text-mkt-accent shrink-0" />
                     <span>Kampala, Uganda</span>
                   </div>
                 </CardContent>
@@ -693,47 +679,47 @@ export default function PrivacyPage() {
       </main>
 
       {/* Sticky footer */}
-      <footer className="mt-auto bg-[#0B0C0E] border-t border-white/10">
+      <footer className="mt-auto bg-mkt-bg-raised border-t border-mkt-border">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <Logo variant="dark" />
+            <Link href="/" className="text-lg font-semibold text-mkt-fg">Smart Ride</Link>
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
               <Link
                 href="/privacy"
-                className="text-gray-400 hover:text-[#00D97E] transition-colors"
+                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
               >
                 Privacy Policy
               </Link>
               <Link
                 href="/terms"
-                className="text-gray-400 hover:text-[#00D97E] transition-colors"
+                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
               >
                 Terms of Service
               </Link>
               <Link
                 href="/delete-account"
-                className="text-gray-400 hover:text-[#00D97E] transition-colors"
+                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
               >
                 Account Deletion
               </Link>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-4">
-            <Mail className="w-4 h-4 text-[#00D97E]" />
+          <div className="flex items-center justify-center gap-2 text-sm text-mkt-fg-muted mb-4">
+            <Mail className="w-4 h-4 text-mkt-accent" />
             <a
               href="mailto:support@smartride.ug"
-              className="hover:text-[#00D97E] transition-colors"
+              className="hover:text-mkt-accent transition-colors"
             >
               support@smartride.ug
             </a>
           </div>
-          <div className="pt-6 border-t border-white/10 text-center">
-            <p className="text-gray-500 text-sm">
+          <div className="pt-6 border-t border-mkt-border text-center">
+            <p className="text-mkt-fg-faint text-sm">
               &copy; 2025 Smart Ride. All rights reserved.
             </p>
           </div>
         </div>
       </footer>
-    </div>
+    </MarketingShell>
   );
 }

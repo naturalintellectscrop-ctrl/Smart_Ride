@@ -2,10 +2,10 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { MarketingShell } from '@/components/marketing/MarketingShell';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { Section } from '@/components/marketing/Section';
-import { SectionHeading } from '@/components/marketing/SectionHeading';
 import {
   Accordion,
   AccordionContent,
@@ -32,33 +32,27 @@ const faqData = [
   },
   {
     question: 'Can I schedule a ride in advance?',
-    answer:
-      'Yes, up to 7 days ahead. Tap the clock icon on the booking screen and pick your pickup date and time.',
+    answer: 'Yes, up to 7 days ahead. Tap the clock icon on the booking screen and pick your pickup date and time.',
   },
   {
     question: 'How do I cancel a ride?',
-    answer:
-      'Tap Cancel Ride in the app. A cancellation fee may apply if your rider has already set off towards your pickup point.',
+    answer: 'Tap Cancel Ride in the app. A cancellation fee may apply if your rider has already set off towards your pickup point.',
   },
   {
     question: 'How do I become a rider or driver?',
-    answer:
-      'Download the app, create an account, and submit your ID, licence and vehicle registration. Once those clear verification you can start accepting requests.',
+    answer: 'Download the app, create an account, and submit your ID, licence and vehicle registration. Once those clear verification you can start accepting requests.',
   },
   {
     question: 'Is my personal information secure?',
-    answer:
-      'Your account details and payment information are encrypted in transit and at rest. We do not sell your data or share it with third parties for marketing. See our privacy policy for what we collect and why.',
+    answer: 'Your account details and payment information are encrypted in transit and at rest. We do not sell your data or share it with third parties for marketing. See our privacy policy for what we collect and why.',
   },
   {
     question: 'What if I left something in a ride?',
-    answer:
-      "Go to Your Rides, select the trip, and tap 'I lost an item'. You can contact the rider directly, or hand it to our support team if you cannot reach them.",
+    answer: "Go to Your Rides, select the trip, and tap 'I lost an item'. You can contact the rider directly, or hand it to our support team if you cannot reach them.",
   },
   {
     question: 'How do I contact support?',
-    answer:
-      'In the app, go to Help then Contact Support. That route gives us your trip details automatically. You can also email support@smartride.ug.',
+    answer: 'In the app, go to Help then Contact Support. That route gives us your trip details automatically. You can also email support@smartride.ug.',
   },
 ];
 
@@ -69,67 +63,64 @@ const safetyFeatures = [
 ];
 
 const paymentOptions = [
-  { label: 'MTN', name: 'MTN MoMo', description: 'Pay straight from your MTN Mobile Money account', swatch: '#FFCC00', text: '#0B0C0E' },
+  { label: 'MTN', name: 'MTN MoMo', description: 'Pay straight from your MTN Mobile Money account', swatch: '#FFCC00', text: '#1a1a1a' },
   { label: 'A', name: 'Airtel Money', description: 'Pay from your Airtel Money wallet', swatch: '#ED1C24', text: '#FFFFFF' },
-  { label: 'UGX', name: 'Cash', description: 'Pay the rider in cash at the end of your trip', swatch: '#00D97E', text: '#0B0C0E' },
+  { label: 'UGX', name: 'Cash', description: 'Pay the rider in cash at the end of your trip', swatch: '#00A862', text: '#FFFFFF' },
 ];
 
 export default function HelpPage() {
   return (
-    <div className="flex min-h-screen flex-col bg-[#0B0C0E] text-white">
+    <MarketingShell>
       <MarketingHeader />
 
-      <Section className="pb-12 pt-20 lg:pt-24">
-        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#00D97E]">
-          Help centre
-        </span>
-        <h1 className="mt-5 text-balance font-[family-name:var(--font-plus-jakarta)] text-4xl font-semibold leading-[1.1] tracking-tight text-white sm:text-5xl">
-          Answers to what people ask most
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/55">
-          If yours isn&apos;t here, our support team can pick it up from the app.
+      <Section className="pb-12 pt-24">
+        <h1 className="text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">Help</h1>
+        <p className="mt-6 max-w-2xl text-lg text-mkt-fg-muted">
+          Answers to the questions we get most. If yours is not here, our
+          support team can pick it up from the app.
         </p>
       </Section>
 
-      <Section className="pt-4">
-        <div className="max-w-3xl">
-          <h2 className="mb-6 text-2xl font-semibold text-white">Frequently asked questions</h2>
-          <Accordion type="single" collapsible defaultValue={faqData[0].question} className="border-t border-white/10">
-            {faqData.map((item) => (
-              <AccordionItem key={item.question} value={item.question} className="border-white/10">
-                <AccordionTrigger className="py-5 text-base font-medium text-white hover:no-underline">
-                  {item.question}
-                </AccordionTrigger>
-                <AccordionContent className="text-sm leading-relaxed text-white/55">
-                  {item.answer}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
+      <Section className="pt-0" containerClassName="[&>*]:max-w-3xl">
+        <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Frequently asked questions</h2>
+
+        <Accordion type="single" collapsible defaultValue={faqData[0].question} className="rounded-2xl border border-mkt-border bg-mkt-bg-raised px-6">
+          {faqData.map((item) => (
+            <AccordionItem key={item.question} value={item.question} className="border-mkt-border">
+              <AccordionTrigger className="py-5 text-base font-medium text-mkt-fg hover:no-underline">
+                {item.question}
+              </AccordionTrigger>
+              <AccordionContent className="text-sm leading-relaxed text-mkt-fg-muted">
+                {item.answer}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </Section>
 
-      <Section tone="contrast">
-        <SectionHeading eyebrow="Safety" title="Staying safe" />
-        <div className="mt-12 grid grid-cols-1 border-t border-white/10 md:grid-cols-3">
+      <Section tone="raised">
+        <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Staying safe</h2>
+
+        <div className="grid grid-cols-1 border-t border-mkt-border md:grid-cols-3">
           {safetyFeatures.map((feature) => (
             <div
               key={feature.title}
-              className="border-b border-white/10 py-6 md:border-l md:px-8 md:first:border-l-0 md:first:pl-0"
+              className="border-b border-mkt-border py-6 md:border-l md:px-8 md:first:border-l-0 md:first:pl-0"
             >
               <div className="flex items-center gap-2.5">
-                <feature.icon className="h-4 w-4 shrink-0 text-[#00D97E]" />
-                <h3 className="font-semibold text-white">{feature.title}</h3>
+                <feature.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
+                <h3 className="font-semibold text-mkt-fg">{feature.title}</h3>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-white/50">{feature.description}</p>
+              <p className="mt-2 text-sm leading-relaxed text-mkt-fg-muted">{feature.description}</p>
             </div>
           ))}
         </div>
       </Section>
 
       <Section>
-        <SectionHeading eyebrow="Payments" title="Ways to pay" />
-        <dl className="mt-12 max-w-3xl divide-y divide-white/10 border-t border-white/10">
+        <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Ways to pay</h2>
+
+        <dl className="max-w-3xl divide-y divide-mkt-border border-t border-mkt-border">
           {paymentOptions.map((option) => (
             <div key={option.name} className="flex items-center gap-5 py-5">
               <span
@@ -139,31 +130,31 @@ export default function HelpPage() {
                 {option.label}
               </span>
               <div>
-                <dt className="font-semibold text-white">{option.name}</dt>
-                <dd className="text-sm text-white/45">{option.description}</dd>
+                <dt className="font-semibold text-mkt-fg">{option.name}</dt>
+                <dd className="text-sm text-mkt-fg-faint">{option.description}</dd>
               </div>
             </div>
           ))}
         </dl>
       </Section>
 
-      <Section tone="contrast">
-        <h2 className="mb-4 text-3xl font-semibold text-white">Still stuck?</h2>
-        <p className="mb-8 max-w-2xl text-white/55">
+      <Section tone="raised">
+        <h2 className="mb-4 text-3xl font-bold text-mkt-fg">Still stuck?</h2>
+        <p className="mb-8 max-w-2xl text-mkt-fg-muted">
           For a problem with a trip that is happening now, use in-app support.
           It reaches us with your trip details attached.
         </p>
         <div className="flex flex-col gap-4 sm:flex-row">
           <Link
             href="/contact"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-7 py-3.5 font-semibold text-[#0B0C0E] transition-colors hover:bg-white/90"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-mkt-accent px-8 py-4 font-semibold text-mkt-accent-fg transition-opacity hover:opacity-90"
           >
             Contact support
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-5 w-5" />
           </Link>
           <a
             href="mailto:support@smartride.ug"
-            className="inline-flex items-center justify-center gap-2 rounded-full border border-white/15 px-7 py-3.5 font-semibold text-white transition-colors hover:bg-white/5"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-mkt-border px-8 py-4 font-semibold text-mkt-fg transition-colors hover:bg-mkt-bg-raised"
           >
             Email us
           </a>
@@ -171,6 +162,6 @@ export default function HelpPage() {
       </Section>
 
       <MarketingFooter />
-    </div>
+    </MarketingShell>
   );
 }

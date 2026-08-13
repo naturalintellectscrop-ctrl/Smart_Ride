@@ -5,50 +5,21 @@ interface SectionHeadingProps {
   eyebrow?: string;
   title: React.ReactNode;
   subtitle?: React.ReactNode;
-  align?: 'left' | 'center';
-  size?: 'default' | 'large';
   className?: string;
-  titleClassName?: string;
 }
 
-export function SectionHeading({
-  eyebrow,
-  title,
-  subtitle,
-  align = 'left',
-  size = 'default',
-  className,
-  titleClassName,
-}: SectionHeadingProps) {
+export function SectionHeading({ eyebrow, title, subtitle, className }: SectionHeadingProps) {
   return (
-    <div
-      className={cn(
-        'max-w-2xl',
-        align === 'center' && 'mx-auto text-center',
-        className,
-      )}
-    >
+    <div className={cn('max-w-xl', className)}>
       {eyebrow && (
-        <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#00D97E]">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-mkt-accent">
           {eyebrow}
         </span>
       )}
-      <h2
-        className={cn(
-          'mt-4 text-balance font-[family-name:var(--font-plus-jakarta)] font-semibold tracking-tight text-white',
-          size === 'large'
-            ? 'text-4xl sm:text-5xl lg:text-6xl leading-[1.05]'
-            : 'text-3xl sm:text-4xl leading-[1.1]',
-          titleClassName,
-        )}
-      >
+      <h2 className="mt-3 text-3xl font-bold tracking-tight text-mkt-fg sm:text-4xl">
         {title}
       </h2>
-      {subtitle && (
-        <p className="mt-5 text-pretty text-base leading-relaxed text-white/55 sm:text-lg">
-          {subtitle}
-        </p>
-      )}
+      {subtitle && <p className="mt-4 text-base text-mkt-fg-muted">{subtitle}</p>}
     </div>
   );
 }

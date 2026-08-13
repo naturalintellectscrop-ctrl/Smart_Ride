@@ -43,6 +43,16 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
+  /* Marketing site tokens (scoped via [data-marketing]) */
+  --color-mkt-bg: var(--mkt-bg);
+  --color-mkt-bg-raised: var(--mkt-bg-raised);
+  --color-mkt-fg: var(--mkt-fg);
+  --color-mkt-fg-muted: var(--mkt-fg-muted);
+  --color-mkt-fg-faint: var(--mkt-fg-faint);
+  --color-mkt-border: var(--mkt-border);
+  --color-mkt-accent: var(--mkt-accent);
+  --color-mkt-accent-fg: var(--mkt-accent-fg);
+
   /* Stitch Design System Colors */
   --color-stitch-surface: #f8f9fa;
   --color-stitch-surface-dim: #d9dadb;
@@ -157,6 +167,34 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/*
+ * Marketing site theme tokens.
+ * Scoped to [data-marketing] so the toggle on the public site cannot
+ * affect the dashboard/admin/auth surfaces, which stay forced dark
+ * via the root ThemeProvider.
+ */
+[data-marketing] {
+  --mkt-bg: #ffffff;
+  --mkt-bg-raised: #f6f6f4;
+  --mkt-fg: #14151a;
+  --mkt-fg-muted: #55565f;
+  --mkt-fg-faint: #85868f;
+  --mkt-border: #e6e6e2;
+  --mkt-accent: #00a862;
+  --mkt-accent-fg: #ffffff;
+}
+
+[data-marketing="dark"] {
+  --mkt-bg: #0b0c0e;
+  --mkt-bg-raised: #111214;
+  --mkt-fg: #ffffff;
+  --mkt-fg-muted: rgba(255, 255, 255, 0.6);
+  --mkt-fg-faint: rgba(255, 255, 255, 0.4);
+  --mkt-border: rgba(255, 255, 255, 0.1);
+  --mkt-accent: #00d97e;
+  --mkt-accent-fg: #0b0c0e;
 }
 
 /* Glassmorphism Styles - Stitch Updated */

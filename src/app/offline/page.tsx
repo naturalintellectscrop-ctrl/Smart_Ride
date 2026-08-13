@@ -5,36 +5,36 @@ import { Button } from "@/components/ui/button";
 
 export default function OfflinePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0B0C0E] p-4 text-white">
-      <div className="max-w-md text-center">
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-white/10">
-          <WifiOff className="h-9 w-9 text-white/50" />
+    <div className="min-h-screen flex items-center justify-center bg-[#0D0D12] p-4">
+      <div className="text-center max-w-md">
+        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[#00FF88]/10 flex items-center justify-center">
+          <WifiOff className="w-12 h-12 text-[#00FF88]" />
         </div>
 
-        <h1 className="text-2xl font-semibold text-white">
-          You&apos;re offline
+        <h1 className="text-2xl font-bold text-white mb-2">
+          You&apos;re Offline
         </h1>
 
-        <p className="mt-3 text-white/55">
+        <p className="text-white/60 mb-6">
           It looks like you&apos;ve lost your internet connection.
           Please check your network settings and try again.
         </p>
 
         <Button
           onClick={() => window.location.reload()}
-          className="mt-7 rounded-full bg-white text-[#0B0C0E] hover:bg-white/90"
+          className="bg-[#00FF88] hover:bg-[#00e07a] text-[#0D0D12]"
         >
-          <RefreshCw className="size-4" />
-          Try again
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Try Again
         </Button>
 
-        <div className="mt-10 rounded-2xl border border-white/10 p-5 text-left">
-          <h3 className="font-semibold text-white">
-            Smart Ride works offline
+        <div className="mt-8 p-4 bg-white/5 border border-white/10 rounded-lg">
+          <h3 className="font-semibold text-white mb-2">
+            Smart Ride works offline!
           </h3>
-          <p className="mt-2 text-sm leading-relaxed text-white/50">
-            Some features are available offline. Your pending requests will
-            be synced automatically once you&apos;re back online.
+          <p className="text-sm text-white/60">
+            Some features are available offline. Your pending requests will be
+            synced automatically when you&apos;re back online.
           </p>
         </div>
       </div>

@@ -2,8 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { MarketingHeader } from '@/components/marketing/MarketingHeader';
-import { MarketingFooter } from '@/components/marketing/MarketingFooter';
+import Logo from '@/components/Logo';
 import {
   Trash2,
   UserX,
@@ -35,14 +34,34 @@ const tocSections = [
 
 export default function DeleteAccountPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-[#0B0C0E] text-white">
-      <MarketingHeader />
+    <div className="min-h-screen flex flex-col bg-[#0D0D12] font-['Inter',sans-serif]">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#0D0D12]/90 backdrop-blur-md border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <Logo />
+            <div className="hidden md:flex items-center gap-8">
+              <Link href="/" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">Home</Link>
+              <Link href="/about" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">About</Link>
+              <Link href="/help" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">Help</Link>
+              <Link href="/contact" className="text-white/70 hover:text-white transition-colors duration-200 text-sm font-medium">Contact</Link>
+            </div>
+            <Link
+              href="/"
+              className="flex items-center gap-2 text-white/60 hover:text-white text-sm font-medium transition-colors duration-200"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Back to Home</span>
+            </Link>
+          </div>
+        </div>
+      </nav>
 
       {/* Hero */}
-      <section className="pt-20 pb-12 lg:pt-24">
+      <section className="pt-24 pb-12">
         <div className="text-center px-4">
           <div className="inline-flex items-center gap-2 bg-[#1A1A1F] border border-white/10 rounded-full px-4 py-2 mb-6">
-            <Trash2 className="w-4 h-4 text-[#00D97E]" />
+            <Trash2 className="w-4 h-4 text-[#00FF88]" />
             <span className="text-white/60 text-sm">Legal Document</span>
           </div>
           <h1 className="text-4xl sm:text-5xl font-bold text-white leading-tight max-w-4xl mx-auto">
@@ -58,7 +77,7 @@ export default function DeleteAccountPage() {
       <main className="flex-1 px-4 sm:px-6 lg:px-8 pb-16">
         <div className="max-w-4xl mx-auto">
           {/* Back to Home */}
-          <Link href="/" className="inline-flex items-center gap-2 text-white/50 hover:text-[#00D97E] text-sm font-medium transition-colors duration-200 mb-8">
+          <Link href="/" className="inline-flex items-center gap-2 text-white/50 hover:text-[#00FF88] text-sm font-medium transition-colors duration-200 mb-8">
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Link>
@@ -71,9 +90,9 @@ export default function DeleteAccountPage() {
                 <a
                   key={section.id}
                   href={`#${section.id}`}
-                  className="flex items-center gap-2 text-white/50 hover:text-[#00D97E] text-sm transition-colors duration-200 py-1"
+                  className="flex items-center gap-2 text-white/50 hover:text-[#00FF88] text-sm transition-colors duration-200 py-1"
                 >
-                  <span className="text-[#00D97E]/60 font-mono text-xs w-5">{index + 1}.</span>
+                  <span className="text-[#00FF88]/60 font-mono text-xs w-5">{index + 1}.</span>
                   {section.label}
                 </a>
               ))}
@@ -85,8 +104,8 @@ export default function DeleteAccountPage() {
             {/* 1. Introduction */}
             <section id="introduction" className="scroll-mt-24">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-5 h-5 text-[#00D97E]" />
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-5 h-5 text-[#00FF88]" />
                 </div>
                 <h2 className="text-2xl font-bold text-white">1. Introduction</h2>
               </div>
@@ -103,8 +122,8 @@ export default function DeleteAccountPage() {
             {/* 2. How to Delete */}
             <section id="how-to-delete" className="scroll-mt-24">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                  <Trash2 className="w-5 h-5 text-[#00D97E]" />
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <Trash2 className="w-5 h-5 text-[#00FF88]" />
                 </div>
                 <h2 className="text-2xl font-bold text-white">2. How to Request Account Deletion</h2>
               </div>
@@ -119,7 +138,7 @@ export default function DeleteAccountPage() {
                 <div className="bg-[#1A1A1F] rounded-xl p-5 border border-white/5">
                   <p className="text-white/80 font-medium mb-2">Method 2 &mdash; Online</p>
                   <p className="text-sm">
-                    Visit this page (<Link href="/delete-account" className="text-[#00D97E] hover:underline">https://smartrideug.vercel.app/delete-account</Link>) and click the delete button below, or email us at <a href="mailto:support@smartride.ug" className="text-[#00D97E] hover:underline">support@smartride.ug</a> with the subject &ldquo;Account Deletion Request&rdquo; and your registered phone number.
+                    Visit this page (<Link href="/delete-account" className="text-[#00FF88] hover:underline">https://smartrideug.vercel.app/delete-account</Link>) and click the delete button below, or email us at <a href="mailto:support@smartride.ug" className="text-[#00FF88] hover:underline">support@smartride.ug</a> with the subject &ldquo;Account Deletion Request&rdquo; and your registered phone number.
                   </p>
                 </div>
                 <div className="bg-[#1A1A1F] rounded-xl p-5 border border-white/5">
@@ -134,8 +153,8 @@ export default function DeleteAccountPage() {
             {/* 3. What Happens */}
             <section id="what-happens" className="scroll-mt-24">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                  <UserX className="w-5 h-5 text-[#00D97E]" />
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <UserX className="w-5 h-5 text-[#00FF88]" />
                 </div>
                 <h2 className="text-2xl font-bold text-white">3. What Happens When You Delete Your Account</h2>
               </div>
@@ -161,8 +180,8 @@ export default function DeleteAccountPage() {
             {/* 4. Data Retained */}
             <section id="data-retained" className="scroll-mt-24">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                  <Database className="w-5 h-5 text-[#00D97E]" />
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <Database className="w-5 h-5 text-[#00FF88]" />
                 </div>
                 <h2 className="text-2xl font-bold text-white">4. Data Retained for Legal Obligations</h2>
               </div>
@@ -185,14 +204,14 @@ export default function DeleteAccountPage() {
             {/* 5. Wallet Balance */}
             <section id="wallet-balance" className="scroll-mt-24">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                  <Wallet className="w-5 h-5 text-[#00D97E]" />
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <Wallet className="w-5 h-5 text-[#00FF88]" />
                 </div>
                 <h2 className="text-2xl font-bold text-white">5. Wallet Balance</h2>
               </div>
               <div className="text-white/60 leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <p>
-                  <strong className="text-white/80">Important:</strong> Any remaining Smart Ride wallet balance must be <span className="text-[#00D97E]">withdrawn BEFORE</span> you request account deletion.
+                  <strong className="text-white/80">Important:</strong> Any remaining Smart Ride wallet balance must be <span className="text-[#00FF88]">withdrawn BEFORE</span> you request account deletion.
                 </p>
                 <div className="bg-[#FF6B35]/10 border border-[#FF6B35]/30 rounded-xl p-5">
                   <p className="text-[#FFB088] text-sm">
@@ -201,7 +220,7 @@ export default function DeleteAccountPage() {
                   </p>
                 </div>
                 <p>
-                  To withdraw: Open the app &rarr; Wallet &rarr; Withdraw &rarr; enter amount &rarr; select mobile money provider &rarr; confirm. If you cannot access your account, contact <a href="mailto:support@smartride.ug" className="text-[#00D97E] hover:underline">support@smartride.ug</a> to arrange a manual withdrawal before deletion.
+                  To withdraw: Open the app &rarr; Wallet &rarr; Withdraw &rarr; enter amount &rarr; select mobile money provider &rarr; confirm. If you cannot access your account, contact <a href="mailto:support@smartride.ug" className="text-[#00FF88] hover:underline">support@smartride.ug</a> to arrange a manual withdrawal before deletion.
                 </p>
               </div>
             </section>
@@ -209,8 +228,8 @@ export default function DeleteAccountPage() {
             {/* 6. Active Orders */}
             <section id="active-orders" className="scroll-mt-24">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                  <AlertTriangle className="w-5 h-5 text-[#00D97E]" />
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-[#00FF88]" />
                 </div>
                 <h2 className="text-2xl font-bold text-white">6. Active Rides &amp; Orders</h2>
               </div>
@@ -233,8 +252,8 @@ export default function DeleteAccountPage() {
             {/* 7. Recovery */}
             <section id="recovery" className="scroll-mt-24">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                  <RotateCcw className="w-5 h-5 text-[#00D97E]" />
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <RotateCcw className="w-5 h-5 text-[#00FF88]" />
                 </div>
                 <h2 className="text-2xl font-bold text-white">7. Recovery Window</h2>
               </div>
@@ -243,7 +262,7 @@ export default function DeleteAccountPage() {
                   Account deletion is not immediate. There is a <strong className="text-white/80">30-day recovery window</strong> during which you can cancel the deletion request and restore your account.
                 </p>
                 <p>
-                  To cancel a pending deletion, log in with your credentials (still active during the window) or contact <a href="mailto:support@smartride.ug" className="text-[#00D97E] hover:underline">support@smartride.ug</a> with your registered phone number and a valid reason for cancellation.
+                  To cancel a pending deletion, log in with your credentials (still active during the window) or contact <a href="mailto:support@smartride.ug" className="text-[#00FF88] hover:underline">support@smartride.ug</a> with your registered phone number and a valid reason for cancellation.
                 </p>
                 <p>
                   After the 30-day window expires, the account and associated personal data are <strong className="text-white/80">permanently deleted</strong> and cannot be recovered by any means.
@@ -254,8 +273,8 @@ export default function DeleteAccountPage() {
             {/* 8. Connected Accounts */}
             <section id="connected-accounts" className="scroll-mt-24">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                  <Users className="w-5 h-5 text-[#00D97E]" />
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-[#00FF88]" />
                 </div>
                 <h2 className="text-2xl font-bold text-white">8. Impact on Connected Accounts</h2>
               </div>
@@ -274,8 +293,8 @@ export default function DeleteAccountPage() {
             {/* 9. Timeline */}
             <section id="timeline" className="scroll-mt-24">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-5 h-5 text-[#00D97E]" />
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-5 h-5 text-[#00FF88]" />
                 </div>
                 <h2 className="text-2xl font-bold text-white">9. Deletion Timeline</h2>
               </div>
@@ -319,8 +338,8 @@ export default function DeleteAccountPage() {
             {/* 10. Contact */}
             <section id="contact" className="scroll-mt-24">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                  <ShieldCheck className="w-5 h-5 text-[#00D97E]" />
+                <div className="w-10 h-10 rounded-xl bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                  <ShieldCheck className="w-5 h-5 text-[#00FF88]" />
                 </div>
                 <h2 className="text-2xl font-bold text-white">10. Contact Us</h2>
               </div>
@@ -331,10 +350,10 @@ export default function DeleteAccountPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <a
                     href="mailto:support@smartride.ug"
-                    className="flex items-center gap-3 bg-[#1A1A1F] rounded-xl p-4 border border-white/5 hover:border-[#00D97E]/30 transition-colors duration-200"
+                    className="flex items-center gap-3 bg-[#1A1A1F] rounded-xl p-4 border border-white/5 hover:border-[#00FF88]/30 transition-colors duration-200"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                      <Mail className="w-5 h-5 text-[#00D97E]" />
+                    <div className="w-10 h-10 rounded-lg bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-5 h-5 text-[#00FF88]" />
                     </div>
                     <div>
                       <p className="text-white/40 text-xs">Email</p>
@@ -343,10 +362,10 @@ export default function DeleteAccountPage() {
                   </a>
                   <a
                     href="https://smartrideug.vercel.app"
-                    className="flex items-center gap-3 bg-[#1A1A1F] rounded-xl p-4 border border-white/5 hover:border-[#00D97E]/30 transition-colors duration-200"
+                    className="flex items-center gap-3 bg-[#1A1A1F] rounded-xl p-4 border border-white/5 hover:border-[#00FF88]/30 transition-colors duration-200"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-[#00D97E]/10 flex items-center justify-center flex-shrink-0">
-                      <Globe className="w-5 h-5 text-[#00D97E]" />
+                    <div className="w-10 h-10 rounded-lg bg-[#00FF88]/10 flex items-center justify-center flex-shrink-0">
+                      <Globe className="w-5 h-5 text-[#00FF88]" />
                     </div>
                     <div>
                       <p className="text-white/40 text-xs">Website</p>
@@ -364,13 +383,13 @@ export default function DeleteAccountPage() {
               Effective Date: June 2025 &middot; &copy; {new Date().getFullYear()} Smart Ride Uganda Limited
             </p>
             <div className="flex items-center gap-6">
-              <Link href="/privacy" className="text-white/40 hover:text-[#00D97E] text-sm transition-colors duration-200">
+              <Link href="/privacy" className="text-white/40 hover:text-[#00FF88] text-sm transition-colors duration-200">
                 Privacy Policy
               </Link>
-              <Link href="/terms" className="text-white/40 hover:text-[#00D97E] text-sm transition-colors duration-200">
+              <Link href="/terms" className="text-white/40 hover:text-[#00FF88] text-sm transition-colors duration-200">
                 Terms of Service
               </Link>
-              <Link href="/" className="inline-flex items-center gap-2 text-white/60 hover:text-[#00D97E] text-sm font-medium transition-colors duration-200">
+              <Link href="/" className="inline-flex items-center gap-2 text-white/60 hover:text-[#00FF88] text-sm font-medium transition-colors duration-200">
                 <ArrowLeft className="w-4 h-4" />
                 Back to Home
               </Link>
@@ -379,7 +398,23 @@ export default function DeleteAccountPage() {
         </div>
       </main>
 
-      <MarketingFooter />
+      {/* Sticky Footer */}
+      <footer className="mt-auto bg-[#0A0A0F] border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Logo size="sm" showText={false} />
+              <span className="text-white/30 text-sm">&copy; {new Date().getFullYear()} Smart Ride Uganda. All rights reserved.</span>
+            </div>
+            <div className="flex items-center gap-6 text-sm">
+              <Link href="/privacy" className="text-white/40 hover:text-white transition-colors duration-200">Privacy Policy</Link>
+              <Link href="/terms" className="text-white/40 hover:text-white transition-colors duration-200">Terms</Link>
+              <Link href="/delete-account" className="text-white/40 hover:text-white transition-colors duration-200">Delete Account</Link>
+              <Link href="/" className="text-white/40 hover:text-white transition-colors duration-200">Home</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
