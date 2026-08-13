@@ -98,6 +98,11 @@ const SUITES: Suite[] = [
     covers: 'BE-005: atomic claiming, concurrent assignments, proof of delivery',
   },
   {
+    name: 'delivery-adversarial',
+    file: 'scripts/verify-delivery-e2e-adversarial.ts',
+    covers: 'the delivery journey walked end to end through real HTTP, under attack',
+  },
+  {
     name: 'core-journey',
     file: 'scripts/verify-client-driver-journey.ts',
     covers: 'book -> dispatch -> ride -> pay -> rate -> receipt -> notify',

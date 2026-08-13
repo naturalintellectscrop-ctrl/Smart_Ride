@@ -1419,6 +1419,13 @@ export class EnhancedTaskStateMachine {
       [TaskStatus.ARRIVING, TaskStatus.ARRIVED],
       [TaskStatus.ACCEPTED, TaskStatus.ARRIVED],
       [TaskStatus.ARRIVED, TaskStatus.PICKED_UP],
+      // Deliveries route ACCEPTED -> ARRIVING -> PICKED_UP; only rides pass
+      // through ARRIVED. The transition TABLE allowed ARRIVING -> PICKED_UP but
+      // the rider actor list did not, so a courier who reached the pickup was
+      // stuck at ARRIVING with no legal move — the parcel could never be
+      // collected, delivered or cancelled out of that state. Found by walking a
+      // real delivery through the HTTP route; every table-level test passed.
+      [TaskStatus.ARRIVING, TaskStatus.PICKED_UP],
       [TaskStatus.PICKED_UP, TaskStatus.IN_PROGRESS],
       [TaskStatus.PICKED_UP, TaskStatus.IN_TRANSIT],
       [TaskStatus.PICKED_UP, TaskStatus.DELIVERED],

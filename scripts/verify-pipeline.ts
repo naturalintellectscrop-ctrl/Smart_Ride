@@ -61,7 +61,13 @@ const STAGES: Stage[] = [
     what: 'the atomicity guards hold when requests race',
     // The suites that fire genuinely simultaneous writes: withdrawals against
     // one wallet, couriers against one job, schedulers against one surge.
-    suites: ['wallet-withdrawal', 'delivery-personnel', 'cron-idempotency', 'cron-endpoint'],
+    suites: [
+      'wallet-withdrawal',
+      'delivery-personnel',
+      'delivery-adversarial',
+      'cron-idempotency',
+      'cron-endpoint',
+    ],
   },
   {
     name: 'journeys',
