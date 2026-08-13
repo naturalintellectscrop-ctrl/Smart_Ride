@@ -6,6 +6,8 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { isProvider } from '@/lib/auth/jwt';
+import type { UserRole } from '@prisma/client';
 import { TaskStatus } from '@prisma/client';
 import { EnhancedTaskStateMachine, TransitionContext } from '@/lib/services/enhanced-task-state-machine.service';
 import { authGuard } from '@/lib/auth/guards';
@@ -85,7 +87,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Determine user's rider ID (if applicable).
     // NOTE: authGuard returns `userId` (JWTPayload), not `id`.
-    const userRider = user.role === 'RIDER'
+    // isProvider, not === 'RIDER': a DRIVER (the app's "Smart Car" signup)
+    // never had a rider profile looked up here, so isAssignedRider was always
+    // false and a driver could not progress ANY task they had been assigned —
+    // every transition returned "Not authorized to transition this task" on
+    // their own job.
+    const userRider = isProvider(user.role as UserRole)
       ? await db.rider.findFirst({ where: { userId: user.userId }, select: { id: true } })
       : null;
 
@@ -103,7 +110,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           action: AuditActions.TASK_CANCELLED, // Closest action for unauthorized access
           entityType: EntityTypes.TASK,
           entityId: taskId,
-          actorType: user.role === 'RIDER' ? 'RIDER' : user.role === 'ADMIN' ? 'ADMIN' : 'USER',
+          actorType: isProvider(user.role as UserRole) ? 'RIDER' : user.role === 'ADMIN' ? 'ADMIN' : 'USER',
           actorId: user.userId,
           userId: user.userId,
           taskId,
@@ -160,7 +167,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     // to 'CLIENT' — the state machine then rejected their transitions.
     const ADMIN_TIER_ROLES = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN'];
     const triggeredByType: 'RIDER' | 'ADMIN' | 'CLIENT' =
-      user.role === 'RIDER' ? 'RIDER' :
+      isProvider(user.role as UserRole) ? 'RIDER' :
       ADMIN_TIER_ROLES.includes(user.role) ? 'ADMIN' :
       'CLIENT';
 

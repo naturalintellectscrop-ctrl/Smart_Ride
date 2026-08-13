@@ -7,6 +7,8 @@
 // ============================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { isProvider } from '@/lib/auth/jwt';
+import type { UserRole } from '@prisma/client';
 import { TaskStatus } from '@prisma/client';
 import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
@@ -44,7 +46,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Determine the actor type based on user role
-    const triggeredByType = user.role === 'RIDER' ? 'RIDER' as const :
+    // isProvider: a DRIVER acting on their own task was being typed as a
+    // CLIENT actor, which the state machine then refused for rider-only
+    // transitions.
+    const triggeredByType = isProvider(user.role as UserRole) ? 'RIDER' as const :
                             user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? 'ADMIN' as const :
                             'CLIENT' as const;
 
