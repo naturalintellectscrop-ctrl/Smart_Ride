@@ -288,9 +288,28 @@ function ThemedRootLayout() {
         (response: any) => {
           try {
             const data = response.notification.request.content.data as any;
-            if (data?.entityType === 'task' || data?.type?.includes('RIDE')) {
+            const type = String(data?.type ?? '');
+
+            // A dispatch offer is the one notification that is time-critical
+            // and actionable, and it was the one this handler ignored: the
+            // push carries `type: 'driver:request'`, which matched neither
+            // branch below ('driver:request'.includes('RIDE') is false), so
+            // tapping an incoming delivery offer did nothing at all. Even a
+            // match would have sent the courier to /(tabs)/rides — the
+            // CLIENT's tab.
+            //
+            // Route to the driver dashboard, which owns the offer sheet: the
+            // socket event restores `incomingRequest`, and if the offer has
+            // since expired the dashboard simply shows no sheet rather than a
+            // stale one. The SLA stays server-authoritative either way.
+            if (type === 'driver:request' || type.startsWith('driver:')) {
+              router.push('/driver' as never);
+              return;
+            }
+
+            if (data?.entityType === 'task' || type.includes('RIDE')) {
               router.push('/(tabs)/rides');
-            } else if (data?.entityType === 'order' || data?.type?.includes('ORDER')) {
+            } else if (data?.entityType === 'order' || type.includes('ORDER')) {
               router.push('/(tabs)/orders');
             }
           } catch {}
