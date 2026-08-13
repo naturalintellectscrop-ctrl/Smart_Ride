@@ -605,7 +605,16 @@ export default function DriverTaskScreen() {
                   onPress={handleButtonPress}
                   variant="primary"
                   loading={isUpdating}
-                  disabled={isUpdating || task.status === 'COMPLETED'}
+                  // A button with nothing to do is worse than no button: the
+                  // courier taps it, nothing happens, and they cannot tell
+                  // whether the app is broken or the tap was missed. Enabled
+                  // only when there is a real next transition, or when this
+                  // state opens the proof sheet.
+                  disabled={
+                    isUpdating ||
+                    isTaskTerminal ||
+                    (!nextStatus && !REQUIRES_PROOF.includes(task.status))
+                  }
                   fullWidth
                   size="md"
                 />
