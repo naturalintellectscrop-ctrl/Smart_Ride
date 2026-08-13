@@ -56,9 +56,9 @@ function BulletList({ items }: { items: string[] }) {
       {items.map((item, i) => (
         <li
           key={i}
-          className="flex items-start gap-3 text-gray-300 text-[15px] leading-relaxed"
+          className="flex items-start gap-3 text-mkt-fg-muted text-[15px] leading-relaxed"
         >
-          <CheckCircle2 className="shrink-0 w-5 h-5 text-[#00FF88] mt-0.5" />
+          <CheckCircle2 className="shrink-0 w-5 h-5 text-mkt-accent mt-0.5" />
           <span>{item}</span>
         </li>
       ))}
@@ -78,11 +78,11 @@ function SectionHeading({
   return (
     <h2
       id={`section-${number}`}
-      className="border-l-4 border-[#00FF88] pl-4 flex items-center gap-3 text-2xl sm:text-3xl font-bold text-white scroll-mt-24"
+      className="border-l-4 border-mkt-accent pl-4 flex items-center gap-3 text-2xl sm:text-3xl font-bold text-mkt-fg scroll-mt-24"
     >
-      <Icon className="w-6 h-6 text-[#00FF88] shrink-0" />
+      <Icon className="w-6 h-6 text-mkt-accent shrink-0" />
       <span>
-        <span className="text-[#00FF88] mr-2">{number}.</span>
+        <span className="text-mkt-accent mr-2">{number}.</span>
         {title}
       </span>
     </h2>
@@ -91,7 +91,7 @@ function SectionHeading({
 
 function SubHeading({ label }: { label: string }) {
   return (
-    <h3 className="text-base sm:text-lg font-semibold text-[#00FF88] mt-6 mb-1 flex items-center gap-2">
+    <h3 className="text-base sm:text-lg font-semibold text-mkt-accent mt-6 mb-1 flex items-center gap-2">
       <ChevronRight className="w-4 h-4" />
       {label}
     </h3>
@@ -110,7 +110,7 @@ export default function TermsPage() {
           <div className="flex justify-center mb-6">
             <Badge
               variant="outline"
-              className="bg-[#00FF88]/10 border-[#00FF88]/30 text-[#00FF88] px-4 py-1.5 text-sm gap-2"
+              className="bg-mkt-accent/10 border-mkt-accent/30 text-mkt-accent px-4 py-1.5 text-sm gap-2"
             >
               <FileText className="w-4 h-4" />
               Terms of Service
@@ -121,36 +121,36 @@ export default function TermsPage() {
             Smart Ride Terms of Service
           </h1>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm text-gray-400">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 mb-8 text-sm text-mkt-fg-muted">
             <span className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-[#00FF88]" />
+              <Calendar className="w-4 h-4 text-mkt-accent" />
               Effective Date:{' '}
-              <span className="text-white font-medium">June 18, 2026</span>
+              <span className="text-mkt-fg font-medium">June 18, 2026</span>
             </span>
-            <span className="hidden sm:inline w-px h-4 bg-white/20" />
+            <span className="hidden sm:inline w-px h-4 bg-mkt-fg-faint/20" />
             <span className="flex items-center gap-2">
-              <RefreshCw className="w-4 h-4 text-[#00FF88]" />
+              <RefreshCw className="w-4 h-4 text-mkt-accent" />
               Last Updated:{' '}
-              <span className="text-white font-medium">June 18, 2026</span>
+              <span className="text-mkt-fg font-medium">June 18, 2026</span>
             </span>
           </div>
 
-          <Card className="bg-[#005f3a]/15 border-[#00FF88]/20 text-left">
+          <Card className="bg-mkt-accent/10 border-mkt-accent/20 text-left">
             <CardContent className="space-y-4">
-              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+              <p className="text-mkt-fg-muted leading-relaxed text-[15px] sm:text-base">
                 Welcome to Smart Ride, a Ugandan ride-hailing and services
                 super-app operated by{' '}
-                <span className="text-white font-semibold">
+                <span className="text-mkt-fg font-semibold">
                   Natural Intellects Corp
                 </span>
                 .
               </p>
-              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+              <p className="text-mkt-fg-muted leading-relaxed text-[15px] sm:text-base">
                 These Terms of Service govern your use of the Smart Ride mobile
                 application, website ({' '}
                 <a
                   href="https://smartrideug.vercel.app"
-                  className="text-[#00FF88] hover:underline"
+                  className="text-mkt-accent hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
@@ -158,7 +158,7 @@ export default function TermsPage() {
                 </a>{' '}
                 ), and related services.
               </p>
-              <p className="text-gray-300 leading-relaxed text-[15px] sm:text-base">
+              <p className="text-mkt-fg-muted leading-relaxed text-[15px] sm:text-base">
                 By creating an account or using Smart Ride, you agree to be
                 bound by these Terms. If you do not agree, please do not use
                 our services.
@@ -179,25 +179,25 @@ export default function TermsPage() {
               Icon={FileText}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 By downloading, installing, accessing, or using the Smart Ride
                 application or website, you acknowledge that you have read,
                 understood, and agree to be bound by these Terms of Service and
                 our{' '}
                 <Link
                   href="/privacy"
-                  className="text-[#00FF88] hover:underline"
+                  className="text-mkt-accent hover:underline"
                 >
                   Privacy Policy
                 </Link>
                 .
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 If you are using Smart Ride on behalf of a business, you
                 represent that you have the authority to bind that business to
                 these Terms.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 These Terms constitute a legally binding agreement between you
                 and Natural Intellects Corp. If you do not agree to any part of
                 these Terms, you must not access or use Smart Ride.
@@ -213,98 +213,98 @@ export default function TermsPage() {
               Icon={Car}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride is a technology platform that connects customers
                 with independent service providers across Uganda. Our services
                 include:
               </p>
               <div className="grid sm:grid-cols-2 gap-4 mt-4">
-                <Card className="bg-white/5 border-white/10">
+                <Card className="bg-white/5 border-mkt-border">
                   <CardHeader>
-                    <Car className="w-5 h-5 text-[#00FF88]" />
-                    <CardTitle className="text-white text-base">
+                    <Car className="w-5 h-5 text-mkt-accent" />
+                    <CardTitle className="text-mkt-fg text-base">
                       Ride-Hailing
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 text-sm leading-relaxed">
+                    <p className="text-mkt-fg-muted text-sm leading-relaxed">
                       Smart Boda (motorcycle) and Smart Car rides across
                       Kampala and beyond.
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-white/10">
+                <Card className="bg-white/5 border-mkt-border">
                   <CardHeader>
-                    <Package className="w-5 h-5 text-[#00FF88]" />
-                    <CardTitle className="text-white text-base">
+                    <Package className="w-5 h-5 text-mkt-accent" />
+                    <CardTitle className="text-mkt-fg text-base">
                       Delivery Services
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 text-sm leading-relaxed">
+                    <p className="text-mkt-fg-muted text-sm leading-relaxed">
                       Food delivery, parcel delivery, and item delivery
                       services.
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-white/10">
+                <Card className="bg-white/5 border-mkt-border">
                   <CardHeader>
-                    <Package className="w-5 h-5 text-[#00FF88]" />
-                    <CardTitle className="text-white text-base">
+                    <Package className="w-5 h-5 text-mkt-accent" />
+                    <CardTitle className="text-mkt-fg text-base">
                       Shopping
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 text-sm leading-relaxed">
+                    <p className="text-mkt-fg-muted text-sm leading-relaxed">
                       Grocery and retail shopping with delivery from local
                       merchants.
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-white/10">
+                <Card className="bg-white/5 border-mkt-border">
                   <CardHeader>
-                    <Shield className="w-5 h-5 text-[#00FF88]" />
-                    <CardTitle className="text-white text-base">
+                    <Shield className="w-5 h-5 text-mkt-accent" />
+                    <CardTitle className="text-mkt-fg text-base">
                       Health & Pharmacy
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 text-sm leading-relaxed">
+                    <p className="text-mkt-fg-muted text-sm leading-relaxed">
                       Pharmacy item delivery and connection to licensed health
                       providers.
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-white/10">
+                <Card className="bg-white/5 border-mkt-border">
                   <CardHeader>
-                    <Wallet className="w-5 h-5 text-[#00FF88]" />
-                    <CardTitle className="text-white text-base">
+                    <Wallet className="w-5 h-5 text-mkt-accent" />
+                    <CardTitle className="text-mkt-fg text-base">
                       Smart Wallet
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 text-sm leading-relaxed">
+                    <p className="text-mkt-fg-muted text-sm leading-relaxed">
                       Digital wallet for top-ups, transfers, and payments
                       within the platform.
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-white/10">
+                <Card className="bg-white/5 border-mkt-border">
                   <CardHeader>
-                    <AlertTriangle className="w-5 h-5 text-[#00FF88]" />
-                    <CardTitle className="text-white text-base">
+                    <AlertTriangle className="w-5 h-5 text-mkt-accent" />
+                    <CardTitle className="text-mkt-fg text-base">
                       Safety Features
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-gray-400 text-sm leading-relaxed">
+                    <p className="text-mkt-fg-muted text-sm leading-relaxed">
                       SOS alerts, live location sharing, masked calling, and
                       trip monitoring.
                     </p>
                   </CardContent>
                 </Card>
               </div>
-              <p className="text-gray-300 leading-relaxed mt-4">
+              <p className="text-mkt-fg-muted leading-relaxed mt-4">
                 Smart Ride acts as a technology intermediary. We do not provide
                 transportation or delivery services ourselves; these are
                 provided by independent driver-partners and merchants who use
@@ -322,21 +322,21 @@ export default function TermsPage() {
             />
             <div className="mt-4 space-y-2">
               <SubHeading label="Registration" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 To use Smart Ride, you must register an account with a valid
                 phone number, email address, and full name. You may also
                 register using Google or Apple Sign-In.
               </p>
 
               <SubHeading label="Accuracy of Information" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 You agree to provide accurate, current, and complete
                 information during registration and to keep your account
                 information updated.
               </p>
 
               <SubHeading label="Account Security" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 You are responsible for:
               </p>
               <BulletList
@@ -349,11 +349,11 @@ export default function TermsPage() {
               />
 
               <SubHeading label="Eligibility" />
-              <Card className="bg-[#005f3a]/10 border-[#00FF88]/20 mt-3">
+              <Card className="bg-[#005f3a]/10 border-mkt-accent/20 mt-3">
                 <CardContent>
-                  <p className="text-gray-200 leading-relaxed">
+                  <p className="text-mkt-fg-muted leading-relaxed">
                     You must be at least{' '}
-                    <span className="text-[#00FF88] font-semibold">
+                    <span className="text-mkt-accent font-semibold">
                       18 years old
                     </span>{' '}
                     to register an account and use Smart Ride services.
@@ -373,7 +373,7 @@ export default function TermsPage() {
               Icon={Ban}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 You agree to use Smart Ride only for lawful purposes. The
                 following activities are strictly prohibited:
               </p>
@@ -392,7 +392,7 @@ export default function TermsPage() {
                   'Smoking, consuming alcohol, or using drugs in a Smart Ride vehicle',
                 ]}
               />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Violations may result in account suspension, permanent
                 termination, and reporting to Ugandan law enforcement
                 authorities.
@@ -408,7 +408,7 @@ export default function TermsPage() {
               Icon={CreditCard}
             />
             <div className="mt-4 space-y-2">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride supports the following payment methods in Uganda:
               </p>
               <BulletList
@@ -423,7 +423,7 @@ export default function TermsPage() {
               />
 
               <SubHeading label="Wallet Terms" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 The Smart Ride Wallet allows you to top up, store, transfer,
                 and spend money within the platform:
               </p>
@@ -438,14 +438,14 @@ export default function TermsPage() {
               />
 
               <SubHeading label="Refunds" />
-              <Card className="bg-[#005f3a]/10 border-[#00FF88]/20 mt-3">
+              <Card className="bg-[#005f3a]/10 border-mkt-accent/20 mt-3">
                 <CardContent>
-                  <p className="text-gray-200 leading-relaxed">
+                  <p className="text-mkt-fg-muted leading-relaxed">
                     All payments are final. Refunds are issued only where
                     required by Ugandan law, or in cases of confirmed service
                     failure (e.g., order not delivered, driver cancellation
                     after pickup). Refund requests must be submitted within{' '}
-                    <span className="text-[#00FF88] font-semibold">48 hours</span>{' '}
+                    <span className="text-mkt-accent font-semibold">48 hours</span>{' '}
                     of the incident.
                   </p>
                 </CardContent>
@@ -462,7 +462,7 @@ export default function TermsPage() {
             />
             <div className="mt-4 space-y-2">
               <SubHeading label="Driver-Partner Relationship" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride connects you with independent driver-partners and
                 merchants. These service providers are not employees of Smart
                 Ride or Natural Intellects Corp. Smart Ride is not liable for
@@ -470,7 +470,7 @@ export default function TermsPage() {
               </p>
 
               <SubHeading label="Ratings & Reviews" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 After each ride or order, you may rate the driver or merchant.
                 Ratings help maintain service quality. Consistently low-rated
                 users may be restricted from using Smart Ride.
@@ -487,7 +487,7 @@ export default function TermsPage() {
               />
 
               <SubHeading label="Fares & Surge Pricing" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Fares are calculated based on distance, time, and service type.
                 During periods of high demand, surge pricing may apply. The
                 estimated fare is shown before you confirm your booking.
@@ -504,7 +504,7 @@ export default function TermsPage() {
             />
             <div className="mt-4 space-y-2">
               <SubHeading label="Partnerships" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Driver-partners and merchants operate as independent
                 businesses. They must:
               </p>
@@ -520,7 +520,7 @@ export default function TermsPage() {
               />
 
               <SubHeading label="Payouts" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Driver-partner and merchant earnings are calculated based on
                 completed rides/orders minus Smart Ride commission. Payouts are
                 made to your registered mobile money or bank account according
@@ -529,7 +529,7 @@ export default function TermsPage() {
               </p>
 
               <SubHeading label="Termination of Partnership" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride may suspend or terminate driver-partner or merchant
                 accounts for violations of these Terms, low performance
                 ratings, fraud, or regulatory non-compliance.
@@ -545,13 +545,13 @@ export default function TermsPage() {
               Icon={Copyright}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 The Smart Ride platform, including its name, logo, software,
                 design, content, and trademarks, is owned by Natural
                 Intellects Corp and protected by Ugandan and international
                 intellectual property laws.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 You may not:
               </p>
               <BulletList
@@ -562,7 +562,7 @@ export default function TermsPage() {
                   'Remove copyright or trademark notices',
                 ]}
               />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 User-generated content (reviews, ratings, photos) remains the
                 property of the user, but you grant Smart Ride a non-exclusive,
                 royalty-free license to use, display, and distribute that
@@ -580,7 +580,7 @@ export default function TermsPage() {
             />
             <div className="mt-4 space-y-4">
               <SubHeading label="Disclaimers" />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride is provided on an &ldquo;as is&rdquo; and{' '}
                 &ldquo;as available&rdquo; basis. We do not warrant that:
               </p>
@@ -594,9 +594,9 @@ export default function TermsPage() {
               />
 
               <SubHeading label="Limitation of Liability" />
-              <Card className="bg-[#005f3a]/10 border-[#00FF88]/20 mt-3">
+              <Card className="bg-[#005f3a]/10 border-mkt-accent/20 mt-3">
                 <CardContent>
-                  <p className="text-gray-200 leading-relaxed">
+                  <p className="text-mkt-fg-muted leading-relaxed">
                     To the maximum extent permitted by Ugandan law, Natural
                     Intellects Corp shall not be liable for any indirect,
                     incidental, special, consequential, or punitive damages,
@@ -618,18 +618,18 @@ export default function TermsPage() {
               Icon={UserX}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 You may delete your account at any time through the app or by
                 visiting our{' '}
                 <Link
                   href="/delete-account"
-                  className="text-[#00FF88] hover:underline"
+                  className="text-mkt-accent hover:underline"
                 >
                   Account Deletion Policy
                 </Link>{' '}
                 page.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride may suspend or terminate your account if:
               </p>
               <BulletList
@@ -641,7 +641,7 @@ export default function TermsPage() {
                   'Required by law or regulatory authority',
                 ]}
               />
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Upon termination, your right to use Smart Ride ceases
                 immediately. Provisions that should reasonably survive
                 termination (including payment obligations, intellectual
@@ -658,20 +658,20 @@ export default function TermsPage() {
               Icon={Scale}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 These Terms of Service are governed by and construed in
                 accordance with the laws of the{' '}
-                <span className="text-white font-semibold">
+                <span className="text-mkt-fg font-semibold">
                   Republic of Uganda
                 </span>
                 , without regard to its conflict of law provisions.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Any dispute arising out of or relating to these Terms shall be
                 subject to the exclusive jurisdiction of the courts of Uganda,
                 with the primary venue being Kampala.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 Where required by Ugandan law, parties may first attempt to
                 resolve disputes through mediation or arbitration administered
                 by the Uganda Centre for Arbitration and Dispute Resolution
@@ -688,18 +688,18 @@ export default function TermsPage() {
               Icon={RefreshCw}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 We may update these Terms of Service from time to time. When we
                 do, we will revise the &ldquo;Last Updated&rdquo; date at the
                 top of this page.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 For material changes, we will notify you through the app or via
                 email before the changes take effect. Continued use of Smart
                 Ride after the effective date constitutes acceptance of the
                 updated Terms.
               </p>
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 If you do not agree to the updated Terms, you must stop using
                 Smart Ride and may delete your account.
               </p>
@@ -714,40 +714,40 @@ export default function TermsPage() {
               Icon={Mail}
             />
             <div className="mt-4 space-y-4">
-              <p className="text-gray-300 leading-relaxed">
+              <p className="text-mkt-fg-muted leading-relaxed">
                 If you have questions, concerns, or requests regarding these
                 Terms of Service, please contact us:
               </p>
-              <Card className="bg-white/5 border-white/10">
+              <Card className="bg-white/5 border-mkt-border">
                 <CardContent className="space-y-3">
-                  <p className="text-white font-semibold text-lg">
+                  <p className="text-mkt-fg font-semibold text-lg">
                     Natural Intellects Corp
                   </p>
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-mkt-fg-muted text-sm">
                     Operator of Smart Ride Uganda
                   </p>
-                  <div className="flex items-center gap-3 text-gray-300 pt-2">
-                    <Mail className="w-5 h-5 text-[#00FF88] shrink-0" />
+                  <div className="flex items-center gap-3 text-mkt-fg-muted pt-2">
+                    <Mail className="w-5 h-5 text-mkt-accent shrink-0" />
                     <a
                       href="mailto:support@smartride.ug"
-                      className="hover:text-[#00FF88] transition-colors"
+                      className="hover:text-mkt-accent transition-colors"
                     >
                       support@smartride.ug
                     </a>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-300">
-                    <Globe className="w-5 h-5 text-[#00FF88] shrink-0" />
+                  <div className="flex items-center gap-3 text-mkt-fg-muted">
+                    <Globe className="w-5 h-5 text-mkt-accent shrink-0" />
                     <a
                       href="https://smartrideug.vercel.app"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="hover:text-[#00FF88] transition-colors"
+                      className="hover:text-mkt-accent transition-colors"
                     >
                       smartrideug.vercel.app
                     </a>
                   </div>
-                  <div className="flex items-center gap-3 text-gray-300">
-                    <MapPin className="w-5 h-5 text-[#00FF88] shrink-0" />
+                  <div className="flex items-center gap-3 text-mkt-fg-muted">
+                    <MapPin className="w-5 h-5 text-mkt-accent shrink-0" />
                     <span>Kampala, Uganda</span>
                   </div>
                 </CardContent>
@@ -758,47 +758,47 @@ export default function TermsPage() {
       </main>
 
       {/* Sticky footer */}
-      <footer className="mt-auto bg-[#0a0f1a] border-t border-white/10">
+      <footer className="mt-auto bg-mkt-bg-raised border-t border-mkt-border">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <Logo variant="dark" />
+            <Link href="/" className="text-lg font-semibold text-mkt-fg">Smart Ride</Link>
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
               <Link
                 href="/privacy"
-                className="text-gray-400 hover:text-[#00FF88] transition-colors"
+                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
               >
                 Privacy Policy
               </Link>
               <Link
                 href="/terms"
-                className="text-gray-400 hover:text-[#00FF88] transition-colors"
+                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
               >
                 Terms of Service
               </Link>
               <Link
                 href="/delete-account"
-                className="text-gray-400 hover:text-[#00FF88] transition-colors"
+                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
               >
                 Account Deletion
               </Link>
             </div>
           </div>
-          <div className="flex items-center justify-center gap-2 text-sm text-gray-400 mb-4">
-            <Mail className="w-4 h-4 text-[#00FF88]" />
+          <div className="flex items-center justify-center gap-2 text-sm text-mkt-fg-muted mb-4">
+            <Mail className="w-4 h-4 text-mkt-accent" />
             <a
               href="mailto:support@smartride.ug"
-              className="hover:text-[#00FF88] transition-colors"
+              className="hover:text-mkt-accent transition-colors"
             >
               support@smartride.ug
             </a>
           </div>
-          <div className="pt-6 border-t border-white/10 text-center">
-            <p className="text-gray-500 text-sm">
+          <div className="pt-6 border-t border-mkt-border text-center">
+            <p className="text-mkt-fg-faint text-sm">
               &copy; 2025 Smart Ride. All rights reserved.
             </p>
           </div>
         </div>
       </footer>
-    </div>
+    </MarketingShell>
   );
 }
