@@ -541,6 +541,17 @@ export default function DriverHomeScreen() {
   const workNoun = isDeliveryRole ? 'delivery' : 'ride';
   const workNounPlural = isDeliveryRole ? 'deliveries' : 'requests';
 
+  // What this provider is ACTUALLY offered, per canRiderPerformTask():
+  //   SMART_BODA_RIDER    passenger rides + parcel deliveries
+  //   SMART_CAR_DRIVER    car rides       + parcel deliveries
+  //   DELIVERY_PERSONNEL  deliveries only (a bicycle carries no passengers)
+  // The old sub-line read "Finding nearby passengers…" for boda and car,
+  // which told them they were waiting for rides alone — so a parcel job
+  // arriving looked like a bug rather than the work they had signed up for.
+  const waitingSub = isDeliveryRole
+    ? 'Finding nearby orders…'
+    : 'Finding nearby rides and parcel deliveries…';
+
   // ── Live status line (drives the operations panel header) ──
   const liveStatus = incomingRequest
     ? { dot: COLORS.warning, text: `New ${workNoun} request`, sub: 'Respond before the timer runs out' }
@@ -548,7 +559,7 @@ export default function DriverHomeScreen() {
       ? {
           dot: COLORS.success,
           text: `Waiting for ${workNounPlural}`,
-          sub: isDeliveryRole ? 'Finding nearby orders…' : 'Finding nearby passengers…',
+          sub: waitingSub,
         }
       : { dot: COLORS.onSurfaceVariant, text: "You're offline", sub: 'Go online to start earning' };
 
@@ -573,6 +584,11 @@ export default function DriverHomeScreen() {
             rightSlot={<OnlinePill isOnline={isOnline} onToggle={() => toggleOnlineStatus(!isOnline)} />}
             rightActions={[
               { icon: 'notifications-outline', onPress: () => router.push('/notifications'), label: 'Notifications' },
+              // Riders had no entry point to their own account at all: no
+              // profile, no settings, no change-password, no logout, no delete.
+              // /(tabs)/profile is already role-generic — clients reached it
+              // from their tab bar, riders simply had no door to it.
+              { icon: 'person-circle-outline', onPress: () => router.push('/(tabs)/profile' as never), label: 'Account' },
             ]}
           />
         </Animated.View>
@@ -643,6 +659,7 @@ export default function DriverHomeScreen() {
               )}
               {/* Driver Reputation engine — trust score, tier, benefits, bonuses */}
               <Shortcut icon="ribbon-outline" label="Reputation" onPress={() => router.push('/driver/reputation' as never)} COLORS={COLORS} styles={styles} />
+              <Shortcut icon="person-circle-outline" label="Account" onPress={() => router.push('/(tabs)/profile' as never)} COLORS={COLORS} styles={styles} />
             </ScrollView>
           </Card>
 
