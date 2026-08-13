@@ -41,6 +41,8 @@ const STATUS_ROLE: Record<string, Semantic> = {
   READY: 'info',
   OUT_FOR_DELIVERY: 'info',
   IN_TRANSIT: 'info',
+  // Handover in progress — same family as the other in-flight states.
+  DELIVERING: 'info',
   IN_PROGRESS: 'info',
   PICKED_UP: 'info',
   DISPATCHED: 'info',

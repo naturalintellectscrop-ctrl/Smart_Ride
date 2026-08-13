@@ -579,6 +579,51 @@ class ApiService {
     return this.request<Task>(`/tasks/${taskId}`);
   }
 
+  /**
+   * Submit proof of delivery. The backend refuses DELIVERED without it, so
+   * this is not optional decoration — it is the step that makes a delivery
+   * completable (BE-005).
+   *
+   * A 409 means the evidence was rejected (wrong code, too far from the
+   * drop-off, already recorded), not that the request was malformed. The
+   * courier can correct and retry.
+   */
+  async submitProofOfDelivery(
+    taskId: string,
+    proof: {
+      proofType: 'CODE' | 'PHOTO' | 'SIGNATURE' | 'LEFT_WITH_NOTE';
+      code?: string;
+      photoUrl?: string;
+      signatureUrl?: string;
+      recipientName?: string;
+      latitude?: number;
+      longitude?: number;
+    },
+  ): Promise<ApiResponse<{ proofCaptured: boolean; distanceFromDropoffKm?: number }>> {
+    return this.request<{ proofCaptured: boolean; distanceFromDropoffKm?: number }>(
+      `/tasks/${taskId}/proof`,
+      'POST',
+      proof,
+    );
+  }
+
+  /**
+   * Read the proof recorded for a task.
+   *
+   * `deliveryCode` comes back ONLY for the customer — a courier who could read
+   * it could prove a delivery they never made, so the courier's copy of this
+   * response has the field absent by design.
+   */
+  async getProofOfDelivery(taskId: string): Promise<ApiResponse<{
+    proofType: string | null;
+    proofPhotoUrl: string | null;
+    proofRecipientName: string | null;
+    proofCapturedAt: string | null;
+    deliveryCode?: string;
+  }>> {
+    return this.request(`/tasks/${taskId}/proof`);
+  }
+
   async getActiveTask(): Promise<ApiResponse<Task>> {
     return this.request<Task>('/tasks/active');
   }

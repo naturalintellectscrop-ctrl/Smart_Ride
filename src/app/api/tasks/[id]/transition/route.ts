@@ -12,6 +12,7 @@ import { authGuard } from '@/lib/auth/guards';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { canCompleteDelivery } from '@/lib/delivery/delivery-service';
 import { broadcastToTask } from '@/lib/realtime-server';
 
 interface RouteParams {
@@ -175,6 +176,28 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
                  request.headers.get('x-real-ip') || undefined,
       userAgent: request.headers.get('user-agent') || undefined,
     };
+
+    // A delivery cannot complete without proof (BE-005).
+    //
+    // This gate already existed on /tasks/[id]/status — but the MOBILE APP
+    // calls /tasks/[id]/transition, so the only path a real courier uses was
+    // the one path that did not check. Gating one of two routes to the same
+    // state machine is not a gate.
+    //
+    // Admins may override: a genuine delivery whose photo upload failed still
+    // has to be closable by a human.
+    if (
+      (toStatus === TaskStatus.DELIVERED || toStatus === TaskStatus.COMPLETED) &&
+      !userIsAdmin
+    ) {
+      const gate = await canCompleteDelivery(taskId);
+      if (!gate.allowed) {
+        return NextResponse.json(
+          { success: false, error: gate.reason, code: 'PROOF_REQUIRED' },
+          { status: 409 }
+        );
+      }
+    }
 
     // Execute transition
     const result = await EnhancedTaskStateMachine.transition(

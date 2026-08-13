@@ -39,6 +39,11 @@ export type TaskStatus =
   // Rides use IN_PROGRESS as the moving state; deliveries use IN_TRANSIT.
   | 'IN_PROGRESS'
   | 'IN_TRANSIT'
+  // The handover step: the courier is at the drop-off and capturing proof.
+  // Present in the Prisma TaskStatus enum and in the delivery transition
+  // tables; it was missing here, so the app could not represent the state the
+  // backend requires a delivery to pass through (BE-005).
+  | 'DELIVERING'
   | 'DELIVERED'
   | 'COMPLETED'
   | 'CANCELLED'

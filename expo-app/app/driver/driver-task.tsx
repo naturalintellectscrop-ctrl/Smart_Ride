@@ -35,6 +35,7 @@ import {
   SmartRideMap,
   StatusBadge,
 } from '@/src/components';
+import { ProofOfDeliverySheet } from '@/src/components/ProofOfDeliverySheet';
 import * as Location from 'expo-location';
 import { useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
@@ -69,9 +70,20 @@ const DELIVERY_FLOW: Partial<Record<TaskStatus, TaskStatus>> = {
   'ACCEPTED': 'ARRIVING',
   'ARRIVING': 'PICKED_UP',
   'PICKED_UP': 'IN_TRANSIT',
-  'IN_TRANSIT': 'DELIVERED',
+  // The handover step. This used to jump IN_TRANSIT -> DELIVERED, which the
+  // backend now refuses: a delivery cannot complete without proof (BE-005).
+  // Reaching the customer moves to DELIVERING; DELIVERED is reached by
+  // capturing proof, not by tapping a button.
+  'IN_TRANSIT': 'DELIVERING',
   'DELIVERED': 'COMPLETED',
 };
+
+/**
+ * Statuses where the primary action opens the proof sheet instead of firing a
+ * transition. DELIVERING is deliberately absent from DELIVERY_FLOW above —
+ * there is no tap that advances it, because the server will not accept one.
+ */
+const REQUIRES_PROOF: TaskStatus[] = ['DELIVERING' as TaskStatus];
 
 const isRideType = (taskType?: string): boolean =>
   taskType === 'SMART_BODA_RIDE' || taskType === 'SMART_CAR_RIDE';
@@ -96,6 +108,9 @@ export default function DriverTaskScreen() {
   useEffect(() => { taskRef.current = task; }, [task]);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  // The handover sheet. Opened at DELIVERING; closed only by the courier or
+  // by the server accepting the proof.
+  const [showProofSheet, setShowProofSheet] = useState(false);
   const [nearDestination, setNearDestination] = useState(false);
   const arrivalFiredRef = useRef<Set<string>>(new Set());
 
@@ -378,7 +393,9 @@ export default function DriverTaskScreen() {
       case 'IN_PROGRESS':
         return 'Complete Trip';
       case 'IN_TRANSIT':
-        return 'Mark Delivered';
+        return "I've Arrived at Drop-off";
+      case 'DELIVERING':
+        return 'Confirm Delivery';
       case 'DELIVERED':
         return 'Complete Task';
       default:
@@ -386,9 +403,25 @@ export default function DriverTaskScreen() {
     }
   };
 
-  // Single source of truth: advance to the next valid status for THIS task type.
+  // Single source of truth: advance to the next valid status for THIS task
+  // type — except at the handover, where the next state is earned by proof
+  // rather than by a tap.
   const handleButtonPress = () => {
+    if (REQUIRES_PROOF.includes(task.status)) {
+      setShowProofSheet(true);
+      return;
+    }
     if (nextStatus) updateStatus(nextStatus);
+  };
+
+  /**
+   * The server accepted the proof. Only now is DELIVERED reachable, and the
+   * transition still goes through the same guarded endpoint — the sheet does
+   * not move the task itself.
+   */
+  const handleProofAccepted = async () => {
+    setShowProofSheet(false);
+    await updateStatus('DELIVERED' as TaskStatus);
   };
 
   const isTaskTerminal = task.status === 'COMPLETED' || task.status === 'CANCELLED' || task.status === 'FAILED';
@@ -600,6 +633,18 @@ export default function DriverTaskScreen() {
           </ScrollView>
         </Card>
       </Animated.View>
+
+      {/* Proof of delivery. The task cannot reach DELIVERED without it, so
+          this sheet is the only route from DELIVERING to a finished job. */}
+      {!!task && (
+        <ProofOfDeliverySheet
+          visible={showProofSheet}
+          taskId={task.id}
+          dropoffAddress={task.dropoffAddress}
+          onDismiss={() => setShowProofSheet(false)}
+          onProofAccepted={handleProofAccepted}
+        />
+      )}
     </View>
   );
 }

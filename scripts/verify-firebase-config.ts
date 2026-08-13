@@ -157,11 +157,27 @@ async function main() {
     let reason = '';
     let message = '';
     try {
+      // Identify as the Android app, the way the device does.
+      //
+      // An Android application restriction is satisfied by two headers the
+      // Firebase SDK sends: X-Android-Package and X-Android-Cert. A plain
+      // fetch sends neither, so Google sees "application <empty>" and refuses
+      // — which this probe originally reported as a configuration fault when
+      // it was really the probe failing to identify itself. Without these, the
+      // check can NEVER pass while any Android restriction exists, correct
+      // config or not.
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      };
+      if (packageName) headers['X-Android-Package'] = packageName;
+      if (releaseSha1) headers['X-Android-Cert'] = releaseSha1.toUpperCase();
+
       const res = await fetch(
         `https://firebaseinstallations.googleapis.com/v1/projects/${projectId}/installations`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
+          headers,
           body: JSON.stringify({
             fid,
             appId,
@@ -204,7 +220,8 @@ async function main() {
       'the shipped API key can register a Firebase installation',
       status === 200,
       status === 200
-        ? 'Installations API returned 200 — push token registration will succeed'
+        ? 'Installations API returned 200 as the release-signed app — push token ' +
+          'registration will succeed on a device signed with this certificate'
         : `HTTP ${status} ${reason || ''} — ${DIAGNOSIS[reason] ?? message.slice(0, 200)}`
     );
   }

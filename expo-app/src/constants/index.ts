@@ -429,6 +429,9 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
   // Both must be mapped or the raw enum leaks into the UI header.
   IN_PROGRESS: 'Moving',
   IN_TRANSIT: 'Moving',
+  // The courier is at the door, capturing proof. Without this the badge
+  // rendered the raw enum value.
+  DELIVERING: 'At drop-off',
   DELIVERED: 'Delivered',
   COMPLETED: 'Trip completed',
   CANCELLED: 'Cancelled',

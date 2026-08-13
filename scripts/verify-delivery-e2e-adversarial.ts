@@ -87,6 +87,31 @@ async function makeCourier(label: string) {
   return { rider, user, token };
 }
 
+/**
+ * Drive the endpoint the MOBILE APP actually calls.
+ *
+ * The app posts to /tasks/[id]/transition, not /tasks/[id]/status. Gating only
+ * /status left the one path a real courier uses ungated, so this helper
+ * deliberately exercises the mobile route.
+ */
+async function transitionViaMobileRoute(
+  taskId: string,
+  status: TaskStatus | string,
+  token: string,
+  riderId?: string
+): Promise<{ status: number; body: { error?: string; code?: string } }> {
+  const { POST } = await import('../src/app/api/tasks/[id]/transition/route');
+  const res = await POST(
+    new NextRequest(new URL(`http://localhost/api/tasks/${taskId}/transition`), {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ toStatus: status, ...(riderId ? { riderId } : {}) }),
+    } as never),
+    { params: Promise.resolve({ id: taskId }) }
+  );
+  return { status: res.status, body: (await res.json().catch(() => ({}))) as never };
+}
+
 /** Drive the real status endpoint the way the mobile app does. */
 async function transition(
   taskId: string,
@@ -464,6 +489,68 @@ async function main() {
       courierBody.data?.deliveryCode === undefined
         ? 'withheld — possessing it must mean being face to face with the recipient'
         : 'LEAKED — a courier could prove a delivery they never made'
+    );
+
+    // ══ THE MOBILE PATH ════════════════════════════════════════════
+    stage('MOBILE  the route the app actually calls enforces the same rules');
+
+    const mobileParcel = await makeDelivery(client.id);
+    await claimTask(mobileParcel.id, holder.rider.id);
+    await db.task.update({ where: { id: mobileParcel.id }, data: { status: 'ASSIGNED' } });
+
+    // Walk the delivery flow exactly as driver-task.tsx does.
+    for (const step of ['ACCEPTED', 'ARRIVING', 'PICKED_UP', 'IN_TRANSIT'] as const) {
+      const r = await transitionViaMobileRoute(mobileParcel.id, step, holder.token, holder.rider.id);
+      check(
+        `mobile route advances to ${step}`,
+        r.status === 200,
+        r.status === 200 ? `now ${await statusOf(mobileParcel.id)}` : `HTTP ${r.status} — ${r.body.error}`
+      );
+    }
+
+    // The app's DELIVERY_FLOW now routes IN_TRANSIT -> DELIVERING.
+    const toHandover = await transitionViaMobileRoute(
+      mobileParcel.id, 'DELIVERING', holder.token, holder.rider.id
+    );
+    check(
+      'mobile route reaches the handover state',
+      toHandover.status === 200 && (await statusOf(mobileParcel.id)) === 'DELIVERING',
+      `HTTP ${toHandover.status}, status=${await statusOf(mobileParcel.id)}`
+    );
+
+    // ⚔ The bypass that existed until now: the mobile route had no proof gate.
+    attack('courier completes via the MOBILE route without proof');
+    const mobileBypass = await transitionViaMobileRoute(
+      mobileParcel.id, 'DELIVERED', holder.token, holder.rider.id
+    );
+    check(
+      'THE MOBILE ROUTE ALSO REFUSES DELIVERED WITHOUT PROOF',
+      mobileBypass.status === 409 && mobileBypass.body.code === 'PROOF_REQUIRED',
+      `HTTP ${mobileBypass.status} code=${mobileBypass.body.code} — gating one of two ` +
+        'routes to the same state machine is not a gate'
+    );
+
+    // The real handover, then completion through the same mobile route.
+    const mobileProof = await submitProof(mobileParcel.id, holder.token, {
+      proofType: 'CODE',
+      code: mobileParcel.deliveryCode!,
+      recipientName: 'Recipient',
+      latitude: DROP.lat,
+      longitude: DROP.lng,
+    });
+    check(
+      'the app can submit proof through the real endpoint',
+      mobileProof.status === 200,
+      mobileProof.status === 200 ? 'proof accepted' : `HTTP ${mobileProof.status} — ${mobileProof.body.error}`
+    );
+
+    const mobileDone = await transitionViaMobileRoute(
+      mobileParcel.id, 'DELIVERED', holder.token, holder.rider.id
+    );
+    check(
+      'with proof recorded the mobile route completes the delivery',
+      mobileDone.status === 200 && (await statusOf(mobileParcel.id)) === 'DELIVERED',
+      `HTTP ${mobileDone.status}, status=${await statusOf(mobileParcel.id)}`
     );
   } finally {
     stage('cleanup');
