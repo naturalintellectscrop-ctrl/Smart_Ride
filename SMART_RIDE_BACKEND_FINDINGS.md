@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-018**.
+**ID allocation:** next free ID is **BE-021**.
 
 ---
 
@@ -29,7 +29,7 @@ finding is explicitly marked as already fixed locally.
 | BE-007 | Dead wallet API surface with no callers | P3 | RESOLVED — receipts screen specced as Golden Screen #43 | Backend |
 | BE-008 | `getFareEstimate` signature left incomplete mid-edit | P2 | FIXED_PENDING_VERIFICATION | Backend |
 | BE-009 | Surge applied silently, broke the minimum-fare flag | P2 | FIXED_PENDING_VERIFICATION | Backend |
-| BE-010 | Push registration fails on the release build | P1 | DIAGNOSED — one Console change owed | Infrastructure |
+| BE-010 | Push registration fails on the release build | P1 | RESOLVED | Infrastructure |
 | BE-011 | Withdrawals were not idempotent | P1 | RESOLVED | Financial |
 | BE-012 | Ratings were one-way; sub-scores written by nothing | P1 | RESOLVED | Data |
 | BE-013 | Three unreconciled stores held the same rating | P1 | RESOLVED | Data |
@@ -37,6 +37,9 @@ finding is explicitly marked as already fixed locally.
 | BE-015 | Courier could not complete a delivery they had handed over | P0 | RESOLVED | Workflow |
 | BE-016 | A parcel could get permanently stuck at ARRIVING | P0 | RESOLVED | Workflow |
 | BE-017 | A restricted account could still spend | P0 | RESOLVED | Security |
+| BE-018 | Proof gate absent from the route the mobile app calls | P0 | RESOLVED | Security |
+| BE-019 | Mobile app had no proof-of-delivery flow at all | P0 | RESOLVED | Workflow |
+| BE-020 | Mobile TaskStatus union missing DELIVERING | P1 | RESOLVED | Data |
 
 ---
 
@@ -1378,3 +1381,68 @@ cross-cutting resilience checks.
 **What eight green pipeline stages mean:** the implementation passed automated
 engineering verification. It does not mean production-ready. Physical-device
 and end-to-end QA remain separate and unstarted.
+
+---
+
+## BE-018 — The proof gate was absent from the route the mobile app calls
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Security
+**Found:** tracing the real courier journey, 2026-08-13
+
+BE-005 gated `POST /api/tasks/[id]/status` on proof of delivery. **The mobile
+app calls `POST /api/tasks/[id]/transition`.**
+
+So the one path a real courier uses was the one path with no gate: a delivery
+could be marked DELIVERED, from the actual app, with no evidence at all. Both
+routes drive the same state machine; gating one of them is not a gate.
+
+The check now sits on both, with the same admin override.
+
+**Why it survived:** every proof test drove `/status`, because that is the
+route I had gated. Testing the route you changed proves the change; it does not
+prove the system. The mobile client was never consulted about which endpoint it
+actually posts to.
+
+---
+
+## BE-019 — The mobile app had no proof-of-delivery flow at all
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Workflow
+**Found:** 2026-08-13
+
+Not incomplete — absent. Zero references to `proof`, `deliveryCode` or
+`handover` anywhere in `expo-app`. And `DELIVERY_FLOW` in `driver-task.tsx`
+routed `IN_TRANSIT -> DELIVERED` directly, a transition the backend now
+refuses.
+
+Combined effect: **every courier would have reached the customer's door and
+been unable to finish the job.** The backend enforcing proof without a mobile
+capture path made deliveries uncompletable rather than secure.
+
+`ProofOfDeliverySheet` implements CODE (the customer reads out their 4-digit
+code) and PHOTO (a doorstep with nobody home), composed only from existing
+Design-System primitives.
+
+Three decisions worth recording:
+- **The sheet never decides whether proof is valid.** It submits and shows the
+  server's own reason, because a wrong code and a capture too far from the
+  drop-off need different corrections from the courier.
+- **DELIVERED is reached only after the server accepts the proof**, through the
+  same guarded endpoint. No UI-only state transition exists in this flow.
+- **The photo is uploaded before submission.** Posting the local `file://` URI
+  would store a path that resolves only on the courier's own phone — the
+  customer would open the receipt and find nothing, which is worse than no
+  proof because it looks like proof.
+
+---
+
+## BE-020 — Mobile TaskStatus union was missing DELIVERING
+
+**Status:** RESOLVED | **Priority:** P1 | **Category:** Data
+**Found:** 2026-08-13
+
+`DELIVERING` exists in the Prisma enum and in every delivery transition table,
+but not in `expo-app/src/types`. The app could not represent a state the
+backend requires deliveries to pass through. Its status label and status colour
+were missing too, so the badge would have rendered the raw enum string to a
+courier.

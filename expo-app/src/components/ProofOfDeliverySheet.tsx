@@ -74,6 +74,7 @@ export function ProofOfDeliverySheet({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [accepted, setAccepted] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const codeInput = useRef<TextInput>(null);
 
   // A dismissed-and-reopened sheet must not carry a stale error or a
@@ -129,9 +130,32 @@ export function ProofOfDeliverySheet({
         /* submit without coordinates rather than block the handover */
       }
 
+      // A photo has to reach the server before its URL means anything. Posting
+      // the local file:// URI would store a path that resolves only on the
+      // courier's own phone — the customer would open the receipt and find
+      // nothing, which is worse than no proof because it looks like proof.
+      let photoUrl: string | undefined;
+      if (mode === 'PHOTO') {
+        setUploadingPhoto(true);
+        const upload = await api.uploadDocument(
+          { uri: photoUri!, type: 'image/jpeg', name: `proof-${taskId}.jpg` },
+          'DELIVERY_PROOF',
+        );
+        setUploadingPhoto(false);
+        if (!upload.success || !upload.data?.url) {
+          setError(
+            upload.error ||
+              'The photo could not be uploaded. Check your connection and try again.',
+          );
+          setIsSubmitting(false);
+          return;
+        }
+        photoUrl = upload.data.url;
+      }
+
       const res = await api.submitProofOfDelivery(taskId, {
         proofType: mode,
-        ...(mode === 'CODE' ? { code: code.trim() } : { photoUrl: photoUri! }),
+        ...(mode === 'CODE' ? { code: code.trim() } : { photoUrl }),
         ...(recipientName.trim() ? { recipientName: recipientName.trim() } : {}),
         ...coords,
       });
@@ -290,7 +314,13 @@ export function ProofOfDeliverySheet({
           )}
 
           <GradientButton
-            title={isSubmitting ? 'Confirming…' : 'Confirm delivery'}
+            title={
+              uploadingPhoto
+                ? 'Uploading photo…'
+                : isSubmitting
+                  ? 'Confirming…'
+                  : 'Confirm delivery'
+            }
             onPress={submit}
             disabled={!canSubmit}
             loading={isSubmitting}
