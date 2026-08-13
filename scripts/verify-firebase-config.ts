@@ -226,8 +226,55 @@ async function main() {
     );
   }
 
-  // ── 4. The server side ───────────────────────────────────────────
-  stage('STAGE 4  the server can send once a token exists');
+  // ── 4. Can Expo actually DELIVER? ────────────────────────────────
+  stage('STAGE 4  Expo can deliver to a real device');
+
+  // Getting a token and delivering to it are different problems with
+  // different fixes. BE-010 fixed registration; delivery then failed on a
+  // separate credential — Expo needs the FCM server key uploaded to the
+  // project, and without it every push is rejected with InvalidCredentials
+  // while the device looks perfectly healthy.
+  {
+    const { db } = await import('../src/lib/db');
+    const live = await db.expoPushToken.findFirst({
+      where: { isActive: true },
+      select: { token: true },
+    });
+    if (!live) {
+      warn(
+        'no active push token to test delivery with',
+        'log in on a device first — registration is verified above, delivery is not'
+      );
+    } else {
+      const res = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([
+          { to: live.token, title: 'Smart Ride', body: 'delivery check', sound: 'default' },
+        ]),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        data?: Array<{ status?: string; message?: string; details?: { error?: string } }>;
+      };
+      const ticket = body.data?.[0];
+      const err = ticket?.details?.error;
+      check(
+        'Expo accepts a push for a real device token',
+        ticket?.status === 'ok',
+        ticket?.status === 'ok'
+          ? 'accepted for delivery'
+          : err === 'InvalidCredentials'
+            ? 'InvalidCredentials — upload the FCM server key to the Expo project ' +
+              '(expo.dev > project > credentials > Android > FCM). No push reaches ' +
+              'ANY device until this is done.'
+            : `${err ?? 'unknown'} — ${ticket?.message ?? ''}`
+      );
+    }
+    await db.$disconnect();
+  }
+
+  // ── 5. The server side ───────────────────────────────────────────
+  stage('STAGE 5  the server can send once a token exists');
 
   const pushSrc = readFileSync('src/lib/services/push-notification.service.ts', 'utf8');
   check(
@@ -244,7 +291,7 @@ async function main() {
   );
 
   // ── 5. Deep linking ──────────────────────────────────────────────
-  stage('STAGE 5  a tapped notification can reach a screen');
+  stage('STAGE 6  a tapped notification can reach a screen');
 
   const appJson = JSON.parse(readFileSync('expo-app/app.json', 'utf8')) as {
     expo?: { scheme?: string };

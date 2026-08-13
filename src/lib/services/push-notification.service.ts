@@ -130,11 +130,35 @@ async function sendViaExpoPush(
       const ticket = result.data[i];
       if (ticket.status === 'error') {
         const errorDetails = ticket.details;
-        if (errorDetails?.error === 'DeviceNotRegistered' ||
-            errorDetails?.error === 'InvalidCredentials') {
+
+        // DeviceNotRegistered means the DEVICE is gone — the app was
+        // uninstalled or the token rotated. Retiring that token is correct.
+        //
+        // InvalidCredentials is the opposite: Expo replies
+        // {"error":"InvalidCredentials","fault":"developer"} when OUR FCM
+        // server key is missing or wrong. The device and its token are
+        // perfectly fine. Deactivating it punishes the user for a server
+        // misconfiguration, and — worse — the damage outlives the fix: once
+        // the FCM key is corrected, every token disabled in the meantime stays
+        // disabled until that device happens to re-register, so those users go
+        // on silently missing every ride offer.
+        if (errorDetails?.error === 'DeviceNotRegistered') {
           await db.expoPushToken.updateMany({
             where: { token: tokens[i].token },
             data: { isActive: false },
+          });
+        } else {
+          notificationLogger.error('Expo push rejected a message', {
+            error: errorDetails?.error ?? 'unknown',
+            fault: errorDetails?.fault ?? 'unknown',
+            message: ticket.message,
+            // Named explicitly because this one is silent and total: no push
+            // reaches ANY device until the FCM server key is uploaded to the
+            // Expo project.
+            hint:
+              errorDetails?.error === 'InvalidCredentials'
+                ? 'Upload the FCM server key to the Expo project — no push can be delivered until then.'
+                : undefined,
           });
         }
       }
