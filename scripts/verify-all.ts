@@ -103,6 +103,11 @@ const SUITES: Suite[] = [
     covers: 'the delivery journey walked end to end through real HTTP, under attack',
   },
   {
+    name: 'intelligence-in-journey',
+    file: 'scripts/verify-intelligence-in-journey.ts',
+    covers: 'reputation/surge/fraud driven from real events to real user outcomes',
+  },
+  {
     name: 'core-journey',
     file: 'scripts/verify-client-driver-journey.ts',
     covers: 'book -> dispatch -> ride -> pay -> rate -> receipt -> notify',

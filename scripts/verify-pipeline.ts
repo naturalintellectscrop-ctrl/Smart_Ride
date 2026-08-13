@@ -54,6 +54,7 @@ const STAGES: Stage[] = [
       'order-pricing',
       'security-claims',
       'offer-alert',
+      'intelligence-in-journey',
     ],
   },
   {

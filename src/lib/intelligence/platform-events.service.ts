@@ -657,10 +657,31 @@ export async function assessTransactionRisk(params: {
   try {
     const assessment = await FraudPreventionService.assessRisk(params.userId, params.riderId);
 
+    // The STANDING restriction, not just the live signals.
+    //
+    // assessRisk() recomputes from current behaviour — failed payments,
+    // cancellations, dispatch abuse. It does not read FraudRiskScore, so an
+    // account the platform has ALREADY auto-restricted (isRestricted = true,
+    // admins paged, alert raised) walked straight through this gate the moment
+    // its live signals were quiet. The restriction has to be the gate's first
+    // question, or restricting an account means nothing to the money path.
+    const entityType = params.riderId ? RiskEntityType.RIDER : RiskEntityType.CLIENT;
+    const entityId = params.riderId ?? params.userId;
+    let standingRestriction = false;
+    if (entityId) {
+      const stored = await db.fraudRiskScore.findUnique({
+        where: { entityType_entityId: { entityType, entityId } },
+        select: { isRestricted: true, riskScore: true, riskLevel: true },
+      });
+      standingRestriction = stored?.isRestricted === true;
+    }
+
     // SUSPEND and HOLD both stop the money. FLAG is recorded but permitted —
     // a medium signal should not block a legitimate customer.
     const blocked =
-      assessment.recommendedAction === 'SUSPEND' || assessment.recommendedAction === 'HOLD';
+      standingRestriction ||
+      assessment.recommendedAction === 'SUSPEND' ||
+      assessment.recommendedAction === 'HOLD';
 
     if (blocked) {
       await safely('fraud.gateAlert', async () => {
