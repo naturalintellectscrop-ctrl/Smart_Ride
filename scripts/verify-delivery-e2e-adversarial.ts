@@ -300,7 +300,7 @@ async function main() {
     });
     check(
       'proof captured far from the drop-off is refused',
-      farAway.status === 409 && /too far/i.test(farAway.body.error ?? ''),
+      farAway.status === 409 && /from the delivery address/i.test(farAway.body.error ?? ''),
       `HTTP ${farAway.status} — "${farAway.body.error}"`
     );
 

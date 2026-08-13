@@ -312,7 +312,7 @@ async function main() {
     });
     check(
       'proof captured far from the drop-off is refused',
-      !farAway.success && /too far/i.test(farAway.error ?? ''),
+      !farAway.success && /from the delivery address/i.test(farAway.error ?? ''),
       `${farAway.error} (${farAway.distanceFromDropoffKm}km, limit ${MAX_PROOF_DISTANCE_KM}km)`
     );
 

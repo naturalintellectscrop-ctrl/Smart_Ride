@@ -257,10 +257,18 @@ export async function submitProofOfDelivery(
       task.dropoffLongitude
     );
     if (distance > MAX_PROOF_DISTANCE_KM) {
+      const km = Math.round(distance * 100) / 100;
       return {
         success: false,
-        error: 'You appear to be too far from the delivery address',
-        distanceFromDropoffKm: Math.round(distance * 100) / 100,
+        // Say HOW far. "Too far" alone is a dead end: a courier standing at a
+        // gate with a poor GPS fix cannot tell whether they are 50 metres out
+        // and should wait for the signal to settle, or genuinely at the wrong
+        // address. The number is the difference between retrying and calling
+        // support.
+        error:
+          `You appear to be ${km < 1 ? `${Math.round(km * 1000)}m` : `${km}km`} from the ` +
+          `delivery address. Move closer to the drop-off and try again.`,
+        distanceFromDropoffKm: km,
       };
     }
   }
