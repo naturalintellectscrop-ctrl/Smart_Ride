@@ -8,8 +8,8 @@
  * failure stops the pipeline rather than letting later stages report against a
  * foundation that is already wrong.
  *
- *   TypeScript -> Unit -> Integration -> Concurrency -> Role journeys
- *              -> Database integrity -> Build -> Production configuration
+ *   Sweep -> TypeScript -> Unit -> Integration -> Concurrency -> Role journeys
+ *         -> Database integrity -> Build -> Production configuration
  *
  *   bun scripts/verify-pipeline.ts
  *   bun scripts/verify-pipeline.ts --from=concurrency   (resume after a fix)
@@ -29,6 +29,17 @@ interface Stage {
 }
 
 const STAGES: Stage[] = [
+  {
+    name: 'sweep',
+    what: 'every stage starts from the same ground',
+    // Suites clean up in a `finally`, which covers a failed assertion but not
+    // a killed process or a database that goes away mid-run. Leaked rows are
+    // not inert: a leaked ONLINE rider counts as supply and a leaked task
+    // counts as demand, so the NEXT suite measures a world that includes
+    // fixtures from a run that already died. That is how a pipeline produces a
+    // failure in a different stage each time and passes standalone.
+    command: 'bun scripts/sweep-test-fixtures.ts',
+  },
   {
     name: 'typescript',
     what: 'the code means what it says',
