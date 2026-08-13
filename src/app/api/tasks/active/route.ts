@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Prisma, TaskStatus } from '@prisma/client';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { redactPerson } from '@/lib/privacy/public-contact';
-import { db, resetRLSContext } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 
 // NOTE: there is no TaskStatus.DELIVERING in the Prisma enum — the in-flight
 // delivery state is IN_TRANSIT. This list previously included
@@ -57,6 +57,13 @@ export async function GET(request: NextRequest) {
       { status: authResult.statusCode || 401 }
     );
   }
+
+  // Same reason as /tasks/available: Task has no rider SELECT policy, so the
+  // rider branch below (riderId = me) returned nothing under the caller's own
+  // context — a courier mid-delivery reopening the app saw no active task.
+  // Both branches are scoped explicitly by the caller's own id, so elevating
+  // widens no access.
+  await setServiceRoleContext();
 
   const user = authResult.user;
 

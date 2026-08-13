@@ -11,12 +11,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TaskStatus, RiderRole, TaskType } from '@prisma/client';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { redactPerson } from '@/lib/privacy/public-contact';
-import { db, resetRLSContext } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { canRiderPerformTask } from '@/lib/services/enhanced-task-state-machine.service';
 
 // GET /api/tasks/available - Get available tasks for rider
 export async function GET(request: NextRequest) {
   const authResult = await requireAuthWithRLS(request);
+  // Listing OFFERABLE work is a system read, not an ownership read.
+  //
+  // requireAuthWithRLS leaves the caller's own RLS context in place, and Task
+  // has no rider SELECT policy — only users_read_own_tasks (clientId = me) and
+  // admin_read. An unassigned task belongs to no rider by definition, so under
+  // a rider's context this query could only ever return an empty list: every
+  // delivery provider saw "no jobs available" no matter how much work was
+  // waiting. Elevate, then scope explicitly below by rider capability, which
+  // widens no access — the handler already filters to unassigned tasks this
+  // rider's role can perform.
+  await setServiceRoleContext();
 
   if (!authResult.success || !authResult.user) {
     return NextResponse.json(
