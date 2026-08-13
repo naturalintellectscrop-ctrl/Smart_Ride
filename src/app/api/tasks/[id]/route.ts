@@ -59,7 +59,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
           },
         },
         payment: true,
-        rating: true,
+        // A task now carries up to two ratings, one per party (BE-012).
+        ratings: true,
       },
     });
 

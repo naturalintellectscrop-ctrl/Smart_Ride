@@ -92,6 +92,13 @@ export async function POST(request: NextRequest) {
     // PENDING, not COMPLETED: the balance is debited immediately so the money
     // cannot be spent twice, but a mobile-money payout is not settled until
     // the provider confirms it.
+    // A retry of a withdrawal must not debit twice. The client sends the same
+    // key when it retries; without one, a dropped response on a flaky mobile
+    // connection is indistinguishable from a failure and the user taps again.
+    const idempotencyKey =
+      request.headers.get('idempotency-key') ||
+      (typeof body.idempotencyKey === 'string' ? body.idempotencyKey : undefined);
+
     const result = await withdrawFromWallet({
       ownerId: user.userId,
       ownerType: 'USER',
@@ -99,6 +106,7 @@ export async function POST(request: NextRequest) {
       externalProvider: provider,
       description: `Withdrawal to ${provider} (${phone})`,
       status: 'PENDING',
+      idempotencyKey,
     });
 
     if (!result.success) {
@@ -117,6 +125,9 @@ export async function POST(request: NextRequest) {
         phone,
         status: 'PENDING',
         newBalance: result.newBalance,
+        // Tells the client this response replays an earlier withdrawal rather
+        // than describing a new one, so it can avoid double-counting.
+        idempotentReplay: result.idempotentReplay === true,
       },
     });
   } catch (error: unknown) {

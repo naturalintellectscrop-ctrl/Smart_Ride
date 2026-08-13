@@ -38,6 +38,14 @@ export interface WithdrawInput {
    * settled until the provider confirms it.
    */
   status?: WalletTransactionStatus;
+  /**
+   * Caller-supplied key making this withdrawal exactly-once. Retrying with the
+   * same key returns the ORIGINAL result and does not debit again.
+   *
+   * Namespaced by wallet before storage, so the same key from two different
+   * users cannot collide.
+   */
+  idempotencyKey?: string;
 }
 
 export interface PaymentInput {
@@ -225,6 +233,8 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
   transactionId?: string;
   newBalance?: number;
   error?: string;
+  /** True when this call returned a prior result instead of moving money. */
+  idempotentReplay?: boolean;
 }> {
   try {
     // Validate amount
@@ -257,6 +267,28 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
     // loser of a race matches zero rows instead of over-drawing. `count` is
     // the answer to "did I get the money", and no read can go stale between
     // the check and the write because there is no gap.
+    // Fast path: a retry of a withdrawal that already completed. Returns the
+    // original outcome without touching the balance. This is an optimisation,
+    // not the guarantee — the guarantee is the unique constraint below, which
+    // is what makes two SIMULTANEOUS retries safe.
+    const scopedKey = input.idempotencyKey
+      ? `${wallet.id}:${input.idempotencyKey}`
+      : null;
+
+    if (scopedKey) {
+      const prior = await db.walletTransaction.findUnique({
+        where: { idempotencyKey: scopedKey },
+      });
+      if (prior) {
+        return {
+          success: true,
+          transactionId: prior.id,
+          newBalance: toNumber(prior.balanceAfter),
+          idempotentReplay: true,
+        };
+      }
+    }
+
     const result = await db.$transaction(async (tx) => {
       // RETURNING gives us the post-debit balance from the same statement that
       // applied it. Doing this as updateMany + findUnique would be three round
@@ -300,6 +332,7 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
           // A mobile-money payout is not settled until the provider confirms.
           // Callers that complete the payout inline may override this.
           status: input.status ?? 'COMPLETED',
+          idempotencyKey: scopedKey,
         },
       });
 
@@ -308,6 +341,30 @@ export async function withdrawFromWallet(input: WithdrawInput): Promise<{
 
     return { success: true, ...result };
   } catch (error) {
+    // A duplicate key means a concurrent retry won the race. Its transaction
+    // committed; ours rolled back — INCLUDING the balance debit, because the
+    // insert and the decrement share one transaction. So the wallet moved
+    // exactly once and we simply report the winner's result.
+    if (
+      input.idempotencyKey &&
+      typeof error === 'object' &&
+      error !== null &&
+      (error as { code?: string }).code === 'P2002'
+    ) {
+      const winner = await db.walletTransaction.findFirst({
+        where: { idempotencyKey: { endsWith: `:${input.idempotencyKey}` } },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (winner) {
+        return {
+          success: true,
+          transactionId: winner.id,
+          newBalance: toNumber(winner.balanceAfter),
+          idempotentReplay: true,
+        };
+      }
+    }
+
     // Surface the specific reason — "insufficient balance" is actionable,
     // "failed to process" leaves the user with nothing to do.
     const message = error instanceof Error ? error.message : 'Failed to process withdrawal';

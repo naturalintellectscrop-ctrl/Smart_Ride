@@ -158,6 +158,32 @@ Completed) → `ListRow` per assignment inside a `Card` (merchant → customer,
 a delivery provider can hold several assignments at once, which a ride driver
 cannot; this list is the only screen unique to the role.
 
+
+**43. Receipt History** — *AR‑4 (list).* `AppHeader` ("Receipts") → optional
+`SegmentedControl` (All / Rides / Orders / Health) → list of compact
+`ReceiptCard` rows (service icon, `serviceLabel`, date, total, `StatusBadge`
+for payment status) → tap → **#39 Receipt**. States: loading (`ListSkeleton`) /
+loaded / empty ("No receipts yet — your completed trips and orders will appear
+here") / error. Notes: inherits the **#39 `ReceiptCard` architecture** in its
+compact variant — the list row and the detail page must not diverge into two
+receipt designs (Part E gap #9). Newest first.
+
+*Backend status: **ready, no work required**.* `GET /api/receipts` already
+returns the caller's receipts newest-first, scoped by `userId` under RLS, and
+`api.getReceipts()` is already declared in `expo-app/src/services/api.ts`.
+Receipts are generated automatically for every completed task, so the data
+exists today and is simply unreachable — `receipt/[id]` can only be opened from
+a task still in view, which means a user cannot retrieve last month's receipt
+for an expense claim or a dispute. Recorded as BE-007 in
+`SMART_RIDE_BACKEND_FINDINGS.md`, where the backend session confirmed the API
+supports this journey and deliberately did not build anything further.
+
+*One limitation to design around:* the endpoint takes the 50 most recent
+receipts with no pagination parameter. That is ample for a first version; if
+the screen needs infinite scroll, that is a small backend change to request
+rather than something to work around in the client.
+
+
 ---
 
 ## Part C — Component Usage Map
@@ -234,4 +260,4 @@ Prototyping these screens surfaced concrete weaknesses in the current system. **
 
 ## Final
 
-These 39 screen specs + 6 archetypes are the **permanent reference**. Every future Smart Ride interface must name the Golden Screen and archetype it inherits from, and resolve entirely to Design-System primitives. If a new screen can't be expressed from this set, that is a signal to extend the **system** (via §17 governance) — never to invent a one-off. Build the Part E gaps first; then the golden screens become straightforward assemblies, and the whole product stays one product.
+These 43 screen specs + 6 archetypes are the **permanent reference**. Every future Smart Ride interface must name the Golden Screen and archetype it inherits from, and resolve entirely to Design-System primitives. If a new screen can't be expressed from this set, that is a signal to extend the **system** (via §17 governance) — never to invent a one-off. Build the Part E gaps first; then the golden screens become straightforward assemblies, and the whole product stays one product.

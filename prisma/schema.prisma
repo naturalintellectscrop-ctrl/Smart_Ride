@@ -42,6 +42,13 @@ model User {
   notificationPreference   NotificationPreference?
   orders                   Order[]
   payments                 Payment[]
+  /// Denormalised average of ratings this user has RECEIVED as a passenger,
+  /// and how many there are. Derived from Rating rows — never authoritative.
+  /// `ratingCount` exists so consumers can tell "5.0 across 200 trips" from
+  /// "never rated", which a bare average silently conflates (BE-013).
+  passengerRating          Float?
+  passengerRatingCount     Int                       @default(0)
+
   ratingsGiven             Rating[]                  @relation("RatingFromUser")
   ratingsReceived          Rating[]                  @relation("RatingToUser")
   rider                    Rider?
@@ -455,7 +462,9 @@ model Task {
   dispute             Dispute?
   heartbeatLogs       HeartbeatLog[]
   payment             Payment?
-  rating              Rating?
+  /// Now a LIST: a task carries up to two ratings, one from each party
+  /// (BE-012). Was `Rating?`, which is what enforced a single rating per trip.
+  ratings             Rating[]
   sosAlerts           SOSAlert[]            @relation("TaskSOSAlerts")
   stateTransitions    TaskStateTransition[]
   transactions        Transaction[]
@@ -579,7 +588,15 @@ model FinanceLog {
 
 model Rating {
   id                    String   @id @default(cuid())
-  taskId                String   @unique
+
+  /// One rating per task PER RATER, not per task.
+  ///
+  /// This was `@unique` on taskId alone, which structurally permitted only a
+  /// single rating for a trip — and since the client is the only party the
+  /// rate endpoint accepted, that one row was always the client's. A driver
+  /// could never rate a passenger, so a rider with a history of no-shows or
+  /// abuse accumulated nothing (BE-012).
+  taskId                String
   fromUserId            String
   toUserId              String?
   toRiderId             String?
@@ -597,6 +614,9 @@ model Rating {
   // relation that did not exist.
   toRider               Rider?   @relation("RatingToRider", fields: [toRiderId], references: [id], onDelete: SetNull)
 
+  /// Each party rates the other at most once per task.
+  @@unique([taskId, fromUserId])
+  @@index([taskId])
   @@index([fromUserId])
   @@index([toUserId])
   @@index([toRiderId])
@@ -1775,6 +1795,18 @@ model WalletTransaction {
   description       String?
   status            WalletTransactionStatus @default(COMPLETED)
   metadata          String?
+
+  /// Exactly-once guard for money movement. Holds `<walletId>:<clientKey>` so
+  /// the same key from two different users can never collide, and NULL for
+  /// callers that supply no key.
+  ///
+  /// Enforced by the DATABASE rather than by a check-then-act read: the
+  /// insert lives inside the same transaction as the balance debit, so a
+  /// duplicate key rolls the debit back with it. That is what makes a retried
+  /// withdrawal safe — without it, two concurrent retries both pass an
+  /// existence check and the wallet is debited twice.
+  idempotencyKey    String?                 @unique
+
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
   wallet            Wallet                  @relation(fields: [walletId], references: [id], onDelete: Cascade)

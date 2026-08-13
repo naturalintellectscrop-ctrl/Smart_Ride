@@ -22,6 +22,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { MarketplaceScheduler } from '@/lib/marketplace/marketplace-scheduler.service';
 import { ReputationMaintenance } from '@/lib/reputation/reputation-maintenance.service';
+import { reconcileAll } from '@/lib/ratings/rating-reconciliation.service';
 import { PlatformIntelligence } from '@/lib/intelligence/platform-events.service';
 import {
   expireEndedIncentives,
@@ -90,6 +91,11 @@ export async function GET(request: NextRequest) {
 
     if (runAll || task === 'reputation') {
       steps.push(await step('reputation.maintenance', () => ReputationMaintenance.runAll(now)));
+      // Rating caches are derived, not authoritative. This recomputes them
+      // from the Rating rows and reports any drift it had to repair, so a
+      // cache that has fallen out of step becomes visible rather than
+      // silently self-healing (BE-013).
+      steps.push(await step('ratings.reconcile', () => reconcileAll()));
     }
 
     if (runAll || task === 'fraud') {

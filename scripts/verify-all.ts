@@ -73,6 +73,21 @@ const SUITES: Suite[] = [
     covers: 'BE-003: one atomic withdrawal path, concurrent debits cannot over-draw',
   },
   {
+    name: 'security-claims',
+    file: 'scripts/verify-security-claims.ts',
+    covers: 'BE-004: no UI claims a security property the backend lacks',
+  },
+  {
+    name: 'car-driver-journey',
+    file: 'scripts/verify-car-driver-journey.ts',
+    covers: 'register -> approve -> dispatch -> trip -> earnings -> receipt',
+  },
+  {
+    name: 'two-way-ratings',
+    file: 'scripts/verify-two-way-ratings.ts',
+    covers: 'BE-012/BE-013: both parties rate; three rating stores reconcile',
+  },
+  {
     name: 'core-journey',
     file: 'scripts/verify-client-driver-journey.ts',
     covers: 'book -> dispatch -> ride -> pay -> rate -> receipt -> notify',

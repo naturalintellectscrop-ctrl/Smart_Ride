@@ -31,6 +31,8 @@ finding is explicitly marked as already fixed locally.
 | BE-009 | Surge applied silently, broke the minimum-fare flag | P2 | FIXED_PENDING_VERIFICATION | Backend |
 | BE-010 | Push registration fails on the release build | P1 | OPEN | Infrastructure |
 | BE-011 | Withdrawals were not idempotent | P1 | RESOLVED | Financial |
+| BE-012 | Ratings were one-way; sub-scores written by nothing | P1 | RESOLVED | Data |
+| BE-013 | Three unreconciled stores held the same rating | P1 | RESOLVED | Data |
 
 ---
 
@@ -970,7 +972,68 @@ others derive from it, or drop the duplicates.
 
 ---
 
-# Session-end audit — Backend session, 2026-08-10
+## BE-012 - Ratings were one-way, and three sub-score columns were dead
+
+**Status:** RESOLVED | **Priority:** P1 | **Category:** Data
+**Resolved by:** Backend session, 2026-08-10
+
+**Evidence:** `Rating.taskId` was `@unique`, so a trip could physically hold
+**one** rating - and the rate route rejected anyone but the client, so that row
+was always the client's. `toUserId` held the *driver's* user id, so despite the
+field's name `User.ratingsReceived` never contained a passenger's rating. A
+passenger with a history of no-shows accumulated nothing. `punctualityScore`,
+`professionalismScore` and `vehicleConditionScore` were declared and written by
+nothing.
+
+**Fix:** `@@unique([taskId, fromUserId])` replaces `taskId @unique`;
+`Task.rating` becomes `Task.ratings`. Each party rates once per task and
+neither can overwrite the other. The route derives *direction* from who the
+caller is on the task - client to driver sets `toRiderId`, driver to passenger
+leaves it null, and that one field is what keeps a passenger's score out of the
+driver's average. All three sub-scores are persisted, and **refused on a
+passenger rating**: a passenger has no vehicle and no punctuality obligation, so
+storing numbers there would feed meaningless values to a reputation engine that
+weights ratings at 40%. `User.passengerRating` / `passengerRatingCount` added as
+the passenger-side cache.
+
+**The policy question is deliberately left open.** Passenger ratings are stored
+and feed **nothing automated** - not dispatch ranking, not pricing, not the
+offer sheet. Whether a passenger score should affect any of those is a product
+decision, and wiring it up quietly would be making that decision by default. A
+test asserts dispatch does not read `passengerRating`, so the boundary cannot
+erode silently.
+
+---
+
+## BE-013 - Three unreconciled stores held the same rating
+
+**Status:** RESOLVED | **Priority:** P1 | **Category:** Data
+**Resolved by:** Backend session, 2026-08-10
+
+**Evidence:** `Rating` rows, `Rider.rating`, and `DriverReputation.averageRating`
+plus five star buckets all held the same number with nothing reconciling them.
+Two of the three defaulted to 5, so an unrated driver was indistinguishable from
+a flawless one. The rate route computed the average inline, which is how a
+second call site could disagree with the first.
+
+**Fix:** the caches stay - dispatch ranking and rider lists read them on every
+request and cannot aggregate inline - but they are now provably **derived**.
+`src/lib/ratings/rating-reconciliation.service.ts` is the only writer and always
+computes from the `Rating` rows. `reconcileAll()` runs as a new
+`ratings.reconcile` scheduler step; it is idempotent and it **reports** every
+discrepancy it repairs rather than silently self-healing, because a cache that
+quietly fixes itself hides whatever caused the drift.
+
+`deriveRiderRating()` returns `average: null` for a never-rated driver rather
+than 5.0. `Rider.rating` keeps its non-nullable 5.0 default - changing it would
+ripple through every consumer - but `totalRatings` is written truthfully, so
+"5.0 from zero ratings" stays detectable.
+
+**Verification:** `bun scripts/verify-two-way-ratings.ts` - 20 checks.
+
+---
+
+# Session-end audit - Backend session, 2026-08-10
 
 Re-verified every finding against the tree after closing P1–P4.
 
@@ -987,6 +1050,8 @@ Re-verified every finding against the tree after closing P1–P4.
 | BE-009 | FIXED_PENDING_VERIFICATION | unchanged |
 | BE-010 | **OPEN** | Firebase Console configuration — outside what a code session can change |
 | BE-011 | **RESOLVED** | DB-enforced idempotency key; six simultaneous retries produce one debit |
+| BE-012 | **RESOLVED** | `@@unique([taskId, fromUserId])`; both directions verified; passenger scores feed nothing automated |
+| BE-013 | **RESOLVED** | caches derived by one service, reconciled on schedule, drift reported not hidden |
 
 **Still owed, and deliberately not smuggled into another finding:**
 - **BE-005's two open questions.** Is there a proof-of-delivery requirement the

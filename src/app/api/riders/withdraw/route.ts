@@ -75,10 +75,26 @@ export async function POST(request: NextRequest) {
       externalProvider: provider,
       description: `Withdrawal to ${provider} (${phoneNumber})`,
       status: 'PENDING',
+      idempotencyKey:
+        request.headers.get('idempotency-key') ||
+        (typeof body?.idempotencyKey === 'string' ? body.idempotencyKey : undefined),
     });
 
     if (!result.success) {
       return errorResponse(result.error || 'Withdrawal failed', 400);
+    }
+
+    // A replay is not a new event. Re-running the audit log and the
+    // notification would tell the driver they withdrew twice.
+    if (result.idempotentReplay) {
+      return successResponse({
+        message: 'Withdrawal already processed',
+        newBalance: result.newBalance,
+        transactionId: result.transactionId,
+        provider,
+        amount,
+        idempotentReplay: true,
+      });
     }
 
     // Create audit log
@@ -111,6 +127,7 @@ export async function POST(request: NextRequest) {
       transactionId: result.transactionId,
       provider,
       amount,
+      idempotentReplay: false,
     });
   } catch (error) {
     console.error('Error processing rider withdrawal:', error);

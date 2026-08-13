@@ -158,7 +158,12 @@ export function PharmacyPrescriptions() {
               <div className="text-center">
                 <FileText className="h-16 w-16 text-gray-400 mx-auto mb-2" />
                 <p className="text-gray-500">Tap to view prescription</p>
-                <p className="text-xs text-gray-400 mt-1">Encrypted image storage</p>
+                {/* Was "Encrypted image storage". Prescription images are
+                    stored as a plain URL on the Prescription row; imageHash is
+                    a timestamp, not a digest, and nothing encrypts the file
+                    (BE-004 audit). Stating access control, which is real,
+                    rather than encryption, which is not. */}
+                <p className="text-xs text-gray-400 mt-1">Visible only to you and your pharmacist</p>
               </div>
               <button className="absolute inset-0 flex items-center justify-center bg-black/0 hover:bg-black/5 transition-colors rounded-xl">
                 <Eye className="h-8 w-8 text-white bg-rose-600 rounded-full p-2" />

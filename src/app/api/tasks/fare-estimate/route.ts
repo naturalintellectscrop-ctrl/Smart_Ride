@@ -58,6 +58,11 @@ export async function GET(request: NextRequest) {
     serviceFee: number;
     surcharges: number;
     minimumApplied: boolean;
+    // Surge is disclosed alongside the total so the client can explain the
+    // price rather than merely display it. 1 / 0 / null when not surging.
+    surgeMultiplier: number;
+    surgeAmount: number;
+    surgeReason: string | null;
   }> = {};
 
   for (const taskType of RIDE_TASK_TYPES) {

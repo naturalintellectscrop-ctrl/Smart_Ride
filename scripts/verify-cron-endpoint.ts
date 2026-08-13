@@ -97,12 +97,14 @@ async function main() {
       full.status === 200 && fullBody.success === true,
       `status=${full.status} steps=${fullBody.steps?.length} totalMs=${fullBody.totalMs}`
     );
-    // Four task groups, six steps — marketplace and incentives contribute two
-    // each. Assert on the NAMES so a silently-dropped job fails this.
+    // Four task groups, seven steps — marketplace and incentives contribute
+    // two each, reputation two (maintenance + rating reconciliation). Assert on
+    // the NAMES so a silently-dropped job fails this.
     const expectedSteps = [
       'marketplace.sampleZones',
       'marketplace.forecast',
       'reputation.maintenance',
+      'ratings.reconcile',
       'fraud.rescoreActive',
       'incentives.expireEnded',
       'incentives.payPending',

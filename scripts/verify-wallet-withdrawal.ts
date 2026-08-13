@@ -266,6 +266,162 @@ async function main() {
       toNumber(totals!.totalWithdrawn) === 7_500,
       `totalWithdrawn=${toNumber(totals!.totalWithdrawn)}`
     );
+
+    // ── 5. Idempotency ───────────────────────────────────────────────
+    stage('STAGE 5  a retried withdrawal does not debit twice');
+
+    const idem = await makeRiderWithBalance(20_000);
+    const idemUser = created.userIds[created.userIds.length - 1];
+    const KEY = `${TAG}-key-${Date.now()}`;
+
+    const first = await withdrawFromWallet({
+      ownerId: idemUser,
+      ownerType: 'USER',
+      amount: 5_000,
+      description: `${TAG} idempotent`,
+      idempotencyKey: KEY,
+    });
+    check(
+      'the first call with a key withdraws normally',
+      first.success && first.newBalance === 15_000 && first.idempotentReplay !== true,
+      `balance ${first.newBalance}, replay=${first.idempotentReplay === true}`
+    );
+
+    // Sequential retry — the dropped-response case.
+    const retry = await withdrawFromWallet({
+      ownerId: idemUser,
+      ownerType: 'USER',
+      amount: 5_000,
+      description: `${TAG} idempotent`,
+      idempotencyKey: KEY,
+    });
+    check(
+      'a retry returns the ORIGINAL result, not a new withdrawal',
+      retry.success && retry.transactionId === first.transactionId,
+      `first=${first.transactionId} retry=${retry.transactionId}`
+    );
+    check(
+      'the retry reports the original balance',
+      retry.newBalance === first.newBalance,
+      `${first.newBalance} vs ${retry.newBalance}`
+    );
+    check(
+      'the retry is flagged as a replay so callers do not double-count',
+      retry.idempotentReplay === true,
+      `idempotentReplay=${retry.idempotentReplay}`
+    );
+    check(
+      'THE WALLET WAS DEBITED ONCE — 5000 taken, not 10000',
+      (await balanceOf(idem.wallet.id)) === 15_000,
+      `balance ${await balanceOf(idem.wallet.id)} (started 20000, withdrew 5000 twice with one key)`
+    );
+
+    // Concurrent retries — the case a check-then-act guard gets wrong. Both
+    // requests pass an existence check simultaneously; only the unique
+    // constraint stops the second debit, and because the ledger insert shares
+    // a transaction with the decrement, the loser's debit rolls back too.
+    const CONCURRENT_KEY = `${TAG}-race-${Date.now()}`;
+    const simultaneous = await Promise.all(
+      Array.from({ length: 6 }, () =>
+        withdrawFromWallet({
+          ownerId: idemUser,
+          ownerType: 'USER',
+          amount: 3_000,
+          description: `${TAG} concurrent retry`,
+          idempotencyKey: CONCURRENT_KEY,
+        })
+      )
+    );
+    const okAttempts = simultaneous.filter(a => a.success);
+    const distinctTxns = new Set(okAttempts.map(a => a.transactionId));
+    const balanceAfterConcurrent = await balanceOf(idem.wallet.id);
+
+    check(
+      'six simultaneous retries produce ONE transaction',
+      distinctTxns.size === 1,
+      `${distinctTxns.size} distinct transaction id(s) from ${okAttempts.length} success(es)`
+    );
+    check(
+      'six simultaneous retries debit 3000 exactly once',
+      balanceAfterConcurrent === 12_000,
+      `15000 -> ${balanceAfterConcurrent} (expected 12000, one debit of 3000)`
+    );
+
+    const idemLedger = await db.walletTransaction.findMany({
+      where: { walletId: idem.wallet.id, transactionType: 'WITHDRAWAL' },
+    });
+    check(
+      'the ledger holds one row per key, not one per attempt',
+      idemLedger.length === 2,
+      `${idemLedger.length} row(s) for 2 keys across 8 calls`
+    );
+
+    // Different keys must still be independent withdrawals.
+    const other = await withdrawFromWallet({
+      ownerId: idemUser,
+      ownerType: 'USER',
+      amount: 3_000,
+      description: `${TAG} different key`,
+      idempotencyKey: `${TAG}-other-${Date.now()}`,
+    });
+    check(
+      'a DIFFERENT key is a genuinely new withdrawal',
+      other.success && other.idempotentReplay !== true && (await balanceOf(idem.wallet.id)) === 9_000,
+      `balance ${await balanceOf(idem.wallet.id)} (expected 9000)`
+    );
+
+    // The same key against a different wallet must not be blocked by the
+    // first wallet's key — keys are namespaced per wallet.
+    const otherWallet = await makeRiderWithBalance(4_000);
+    const otherUser = created.userIds[created.userIds.length - 1];
+    const sameKeyElsewhere = await withdrawFromWallet({
+      ownerId: otherUser,
+      ownerType: 'USER',
+      amount: 1_000,
+      description: `${TAG} same key other wallet`,
+      idempotencyKey: KEY,
+    });
+    check(
+      'the same key on a different wallet is not blocked',
+      sameKeyElsewhere.success &&
+        sameKeyElsewhere.idempotentReplay !== true &&
+        (await balanceOf(otherWallet.wallet.id)) === 3_000,
+      `other wallet balance ${await balanceOf(otherWallet.wallet.id)} (expected 3000)`
+    );
+
+    // A key must not resurrect a withdrawal that was refused.
+    const poor = await makeRiderWithBalance(100);
+    const poorUser = created.userIds[created.userIds.length - 1];
+    const REFUSED_KEY = `${TAG}-refused-${Date.now()}`;
+    const refused = await withdrawFromWallet({
+      ownerId: poorUser, ownerType: 'USER', amount: 9_000,
+      description: `${TAG} refused`, idempotencyKey: REFUSED_KEY,
+    });
+    await db.wallet.update({ where: { id: poor.wallet.id }, data: { balance: 50_000 } });
+    const nowAffordable = await withdrawFromWallet({
+      ownerId: poorUser, ownerType: 'USER', amount: 9_000,
+      description: `${TAG} refused`, idempotencyKey: REFUSED_KEY,
+    });
+    check(
+      'a refused withdrawal leaves no key behind to block a later real one',
+      !refused.success && nowAffordable.success && (await balanceOf(poor.wallet.id)) === 41_000,
+      `refused first, then succeeded once funded: balance ${await balanceOf(poor.wallet.id)}`
+    );
+
+    // ── 6. The routes pass the key through ───────────────────────────
+    stage('STAGE 6  both endpoints accept an idempotency key');
+    check(
+      '/wallet/withdraw reads the Idempotency-Key header',
+      walletRoute.includes("headers.get('idempotency-key')") &&
+        walletRoute.includes('idempotencyKey,'),
+      'header preferred, body accepted as fallback'
+    );
+    check(
+      '/riders/withdraw reads it too, and does not re-notify on a replay',
+      riderRoute.includes("headers.get('idempotency-key')") &&
+        riderRoute.includes('result.idempotentReplay'),
+      'a replay short-circuits before the audit log and the notification'
+    );
   } finally {
     stage('cleanup');
     await db.walletTransaction.deleteMany({ where: { walletId: { in: created.walletIds } } });

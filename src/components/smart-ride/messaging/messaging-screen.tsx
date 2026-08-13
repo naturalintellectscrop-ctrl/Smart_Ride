@@ -413,7 +413,16 @@ function ChatView({ conversation, onBack, currentUserId, currentUserType }: Chat
       <div className="px-4 py-2 bg-[#005f3a]/5 border-b border-[#005f3a]/10">
         <div className="flex items-center gap-2 text-xs text-[#005f3a]">
           <Shield className="h-3 w-3" />
-          <span>End-to-end encrypted • Phone numbers hidden</span>
+        {/* This badge used to read "End-to-end encrypted • Phone numbers
+            hidden". The second half is true; the first was not. Message.content
+            is a plain String column, there is no crypto library in the
+            dependency tree, and no key exchange exists anywhere in the chat
+            path — messages are readable by the server and by anyone with
+            database access (BE-004). The claim mattered because ride tracking
+            promotes in-app chat as the privacy-safe alternative to sharing a
+            phone number, so a user could reasonably decide what to send based
+            on it. It now states the property that actually holds. */}
+          <span>Contact details stay private • in-app only</span>
         </div>
       </div>
 
