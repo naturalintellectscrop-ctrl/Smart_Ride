@@ -73,7 +73,7 @@ export default function HelpPage() {
     <MarketingShell>
       <MarketingHeader />
 
-      <Section className="pb-12 pt-24">
+      <Section className="pb-12">
         <h1 className="text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">Help</h1>
         <p className="mt-6 max-w-2xl text-lg text-mkt-fg-muted">
           Answers to the questions we get most. If yours is not here, our

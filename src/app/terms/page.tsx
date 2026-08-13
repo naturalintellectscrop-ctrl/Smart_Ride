@@ -219,7 +219,7 @@ export default function TermsPage() {
                 include:
               </p>
               <div className="grid sm:grid-cols-2 gap-4 mt-4">
-                <Card className="bg-white/5 border-mkt-border">
+                <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                   <CardHeader>
                     <Car className="w-5 h-5 text-mkt-accent" />
                     <CardTitle className="text-mkt-fg text-base">
@@ -233,7 +233,7 @@ export default function TermsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-mkt-border">
+                <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                   <CardHeader>
                     <Package className="w-5 h-5 text-mkt-accent" />
                     <CardTitle className="text-mkt-fg text-base">
@@ -247,7 +247,7 @@ export default function TermsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-mkt-border">
+                <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                   <CardHeader>
                     <Package className="w-5 h-5 text-mkt-accent" />
                     <CardTitle className="text-mkt-fg text-base">
@@ -261,7 +261,7 @@ export default function TermsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-mkt-border">
+                <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                   <CardHeader>
                     <Shield className="w-5 h-5 text-mkt-accent" />
                     <CardTitle className="text-mkt-fg text-base">
@@ -275,7 +275,7 @@ export default function TermsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-mkt-border">
+                <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                   <CardHeader>
                     <Wallet className="w-5 h-5 text-mkt-accent" />
                     <CardTitle className="text-mkt-fg text-base">
@@ -289,7 +289,7 @@ export default function TermsPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-mkt-border">
+                <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                   <CardHeader>
                     <AlertTriangle className="w-5 h-5 text-mkt-accent" />
                     <CardTitle className="text-mkt-fg text-base">
@@ -349,7 +349,7 @@ export default function TermsPage() {
               />
 
               <SubHeading label="Eligibility" />
-              <Card className="bg-[#005f3a]/10 border-mkt-accent/20 mt-3">
+              <Card className="bg-mkt-accent/10 border-mkt-accent/20 mt-3">
                 <CardContent>
                   <p className="text-mkt-fg-muted leading-relaxed">
                     You must be at least{' '}
@@ -438,7 +438,7 @@ export default function TermsPage() {
               />
 
               <SubHeading label="Refunds" />
-              <Card className="bg-[#005f3a]/10 border-mkt-accent/20 mt-3">
+              <Card className="bg-mkt-accent/10 border-mkt-accent/20 mt-3">
                 <CardContent>
                   <p className="text-mkt-fg-muted leading-relaxed">
                     All payments are final. Refunds are issued only where
@@ -594,7 +594,7 @@ export default function TermsPage() {
               />
 
               <SubHeading label="Limitation of Liability" />
-              <Card className="bg-[#005f3a]/10 border-mkt-accent/20 mt-3">
+              <Card className="bg-mkt-accent/10 border-mkt-accent/20 mt-3">
                 <CardContent>
                   <p className="text-mkt-fg-muted leading-relaxed">
                     To the maximum extent permitted by Ugandan law, Natural
@@ -718,7 +718,7 @@ export default function TermsPage() {
                 If you have questions, concerns, or requests regarding these
                 Terms of Service, please contact us:
               </p>
-              <Card className="bg-white/5 border-mkt-border">
+              <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                 <CardContent className="space-y-3">
                   <p className="text-mkt-fg font-semibold text-lg">
                     Natural Intellects Corp

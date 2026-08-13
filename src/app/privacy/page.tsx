@@ -407,7 +407,7 @@ export default function PrivacyPage() {
                 your personal information:
               </p>
               <div className="grid sm:grid-cols-3 gap-4 mt-4">
-                <Card className="bg-white/5 border-mkt-border">
+                <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                   <CardHeader>
                     <Lock className="w-5 h-5 text-mkt-accent" />
                     <CardTitle className="text-mkt-fg text-base">
@@ -421,7 +421,7 @@ export default function PrivacyPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-mkt-border">
+                <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                   <CardHeader>
                     <Database className="w-5 h-5 text-mkt-accent" />
                     <CardTitle className="text-mkt-fg text-base">
@@ -435,7 +435,7 @@ export default function PrivacyPage() {
                     </p>
                   </CardContent>
                 </Card>
-                <Card className="bg-white/5 border-mkt-border">
+                <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                   <CardHeader>
                     <Shield className="w-5 h-5 text-mkt-accent" />
                     <CardTitle className="text-mkt-fg text-base">
@@ -570,7 +570,7 @@ export default function PrivacyPage() {
               Icon={Baby}
             />
             <div className="mt-4 space-y-4">
-              <Card className="bg-[#005f3a]/10 border-mkt-accent/20">
+              <Card className="bg-mkt-accent/10 border-mkt-accent/20">
                 <CardContent>
                   <p className="text-mkt-fg-muted leading-relaxed">
                     Smart Ride is not intended for children under{' '}
@@ -639,7 +639,7 @@ export default function PrivacyPage() {
                 Privacy Policy or your personal information, please contact
                 our Data Protection Officer:
               </p>
-              <Card className="bg-white/5 border-mkt-border">
+              <Card className="bg-mkt-bg-raised border-mkt-border text-mkt-fg">
                 <CardContent className="space-y-3">
                   <p className="text-mkt-fg font-semibold text-lg">
                     Natural Intellects Corp

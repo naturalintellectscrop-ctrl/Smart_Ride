@@ -85,7 +85,7 @@ export default function ContactPage() {
     <MarketingShell>
       <MarketingHeader />
 
-      <Section className="pb-12 pt-24">
+      <Section className="pb-12">
         <h1 className="text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">
           Get in touch
         </h1>

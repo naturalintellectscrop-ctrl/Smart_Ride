@@ -13,7 +13,7 @@ export default function BlogPage() {
     <MarketingShell>
       <MarketingHeader />
 
-      <Section className="pb-24 pt-24" containerClassName="mx-auto max-w-3xl text-center">
+      <Section className="pb-24" containerClassName="mx-auto max-w-3xl text-center">
         <h1 className="text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">Blog</h1>
         <p className="mt-6 text-lg text-mkt-fg-muted">
           Product updates, safety notes, and what we are working on.

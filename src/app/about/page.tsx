@@ -61,7 +61,7 @@ export default function AboutPage() {
     <MarketingShell>
       <MarketingHeader />
 
-      <Section className="pb-16 pt-24">
+      <Section className="pb-16">
         <h1 className="max-w-3xl text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">
           About Smart Ride
         </h1>
