@@ -1241,23 +1241,32 @@ Re-verified every finding against the tree after closing P1–P4.
 | BE-002 | **RESOLVED** | `priceItemsFromCatalogue` scoped to `merchantId`; `verify-order-pricing` 16 checks |
 | BE-003 | **RESOLVED** | one atomic implementation, all four call sites on the USER wallet; `verify-wallet-withdrawal` |
 | BE-004 | **RESOLVED** | three false claims removed (two of them web, never previously audited); `verify-security-claims` 13 checks over 612 files |
-| BE-005 | FIXED_PENDING_VERIFICATION | unchanged — the two remaining questions (proof-of-delivery, concurrent DP assignments) are still owed |
+| BE-005 | **RESOLVED** | proof of delivery built and gated; claiming made atomic (a third defect found while testing); concurrent assignments confirmed |
 | BE-006 | **RESOLVED** | no backfill owed; the enum column rejected bad values, so onboarding 400'd rather than writing drift |
 | BE-007 | **RESOLVED** | receipts API confirmed sufficient; screen specced as Golden Screen #43, no backend built |
 | BE-008 | FIXED_PENDING_VERIFICATION | signature intact; the `estimates` response type has been widened to carry the surge fields it returns |
 | BE-009 | FIXED_PENDING_VERIFICATION | unchanged |
-| BE-010 | **OPEN** | Firebase Console configuration — outside what a code session can change |
+| BE-010 | **DIAGNOSED** | 403 API_KEY_ANDROID_APP_BLOCKED — certificate and package ruled out with evidence; one Cloud Console change owed |
 | BE-011 | **RESOLVED** | DB-enforced idempotency key; six simultaneous retries produce one debit |
 | BE-012 | **RESOLVED** | `@@unique([taskId, fromUserId])`; both directions verified; passenger scores feed nothing automated |
 | BE-013 | **RESOLVED** | caches derived by one service, reconciled on schedule, drift reported not hidden |
 
-**Still owed, and deliberately not smuggled into another finding:**
-- **BE-005's two open questions.** Is there a proof-of-delivery requirement the
-  mobile app does not collect, and does `GET /tasks` return *all* concurrent
-  assignments for a DP rider? Neither was tested this session.
-- **BE-010.** Needs someone with access to the Firebase project.
-- **Whether messages should be encrypted at rest.** BE-004 removed the false
-  claim; it did not answer the product question underneath it.
+**Still owed:**
+- **BE-010's one Console change.** *APIs & Services > Credentials > the Android
+  API key > Application restrictions* — add `ug.smartride.app` with the release
+  SHA-1, or relax the restriction. Everything else about push is verified;
+  re-run `verify-firebase-config` and STAGE 3 turning green means devices will
+  obtain tokens.
+- **`MESSAGE_ENCRYPTION_KEY` in each deployment.** The cipher is built and
+  wired, but encryption only activates when the key is set. Until then messages
+  are still stored in plaintext, and `verify-production-config` warns on every
+  run.
+- **A device pass on the offer ringtone.** Whether the alert is loud enough
+  through a helmet, and whether a custom tone beats the system default, cannot
+  be judged from a build log.
+- **The mobile proof-of-delivery UI.** The backend enforces proof; the courier
+  app needs a screen to capture a code, photo or signature. Handed to the
+  migration session, not built here.
 
 **Not a defect, recorded so it is not re-investigated:** the zero
 `SMART_CAR_DRIVER` rows noted at the last audit. The role was driven end to end
