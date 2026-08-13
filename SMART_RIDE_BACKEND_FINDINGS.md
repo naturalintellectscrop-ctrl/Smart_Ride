@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-015**.
+**ID allocation:** next free ID is **BE-018**.
 
 ---
 
@@ -34,6 +34,9 @@ finding is explicitly marked as already fixed locally.
 | BE-012 | Ratings were one-way; sub-scores written by nothing | P1 | RESOLVED | Data |
 | BE-013 | Three unreconciled stores held the same rating | P1 | RESOLVED | Data |
 | BE-014 | Intermittent P2028 in verification runs | P2 | RESOLVED | Infrastructure |
+| BE-015 | Courier could not complete a delivery they had handed over | P0 | RESOLVED | Workflow |
+| BE-016 | A parcel could get permanently stuck at ARRIVING | P0 | RESOLVED | Workflow |
+| BE-017 | A restricted account could still spend | P0 | RESOLVED | Security |
 
 ---
 
@@ -1295,3 +1298,83 @@ Re-verified every finding against the tree after closing P1–P4.
 earnings into a withdrawable wallet, and a receipt naming the car service — and
 passes at every step (`verify-car-driver-journey`, 15 checks). The absence is a
 small dataset, not a broken role.
+
+---
+
+## BE-015 — Courier could not complete a delivery they had handed over
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Workflow
+**Found:** Phase B route-level testing, 2026-08-10
+
+The state machine's RIDER actor list permitted the shortcut
+`IN_TRANSIT -> DELIVERED` but omitted `DELIVERING -> DELIVERED`. The transition
+*tables* allowed the handover step, so a courier could move a parcel INTO
+delivering and then had no authority to finish it. **The only couriers who
+could complete a delivery were the ones who skipped the handover.**
+
+Both pairs added to the actor list.
+
+---
+
+## BE-016 — A parcel could get permanently stuck at ARRIVING
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Workflow
+**Found:** Phase B adversarial journey, 2026-08-10
+
+Deliveries route `ACCEPTED -> ARRIVING -> PICKED_UP`; only passenger rides pass
+through `ARRIVED`. The transition table allowed `ARRIVING -> PICKED_UP`, but the
+RIDER actor list did not — so a courier who reached the pickup point had **no
+legal move at all**. The parcel could not be collected, delivered, or cancelled
+out of that state.
+
+**Why BE-015 and BE-016 both survived every existing test.** Every delivery test
+either asserted against the transition *table* or wrote `db.task.update({
+status })` directly. Both are blind to *who is authorised* to make a move.
+Walking one parcel through the real HTTP handlers exposed both immediately.
+
+This is now a standing rule for this codebase: **a lifecycle tested by writing
+the status column proves nothing about who may write it.**
+
+---
+
+## BE-017 — A restricted account could still spend
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Security
+**Found:** Phase B intelligence-in-journey testing, 2026-08-10
+
+`assessTransactionRisk()` called `FraudPreventionService.assessRisk()`, which
+recomputes risk from LIVE behavioural signals — failed payments, cancellations,
+dispatch abuse. It never read `FraudRiskScore`.
+
+So an account the platform had **already auto-restricted** — `isRestricted =
+true`, admins paged, CRITICAL alert raised — walked straight through the payment
+gate as soon as its live signals went quiet. Restricting an account meant
+nothing to the money path, which is the only place a restriction matters.
+
+The standing restriction is now the gate's first question, checked before the
+live assessment.
+
+**Why it survived.** Every fraud test asserted that the *score* changed and that
+an *alert* was raised. None asserted that a flagged account was actually
+refused. The engine was correct; nothing consumed its verdict.
+
+---
+
+## Phase C — device QA
+
+The matrix lives in `SMART_RIDE_QA_MATRIX.md`: six role journeys, the advanced
+systems exercised *inside* those journeys rather than separately, and
+cross-cutting resilience checks.
+
+**Two things gate it:**
+- **BE-010** must be cleared first (`API_KEY_ANDROID_APP_BLOCKED`). Until the
+  API key restriction admits the app, no push arrives and every
+  notification row is untestable.
+- **The mobile proof-of-delivery capture UI may not exist.** The backend
+  enforces proof; if the courier app has no way to enter a code or take a
+  photo, deliveries cannot be completed from the device at all. That is a
+  migration-session item and is the likeliest blocker in section 4.
+
+**What eight green pipeline stages mean:** the implementation passed automated
+engineering verification. It does not mean production-ready. Physical-device
+and end-to-end QA remain separate and unstarted.
