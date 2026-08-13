@@ -357,14 +357,59 @@ export default function DriverHomeScreen() {
         clearIncomingRequest();
         setRequestTimer(null);
         router.push(`/driver/driver-task?taskId=${incomingRequest.task.id}`);
-      } else {
-        Alert.alert('Error', (result as any).error || 'Failed to accept request');
+        return;
       }
+
+      // Neither call reported success — but the accept may still have LANDED.
+      // A dropped response on a flaky connection looks identical to a refusal
+      // from here, and the difference matters enormously: the rider has either
+      // been given the job or not. Ask the server which, rather than guessing.
+      //
+      // This is the mirror of never claiming success the backend did not
+      // confirm — do not claim FAILURE it did not report either. Observed on a
+      // real device: dispatch/accept moved the task to ASSIGNED server-side
+      // while the app showed "Failed to accept request" and stranded the
+      // courier on the dashboard, holding a job they did not know they had.
+      const confirmed = await confirmAcceptedByServer(incomingRequest.task.id);
+      if (confirmed) {
+        clearIncomingRequest();
+        setRequestTimer(null);
+        router.push(`/driver/driver-task?taskId=${incomingRequest.task.id}`);
+        return;
+      }
+
+      Alert.alert('Error', (result as any).error || 'Failed to accept request');
     } catch (error) {
+      // Same reasoning on a thrown request: verify before reporting failure.
+      try {
+        const confirmed = await confirmAcceptedByServer(incomingRequest.task.id);
+        if (confirmed) {
+          clearIncomingRequest();
+          setRequestTimer(null);
+          router.push(`/driver/driver-task?taskId=${incomingRequest.task.id}`);
+          return;
+        }
+      } catch {
+        /* fall through to the error below */
+      }
       Alert.alert('Error', 'Failed to accept request');
     } finally {
       setIsAccepting(false);
     }
+  };
+
+  /**
+   * Did the server actually assign this task to us?
+   *
+   * The only authority on whether an accept succeeded is the task's own state.
+   * Returns true when the task now names this rider — which is exactly what
+   * dispatch/accept does on success — and false for anything else, including
+   * a task another courier won.
+   */
+  const confirmAcceptedByServer = async (taskId: string): Promise<boolean> => {
+    const check = await api.getTask(taskId);
+    const t: any = check?.data;
+    return !!check?.success && !!t && t.riderId === rider?.id;
   };
 
   const handleDeclineRequest = async () => {
