@@ -564,3 +564,139 @@ a 404 on `/api/marketplace/incentives` and a "Failed to login" — were the Next
 dev server answering before it had compiled the route, not defects. Both looked
 convincing. Give a freshly started dev server a real request and a moment before
 believing anything it says.
+
+---
+
+# Device-only QA — executable scenarios
+
+Every row below is something no server-side test can answer. Each names the
+role, the account, the setup, the exact action, and what a pass looks like, so
+it can be run without re-deriving any of it.
+
+All accounts use password `QaDevice@2026` and are created by
+`bun scripts/qa-device-accounts.ts`.
+
+Device: `R3CR709T4FN` — Galaxy S21 5G, Android 15.
+
+Legend: **C** = I can drive it via adb and read the result · **D** = a human
+must be present (hearing, touch, judgement, physical movement).
+
+---
+
+## D1 — The offer arrives while the phone is locked
+
+| | |
+|---|---|
+| **Level** | D — human |
+| **Role / account** | Boda · `qa.boda@smartride.test` |
+| **Setup** | Log in, go online, confirm "Waiting for requests". Lock the phone. Leave it locked, screen off, for 2 minutes. |
+| **Action** | From another machine: `bun scripts/qa-dispatch-offer.ts boda` (or book a ride as `qa.client@smartride.test`). |
+| **Expected** | The phone wakes or lights the screen, plays the offer sound, and vibrates. Unlocking lands on the offer sheet with a live countdown — **not** on the dashboard, and **not** on a tray notification the courier must find. |
+| **Why a human** | Screen-wake behaviour, audibility and vibration cannot be sampled over adb. |
+| **Result** | ☐ |
+
+## D2 — The ringtone is audible over traffic
+
+| | |
+|---|---|
+| **Level** | D — human |
+| **Setup** | Phone in a trouser pocket, media volume at the level a courier would actually use, near a road. |
+| **Action** | Trigger an offer. |
+| **Expected** | Noticed within ~3 seconds without looking at the phone. |
+| **Why a human** | This is the difference between a courier earning and a courier missing the job. |
+| **Result** | ☐ |
+
+## D3 — The SLA countdown matches the server
+
+| | |
+|---|---|
+| **Level** | D — human (stopwatch) |
+| **Action** | Trigger an offer, start a stopwatch when the sheet appears, do nothing, and note when the sheet closes. Then read the task's `expiresAt` from the database. |
+| **Expected** | On-screen countdown reaches zero within ~2s of the server's own expiry. Accepting after the sheet closes is refused **by the server**, not merely hidden by the UI. |
+| **Why a human** | Clock skew between phone and server only appears live. |
+| **Result** | ☐ |
+
+## D4 — Tapping the notification, from cold start
+
+| | |
+|---|---|
+| **Level** | D — human |
+| **Setup** | Force-stop the app (`adb shell am force-stop ug.smartride.app`). Phone unlocked, app not running. |
+| **Action** | Trigger an offer. Tap the notification. |
+| **Expected** | App cold-starts and lands on the driver dashboard with the offer sheet open. The known failure was landing on the client's rides tab, or nothing happening at all. |
+| **Result** | ☐ |
+
+## D5 — Realtime through a network change
+
+| | |
+|---|---|
+| **Level** | D — human |
+| **Setup** | Logged in as Boda, online, on Wi-Fi. |
+| **Action** | Turn Wi-Fi off so the phone falls to mobile data. Wait 30s. Trigger an offer. Then re-enable Wi-Fi and trigger another. |
+| **Expected** | Both offers arrive. After each switch the dashboard shows current state — the fix re-reads authoritative state on resubscribe rather than trusting the last screen. |
+| **Note** | **RT-4: nothing will appear in logcat.** The release build prints no JS logs, so judge this by whether the offer arrives, not by watching for a channel error. |
+| **Result** | ☐ |
+
+## D6 — Proof photo in poor light
+
+| | |
+|---|---|
+| **Level** | D — human |
+| **Role / account** | Courier · `qa.courier@smartride.test` |
+| **Setup** | Take a delivery to DELIVERING. Stand somewhere dim — a stairwell or a doorway at dusk. |
+| **Action** | Capture proof of delivery. |
+| **Expected** | The photo uploads, and — the part that matters — **the customer can tell what it shows**. Open the same task's receipt as `qa.client@smartride.test` and look. |
+| **Why a human** | Legibility is a judgement, and a 700KB blob that proves nothing settles no dispute. |
+| **Result** | ☐ |
+
+## D7 — The too-far refusal is actionable
+
+| | |
+|---|---|
+| **Level** | D — human (requires physically moving) |
+| **Action** | Attempt proof capture ~2km from the drop-off, then again at the drop-off. |
+| **Expected** | First attempt refused, naming the distance. Second accepted. |
+| **Result** | ☐ |
+
+## D8 — Map settles and the driver marker tracks
+
+| | |
+|---|---|
+| **Level** | D — human |
+| **Action** | Ride an actual short route with client and driver accounts on two devices, or drive one leg. |
+| **Expected** | Map settles without jitter; the marker follows; the ETA changes in a way that matches reality. |
+| **Note** | Mapbox **telemetry** fails on this device (`ERR_NAME_NOT_RESOLVED`). Tiles and directions are unaffected — but if the map misbehaves, check that first. |
+| **Result** | ☐ |
+
+## D9 — Push on the release build, off the cable
+
+| | |
+|---|---|
+| **Level** | D — human |
+| **Setup** | Install the release APK, then **unplug the USB cable**. |
+| **Action** | Trigger an offer from another machine. |
+| **Expected** | It arrives. USB is a debugging channel, not a delivery channel — this rules out the possibility that push only appeared to work because the device was tethered. |
+| **Result** | ☐ |
+
+## D10 — A second delivery, back to back
+
+| | |
+|---|---|
+| **Level** | C→D |
+| **Action** | Complete one delivery fully, then immediately dispatch another to the same courier. |
+| **Expected** | The second offer arrives. This is the regression guard for the defect where a courier who finished one delivery never got another. |
+| **Result** | ☐ |
+
+---
+
+## What I could drive myself, and did
+
+| # | Scenario | Result |
+|---|---|---|
+| C-1 | App cold-starts on real hardware | **PASS** |
+| C-2 | Login screen renders and accepts typed input | **PASS** |
+| C-3 | Email/password login against the production API | **PASS** |
+| C-4 | Server-side role reaches the UI (Rider/Boda pre-selected) | **PASS** |
+
+Anything beyond C-4 in this session ran against a **stale APK** and is therefore
+not recorded as verified — see the staleness note above.
