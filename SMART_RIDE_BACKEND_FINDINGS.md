@@ -2093,3 +2093,93 @@ order. Worth a product decision; no user-visible breakage.
 **Device-only:** whether the push arrives at all on a release build, and whether
 the tap works from cold start and from a locked screen. No server-side test can
 answer either.
+
+---
+
+## RT-4 — `[Realtime] Channel error` cannot be observed on a release build
+
+**Status:** OPEN — investigation reframed | **Priority:** P1 | **Category:** Realtime / Observability
+**Found:** physical device, release APK, 2026-08-14
+
+The message the ledger has been chasing for three sessions is a `console.error`
+in `socket.service.ts`. On the release build installed on the QA device it does
+not exist as far as the operating system is concerned.
+
+Measured on `R3CR709T4FN`, whole logcat buffer, app PID filtered:
+
+```
+ReactNativeJS lines in buffer : 0
+```
+
+Every line the app produced was native — `BridgelessReact`, `HWUI`,
+`InputTransport`, `Mapbox`. React Native strips console output in release, so
+`[Realtime] Channel error` never reaches logcat from a production APK.
+
+**What this means, concretely:**
+
+1. The original sighting must have come from a **development build** (Metro or a
+   dev client), not from the release APK. That was never recorded, and three
+   sessions of "cannot reproduce off-device" were partly chasing a message that
+   the production binary is incapable of printing.
+2. Any future attempt to reproduce it by watching logcat on a release APK is
+   **structurally impossible**, not merely unlucky.
+3. The same applies to every `console.log` diagnostic in the mobile codebase.
+   The app is, from the outside, silent in production.
+
+**Why the fix still holds.** The RT-2 repair changed *behaviour*, not logging:
+channel-local recovery, real backoff, and a `realtime:resubscribed` event that
+makes the dashboard re-read authoritative state. None of that depends on anyone
+reading a log line. The one thing lost is the ability to *watch* it happen.
+
+**To actually investigate this, one of these is needed** — recorded as options,
+not built:
+
+- a development build for the realtime session specifically, where JS logs reach
+  Metro;
+- routing realtime failures to Sentry (already a dependency — the build emits
+  `copySentryJsonConfiguration`), so a production channel error leaves a
+  breadcrumb;
+- a visible in-app connection indicator, so a human on the device can see the
+  state without a cable.
+
+The third is the only one that helps a real courier at a stage in Kampala.
+
+---
+
+## Observation — Mapbox telemetry cannot resolve its host
+
+**Status:** OPEN — low severity | **Category:** Configuration
+
+On the device, during a normal session:
+
+```
+Mapbox [events_service]: Failed to send events: Couldn't connect to server:
+  net::ERR_NAME_NOT_RESOLVED, ErrorCode=1, InternalErrorCode=-105
+Mapbox [events_service]: Events sending aborted after 2 attempts
+```
+
+This is Mapbox's **telemetry** endpoint, not tile or directions traffic, and the
+app was otherwise online (login succeeded against the API in the same session).
+So it does not affect maps or navigation. Recorded because it is a real,
+repeatable device-side network failure that would otherwise be discovered later
+and mistaken for a map defect.
+
+---
+
+## Device-verified this session (level C)
+
+| # | Scenario | Evidence | Result |
+|---|---|---|---|
+| C-1 | App cold-starts on real hardware | `am start` → welcome screen screenshot | **PASS** |
+| C-2 | Login screen renders and accepts input | screenshot with both fields populated | **PASS** |
+| C-3 | Email/password login against production API | screenshot: "Welcome, QA!" after tapping Login | **PASS** |
+| C-4 | Server-side role reaches the UI | role chooser opened with **Rider / Boda pre-selected**, matching `riderRole: SMART_BODA_RIDER` on the account | **PASS** |
+
+C-4 is the interesting one: it is a full round trip — account role in Postgres →
+login response → client state → rendered selection — verified by looking at the
+phone rather than at a database row.
+
+**UX note, not a defect:** an existing rider is shown "Choose Your Role" after
+login even though the account already has one. The pre-selection is correct, so
+nothing is broken; whether a returning user should see that screen at all is a
+product decision.
