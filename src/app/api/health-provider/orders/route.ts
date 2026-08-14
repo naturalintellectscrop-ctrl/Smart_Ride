@@ -1,16 +1,91 @@
+/**
+ * Health provider (pharmacy) orders.
+ *
+ * SECURITY: none of the three handlers in this file authenticated the caller,
+ * and all of them ran under setServiceRoleContext(), which elevates past RLS.
+ * `providerId` came from the query string, so an anonymous request could list
+ * any pharmacy's order book — patient names, phone numbers, delivery
+ * addresses and what medicine each person ordered. PATCH could also advance
+ * another pharmacy's orders.
+ *
+ * Every handler now authenticates first, and the provider is resolved from the
+ * caller's own account rather than from the request.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { enumParam, requireEnumParam } from '@/lib/api/enum-params';
 import { ProviderOrderStatus, HealthOrderType } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 
+/**
+ * Resolve which provider this caller may act for.
+ *
+ * Returns the allowed providerId, or a response to send instead. An admin may
+ * name any provider; anyone else gets their own and only their own, and asking
+ * for someone else's is refused outright rather than silently redirected — a
+ * pharmacy that requests a competitor's order book should be told no.
+ */
+async function resolveProvider(
+  request: NextRequest,
+  requestedId: string | null
+): Promise<{ providerId: string } | { error: NextResponse }> {
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return {
+      error: NextResponse.json(
+        { success: false, error: auth.error || 'Authentication required' },
+        { status: auth.statusCode || 401 }
+      ),
+    };
+  }
+
+  if (isAdmin(auth.user.role)) {
+    if (!requestedId) {
+      return {
+        error: NextResponse.json(
+          { success: false, error: 'providerId is required' },
+          { status: 400 }
+        ),
+      };
+    }
+    return { providerId: requestedId };
+  }
+
+  const own = await db.healthProvider.findUnique({
+    where: { userId: auth.user.userId },
+    select: { id: true },
+  });
+  if (!own) {
+    return {
+      error: NextResponse.json(
+        { success: false, error: 'No health provider account for this user' },
+        { status: 403 }
+      ),
+    };
+  }
+  if (requestedId && requestedId !== own.id) {
+    return {
+      error: NextResponse.json(
+        { success: false, error: 'These orders belong to another provider' },
+        { status: 403 }
+      ),
+    };
+  }
+  return { providerId: own.id };
+}
+
 // GET /api/health-provider/orders - Get orders for provider
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const resolved = await resolveProvider(request, searchParams.get('providerId'));
+  if ('error' in resolved) return resolved.error;
+
   await setServiceRoleContext();
   try {
-    const { searchParams } = new URL(request.url);
-    const providerId = searchParams.get('providerId');
+    const providerId = resolved.providerId;
     const status = searchParams.get('status');
     const orderType = searchParams.get('orderType');
     const dateFrom = searchParams.get('dateFrom');
@@ -102,6 +177,17 @@ export async function GET(request: NextRequest) {
 
 // POST /api/health-provider/orders - Create new order
 export async function POST(request: NextRequest) {
+  // Placing an order committed a named customer to a purchase. Unauthenticated,
+  // anyone could create orders in someone else's name at any pharmacy.
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return NextResponse.json(
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 }
+    );
+  }
+  const caller = auth.user;
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -152,6 +238,16 @@ export async function POST(request: NextRequest) {
       paymentMethod,
       customerNotes,
     } = parsed.data;
+
+    // The order is placed for whoever is holding the token. An admin may place
+    // one on a customer's behalf (phone orders); nobody else may name someone
+    // other than themselves.
+    if (customerId !== caller.userId && !isAdmin(caller.role)) {
+      return NextResponse.json(
+        { success: false, error: 'Cannot place an order on behalf of another customer' },
+        { status: 403 }
+      );
+    }
 
     // Verify provider is active
     const provider = await db.healthProvider.findUnique({
@@ -255,6 +351,18 @@ export async function POST(request: NextRequest) {
 
 // PATCH /api/health-provider/orders - Update order status
 export async function PATCH(request: NextRequest) {
+  // Unauthenticated, this drove another pharmacy's order book — including
+  // VERIFY_PRESCRIPTION, which is the control that says a pharmacist checked a
+  // prescription before medicine was dispensed against it.
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return NextResponse.json(
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 }
+    );
+  }
+  const caller = auth.user;
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -274,6 +382,20 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Order not found' },
         { status: 404 }
       );
+    }
+
+    // The order must belong to the caller's own pharmacy.
+    if (!isAdmin(caller.role)) {
+      const own = await db.healthProvider.findUnique({
+        where: { userId: caller.userId },
+        select: { id: true },
+      });
+      if (!own || own.id !== order.providerId) {
+        return NextResponse.json(
+          { success: false, error: 'This order belongs to another provider' },
+          { status: 403 }
+        );
+      }
     }
 
     const updateData: Prisma.ProviderOrderUpdateInput = {};

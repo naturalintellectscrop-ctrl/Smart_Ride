@@ -1,20 +1,90 @@
+/**
+ * Merchant earnings.
+ *
+ * SECURITY: this route had no authentication of any kind while running under
+ * setServiceRoleContext(), which elevates past RLS. Anyone who could reach the
+ * URL — signed in or not — could read it. Two different exposures:
+ *
+ *   - `summary`, `transactions`, `analytics`, `by-type` ignore merchantId and
+ *     aggregate the WHOLE platform, so an anonymous request returned Smart
+ *     Ride's total revenue, commission take and transaction history.
+ *   - `merchants` and `payouts` take merchantId from the query string, so any
+ *     merchant could read a competitor's takings by changing one id.
+ *
+ * Platform-wide figures are now admin-only, and merchant-scoped figures are
+ * pinned to the caller's own merchant rather than to whatever id they ask for.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { toNumber } from '@/lib/decimal-utils';
+
+/**
+ * Actions that aggregate across every merchant on the platform.
+ *
+ * `summary` is scoped to the caller instead of being refused — it used to
+ * total every merchant's orders regardless of who asked, so a merchant reading
+ * their own earnings screen was shown the platform's revenue.
+ */
+const PLATFORM_WIDE_ACTIONS = new Set(['transactions', 'analytics', 'by-type']);
 
 // GET - Fetch merchant earnings and financial data
 export async function GET(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return NextResponse.json(
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 }
+    );
+  }
+  const user = auth.user;
+  const admin = isAdmin(user.role);
+
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get('action') || 'summary';
+
+  if (PLATFORM_WIDE_ACTIONS.has(action) && !admin) {
+    return NextResponse.json(
+      { success: false, error: 'Platform-wide earnings are restricted to administrators' },
+      { status: 403 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get('action') || 'summary';
-    const merchantId = searchParams.get('merchantId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    // A merchant may only ever see themselves. The requested id is honoured
+    // for admins and ignored for everyone else — asking for someone else's
+    // figures quietly returns your own rather than theirs.
+    let merchantId = searchParams.get('merchantId');
+    if (!admin) {
+      const own = await db.merchant.findUnique({
+        where: { userId: user.userId },
+        select: { id: true },
+      });
+      if (!own) {
+        return NextResponse.json(
+          { success: false, error: 'No merchant account for this user' },
+          { status: 403 }
+        );
+      }
+      if (merchantId && merchantId !== own.id) {
+        return NextResponse.json(
+          { success: false, error: 'These earnings belong to another merchant' },
+          { status: 403 }
+        );
+      }
+      merchantId = own.id;
+    }
+
     switch (action) {
       case 'summary':
-        return await getEarningsSummary(startDate, endDate);
+        // Null only for an admin who named no merchant — the one case that
+        // legitimately means "the whole platform".
+        return await getEarningsSummary(merchantId, startDate, endDate);
       
       case 'merchants':
         return await getMerchantEarnings(merchantId, startDate, endDate);
@@ -46,6 +116,23 @@ export async function GET(request: NextRequest) {
 
 // POST - Record payout or update earnings
 export async function POST(request: NextRequest) {
+  // Recording a payout moves money and changing a commission rate changes what
+  // every future order pays out. Neither had an auth check; both are now
+  // admin-only, which is the only role that should be doing either.
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return NextResponse.json(
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 }
+    );
+  }
+  if (!isAdmin(auth.user.role)) {
+    return NextResponse.json(
+      { success: false, error: 'Administrator access required' },
+      { status: 403 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -72,17 +159,21 @@ export async function POST(request: NextRequest) {
 }
 
 // Get overall earnings summary for merchant service
-async function getEarningsSummary(startDate?: string | null, endDate?: string | null) {
+async function getEarningsSummary(
+  merchantId?: string | null,
+  startDate?: string | null,
+  endDate?: string | null
+) {
   const dateFilter: { gte?: Date; lte?: Date } = {};
   if (startDate) dateFilter.gte = new Date(startDate);
   if (endDate) dateFilter.lte = new Date(endDate);
 
-  // Get all orders with their financial data
+  // Scoped to one merchant unless an admin asked for the platform.
   const orders = await db.order.findMany({
     where: {
       createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
       status: 'DELIVERED',
-      merchantId: { not: null },
+      ...(merchantId ? { merchantId } : { merchantId: { not: null } }),
     },
     include: {
       merchant: true,

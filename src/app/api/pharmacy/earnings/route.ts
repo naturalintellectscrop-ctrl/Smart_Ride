@@ -1,21 +1,84 @@
+/**
+ * Pharmacy earnings.
+ *
+ * SECURITY: same shape as the merchant earnings route — no authentication at
+ * all, under setServiceRoleContext(). `summary`, `transactions` and
+ * `analytics` aggregate every health provider on the platform; `providers`
+ * and `payouts` take providerId straight from the query string. Both were
+ * readable by anyone who knew the URL.
+ */
+
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { toNumber } from '@/lib/decimal-utils';
+
+/**
+ * Actions that aggregate across every provider on the platform.
+ *
+ * `summary` is deliberately NOT in this set. The mobile pharmacy app calls it
+ * for its own earnings screen, and it used to answer with platform-wide totals
+ * — every pharmacy was shown Smart Ride's whole health revenue as if it were
+ * their own takings. It is now scoped to the caller below, so it is a
+ * per-provider figure for a provider and a platform figure for an admin.
+ */
+const PLATFORM_WIDE_ACTIONS = new Set(['transactions', 'analytics']);
 
 // GET - Fetch pharmacy earnings and financial data
 export async function GET(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return NextResponse.json(
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 }
+    );
+  }
+  const user = auth.user;
+  const admin = isAdmin(user.role);
+
+  const { searchParams } = new URL(request.url);
+  const action = searchParams.get('action') || 'summary';
+
+  if (PLATFORM_WIDE_ACTIONS.has(action) && !admin) {
+    return NextResponse.json(
+      { success: false, error: 'Platform-wide earnings are restricted to administrators' },
+      { status: 403 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
-    const { searchParams } = new URL(request.url);
-    const action = searchParams.get('action') || 'summary';
-    const providerId = searchParams.get('providerId');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    // Pinned to the caller's own pharmacy unless they are an admin.
+    let providerId = searchParams.get('providerId');
+    if (!admin) {
+      const own = await db.healthProvider.findUnique({
+        where: { userId: user.userId },
+        select: { id: true },
+      });
+      if (!own) {
+        return NextResponse.json(
+          { success: false, error: 'No health provider account for this user' },
+          { status: 403 }
+        );
+      }
+      if (providerId && providerId !== own.id) {
+        return NextResponse.json(
+          { success: false, error: 'These earnings belong to another provider' },
+          { status: 403 }
+        );
+      }
+      providerId = own.id;
+    }
+
     switch (action) {
       case 'summary':
-        return await getEarningsSummary(startDate, endDate);
-      
+        // providerId is null only for an admin who named no provider, which
+        // is the one case that legitimately means "the whole platform".
+        return await getEarningsSummary(providerId, startDate, endDate);
+
       case 'providers':
         return await getProviderEarnings(providerId, startDate, endDate);
       
@@ -43,6 +106,21 @@ export async function GET(request: NextRequest) {
 
 // POST - Record payout or update earnings
 export async function POST(request: NextRequest) {
+  // Payouts move money; commission rates change every future settlement.
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return NextResponse.json(
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 }
+    );
+  }
+  if (!isAdmin(auth.user.role)) {
+    return NextResponse.json(
+      { success: false, error: 'Administrator access required' },
+      { status: 403 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -69,17 +147,23 @@ export async function POST(request: NextRequest) {
 }
 
 // Get overall earnings summary for pharmacy service
-async function getEarningsSummary(startDate?: string | null, endDate?: string | null) {
+async function getEarningsSummary(
+  providerId?: string | null,
+  startDate?: string | null,
+  endDate?: string | null
+) {
   // Build date filter
   const dateFilter: { gte?: Date; lte?: Date } = {};
   if (startDate) dateFilter.gte = new Date(startDate);
   if (endDate) dateFilter.lte = new Date(endDate);
 
-  // Get all health orders with their financial data
+  // Get health orders with their financial data, scoped to one provider unless
+  // an admin asked for the platform.
   const healthOrders = await db.healthOrder.findMany({
     where: {
       createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
       status: 'DELIVERED',
+      ...(providerId ? { providerId } : {}),
     },
     include: {
       provider: true,

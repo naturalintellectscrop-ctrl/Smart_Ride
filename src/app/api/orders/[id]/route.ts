@@ -248,6 +248,28 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   try {
     const body = await request.json();
 
+    // ============================================================
+    // SECURITY: role is not ownership.
+    //
+    // The matrix above answers "may a MERCHANT accept orders?" — it never
+    // asked "is this merchant's order?". `handleAccept` looked like it did,
+    // but it compared order.merchantId against body.merchantId, a value the
+    // caller supplies and which is not secret (it is returned by the public
+    // merchant listing and echoed in every order). The other five handlers
+    // did not check at all.
+    //
+    // So any signed-in merchant could accept, reject, start preparing or mark
+    // ready any other merchant's order — taking over a competitor's kitchen
+    // queue and firing status notifications at their customers — and any
+    // signed-in rider could mark any order picked up or delivered, including
+    // deliveries assigned to someone else.
+    //
+    // Ownership is now resolved from the token before any handler runs, and
+    // is never read from the body.
+    // ============================================================
+    const ownership = await assertOrderOwnership(id, action, decoded);
+    if (ownership) return ownership;
+
     switch (action) {
       case 'confirm-payment':
         return handleConfirmPayment(id, body, decoded);
@@ -274,6 +296,85 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   } finally {
     await resetRLSContext();
   }
+}
+
+/** Roles that are allowed to act across tenants by definition. */
+const CROSS_TENANT_ROLES = ['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN'];
+
+/** Which party an action belongs to, derived from the same matrix above. */
+const MERCHANT_ACTIONS = new Set(['accept', 'reject', 'preparing', 'ready']);
+const RIDER_ACTIONS = new Set(['pickup', 'deliver']);
+const CLIENT_ACTIONS = new Set(['confirm-payment']);
+
+/**
+ * Refuse an action on an order the caller has no stake in.
+ *
+ * Returns a response to send when the caller is not entitled, or null to let
+ * the action proceed. Identity comes only from the verified token — nothing
+ * here reads the request body, which is the whole point.
+ */
+async function assertOrderOwnership(
+  orderId: string,
+  action: string,
+  decoded: { userId: string; role: string }
+): Promise<NextResponse | null> {
+  if (CROSS_TENANT_ROLES.includes(decoded.role)) return null;
+
+  const order = await db.order.findUnique({
+    where: { id: orderId },
+    select: { id: true, clientId: true, merchantId: true },
+  });
+  if (!order) return notFoundResponse('Order');
+
+  const deny = (why: string) =>
+    NextResponse.json({ success: false, error: why }, { status: 403 });
+
+  if (MERCHANT_ACTIONS.has(action)) {
+    const merchant = await db.merchant.findUnique({
+      where: { userId: decoded.userId },
+      select: { id: true },
+    });
+    if (!merchant || merchant.id !== order.merchantId) {
+      return deny('This order belongs to another merchant');
+    }
+    return null;
+  }
+
+  if (RIDER_ACTIONS.has(action)) {
+    const rider = await db.rider.findFirst({
+      where: { userId: decoded.userId },
+      select: { id: true },
+    });
+    if (!rider) return deny('No delivery profile for this account');
+
+    // An order carries no riderId of its own — the delivery leg lives on the
+    // Task that references it, so that is where the assignment is checked.
+    const task = await db.task.findFirst({
+      where: { orderId: order.id },
+      select: { riderId: true },
+    });
+    if (!task || task.riderId !== rider.id) {
+      return deny('You are not assigned to this delivery');
+    }
+    return null;
+  }
+
+  if (CLIENT_ACTIONS.has(action) && order.clientId !== decoded.userId) {
+    return deny('This order belongs to another customer');
+  }
+
+  // `cancel` is shared: whoever is genuinely party to the order may cancel it.
+  if (action === 'cancel') {
+    if (order.clientId === decoded.userId) return null;
+    const merchant = await db.merchant.findUnique({
+      where: { userId: decoded.userId },
+      select: { id: true },
+    });
+    if (merchant && merchant.id === order.merchantId) return null;
+    return deny('You are not party to this order');
+  }
+
+  return null;
 }
 
 /**
