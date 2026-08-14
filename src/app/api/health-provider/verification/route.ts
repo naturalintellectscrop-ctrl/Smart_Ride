@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { allAdminsGuard } from '@/lib/auth/admin-guards';
 import { enumParam } from '@/lib/api/enum-params';
 import { VerificationStatus, HealthProviderType } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
@@ -6,6 +7,16 @@ import { Prisma } from '@prisma/client';
 
 // GET /api/health-provider/verification - Get providers pending verification
 export async function GET(request: NextRequest) {
+  // SECURITY: this lists every provider awaiting verification, with their
+  // documents. It answered unauthenticated callers.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);

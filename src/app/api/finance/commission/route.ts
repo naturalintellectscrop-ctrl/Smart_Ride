@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { calculateCommission, calculateAndRecordCommission, getPlatformEarningsSummary, estimateCommission, getCommissionConfig } from '@/lib/finance/commission-engine';
 import { TaskType } from '@prisma/client';
+import { operationsOrFinanceGuard } from '@/lib/auth/admin-guards';
 
 // ============================================
 // GET /api/finance/commission
@@ -13,6 +14,16 @@ import { TaskType } from '@prisma/client';
 // ============================================
 
 export async function GET(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = operationsOrFinanceGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
@@ -75,6 +86,16 @@ export async function GET(request: NextRequest) {
 // ============================================
 
 export async function POST(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = operationsOrFinanceGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   try {
     const body = await request.json();
     const { action, ...data } = body;

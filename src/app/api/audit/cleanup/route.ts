@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { superAdminGuard } from '@/lib/auth/admin-guards';
 
 // Default retention period: 30 days
 const DEFAULT_RETENTION_DAYS = 30;
@@ -20,6 +21,16 @@ const DEFAULT_RETENTION_DAYS = 30;
  *           or a valid cronSecret for Vercel Cron invocations.
  */
 export async function DELETE(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = superAdminGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const retentionDays = parseInt(searchParams.get('retentionDays') || String(DEFAULT_RETENTION_DAYS));
@@ -207,6 +218,16 @@ export async function DELETE(request: NextRequest) {
  * Shows how many logs would be deleted with the current retention policy.
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = superAdminGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const retentionDays = parseInt(searchParams.get('retentionDays') || String(DEFAULT_RETENTION_DAYS));

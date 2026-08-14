@@ -334,6 +334,18 @@ export async function POST(request: NextRequest) {
  * Get registration status for a merchant
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: merchantId came from the query string with no authentication,
+  // and the response includes the merchant's uploaded documents — business
+  // licence and owner identification. Anyone could enumerate them.
+  const token = request.headers.get('authorization')?.replace('Bearer ', '');
+  const decoded = token ? verifyAccessToken(token) : null;
+  if (!decoded) {
+    return NextResponse.json(
+      { success: false, error: 'Authentication required' },
+      { status: 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
@@ -343,6 +355,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'merchantId is required' },
         { status: 400 }
       );
+    }
+
+    // Own registration, or an admin reviewing one.
+    if (!['ADMIN', 'SUPER_ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN'].includes(decoded.role)) {
+      const own = await db.merchant.findUnique({
+        where: { userId: decoded.userId },
+        select: { id: true },
+      });
+      if (!own || own.id !== merchantId) {
+        return NextResponse.json(
+          { success: false, error: 'This registration belongs to another merchant' },
+          { status: 403 }
+        );
+      }
     }
 
     const merchant = await db.merchant.findUnique({

@@ -2,9 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { Prisma, ActorType } from '@prisma/client';
 import { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, WidthType, HeadingLevel, AlignmentType, BorderStyle, ShadingType } from 'docx';
+import { allAdminsGuard } from '@/lib/auth/admin-guards';
 
 // GET - Fetch audit logs with filtering
 export async function GET(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
@@ -50,6 +61,16 @@ export async function GET(request: NextRequest) {
 
 // POST - Log mobile app activity
 export async function POST(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();

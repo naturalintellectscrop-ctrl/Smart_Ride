@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { allAdminsGuard } from '@/lib/auth/admin-guards';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, serverErrorResponse } from '@/lib/api/response';
 import { 
@@ -15,6 +16,16 @@ import {
  * Get overall marketplace balance overview
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     // Get all active zones with latest metrics

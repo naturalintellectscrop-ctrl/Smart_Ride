@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { FraudAlertType, RiskEntityType } from '@prisma/client';
+import { allAdminsGuard } from '@/lib/auth/admin-guards';
 
 interface RiskIndicators {
   highFrequency?: boolean;
@@ -22,6 +23,16 @@ interface SuspiciousActivity {
 
 // GET /api/fraud/activity - Get suspicious activity logs
 export async function GET(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
@@ -68,6 +79,16 @@ export async function GET(request: NextRequest) {
 
 // POST /api/fraud/activity - Log suspicious activity
 export async function POST(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();

@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
@@ -8,6 +8,7 @@ import {
 } from '@/lib/api/response';
 import { hash } from 'bcryptjs';
 import { z } from 'zod';
+import { superAdminGuard } from '@/lib/auth/admin-guards';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -18,6 +19,16 @@ interface RouteParams {
  * Get a single admin user by ID
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = superAdminGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { id } = await params;
@@ -65,6 +76,16 @@ const updateSchema = z.object({
  * Update an admin user
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = superAdminGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { id } = await params;
@@ -151,6 +172,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
  * Delete an admin user
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = superAdminGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { id } = await params;

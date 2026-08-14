@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { 
   successResponse, 
@@ -9,6 +9,7 @@ import {
 } from '@/lib/api/response';
 import { hash } from 'bcryptjs';
 import { z } from 'zod';
+import { superAdminGuard } from '@/lib/auth/admin-guards';
 
 const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADMIN', 'FINANCE_ADMIN'];
 
@@ -17,6 +18,16 @@ const ADMIN_ROLES = ['SUPER_ADMIN', 'ADMIN', 'OPERATIONS_ADMIN', 'COMPLIANCE_ADM
  * List all admin users (non-CLIENT roles)
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = superAdminGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { page, limit, skip } = getPaginationParams(request);
@@ -88,6 +99,16 @@ const adminUserSchema = z.object({
  * Create a new admin user
  */
 export async function POST(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = superAdminGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();

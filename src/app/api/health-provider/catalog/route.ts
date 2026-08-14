@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { enumParam, requireEnumParam } from '@/lib/api/enum-params';
 import { MedicineCategory } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
@@ -6,6 +7,47 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 
 // GET /api/health-provider/catalog - Get medicine catalog for provider
+
+/**
+ * Only the provider that owns a catalogue may change it.
+ *
+ * GET is left open deliberately — a customer browses medicines before signing
+ * in, and the catalogue is the storefront. The writes were open too, which is
+ * what this closes: anyone could add, reprice or delete another pharmacy's
+ * stock, including changing whether an item requires a prescription.
+ */
+async function ownsProvider(
+  request: NextRequest,
+  providerId: string | null | undefined
+): Promise<NextResponse | null> {
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return NextResponse.json(
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 }
+    );
+  }
+  if (isAdmin(auth.user.role)) return null;
+
+  const own = await db.healthProvider.findUnique({
+    where: { userId: auth.user.userId },
+    select: { id: true },
+  });
+  if (!own) {
+    return NextResponse.json(
+      { success: false, error: 'No health provider account for this user' },
+      { status: 403 }
+    );
+  }
+  if (providerId && providerId !== own.id) {
+    return NextResponse.json(
+      { success: false, error: 'This catalogue belongs to another provider' },
+      { status: 403 }
+    );
+  }
+  return null;
+}
+
 export async function GET(request: NextRequest) {
   await setServiceRoleContext();
   try {
@@ -84,6 +126,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/health-provider/catalog - Add medicine to catalog
 export async function POST(request: NextRequest) {
+  const denied = await ownsProvider(request, new URL(request.url).searchParams.get('providerId'));
+  if (denied) return denied;
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -123,6 +168,11 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // providerId arrives in the BODY here, not the query string, so it has to
+    // be re-checked after parsing — the guard above only saw the URL.
+    const bodyDenied = await ownsProvider(request, parsed.data.providerId);
+    if (bodyDenied) return bodyDenied;
 
     const {
       providerId,
@@ -229,6 +279,9 @@ export async function POST(request: NextRequest) {
 
 // PATCH /api/health-provider/catalog - Update medicine in catalog
 export async function PATCH(request: NextRequest) {
+  const denied = await ownsProvider(request, new URL(request.url).searchParams.get('providerId'));
+  if (denied) return denied;
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -295,6 +348,9 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE /api/health-provider/catalog - Remove medicine from catalog
 export async function DELETE(request: NextRequest) {
+  const denied = await ownsProvider(request, new URL(request.url).searchParams.get('providerId'));
+  if (denied) return denied;
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);

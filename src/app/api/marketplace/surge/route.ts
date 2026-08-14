@@ -1,4 +1,5 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { allAdminsGuard } from '@/lib/auth/admin-guards';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { 
@@ -17,6 +18,16 @@ import {
  * Get all active surge pricing zones
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
@@ -91,6 +102,16 @@ export async function GET(request: NextRequest) {
  * Manually start surge pricing for a zone
  */
 export async function POST(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -213,6 +234,16 @@ export async function POST(request: NextRequest) {
  * End surge pricing for a zone
  */
 export async function PATCH(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();

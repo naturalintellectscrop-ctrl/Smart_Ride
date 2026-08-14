@@ -1,8 +1,9 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
 import { notifyNewIncentive } from '@/lib/services/notification.service';
 import { z } from 'zod';
+import { allAdminsGuard } from '@/lib/auth/admin-guards';
 
 // Incentive creation schema
 const incentiveSchema = z.object({
@@ -43,6 +44,16 @@ const incentiveSchema = z.object({
  * Get all driver incentives
  */
 export async function GET(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
@@ -135,6 +146,16 @@ export async function GET(request: NextRequest) {
  * Create a new driver incentive
  */
 export async function POST(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();
@@ -238,6 +259,16 @@ export async function POST(request: NextRequest) {
  * Update an incentive status
  */
 export async function PATCH(request: NextRequest) {
+  // SECURITY: this route answered an unauthenticated GET with real data.
+  // Verified against a running server before this guard was added.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error },
+      { status: guard.statusCode || 401 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const body = await request.json();

@@ -439,6 +439,63 @@ async function main() {
       refused(anonPharm.status),
       `status ${anonPharm.status}`
     );
+
+    // ── 9. Routes that answered strangers ────────────────────────────
+    //
+    // Each of these was verified reachable without a token against a running
+    // server. They are regression-locked here so a future refactor that drops
+    // a guard fails a test rather than a customer.
+    stage('CASE 9  routes that used to answer an unauthenticated caller');
+
+    const anonRoutes: Array<[string, string, () => Promise<Response>]> = [
+      ['fraud dashboard', 'fraud/dashboard', async () =>
+        (await import('../src/app/api/fraud/dashboard/route')).GET(req('/api/fraud/dashboard')) as never],
+      ['audit log', 'audit', async () =>
+        (await import('../src/app/api/audit/route')).GET(req('/api/audit')) as never],
+      ['admin user list', 'admin-users', async () =>
+        (await import('../src/app/api/admin-users/route')).GET(req('/api/admin-users')) as never],
+      ['platform commission', 'finance/commission', async () =>
+        (await import('../src/app/api/finance/commission/route')).GET(req('/api/finance/commission')) as never],
+      ['driver reputation', 'driver-reputation', async () =>
+        (await import('../src/app/api/driver-reputation/route')).GET(req('/api/driver-reputation')) as never],
+      ['surge control', 'marketplace/surge', async () =>
+        (await import('../src/app/api/marketplace/surge/route')).GET(req('/api/marketplace/surge')) as never],
+      ['incentive config', 'marketplace/incentives', async () =>
+        (await import('../src/app/api/marketplace/incentives/route')).GET(req('/api/marketplace/incentives')) as never],
+      ['health provider queue', 'health-provider/verification', async () =>
+        (await import('../src/app/api/health-provider/verification/route')).GET(req('/api/health-provider/verification')) as never],
+    ];
+
+    for (const [label, path, callRoute] of anonRoutes) {
+      const res = await callRoute();
+      check(`anonymous cannot read ${label}`, refused(res.status), `${path} -> ${res.status}`);
+    }
+
+    // Emergency contacts are next of kin — the people called when a rider is
+    // in trouble. Reading them, and silently re-pointing them, both matter.
+    const { GET: ecGet } = await import('../src/app/api/emergency-contacts/route');
+    const ecAnon = await ecGet(req(`/api/emergency-contacts?userId=${clientA.id}`));
+    check('anonymous cannot read emergency contacts', refused(ecAnon.status), `status ${ecAnon.status}`);
+
+    const ecOther = await ecGet(
+      req(`/api/emergency-contacts?userId=${clientA.id}`, { token: tokenFor(clientB) })
+    );
+    check("one customer cannot read another's emergency contacts", refused(ecOther.status), `status ${ecOther.status}`);
+
+    // A task's full state history, by id, to anyone who has the id.
+    const { GET: histGet } = await import('../src/app/api/tasks/[id]/transition/route');
+    const histAnon = await histGet(
+      req(`/api/tasks/${taskA.id}/transition`),
+      { params: Promise.resolve({ id: taskA.id }) } as never
+    );
+    check('anonymous cannot read a task state history', refused(histAnon.status), `status ${histAnon.status}`);
+
+    const histOther = await histGet(
+      req(`/api/tasks/${taskA.id}/transition`, { token: tokenFor(clientB) }),
+      { params: Promise.resolve({ id: taskA.id }) } as never
+    );
+    check('an unrelated customer cannot read a task state history', refused(histOther.status), `status ${histOther.status}`);
+
   } finally {
     // ── Cleanup ──────────────────────────────────────────────────────
     await db.receipt.deleteMany({ where: { receiptNumber: { startsWith: TAG } } }).catch(() => {});

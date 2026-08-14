@@ -1,9 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { Prisma } from '@prisma/client';
 
 // GET /api/health-provider/register - Get registration status
 export async function GET(request: NextRequest) {
+  // SECURITY: userId came from the query string, so anyone could look up any
+  // user's health-provider registration and its details.
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return NextResponse.json(
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 }
+    );
+  }
+  const requestedUserId = new URL(request.url).searchParams.get('userId');
+  if (requestedUserId && requestedUserId !== auth.user.userId && !isAdmin(auth.user.role)) {
+    return NextResponse.json(
+      { success: false, error: 'This registration belongs to another user' },
+      { status: 403 }
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);

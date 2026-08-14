@@ -1,4 +1,5 @@
 // ============================================
+import { requireAuth, isAdmin } from '@/lib/auth/guards';
 // SMART RIDE - TASK TRANSITION API
 // ============================================
 // API endpoint for transitioning task states
@@ -23,8 +24,37 @@ interface RouteParams {
 
 // GET /api/tasks/[id]/history - Get task state history
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  // SECURITY: this returns the full state history of any task to anyone who
+  // knows its id — every transition, who triggered it and when. Restricted to
+  // the two parties on the task, plus admins.
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return NextResponse.json(
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 }
+    );
+  }
+
   try {
     const { id: taskId } = await params;
+
+    if (!isAdmin(auth.user.role)) {
+      const task = await db.task.findUnique({
+        where: { id: taskId },
+        select: { clientId: true, rider: { select: { userId: true } } },
+      });
+      if (!task) {
+        return NextResponse.json({ success: false, error: 'Task not found' }, { status: 404 });
+      }
+      const isParty =
+        task.clientId === auth.user.userId || task.rider?.userId === auth.user.userId;
+      if (!isParty) {
+        return NextResponse.json(
+          { success: false, error: 'Not authorized to view this task' },
+          { status: 403 }
+        );
+      }
+    }
 
     const history = await EnhancedTaskStateMachine.getTaskHistory(taskId);
 
