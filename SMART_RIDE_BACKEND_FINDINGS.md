@@ -2014,3 +2014,82 @@ caught it. Scripted multi-line edits against CRLF files have now produced this
 class of failure four times in this codebase — twice injecting an import into
 the middle of a multi-line `import {` block, twice silently matching nothing.
 Prefer targeted edits over scripted replacement on these files.
+
+---
+
+## BE-034 — The web app has no client, driver or merchant dashboard at all
+
+**Status:** OPEN — product decision | **Priority:** P2 | **Category:** Dead code
+**Found:** tracing a mock-data screen to its route, 2026-08-14
+
+Chasing fabricated pharmacy data on the Smart Health screen led somewhere more
+interesting than the mock itself.
+
+`src/app` routes exactly three things: the marketing site, the auth screens, and
+`/intellects` (admin). **There is no page anywhere that renders a client, driver
+or merchant dashboard on the web.** Verified by enumerating every `page.tsx`:
+
+```
+about  auth/login  auth/signup  blog  contact  delete-account
+forgot-password  help  intellects  intellects/admin  intellects/login
+intellects/reset-password  offline  page.tsx  privacy  reset-password  terms
+```
+
+The tree those dashboards live in is reached only by
+`src/components/smart-ride/smart-ride-app.tsx`, which itself has **zero
+importers**. So the whole thing is unreachable:
+
+| Tree | Size |
+|---|---|
+| `smart-ride/dashboards/client` | 15 files, ~8,930 lines |
+| `smart-ride/dashboards/merchant` | 7 files, ~2,691 lines |
+| `smart-ride/smart-ride-app.tsx` | the shell that would mount them |
+
+**This is not a defect** — the rider, driver and merchant experiences are the
+Expo app, and every one of those journeys is verified working there. It is
+~11,600 lines of prototype that no user can reach, and it matters for three
+reasons:
+
+1. **It contains fabricated data that reads as real.** `health-screen.tsx`
+   renders a hardcoded `MOCK_FACILITIES` list — "HealthCare Pharmacy", rating
+   4.8, 1,250 reviews — with no API call and no fallback. If this tree were
+   ever routed, customers would browse pharmacies that do not exist. The real
+   endpoints (`/api/health-providers`, `/api/pharmacies`) are live and correct.
+2. **It distorts every audit.** A reviewer grepping for "does the client have a
+   health screen?" finds one, well-built, and concludes the feature ships.
+3. **It is a standing invitation to a parallel system** — the exact failure this
+   project has a rule against.
+
+**Recommendation, not an action:** decide whether the web gets non-admin
+dashboards. If yes, wire the tree and replace the mock data first. If no, delete
+it. Left in place here because that is a product call, not a defect fix.
+
+Related orphan found the same way: `smart-ride/shared/notifications-panel.tsx`
+renders `MOCK_NOTIFICATIONS` and has zero importers.
+
+---
+
+## Notification chain — traced, connected
+
+```
+task event
+  → notification.service (sendTaskUpdateNotification)
+  → push-notification.service (Expo)
+  → device
+  → tap handler in expo-app/app/_layout.tsx
+  → router.push
+```
+
+All links present. The offer branch (`type === 'driver:request'`) routes to the
+driver dashboard, which owns the offer sheet; the earlier defect where a tapped
+offer did nothing, or sent the courier to the *client's* rides tab, is fixed and
+commented at the handler.
+
+**Known limitation, not a defect:** taps route to a tab, not to the specific
+task. The destination screen re-reads its own state, so nothing is stale — but a
+customer tapping "your order is ready" lands on the orders list rather than that
+order. Worth a product decision; no user-visible breakage.
+
+**Device-only:** whether the push arrives at all on a release build, and whether
+the tap works from cold start and from a locked screen. No server-side test can
+answer either.
