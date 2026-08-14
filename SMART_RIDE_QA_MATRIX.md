@@ -356,3 +356,130 @@ Everything here fails the "could a terminal answer this?" test.
   and have not been checked. Given that five of the five audited in this pass
   were exposed, assume the rest are until shown otherwise. **This is a bigger
   risk than anything on the device list.**
+
+---
+
+# Feature connectivity matrix — 2026-08-14
+
+The question this answers is the only one that matters before device QA:
+**if I press this button in the real app, what happens all the way through?**
+
+Nothing here is classified from the existence of a file, a route, a model or a
+screen. Each row is either traced end to end by a suite that drives real HTTP
+handlers with real tokens, or marked as unverified. Where a chain breaks, the
+break is named.
+
+## Legend
+
+| Code | Meaning |
+|---|---|
+| **A** | Fully connected — user action reaches the backend, the intended thing happens, and the affected user sees the result |
+| **B** | Connected but broken — the production path exists and fails under realistic execution |
+| **C** | Partially connected — some layers work, one important link is missing |
+| **D** | Backend only — the system works but no user-facing workflow consumes it |
+| **E** | UI only — the control exists but produces no real backend outcome |
+| **F** | Dead / orphaned — code with no reachable caller |
+| **G** | Blocked — implemented but cannot operate without external configuration |
+| **H** | Not implemented |
+
+`✓` verified this session · `~` present, not independently verified · `✗` absent
+
+---
+
+## Core mobility
+
+| Feature | UI | API | Service | DB | Realtime | Notif | Consumer | Status |
+|---|---|---|---|---|---|---|---|---|
+| Ride booking (Boda) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | client sees driver | **A** |
+| Ride booking (Car) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | client sees driver | **A** |
+| Server-authoritative fare | — | ✓ | ✓ | ✓ | — | — | quoted price honoured | **A** |
+| Surge → fare | ✓ | ✓ | ✓ | ✓ | — | ✓ | client quoted more, told why | **A** |
+| Driver offer (push path) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | offer sheet + ring | **A** |
+| Driver offer (open market pull) | ✓ | ✓ | ✓ | ✓ | — | — | queue → accept | **A** |
+| Accept / atomic claim | ✓ | ✓ | ✓ | ✓ | ✓ | — | loser is told | **A** |
+| Trip lifecycle → COMPLETED | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | both sides | **A** |
+| Driver release after completion | — | ✓ | ✓ | ✓ | — | — | next job possible | **A** |
+| Receipts | ✓ | ✓ | ✓ | ✓ | — | — | client history | **A** |
+| Two-way rating | ✓ | ✓ | ✓ | ✓ | — | — | scores stored | **A** |
+| Live GPS tracking | ~ | ✓ | ✓ | ✓ | ✓ | — | map marker | **device-only** |
+| SLA timeout / reassignment | ~ | ✓ | ✓ | ✓ | ✓ | ✓ | cron-driven | **~ A** |
+
+## Delivery Personnel
+
+| Feature | UI | API | Service | DB | Realtime | Notif | Consumer | Status |
+|---|---|---|---|---|---|---|---|---|
+| Full DP journey to DELIVERED | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | proven on hardware | **A** |
+| Proof of delivery capture | ✓ | ✓ | ✓ | ✓ | — | — | courier | **A** |
+| Proof visible to the customer | ✓ | ✓ | ✓ | ✓ | — | — | receipt screen | **A** (fixed this session) |
+| Handover code withheld from courier | — | ✓ | ✓ | ✓ | — | — | customer only | **A** |
+| Too-far refusal with distance | ✓ | ✓ | ✓ | — | — | — | courier | **A** |
+
+## Money
+
+| Feature | UI | API | Service | DB | Realtime | Notif | Consumer | Status |
+|---|---|---|---|---|---|---|---|---|
+| Wallet balance / history | ✓ | ✓ | ✓ | ✓ | — | — | client + driver | **A** |
+| Withdrawal (atomic, idempotent) | ✓ | ✓ | ✓ | ✓ | — | — | 30 checks | **A** |
+| Driver earnings | ✓ | ✓ | ✓ | ✓ | — | — | driver | **A** |
+| Merchant earnings (own only) | ✓ | ✓ | ✓ | ✓ | — | — | merchant | **A** (fixed) |
+| Pharmacy earnings (own only) | ✓ | ✓ | ✓ | ✓ | — | — | pharmacy | **A** (fixed) |
+| Mobile-money settlement | ~ | ✓ | ✓ | ✓ | — | — | recorded PENDING | **G** — no provider settlement exercised |
+
+## Merchant / Pharmacy
+
+| Feature | UI | API | Service | DB | Realtime | Notif | Consumer | Status |
+|---|---|---|---|---|---|---|---|---|
+| Order placement, catalogue-priced | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | merchant queue | **A** |
+| Order lifecycle accept→ready | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | client updates | **A** |
+| Merchant tenant isolation | — | ✓ | ✓ | ✓ | — | — | refusal | **A** (fixed) |
+| Prescription lifecycle + verify | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | pharmacy | **A** |
+| Pharmacy tenant isolation | — | ✓ | ✓ | ✓ | — | — | refusal | **A** (fixed) |
+| Merchant verification (admin) | ✓ | ✓ | ✓ | ✓ | — | ✓ | merchant notified | **~ A** |
+
+## Platform intelligence
+
+| Feature | UI | API | Service | DB | Realtime | Notif | Consumer | Status |
+|---|---|---|---|---|---|---|---|---|
+| Driver reputation → dispatch rank | ✓ | ✓ | ✓ | ✓ | — | ✓ | **fewer offers**, verified | **A** |
+| Fraud score → payment refusal | ✓ | ✓ | ✓ | ✓ | — | ✓ | **transaction blocked**, verified | **A** |
+| Surge → fare → driver premium | ✓ | ✓ | ✓ | ✓ | — | ✓ | verified both directions | **A** |
+| **Incentives, full chain** | ✓ | ✓ | ✓ | ✓ | — | ✓ | **5000 UGX in a spendable wallet** | **A** (was C→B; fixed) |
+| Zone metrics → scheduler | — | ✓ | ✓ | ✓ | — | — | surge decisions | **A** |
+| Device trust | — | ✓ | ✓ | ✓ | — | — | risk scoring | **~ D** |
+
+## Admin dashboard — 15 modules
+
+| Module | Reaches API | Sends token | Status |
+|---|---|---|---|
+| Overview, Users, Riders, Merchants, Orders, Tasks, Payments, Audit, Settings | ✓ | ✓ | **A** |
+| Monitoring, Health, SOS, Fraud | ✓ | ✓ | **A** |
+| Driver Reputation | ✓ | ✓ | **A** (token added this session) |
+| Marketplace Balance | ✓ | ✓ | **A** (token added this session) |
+| Audit DOCX export | ✓ | ✓ | **A** (token added this session) |
+
+Rider approve / reject / suspend are wired from Rider Management to
+`/api/riders/*` and verified working — see the BE-021 retraction.
+
+## Dead / orphaned — classified, not deleted
+
+| Item | Evidence | Recommendation |
+|---|---|---|
+| `components/dashboard/fraud-monitoring-enhanced.tsx` | 0 importers | delete or wire |
+| `components/dashboard/pharmacy-finance.tsx` | 0 importers | delete |
+| `components/dashboard/merchant-finance.tsx` | 0 importers (the wired one is a different file under `smart-ride/dashboards/merchant/tabs/`) | delete |
+| `components/dashboard/pricing-configuration.tsx` | 0 importers | delete or wire |
+| `components/dashboard/route-optimization.tsx` | 0 importers | delete or wire |
+| `components/dashboard/collusion-network-graph.tsx` | 0 importers; contains a commented-out fetch | delete or finish |
+| `src/app/api/admin/riders/verify` | 0 callers; duplicates `/api/riders/approve` | **delete, or repoint Rider Management at it and delete the older three** |
+| `expo-app/src/services/realtime.service.ts` | 0 importers; `socket.service.ts` is the live one | delete |
+
+None deleted. Each is a judgement about which surface is canonical, which is a
+product decision rather than a defect.
+
+## Blocked on configuration
+
+| Item | Blocker |
+|---|---|
+| Message encryption at rest | `MESSAGE_ENCRYPTION_KEY` unset in every deployment — messages stored plaintext |
+| Mobile-money settlement | no real MTN/Airtel settlement exercised end to end |
+| Push on release build | FCM key uploaded; release-build delivery still device-only to confirm |

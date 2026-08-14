@@ -12,6 +12,7 @@
 
 import { NextRequest } from 'next/server';
 import { db } from '../src/lib/db';
+import { generateAccessToken } from '../src/lib/auth/jwt';
 
 let failures = 0;
 
@@ -20,7 +21,35 @@ function check(label: string, ok: boolean, detail: string) {
   if (!ok) failures++;
 }
 
+/**
+ * These are admin dashboard routes, so requests carry an admin token.
+ *
+ * They did not, and the suite still passed — because the routes had no
+ * authentication and answered anyone. The assertions were therefore
+ * documenting the vulnerability: "returns the shape the dashboard reads" was
+ * true for an anonymous caller too. Sending the token is what makes this a
+ * test of the dashboard's path rather than of an open door.
+ */
+const ADMIN_TOKEN = generateAccessToken({
+  id: 'e2e-intelligence-admin',
+  email: 'e2e-intelligence@smartride.test',
+  role: 'SUPER_ADMIN',
+  name: 'E2E Intelligence Admin',
+} as never);
+
 function req(url: string, init?: RequestInit) {
+  const headers = new Headers((init as RequestInit | undefined)?.headers ?? {});
+  if (!headers.has('authorization')) {
+    headers.set('authorization', `Bearer ${ADMIN_TOKEN}`);
+  }
+  return new NextRequest(new URL(url, 'http://localhost:3000'), {
+    ...(init as RequestInit),
+    headers,
+  } as never);
+}
+
+/** A request with no credentials, for the checks that assert a refusal. */
+function anonReq(url: string, init?: RequestInit) {
   return new NextRequest(new URL(url, 'http://localhost:3000'), init as never);
 }
 
@@ -55,7 +84,7 @@ async function main() {
   // to prevent, so 401/403 is the passing result.
   {
     const { GET } = await import('../src/app/api/fraud/alerts/route');
-    const res = await GET(req('/api/fraud/alerts?limit=100'));
+    const res = await GET(anonReq('/api/fraud/alerts?limit=100'));
     check(
       'GET /api/fraud/alerts rejects unauthenticated callers',
       res.status === 401 || res.status === 403,

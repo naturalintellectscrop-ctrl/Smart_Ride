@@ -40,7 +40,7 @@ finding is explicitly marked as already fixed locally.
 | BE-018 | Proof gate absent from the route the mobile app calls | P0 | RESOLVED | Security |
 | BE-019 | Mobile app had no proof-of-delivery flow at all | P0 | RESOLVED | Workflow |
 | BE-020 | Mobile TaskStatus union missing DELIVERING | P1 | RESOLVED | Data |
-| BE-021 | No route could ever approve a rider | P0 | RESOLVED | Workflow |
+| BE-021 | ~~No route could ever approve a rider~~ **WITHDRAWN — the finding was wrong** | — | WITHDRAWN | Workflow |
 
 ---
 
@@ -1450,7 +1450,38 @@ courier.
 
 ---
 
-## BE-021 — No route could ever approve a rider
+## BE-021 — No route could ever approve a rider  **[WITHDRAWN]**
+
+> **RETRACTION — 2026-08-14.** This finding is false and the claim below is
+> wrong. `POST /api/riders/approve` existed the whole time, is guarded by
+> `requireAdmin`, sets `status: 'APPROVED'`, and is wired to the Rider
+> Management tab of the admin dashboard. Verified against the live database:
+>
+> ```
+> POST /api/riders/approve?riderId=... -> 200
+> rider status after: APPROVED
+> ```
+>
+> Sibling routes `/api/riders/reject`, `/api/riders/suspend` and
+> `/api/riders/reactivate` exist too, and the dashboard calls all of them.
+>
+> **What this cost.** `/api/admin/riders/verify` was built on the false
+> premise. It works and is admin-guarded, but it duplicates an existing route
+> and has **zero callers** — a parallel system of exactly the kind this project
+> has a standing rule against. Recommendation: delete it, or repoint Rider
+> Management at it and delete the older three. Not done here because it is a
+> product decision about which surface is canonical, not a defect.
+>
+> **Why the mistake happened, so it does not repeat.** The conclusion came from
+> a grep that did not find a match, and absence of a grep hit was treated as
+> absence of the capability. The zero `SMART_CAR_DRIVER` rows then looked like
+> corroboration when they were just a small dataset. The correct move — the one
+> that would have taken two minutes — was to call the route and look at the
+> result, which is what finally disproved it.
+>
+> The paragraphs below are preserved as written, not edited, so the error stays
+> visible in the audit trail.
+
 
 **Status:** RESOLVED | **Priority:** P0 | **Category:** Workflow
 **Found:** preparing the device QA matrix, 2026-08-13
@@ -1797,3 +1828,189 @@ all. The five in the journeys' path are fixed above. The remainder — including
 exposed the same way. Some in that list are legitimately public (merchant
 listing, menu, pharmacy listing), so the count is an upper bound, not a defect
 tally. This is the single largest known unaudited area. **P0, open.**
+
+---
+
+# Connectivity audit — 2026-08-14
+
+The question driving this pass: *if I press this button in the real app, what
+happens all the way through the system?* Findings below are all cases where the
+answer turned out to be "less than it looks".
+
+New suites:
+- `scripts/verify-route-auth-sweep.ts` — unauthenticated GET against all 154
+  routes with a GET, with an allowlist for the genuinely public.
+- `scripts/verify-incentive-connectivity.ts` — admin → driver → work → wallet,
+  asserting a balance rather than a status column.
+
+---
+
+## BE-028 — Twenty-two routes answered anyone who knew the URL
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Authorization
+**Found:** unauthenticated sweep, 2026-08-14
+
+A grep for `requireAuth` is not evidence — some routes are guarded by a setup
+key, some are public by design. Asking a running server produced a very
+different picture: **26 of 154 routes answered an unauthenticated GET**, 22 of
+which should not have.
+
+The worst were not obscure corners:
+
+| Route | What it returned to a stranger |
+|---|---|
+| `fraud/dashboard` | 9KB of live fraud intelligence |
+| `audit` | the audit log |
+| `admin-users` | the administrator list |
+| `finance/commission` | the platform's commission take |
+| `finance/settlements` | settlement records |
+| `marketplace/surge` | surge configuration — and POST/PATCH could change it |
+| `marketplace/incentives` | incentive budgets, editable |
+| `driver-reputation` | every driver's trust score |
+| `admin/health-providers` | provider records |
+| `health-provider/verification` | the verification queue, with documents |
+| `merchants/register` | a merchant's uploaded licence and owner identification |
+| `tasks/[id]/transition` | any task's full state history, to anyone with the id |
+
+**Fix:** the guards already existed — `allAdminsGuard`, `superAdminGuard`,
+`operationsOrFinanceGuard` — and were simply not applied. No new auth machinery
+was written.
+
+**One deliberate exception.** `marketplace/incentives` GET is authenticated but
+*not* admin-only: a driver has to see which campaigns are open before they can
+join one. Its POST/PATCH remain admin.
+
+---
+
+## BE-029 — Emergency contacts were world-readable and world-writable
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Privacy
+**Found:** same sweep, 2026-08-14
+
+Every handler on `/api/emergency-contacts` took `userId` from the query string
+or body, under `setServiceRoleContext()`. Anyone could read, add, edit or delete
+any user's next of kin — the people called when something happens to a rider.
+
+Authentication alone would not have fixed it: `POST` still wrote a body-supplied
+owner, and `PUT`/`DELETE` acted on any id. **Silently re-pointing an SOS contact
+is worse than reading one** — it redirects the call for help. Ownership is now
+taken from the token and re-checked against the stored row before any write.
+
+---
+
+## BE-030 — Nobody could join an incentive
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Connectivity
+**Found:** incentive trace, 2026-08-14
+
+`api.getAvailableIncentives` and `api.joinIncentive` existed in the mobile
+client with **zero callers anywhere in the app**. The driver reputation screen
+displayed progress on campaigns a driver had no way to enter, so
+`IncentiveParticipation` rows could only ever be created by someone calling the
+API by hand.
+
+Everything behind that link already worked: enrolment, per-task progress wired
+to `PlatformIntelligence.onTaskCompleted`, reward calculation, and a scheduled
+sweep for anything unsettled. The system was one button away from functioning
+and had been reported as built.
+
+**Fix:** the reputation screen now lists open campaigns with a Join action.
+
+---
+
+## BE-031 — A reputation breadcrumb rolled back the entire payout
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Financial
+**Found:** immediately underneath BE-030, 2026-08-14
+
+`completeIncentiveAndReward` writes a `DriverIncentiveEarned` row keyed on
+`reputationId`, falling back to `''` when the driver had no reputation record.
+
+Postgres does not read `''` as missing — it is a foreign key matching nothing.
+The insert raised `DriverIncentiveEarned_reputationId_fkey` and rolled back the
+**entire** transaction: participation status, rider balance, wallet credit and
+ledger row with it. The caller caught and logged the error, so the only visible
+symptom was a bonus stuck at `IN_PROGRESS`, retried on every completed task,
+failing identically each time.
+
+A brand-new driver is exactly the one chasing a first-rides bonus, which made
+this the common case rather than the edge case.
+
+**Fix:** `getOrCreateReputation` before the transaction opens, and the real id
+used.
+
+---
+
+## BE-032 — The reward was recorded as paid with the wallet untouched
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Financial
+**Found:** immediately underneath BE-031, 2026-08-14
+
+`creditRewardToWallet` opened its **own** `db.$transaction` while already inside
+the caller's. RLS requires `connection_limit=1`, so the outer transaction held
+the only connection and the inner one could never acquire it. The credit failed,
+the failure was swallowed into a `{ success: false }` **nobody read**, and the
+participation committed as `REWARDED` with the wallet empty.
+
+The `rider.walletBalance` increment on the line above *did* apply, because it
+used the transaction client — so the driver's legacy parallel balance moved
+while the wallet they actually spend from did not. A test asserting "the driver
+was credited" against the wrong column would have passed.
+
+**Fix:** `RewardInput` takes an optional `tx` so the credit joins the caller's
+transaction, and the caller now reads the result — a reward that cannot be paid
+must not be recorded as paid.
+
+---
+
+## BE-033 — Two admin tabs would have gone blank
+
+**Status:** RESOLVED | **Priority:** P1 | **Category:** Connectivity
+**Found:** asking what BE-028 broke, 2026-08-14
+
+Driver Reputation and Marketplace Balance called their APIs with no
+`Authorization` header at all, as did the audit DOCX export on the dashboard
+shell. That worked only because those routes were open — the calls proved
+nothing about being an admin, because anyone could make them.
+
+Worth stating plainly: **the security fix would have broken three working admin
+surfaces**, and the only reason it did not ship that way is that the question
+"what did I just break?" was asked before the commit rather than after.
+
+---
+
+## BE-021 — RETRACTED
+
+The finding "no route could ever approve a rider" was **wrong**.
+`/api/riders/approve` existed, is `requireAdmin`-guarded, and is wired to the
+Rider Management tab. Verified live: `200`, rider status `APPROVED`.
+
+The route built on that premise, `/api/admin/riders/verify`, works but
+duplicates existing functionality and has zero callers. See the retraction block
+at BE-021 for the full correction and the recommendation.
+
+---
+
+## Two suites were asserting the vulnerability
+
+`verify-intelligence-apis` and `verify-intelligence-e2e` called admin dashboard
+routes **without a token** and asserted they returned dashboard-shaped data.
+They passed for years of runs because the routes answered anonymous callers.
+"Returns the shape the dashboard reads" was equally true of a stranger.
+
+Both now send an admin token; the one check that deliberately asserts a refusal
+keeps an anonymous request. **A green suite is not evidence that the thing it
+tests is safe — only that it behaves as the suite expects.**
+
+---
+
+## Noted, not changed
+
+**A silent patch is worse than a failed one.** The first attempt at the
+`participate` authorization fix missed all three handlers to a CRLF mismatch,
+leaving `resolveRider` defined and never called. Everything typechecked, the
+build was green, and the route was still wide open. Only the connectivity suite
+caught it. Scripted multi-line edits against CRLF files have now produced this
+class of failure four times in this codebase — twice injecting an import into
+the middle of a multi-line `import {` block, twice silently matching nothing.
+Prefer targeted edits over scripted replacement on these files.

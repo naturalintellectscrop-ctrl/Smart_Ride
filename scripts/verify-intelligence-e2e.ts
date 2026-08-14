@@ -16,6 +16,7 @@
 
 import { NextRequest } from 'next/server';
 import { db } from '../src/lib/db';
+import { generateAccessToken } from '../src/lib/auth/jwt';
 import { PlatformIntelligence } from '../src/lib/intelligence/platform-events.service';
 import { DispatchService } from '../src/lib/services/dispatch-persistence.service';
 
@@ -37,8 +38,23 @@ const scoreRiders = (
   }
 ).scoreRiders.bind(DispatchService);
 
+/**
+ * Admin dashboard routes are admin-guarded, so the request carries a token.
+ * It did not before, and this suite still passed — because the route answered
+ * anonymous callers. "The driver appears in the admin dashboard payload" was
+ * being proved against an open endpoint.
+ */
+const ADMIN_TOKEN = generateAccessToken({
+  id: 'e2e-intelligence-admin',
+  email: 'e2e-intelligence@smartride.test',
+  role: 'SUPER_ADMIN',
+  name: 'E2E Intelligence Admin',
+} as never);
+
 function req(url: string) {
-  return new NextRequest(new URL(url, 'http://localhost:3000'));
+  return new NextRequest(new URL(url, 'http://localhost:3000'), {
+    headers: { authorization: `Bearer ${ADMIN_TOKEN}` },
+  } as never);
 }
 
 async function main() {
