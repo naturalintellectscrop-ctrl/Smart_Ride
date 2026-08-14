@@ -165,12 +165,32 @@ const createTaskSchema = z.object({
   itemValue: z.number().optional(),
   orderId: z.string().optional(),
 
-  // Pricing override (optional)
+  /**
+   * The fare the client was QUOTED, echoed back so the server can confirm the
+   * price has not moved between the estimate screen and the booking.
+   *
+   * It is a claim to be checked, never a price to be applied. It used to be
+   * written straight into baseFare and totalAmount, so a client could book a
+   * trip for one shilling — while riderEarnings and platformCommission stayed
+   * on the server's real figures, meaning the platform paid a driver ~4,250
+   * out of revenue of 1. Any authenticated account could do it with one
+   * request.
+   */
   customPricing: z.object({
     baseFare: z.number(),
     totalAmount: z.number(),
   }).optional(),
 });
+
+/**
+ * How far a quoted fare may drift from the server's own figure before the
+ * booking is refused. Absorbs rounding and a surge tick between screens;
+ * nowhere near enough to matter to anyone trying to underpay.
+ */
+function quoteIsStale(quoted: number, actual: number): boolean {
+  const tolerance = Math.max(100, actual * 0.01);
+  return Math.abs(quoted - actual) > tolerance;
+}
 
 /**
  * POST /api/tasks
@@ -238,6 +258,25 @@ export async function POST(request: NextRequest) {
       pickupLongitude: validatedData.pickupLongitude,
     });
 
+    // The quote is checked, then discarded. If the price moved between the
+    // estimate screen and this request, refuse and hand back the real figure
+    // so the app can re-confirm — the same shape as the order route's "prices
+    // have changed". Booking silently at a different price than the one the
+    // customer agreed to would be the other way to get this wrong.
+    if (
+      validatedData.customPricing &&
+      quoteIsStale(validatedData.customPricing.totalAmount, pricing.totalAmount)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'The fare has changed since you were quoted. Please confirm the new price.',
+          data: { quotedAmount: validatedData.customPricing.totalAmount, currentAmount: pricing.totalAmount },
+        },
+        { status: 409 }
+      );
+    }
+
     // Create task
     const task = await db.task.create({
       data: {
@@ -267,7 +306,7 @@ export async function POST(request: NextRequest) {
         
         distanceKm: validatedData.distanceKm,
         
-        baseFare: validatedData.customPricing?.baseFare || pricing.baseFare,
+        baseFare: pricing.baseFare,
         distanceFare: pricing.distanceFare,
         // Persist the time component too. It's part of totalAmount but was being
         // dropped, so the receipt breakdown couldn't itemise it (the lines then
@@ -275,7 +314,7 @@ export async function POST(request: NextRequest) {
         timeFare: pricing.timeFare,
         deliveryFee: pricing.deliveryFee,
         serviceFee: pricing.serviceFee,
-        totalAmount: validatedData.customPricing?.totalAmount || pricing.totalAmount,
+        totalAmount: pricing.totalAmount,
         platformCommission: pricing.platformCommission,
         riderEarnings: pricing.riderEarnings,
         
