@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Mail, Lock, Loader2, Eye, EyeOff, AlertCircle, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { ADMIN_DASHBOARD_CONFIG } from '@/lib/config/admin-access';
 import { AuthShell } from '@/components/auth/AuthShell';
@@ -13,8 +14,18 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
+// Height + opacity, not scroll-behavior tricks — the alert is short-lived
+// feedback for a validation/request outcome, not decoration.
+const alertMotion = {
+  initial: { opacity: 0, height: 0, marginBottom: 0 },
+  animate: { opacity: 1, height: 'auto', marginBottom: 0 },
+  exit: { opacity: 0, height: 0, marginBottom: 0 },
+  transition: { duration: 0.2, ease: [0.16, 1, 0.3, 1] as const },
+};
+
 export default function AdminLoginPage() {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -116,12 +127,17 @@ export default function AdminLoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <div className="flex items-center gap-2.5 rounded-lg border border-red-500/20 bg-red-500/10 px-3.5 py-3">
-              <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
-              <p className="text-sm text-red-400">{error}</p>
-            </div>
-          )}
+          <AnimatePresence initial={false}>
+            {error && (
+              <motion.div
+                {...alertMotion}
+                className="flex items-center gap-2.5 overflow-hidden rounded-lg border border-red-500/20 bg-red-500/10 px-3.5 py-3"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+                <p className="text-sm text-red-400">{error}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <AuthField
             id="email"
@@ -168,9 +184,10 @@ export default function AdminLoginPage() {
             </button>
           </div>
 
-          <button
+          <motion.button
             type="submit"
             disabled={isLoading}
+            whileTap={reduceMotion ? undefined : { scale: 0.98 }}
             className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-white font-semibold text-[#0B0C0E] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isLoading ? (
@@ -181,7 +198,7 @@ export default function AdminLoginPage() {
             ) : (
               'Sign in'
             )}
-          </button>
+          </motion.button>
         </form>
 
         <p className="mt-6 rounded-lg border border-white/10 bg-white/5 p-3.5 text-center text-xs leading-relaxed text-white/40">
@@ -194,20 +211,26 @@ export default function AdminLoginPage() {
         <DialogContent className="border-white/10 bg-[#111214] text-white sm:max-w-sm">
           {forgotSuccess ? (
             <div className="py-2 text-center">
-              <div className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#00D97E]/10">
+              <motion.div
+                initial={reduceMotion ? false : { opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                className="mx-auto mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#00D97E]/10"
+              >
                 <CheckCircle2 className="h-6 w-6 text-[#00D97E]" />
-              </div>
+              </motion.div>
               <h3 className="text-lg font-semibold text-white">Check your email</h3>
               <p className="mt-2 text-sm text-white/50">
                 If an admin account with that email exists, a reset link has been sent.
               </p>
               <p className="mt-1 text-xs text-white/30">The link expires in 1 hour.</p>
-              <button
+              <motion.button
                 onClick={closeForgotPassword}
+                whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                 className="mt-5 h-10 w-full rounded-lg bg-white font-semibold text-[#0B0C0E] transition-opacity hover:opacity-90"
               >
                 Back to login
-              </button>
+              </motion.button>
             </div>
           ) : (
             <>
@@ -217,12 +240,17 @@ export default function AdminLoginPage() {
               </DialogHeader>
 
               <form onSubmit={handleForgotPassword} className="space-y-4">
-                {forgotError && (
-                  <div className="flex items-center gap-2.5 rounded-lg border border-red-500/20 bg-red-500/10 px-3.5 py-3">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
-                    <p className="text-sm text-red-400">{forgotError}</p>
-                  </div>
-                )}
+                <AnimatePresence initial={false}>
+                  {forgotError && (
+                    <motion.div
+                      {...alertMotion}
+                      className="flex items-center gap-2.5 overflow-hidden rounded-lg border border-red-500/20 bg-red-500/10 px-3.5 py-3"
+                    >
+                      <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+                      <p className="text-sm text-red-400">{forgotError}</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <AuthField
                   id="forgot-email"
@@ -236,9 +264,10 @@ export default function AdminLoginPage() {
                   autoFocus
                 />
 
-                <button
+                <motion.button
                   type="submit"
                   disabled={forgotLoading}
+                  whileTap={reduceMotion ? undefined : { scale: 0.98 }}
                   className="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-white font-semibold text-[#0B0C0E] transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {forgotLoading ? (
@@ -249,7 +278,7 @@ export default function AdminLoginPage() {
                   ) : (
                     'Send reset link'
                   )}
-                </button>
+                </motion.button>
               </form>
             </>
           )}

@@ -1,6 +1,9 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { motion, useReducedMotion, type Variants } from 'framer-motion';
 
 interface AuthShellProps {
   title: string;
@@ -10,6 +13,18 @@ interface AuthShellProps {
   children: React.ReactNode;
 }
 
+const container: Variants = {
+  hidden: {},
+  show: {
+    transition: { staggerChildren: 0.08, delayChildren: 0.04 },
+  },
+};
+
+const item: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1] } },
+};
+
 export function AuthShell({
   title,
   subtitle,
@@ -17,10 +32,17 @@ export function AuthShell({
   footerNote = 'Smart Ride',
   children,
 }: AuthShellProps) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0B0C0E] px-4 py-12 text-white">
-      <div className="w-full max-w-sm">
-        <div className="mb-8 text-center motion-safe:animate-[fadeIn_0.5s_ease-out]">
+      <motion.div
+        className="w-full max-w-sm"
+        initial={reduceMotion ? false : 'hidden'}
+        animate="show"
+        variants={container}
+      >
+        <motion.div variants={item} className="mb-8 text-center">
           <Link href={homeHref} className="inline-flex">
             <div className="h-14 w-14 overflow-hidden rounded-2xl">
               <Image
@@ -35,13 +57,16 @@ export function AuthShell({
           </Link>
           <h1 className="mt-5 text-2xl font-semibold tracking-tight text-white">{title}</h1>
           <p className="mt-1.5 text-sm text-white/50">{subtitle}</p>
-        </div>
+        </motion.div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#111214] p-7 motion-safe:animate-[fadeIn_0.5s_ease-out_0.1s_backwards]">
+        <motion.div
+          variants={item}
+          className="rounded-2xl border border-white/10 bg-[#111214] p-7"
+        >
           {children}
-        </div>
+        </motion.div>
 
-        <div className="mt-6 text-center">
+        <motion.div variants={item} className="mt-6 text-center">
           <Link
             href={homeHref}
             className="text-sm text-white/40 transition-colors hover:text-white"
@@ -49,8 +74,8 @@ export function AuthShell({
             Back to Smart Ride
           </Link>
           <p className="mt-3 text-xs text-white/25">{footerNote}</p>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }
