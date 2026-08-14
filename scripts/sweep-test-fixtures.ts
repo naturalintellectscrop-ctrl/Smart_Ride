@@ -102,6 +102,10 @@ async function main() {
     ['ratings', () => db.rating.deleteMany({ where: { OR: [{ taskId: { in: taskIds } }, { fromUserId: { in: userIds } }] } })],
     ['receipts', () => db.receipt.deleteMany({ where: { OR: [{ taskId: { in: taskIds } }, { userId: { in: userIds } }] } })],
     ['order items', () => db.orderItem.deleteMany({ where: { order: { merchantId: { in: merchantIds } } } })],
+    // KOT's FK to Order restricts deletion, so an order that reached
+    // confirm-payment cannot be removed until its ticket is. Missing this is
+    // why leaked orders survived a sweep and then blocked the user delete.
+    ['kitchen tickets', () => db.kOT.deleteMany({ where: { order: { OR: [{ merchantId: { in: merchantIds } }, { clientId: { in: userIds } }] } } })],
     ['orders', () => db.order.deleteMany({ where: { OR: [{ merchantId: { in: merchantIds } }, { clientId: { in: userIds } }] } })],
     ['menu items', () => db.menuItem.deleteMany({ where: { merchantId: { in: merchantIds } } })],
     ['tasks', () => db.task.deleteMany({ where: { id: { in: taskIds } } })],

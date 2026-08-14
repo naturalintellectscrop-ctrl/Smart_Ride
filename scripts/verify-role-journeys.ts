@@ -595,6 +595,9 @@ async function main() {
     await db.providerOrder.deleteMany({ where: { id: { in: made.providerOrderIds } } }).catch(() => {});
     await db.healthProvider.deleteMany({ where: { id: { in: made.providerIds } } }).catch(() => {});
     await db.orderItem.deleteMany({ where: { orderId: { in: made.orderIds } } }).catch(() => {});
+    // confirm-payment creates a KOT whose FK to Order restricts deletion, so
+    // skipping it leaks one order — and therefore one user — per run.
+    await db.kOT.deleteMany({ where: { orderId: { in: made.orderIds } } }).catch(() => {});
     await db.order.deleteMany({ where: { id: { in: made.orderIds } } }).catch(() => {});
     await db.menuItem.deleteMany({ where: { merchantId: { in: made.merchantIds } } }).catch(() => {});
     await db.task.deleteMany({ where: { id: { in: made.taskIds } } }).catch(() => {});
