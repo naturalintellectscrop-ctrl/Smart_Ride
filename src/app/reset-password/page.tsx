@@ -3,9 +3,11 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { Lock, Loader2, Eye, EyeOff, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Lock, Eye, EyeOff, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthField } from '@/components/auth/AuthField';
+import { WheelSpinner } from '@/components/auth/loaders/WheelSpinner';
+import { RideLoader } from '@/components/auth/loaders/RideLoader';
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -188,7 +190,7 @@ function ResetPasswordForm() {
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <WheelSpinner size={16} />
                 Resetting...
               </>
             ) : (
@@ -205,8 +207,8 @@ export default function ResetPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#0B0C0E]">
-          <Loader2 className="h-6 w-6 animate-spin text-[#00D97E]" />
+        <div className="flex min-h-screen items-center justify-center bg-[#0B0C0E] text-[#00D97E]">
+          <RideLoader variant="car" size={96} label="Loading" />
         </div>
       }
     >

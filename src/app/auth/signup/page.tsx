@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, Lock, User, Phone, Loader2, Eye, EyeOff, AlertCircle, ArrowRight, Check } from 'lucide-react';
+import { Mail, Lock, User, Phone, Eye, EyeOff, AlertCircle, ArrowRight, Check } from 'lucide-react';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthField } from '@/components/auth/AuthField';
+import { WheelSpinner } from '@/components/auth/loaders/WheelSpinner';
 
 export default function UserSignupPage() {
   const router = useRouter();
@@ -169,7 +170,7 @@ export default function UserSignupPage() {
         >
           {isLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <WheelSpinner size={16} />
               Creating account...
             </>
           ) : (

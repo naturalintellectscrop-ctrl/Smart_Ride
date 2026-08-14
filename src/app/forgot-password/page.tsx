@@ -2,9 +2,11 @@
 
 import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
-import { Mail, Loader2, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Mail, AlertCircle, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthField } from '@/components/auth/AuthField';
+import { WheelSpinner } from '@/components/auth/loaders/WheelSpinner';
+import { RideLoader } from '@/components/auth/loaders/RideLoader';
 
 function ForgotPasswordForm() {
   const [email, setEmail] = useState('');
@@ -92,7 +94,7 @@ function ForgotPasswordForm() {
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <WheelSpinner size={16} />
                 Sending...
               </>
             ) : (
@@ -109,8 +111,8 @@ export default function ForgotPasswordPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-[#0B0C0E]">
-          <Loader2 className="h-6 w-6 animate-spin text-[#00D97E]" />
+        <div className="flex min-h-screen items-center justify-center bg-[#0B0C0E] text-[#00D97E]">
+          <RideLoader variant="bike" size={96} label="Loading" />
         </div>
       }
     >

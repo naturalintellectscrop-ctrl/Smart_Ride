@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion, useReducedMotion, type Variants } from 'framer-motion';
+import { AuthParticleField } from './AuthParticleField';
 
 interface AuthShellProps {
   title: string;
@@ -35,9 +36,10 @@ export function AuthShell({
   const reduceMotion = useReducedMotion();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0B0C0E] px-4 py-12 text-white">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0B0C0E] px-4 py-12 text-white">
+      <AuthParticleField />
       <motion.div
-        className="w-full max-w-sm"
+        className="relative z-10 w-full max-w-sm"
         initial={reduceMotion ? false : 'hidden'}
         animate="show"
         variants={container}

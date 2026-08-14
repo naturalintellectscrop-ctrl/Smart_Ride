@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Mail, Lock, Loader2, Eye, EyeOff, AlertCircle, ArrowRight, Phone } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, ArrowRight, Phone } from 'lucide-react';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthField } from '@/components/auth/AuthField';
+import { WheelSpinner } from '@/components/auth/loaders/WheelSpinner';
 
 export default function UserLoginPage() {
   const router = useRouter();
@@ -145,7 +146,7 @@ export default function UserLoginPage() {
         >
           {isLoading ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <WheelSpinner size={16} />
               Signing in...
             </>
           ) : (
@@ -172,7 +173,7 @@ export default function UserLoginPage() {
           className="flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 text-sm text-white/75 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
         >
           {googleLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <WheelSpinner size={16} />
           ) : (
             <svg className="h-4 w-4" viewBox="0 0 24 24">
               <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />

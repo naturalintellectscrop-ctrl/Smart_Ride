@@ -3,10 +3,11 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { Mail, Lock, Loader2, Eye, EyeOff, AlertCircle, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, AlertCircle, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { ADMIN_DASHBOARD_CONFIG } from '@/lib/config/admin-access';
 import { AuthShell } from '@/components/auth/AuthShell';
 import { AuthField } from '@/components/auth/AuthField';
+import { WheelSpinner } from '@/components/auth/loaders/WheelSpinner';
 import {
   Dialog,
   DialogContent,
@@ -192,7 +193,7 @@ export default function AdminLoginPage() {
           >
             {isLoading ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <WheelSpinner size={16} />
                 Signing in...
               </>
             ) : (
@@ -272,7 +273,7 @@ export default function AdminLoginPage() {
                 >
                   {forgotLoading ? (
                     <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <WheelSpinner size={16} />
                       Sending...
                     </>
                   ) : (
