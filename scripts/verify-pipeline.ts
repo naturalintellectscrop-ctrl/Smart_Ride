@@ -90,6 +90,16 @@ const STAGES: Stage[] = [
       'health-journey',
       'delivery-journey',
       'two-way-ratings',
+      // Cross-tenant refusals, driven through the real route handlers with a
+      // real token belonging to the wrong party. Runs standalone.
+      //
+      // Its siblings verify-role-journeys and verify-incentive-connectivity
+      // are NOT here: they speak real HTTP, because task creation dispatches
+      // through next/server after(), which throws outside a request scope.
+      // They need `npm run dev` and are listed in SMART_RIDE_QA_MATRIX.md as
+      // the pre-device step rather than being made to pass by weakening what
+      // they test.
+      'role-authorization',
     ],
   },
   {
