@@ -9,7 +9,7 @@
 // ============================================
 
 import { useEffect, useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Image, ActivityIndicator } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,6 +71,11 @@ export default function ReceiptScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Proof of delivery, when this receipt is for a delivery that captured one.
+  const [proof, setProof] = useState<any>(null);
+  const [proofLoading, setProofLoading] = useState(false);
+  const [photoBroken, setPhotoBroken] = useState(false);
+
   useEffect(() => {
     let active = true;
     (async () => {
@@ -91,6 +96,40 @@ export default function ReceiptScreen() {
     })();
     return () => { active = false; };
   }, [params.id, params.taskId]);
+
+  /**
+   * Fetch the delivery proof the courier captured.
+   *
+   * The courier's photo was being stored and served correctly, and nothing in
+   * the app ever asked for it — so from the customer's side the evidence did
+   * not exist. A proof only settles a dispute if the person disputing can see
+   * it, which makes the receipt its natural home: it is the one screen a
+   * customer already opens when they want to know what they paid for.
+   *
+   * The server decides who may look. It returns 403 to anyone who is neither
+   * the customer nor the assigned courier, so this fetch simply renders
+   * whatever it is allowed to have.
+   */
+  const taskId = params.taskId ?? receipt?.taskId;
+  useEffect(() => {
+    if (!taskId) return;
+    let active = true;
+    setProofLoading(true);
+    setPhotoBroken(false);
+    (async () => {
+      try {
+        const res = await api.getProofOfDelivery(String(taskId));
+        if (!active) return;
+        // A ride has no proof and never will — absence is normal, not an error.
+        if (res?.success && (res.data as any)?.proofCapturedAt) setProof(res.data);
+      } catch {
+        // Never let a missing proof break the receipt itself.
+      } finally {
+        if (active) setProofLoading(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [taskId]);
 
   const buildHtml = useCallback((r: any) => {
     const lines: Array<{ label: string; amount: number }> = Array.isArray(r.breakdown) ? r.breakdown : [];
@@ -227,6 +266,66 @@ ${LEGAL_FOOTER}`}
             </View>
           ) : null}
         </ReceiptCard>
+
+        {/* Proof of delivery. Rendered only when one was captured, so rides
+            and other non-delivery receipts are unchanged. */}
+        {proofLoading && !proof ? (
+          <View style={styles.proofCard}>
+            <ActivityIndicator color={COLORS.primary} />
+          </View>
+        ) : null}
+
+        {proof ? (
+          <View style={styles.proofCard}>
+            <View style={styles.proofHead}>
+              <Ionicons name="shield-checkmark-outline" size={ICON.md} color={COLORS.primary} />
+              <Text style={styles.proofTitle}>Proof of delivery</Text>
+            </View>
+
+            {proof.proofPhotoUrl && !photoBroken ? (
+              <Image
+                source={{ uri: proof.proofPhotoUrl }}
+                style={styles.proofPhoto}
+                resizeMode="cover"
+                onError={() => setPhotoBroken(true)}
+              />
+            ) : null}
+
+            {proof.proofPhotoUrl && photoBroken ? (
+              // The record exists even when the image will not load — say so
+              // rather than showing a blank frame that reads as "no proof".
+              <View style={[styles.proofPhoto, styles.proofPhotoFallback]}>
+                <Ionicons name="image-outline" size={ICON.lg} color={COLORS.onSurfaceVariant} />
+                <Text style={styles.proofFallbackText}>
+                  Photo could not be loaded. It is still on file — contact support if you need it.
+                </Text>
+              </View>
+            ) : null}
+
+            {proof.proofRecipientName ? (
+              <View style={styles.serviceRow}>
+                <Text style={styles.serviceLabel}>Received by</Text>
+                <Text style={styles.serviceValue} numberOfLines={1}>{proof.proofRecipientName}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.serviceRow}>
+              <Text style={styles.serviceLabel}>Confirmed</Text>
+              <Text style={styles.serviceValue}>
+                {new Date(proof.proofCapturedAt).toLocaleString('en-GB', {
+                  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
+                })}
+              </Text>
+            </View>
+
+            {proof.proofType === 'CODE' ? (
+              <View style={styles.serviceRow}>
+                <Text style={styles.serviceLabel}>Confirmed with</Text>
+                <Text style={styles.serviceValue}>Your handover code</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
       </ScrollView>
 
       <View style={[styles.actions, { paddingBottom: Math.max(insets.bottom, SPACING.gutter) }]}>
@@ -288,6 +387,45 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.onSurface,
     fontWeight: '500',
     marginTop: 2,
+  },
+  proofCard: {
+    marginTop: SPACING.md,
+    padding: SPACING.md,
+    borderRadius: 16,
+    backgroundColor: COLORS.surfaceContainer,
+    borderWidth: 1,
+    borderColor: COLORS.outlineVariant,
+    gap: SPACING.sm,
+  },
+  proofHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  proofTitle: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+    fontWeight: '700',
+  },
+  proofPhoto: {
+    width: '100%',
+    // Fixed ratio rather than a fixed height: courier photos arrive in
+    // whatever aspect the phone camera produced, and a fixed height either
+    // letterboxes them or crops the doorway out of the frame.
+    aspectRatio: 4 / 3,
+    borderRadius: 12,
+    backgroundColor: COLORS.surfaceVariant,
+  },
+  proofPhotoFallback: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.md,
+    gap: SPACING.xs,
+  },
+  proofFallbackText: {
+    ...TYPOGRAPHY.bodySm,
+    color: COLORS.onSurfaceVariant,
+    textAlign: 'center',
   },
   actions: {
     paddingHorizontal: SPACING.md,

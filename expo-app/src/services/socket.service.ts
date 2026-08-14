@@ -64,6 +64,11 @@ class SocketService {
   private listeners: Map<string, Set<Function>> = new Map();
   private channels: Map<string, RealtimeChannel> = new Map();
 
+  /** Consecutive failures per channel, reset the moment it subscribes. */
+  private channelRetries: Map<string, number> = new Map();
+  private channelRecoveryTimers: Map<string, ReturnType<typeof setTimeout>> = new Map();
+  private static readonly MAX_CHANNEL_RETRIES = 5;
+
   // Track current user
   private currentUserId: string | null = null;
   private currentToken: string | null = null;
@@ -110,7 +115,6 @@ class SocketService {
       this.subscribeToUserChannel();
 
       this.isConnected = true;
-      this.reconnectAttempts = 0;
       this.emitLocal('connection:changed', { connected: true });
 
       console.log('[Realtime] Connected as user:', this.currentUserId);
@@ -219,7 +223,20 @@ class SocketService {
     });
   }
 
-  /** Create a Supabase Realtime channel and track it */
+  /**
+   * Create a Supabase Realtime channel and track it.
+   *
+   * A channel failure is recovered CHANNEL-LOCALLY. It used to call
+   * scheduleReconnect(), which tears down every channel and rebuilds the whole
+   * connection — so a chat room nobody was looking at could knock out the
+   * `user:` channel that carries ride offers. One broken subscription became a
+   * total realtime outage, and each teardown opened a window in which a
+   * broadcast offer arrives and is dropped (Supabase broadcast has no replay).
+   *
+   * Only the personal `user:` channel escalates to a full reconnect, and only
+   * after its own retries are exhausted — that one genuinely is the connection
+   * as far as this app is concerned.
+   */
   private createChannel(name: string): RealtimeChannel {
     if (!this.supabase) {
       throw new Error('[Realtime] Supabase not initialized');
@@ -232,35 +249,113 @@ class SocketService {
       },
     });
 
+    this.channels.set(name, channel);
+    this.bindStatus(name, channel);
+    return channel;
+  }
+
+  /** Attach the subscribe-status handler that owns per-channel recovery. */
+  private bindStatus(name: string, channel: RealtimeChannel): void {
     channel.subscribe((status: string) => {
       if (status === 'SUBSCRIBED') {
+        const wasRetrying = (this.channelRetries.get(name) ?? 0) > 0;
+        this.channelRetries.set(name, 0);
         console.log(`[Realtime] Subscribed to: ${name}`);
-      } else if (status === 'CHANNEL_ERROR') {
-        // Observed on a real device. The reconnect below usually recovers it,
-        // but while the channel is down the rider receives NO in-app offer
-        // sheet — dispatch pushes a notification and nothing takes over the
-        // screen. Surfaced as a local event so the dashboard can fall back to
-        // asking the server what it holds, rather than the failure being
-        // visible only in logcat.
-        console.error(`[Realtime] Channel error: ${name}`);
-        this.emitLocal('connection:changed', { connected: false });
-        this.scheduleReconnect();
-      } else if (status === 'TIMED_OUT') {
-        console.warn(`[Realtime] Channel timed out: ${name}`);
-        this.scheduleReconnect();
+
+        if (wasRetrying) {
+          // The channel is live again, but anything broadcast while it was
+          // down is gone for good. Tell listeners to re-read authoritative
+          // state from the API rather than assume the screen is still correct.
+          this.emitLocal('connection:changed', { connected: true });
+          this.emitLocal('realtime:resubscribed', { channel: name });
+        }
+      } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn(`[Realtime] ${status}: ${name}`);
+        this.recoverChannel(name);
       }
     });
+  }
 
-    this.channels.set(name, channel);
-    return channel;
+  /**
+   * Re-join one channel, with backoff, without disturbing the others.
+   * Bindings live on the channel object, so re-subscribing the same object
+   * restores every `.on()` handler that was registered against it.
+   */
+  private recoverChannel(name: string): void {
+    if (this.intentionalDisconnect) return;
+    if (this.channelRecoveryTimers.has(name)) return; // already in flight
+
+    const attempt = (this.channelRetries.get(name) ?? 0) + 1;
+    this.channelRetries.set(name, attempt);
+
+    if (attempt > SocketService.MAX_CHANNEL_RETRIES) {
+      console.error(`[Realtime] ${name} failed ${attempt - 1}x — giving up on this channel`);
+      // The personal channel IS the connection: without it there are no
+      // offers, no call invites and no notifications, so a full rebuild is
+      // warranted. Any other channel stays down alone.
+      if (name.startsWith('user:')) {
+        this.emitLocal('connection:changed', { connected: false });
+        this.scheduleReconnect();
+      }
+      return;
+    }
+
+    const delay = Math.min(1000 * Math.pow(2, attempt - 1), 30000);
+    console.log(`[Realtime] Re-joining ${name} in ${delay}ms (attempt ${attempt})`);
+
+    const timer = setTimeout(async () => {
+      this.channelRecoveryTimers.delete(name);
+      const channel = this.channels.get(name);
+      if (!channel || this.intentionalDisconnect) return;
+
+      try {
+        // subscribe() throws if the channel is already joined/joining, so the
+        // socket must be told to leave before we ask to re-join.
+        await channel.unsubscribe();
+        this.bindStatus(name, channel);
+      } catch (e) {
+        console.warn(`[Realtime] Re-join of ${name} failed:`, e);
+        this.recoverChannel(name);
+      }
+    }, delay);
+
+    this.channelRecoveryTimers.set(name, timer);
+  }
+
+  /**
+   * Remove a channel and everything tracking it. Leaving the retry counter or
+   * a pending recovery timer behind would resurrect a channel the screen has
+   * deliberately left.
+   */
+  private dropChannel(name: string): void {
+    const timer = this.channelRecoveryTimers.get(name);
+    if (timer) {
+      clearTimeout(timer);
+      this.channelRecoveryTimers.delete(name);
+    }
+    this.channelRetries.delete(name);
+
+    const channel = this.channels.get(name);
+    if (channel) {
+      this.supabase?.removeChannel(channel);
+      this.channels.delete(name);
+    }
+  }
+
+  /** Cancel every in-flight per-channel recovery. */
+  private clearChannelRecovery(): void {
+    this.channelRecoveryTimers.forEach(t => clearTimeout(t));
+    this.channelRecoveryTimers.clear();
+    this.channelRetries.clear();
   }
 
   disconnect(): void {
     this.intentionalDisconnect = true;
     this.clearReconnectTimer();
     this.clearAllRequestExpiryTimers();
+    this.clearChannelRecovery();
 
-    for (const [name, channel] of this.channels.entries()) {
+    for (const channel of this.channels.values()) {
       this.supabase?.removeChannel(channel);
     }
     this.channels.clear();
@@ -297,12 +392,7 @@ class SocketService {
 
   leaveDriverRoom(driverId: string): void {
     this.currentDriverRoom = null;
-    const channelName = `driver:${driverId}`;
-    const channel = this.channels.get(channelName);
-    if (channel) {
-      this.supabase?.removeChannel(channel);
-      this.channels.delete(channelName);
-    }
+    this.dropChannel(`driver:${driverId}`);
     console.log('[Realtime] Left driver room:', driverId);
   }
 
@@ -394,29 +484,13 @@ class SocketService {
       });
     }
 
-    // Also subscribe to DB changes for this task
-    this.subscribeToTaskChanges(taskId);
-
     console.log('[Realtime] Joined task room:', taskId);
   }
 
   leaveTaskRoom(taskId: string): void {
     this.currentTaskRoom = null;
 
-    const channelName = `task:${taskId}`;
-    const channel = this.channels.get(channelName);
-    if (channel) {
-      this.supabase?.removeChannel(channel);
-      this.channels.delete(channelName);
-    }
-
-    const dbChannelName = `db:task:${taskId}`;
-    const dbChannel = this.channels.get(dbChannelName);
-    if (dbChannel) {
-      this.supabase?.removeChannel(dbChannel);
-      this.channels.delete(dbChannelName);
-    }
-
+    this.dropChannel(`task:${taskId}`);
     console.log('[Realtime] Left task room:', taskId);
   }
 
@@ -424,8 +498,13 @@ class SocketService {
   // RIDER METHODS
   // ==========================================
 
-  joinRiderRoom(riderId: string): void {
-    if (!this.isConnected) this.connect();
+  async joinRiderRoom(riderId: string): Promise<void> {
+    // Awaited deliberately: connect() is what creates the Supabase client, and
+    // createChannel() below throws outright if it is still null. Firing this
+    // off un-awaited meant the very first join after a cold start could throw
+    // before the client existed.
+    if (!this.isConnected) await this.connect();
+    if (!this.supabase) return;
 
     this.currentRiderRoom = riderId;
     const channelName = `rider:${riderId}`;
@@ -441,12 +520,7 @@ class SocketService {
 
   leaveRiderRoom(riderId: string): void {
     this.currentRiderRoom = null;
-    const channelName = `rider:${riderId}`;
-    const channel = this.channels.get(channelName);
-    if (channel) {
-      this.supabase?.removeChannel(channel);
-      this.channels.delete(channelName);
-    }
+    this.dropChannel(`rider:${riderId}`);
     console.log('[Realtime] Left rider room:', riderId);
   }
 
@@ -496,12 +570,7 @@ class SocketService {
   }
 
   chatLeave(roomId: string): void {
-    const channelName = `chat:${roomId}`;
-    const channel = this.channels.get(channelName);
-    if (channel) {
-      this.supabase?.removeChannel(channel);
-      this.channels.delete(channelName);
-    }
+    this.dropChannel(`chat:${roomId}`);
     console.log('[Realtime] Left chat room:', roomId);
   }
 
@@ -555,40 +624,29 @@ class SocketService {
   }
 
   // ==========================================
-  // DB CHANGES SUBSCRIPTION
+  // WHY THERE IS NO postgres_changes FALLBACK
   // ==========================================
-
-  private subscribeToTaskChanges(taskId: string): void {
-    if (!this.supabase) return;
-
-    const channelName = `db:task:${taskId}`;
-    if (this.channels.has(channelName)) return;
-
-    const channel = this.supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes' as any,
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'Task',
-          filter: `id=eq.${taskId}`,
-        },
-        (payload: any) => {
-          const newRecord = payload.new;
-          if (newRecord) {
-            this.emitLocal('task:status:update', {
-              taskId: newRecord.id,
-              status: newRecord.status,
-              timestamp: new Date().toISOString(),
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    this.channels.set(channelName, channel);
-  }
+  // A `db:task:<id>` channel used to subscribe to Postgres Changes on Task and
+  // was documented as "defense-in-depth ... ensuring the client never misses
+  // updates". It did nothing of the kind. Measured against the live project:
+  //
+  //   subscribe status : SUBSCRIBED
+  //   rows delivered   : 0
+  //
+  // Realtime evaluates RLS as the subscriber's role, and Task's SELECT policy
+  // is `"clientId" = current_setting('app.current_user_id')` — a session
+  // variable the API sets on its own pooled connection and which does not, and
+  // cannot, exist on a Realtime connection. So the channel reported success
+  // and silently delivered nothing, forever.
+  //
+  // It could only be made to work by granting the public anon key SELECT on
+  // Task, which would let anyone holding a key that ships inside the APK read
+  // every trip on the platform. Not a trade worth making for a backup path.
+  //
+  // Broadcast (which the server pushes explicitly, and which is verified
+  // working) is the real-time mechanism. The actual safety net is the
+  // `realtime:resubscribed` event above: after any gap, screens re-read
+  // authoritative state from the API instead of trusting what they last saw.
 
   // ==========================================
   // REQUEST EXPIRY TIMER
@@ -640,7 +698,8 @@ class SocketService {
     const savedRiderRoom = this.currentRiderRoom;
 
     // Clean up channels without clearing listeners
-    for (const [name, channel] of this.channels.entries()) {
+    this.clearChannelRecovery();
+    for (const channel of this.channels.values()) {
       this.supabase?.removeChannel(channel);
     }
     this.channels.clear();
@@ -665,7 +724,19 @@ class SocketService {
     }
   }
 
-  /** Schedule a reconnect attempt with exponential backoff */
+  /**
+   * Schedule a full reconnect with exponential backoff.
+   *
+   * The backoff used to be decorative: connect() reset `reconnectAttempts` to
+   * 0 on every success, and a reconnect that succeeds at the socket level then
+   * fails at the channel level counts as a success. The exponent was therefore
+   * always 0 and the delay always 1000ms — a permanently unhealthy channel
+   * rebuilt the entire connection once a second, forever, which is what filled
+   * logcat with `Channel error` and kept the offer window closed.
+   *
+   * The counter is now cleared only when a channel actually reaches
+   * SUBSCRIBED, so repeated failure genuinely backs off toward 30s.
+   */
   private scheduleReconnect(): void {
     if (this.intentionalDisconnect) return;
     if (this.reconnectTimer) return; // Already scheduling
@@ -686,9 +757,6 @@ class SocketService {
       this.reconnectTimer = null;
       if (!this.intentionalDisconnect) {
         await this.reconnect();
-        if (this.isConnected) {
-          this.reconnectAttempts = 0;
-        }
       }
     }, delay);
   }

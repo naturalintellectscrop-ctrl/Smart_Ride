@@ -144,6 +144,47 @@ export default function DriverHomeScreen() {
     }
   }, [router]);
 
+  /**
+   * Re-read the world after a realtime gap.
+   *
+   * Supabase broadcast has no replay: an offer pushed while the channel was
+   * down is gone, and nothing will ever push it again. So when a channel comes
+   * back we ask the server what it holds rather than assume the screen is
+   * still current — the job we may already be on, and any offer still open.
+   *
+   * This is reconciliation against the same authority, not a second dispatch
+   * system: /tasks/available already filters to work this rider's role can
+   * take, and accepting still goes through the normal atomic claim.
+   */
+  const reconcileAfterGap = useCallback(async () => {
+    await recoverActiveTask();
+
+    // Only look for an offer if we are not already showing one.
+    if (useTaskStore.getState().incomingRequest) return;
+
+    try {
+      const res = await api.getAvailableTasks();
+      const open = Array.isArray(res?.data) ? res.data[0] : null;
+      if (!res?.success || !open) return;
+
+      handleIncomingRequest({
+        task: open,
+        pickup: {
+          address: open.pickupAddress,
+          latitude: open.pickupLatitude,
+          longitude: open.pickupLongitude,
+        },
+        // The original SLA deadline died with the broadcast. Rather than
+        // inventing a fresh countdown that outlives the server's own window,
+        // carry whatever the task still reports and let the server refuse the
+        // accept if it has since expired.
+        expiresAt: (open as any).expiresAt ?? new Date(Date.now() + 30_000).toISOString(),
+      });
+    } catch {
+      // Recovery is best-effort; never block the dashboard on it.
+    }
+  }, [recoverActiveTask]);
+
   useEffect(() => {
     loadRiderProfile();
     loadEarnings();
@@ -162,10 +203,13 @@ export default function DriverHomeScreen() {
 
     const unsubscribeRequest = socketService.on('driver:request', handleIncomingRequest);
     const unsubscribeExpired = socketService.on('driver:request:expired', handleRequestExpired);
+    // A channel that dropped and recovered had a blind window. Close it.
+    const unsubscribeRecovered = socketService.on('realtime:resubscribed', reconcileAfterGap);
 
     return () => {
       unsubscribeRequest();
       unsubscribeExpired();
+      unsubscribeRecovered();
       stopLocationTracking();
       socketService.disconnect();
     };
