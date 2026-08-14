@@ -483,3 +483,84 @@ product decision rather than a defect.
 | Message encryption at rest | `MESSAGE_ENCRYPTION_KEY` unset in every deployment — messages stored plaintext |
 | Mobile-money settlement | no real MTN/Airtel settlement exercised end to end |
 | Push on release build | FCM key uploaded; release-build delivery still device-only to confirm |
+
+---
+
+# Physical device QA — session of 2026-08-14
+
+## The device, proven rather than assumed
+
+`adb devices` returning a serial is not proof of hardware; an emulator returns
+one too. These are the properties that separate them:
+
+| Property | Value | Why it matters |
+|---|---|---|
+| `ro.serialno` | `R3CR709T4FN` | the QA target for every command below |
+| `ro.product.model` | `SM-G991U` | Samsung Galaxy S21 5G |
+| `ro.build.version.release` / `sdk` | `15` / `35` | current Android |
+| `ro.product.cpu.abi` | `arm64-v8a` | not an x86 emulator image |
+| **`ro.kernel.qemu`** | **`0`** | an emulator reports `1` |
+| **`ro.hardware`** | **`qcom`** | real Qualcomm silicon; an emulator reports `ranchu` / `goldfish` |
+| Battery | 79%, 4158 mV, **33.4 °C**, Li-ion | a real cell, discharging, at a real temperature. Emulators report a fixed synthetic profile |
+| Sensors | 289 entries | an emulator exposes a handful |
+| Display | 1080×2400 @ 480dpi | matches the physical panel |
+
+## Tooling available to me
+
+| Capability | Command | Level |
+|---|---|---|
+| Launch / force-stop | `am start -n ug.smartride.app/.MainActivity` | C |
+| Screenshot **and read it** | `exec-out screencap -p` → image | C |
+| Tap / swipe / type | `input tap`, `input text`, `input keyevent` | C |
+| Read logs | `logcat` | C |
+| Install | `adb install -r` | C |
+
+I can drive the UI and see the result. What I **cannot** do: hear a ringtone,
+feel a vibration, judge whether a photo is legible in poor light, carry the
+phone through a network dead-spot, or confirm a map settles smoothly. Those stay
+level **D — human required**.
+
+## Installed build at session start
+
+```
+package      ug.smartride.app
+versionName  1.0.0  (versionCode 1)
+installed    2026-08-13 20:19:15
+targetSdk    36, minSdk 24
+```
+
+**This APK is stale.** Four mobile files changed after it was built, across two
+commits:
+
+| Commit | File | What it changes |
+|---|---|---|
+| `22bb0c0` | `src/services/socket.service.ts` | channel-local realtime recovery, real backoff, dead postgres_changes layer removed |
+| `22bb0c0` | `app/driver/index.tsx` | `realtime:resubscribed` reconciliation |
+| `22bb0c0` | `app/receipt/[id].tsx` | proof-of-delivery photo on the customer receipt |
+| `939700f` | `app/driver/reputation.tsx` | the incentive Join button |
+
+**Consequence, stated plainly:** any journey run against the installed APK tests
+code that no longer exists. A pass would prove nothing about what ships and a
+failure might already be fixed. So the device journeys below are gated on a
+rebuild, and nothing is marked verified against the old binary.
+
+## QA accounts for device testing
+
+Created by `scripts/qa-device-accounts.ts`, re-runnable, password
+`QaDevice@2026`:
+
+```
+qa.client@smartride.test    CLIENT
+qa.boda@smartride.test      RIDER / SMART_BODA_RIDER
+qa.car@smartride.test       RIDER / SMART_CAR_DRIVER
+qa.courier@smartride.test   RIDER / DELIVERY_PERSONNEL
+```
+
+Login verified through the real HTTP route: `POST /api/auth/login` → 200 with an
+access token.
+
+**A caution recorded for the next session.** Two "failures" during this pass —
+a 404 on `/api/marketplace/incentives` and a "Failed to login" — were the Next
+dev server answering before it had compiled the route, not defects. Both looked
+convincing. Give a freshly started dev server a real request and a moment before
+believing anything it says.
