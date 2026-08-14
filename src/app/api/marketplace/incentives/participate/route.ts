@@ -6,11 +6,71 @@ import {
   getDriverIncentiveProgress,
 } from '@/lib/marketplace/incentive-fulfillment';
 import { z } from 'zod';
+import { requireAuth, isAdmin } from '@/lib/auth/guards';
+import { NextResponse } from 'next/server';
+
+/**
+ * The rider acting here is the token holder.
+ *
+ * SECURITY: riderId came from the query string and the request body with no
+ * authentication at all. A driver could read another driver's incentive
+ * progress, enrol them in campaigns, or withdraw them from one they were
+ * winning — and an anonymous caller could do the same.
+ */
+async function resolveRider(
+  request: NextRequest,
+  requested: string | null | undefined
+): Promise<{ riderId: string } | { error: NextResponse }> {
+  const auth = requireAuth(request);
+  if (!auth.success || !auth.user) {
+    return {
+      error: NextResponse.json(
+        { success: false, error: auth.error || 'Authentication required' },
+        { status: auth.statusCode || 401 }
+      ),
+    };
+  }
+  if (isAdmin(auth.user.role)) {
+    if (!requested) {
+      return {
+        error: NextResponse.json(
+          { success: false, error: 'Rider ID is required' },
+          { status: 400 }
+        ),
+      };
+    }
+    return { riderId: requested };
+  }
+
+  const own = await db.rider.findFirst({
+    where: { userId: auth.user.userId },
+    select: { id: true },
+  });
+  if (!own) {
+    return {
+      error: NextResponse.json(
+        { success: false, error: 'No driver profile for this account' },
+        { status: 403 }
+      ),
+    };
+  }
+  if (requested && requested !== own.id) {
+    return {
+      error: NextResponse.json(
+        { success: false, error: 'This enrolment belongs to another driver' },
+        { status: 403 }
+      ),
+    };
+  }
+  return { riderId: own.id };
+}
 
 // Schema for enrollment
 const enrollSchema = z.object({
   incentiveId: z.string(),
-  riderId: z.string(),
+  // Optional: the driver enrolling is whoever holds the token. Retained so an
+  // admin can enrol someone on their behalf.
+  riderId: z.string().optional(),
 });
 
 /**
@@ -19,14 +79,13 @@ const enrollSchema = z.object({
  * Query params: riderId
  */
 export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const actor = await resolveRider(request, searchParams.get('riderId'));
+  if ('error' in actor) return actor.error;
+
   await setServiceRoleContext();
   try {
-    const { searchParams } = new URL(request.url);
-    const riderId = searchParams.get('riderId');
-
-    if (!riderId) {
-      return errorResponse('Rider ID is required');
-    }
+    const riderId = actor.riderId;
 
     // Verify rider exists
     const rider = await db.rider.findUnique({
@@ -78,12 +137,15 @@ export async function GET(request: NextRequest) {
  * Enroll a driver in an incentive
  */
 export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const validatedData = enrollSchema.parse(body);
+
+  const actor = await resolveRider(request, validatedData.riderId);
+  if ('error' in actor) return actor.error;
+
   await setServiceRoleContext();
   try {
-    const body = await request.json();
-    const validatedData = enrollSchema.parse(body);
-
-    const result = await enrollInIncentive(validatedData.incentiveId, validatedData.riderId);
+    const result = await enrollInIncentive(validatedData.incentiveId, actor.riderId);
 
     if (!result.success) {
       return errorResponse(result.error || 'Failed to enroll in incentive');
@@ -113,14 +175,17 @@ export async function POST(request: NextRequest) {
  * Opt out of an incentive
  */
 export async function DELETE(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
+  const actor = await resolveRider(request, searchParams.get('riderId'));
+  if ('error' in actor) return actor.error;
+
   await setServiceRoleContext();
   try {
-    const { searchParams } = new URL(request.url);
     const participationId = searchParams.get('participationId');
-    const riderId = searchParams.get('riderId');
+    const riderId = actor.riderId;
 
-    if (!participationId || !riderId) {
-      return errorResponse('Participation ID and Rider ID are required');
+    if (!participationId) {
+      return errorResponse('Participation ID is required');
     }
 
     // Verify participation belongs to this rider

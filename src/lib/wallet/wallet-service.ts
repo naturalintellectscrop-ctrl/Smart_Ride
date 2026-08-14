@@ -2,7 +2,7 @@
 // Handles all wallet operations: deposits, withdrawals, payments, rewards
 
 import { db } from '@/lib/db';
-import { WalletStatus, WalletTransactionType, WalletOwnerType, WalletTransactionStatus } from '@prisma/client';
+import { WalletStatus, WalletTransactionType, WalletOwnerType, WalletTransactionStatus, Prisma } from '@prisma/client';
 import { toNumber } from '@/lib/decimal-utils';
 
 // ============================================
@@ -64,6 +64,21 @@ export interface RewardInput {
   referenceId?: string;
   referenceType?: string;
   description?: string;
+  /**
+   * The caller's open transaction, when this credit is part of a larger
+   * atomic operation.
+   *
+   * Without it, a caller already inside `db.$transaction` would have this
+   * function open a SECOND, independent transaction on the same client. RLS
+   * requires connection_limit=1, so the outer transaction is holding the only
+   * connection and the inner one can never acquire it — the credit fails, the
+   * failure is swallowed into a `{ success: false }` return, and the caller
+   * commits as if the money had moved.
+   *
+   * That is exactly how incentive rewards were being marked REWARDED while the
+   * driver's wallet stayed empty.
+   */
+  tx?: Prisma.TransactionClient;
 }
 
 export interface WalletBalance {
@@ -83,16 +98,18 @@ export interface WalletBalance {
  */
 export async function getOrCreateWallet(
   ownerId: string,
-  ownerType: WalletOwnerType
+  ownerType: WalletOwnerType,
+  /** Run inside the caller's transaction when one is already open. */
+  client: Prisma.TransactionClient | typeof db = db
 ): Promise<WalletBalance> {
-  let wallet = await db.wallet.findUnique({
+  let wallet = await client.wallet.findUnique({
     where: {
       ownerId_ownerType: { ownerId, ownerType },
     },
   });
 
   if (!wallet) {
-    wallet = await db.wallet.create({
+    wallet = await client.wallet.create({
       data: {
         ownerId,
         ownerType,
@@ -478,11 +495,9 @@ export async function creditRewardToWallet(input: RewardInput): Promise<{
       return { success: false, error: 'Reward amount must be positive' };
     }
 
-    // Get or create wallet
-    const wallet = await getOrCreateWallet(input.ownerId, input.ownerType);
-
-    // Create transaction and update wallet atomically
-    const result = await db.$transaction(async (tx) => {
+    // Join the caller's transaction when there is one; otherwise open our own.
+    const runCredit = async (tx: Prisma.TransactionClient) => {
+      const wallet = await getOrCreateWallet(input.ownerId, input.ownerType, tx);
       const walletRecord = await tx.wallet.findUnique({
         where: { id: wallet.walletId },
       });
@@ -520,7 +535,13 @@ export async function creditRewardToWallet(input: RewardInput): Promise<{
       });
 
       return { transactionId: transaction.id, newBalance: balanceAfter };
-    });
+    };
+
+    // A caller already inside a transaction passes it in; opening our own here
+    // would deadlock against connection_limit=1 and fail silently.
+    const result = input.tx
+      ? await runCredit(input.tx)
+      : await db.$transaction(runCredit);
 
     return { success: true, ...result };
   } catch (error) {

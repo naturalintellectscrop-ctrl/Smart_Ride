@@ -20,6 +20,7 @@ import {
   ScrollView,
   RefreshControl,
   ActivityIndicator,
+  Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,6 +32,16 @@ import { SPACING, RADIUS, TYPOGRAPHY, BORDER } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import type { RiderReputation, TrustTier } from '@/src/types';
+
+/** A campaign the driver has not joined yet, as the marketplace API returns it. */
+interface OpenIncentive {
+  id: string;
+  name: string;
+  description?: string;
+  rewardAmount: number | string;
+  minRides?: number | null;
+  endTime?: string | null;
+}
 
 // Tier presentation. Kept local to the screen — these are display concerns,
 // not platform rules; the thresholds themselves live server-side.
@@ -54,6 +65,19 @@ export default function DriverReputationScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Campaigns this driver could join but has not.
+   *
+   * The incentive system was complete except for this one link. The backend
+   * enrols drivers, tracks progress on every completed task, calculates the
+   * reward and credits the wallet on a schedule — and `api.getIncentives` /
+   * `api.joinIncentive` existed with NO caller anywhere in the app. So a
+   * driver could watch progress on campaigns they had no way to enter, and in
+   * practice nobody was ever enrolled.
+   */
+  const [openIncentives, setOpenIncentives] = useState<OpenIncentive[]>([]);
+  const [joining, setJoining] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setError(null);
     try {
@@ -63,6 +87,15 @@ export default function DriverReputationScreen() {
       } else {
         setError(res.error || 'Could not load your reputation.');
       }
+
+      // Campaigns already joined show under "Active bonuses" below; this list
+      // is what is still open to them.
+      const enrolledIds = new Set((res.data?.incentives ?? []).map(i => i.id));
+      const camp = await api.getAvailableIncentives();
+      const all = (camp?.data?.incentives ?? camp?.data ?? []) as OpenIncentive[];
+      setOpenIncentives(
+        Array.isArray(all) ? all.filter(i => i?.id && !enrolledIds.has(i.id)) : []
+      );
     } catch {
       setError('Could not load your reputation.');
     } finally {
@@ -70,6 +103,24 @@ export default function DriverReputationScreen() {
       setRefreshing(false);
     }
   }, []);
+
+  const join = useCallback(async (incentiveId: string) => {
+    setJoining(incentiveId);
+    try {
+      const res = await api.joinIncentive(incentiveId);
+      if (res?.success) {
+        // Re-read rather than patch locally: enrolment moves the campaign from
+        // "open" to "active bonus", and the server owns which is which.
+        await load();
+      } else {
+        setError(res?.error || 'Could not join that bonus. Try again.');
+      }
+    } catch {
+      setError('Could not join that bonus. Try again.');
+    } finally {
+      setJoining(null);
+    }
+  }, [load]);
 
   useEffect(() => {
     load();
@@ -239,6 +290,46 @@ export default function DriverReputationScreen() {
             />
           </Card>
         </Animated.View>
+
+        {/* Campaigns open to join. Without this the driver can only ever
+            watch bonuses they had no way to enter. */}
+        {openIncentives.length > 0 && (
+          <Animated.View entering={FadeInDown.delay(225).duration(300)}>
+            <Text style={styles.sectionTitle}>Bonuses you can join</Text>
+            {openIncentives.map((inc) => (
+              <Card key={inc.id} style={styles.card}>
+                <View style={styles.rowBetween}>
+                  <Text style={styles.incentiveName}>{inc.name}</Text>
+                  <Text style={styles.incentiveReward}>
+                    UGX {Number(inc.rewardAmount).toLocaleString()}
+                  </Text>
+                </View>
+                {inc.description ? (
+                  <Text style={styles.incentiveProgress}>{inc.description}</Text>
+                ) : null}
+                {inc.minRides ? (
+                  <Text style={styles.incentiveProgress}>
+                    {inc.minRides} rides to qualify
+                  </Text>
+                ) : null}
+                <Pressable
+                  onPress={() => join(inc.id)}
+                  disabled={joining === inc.id}
+                  style={({ pressed }) => [
+                    styles.joinButton,
+                    { opacity: pressed || joining === inc.id ? 0.6 : 1 },
+                  ]}
+                >
+                  {joining === inc.id ? (
+                    <ActivityIndicator size="small" color={COLORS.onPrimary} />
+                  ) : (
+                    <Text style={styles.joinButtonText}>Join this bonus</Text>
+                  )}
+                </Pressable>
+              </Card>
+            ))}
+          </Animated.View>
+        )}
 
         {/* Live incentive progress */}
         {data.incentives && data.incentives.length > 0 && (
@@ -423,6 +514,19 @@ const createStyles = (COLORS: ThemedColors) =>
     incentiveName: { ...TYPOGRAPHY.labelLg, color: COLORS.onSurface, flex: 1 },
     incentiveReward: { ...TYPOGRAPHY.labelLg, color: COLORS.primary },
     incentiveProgress: { ...TYPOGRAPHY.labelMd, color: COLORS.outline, marginTop: SPACING.xs },
+    joinButton: {
+      marginTop: SPACING.sm,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    joinButtonText: {
+      ...TYPOGRAPHY.labelLg,
+      color: COLORS.onPrimary,
+      fontWeight: '700',
+    },
 
     alertTitle: { ...TYPOGRAPHY.labelLg, color: COLORS.onSurface },
     alertBody: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant, marginTop: 2 },

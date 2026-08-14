@@ -4,6 +4,7 @@ import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/r
 import { notifyNewIncentive } from '@/lib/services/notification.service';
 import { z } from 'zod';
 import { allAdminsGuard } from '@/lib/auth/admin-guards';
+import { requireAuth } from '@/lib/auth/guards';
 
 // Incentive creation schema
 const incentiveSchema = z.object({
@@ -44,13 +45,16 @@ const incentiveSchema = z.object({
  * Get all driver incentives
  */
 export async function GET(request: NextRequest) {
-  // SECURITY: this route answered an unauthenticated GET with real data.
-  // Verified against a running server before this guard was added.
-  const guard = allAdminsGuard(request);
-  if (!guard.success) {
+  // SECURITY: this answered an unauthenticated GET with the full incentive
+  // configuration. It is NOT admin-only, though — a driver has to be able to
+  // see which campaigns are open before they can join one, which is the whole
+  // point of the feature. Creating and editing campaigns (POST/PATCH below)
+  // stays with admins.
+  const auth = requireAuth(request);
+  if (!auth.success) {
     return NextResponse.json(
-      { success: false, error: guard.error },
-      { status: guard.statusCode || 401 }
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 }
     );
   }
 

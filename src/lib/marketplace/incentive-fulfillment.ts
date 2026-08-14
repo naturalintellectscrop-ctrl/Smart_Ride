@@ -6,6 +6,7 @@ import { IncentiveType, IncentiveStatus, ParticipationStatus, RewardType, Incent
 import { createNotification } from '@/lib/services/notification.service';
 import { creditRewardToWallet } from '@/lib/wallet/wallet-service';
 import { toNumber } from '@/lib/decimal-utils';
+import { getOrCreateReputation } from '@/lib/reputation/trust-score-engine';
 
 // ============================================
 // TYPES
@@ -479,6 +480,28 @@ export async function completeIncentiveAndReward(participationId: string): Promi
 
     const rewardAmount = participation.incentive.rewardAmount;
 
+    /**
+     * The reputation record has to exist BEFORE the transaction opens.
+     *
+     * Step 5 below writes a DriverIncentiveEarned row keyed on
+     * `reputationId`, and it used to fall back to `''` when the driver had no
+     * reputation yet. An empty string is not a missing value to Postgres — it
+     * is a foreign key that matches nothing, so the insert raised
+     * DriverIncentiveEarned_reputationId_fkey and rolled back the ENTIRE
+     * transaction: the participation status, the rider balance, the wallet
+     * credit and the transaction record with it.
+     *
+     * The driver had qualified, the reward had been calculated, and they were
+     * paid nothing. The error was caught and logged by the caller, so the only
+     * visible symptom was a bonus that stayed IN_PROGRESS forever and retried
+     * on every completed task, failing identically each time.
+     *
+     * A brand-new driver is exactly the one most likely to be chasing a
+     * first-rides bonus, which is what made this the common case rather than
+     * the edge case.
+     */
+    const reputation = await getOrCreateReputation(participation.riderId);
+
     // Start a transaction to update everything atomically
     const result = await db.$transaction(async (tx) => {
       // 1. Update participation status
@@ -505,14 +528,26 @@ export async function completeIncentiveAndReward(participationId: string): Promi
       // USER-owned, not RIDER-owned: no RIDER wallet has ever existed, so this
       // credit was creating a second, parallel balance the driver could never
       // withdraw from (BE-003). One person, one balance.
-      await creditRewardToWallet({
+      // Pass the open transaction. Without it this opened a second one and
+      // could never acquire a connection, so the credit failed, the failure
+      // was swallowed into a `{ success: false }` nobody read, and the
+      // participation was committed as REWARDED with the wallet untouched.
+      const credited = await creditRewardToWallet({
         ownerId: participation.rider.userId,
         ownerType: 'USER',
         amount: rewardAmount,
         referenceId: participationId,
         referenceType: 'INCENTIVE',
         description: `Incentive reward: ${participation.incentive.name}`,
+        tx,
       });
+
+      // And read the answer. A reward that cannot be paid must not be recorded
+      // as paid — throwing rolls the whole thing back so it is retried rather
+      // than silently lost.
+      if (!credited.success) {
+        throw new Error(`Wallet credit failed: ${credited.error ?? 'unknown'}`);
+      }
 
       // 3. Update incentive totals
       await tx.driverIncentive.update({
@@ -545,7 +580,7 @@ export async function completeIncentiveAndReward(participationId: string): Promi
       // 5. Create DriverIncentiveEarned record for reputation tracking
       await tx.driverIncentiveEarned.create({
         data: {
-          reputationId: participation.rider.reputation?.id || '',
+          reputationId: reputation.id,
           incentiveId: participation.incentiveId,
           incentiveType: mapIncentiveType(participation.incentive.incentiveType),
           name: participation.incentive.name,
