@@ -75,7 +75,15 @@ export function AdminDashboard() {
   const handleExportAuditDocx = useCallback(async () => {
     setIsExporting(true);
     try {
-      const response = await fetch('/api/audit?action=export-docx');
+      // The audit log is admin-only now. This export used to work purely
+      // because the route was open to anyone.
+      const token =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('accessToken') || localStorage.getItem('admin_token')
+          : null;
+      const response = await fetch('/api/audit?action=export-docx', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
       if (response.ok) {
         const blob = await response.blob();
         const date = new Date().toISOString().split('T')[0];

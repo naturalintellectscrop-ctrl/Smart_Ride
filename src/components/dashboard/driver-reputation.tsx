@@ -31,6 +31,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { 
+
+
   Search, 
   Filter, 
   Star, 
@@ -50,6 +52,23 @@ import {
   ChevronRight,
   Loader2,
 } from 'lucide-react';
+
+/**
+ * Admin requests carry the admin token.
+ *
+ * These calls used to go out bare. That worked only because the routes behind
+ * them had no authentication — reading them proved nothing about being an
+ * admin, because anyone could read them. Now that they are guarded, the token
+ * is what makes this dashboard work rather than what makes it safe.
+ */
+function adminHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const token =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('accessToken') || localStorage.getItem('admin_token')
+      : null;
+  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
+}
+
 
 // Dynamic import for recharts to reduce initial bundle size
 const RechartsComponents = dynamic(
@@ -170,7 +189,7 @@ export function DriverReputationDashboard() {
       else if (suspendedFilter === 'false') params.set('isSuspended', 'false');
       if (search) params.set('search', search);
 
-      const response = await fetch(`/api/driver-reputation?${params}`);
+      const response = await fetch(`/api/driver-reputation?${params}`, { headers: adminHeaders() });
       const data = await response.json();
 
       if (data.success) {
@@ -205,7 +224,7 @@ export function DriverReputationDashboard() {
     try {
       const response = await fetch(`/api/driver-reputation/${selectedDriver.riderId}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           adjustment: adjustmentAmount,
           reason: adjustmentReason,

@@ -34,6 +34,8 @@ import {
 import { canView, canEdit } from '@/lib/permissions';
 import { NotificationSender } from '@/components/notifications/notification-sender';
 import { 
+
+
   Activity, 
   TrendingUp, 
   TrendingDown,
@@ -57,6 +59,23 @@ import {
   Send,
   Gift
 } from 'lucide-react';
+
+/**
+ * Admin requests carry the admin token.
+ *
+ * These calls used to go out bare. That worked only because the routes behind
+ * them had no authentication — reading them proved nothing about being an
+ * admin, because anyone could read them. Now that they are guarded, the token
+ * is what makes this dashboard work rather than what makes it safe.
+ */
+function adminHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const token =
+    typeof window !== 'undefined'
+      ? localStorage.getItem('accessToken') || localStorage.getItem('admin_token')
+      : null;
+  return token ? { ...extra, Authorization: `Bearer ${token}` } : extra;
+}
+
 
 interface ZoneStats {
   id: string;
@@ -152,8 +171,8 @@ export function MarketplaceBalance() {
     
     try {
       const [overviewRes, incentivesRes] = await Promise.all([
-        fetch('/api/marketplace/overview'),
-        fetch('/api/marketplace/incentives?status=ACTIVE'),
+        fetch('/api/marketplace/overview', { headers: adminHeaders() }),
+        fetch('/api/marketplace/incentives?status=ACTIVE', { headers: adminHeaders() }),
       ]);
 
       if (overviewRes.ok) {
@@ -190,7 +209,7 @@ export function MarketplaceBalance() {
     try {
       const response = await fetch('/api/marketplace/surge', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           zoneId: selectedZone.id,
           multiplier: parseFloat(surgeMultiplier),
@@ -221,7 +240,7 @@ export function MarketplaceBalance() {
 
       const response = await fetch('/api/marketplace/incentives', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           name: newIncentive.name,
           description: newIncentive.description,
