@@ -1483,3 +1483,317 @@ the rider is notified, because they have been waiting on the decision.
 **Verified against the live database:** GET returns pending riders, POST
 approves and the status becomes APPROVED, the rider receives a notification, and
 an unauthenticated POST returns 401.
+
+---
+
+# QA baseline — role journeys, 2026-08-14
+
+Client, Smart Boda, Smart Car, Merchant and Pharmacist driven end to end
+against a live server, plus a cross-tenant authorization pass. Two new suites:
+
+- `scripts/verify-role-journeys.ts` — 40 checks, the positive half. Runs over
+  real HTTP because task creation dispatches through `next/server` `after()`,
+  which throws outside a request scope. Needs `npm run dev` running.
+- `scripts/verify-role-authorization.ts` — 17 checks, the negative half. Every
+  case uses a real signed token belonging to the wrong party and asserts the
+  refusal came from the server.
+
+---
+
+## BE-022 — A client could set their own fare
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Financial
+**Found:** running the Client journey, 2026-08-14
+
+`POST /api/tasks` wrote `customPricing.baseFare` and `customPricing.totalAmount`
+from the request body straight into the task:
+
+```ts
+baseFare:    validatedData.customPricing?.baseFare    || pricing.baseFare,
+totalAmount: validatedData.customPricing?.totalAmount || pricing.totalAmount,
+```
+
+`riderEarnings` and `platformCommission` on the adjacent lines kept the server's
+own figures. Measured: a booking with `customPricing: { totalAmount: 1 }` was
+accepted, stored `totalAmount = 1`, and stored `riderEarnings = 4250`. **The
+platform pays the driver 4,250 out of revenue of 1.** Any authenticated account,
+one request, no special access.
+
+BE-001 fixed this shape for orders. Tasks were missed — the same defect, a
+different table.
+
+**Fix:** the quote is checked, then discarded. The client's figure is compared
+against the server's own price; if it has drifted beyond rounding tolerance the
+booking is refused with a 409 carrying the real figure, the same shape the order
+route already uses for "prices have changed". The value written is always the
+server's.
+
+The quote is not simply ignored, because the customer should be charged what
+they were shown — silently booking at a different price than the one agreed is
+the other way to get this wrong.
+
+---
+
+## BE-023 — No provider could accept a task
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Authorization / RLS
+**Found:** running the Boda journey, 2026-08-14
+
+`POST /api/tasks/[id]/accept` answered **404 Task not found** for every accept,
+by every provider.
+
+`requireAuthWithRLS` leaves the caller's own RLS context in place, and `Task`
+carries no rider SELECT policy — only `users_read_own_tasks`
+(`"clientId" = current_setting('app.current_user_id')`) and `admin_read`. A
+provider is not the client, so the task they were just offered is invisible to
+them and `findUnique` returns null.
+
+Measured against the live database — the same row:
+
+```
+findUnique under RIDER RLS   -> NULL
+findUnique under CLIENT RLS  -> VISIBLE
+db identity                  -> smart_ride_api  (non-owner, so RLS is enforced)
+```
+
+Same defect class as the one already fixed in `/api/tasks/available`, which
+documents it in its own comment. That endpoint was fixed; the accept beside it
+was not.
+
+**Why device QA did not catch it:** the mobile app works around it. The client
+re-reads state after a failed accept, which is why the observed symptom was
+"after I accepted the task it returned an error" rather than an unusable app.
+
+**Fix:** elevate to service role, exactly as `/tasks/available` does. This
+widens no access — the handler already refuses non-providers, and the claim
+below it is a conditional UPDATE that only succeeds on a genuinely unclaimed
+task, so the authorization lives in the write rather than in what the reader can
+see.
+
+---
+
+## BE-024 — Nothing on the open-market list could be accepted
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Workflow
+**Found:** immediately underneath BE-023, 2026-08-14
+
+With the read fixed, accept then failed with:
+
+```
+Invalid transition from MATCHING to ACCEPTED for task type SMART_BODA_RIDE
+```
+
+A task reaches the accept route two ways:
+
+- **PUSH** — dispatch offers it to a chosen provider and moves it to `ASSIGNED`
+  itself, leaving only the `ASSIGNED -> ACCEPTED` hop. This is the path device
+  QA exercised, and it works.
+- **PULL** — a provider takes an unclaimed job from `/api/tasks/available`,
+  where it is still `MATCHING` or `SEARCHING`.
+
+The ride lifecycle requires `MATCHING -> ASSIGNED -> ACCEPTED`, so the pull path
+was rejected as an invalid transition. `/api/tasks/available` returned jobs that
+could not be taken.
+
+**Fix:** the accept route makes the missing hop when the task is pre-assignment.
+The state machine was not loosened — `claimTask` has already set `riderId`,
+which is precisely the field the `ASSIGNED` transition requires.
+
+---
+
+## BE-025 — Role was checked, ownership was not
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Authorization
+**Found:** cross-tenant authorization pass, 2026-08-14
+
+`PATCH /api/orders/[id]` gated actions with `ACTION_ROLE_MATRIX` — "may a
+MERCHANT accept orders?" — and never asked *whose* order it was.
+
+`handleAccept` looked like it checked:
+
+```ts
+if (order.merchantId !== validatedData.merchantId) {
+  return errorResponse('Merchant does not own this order');
+}
+```
+
+`validatedData.merchantId` comes from the **request body**. The id is not
+secret — it is returned by the public merchant listing and echoed in every
+order. `handleReject`, `handlePreparing`, `handleReady`, `handlePickup` and
+`handleDeliver` did not check at all.
+
+**The effect:** any signed-in merchant could accept, reject, start preparing or
+mark ready a competitor's order — taking over their kitchen queue and firing
+status notifications at their customers. Any signed-in rider could mark any
+order picked up or delivered, including deliveries assigned to someone else.
+
+**Fix:** `assertOrderOwnership` resolves the caller's merchant or rider from the
+token before any handler runs, and never reads the body. An order carries no
+`riderId`, so the delivery leg is checked against the `Task` that references it.
+
+---
+
+## BE-026 — The pharmacy order book was open to the world
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Authorization / Privacy
+**Found:** cross-tenant authorization pass, 2026-08-14
+
+`/api/health-provider/orders` had **no authentication in any of its three
+handlers** — 386 lines, zero references to `requireAuth` or `verifyAccessToken`
+— while every handler ran under `setServiceRoleContext()`, which elevates past
+RLS. `providerId` came from the query string.
+
+An anonymous `GET /api/health-provider/orders?providerId=<any>` returned that
+pharmacy's entire order book: patient names, phone numbers, delivery addresses
+and what medicine each person ordered. Confirmed against the live database with
+no token at all — status 200.
+
+`POST` could create orders in another customer's name. `PATCH` could advance
+another pharmacy's orders, including `VERIFY_PRESCRIPTION` — the control that
+records that a pharmacist checked a prescription before medicine was dispensed
+against it.
+
+**Fix:** every handler authenticates, and the provider is resolved from the
+caller's own account. A non-admin asking for another provider's id is refused
+outright rather than silently redirected to their own — a pharmacy requesting a
+competitor's order book should be told no.
+
+---
+
+## BE-027 — Platform revenue readable by anyone; providers shown the wrong number
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Authorization / Correctness
+**Found:** cross-tenant authorization pass, 2026-08-14
+
+`/api/merchant/earnings` and `/api/pharmacy/earnings` were the same shape as
+BE-026: no auth, service-role context. Two distinct exposures each:
+
+- `summary`, `transactions`, `analytics`, `by-type` ignore the id entirely and
+  aggregate the whole platform. An anonymous GET returned Smart Ride's total
+  revenue, commission take and transaction history.
+- `merchants` / `providers` and `payouts` take the id from the query string, so
+  any merchant could read a competitor's takings by changing one parameter.
+
+`POST` — recording payouts and changing commission rates — was also
+unauthenticated.
+
+**A correctness defect fell out of the same code.** The mobile pharmacy earnings
+screen calls `action=summary`, which aggregates *every* provider. Every pharmacy
+has been shown Smart Ride's entire health revenue as its own takings. `summary`
+is now scoped to the caller, so it is a per-provider figure for a provider and a
+platform figure only for an admin.
+
+---
+
+## RT-1 — The realtime fallback layer delivered nothing, ever
+
+**Status:** RESOLVED | **Priority:** P1 | **Category:** Realtime / False claim
+**Found:** investigating the device-only `[Realtime] Channel error`, 2026-08-14
+
+`socket.service.ts` opened a `db:task:<id>` channel subscribing to Postgres
+Changes on `Task`, documented as "defense-in-depth ... ensuring the client never
+misses updates".
+
+Measured against the live project:
+
+```
+subscribe status : SUBSCRIBED
+rows delivered   : 0
+```
+
+Realtime evaluates RLS as the subscriber's role, and `Task`'s SELECT policy is
+`"clientId" = current_setting('app.current_user_id')` — a session variable the
+API sets on its own pooled connection and which cannot exist on a Realtime
+connection. The channel reported success and silently delivered nothing.
+
+It could only be made to work by granting the public anon key SELECT on `Task`,
+letting anyone holding a key that ships inside the APK read every trip on the
+platform. Not a trade worth making for a backup path.
+
+**Fix:** removed, along with the comment claiming it. The real safety net is now
+explicit — see RT-3.
+
+---
+
+## RT-2 — One bad channel took down every channel, once a second, forever
+
+**Status:** RESOLVED | **Priority:** P1 | **Category:** Realtime
+**Found:** same investigation, 2026-08-14
+
+`CHANNEL_ERROR` on **any** channel called `scheduleReconnect()`, which tears
+down and rebuilds every channel. A chat room nobody was looking at could knock
+out the `user:` channel that carries ride offers, and each teardown opened a
+window in which a broadcast offer arrives and is dropped — Supabase broadcast
+has no replay.
+
+The backoff that was supposed to limit this was decorative. `connect()` reset
+`reconnectAttempts` to 0 on every success, and a reconnect that succeeds at the
+socket level while failing at the channel level counts as a success. The
+exponent was therefore always 0 and the delay always 1000ms: a permanently
+unhealthy channel rebuilt the entire connection once a second, indefinitely.
+This is what filled logcat with `Channel error`.
+
+**Fix:** recovery is channel-local, with real backoff. Only the personal `user:`
+channel escalates to a full reconnect, and only after its own retries are
+exhausted.
+
+---
+
+## RT-3 — Events lost during a realtime gap are now reconciled
+
+**Status:** RESOLVED | **Priority:** P1 | **Category:** Realtime
+**Found:** consequence of RT-1 and RT-2, 2026-08-14
+
+With no replay and no working fallback, an offer pushed while a channel was down
+was gone for good. A recovered channel now emits `realtime:resubscribed`, and
+the driver dashboard re-reads authoritative state from the API — the job it may
+already hold, and any offer still open — rather than trusting what it last saw.
+
+This is reconciliation against the same authority, not a second dispatch system:
+`/tasks/available` already filters to work the rider's role can take, and
+accepting still goes through the atomic claim.
+
+**Remaining uncertainty:** none of this explains `CHANNEL_ERROR` itself, which
+still does not reproduce off-device. Broadcast and postgres_changes channels both
+subscribe cleanly from Node against the same project with the same anon key. What
+is fixed is the amplifier that turned one channel failure into a total outage;
+the trigger is still unknown. **Open.**
+
+---
+
+## PROOF-1 — The customer could never see the proof of delivery
+
+**Status:** RESOLVED | **Priority:** P1 | **Category:** Product / Trust
+**Found:** tracing the proof journey to its customer end, 2026-08-14
+
+The backend stored proof correctly and served it correctly:
+`GET /api/tasks/[id]/proof` is authorized to the customer and the assigned
+courier only, and withholds the handover code from the courier. All verified.
+
+`api.getProofOfDelivery` in the mobile client had **no callers**. Nothing in the
+app ever asked for it, so from the customer's side the evidence did not exist —
+and a proof only settles a dispute if the person disputing can see it.
+
+**Fix:** the receipt screen fetches and displays it — photo, recipient name and
+capture time — with loading, missing and broken-image states. Absence is treated
+as normal, since a ride has no proof and never will.
+
+---
+
+## Noted, not changed
+
+**`/api/health-provider/orders` GET answers with a bare
+`{ orders, pagination, stats }`** rather than the `{ success, data }` envelope
+the rest of the API uses. An inconsistency worth knowing about; not changed
+under a dashboard that already reads this shape.
+
+**Auth coverage across the merchant/pharmacy surface is uneven.** A sweep of 34
+routes under `health-provider`, `health-orders`, `pharmacy`, `merchant`,
+`inventory` and `prescriptions` found 17 with no authentication reference at
+all. The five in the journeys' path are fixed above. The remainder — including
+`admin/health-providers`, `health-orders/[id]`, `health-provider/catalog`,
+`health-provider/register`, `health-provider/verification`, `inventory/*` and
+`merchants/onboarding` — are **not** audited, and several are near-certainly
+exposed the same way. Some in that list are legitimately public (merchant
+listing, menu, pharmacy listing), so the count is an upper bound, not a defect
+tally. This is the single largest known unaudited area. **P0, open.**

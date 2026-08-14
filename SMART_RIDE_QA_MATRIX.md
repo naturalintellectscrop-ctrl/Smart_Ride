@@ -287,3 +287,72 @@ Stated so nobody assumes otherwise:
   no real MTN/Airtel settlement has been exercised end to end.
 - **Multi-device sessions** for one account.
 - **Accessibility** beyond dark mode and screen size.
+
+---
+
+# Update — role journeys closed in code, 2026-08-14
+
+Client, Smart Boda, Smart Car, Merchant and Pharmacist were driven end to end
+through real route handlers against a live server. **The device pass below got
+shorter**: anything proven by those suites is no longer worth a human's time on
+a phone.
+
+Run both before picking up a device — a red suite means the device pass will
+waste your afternoon on a defect already visible from a terminal:
+
+```bash
+npm run dev                                   # they need a live server
+bun scripts/verify-role-journeys.ts           # 40 checks — the positive half
+bun scripts/verify-role-authorization.ts      # 17 checks — the negative half
+```
+
+## Now verified automatically — do NOT re-test by hand
+
+Each of these is asserted through the API with a real signed token, so a pass
+also proves the actor was authorized to cause it.
+
+| Area | What is proven |
+|---|---|
+| Ride lifecycle | request → available-queue → accept → ARRIVING → ARRIVED → PICKED_UP → IN_PROGRESS → COMPLETED, for both Boda and Car |
+| Role persistence | `SMART_BODA_RIDER`/`BODA` and `SMART_CAR_DRIVER`/`CAR` survive registration and reach dispatch |
+| Pricing authority | the server prices the trip; a client-supplied fare is refused, never applied |
+| Payout sanity | `riderEarnings` never exceeds `totalAmount` |
+| Driver release | `currentTaskId` clears on completion, so a second job is possible |
+| Receipts | generated on demand, listed in the client's own history |
+| Rating | a completed trip can be rated by its client |
+| Client money | wallet balance and transaction history return for the owner |
+| Order pricing | catalogue price wins; an under-priced line is refused |
+| Merchant lifecycle | confirm-payment → accept → preparing → ready |
+| Pharmacy lifecycle | order book read → ACCEPT → VERIFY_PRESCRIPTION → START_PREPARING → READY |
+| Earnings scope | a merchant and a pharmacy each read their own figures only |
+| Cross-tenant refusal | merchant vs merchant, rider vs rider, unassigned rider, client vs provider surface, stranger vs receipt, stranger vs proof, anonymous vs pharmacy order book, anonymous vs platform revenue |
+| Proof authorization | customer and assigned courier only; the handover code never reaches the courier |
+
+## Still device-only — the smallest honest list
+
+Everything here fails the "could a terminal answer this?" test.
+
+| # | Check | Why a device is required | Result |
+|---|---|---|---|
+| D-1 | Offer sheet takes over the screen when the app is **backgrounded** and the phone is **locked** | notification presentation and wake behaviour have no server-side truth | ☐ |
+| D-2 | Ringtone is audible over traffic noise; vibration is felt in a pocket | audibility is physical | ☐ |
+| D-3 | The SLA countdown on screen matches the server's window as it runs out | clock skew between phone and server only shows live | ☐ |
+| D-4 | Tapping the notification opens the offer, from cold start and from background | OS launch-intent routing | ☐ |
+| D-5 | `[Realtime] Channel error` under a real mobile network — does the channel-local recovery restore it, and does an offer arrive after? | **does not reproduce off-device; the trigger is still unknown** | ☐ |
+| D-6 | Ride a real route: does the map settle, does the driver marker track, does the ETA stop lying | GPS and map rendering | ☐ |
+| D-7 | Camera capture at the drop-off in poor light | camera path and image quality | ☐ |
+| D-8 | The proof photo renders on the **customer's** receipt at real photo dimensions | layout with a real 700KB+ camera image | ☐ |
+| D-9 | Backgrounding mid-trip and returning — is the screen still correct, or stale? | `realtime:resubscribed` reconciliation under real app lifecycle | ☐ |
+| D-10 | Push actually arrives on the release build (FCM), not just the dev build | signing and FCM registration differ per build | ☐ |
+
+## Carried forward, unchanged
+
+- **P2** `MESSAGE_ENCRYPTION_KEY` is still unset in every deployment — messages
+  are stored plaintext. The UI no longer claims otherwise (BE-004), so this is
+  a real gap rather than a false promise, but it is still a gap.
+- **The unaudited auth surface** listed at the end of
+  `SMART_RIDE_BACKEND_FINDINGS.md`. Twelve routes under `health-provider`,
+  `health-orders`, `inventory` and `merchants` have no authentication reference
+  and have not been checked. Given that five of the five audited in this pass
+  were exposed, assume the rest are until shown otherwise. **This is a bigger
+  risk than anything on the device list.**
