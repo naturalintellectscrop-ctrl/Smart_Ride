@@ -700,3 +700,108 @@ must be present (hearing, touch, judgement, physical movement).
 
 Anything beyond C-4 in this session ran against a **stale APK** and is therefore
 not recorded as verified — see the staleness note above.
+
+---
+
+# Device findings — release APK on R3CR709T4FN, 2026-08-15
+
+Built and installed the current code (109MB signed release, `BUILD SUCCESSFUL
+in 26m 26s`), then drove it with adb and read every screen. Three defects that
+no server-side test could have found, all in code written earlier in this same
+session.
+
+## DEV-1 — A new driver could not see the bonus written for new drivers
+
+**Status:** RESOLVED | **Priority:** P1 | **Found:** on the phone
+
+The reputation screen returned its "No reputation yet" empty state for the
+**whole screen**, before rendering anything below — including the Join button
+added hours earlier to fix the incentive system's missing link.
+
+So campaigns were unreachable for any driver with no completed trips, which is
+exactly the driver a first-rides or completion bonus exists for. The one person
+who most needed to join a campaign was the one person who could not see it: the
+same unreachability the Join button was meant to fix, one level up.
+
+Evidence: `qa.boda@smartride.test` has no reputation row and zero enrolments,
+with one ACTIVE 15,000 UGX campaign visible to that same account through the
+API. The screen showed the empty state and nothing else.
+
+**Fix:** the empty state now covers only the reputation cards; open campaigns
+render beneath it. Re-verified on device — "Bonuses you can join" and a "Join
+this bonus" button now appear for a driver with zero trips.
+
+## DEV-2 — The bonus was advertised as "UGX NaN"
+
+**Status:** RESOLVED | **Priority:** P1 | **Found:** on the phone
+
+With DEV-1 fixed, the campaign rendered — as **UGX NaN**.
+
+The marketplace API nests its payload: `reward.amount` and
+`requirements.minRides`. The screen read them flat, as `rewardAmount` and
+`minRides`. `Number(undefined)` is `NaN`, so a live driver was shown a bonus
+worth NaN, and the "3 rides to qualify" line silently never rendered.
+
+Nothing threw. Types passed. The screen looked correct until you read it.
+
+**Fix:** read the real shape, and **omit** the figure when the payload carries
+no usable number — an absent amount is honest, a nonsense one is not. Also gave
+the row a gap, because the title and amount butted together as
+"Weekend PushUGX NaN".
+
+**Not yet re-verified on device** — needs the next build. The expected result is
+"UGX 15,000" and a "3 rides to qualify" line.
+
+## DEV-3 — An approved rider can be trapped in the onboarding form
+
+**Status:** OPEN | **Priority:** P1 | **Category:** Navigation
+
+Reaching "Become a Rider" (Step 1 of 4) as an already-approved rider produces a
+dialog — "Already Approved: Your rider account is already approved!" — which is
+correct. Dismissing it leaves the driver **on the onboarding form**, which they
+cannot meaningfully complete.
+
+The exits are worse than the trap:
+
+| Exit | What happens |
+|---|---|
+| Continue | a form for an account that is already approved |
+| Header back | "Not a Rider? … **Switch to Client**" — offers to *demote* an approved driver |
+| Cancel | stays on the form |
+| Android back | leaves the app entirely |
+
+An approved driver who lands here has no path to their dashboard, and the one
+prominent escape would change their role. A cold restart does route correctly to
+the dashboard, so the state is recoverable — by knowing to force-quit.
+
+**Recommended fix (not made):** when the account is already approved, the dialog
+should navigate to the driver dashboard on dismiss rather than returning to the
+form. Left for a decision because it touches onboarding routing, which is
+outside the QA scope freeze.
+
+---
+
+## Device-verified this session (level C — I drove it and read the screen)
+
+| # | Scenario | Result |
+|---|---|---|
+| C-1 | App cold-starts on real hardware | **PASS** |
+| C-2 | Login screen renders, accepts typed input | **PASS** |
+| C-3 | Email/password login against the production API | **PASS** |
+| C-4 | Server-side role reaches the UI (Rider/Boda pre-selected) | **PASS** |
+| C-5 | All five roles render on the role chooser | **PASS** |
+| C-6 | Driver dashboard: map, offline toggle, earnings, wallet actions | **PASS** |
+| C-7 | **Live GPS fix** — blue dot placed in Bugolobi, Kampala | **PASS** |
+| C-8 | Approved-rider guard refuses re-onboarding | **PASS** (but see DEV-3) |
+| C-9 | Reputation screen reachable from the dashboard | **PASS** |
+| C-10 | Incentive campaign + Join button visible to a zero-trip driver | **PASS** (after DEV-1) |
+
+## Not verified on device, and why
+
+- **The offer → ring → accept journey.** Needs a dispatched offer with a second
+  account online; the ringing and vibration are level D regardless.
+- **Proof photo on the customer receipt.** The delivery that carried a photo was
+  removed by the fixture sweep, so there is currently no proof row to display.
+  Needs a fresh delivery driven to DELIVERING on the device.
+- **UGX 15,000 rendering correctly** — fixed but awaiting the next build.
+- Everything in the D1–D10 list, which is human-only by construction.
