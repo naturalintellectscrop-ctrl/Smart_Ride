@@ -27,11 +27,28 @@ const DRY = process.argv.includes('--dry-run');
 const TAG_PREFIX = 'E2E-';
 const TEST_DOMAIN = '@smartride.test';
 
+/**
+ * Accounts a human logs into on the QA phone, e.g. `qa.boda@smartride.test`.
+ *
+ * They share the reserved domain with suite fixtures, so this sweep deleted
+ * them — which it duly did mid-session, after they had been created and used
+ * to log in on the device. The next login failed with "Invalid email or
+ * password" on a phone that had worked twenty minutes earlier, and the cause
+ * looked for all the world like an auth defect.
+ *
+ * These are long-lived and re-created by `scripts/qa-device-accounts.ts`; they
+ * are not leaked rows, so they are left alone.
+ */
+const DEVICE_ACCOUNT_PREFIX = 'qa.';
+
 async function main() {
   console.log(`\n=== Sweeping leaked test fixtures${DRY ? ' (dry run)' : ''} ===\n`);
 
   const users = await db.user.findMany({
-    where: { email: { contains: TEST_DOMAIN } },
+    where: {
+      email: { contains: TEST_DOMAIN },
+      NOT: { email: { startsWith: DEVICE_ACCOUNT_PREFIX } },
+    },
     select: { id: true },
   });
   const userIds = users.map(u => u.id);
