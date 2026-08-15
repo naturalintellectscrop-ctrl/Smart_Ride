@@ -151,24 +151,26 @@ export default function DriverReputationScreen() {
     );
   }
 
-  // No completed work yet — an empty state, not an error.
-  if (!data?.hasReputation) {
-    return (
-      <View style={styles.container}>
-        <AppHeader title="My Reputation" onBack={() => router.back()} />
-        <EmptyState
-          icon="star-outline"
-          title="No reputation yet"
-          subtitle={data?.message || 'Complete your first trips to start building your reputation.'}
-        />
-      </View>
-    );
-  }
+  /**
+   * No completed work yet — an empty state, not an error.
+   *
+   * This used to `return` the empty state for the WHOLE screen, which put the
+   * campaigns below it out of reach. A driver with no trips is precisely the
+   * one a first-rides bonus is aimed at, so the one person who most needed to
+   * join a campaign was the one person who could not see it — the same
+   * unreachability the Join button was added to fix, one level up.
+   *
+   * The empty state now covers only the reputation half; open campaigns still
+   * render underneath it.
+   */
+  const hasReputation = !!data?.hasReputation;
 
-  const tier = (data.trustTier ?? 'SILVER') as TrustTier;
+  // `data` is no longer guaranteed past this point — the screen now renders
+  // with an empty reputation so the campaigns below stay reachable.
+  const tier = (data?.trustTier ?? 'SILVER') as TrustTier;
   const meta = TIER_META[tier];
-  const score = data.trustScore ?? 0;
-  const m = data.metrics;
+  const score = data?.trustScore ?? 0;
+  const m = data?.metrics;
 
   return (
     <View style={styles.container}>
@@ -181,6 +183,20 @@ export default function DriverReputationScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
+        {/* Nothing to score yet. Shown in place of the reputation cards, not
+            in place of the screen — the campaigns below still render. */}
+        {!hasReputation && (
+          <EmptyState
+            icon="star-outline"
+            title="No reputation yet"
+            subtitle={data?.message || 'Complete your first trips to start building your reputation.'}
+          />
+        )}
+
+        {/* Everything that describes an existing reputation. Wrapped in a
+            fragment because several sibling sections share the condition. */}
+        {hasReputation && (
+        <>
         {/* Trust score + tier */}
         <Animated.View entering={FadeInDown.duration(300)}>
           <Card style={styles.scoreCard}>
@@ -201,9 +217,9 @@ export default function DriverReputationScreen() {
               />
             </View>
 
-            {data.nextTier && data.pointsToNextTier != null ? (
+            {data?.nextTier && data?.pointsToNextTier != null ? (
               <Text style={styles.nextTier}>
-                {data.pointsToNextTier} points to {TIER_META[data.nextTier as TrustTier]?.label ?? data.nextTier}
+                {data?.pointsToNextTier} points to {TIER_META[data?.nextTier as TrustTier]?.label ?? data?.nextTier}
               </Text>
             ) : (
               <Text style={styles.nextTier}>You are at the highest tier</Text>
@@ -212,7 +228,7 @@ export default function DriverReputationScreen() {
         </Animated.View>
 
         {/* Suspension notice — the most consequential thing on this screen */}
-        {data.accountHealth?.isSuspended && (
+        {data?.accountHealth?.isSuspended && (
           <Animated.View entering={FadeInDown.delay(50).duration(300)}>
             <Card style={[styles.card, styles.suspendedCard]}>
               <View style={styles.rowStart}>
@@ -220,9 +236,9 @@ export default function DriverReputationScreen() {
                 <View style={styles.flex1}>
                   <Text style={styles.suspendedTitle}>Account suspended</Text>
                   <Text style={styles.suspendedBody}>
-                    {data.accountHealth.suspensionReason || 'Your account is under review.'}
-                    {data.accountHealth.suspensionEndsAt
-                      ? ` Ends ${new Date(data.accountHealth.suspensionEndsAt).toLocaleDateString()}.`
+                    {data?.accountHealth.suspensionReason || 'Your account is under review.'}
+                    {data?.accountHealth.suspensionEndsAt
+                      ? ` Ends ${new Date(data?.accountHealth.suspensionEndsAt).toLocaleDateString()}.`
                       : ''}
                   </Text>
                 </View>
@@ -290,6 +306,8 @@ export default function DriverReputationScreen() {
             />
           </Card>
         </Animated.View>
+        </>
+        )}
 
         {/* Campaigns open to join. Without this the driver can only ever
             watch bonuses they had no way to enter. */}
@@ -332,10 +350,10 @@ export default function DriverReputationScreen() {
         )}
 
         {/* Live incentive progress */}
-        {data.incentives && data.incentives.length > 0 && (
+        {data?.incentives && data?.incentives.length > 0 && (
           <Animated.View entering={FadeInDown.delay(250).duration(300)}>
             <Text style={styles.sectionTitle}>Active bonuses</Text>
-            {data.incentives.map((inc) => {
+            {data?.incentives.map((inc) => {
               const pct = Math.max(0, Math.min(100, inc.progressPercent));
               return (
                 <Card key={inc.id} style={styles.card}>
@@ -362,10 +380,10 @@ export default function DriverReputationScreen() {
         )}
 
         {/* Performance alerts */}
-        {data.alerts && data.alerts.length > 0 && (
+        {data?.alerts && data?.alerts.length > 0 && (
           <Animated.View entering={FadeInDown.delay(300).duration(300)}>
             <Text style={styles.sectionTitle}>Updates</Text>
-            {data.alerts.map((a) => (
+            {data?.alerts.map((a) => (
               <Card key={a.id} style={styles.card}>
                 <Text style={styles.alertTitle}>{a.title}</Text>
                 <Text style={styles.alertBody}>{a.message}</Text>
