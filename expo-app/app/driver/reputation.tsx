@@ -33,14 +33,28 @@ import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import type { RiderReputation, TrustTier } from '@/src/types';
 
-/** A campaign the driver has not joined yet, as the marketplace API returns it. */
+/**
+ * A campaign the driver has not joined yet, in the shape the marketplace API
+ * actually returns it.
+ *
+ * The reward and the requirements are NESTED. Reading them as flat
+ * `rewardAmount` / `minRides` produced `UGX NaN` on the phone and silently
+ * dropped the qualifying line — the screen rendered, so nothing failed, it
+ * just told the driver a bonus was worth NaN.
+ */
 interface OpenIncentive {
   id: string;
   name: string;
   description?: string;
-  rewardAmount: number | string;
-  minRides?: number | null;
-  endTime?: string | null;
+  reward?: { amount?: number | string | null; type?: string | null };
+  requirements?: { minRides?: number | null };
+  timing?: { endTime?: string | null };
+}
+
+/** The reward, or null when the payload does not carry a usable number. */
+function rewardOf(inc: OpenIncentive): number | null {
+  const raw = Number(inc.reward?.amount);
+  return Number.isFinite(raw) && raw > 0 ? raw : null;
 }
 
 // Tier presentation. Kept local to the screen — these are display concerns,
@@ -317,17 +331,19 @@ export default function DriverReputationScreen() {
             {openIncentives.map((inc) => (
               <Card key={inc.id} style={styles.card}>
                 <View style={styles.rowBetween}>
-                  <Text style={styles.incentiveName}>{inc.name}</Text>
-                  <Text style={styles.incentiveReward}>
-                    UGX {Number(inc.rewardAmount).toLocaleString()}
-                  </Text>
+                  <Text style={styles.incentiveName} numberOfLines={2}>{inc.name}</Text>
+                  {rewardOf(inc) != null ? (
+                    <Text style={styles.incentiveReward}>
+                      UGX {rewardOf(inc)!.toLocaleString()}
+                    </Text>
+                  ) : null}
                 </View>
                 {inc.description ? (
                   <Text style={styles.incentiveProgress}>{inc.description}</Text>
                 ) : null}
-                {inc.minRides ? (
+                {inc.requirements?.minRides ? (
                   <Text style={styles.incentiveProgress}>
-                    {inc.minRides} rides to qualify
+                    {inc.requirements.minRides} rides to qualify
                   </Text>
                 ) : null}
                 <Pressable
@@ -529,8 +545,10 @@ const createStyles = (COLORS: ThemedColors) =>
     streakLabel: { ...TYPOGRAPHY.bodyMd, color: COLORS.onSurfaceVariant, flex: 1 },
     streakBest: { ...TYPOGRAPHY.labelMd, color: COLORS.outline },
 
-    incentiveName: { ...TYPOGRAPHY.labelLg, color: COLORS.onSurface, flex: 1 },
-    incentiveReward: { ...TYPOGRAPHY.labelLg, color: COLORS.primary },
+    // flexShrink + a gap: the name and the amount used to butt straight up
+    // against each other ("Weekend PushUGX 15,000") on a narrow row.
+    incentiveName: { ...TYPOGRAPHY.labelLg, color: COLORS.onSurface, flex: 1, flexShrink: 1, marginRight: SPACING.sm },
+    incentiveReward: { ...TYPOGRAPHY.labelLg, color: COLORS.primary, flexShrink: 0 },
     incentiveProgress: { ...TYPOGRAPHY.labelMd, color: COLORS.outline, marginTop: SPACING.xs },
     joinButton: {
       marginTop: SPACING.sm,
