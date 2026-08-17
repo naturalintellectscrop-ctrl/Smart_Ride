@@ -1,14 +1,41 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { requireAuth } from '@/lib/auth/guards';
+import { allAdminsGuard } from '@/lib/auth/admin-guards';
+import { isAdminRole } from '@/lib/auth/rbac';
 
 // GET /api/driver-reputation/[riderId] - Get detailed reputation for a specific driver
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ riderId: string }> }
 ) {
+  // SECURITY: ran under setServiceRoleContext() with no guard — an
+  // unauthenticated GET returned a named driver's trust score, safety score and
+  // fraud-risk score. A driver may read their own; otherwise admin.
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return NextResponse.json(
+      { success: false, error: auth.error || 'Authentication required' },
+      { status: auth.statusCode || 401 },
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { riderId } = await params;
+
+    if (!isAdminRole(auth.user!.role)) {
+      const own = await db.rider.findUnique({
+        where: { id: riderId },
+        select: { userId: true },
+      });
+      if (!own || own.userId !== auth.user!.id) {
+        return NextResponse.json(
+          { success: false, error: 'You do not have access to this driver’s reputation' },
+          { status: 403 },
+        );
+      }
+    }
 
     const reputation = await db.driverReputation.findUnique({
       where: { riderId },
@@ -149,11 +176,25 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ riderId: string }> }
 ) {
+  // SECURITY: an unauthenticated PATCH raised a driver's trust score from 82 to
+  // 97 and attributed it to whatever `adminId` the caller put in the body. Trust
+  // score feeds dispatch ranking, so this was direct control over who gets work.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return NextResponse.json(
+      { success: false, error: guard.error || 'Admin access required' },
+      { status: guard.statusCode || 401 },
+    );
+  }
+
   await setServiceRoleContext();
   try {
     const { riderId } = await params;
     const body = await request.json();
-    const { adjustment, reason, adminId } = body;
+    const { adjustment, reason } = body;
+    // The acting admin is the authenticated caller, never a body field — the
+    // audit trail is worthless if the actor names themselves.
+    const adminId = guard.user!.id;
 
     if (typeof adjustment !== 'number') {
       return NextResponse.json(

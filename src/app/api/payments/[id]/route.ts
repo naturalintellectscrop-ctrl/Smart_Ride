@@ -9,6 +9,9 @@ import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { PaymentStatus } from '@prisma/client';
 import { successResponse, errorResponse, notFoundResponse, serverErrorResponse } from '@/lib/api/response';
 import { checkPaymentStatus } from '@/lib/payments';
+import { requireAuth } from '@/lib/auth/guards';
+import { allAdminsGuard } from '@/lib/auth/admin-guards';
+import { isAdminRole } from '@/lib/auth/rbac';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -19,10 +22,18 @@ interface RouteParams {
  * Get payment details and current status
  */
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  // SECURITY: this ran under setServiceRoleContext() with no guard at all, so
+  // anyone holding a payment id could read the payer's name, the amount and the
+  // linked task. Demonstrated returning 200 to an unauthenticated caller.
+  const auth = requireAuth(request);
+  if (!auth.success) {
+    return errorResponse(auth.error || 'Authentication required', auth.statusCode || 401);
+  }
+
   await setServiceRoleContext();
   try {
     const { id } = await params;
-    
+
     const payment = await db.payment.findUnique({
       where: { id },
       include: {
@@ -53,6 +64,13 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (!payment) {
       return notFoundResponse('Payment not found');
+    }
+
+    // Ownership: a payer may read their own payment; anyone else must be an
+    // admin. Checked after the lookup so the answer does not depend on a
+    // body-supplied id.
+    if (payment.userId !== auth.user!.id && !isAdminRole(auth.user!.role)) {
+      return errorResponse('You do not have access to this payment', 403);
     }
 
     // If payment is still processing, check with provider
@@ -107,6 +125,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * Update payment status (admin only)
  */
 export async function PUT(request: NextRequest, { params }: RouteParams) {
+  // SECURITY: the docstring above already said "admin only". Nothing enforced
+  // it, and an unauthenticated PUT was demonstrated moving a PENDING payment to
+  // COMPLETED — settling a payment nobody made.
+  const guard = allAdminsGuard(request);
+  if (!guard.success) {
+    return errorResponse(guard.error || 'Admin access required', guard.statusCode || 401);
+  }
+
   await setServiceRoleContext();
   try {
     const { id } = await params;
