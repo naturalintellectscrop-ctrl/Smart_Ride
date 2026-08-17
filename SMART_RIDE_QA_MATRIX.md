@@ -1066,3 +1066,117 @@ Recorded rather than fixed: this is the calling subsystem, outside the incentive
 closure currently in progress.
 
 ---
+
+---
+
+# Role journeys — controls vs. backend lifecycle, 2026-08-17
+
+Audited under the rule LC-1 established: the question is not *does the button
+render*, it is **does this control correspond to a backend operation that
+exists, is reachable, and is legal at this state.**
+
+## Driver progression — SOUND
+
+`scripts/verify-ui-lifecycle-parity.ts` takes the mobile app's own progression
+maps (`RIDE_FLOW`, `DELIVERY_FLOW` from `driver-task.tsx`) and walks each one
+through the real state machine as the RIDER actor, on real tasks.
+
+| Journey | Result |
+|---|---|
+| Smart Boda — ASSIGNED → ACCEPTED → ARRIVING → ARRIVED → PICKED_UP → IN_PROGRESS → COMPLETED | **6/6 accepted** |
+| Smart Car — same map, `SMART_CAR_RIDE` | **6/6 accepted** |
+| Delivery — ASSIGNED → ACCEPTED → ARRIVING → PICKED_UP → IN_TRANSIT → DELIVERING | **5/5 accepted** |
+
+**17/17.** The primary button matches the server on every step of all three
+journeys. `DELIVERING → DELIVERED` is correctly absent from the button map —
+proof capture advances it, not a tap.
+
+**A false defect, caught by doubting it.** The first run reported Smart Boda
+dead at its very first step with the state machine's catch-all "An internal
+error occurred", while Smart Car passed the identical map. The difference was
+run order: the harness had not established a service-role context before the
+first walk. It read exactly like a product defect and was not one. Recorded
+because it is the third time this session an environmental artifact has imitated
+a bug.
+
+## MERCH-1 — The merchant cannot accept or reject an order
+
+**Status:** OPEN | **Priority:** P0 | **Category:** Dead control / contract
+
+The merchant screens render Accept and Reject. Pressing them calls:
+
+```ts
+api.updateOrderStatus(orderId, 'CONFIRMED')
+  → PATCH /orders/{id}/status   body { status: 'CONFIRMED' }
+```
+
+**`/api/orders/[id]/status` does not exist.** Everything under `/api/orders` is:
+
+```
+src/app/api/orders/[id]/route.ts
+src/app/api/orders/quote/route.ts
+src/app/api/orders/route.ts
+```
+
+The real contract is a **query parameter on a different URL**:
+
+```
+PATCH /orders/{id}?action=accept
+```
+
+with `ACTION_ROLE_MATRIX` gating `confirm-payment, accept, reject, preparing,
+ready, pickup, deliver, cancel` — the same route hardened in BE-025.
+
+So the mismatch is three-deep: wrong URL, wrong parameter location (query, not
+body), wrong vocabulary (`CONFIRMED`/`REJECTED` vs `accept`/`reject`). Every
+merchant order action is a 404.
+
+**The whole merchant journey is inert from the app.** A restaurant cannot accept
+an order, mark it preparing, or mark it ready. The backend supports all of it.
+
+## PHARM-1 — The pharmacist cannot progress a health order
+
+**Status:** OPEN | **Priority:** P0 | **Category:** Dead control / contract
+
+```ts
+api.updateHealthOrderStatus(orderId, status)
+  → PATCH /health/orders/{id}/status
+```
+
+**`/api/health/orders/...` does not exist.** `src/app/api/health/` contains only
+the health*check* endpoints — `route.ts`, `ready`, `startup`. The real route is
+
+```
+PATCH /health-orders/{id}    body { status }
+```
+
+— hyphenated, no `/status` segment. The app is calling into the monitoring
+namespace by accident. Fulfilment cannot be advanced from the pharmacist app.
+
+**Not everything on that screen is broken.** `verifyPrescription` and
+`rejectPrescription` call `PATCH /prescriptions/{id}`, and
+`src/app/api/prescriptions/[id]/route.ts` exists — that pair is correctly
+addressed and was not disproved here.
+
+## What these two have in common
+
+Neither is a logic bug. Both are **address mismatches between a client and a
+backend that were written to different maps**, and both survive every check that
+does not actually issue the request: the screens render, the handlers are wired,
+the store updates optimistically, TypeScript is satisfied, and the button
+animates on press. `merchantStore.updateOrderStatus` even patches local state
+after the call, so the order visibly moves on screen while the server never
+heard about it.
+
+That last detail is the dangerous one: **the merchant sees the order advance.**
+The failure is invisible until someone asks the database.
+
+## Method note
+
+The first inventory pass grepped `api.*` inside the screen directories and found
+no merchant order actions at all, which suggested a missing feature. That was
+wrong — the calls go through `useMerchantStore()`, one indirection away. The
+feature exists and is wired; it is the address that is wrong. Worth recording
+because the same grep shape would under-report every store-mediated action.
+
+---
