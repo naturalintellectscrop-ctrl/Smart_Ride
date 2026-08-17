@@ -98,6 +98,14 @@ export default function DriverHomeScreen() {
   const [rider, setRider] = useState<Rider | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [profileError, setProfileError] = useState<string | null>(null);
+  /**
+   * True only when the server said the rider profile does not exist (404).
+   * The onboarding gate below used to fire on ANY profile-load failure, so a
+   * dropped connection told an APPROVED driver they had not onboarded and sent
+   * them into the onboarding form — where DEV-3's "Already Approved" dialog
+   * traps them. A transient failure now shows a retry instead.
+   */
+  const [profileMissing, setProfileMissing] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
   const [requestTimer, setRequestTimer] = useState<number | null>(null);
   const [today, setToday] = useState<PeriodEarnings | null>(null);
@@ -271,6 +279,7 @@ export default function DriverHomeScreen() {
   const loadRiderProfile = useCallback(async () => {
     setIsLoading(true);
     setProfileError(null);
+    setProfileMissing(false);
 
     try {
       const response = await api.getRiderProfile();
@@ -300,10 +309,13 @@ export default function DriverHomeScreen() {
         setIsOnline(normalizedRider.isOnline);
       } else {
         setProfileError(response.error || 'Failed to load profile');
+        setProfileMissing(response.status === 404);
       }
     } catch (error) {
       console.error('Failed to load profile:', error);
       setProfileError('Unable to load driver profile');
+      // A thrown request is a transport failure, never proof of absence.
+      setProfileMissing(false);
     } finally {
       setIsLoading(false);
     }
@@ -594,7 +606,10 @@ export default function DriverHomeScreen() {
 
   // Show error state if rider profile failed to load
   if (profileError && !rider) {
-    const isRiderRole = user?.role === 'RIDER';
+    // Offer onboarding only when the profile really is absent. Otherwise this
+    // is a load failure and the honest response is "try again", not "you are
+    // not a driver".
+    const isRiderRole = user?.role === 'RIDER' && profileMissing;
     return (
       <View style={styles.gateContainer}>
         {isRiderRole ? (

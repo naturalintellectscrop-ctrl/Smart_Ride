@@ -120,7 +120,8 @@ class ApiService {
       if (!response.ok) {
         return {
           success: false,
-          error: data?.error || `HTTP error: ${response.status}`
+          error: data?.error || `HTTP error: ${response.status}`,
+          status: response.status,
         };
       }
 

@@ -205,6 +205,14 @@ export interface ApiResponse<T> {
   data?: T;
   error?: string;
   message?: string;
+  /**
+   * HTTP status on a failed request. Present so callers can distinguish a
+   * resource that genuinely does not exist (404) from one that could not be
+   * reached (timeout, 5xx). The driver dashboard treated every profile-load
+   * failure as "you have not onboarded", which sent an APPROVED rider into the
+   * onboarding form on nothing worse than a dropped connection.
+   */
+  status?: number;
 }
 
 export interface PaginatedResponse<T> {
