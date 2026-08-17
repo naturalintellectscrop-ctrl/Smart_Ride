@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { TaskStatus } from '@prisma/client';
 import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-machine.service';
 import { requireAuthWithRLS } from '@/lib/auth/guards';
-import { db, resetRLSContext } from '@/lib/db';
+import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { isProvider } from '@/lib/auth/jwt';
 
 interface RouteParams {
@@ -55,6 +55,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
+    // Task carries no rider SELECT policy — only users_read_own_tasks
+    // (clientId = me), admin_read and service_role_access. Under the caller's
+    // own RLS context this lookup returned NOTHING for the assigned rider, so
+    // every decline answered 404 "Task not found" and a driver could not
+    // release a job they had been given. Same fix as /tasks/[id]/accept and
+    // /tasks/available; this route was missed when those were repaired.
+    //
+    // Ownership is asserted explicitly below, because service role sees every
+    // task and the handler previously had no owner check at all.
+    await setServiceRoleContext();
+
     // Find the task to determine current status
     const task = await db.task.findUnique({
       where: { id: taskId },
@@ -65,6 +76,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         { success: false, error: 'Task not found' },
         { status: 404 }
+      );
+    }
+
+    // A rider may only decline a task that is actually theirs. Checked after
+    // the lookup, against the stored row — never against a body-supplied id.
+    if (task.riderId && task.riderId !== rider.id) {
+      return NextResponse.json(
+        { success: false, error: 'This task is not assigned to you' },
+        { status: 403 }
       );
     }
 
@@ -88,12 +108,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // Only proceed if the transition is needed
     if (task.status !== targetStatus) {
-      // Clear the rider assignment and transition back
-      await db.task.update({
-        where: { id: taskId },
-        data: { riderId: null },
-      });
-
+      // ORDER MATTERS. The state machine releases the rider by reading
+      // `task.riderId` as previousRiderId and clearing their currentTaskId on
+      // an active -> dispatch transition. Nulling riderId FIRST (as this route
+      // used to) made previousRiderId null, so that branch never ran: the
+      // declining driver stayed pinned to the task they had just refused, and
+      // `getEligibleRiders` filters on currentTaskId = null — so they went
+      // invisible to dispatch and were offered nothing further.
+      //
+      // Transition first, so the rider is released; clear the assignment after.
       const result = await EnhancedTaskStateMachine.transition(taskId, targetStatus, {
         triggeredByType: 'RIDER',
         riderId: rider.id,
@@ -107,6 +130,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           { status: 400 }
         );
       }
+
+      // Now detach the task from the rider who refused it, so dispatch offers
+      // it onward rather than back to them.
+      await db.task.update({
+        where: { id: taskId },
+        data: { riderId: null },
+      });
     }
 
     return NextResponse.json({

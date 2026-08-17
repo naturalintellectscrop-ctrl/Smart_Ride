@@ -2573,3 +2573,124 @@ A unique constraint on `DriverIncentiveEarned(participationId)` would make it
 structural rather than conventional.
 
 ---
+
+---
+
+## LC-1 — Refusing work: the trace that overturned DEV-6's recommended fix
+
+**Status:** PARTIALLY FIXED — one open lifecycle question | **Priority:** P1
+**Method:** Inspect → Trace → Test → Doubt, before touching the button
+
+DEV-6 recommended pointing the driver's Cancel button at `api.declineTask()`.
+**That recommendation was wrong**, and tracing the path before implementing it is
+the only reason we know.
+
+`scripts/verify-decline-reroute.ts` drives the real handlers with a real signed
+token and asks three questions of a decline: does the task go back to the pool,
+is the rider released, can they receive work again.
+
+### What the trace found — three independent breaks, stacked
+
+**1. Every decline answered 404 "Task not found".** The route runs under
+`requireAuthWithRLS` and never escapes to a service-role context. `Task` carries
+no rider SELECT policy — only `users_read_own_tasks` (clientId = me),
+`admin_read` and `service_role_access` — so the assigned rider's own lookup of
+their own task returned nothing. `/tasks/available` and `/tasks/[id]/accept`
+already carry comments about exactly this and were repaired; **this route was
+missed in that sweep.**
+
+**2. No ownership check at all.** The handler selects `task.riderId` and never
+compares it to the caller. Fixing (1) alone would have handed every provider the
+ability to decline anyone's task — a BE-025-class hole opened by fixing a bug.
+The two had to be fixed together, which is only visible if you look before you
+leap.
+
+**3. The transition it attempts does not exist.** With (1) and (2) fixed the
+route now reaches the state machine and is refused:
+
+```
+Invalid transition from ASSIGNED to SEARCHING for task type SMART_BODA_RIDE
+```
+
+**No task-type table permits `ASSIGNED → SEARCHING`** — not ride, food, shopping,
+item delivery or health. Entries into SEARCHING come only from MATCHING,
+REQUESTED, CREATED, or food's "ready for rider". So the route's own header
+comment — *"Transitions task back to MATCHING or SEARCHING so other riders can
+pick it up"* — describes behaviour the state machine forbids for **every** task
+type.
+
+`/tasks/[id]/decline` has therefore never worked for an assigned task, in any
+lifecycle, since it was written.
+
+### Where refusal actually lives, and it works
+
+`/dispatch/[id]/reject` operates on the **DispatchMatch**, not the Task:
+
+```ts
+await db.dispatchMatch.update({ status: REJECTED })
+const retryCount = match.retryCount + 1;
+if (retryCount < DISPATCH_CONFIG.maxRetryAttempts) {
+  return this.findAndAssign({ ..., excludeRiderIds: [riderId] });
+}
+```
+
+It marks the offer rejected, increments the retry counter, and re-dispatches to
+a different rider **excluding the one who refused** — with a realtime broadcast
+telling the waiting client "Searching for another rider…". That is real
+re-routing, and it is the correct driver-side refusal.
+
+**The architecture is two-stage, and it is coherent:**
+
+| Stage | State | Refusal | Rider pinned? |
+|---|---|---|---|
+| Offer | task SEARCHING, DispatchMatch PENDING | `/dispatch/[id]/reject` — works, re-routes | no, `currentTaskId` not yet set |
+| Assignment | task ASSIGNED | **nothing supported** | yes |
+
+Refusal is designed to happen at the offer stage, before the job is yours.
+
+### What this means for DEV-6
+
+The Cancel button on an **ASSIGNED** ride is not "pointed at the wrong
+endpoint". At that stage **there is no correct endpoint to point it at.** The
+options are: the client cancels, an admin cancels, or the driver completes the
+job.
+
+So DEV-6 is not a wiring fix. It is one of:
+
+- **a UI defect** — the control should not be offered at all once a task is
+  ASSIGNED, only during the offer window; or
+- **a lifecycle gap** — drivers genuinely need a supported release for a job
+  they cannot do (broken bike, wrong side of the city), and `ASSIGNED →
+  SEARCHING` should exist with a penalty recorded against acceptance rate.
+
+**Deliberately not decided here.** Adding a transition to the state machine is a
+lifecycle change, not a QA fix, and the evidence does not say which is intended.
+`getAllowedActors` restricting drivers to cancelling only from `IN_PROGRESS`
+suggests the first reading is the designed one.
+
+### What was changed
+
+Two of the three breaks are fixed in `/tasks/[id]/decline`, because they are
+plainly defects regardless of how the lifecycle question resolves:
+
+- service-role context so the task is visible, matching the sibling routes
+- an explicit ownership assertion, so service role does not become a hole
+- transition ordering corrected: the route nulled `task.riderId` **before**
+  transitioning, which made `previousRiderId` null inside the state machine, so
+  the branch that clears `currentTaskId` never ran. A driver who declined would
+  have stayed pinned to the refused task and gone invisible to dispatch
+  (`getEligibleRiders` filters on `currentTaskId = null`). Now: transition
+  first, detach after.
+
+**The route still does not function**, because break (3) is a lifecycle
+question, not a bug to patch. Recorded honestly rather than papered over by
+adding a transition nobody has decided on.
+
+### The rule this establishes for the remaining journeys
+
+The audit question is not "does the button render" but **"does this control
+correspond to a backend lifecycle operation that exists, is reachable, and is
+correct at this state?"** Cancel-on-assigned failed all three, and no amount of
+checking that it rendered would have found it.
+
+---
