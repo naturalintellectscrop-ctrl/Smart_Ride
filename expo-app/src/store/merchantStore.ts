@@ -43,7 +43,7 @@ interface MerchantState {
   fetchMenu: (merchantId: string) => Promise<void>;
   fetchEarnings: (merchantId: string, period?: string) => Promise<void>;
   toggleAvailability: (merchantId: string) => Promise<void>;
-  updateOrderStatus: (orderId: string, status: string) => Promise<void>;
+  updateOrderStatus: (orderId: string, status: string, reason?: string) => Promise<void>;
   createMenuItem: (merchantId: string, data: any) => Promise<boolean>;
   updateMenuItem: (merchantId: string, itemId: string, data: any) => Promise<boolean>;
   deleteMenuItem: (merchantId: string, itemId: string) => Promise<boolean>;
@@ -189,10 +189,14 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
     }
   },
 
-  updateOrderStatus: async (orderId: string, status: string) => {
+  updateOrderStatus: async (orderId: string, status: string, reason?: string) => {
     set({ isUpdatingOrder: true });
     try {
-      const response = await api.updateOrderStatus(orderId, status);
+      // accept/reject/preparing/ready are schema-gated on merchantId, and
+      // reject additionally needs a reason. The store already holds the signed-in
+      // merchant, so the call sites do not have to thread it through.
+      const merchantId = get().merchant?.id;
+      const response = await api.updateOrderStatus(orderId, status, { merchantId, reason });
       if (response.success) {
         // Update the order in the local state
         const { orders } = get();
@@ -202,7 +206,12 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
           ),
         });
       } else {
+        // Previously this only console.error'd, so a failed call left the
+        // optimistic local update in place and the merchant watched an order
+        // advance that the server never accepted. Surface it and do NOT patch
+        // local state on failure.
         console.error('[MerchantStore] updateOrderStatus failed:', response.error);
+        set({ ordersError: response.error || 'Could not update the order' });
       }
     } catch (error) {
       console.error('[MerchantStore] updateOrderStatus error:', error);

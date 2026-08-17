@@ -14,6 +14,42 @@ import { secureStorage } from '../utils/secureStorage';
 // API CLIENT
 // ============================================
 
+/**
+ * Order status (what the merchant screens render) -> backend action verb
+ * (what `PATCH /orders/{id}?action=` accepts). Kept next to the only method
+ * that uses it so the two cannot drift apart unnoticed.
+ */
+const ORDER_STATUS_TO_ACTION: Record<string, string> = {
+  CONFIRMED: 'accept',
+  ACCEPTED: 'accept',
+  REJECTED: 'reject',
+  PREPARING: 'preparing',
+  READY_FOR_PICKUP: 'ready',
+  READY: 'ready',
+  PICKED_UP: 'pickup',
+  DELIVERED: 'deliver',
+  CANCELLED: 'cancel',
+};
+
+/**
+ * Pharmacist screen status -> `PATCH /health-provider/orders` action verb.
+ * The provider order lifecycle speaks in actions (ACCEPT, START_PREPARING,
+ * READY, DELIVER …), not statuses.
+ */
+const HEALTH_STATUS_TO_ACTION: Record<string, string> = {
+  ACCEPTED: 'ACCEPT',
+  PROCESSING: 'START_PREPARING',
+  PREPARING: 'START_PREPARING',
+  PRESCRIPTION_VERIFIED: 'VERIFY_PRESCRIPTION',
+  READY_FOR_PICKUP: 'READY',
+  READY: 'READY',
+  PICKED_UP: 'PICKED_UP',
+  COMPLETED: 'DELIVER',
+  DELIVERED: 'DELIVER',
+  CANCELLED: 'CANCEL',
+  REJECTED: 'REJECT',
+};
+
 class ApiService {
   private baseUrl: string;
 
@@ -813,8 +849,47 @@ class ApiService {
     return this.request<any>(`/merchants/${merchantId}/payout`, 'POST', { amount });
   }
 
-  async updateOrderStatus(orderId: string, status: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/orders/${orderId}/status`, 'PATCH', { status });
+  /**
+   * Advance a merchant order.
+   *
+   * The backend contract is `PATCH /orders/{id}?action=<action>` — the action
+   * is a QUERY parameter and uses its own verb vocabulary. This client used to
+   * call `PATCH /orders/{id}/status` with `{ status }`, a URL that does not
+   * exist, so every merchant order action was a 404 while the UI optimistically
+   * moved the order on screen. Callers still speak in order statuses, which is
+   * what the screens render, so the translation lives here rather than forcing
+   * every call site to learn the server's verbs.
+   */
+  async updateOrderStatus(
+    orderId: string,
+    status: string,
+    opts?: { merchantId?: string; reason?: string; riderId?: string }
+  ): Promise<ApiResponse<any>> {
+    const action = ORDER_STATUS_TO_ACTION[status];
+    if (!action) {
+      return { success: false, error: `No order action corresponds to status '${status}'` };
+    }
+
+    // Each action's own schema. merchantId is required by accept/reject/ready;
+    // reject additionally requires a reason of at least 5 characters.
+    const body: Record<string, unknown> = {};
+    if (action === 'accept' || action === 'reject' || action === 'ready' || action === 'preparing') {
+      if (opts?.merchantId) body.merchantId = opts.merchantId;
+    }
+    if (action === 'reject') {
+      body.reason = opts?.reason && opts.reason.length >= 5
+        ? opts.reason
+        : 'Rejected by merchant';
+    }
+    if ((action === 'pickup' || action === 'deliver') && opts?.riderId) {
+      body.riderId = opts.riderId;
+    }
+
+    return this.request<any>(
+      `/orders/${orderId}?action=${encodeURIComponent(action)}`,
+      'PATCH',
+      body
+    );
   }
 
   // ==========================================
@@ -827,7 +902,7 @@ class ApiService {
 
   async getHealthProviderOrders(status?: string): Promise<ApiResponse<any>> {
     const query = status ? `?status=${status}` : '';
-    return this.request<any>(`/health/orders${query}`);
+    return this.request<any>(`/health-provider/orders${query}`);
   }
 
   async getHealthProviderStatus(): Promise<ApiResponse<any>> {
@@ -841,7 +916,7 @@ class ApiService {
 
   async getHealthOrders(statusOrPage?: string | number): Promise<ApiResponse<any>> {
     if (typeof statusOrPage === 'string') {
-      return this.request<any>(`/health/orders?status=${statusOrPage}`);
+      return this.request<any>(`/health-provider/orders?status=${statusOrPage}`);
     }
     const page = statusOrPage ?? 1;
     return this.request<any>(`/health/orders?page=${page}`);
@@ -851,8 +926,39 @@ class ApiService {
     return this.request<any>(`/health/orders/${orderId}`);
   }
 
-  async updateHealthOrderStatus(orderId: string, status: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/health/orders/${orderId}/status`, 'PATCH', { status });
+  /**
+   * Advance a pharmacy/health order.
+   *
+   * This used to call `PATCH /health/orders/{id}/status`. `/api/health/` is the
+   * health*check* namespace — `route.ts`, `ready`, `startup` — so the pharmacist
+   * was addressing the monitoring endpoints by accident and every fulfilment
+   * step 404'd.
+   *
+   * The correct route is `PATCH /health-provider/orders`, which operates on
+   * ProviderOrder — the same model the pharmacist's own order list reads. There
+   * is a second, similarly-named route (`/health-orders/{id}`) backed by a
+   * DIFFERENT model (HealthOrder); pointing at it returns "Health order not
+   * found" for every real pharmacy order. Verified by driving both.
+   *
+   * The contract takes `orderId` and an ACTION verb in the body.
+   */
+  async updateHealthOrderStatus(
+    orderId: string,
+    status: string,
+    opts?: { notes?: string; rejectionReason?: string; riderId?: string }
+  ): Promise<ApiResponse<any>> {
+    const action = HEALTH_STATUS_TO_ACTION[status];
+    if (!action) {
+      return { success: false, error: `No pharmacy action corresponds to status '${status}'` };
+    }
+
+    return this.request<any>('/health-provider/orders', 'PATCH', {
+      orderId,
+      action,
+      ...(opts?.notes ? { notes: opts.notes } : {}),
+      ...(opts?.rejectionReason ? { rejectionReason: opts.rejectionReason } : {}),
+      ...(opts?.riderId ? { riderId: opts.riderId } : {}),
+    });
   }
 
   async getHealthProviderCatalog(): Promise<ApiResponse<any>> {
