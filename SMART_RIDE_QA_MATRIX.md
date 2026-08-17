@@ -877,3 +877,116 @@ source is still not a fix that was seen working on a phone.
 | C-2 | Installed build identified and dated | **VERIFIED** (stale, 2026-07-21) |
 | C-3 | DEV-2 renders UGX 15,000 | **UNVERIFIED — no APK** |
 | C-4 | Everything else on this handset | **UNVERIFIED — not re-run on S10+** |
+
+---
+
+# Incentive journey on the phone — 2026-08-17, second half
+
+Device: `R3CR709T4FN` — **SM-G991U (Galaxy S21 5G), Android 15**. The S10+ that
+was connected earlier in the session was swapped back out; both are real
+handsets, and this note supersedes the device change recorded above. Proven
+physical again on the same terms: `ro.kernel.qemu=0`, `ro.hardware=qcom`, real
+Li-ion cell at 79% / 4142 mV / 33.4 °C.
+
+APK: rebuilt and installed, `lastUpdateTime=2026-08-17 12:54:02`, 114,363,475
+bytes, `:app:assembleRelease` completed. Newer than the DEV-2 commit (2026-08-15
+16:12), so it contains it.
+
+## DEV-2 — CLOSED
+
+The campaign renders on the device as:
+
+> **QA-DEVICE Weekend Push**  **UGX 15,000**
+> Complete 3 rides this weekend and earn a bonus.
+> **3 rides to qualify**
+
+All three of the things that were wrong are right: the amount is a number and
+not `NaN`, the qualifying line renders instead of silently vanishing, and the
+title no longer collides with the figure. Confirmed stable across a reload.
+
+DEV-1 holds alongside it — "No reputation yet" covers only the reputation area
+while "Bonuses you can join" renders beneath it for a driver with zero trips.
+
+## DEV-4 — Joining fails on the device, and it is not a code defect
+
+**Status:** OPEN — deployment | **Priority:** P0 (operational)
+
+Tapping "Join this bonus" produced:
+
+> **Something went wrong** — Invalid input: expected string, received undefined
+
+The mobile app sends `{ incentiveId }`. The **deployed** schema requires both:
+
+```ts
+const enrollSchema = z.object({ incentiveId: z.string(), riderId: z.string() });
+```
+
+so Zod rejects on the missing `riderId`. The local fix — which derives the rider
+from the token instead of trusting a body field, the BE-030 repair — makes
+`riderId` optional. Driving the local handler with the phone's exact payload
+returns **201, ENROLLED**.
+
+So the fix is correct and the phone cannot see it.
+
+### The finding underneath this one
+
+`EXPO_PUBLIC_API_BASE_URL=https://smartrideug.vercel.app/api`. **The phone talks
+to production.** This branch is **20 commits ahead of `origin/main`.**
+
+That has two consequences, and the second is the serious one:
+
+1. Every backend fix in this ledger — BE-022 through BE-036 — is **invisible to
+   the device**. Device QA of anything server-side has been testing code from
+   before this work started. Only client-side fixes like DEV-2 could ever have
+   shown up.
+2. Therefore **BE-035 and BE-036 are live in production right now.** Any user can
+   still PUT themselves `SUPER_ADMIN`; any stranger can still mark a payment
+   COMPLETED and rewrite a driver's trust score. Fixing them locally closed
+   nothing until this is deployed.
+
+Deploying is a release decision, not a QA one, so it is recorded rather than
+performed. It is the highest-priority item on this ledger.
+
+## DEV-5 — A bonus already joined still offered a Join button
+
+**Status:** RESOLVED (awaiting rebuild + deploy to see on device) | **Priority:** P1
+
+After the enrolment existed server-side, the phone reloaded and still showed the
+campaign under "Bonuses you can join" with an active **Join this bonus** button.
+Tapping it again would attempt a duplicate enrolment.
+
+Two independent faults, either sufficient alone:
+
+1. `/api/rider/reputation` returned `id: p.id` — the **participation** row's id —
+   and never exposed the campaign id. The screen compared that set against
+   **campaign** ids, so it was permanently disjoint and excluded nothing.
+2. The `hasReputation: false` branch omitted `incentives` altogether. A driver
+   with no completed trips got no enrolment state at all — and that is exactly
+   the driver a first-rides bonus is written for.
+
+The second is DEV-1's mistake one level deeper: **the audience the feature exists
+for is the audience the code forgets.** Three separate times now, the zero-trip
+driver has been the case that broke.
+
+Fixed by adding `incentiveId` to the contract and including enrolments in the
+no-reputation branch. Verified in process: a zero-trip driver with one ENROLLED
+participation now receives it, `incentiveId` matching the campaign.
+
+## Device scenarios — this session
+
+| # | Scenario | Result |
+|---|---|---|
+| C-1 | Device physical, S21, Android 15 | **VERIFIED** |
+| C-2 | New APK installed and dated after the fix | **VERIFIED** |
+| C-3 | Cold start to driver dashboard, live GPS in Bugolobi | **VERIFIED** |
+| C-4 | Reputation screen reachable, campaign visible to a zero-trip driver | **VERIFIED** |
+| C-5 | **Campaign displays UGX 15,000 and "3 rides to qualify"** | **VERIFIED — DEV-2 closed** |
+| C-6 | Join enrols the driver from the device | **DEFECT — DEV-4, deployment gap** |
+| C-7 | Joined campaign stops offering Join | **DEFECT — DEV-5, fixed, not yet on device** |
+| C-8 | Progress advances toward the reward | **UNVERIFIED — blocked by C-6** |
+| C-9 | Reward reaches the wallet on completion | **UNVERIFIED — blocked by C-6** |
+
+C-8 and C-9 are honestly blocked rather than failed: they need enrolment from the
+device, which needs the deploy. The same two steps were proven server-side
+earlier (BE-030/031/032, a real 5,000 UGX wallet credit), so the mechanism works
+— it is the device path that is unproven.
