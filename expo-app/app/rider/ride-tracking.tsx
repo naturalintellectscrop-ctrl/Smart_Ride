@@ -362,7 +362,7 @@ export default function RideTrackingScreen() {
   const handleCallDriver = () => {
     if (task?.riderId && conversationId) {
       router.push(
-        `/call/${task.riderId}?name=${encodeURIComponent(firstName(task.rider?.fullName, 'Driver'))}&conversationId=${conversationId}`
+        `/call/${task.riderId}?name=${encodeURIComponent(firstName(task.rider?.fullName, 'Driver'))}&conversationId=${conversationId}&taskId=${params.taskId}`
       );
     } else {
       Alert.alert('Driver Unavailable', 'No driver has been assigned yet.');

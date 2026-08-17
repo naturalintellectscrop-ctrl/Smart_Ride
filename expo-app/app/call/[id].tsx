@@ -207,6 +207,17 @@ export default function CallScreen() {
     name?: string;
     phone?: string;
     conversationId?: string;
+    /**
+     * The authoritative task id. /api/calls/initiate requires it for
+     * CLIENT/RIDER calls as an IDOR guard — caller and recipient must be the
+     * two parties on a shared task. It used to be reconstructed as
+     * `conversationId.replace('conv-','')`, which is a guess about an id
+     * format, not a relationship: three of the five screens that open this
+     * one pass no conversationId at all, so the call could never connect from
+     * them. Conversation.taskId is a real FK, and every calling screen already
+     * knows the task — so it is passed explicitly.
+     */
+    taskId?: string;
     isIncoming?: string;
     sessionId?: string;
     channelId?: string;
@@ -222,6 +233,10 @@ export default function CallScreen() {
   // revealed or dialed. Ignoring any phone param disables the tel: fallback.
   const recipientPhone = undefined as string | undefined;
   const conversationId = params.conversationId;
+  // Prefer the id we were handed; fall back to the legacy derivation only for
+  // callers that still pass a `conv-<taskId>` conversation id.
+  const resolvedTaskId =
+    params.taskId ?? (conversationId?.startsWith('conv-') ? conversationId.replace('conv-', '') : undefined);
   const isIncoming = params.isIncoming === 'true';
 
   const [callState, setCallState] = useState<CallState>(
@@ -364,7 +379,7 @@ export default function CallScreen() {
       const response = await api.initiateCall({
         recipientId,
         recipientType: 'RIDER',
-        taskId: conversationId?.replace('conv-', ''),
+        taskId: resolvedTaskId,
       });
       if (response.success && response.data) {
         setCallInfo({

@@ -212,7 +212,7 @@ export default function OrderTrackingScreen() {
   const handleCallMerchant = () => {
     if (order?.merchantId) {
       router.push(
-        `/call/${order.merchantId}?name=${encodeURIComponent(firstName(order.merchant?.name, 'Merchant'))}`
+        `/call/${order.merchantId}?name=${encodeURIComponent(firstName(order.merchant?.name, 'Merchant'))}&taskId=${taskIdRef.current}`
       );
     } else {
       Alert.alert('Unavailable', 'Merchant contact is not available for this order yet.');
@@ -227,7 +227,7 @@ export default function OrderTrackingScreen() {
 
     if (riderId) {
       router.push(
-        `/call/${riderId}?name=${encodeURIComponent(riderName)}`
+        `/call/${riderId}?name=${encodeURIComponent(riderName)}&taskId=${taskIdRef.current}`
       );
     } else {
       Alert.alert(

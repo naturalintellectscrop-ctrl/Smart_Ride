@@ -338,7 +338,7 @@ export default function DriverTaskScreen() {
   const handleCallClient = () => {
     if (task?.clientId) {
       router.push(
-        `/call/${task.clientId}?name=${encodeURIComponent(firstName(task.client?.name, 'Customer'))}`
+        `/call/${task.clientId}?name=${encodeURIComponent(firstName(task.client?.name, 'Customer'))}&taskId=${task.id}`
       );
     } else {
       Alert.alert('Unavailable', 'Customer contact is not available yet.');
