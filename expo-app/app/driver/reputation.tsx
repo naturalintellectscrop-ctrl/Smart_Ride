@@ -104,7 +104,13 @@ export default function DriverReputationScreen() {
 
       // Campaigns already joined show under "Active bonuses" below; this list
       // is what is still open to them.
-      const enrolledIds = new Set((res.data?.incentives ?? []).map(i => i.id));
+      // Match on the CAMPAIGN id, not the participation id. `i.id` here is the
+      // IncentiveParticipation row's own id, which never equals a campaign id —
+      // so this set was always disjoint from the open list and filtered nothing.
+      // The phone showed "Join this bonus" on a bonus already joined.
+      const enrolledIds = new Set(
+        (res.data?.incentives ?? []).map(i => i.incentiveId).filter(Boolean) as string[]
+      );
       const camp = await api.getAvailableIncentives();
       const all = (camp?.data?.incentives ?? camp?.data ?? []) as OpenIncentive[];
       setOpenIncentives(

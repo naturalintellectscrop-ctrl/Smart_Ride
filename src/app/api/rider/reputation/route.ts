@@ -87,6 +87,26 @@ export async function GET(request: NextRequest) {
     // well-formed "not yet rated" payload rather than 404 — the app should
     // render an empty state, not an error.
     if (!reputation) {
+      // Incentives belong here too. A driver with no completed work is exactly
+      // who a first-rides bonus is aimed at, and this branch used to omit their
+      // enrolments entirely — so a campaign they had already joined still came
+      // back as "open to join", and joining again attempted a duplicate.
+      const joined = await db.incentiveParticipation.findMany({
+        where: { riderId: rider.id, status: { in: ['ENROLLED', 'IN_PROGRESS'] } },
+        orderBy: { enrolledAt: 'desc' },
+        take: 10,
+        select: {
+          id: true,
+          status: true,
+          ridesCompleted: true,
+          earningsAccumulated: true,
+          progressPercent: true,
+          incentive: {
+            select: { id: true, name: true, incentiveType: true, rewardAmount: true, minRides: true, endTime: true },
+          },
+        },
+      });
+
       return NextResponse.json({
         success: true,
         data: {
@@ -95,6 +115,19 @@ export async function GET(request: NextRequest) {
           trustTier: null,
           message: 'Complete your first trips to build your reputation.',
           privileges: { bonusEligible: true, priorityDispatch: false, premiumAccess: false },
+          incentives: joined.map(p => ({
+            id: p.id,
+            incentiveId: p.incentive.id,
+            status: p.status,
+            name: p.incentive.name,
+            type: p.incentive.incentiveType,
+            rewardAmount: p.incentive.rewardAmount,
+            ridesCompleted: p.ridesCompleted,
+            ridesRequired: p.incentive.minRides,
+            earningsAccumulated: p.earningsAccumulated,
+            progressPercent: Math.round(p.progressPercent * 10) / 10,
+            endsAt: p.incentive.endTime,
+          })),
         },
       });
     }
@@ -196,6 +229,11 @@ export async function GET(request: NextRequest) {
         history,
         incentives: incentives.map(p => ({
           id: p.id,
+          // The CAMPAIGN id, distinct from the participation id above. Without
+          // it the driver screen cannot tell which open campaign a participation
+          // corresponds to, so an already-joined bonus kept rendering with a
+          // "Join this bonus" button.
+          incentiveId: p.incentive.id,
           status: p.status,
           name: p.incentive.name,
           type: p.incentive.incentiveType,

@@ -315,7 +315,10 @@ export interface ReputationHistoryPoint {
 }
 
 export interface DriverIncentiveProgress {
+  /** The IncentiveParticipation row's own id. */
   id: string;
+  /** The campaign this participation is for — never equal to `id`. */
+  incentiveId?: string;
   status: string;
   name: string;
   type: string;
