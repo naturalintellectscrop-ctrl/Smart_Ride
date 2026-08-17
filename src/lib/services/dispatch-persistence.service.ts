@@ -86,6 +86,19 @@ export interface DispatchResult {
   noRidersAvailable?: boolean;
 }
 
+/**
+ * Thrown inside acceptMatch's transaction when the accepting driver already
+ * holds an active task. It exists to force a rollback — returning from a Prisma
+ * interactive transaction commits — and is caught by acceptMatch itself, so it
+ * never escapes as a 500.
+ */
+class RiderAlreadyBusyError extends Error {
+  constructor() {
+    super('RIDER_ALREADY_BUSY');
+    this.name = 'RiderAlreadyBusyError';
+  }
+}
+
 export class DispatchService {
   /**
    * Find and assign the best rider for a task
@@ -357,7 +370,11 @@ export class DispatchService {
    * If broadcast fails, marks notificationSent as false so the periodic
    * processExpiredMatches() can re-attempt later.
    */
-  private static async notifyRider(match: any, taskId: string): Promise<void> {
+  private static async notifyRider(
+    match: any,
+    taskId: string,
+    options: { skipPush?: boolean } = {},
+  ): Promise<void> {
     // Get task details for the offer
     const task = await db.task.findUnique({
       where: { id: taskId },
@@ -429,7 +446,15 @@ export class DispatchService {
     // driver while the app is foregrounded with a live channel; a push wakes a
     // backgrounded/closed app so drivers don't miss requests between rides.
     // Fire-and-forget — push failure must never block dispatch.
-    if (rider?.userId) {
+    //
+    // `skipPush` exists for the retry path. `notificationSent` records only
+    // whether the BROADCAST succeeded — the push above is fire-and-forget and
+    // its outcome is never recorded. So a match whose broadcast failed while
+    // its push went out fine is stored as "not sent", and the retry sweep used
+    // to call this method again and fire a SECOND push for an offer the driver
+    // had already been rung about. Retries re-attempt the broadcast only; the
+    // push is sent once per match, when the match is created.
+    if (rider?.userId && !options.skipPush) {
       const fareText = task?.riderEarnings || task?.totalAmount
         ? ` · UGX ${Number(task.riderEarnings || task.totalAmount).toLocaleString()}`
         : '';
@@ -533,6 +558,41 @@ export class DispatchService {
           return { alreadyHandled: true as const, smContextData: null as any };
         }
 
+        // ── One driver, one active job ──────────────────────────────────────
+        // The guard above protects a single match from being accepted twice. It
+        // says nothing about the same DRIVER accepting two DIFFERENT matches,
+        // and that gap is reachable in production: a PENDING DispatchMatch does
+        // not set rider.currentTaskId, so a driver sitting on an open offer is
+        // still `currentTaskId: null` and therefore still in the eligible pool
+        // for the next task. Two offers, two taps, and both transitions
+        // succeeded — verified: one rider ended up holding two ASSIGNED tasks,
+        // with currentTaskId naming only the second, so the first became a
+        // trip nobody was dispatched to and no cleanup would ever release.
+        //
+        // Claiming the rider row is the natural serialization point, and it is
+        // the same field dispatch eligibility already reads. This is a
+        // compare-and-set, not a lifecycle change: it decides only whether THIS
+        // accept is admissible. The task state machine and its transition
+        // tables are untouched, and a driver who declines or completes is
+        // released exactly as before.
+        const claim = await tx.rider.updateMany({
+          where: {
+            id: riderId,
+            // Free, or already holding this very task (an idempotent re-accept
+            // of the same offer must not be mistaken for a second job).
+            OR: [{ currentTaskId: null }, { currentTaskId: match.taskId }],
+          },
+          data: { currentTaskId: match.taskId },
+        });
+
+        if (claim.count === 0) {
+          // Throw rather than return: a plain return COMMITS, which would leave
+          // this match ACCEPTED while the task was never assigned to anyone.
+          // Throwing rolls the match back to PENDING so the offer stays alive
+          // for whoever is genuinely free.
+          throw new RiderAlreadyBusyError();
+        }
+
         // ── Delegate status transition to SM within this transaction ──
         // SM handles: task.status=ASSIGNED, assignedAt, riderId, transition
         // record, audit log, and rider.currentTaskId — all within our tx.
@@ -591,6 +651,15 @@ export class DispatchService {
 
       return { success: true, taskId: match.taskId };
     } catch (error: unknown) {
+      // Losing the one-driver-one-job race is an expected outcome, not a
+      // server fault: the driver tapped two offers. Report it as a refusal the
+      // app can show, and keep it out of the error log.
+      if (error instanceof RiderAlreadyBusyError) {
+        return {
+          success: false,
+          error: 'You already have an active task. Finish or cancel it before accepting another.',
+        };
+      }
       console.error('Accept match error:', error);
       return { success: false, error: 'An internal error occurred' };
     } finally {
@@ -890,7 +959,9 @@ export class DispatchService {
           console.log(
             `[Dispatch] Re-attempting notification for match ${match.id}, rider ${match.riderId}, task ${match.taskId}`
           );
-          await this.notifyRider(match, match.taskId);
+          // Broadcast only — the push for this match already went out when the
+          // match was created. See notifyRider's `skipPush` note.
+          await this.notifyRider(match, match.taskId, { skipPush: true });
           retriedCount++;
         } catch (error) {
           console.error(
