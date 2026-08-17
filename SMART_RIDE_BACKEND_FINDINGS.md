@@ -2311,3 +2311,68 @@ underneath it the platform had a privilege-escalation hole that a UI trace found
 by accident. The navigation bug is cosmetic. The endpoint it leads to was not.
 
 ---
+
+---
+
+## BE-036 — A stranger could settle a payment and rewrite a driver's score
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Authorization / Financial
+**Found:** unauthenticated in-process probe, 2026-08-17
+
+Continuing the route audit turned up two more handlers running under
+`setServiceRoleContext()` — which bypasses RLS — with no guard of any kind.
+Both were demonstrated against the real handlers, unauthenticated, with real
+fixture rows behind them:
+
+| Route | Method | Result |
+|---|---|---|
+| `payments/[id]` | GET | **200** — payer name, amount, linked task |
+| `payments/[id]` | PUT | **200** — moved a PENDING payment to **COMPLETED** |
+| `driver-reputation/[riderId]` | GET | **200** — trust, safety and fraud-risk scores |
+| `driver-reputation/[riderId]` | PATCH | **200** — trust score **82 → 97** |
+
+Two details make these worse than a listing leak.
+
+**The payment PUT already said "admin only" in its own docstring.** Nothing
+enforced it. A stranger with a payment id could mark it settled — a free ride,
+and a reconciliation record that disagrees with the money.
+
+**The reputation PATCH took `adminId` from the request body.** The caller chose
+which administrator the adjustment would be attributed to. An audit trail whose
+actor is self-declared records nothing. Trust score feeds dispatch ranking, so
+this was direct control over which drivers get offered work — usable to promote
+an account or to bury a competitor.
+
+**Fix.** GET on both is owner-or-admin, evaluated *after* the row is loaded so
+the answer never depends on a body-supplied id. PUT/PATCH are `allAdminsGuard`.
+The acting admin on a reputation adjustment is now the authenticated caller, not
+a body field.
+
+Re-verified: 401 on all four, trust score back to 82, payment still PENDING.
+`scripts/verify-unguarded-routes.ts` keeps it that way.
+
+### Still UNVERIFIED — not cleared, not condemned
+
+Four probes returned a 4xx that is **not** an auth refusal, so they are recorded
+honestly as unverified rather than counted as either result:
+
+| Route | Status | Why it is not a verdict |
+|---|---|---|
+| `health-orders/[id]` GET | 404 | Reached the database on a stranger's behalf to decide the id did not exist. With a real order id this may well return 200 |
+| `health-orders/[id]` PATCH | 400 | Body validation, not authentication |
+| `inventory` GET | 400 | Wants `menuItemId` and `quantity`; refused on shape, not identity |
+| `riders/nearby` GET | 400 | Refused on parameter shape, not identity |
+
+A 400 means the route rejected the *envelope* and never got as far as asking
+who was calling. None of these four contains an auth guard, so the likely
+outcome with well-formed input is a 200 — but likely is not demonstrated, and
+this ledger does not record inferences as results. Settling them needs a real
+health-order fixture and correct query parameters.
+
+**Also cleared, against expectation:** `admin/finance-integrity` returned **401**
+to an unauthenticated GET despite matching no guard helper my static scan knew
+about. It is guarded. That is the second time in two sessions that a grep-shaped
+suspicion did not survive contact with the running handler, in the opposite
+direction from BE-028 — the scan produces candidates, never verdicts.
+
+---
