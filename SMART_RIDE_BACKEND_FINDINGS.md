@@ -2183,3 +2183,131 @@ phone rather than at a database row.
 login even though the account already has one. The pre-selection is correct, so
 nothing is broken; whether a returning user should see that screen at all is a
 product decision.
+
+---
+
+## BE-035 — Any user could make themselves a super administrator
+
+**Status:** RESOLVED | **Priority:** P0 | **Category:** Authorization / Privilege escalation
+**Found:** tracing DEV-3, 2026-08-17
+
+`PUT /api/user/profile` assigned `role` straight from the request body:
+
+```ts
+// Role changes are typically gated, but the existing contract allows it.
+if (role !== undefined) updateData.role = role;
+```
+
+The comment was wrong in the way that matters. Role changes were not gated
+anywhere else — **this handler was the gate, and it was open.**
+
+`UserRole` contains `ADMIN`, `SUPER_ADMIN`, `OPERATIONS_ADMIN`,
+`COMPLIANCE_ADMIN` and `FINANCE_ADMIN`. Every admin guard resolves the caller's
+role through `getAuthUser()`, which reads it from the JWT, and login mints that
+JWT from this same column. So the chain closed:
+
+1. register a perfectly ordinary account — registration *does* whitelist roles,
+   so it starts as `CLIENT`
+2. `PUT /api/user/profile {"role":"SUPER_ADMIN"}` — accepted, 200
+3. log in again; the new token now carries `SUPER_ADMIN`
+4. `allAdminsGuard` is satisfied
+
+**Demonstrated, not inferred.** `scripts/verify-privilege-escalation.ts` drives
+the real handlers with real signed tokens. Against the pre-fix code it reports:
+
+```
+FAIL  PUT role=SUPER_ADMIN is refused — status 200
+FAIL  the stored role is still CLIENT after trying SUPER_ADMIN — column reads SUPER_ADMIN
+FAIL  a re-issued token still cannot reach the fraud dashboard — status 200
+```
+
+That last line is the whole finding: a token minted from the self-assigned role
+**reached the live fraud dashboard**. The same key opens `audit`, `admin-users`,
+`finance/commission`, `finance/settlements` and task override.
+
+### Why BE-028 did not already cover this
+
+BE-028 put guards on twenty-two routes that had none, and those guards work —
+the baseline check in this suite confirms an ordinary client token gets a 403.
+But a lock is only as good as the key issuance. **BE-028 locked the doors;
+BE-035 is that anyone could print themselves a key.** Neither fix is sufficient
+alone, and the pair is why "we added `allAdminsGuard`" was not the end of the
+authorization story.
+
+### Fix
+
+A whitelist identical to the one `registerSchema` already enforces at signup: if
+a role cannot be *chosen* when creating an account, it cannot be *edited* onto
+one. No new role-management system — the existing contract, actually enforced.
+
+Self-demotion out of an admin role is refused too. Moving an account out of an
+administrative role is an administrative action, and allowing it here would let
+a compromised admin session quietly erase its own privileges to cover tracks.
+
+The two legitimate callers still work, and the suite asserts it: the signup role
+chooser (`app/auth/role-selection.tsx`) and the rider-onboarding escape hatch
+(`app/rider/onboarding.tsx`) both send only self-service roles. 14/14 pass with
+the fix, 5/14 without it.
+
+---
+
+## DEV-3 — An approved rider trapped in the onboarding form  **[CLASSIFIED]**
+
+**Status:** OPEN — split | **Priority:** P1 / P0 | **Category:** Navigation + Authorization
+
+Traced the full rider lifecycle before touching anything, as required. The
+finding splits cleanly in two, and only one half is what it appeared to be.
+
+### DEV-3a — UI BUG (the trap itself)
+
+`expo-app/app/rider/onboarding.tsx`:
+
+```ts
+if (data?.status === 'APPROVED') {
+  Alert.alert('Already Approved', '…', [{ text: 'OK', onPress: () => router.back() }]);
+  return;
+}
+```
+
+`router.back()` pops a stack entry. When the screen was reached without one to
+pop — a deep link, a notification, a fresh route — there is nothing to pop, so
+the call is a no-op and the driver is left standing on the form. The `return`
+skips the prefill but the `finally` still clears `isLoading`, so the form
+renders regardless.
+
+And the exit is bound to the demotion:
+
+```ts
+onBack={currentStep > 1 ? handleBack : handleSwitchRole}
+```
+
+On step 1 the header **back arrow is `handleSwitchRole`**. An approved rider
+pressing back to leave is offered "Switch to Client" — the affordance that means
+"go back" is wired to a role change.
+
+Classification: **UI BUG.** The account state is correct throughout; the wrong
+navigation option is presented. The recommended fix remains a `router.replace()`
+to the driver dashboard on dismiss, and a back affordance that is not a role
+change. Deliberately not made — it touches onboarding routing, which is outside
+the scope freeze, and it is a product call whether "not a rider?" belongs on
+that header at all.
+
+### DEV-3b — REAL DEFECT, and it is not a navigation bug
+
+The question the brief asked — *"whether this action actually mutates role state
+or merely navigates"* — has a definite answer. It mutates:
+
+```ts
+await api.updateUserRole('CLIENT');   // → PUT /api/user/profile { role }
+```
+
+Following that call into the backend is what uncovered **BE-035** above. The
+"Switch to Client" button is not misusing the endpoint; it is using it exactly
+as designed. The defect is that the endpoint treats `role` as ordinary profile
+data, editable to any value in the enum.
+
+So the honest classification of the pair: the screen has a navigation bug, and
+underneath it the platform had a privilege-escalation hole that a UI trace found
+by accident. The navigation bug is cosmetic. The endpoint it leads to was not.
+
+---

@@ -9,7 +9,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAuth, resetRLSContext } from '@/lib/auth-utils';
 import { successResponse, errorResponse, serverErrorResponse } from '@/lib/api/response';
-import { Prisma } from '@prisma/client';
+import { Prisma, UserRole } from '@prisma/client';
+
+/**
+ * Roles a user may give themselves through an ordinary profile update.
+ *
+ * Deliberately identical to the set `registerSchema` accepts at signup: if a
+ * role cannot be chosen when creating an account, it cannot be chosen by
+ * editing one. Every admin role is absent, which is the point.
+ */
+const SELF_ASSIGNABLE_ROLES: UserRole[] = [
+  'CLIENT',
+  'RIDER',
+  'DRIVER',
+  'MERCHANT',
+  'PHARMACIST',
+];
 
 export async function GET(request: NextRequest) {
   try {
@@ -72,8 +87,39 @@ export async function PUT(request: NextRequest) {
     if (phone !== undefined) updateData.phone = phone || null;
     if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl || null;
     if (address !== undefined) updateData.address = address || null;
-    // Role changes are typically gated, but the existing contract allows it.
-    if (role !== undefined) updateData.role = role;
+
+    // SECURITY: `role` used to be assigned straight from the body, with a
+    // comment saying role changes were "typically gated". They were not gated
+    // anywhere — this handler was the gate, and it was open.
+    //
+    // `UserRole` includes ADMIN, SUPER_ADMIN, OPERATIONS_ADMIN,
+    // COMPLIANCE_ADMIN and FINANCE_ADMIN, and every admin guard reads the role
+    // out of the JWT, which login mints from this column. So any authenticated
+    // user could PUT their own role to SUPER_ADMIN, log in again, and hold a
+    // token that satisfies `allAdminsGuard` on the fraud, audit, admin-user and
+    // finance routes.
+    //
+    // The two legitimate callers only ever send a self-service role:
+    // `app/auth/role-selection.tsx` (choosing a role after signup) and
+    // `app/rider/onboarding.tsx` (switching back to CLIENT). That is the same
+    // set `registerSchema` already permits at signup, so it is the whitelist —
+    // no new role-management system, just the existing contract enforced.
+    if (role !== undefined) {
+      if (!SELF_ASSIGNABLE_ROLES.includes(role)) {
+        return errorResponse('That role cannot be set from a profile update', 403);
+      }
+      // An admin must not be able to change their own role through an ordinary
+      // profile edit either — moving an account out of an admin role is an
+      // administrative action, not a self-service one.
+      const current = await db.user.findUnique({
+        where: { id: userId },
+        select: { role: true },
+      });
+      if (current && !SELF_ASSIGNABLE_ROLES.includes(current.role)) {
+        return errorResponse('Admin roles are managed by an administrator', 403);
+      }
+      updateData.role = role;
+    }
 
     // Email updates require uniqueness — only attempt the change if the
     // user actually provided a value AND it differs from the current one.
