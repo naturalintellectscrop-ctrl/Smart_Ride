@@ -2376,3 +2376,87 @@ suspicion did not survive contact with the running handler, in the opposite
 direction from BE-028 — the scan produces candidates, never verdicts.
 
 ---
+
+---
+
+## INFRA-1 — Local development and production share one database
+
+**Status:** OPEN — recorded, deliberately not acted on | **Priority:** P1
+**Category:** Environment architecture | **Found:** deployment alignment gate, 2026-08-17
+
+Demonstrated, not inferred: an unauthenticated GET to **production**
+`/api/marketplace/incentives` returned `QA-DEVICE Weekend Push` with
+`amount: 15000` — a campaign created by a *local* seeding script. Production
+reads the same Supabase database that `.env` points at.
+
+### What this means
+
+Every verification suite in `scripts/` — the journey suites, the authorization
+sweeps, the fraud and dispatch harnesses, the fixture sweeper — has been running
+against **the production database**. That is why:
+
+- `scripts/sweep-test-fixtures.ts` needs its `qa.` exclusion so carefully: it is
+  deleting rows from the live database, and it already deleted the phone's login
+  accounts once mid-session
+- a leaked `isOnline` fixture rider is not merely a dirty test, it is a phantom
+  driver in live dispatch supply
+- the QA campaign a driver can see on a real phone was created by a test script
+
+Nothing here is currently broken, and the QA work is sound — the suites clean up
+after themselves and are scoped to a reserved `@smartride.test` domain. But the
+isolation everyone assumes exists does not.
+
+### Why it is not being fixed now
+
+A second database means a second `DATABASE_URL`, a schema kept in step by
+`db:push` with no migrations directory, and a decision about which environment
+the mobile app points at. That is infrastructure work, it would derail the QA
+baseline, and the brief explicitly says not to build staging now. **Recorded as a
+post-QA infrastructure improvement, not started.**
+
+### What already exists, for whoever picks this up
+
+Vercel's GitHub integration is live, so a push to any non-`main` branch produces
+a preview deployment automatically — isolated *compute* with no new architecture.
+Every one of the last twenty deployments is `target: production` from `main`, so
+that capability has never been used. Whether Vercel's Preview environment can be
+given its own `DATABASE_URL` is **UNVERIFIED** and is the first question to
+answer.
+
+The distinction that matters: a preview deployment isolates the code, not the
+data. Without a separate database it would still write to live records.
+
+---
+
+## INFRA-2 — The postbuild admin seed has never run on Vercel
+
+**Status:** OPEN — benign, recorded | **Priority:** P3 | **Category:** Build
+
+`package.json` runs `postbuild: npx --yes tsx scripts/postbuild-seed-admin.ts`.
+On the production build log for `dpl_AYZiQUDsiXzBLRi7A23CmCz8dgrv` it fails:
+
+```
+Error [ERR_MODULE_NOT_FOUND]: Cannot find module
+  '/vercel/path0/scripts/postbuild-seed-admin.ts'
+postbuild-seed skipped (non-blocking)
+```
+
+`tsx` itself resolves fine there — the stack trace runs through
+`/vercel/path0/node_modules/tsx/`. The cause is `.vercelignore`, which lists
+`scripts/`, so the directory the postbuild step targets is excluded from the
+upload. The script cannot run because it is not deployed.
+
+**It is not required.** Production holds three ACTIVE administrator accounts with
+real password hashes, and the SUPER_ADMIN logged in on 2026-08-14 — the state the
+seed would create already exists and is in use. The `|| echo` fallback means the
+failure never blocks a build, which is why it has gone unnoticed.
+
+Worth knowing rather than fixing under a deployment gate: the same
+`.vercelignore` rule is also why none of the QA verification scripts reach
+production, which is correct and desirable.
+
+Left alone deliberately — changing `.vercelignore` or the postbuild step would be
+modifying deployment architecture during a security deployment, which is exactly
+the wrong moment.
+
+---
