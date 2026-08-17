@@ -2460,3 +2460,116 @@ modifying deployment architecture during a security deployment, which is exactly
 the wrong moment.
 
 ---
+
+---
+
+# Incentives — end-to-end connectivity audit, 2026-08-17
+
+Scope: the incentive chain only. Admin Dashboard → API → DB → Driver App →
+qualifying rides → reward → wallet. Nothing else audited.
+
+## The chain, link by link
+
+| # | Link | Status |
+|---|---|---|
+| 1 | Admin dashboard can create a campaign | **CONNECTED** — real dialog, `marketplace-balance.tsx` |
+| 2 | Dashboard calls the right endpoint | **CONNECTED** — `POST /api/marketplace/incentives`, field names match the Zod schema |
+| 3 | Backend persists the campaign | **CONNECTED** — status computed from timing, born `ACTIVE` |
+| 4 | Mobile app receives it | **VERIFIED on device** — rendered UGX 15,000 / 3 rides |
+| 5 | Driver can enrol | **VERIFIED on device against production** — 201, row `ENROLLED` |
+| 6 | Real rides advance progress | **CONNECTED** — state machine `COMPLETED` → `PlatformIntelligence.onTaskCompleted` → `processTaskCompletion` |
+| 7 | Qualification triggers once | **CONNECTED, with a caveat** — see INC-4 |
+| 8 | Reward credits the correct wallet | **CONNECTED** — `ownerId: rider.userId, ownerType: 'USER'` |
+| 9 | Ledger records the transaction | **CONNECTED** — `walletTransaction` with balanceBefore/After, `referenceType: 'INCENTIVE'`, `referenceId: participationId` |
+| 10 | Driver sees the balance | **CONNECTED** — app reads `/wallet` and `/wallet/balance`, same wallet |
+| 11 | Driver can withdraw it | **CONNECTED** — `/wallet/withdraw` resolves `ownerId_ownerType: {userId, 'USER'}`, the identical wallet |
+| 12 | Duplicate/retry cannot pay twice | **GUARDED at payout** — see INC-4/INC-5 |
+| 13 | Cancelled ride | **SAFE BY CONSTRUCTION** — progress increments only on `COMPLETED`, and the map allows `COMPLETED → PAID` only |
+| 14 | Driver leaves an incentive | **BACKEND ONLY** — see INC-3 |
+| 15 | Incentive expires | **CONNECTED** — `expireEndedIncentives` on the 15-minute cron |
+| 16 | Admin pauses/cancels | **BACKEND ONLY** — see INC-2 |
+| 17 | Rules enforced server-side | **CONNECTED** — see below |
+
+**Q17 in detail.** Enrolment refuses on the server for: non-`ACTIVE` status,
+outside the time window, already enrolled, `maxParticipants` reached, rider not
+found, and `minRating` below threshold. Qualification checks `minRides`,
+`minEarnings`, `targetHours`, `streakDays` server-side. Zone and vehicle rules
+are applied per completed task. None of this depends on the client.
+
+**Scheduling.** `/api/cron/intelligence` runs **every 15 minutes** via GitHub
+Actions (`.github/workflows/cron-intelligence.yml`) against production — not
+Vercel cron, which only carries session and OTP cleanup. It drives both
+`processPendingRewards` and `expireEndedIncentives`.
+
+## INC-1 — A campaign can only ever last four hours
+
+**Status:** OPEN | **Priority:** P2 | **Category:** UI limitation
+
+`handleCreateIncentive` hardcodes the window:
+
+```ts
+const startTime = new Date();
+const endTime = new Date();
+endTime.setHours(endTime.getHours() + 4);
+```
+
+There is no duration field in the dialog. The backend accepts any window — the
+QA campaign runs a week — but an admin using the dashboard cannot create one.
+A "Weekend Push" created through the UI expires the same afternoon.
+
+## INC-2 — An admin cannot pause or cancel a campaign from the dashboard
+
+**Status:** OPEN | **Priority:** P1 | **Category:** Backend-only
+
+`PATCH /api/marketplace/incentives` exists, is admin-guarded, and accepts a
+status change — `IncentiveStatus` has `PAUSED`, `ENDED` and `CANCELLED`. **No UI
+calls it.** A campaign paying the wrong amount, or one created with a typo, can
+only be stopped by waiting for `endTime` or by a direct database write.
+
+For a money-moving feature that is the control that matters most.
+
+## INC-3 — A driver cannot leave a campaign from the app
+
+**Status:** OPEN | **Priority:** P2 | **Category:** Backend-only
+
+`DELETE /api/marketplace/incentives/participate` exists. The mobile API client
+has no method for it — `api.joinIncentive` has no counterpart. Enrolment is
+one-way from the driver's side.
+
+## INC-4 — Progress has no duplicate-task guard; the payout does
+
+**Status:** OPEN | **Priority:** P2 | **Category:** Idempotency
+
+`processTaskCompletion` writes the task id into `qualifyingTasks` and never reads
+it back:
+
+```ts
+qualifyingTasks.push(data.taskId);
+updateData.ridesCompleted = { increment: 1 };
+```
+
+So if `onTaskCompleted` fires twice for one task — a retry, a replayed event, a
+double transition — that ride counts twice toward `minRides`. The array that
+would make this detectable is already being maintained; nothing consults it.
+
+**The money is still safe.** `completeIncentiveAndReward` refuses a participation
+already in `REWARDED`, so a duplicate cannot pay twice. The exposure is a driver
+qualifying on fewer real rides than the campaign requires — a correctness and
+cost problem, not a double-payment one.
+
+Fix is small: skip when `qualifyingTasks` already contains the task id.
+
+## INC-5 — The payout idempotency check sits outside its transaction
+
+**Status:** OPEN | **Priority:** P3 | **Category:** Idempotency
+
+The `status === REWARDED` check runs before the transaction opens, so two
+concurrent calls could both pass it. In practice the only caller is a
+single-threaded 15-minute cron, so this has no live exposure today — recorded
+because it is the kind of thing that becomes real the moment the payout is
+parallelised or retried.
+
+A unique constraint on `DriverIncentiveEarned(participationId)` would make it
+structural rather than conventional.
+
+---
