@@ -243,6 +243,13 @@ export default function CallScreen() {
     isIncoming ? 'incoming' : 'outgoing'
   );
   const [callInfo, setCallInfo] = useState<CallInfo | null>(null);
+  /**
+   * Set once the call is over. An outgoing call auto-initiates on mount, and
+   * ending one used to leave this screen mounted in an 'ended' state — so
+   * navigating back onto it started a NEW call, which looked like the finished
+   * call resuming. This guards the auto-initiate and the auto-dismiss below.
+   */
+  const hasEnded = useRef(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeaker, setIsSpeaker] = useState(false);
   const [callStartTime, setCallStartTime] = useState(0);
@@ -274,6 +281,7 @@ export default function CallScreen() {
       if (callState === 'active') {
         const duration = callStartTime > 0 ? Math.floor((Date.now() - callStartTime) / 1000) : 0;
         setCallDuration(duration);
+        hasEnded.current = true;
         setCallState('ended');
         hasJoinedChannel.current = false;
       }
@@ -330,7 +338,7 @@ export default function CallScreen() {
 
   // For OUTGOING calls: initiate via API
   useEffect(() => {
-    if (!isIncoming && !callInfo && !isInitiating) {
+    if (!isIncoming && !callInfo && !isInitiating && !hasEnded.current) {
       initiateCall();
     }
   }, []);
@@ -495,6 +503,7 @@ export default function CallScreen() {
         console.log('[CALL] Decline end error:', error);
       }
     }
+    hasEnded.current = true;
     setCallState('ended');
     setCallDuration(0);
   }, [callInfo, agoraCall]);
@@ -533,9 +542,21 @@ export default function CallScreen() {
         console.log('[CALL] Cancel end error:', error);
       }
     }
+    hasEnded.current = true;
     setCallState('ended');
     setCallDuration(0);
   }, [callInfo, agoraCall]);
+
+  // Leave the screen once the call is over. Without this the call screen stays
+  // mounted showing "Call Ended" and remains in the navigation stack.
+  useEffect(() => {
+    if (callState !== 'ended') return;
+    const t = setTimeout(() => {
+      if (router.canGoBack()) router.back();
+      else router.replace('/(tabs)');
+    }, 1200);
+    return () => clearTimeout(t);
+  }, [callState]);
 
   const handleBack = useCallback(() => {
     if (router.canGoBack()) {
