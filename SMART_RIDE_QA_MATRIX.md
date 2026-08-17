@@ -990,3 +990,79 @@ C-8 and C-9 are honestly blocked rather than failed: they need enrolment from th
 device, which needs the deploy. The same two steps were proven server-side
 earlier (BE-030/031/032, a real 5,000 UGX wallet credit), so the mechanism works
 — it is the device path that is unproven.
+
+---
+
+## DEV-6 — The driver's Cancel button can never succeed on an assigned ride
+
+**Status:** OPEN — not fixed (scope) | **Priority:** P1 | **Category:** Navigation / wiring
+**Found:** physical device, 2026-08-17
+
+Pressing Cancel on an assigned ride shows the driver:
+
+> Actor 'RIDER' is not authorized to transition from ASSIGNED to CANCELLED
+
+**The server is right.** `getAllowedActors` permits a driver to cancel a ride
+only from `IN_PROGRESS`:
+
+```ts
+if (toStatus === CANCELLED) {
+  actors.push('CLIENT');
+  if (isRideType) {
+    if (fromStatus === IN_PROGRESS) actors.push('RIDER');  // mid-trip only
+  } else {
+    actors.push('RIDER');                                   // deliveries: any active phase
+  }
+}
+```
+
+From `ASSIGNED` the allowed actors are SYSTEM, ADMIN and CLIENT. The rule looks
+deliberate — it stops a driver taking an assignment and dumping it, which would
+strand the customer.
+
+**The defect is the button.** `handleCancelTask` calls `api.cancelTask()`, a
+`CANCELLED` transition. For an offer the driver has not started, the correct call
+is the decline path — which already exists and has no caller here:
+
+- `api.declineTask(taskId)` → `POST /tasks/{id}/decline`
+- `api.rejectDispatch(matchId, reason)` → `POST /dispatch/{id}/reject`
+
+So the control is guaranteed to fail, and it fails by showing a courier the state
+machine's internal vocabulary. Two things to fix together: point the button at
+decline, and stop surfacing raw transition errors to drivers.
+
+## DEV-7 — In-app calling cannot derive the task, so no call connects
+
+**Status:** OPEN — not fixed (scope) | **Priority:** P1 | **Category:** Contract
+**Found:** manual device test by the user, 2026-08-17
+
+The call screen sits on "Connecting…" and reports:
+
+> taskId is required to call a client or rider
+
+**The server is right again.** `/api/calls/initiate` requires `taskId` for
+CLIENT/RIDER calls as a deliberate IDOR guard — without it `recipientId` is a
+caller-supplied field checked only for "exists and is ACTIVE", so any
+authenticated user could ring any other user with no relationship at all.
+
+The client derives the task id by string-surgery on the conversation id:
+
+```ts
+taskId: conversationId?.replace('conv-', ''),
+```
+
+When the call screen is opened without a `conversationId` — which is what
+happens from the task card's "Tap to call in-app" — this evaluates to
+`undefined` and the server refuses. The call can never connect from that entry
+point.
+
+Two problems, not one. The missing parameter is the immediate cause; the deeper
+issue is that **reconstructing a task id by stripping a prefix off a conversation
+id is a guess, not a contract.** The task screen already knows the real task id
+and should pass it explicitly rather than encoding it in another identifier's
+string form.
+
+Recorded rather than fixed: this is the calling subsystem, outside the incentive
+closure currently in progress.
+
+---
