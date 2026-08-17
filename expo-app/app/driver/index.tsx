@@ -26,6 +26,7 @@ import { Alert } from '@/src/components/feedback';
 import {
   CHANNEL_RIDE_OFFERS,
   OFFER_VIBRATION_PATTERN,
+  OFFER_ALERT_ID,
 } from '@/src/services/notification-channels';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -559,15 +560,32 @@ export default function DriverHomeScreen() {
   // wired into each accept/decline/expire handler individually, so it stops
   // the instant any of them clears the request — same pattern as the
   // countdown timer effect above.
+  //
+  // Every repeat REPLACES the previous alert instead of adding to it.
+  //
+  // This loop used to post each ring with no identifier, so expo-notifications
+  // minted a fresh one every time and Android had no way to know the ten
+  // alerts were one event. A single 30-second offer left ~9 stacked "New
+  // request" entries in the tray plus the server's own push — the driver had
+  // to clear a pile of notifications for a ride they had already answered, and
+  // could not tell one offer from several. Reusing a fixed identifier makes
+  // Android update the same notification in place: it still re-alerts (we
+  // never set onlyAlertOnce), so the offer keeps ringing like an incoming
+  // call, but there is only ever ONE of it.
   useEffect(() => {
     if (!incomingRequest) return;
 
     const ring = () => {
       Notifications.scheduleNotificationAsync({
+        identifier: OFFER_ALERT_ID,
         content: {
           title: 'New request',
           body: incomingRequest.pickup?.address || 'Respond before it expires',
           sound: true,
+          // Marks this as the offer's own alert so the global foreground
+          // handler can tell it apart from the server's push for the same
+          // offer.
+          data: { type: 'driver:request:alert' },
           // Routes onto the MAX-importance offer channel, which is what
           // actually carries the sound on Android — the `sound` field above is
           // ignored without it. Ordinary notifications stay on their quieter
@@ -584,7 +602,14 @@ export default function DriverHomeScreen() {
 
     ring();
     const interval = setInterval(ring, 3500);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      Vibration.cancel();
+      // The offer is over — accepted, declined or expired. Take the alert down
+      // with it, so a dead offer does not sit in the tray inviting a tap on
+      // something the server will refuse.
+      Notifications.dismissNotificationAsync(OFFER_ALERT_ID).catch(() => {});
+    };
   }, [incomingRequest]);
 
   // Map-archetype loading skeleton — the panel shape is already there, so the

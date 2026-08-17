@@ -39,6 +39,22 @@ export const CHANNEL_GENERAL = 'general-v1';
  */
 export const OFFER_VIBRATION_PATTERN = [0, 400, 200, 400];
 
+/**
+ * The single notification identifier every ride-offer alert reuses.
+ *
+ * An offer has to keep alerting while it is live — a driver looking at the road
+ * needs it to behave like a ringing phone, not a one-shot ding. But "keep
+ * alerting" was implemented by posting a NEW notification every few seconds,
+ * and with no identifier expo-notifications minted a fresh one each time, so
+ * Android stacked them: one 30-second offer produced roughly nine tray entries.
+ *
+ * Re-posting under a fixed identifier makes Android update the same
+ * notification instead of adding another. It still re-alerts on each repeat, so
+ * the ringing behaviour is unchanged — there is simply one notification for one
+ * offer, and one handle to dismiss when the offer ends.
+ */
+export const OFFER_ALERT_ID = 'ride-offer-active';
+
 let configured = false;
 
 /**

@@ -53,20 +53,65 @@ import { useIncomingCall } from '@/src/hooks/useIncomingCall';
 import { useAuthStore } from '@/src/store/authStore';
 import { OfflineBanner } from '@/src/components/OfflineBanner';
 import { FeedbackHost } from '@/src/components/feedback';
-import { configureNotificationChannels } from '@/src/services/notification-channels';
+import { configureNotificationChannels, OFFER_ALERT_ID } from '@/src/services/notification-channels';
+import { useTaskStore } from '@/src/store/taskStore';
 
 // Without an explicit handler, expo-notifications does not play a sound or
 // show an alert while the app is foregrounded — the default behavior in
 // current SDKs is to suppress both. This is why the driver's incoming-ride
 // request only ever vibrated: nothing was configured to let a foreground
 // notification actually make noise. Applies globally, not just to dispatch.
+//
+// One offer must not produce two alerts. Dispatch deliberately sends a ride
+// offer twice — a realtime broadcast (which raises the in-app offer sheet and
+// its ringing alert) AND a push (which wakes a backgrounded app that has no
+// live channel). Both are needed, but when the app is foregrounded and the
+// offer sheet is ALREADY up and ringing for that same offer, the push's tray
+// entry and banner are pure duplication on top of the alert the driver is
+// already looking at.
+//
+// So the push is suppressed only on the narrow condition that the offer is
+// already being presented in-app. If the sheet is not up — the socket dropped,
+// the driver was on another screen, the app was backgrounded — the push shows
+// normally. Suppressing it unconditionally would hide the very offer the push
+// exists to deliver.
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
+  handleNotification: async (notification) => {
+    const show = {
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    };
+
+    try {
+      const data = notification.request.content.data as Record<string, unknown> | undefined;
+      const type = typeof data?.type === 'string' ? data.type : '';
+      const isServerOfferPush =
+        type === 'driver:request' && notification.request.identifier !== OFFER_ALERT_ID;
+
+      if (isServerOfferPush) {
+        const open = useTaskStore.getState().incomingRequest as
+          | { task?: { id?: string } }
+          | null;
+        const sameOffer =
+          !!open?.task?.id && (!data?.taskId || String(data.taskId) === String(open.task.id));
+        if (sameOffer) {
+          // The local offer alert already owns the tray slot and the sound.
+          return {
+            shouldShowBanner: false,
+            shouldShowList: false,
+            shouldPlaySound: false,
+            shouldSetBadge: false,
+          };
+        }
+      }
+    } catch {
+      // Never let dedup logic swallow a notification — fall through to showing it.
+    }
+
+    return show;
+  },
 });
 
 // On Android 8+ the SOUND is a property of the notification CHANNEL, not the
