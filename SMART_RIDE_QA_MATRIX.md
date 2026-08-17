@@ -805,3 +805,75 @@ outside the QA scope freeze.
   Needs a fresh delivery driven to DELIVERING on the device.
 - **UGX 15,000 rendering correctly** — fixed but awaiting the next build.
 - Everything in the D1–D10 list, which is human-only by construction.
+
+---
+
+# QA baseline closure — 2026-08-17
+
+## The phone changed, and that matters
+
+The device connected today is **not** the one the previous session tested.
+
+| | Previous session | Today |
+|---|---|---|
+| Serial | `R3CR709T4FN` | `R58M3631ABM` |
+| Model | SM-G991U (Galaxy S21 5G) | **SM-G975U (Galaxy S10+)** |
+| Android | 15 (SDK 35) | **12 (SDK 31)** |
+| Chipset | — | Snapdragon 855 (SM8150), Adreno |
+
+Proven physical on the same terms as before, not assumed from `adb devices`:
+`ro.kernel.qemu=0`, `ro.hardware=qcom` (an emulator reports `ranchu`/`goldfish`),
+a real Li-ion cell at 100% / 4222 mV / **34.5 °C**, 59 sensors.
+
+Three Android versions separate the two handsets. Any device result carried over
+from the S21 is evidence about the S21, so the level-C table from that session is
+**not** transitively true here and is not being claimed as such.
+
+The APK installed on this phone was `versionName=1.0.0`, `lastUpdateTime`
+**2026-07-21** — roughly four weeks stale, predating every fix in this ledger.
+
+## Build discipline, and an honest failure
+
+The APK on disk was built at **15:48**, which contains the DEV-1 fix (15:26) but
+**not** DEV-2 (16:12). Testing DEV-2 on it would have validated code that does
+not exist in it, so it was not used.
+
+The rebuild was started, ran for roughly two hours, and **was killed** — no
+`FAILURE:` in the log, the output simply stops mid-`mergeReleaseNativeLibs`,
+which is what a process kill looks like rather than a build error. The machine
+was under RAM pressure with a dev server running alongside it.
+
+Two things worth recording, because both cost real time:
+
+1. **The build script's clean step deletes the previous APK before producing a
+   new one.** When the build then dies, there is no APK at all — not the new one
+   and not the old one. A failed rebuild is not a no-op; it is destructive.
+2. Running the Next dev server and Gradle concurrently starved both. The dev
+   server died, and its death presented as API requests hanging — which looks
+   exactly like a backend defect and is not one. This is the same class of
+   mistake as the warm-up false-failure already recorded: **the environment
+   producing a symptom that mimics the product.**
+
+Restarted as `./gradlew assembleRelease` alone — no `prebuild --clean`, nothing
+competing. Only JS changed, so the native artifacts did not need regenerating.
+
+## DEV-2 — status
+
+**Fix committed and correct against the authoritative response shape.** Verified
+by reading the API: `src/app/api/marketplace/incentives/route.ts:99-105` returns
+`reward: { amount, type }` and `requirements: { minRides }`, nested, which is
+what `expo-app/app/driver/reputation.tsx` now reads.
+
+**NOT device-verified.** The build that would prove it did not finish. The
+expected result on screen remains "UGX 15,000" and a "3 rides to qualify" line.
+Recorded as **UNVERIFIED**, not as passed — a fix that is provably correct in
+source is still not a fix that was seen working on a phone.
+
+## Level-C device scenarios — this handset
+
+| # | Scenario | Result |
+|---|---|---|
+| C-1 | Device is physical, not an emulator | **VERIFIED** |
+| C-2 | Installed build identified and dated | **VERIFIED** (stale, 2026-07-21) |
+| C-3 | DEV-2 renders UGX 15,000 | **UNVERIFIED — no APK** |
+| C-4 | Everything else on this handset | **UNVERIFIED — not re-run on S10+** |
