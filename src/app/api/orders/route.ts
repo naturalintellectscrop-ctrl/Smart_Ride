@@ -77,7 +77,15 @@ export async function GET(request: NextRequest) {
     }
     
     if (orderType) where.orderType = orderType;
-    if (status) where.status = status;
+    // A merchant tab covers a phase, not a single status — "New" is everything
+    // awaiting acceptance, "Preparing" is accepted-or-cooking. Accepting a
+    // comma-separated list lets one request answer a tab; a single value still
+    // behaves exactly as before.
+    if (status) {
+      const wanted = status.split(',').map(s => s.trim()).filter(Boolean);
+      if (wanted.length > 1) where.status = { in: wanted };
+      else if (wanted.length === 1) where.status = wanted[0];
+    }
     if (merchantId && isAdmin(user.role)) where.merchantId = merchantId;
     if (clientId && isAdmin(user.role)) where.clientId = clientId;
     if (search) {

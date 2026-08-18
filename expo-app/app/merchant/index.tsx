@@ -44,11 +44,23 @@ import { statusColor } from '@/src/theme/statusColors';
 
 type OrderTab = 'NEW' | 'PREPARING' | 'READY' | 'COMPLETED';
 
+// Real OrderStatus values, not invented ones.
+//
+// These tabs were filtering on 'NEW', 'PENDING', 'CONFIRMED', 'READY' and
+// 'COMPLETED' — five names that do not exist in the OrderStatus enum. Prisma
+// rejected the invalid value and the whole request 500'd, so the dashboard read
+// "Failed to load orders" on every tab except by accident. Only 'PREPARING' and
+// 'DELIVERED' were ever real.
+//
+// Each tab is a PHASE, so it carries every status belonging to that phase and
+// nothing falls through the gaps: an order picked up by a courier is still
+// visible to the merchant, and an order awaiting acceptance shows whether or
+// not payment has landed yet.
 const ORDER_TABS: { key: OrderTab; label: string; icon: keyof typeof Ionicons.glyphMap; statuses: string[] }[] = [
-  { key: 'NEW', label: 'New', icon: 'alert-circle-outline', statuses: ['NEW', 'PENDING'] },
-  { key: 'PREPARING', label: 'Preparing', icon: 'restaurant-outline', statuses: ['CONFIRMED', 'PREPARING'] },
-  { key: 'READY', label: 'Ready', icon: 'checkmark-circle-outline', statuses: ['READY'] },
-  { key: 'COMPLETED', label: 'Completed', icon: 'checkmark-done-circle-outline', statuses: ['COMPLETED', 'DELIVERED'] },
+  { key: 'NEW', label: 'New', icon: 'alert-circle-outline', statuses: ['ORDER_CREATED', 'PAYMENT_CONFIRMED'] },
+  { key: 'PREPARING', label: 'Preparing', icon: 'restaurant-outline', statuses: ['MERCHANT_ACCEPTED', 'PREPARING'] },
+  { key: 'READY', label: 'Ready', icon: 'checkmark-circle-outline', statuses: ['READY_FOR_PICKUP', 'PICKED_UP'] },
+  { key: 'COMPLETED', label: 'Completed', icon: 'checkmark-done-circle-outline', statuses: ['DELIVERED'] },
 ];
 
 // Status colours come from the shared semantic mapping. This table was the
@@ -135,7 +147,7 @@ export default function MerchantDashboardScreen() {
       const tab = ORDER_TABS.find(t => t.key === activeTab);
       // Fetch orders filtered by the statuses for the active tab
       // Use the first status as the API filter; we'll also include all tab statuses in client-side filter
-      fetchOrders(merchant.id, tab?.statuses[0], 1);
+      fetchOrders(merchant.id, tab?.statuses.join(","), 1);
     }
   }, [merchant?.id, activeTab]);
 
@@ -144,7 +156,7 @@ export default function MerchantDashboardScreen() {
     const state = useMerchantStore.getState();
     if (state.merchant?.id) {
       const tab = ORDER_TABS.find(t => t.key === activeTab);
-      fetchOrders(state.merchant.id, tab?.statuses[0], 1);
+      fetchOrders(state.merchant.id, tab?.statuses.join(","), 1);
       fetchAnalytics(state.merchant.id);
     }
   };
@@ -172,7 +184,7 @@ export default function MerchantDashboardScreen() {
       // Refresh orders after status change
       if (merchant?.id) {
         const tab = ORDER_TABS.find(t => t.key === activeTab);
-        fetchOrders(merchant.id, tab?.statuses[0], 1);
+        fetchOrders(merchant.id, tab?.statuses.join(","), 1);
       }
     } catch {
       Alert.alert('Error', 'Failed to accept order. Please try again.');
@@ -194,7 +206,7 @@ export default function MerchantDashboardScreen() {
               // Refresh orders after status change
               if (merchant?.id) {
                 const tab = ORDER_TABS.find(t => t.key === activeTab);
-                fetchOrders(merchant.id, tab?.statuses[0], 1);
+                fetchOrders(merchant.id, tab?.statuses.join(","), 1);
               }
             } catch {
               Alert.alert('Error', 'Failed to reject order. Please try again.');
@@ -347,7 +359,7 @@ export default function MerchantDashboardScreen() {
             onRetry={() => {
               if (merchant?.id) {
                 const tab = ORDER_TABS.find((t) => t.key === activeTab);
-                fetchOrders(merchant.id, tab?.statuses[0], 1);
+                fetchOrders(merchant.id, tab?.statuses.join(","), 1);
               }
             }}
           />
