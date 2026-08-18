@@ -586,13 +586,25 @@ export default function DriverHomeScreen() {
           // handler can tell it apart from the server's push for the same
           // offer.
           data: { type: 'driver:request:alert' },
-          // Routes onto the MAX-importance offer channel, which is what
-          // actually carries the sound on Android — the `sound` field above is
-          // ignored without it. Ordinary notifications stay on their quieter
-          // channels so an offer is distinguishable from a receipt.
-          ...(Platform.OS === 'android' ? { channelId: CHANNEL_RIDE_OFFERS } : {}),
         },
-        trigger: null,
+        // The channel belongs on the TRIGGER, not the content.
+        //
+        // This used to pass `channelId` inside `content`, added by a
+        // conditional spread. NotificationContentInput has no channelId field
+        // at all — the SDK's `ChannelAwareTriggerInput` is where it lives — so
+        // the value was silently discarded and `trigger: null` told Android
+        // nothing about which channel to use. Every offer landed on
+        // `expo_notifications_fallback_notification_channel` at default
+        // importance instead of the MAX-importance `ride-offers-v1` built for
+        // exactly this alert: no heads-up while the driver is in another app,
+        // no DND bypass, quieter than a receipt. Confirmed on the device with
+        // `dumpsys notification`.
+        //
+        // The spread is what hid it: TypeScript skips excess-property checking
+        // on spread objects, so the compiler had nothing to complain about.
+        // Passing the trigger directly means a future mistake here fails the
+        // typecheck instead of going quiet on the phone.
+        trigger: Platform.OS === 'android' ? { channelId: CHANNEL_RIDE_OFFERS } : null,
       }).catch(() => {});
       // Vibration alongside the sound, not instead of it: a driver on a boda
       // in traffic may not hear a ring, and one with the phone in a mount may
