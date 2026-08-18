@@ -1515,3 +1515,157 @@ creates is four hours long and the duration is never offered as a choice. The
 API accepts whatever start/end it is given. Making it configurable is a small
 change to that form; whether four hours is the intended default is a product
 question, so it stays open rather than being changed unilaterally.
+
+# Session — Device journey matrix: client and merchant
+
+## CLIENT JOURNEY — VERIFIED end to end on physical hardware
+
+One ride, `TASK-2026-000060`, driven from a real phone with a properly separated
+client and driver account (different user ids — the earlier self-assigned
+fixture could not have caught actor bugs).
+
+| Step | Evidence |
+|---|---|
+| Request | HTTP 201, fare 3000, riderEarnings 2550 |
+| Matching | exactly 1 DispatchMatch |
+| One offer | 1 notification, `ride-offers-v1`, importance 5 |
+| Accept | tapped on device → `MATCHING→ASSIGNED[RIDER]` |
+| Client sees assignment | status ASSIGNED, driver named, phone hidden |
+| In-journey | ETA, progress timeline, correct "You earn UGX 2,550" |
+| Progression | 8 transitions, every rider step tapped on the phone |
+| Completion | COMPLETED, `payment=COMPLETED/CASH` |
+| Settlement | ledger riderEarnings 2550, commission 450, `COD_PAYMENT 450 COLLECTED` |
+| Rating | 5★, `direction: client_rated_driver`, toRiderId + toUserId both set |
+| Wallet/ledger | Wallet untouched — correct, the passenger paid cash in hand |
+| Final state | `/tasks/active` → 404; completed card offers only "View earnings" |
+
+Full transition chain, all from the device:
+
+```
+CREATED→MATCHING[SYSTEM] MATCHING→ASSIGNED[RIDER] ASSIGNED→ACCEPTED[RIDER]
+ACCEPTED→ARRIVING[RIDER] ARRIVING→ARRIVED[RIDER] ARRIVED→PICKED_UP[RIDER]
+PICKED_UP→IN_PROGRESS[RIDER] IN_PROGRESS→COMPLETED[RIDER]
+```
+
+## JRN-1 — the job screen hid its own action button
+
+**Status:** FIXED + VERIFIED ON DEVICE | **Priority:** P0 | **Category:** Layout
+
+A driver holding an assigned ride had no way to advance it. `JourneyShell` caps
+the panel at 68% of the screen, but the detail `ScrollView` was `flexGrow: 0`
+with nothing letting it shrink, so it always sized to its full content, the card
+grew past the cap, and the pinned action block went off the bottom. The panel
+would not scroll because there was nothing to scroll — the overflow was outside
+the viewport, not inside the list. Every extra progress step made it worse.
+
+## JRN-2 — `allowedTransitions` was never published
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P0 | **Category:** Contract
+
+The job screen asks the server which move is legal — `pickPrimaryTransition()`
+reads `task.allowedTransitions`. The mobile half shipped; the server half did
+not, so `GET /tasks/[id]` answered without the field, `nextStatus` was null and
+no primary action was rendered at all. The route now returns
+`EnhancedTaskStateMachine.getValidNextStatuses`, so there is still exactly one
+lifecycle authority and the client only chooses which of those to offer.
+
+## JRN-3 — the offer overstated the driver's pay
+
+**Status:** FIXED | **Priority:** P1 | **Category:** Correctness
+
+The offer sheet labelled `totalAmount` "You earn", advertising UGX 3,000 for a
+job that pays 2,550 — on the one screen where the driver decides whether the
+work is worth taking, and contradicted by the job screen a tap later.
+`riderEarnings` was read for the push text but never included in the dispatch
+broadcast, so the sheet had nothing else to show. It is in the payload now.
+
+## HB-1 — a stationary rider's heartbeat was rejected
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P1 | **Category:** Dispatch
+
+`POST /rider/heartbeat` declared `speed` and `heading` `.optional()`, which
+accepts a missing key but rejects an explicit null — and Android reports null
+for both whenever the device is not moving. Every heartbeat from a parked rider
+came back `400 "Invalid input: expected number, received null"` and was thrown
+away by the caller's `.catch(() => {})`.
+
+**Important qualification.** This is real and reproduced directly against
+production, but it was NOT the cause of the symptom that led me to it. I read a
+rider as an hour stale and went hunting; the local machine's clock is exactly one
+hour ahead of the server, and by the database's own clock the heartbeat was 24
+seconds old. The keep-alive timer sends position only, which always passed, so
+the rider stayed eligible throughout. The fix restores the movement-triggered
+heartbeat and its telemetry; the staleness never existed.
+
+## MERCH-2 — the dashboard could not load a single order
+
+**Status:** FIXED + VERIFIED ON DEVICE | **Priority:** P0 | **Category:** Contract
+
+`getMerchantOrders` called `/merchants/{id}/orders`, which does not exist — that
+directory holds analytics, availability, menu and products. The request 404'd
+and the store reported "Network error. Please check your connection." while the
+order sat in the database. Same shape as MERCH-1: a client addressing a URL
+nobody built.
+
+`GET /orders` is the real contract and already scopes a MERCHANT caller to their
+own merchant from the token, so the id is no longer sent.
+
+Paging was broken in the same place: `pagination` is a sibling of `data` in the
+backend envelope, but the client's unwrap returned only the inner payload, so
+every paged list believed it was on page 1 of 1.
+
+## MERCH-3 — every tab filtered on a status that does not exist
+
+**Status:** FIXED + VERIFIED ON DEVICE | **Priority:** P0 | **Category:** Enum drift
+
+With the URL corrected the dashboard still failed — but the message changed from
+the client's network catch-all to the server's own "Failed to fetch orders",
+which is what a 500 from `GET /orders` looks like.
+
+The tabs filtered on `NEW`, `PENDING`, `CONFIRMED`, `READY`, `COMPLETED`. None
+are `OrderStatus` values, so Prisma rejected them. Only `PREPARING` and
+`DELIVERED` were ever real. Proven after the fix: `status=NEW` still returns
+**500** on production, while `status=ORDER_CREATED,PAYMENT_CONFIRMED` returns
+200.
+
+Tabs are phases, so `GET /orders` now accepts a comma-separated list — a single
+value behaves exactly as before. Previously only `statuses[0]` was sent, which
+would have hidden half of each tab even once the names were right.
+
+## MERCH-4 — Accept and Reject never rendered
+
+**Status:** FIXED | **Priority:** P0 | **Category:** Enum drift
+
+The card gated its buttons on `['NEW','PENDING'].includes(order.status)` — the
+same invented names — so the test was permanently false and the merchant could
+see an order but never act on it. Now gated on `PAYMENT_CONFIRMED`, and only
+that: the backend refuses an accept before the customer has paid, so offering
+the button earlier would promise an action the server rejects. The status label
+table had the same invented keys, so cards printed the raw enum.
+
+## Merchant actions — VERIFIED against the deployed API (7/7)
+
+```
+client confirm-payment  → PAYMENT_CONFIRMED
+Accept   → MERCHANT_ACCEPTED
+Preparing→ PREPARING
+Ready    → READY_FOR_PICKUP
+Reject   → REJECTED
+accepting an already-advanced order → 400 "Order must be in PAYMENT_CONFIRMED status"
+another provider advancing it       → 403 "Role 'PHARMACIST' is not permitted"
+```
+
+## Observation — role picker after login
+
+A MERCHANT signing in on a fresh install passes through "Choose Your Role"
+before reaching the dashboard. The correct role is **pre-selected** and the
+database role is unchanged afterwards (verified: still MERCHANT), so this is
+onboarding friction on a fresh install rather than a data defect. Recorded, not
+fixed.
+
+## Approval gate — working as designed
+
+Both fixtures were initially refused with "Application under review": `Merchant.
+status` defaults to `PENDING_APPROVAL` and `HealthProvider.verificationStatus`
+to `PENDING`. That is the gate doing its job; the fixtures were approved to
+proceed, not the gate weakened.
