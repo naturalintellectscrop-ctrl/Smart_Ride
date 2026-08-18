@@ -139,6 +139,7 @@ export function MarketplaceBalance() {
   // Dialog states
   const [surgeDialogOpen, setSurgeDialogOpen] = useState(false);
   const [incentiveDialogOpen, setIncentiveDialogOpen] = useState(false);
+  const [updatingIncentiveId, setUpdatingIncentiveId] = useState<string | null>(null);
   const [selectedZone, setSelectedZone] = useState<ZoneStats | null>(null);
   const [surgeMultiplier, setSurgeMultiplier] = useState('1.5');
   const [surgeReason, setSurgeReason] = useState('');
@@ -228,6 +229,51 @@ export function MarketplaceBalance() {
       console.error('Error starting surge:', error);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  /**
+   * INC-2: stop or resume a live campaign.
+   *
+   * A campaign could be created and then never stopped — it ran to its end time
+   * paying real money whatever happened. The backend already accepted this:
+   * PATCH /api/marketplace/incentives takes { incentiveId, status } and has
+   * done all along. Only the control was missing, so this calls the existing
+   * contract rather than adding a second one.
+   *
+   * Drivers already enrolled are left to the existing participation rules; this
+   * changes the campaign's own state, nothing else.
+   */
+  const handleSetIncentiveStatus = async (
+    incentive: Incentive,
+    status: 'ACTIVE' | 'PAUSED' | 'ENDED',
+  ) => {
+    if (status === 'ENDED' && !confirm(`End "${incentive.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    setUpdatingIncentiveId(incentive.id);
+    try {
+      const response = await fetch('/api/marketplace/incentives', {
+        method: 'PATCH',
+        headers: adminHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify({ incentiveId: incentive.id, status }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        alert(body?.error || `Could not update the campaign (${response.status})`);
+        return;
+      }
+
+      // Re-read rather than patching local state: the server decides what the
+      // campaign now is, and an optimistic row that disagrees with it is how a
+      // paused campaign keeps looking active.
+      await fetchData();
+    } catch {
+      alert('Could not reach the server. The campaign was not changed.');
+    } finally {
+      setUpdatingIncentiveId(null);
     }
   };
 
@@ -709,13 +755,48 @@ export function MarketplaceBalance() {
                           </div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold text-[#00D97E]">
-                          {formatCurrency(incentive.rewardAmount)}
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="font-bold text-[#00D97E]">
+                            {formatCurrency(incentive.rewardAmount)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {incentive.status === 'PAUSED'
+                              ? 'Paused'
+                              : `Ends ${new Date(incentive.endTime).toLocaleTimeString()}`}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">
-                          Ends {new Date(incentive.endTime).toLocaleTimeString()}
-                        </div>
+
+                        {/* INC-2: a live campaign could be created but never stopped.
+                            PATCH /api/marketplace/incentives already accepted
+                            { incentiveId, status } — there was simply no control
+                            wired to it, so a campaign paying real money ran until
+                            its end time no matter what. */}
+                        {canEditMarketplace && (
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={updatingIncentiveId === incentive.id}
+                              onClick={() =>
+                                handleSetIncentiveStatus(
+                                  incentive,
+                                  incentive.status === 'PAUSED' ? 'ACTIVE' : 'PAUSED',
+                                )
+                              }
+                            >
+                              {incentive.status === 'PAUSED' ? 'Resume' : 'Pause'}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={updatingIncentiveId === incentive.id}
+                              onClick={() => handleSetIncentiveStatus(incentive, 'ENDED')}
+                            >
+                              End
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
