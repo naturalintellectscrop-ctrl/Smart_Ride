@@ -1441,6 +1441,16 @@ export class EnhancedTaskStateMachine {
       [TaskStatus.PICKED_UP, TaskStatus.IN_TRANSIT],
       [TaskStatus.PICKED_UP, TaskStatus.DELIVERED],
       [TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED],
+      // SHOPPING runs ASSIGNED -> IN_PROGRESS (shopper is in the shop) ->
+      // PICKED_UP (items in hand). The transition table has allowed
+      // IN_PROGRESS -> PICKED_UP all along, but the RIDER actor list did not,
+      // so a shopper who started shopping had NO legal move: not forward, and
+      // (SHOPPING listing no rider cancel) not out. Same omission as the two
+      // below, found the same way — by walking every service type through the
+      // real state machine rather than only the ones already known to work.
+      // Adding the pair enables nothing new: the per-type table is checked
+      // first, so this only stops the actor gate contradicting it.
+      [TaskStatus.IN_PROGRESS, TaskStatus.PICKED_UP],
       [TaskStatus.IN_TRANSIT, TaskStatus.DELIVERED],
       // The DELIVERING handover step. The transition tables allow
       // IN_TRANSIT -> DELIVERING -> DELIVERED, but the RIDER actor list only

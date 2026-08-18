@@ -110,7 +110,23 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       redactBusiness((task as { order?: { merchant?: Record<string, unknown> } }).order?.merchant);
     }
 
-    return successResponse(task);
+    // The legal next states for THIS task's type, straight from the state
+    // machine that the transition endpoint actually enforces.
+    //
+    // Without this the mobile app had to guess, and it guessed with one
+    // hardcoded delivery flow copied from ITEM_DELIVERY. FOOD_DELIVERY,
+    // SHOPPING and SMART_HEALTH_DELIVERY have no ACCEPTED transition at all,
+    // so a courier's very first tap died on
+    // "Invalid transition from ASSIGNED to ACCEPTED for task type FOOD_DELIVERY".
+    // Publishing the graph keeps ONE state machine: the client chooses which
+    // of these to offer, never what is possible.
+    return successResponse({
+      ...task,
+      allowedTransitions: EnhancedTaskStateMachine.getValidNextStatuses(
+        task.taskType,
+        task.status
+      ),
+    });
   } catch (error) {
     console.error('Error fetching task:', error);
     return serverErrorResponse('Failed to fetch task');
