@@ -398,6 +398,53 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
+    // ── PHARM-2: an action has to be legal from where the order actually is ──
+    //
+    // The switch below maps an action straight onto a new status. Nothing ever
+    // read `order.status`, so any action applied from any state: an order at
+    // READY_FOR_PICKUP accepted ACCEPT and went backwards to ACCEPTED
+    // (reproduced against production), a DELIVERED order could be re-accepted,
+    // a CANCELLED one could be marched forward again, and DELIVER on an
+    // already-delivered order re-stamped deliveredAt and paymentStatus.
+    //
+    // ProviderOrder has no state machine anywhere — ProviderOrderStatus is
+    // referenced only in this file — so this is the FIRST definition of that
+    // lifecycle, not a second one competing with an existing authority. It
+    // stays next to the switch it guards, which is the only code that moves a
+    // provider order.
+    const LEGAL_FROM: Record<string, ProviderOrderStatus[]> = {
+      ACCEPT: ['ORDER_RECEIVED'],
+      REJECT: ['ORDER_RECEIVED'],
+      START_PREPARING: ['ACCEPTED'],
+      READY: ['PREPARING'],
+      ASSIGN_RIDER: ['READY_FOR_PICKUP'],
+      PICKED_UP: ['READY_FOR_PICKUP', 'RIDER_ASSIGNED'],
+      DELIVER: ['OUT_FOR_DELIVERY'],
+      // Cancellable right up until the courier has it.
+      CANCEL: ['ORDER_RECEIVED', 'ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'RIDER_ASSIGNED'],
+    };
+
+    // Prescription decisions do not move the order; they are legal while it is
+    // still live, and meaningless once it has finished.
+    const TERMINAL: ProviderOrderStatus[] = ['DELIVERED', 'CANCELLED', 'REJECTED'];
+
+    const allowedFrom = LEGAL_FROM[action];
+    if (allowedFrom && !allowedFrom.includes(order.status)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Cannot ${action} an order that is ${order.status}`,
+        },
+        { status: 409 }
+      );
+    }
+    if (!allowedFrom && TERMINAL.includes(order.status)) {
+      return NextResponse.json(
+        { success: false, error: `This order is already ${order.status}` },
+        { status: 409 }
+      );
+    }
+
     const updateData: Prisma.ProviderOrderUpdateInput = {};
     const now = new Date();
 
