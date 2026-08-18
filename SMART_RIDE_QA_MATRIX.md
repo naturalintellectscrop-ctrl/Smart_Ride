@@ -1354,3 +1354,164 @@ All verified in `verify-offer-lifecycle.ts` (37/37):
 - **Actor authority derives from the account's global role**, not the caller's
   relationship to the task, so a user whose role is RIDER cannot cancel a ride
   they booked as the client. Entangled with LC-1; not touched.
+
+# Session — Financial integrity
+
+Two P0s on opposite ends of the same money path, both live in production when
+found: customers could underpay, and drivers could not be paid at all.
+
+## BE-041 — the customer decided what they owed
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P0 | **Category:** Payment integrity
+
+`/payments/initiate` destructured `amount` from the request body and passed it
+to `initiatePayment`, which wrote it straight to `db.payment.create`. Nothing
+looked the obligation up. The client was the sole authority on the figure:
+
+```
+UGX 50,000 fare, settled for 100  → accepted
+settled for 0                      → accepted
+settled for -50,000                → accepted
+attached to someone else's task    → accepted
+```
+
+The mobile client's own comment conceded it — *"the endpoint trusts the amount
+it is given."*
+
+**Fix.** The amount is derived from the task or order being settled; the caller
+must own it; an already-paid obligation is refused; a request referencing
+neither is rejected (top-ups have `/wallet/topup`, where a user-chosen amount is
+legitimate). A client figure that disagrees with the derived one is **refused
+and logged**, not silently corrected — quietly charging the right amount would
+hide both a drifted client and a probing one.
+
+## BE-043 — no customer could create a payment at all
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P0 | **Category:** RLS
+
+Found while testing BE-041, not by reading code. The honest payment failed:
+
+```
+new row violates row-level security policy for table "Payment"
+```
+
+`Payment` has three policies — `service_role_access` (ALL), `admin_read`
+(SELECT), `users_read_own_payments` (SELECT). **Not one permits INSERT for an
+ordinary user.** A customer could read their payments and never make one, so
+non-cash settlement has never worked under the caller's own context.
+
+Same family as the earlier finding that `Task` has no rider SELECT policy.
+
+**Fix.** Recording a payment is the platform acting on the customer's behalf,
+and the write is now made with that authority. Safe precisely because
+authorization is no longer implicit: ownership and amount are both proven
+immediately above it, and the route's `finally` resets the context so the
+elevation cannot outlive the request.
+
+## BE-040 — drivers could not see or withdraw their earnings
+
+**Status:** FIXED + VERIFIED | **Priority:** P0 | **Category:** Wallet / source of truth
+
+Two stores, and the money path crossed them:
+
+| Path | Store |
+|---|---|
+| Task-completion earnings | `rider.walletBalance` **only** |
+| Incentive reward | **both** — already correct |
+| Driver app wallet display | `Wallet` model only |
+| Withdrawal | `Wallet` model only, upserts `balance: 0` |
+
+Ride earnings accrued into a column the driver's app never reads and the
+withdrawal route never debits. UGX 0 on screen after a completed paid trip, and
+nothing to pay out on request.
+
+**Fix.** Ride earnings now go through `creditRewardToWallet` inside the existing
+completion transaction — the path the incentive payout already used correctly —
+so the money lands where the driver looks and the ledger gets its row. A failed
+credit throws rather than recording earnings as paid that never moved. Cash is
+still excluded: the rider was paid in hand.
+
+**Production data.** `report-wallet-reconciliation.ts` is read-only and reports
+what this stranded. Run against production: **7 riders, 0 stranded, UGX 0** —
+caught before it cost anyone. No backfill needed.
+
+## INC-4 — a replayed completion advanced progress twice
+
+**Status:** FIXED | **Priority:** P1 | **Category:** Incentive integrity
+
+`qualifyingTasks` records which tasks have already counted, but nothing
+consulted it before appending. The same task arriving twice incremented
+`ridesCompleted` twice. Completion events are not delivered exactly once — a
+retry, a replayed webhook, a double-fired hook — so a driver could reach a rides
+target without driving the rides and the campaign would pay for work never done.
+
+## INC-5 — one qualification could pay twice
+
+**Status:** FIXED | **Priority:** P1 | **Category:** Payout idempotency
+
+The payout marked the participation `REWARDED` with an unconditional update,
+which succeeded whatever the status already was. Two concurrent runs both passed
+and both credited the wallet. Claiming the row is now atomic, and the loser
+throws so the transaction rolls back rather than committing a half-payout — a
+plain `return` inside a Prisma interactive transaction COMMITS.
+
+## INC-2 — a live campaign could not be stopped
+
+**Status:** FIXED | **Priority:** P2 | **Category:** Admin control
+
+A campaign ran to its end time paying real money with no way to intervene.
+`PATCH /api/marketplace/incentives` already accepted `{ incentiveId, status }`;
+only the control was missing. Added to the marketplace admin view against that
+existing contract, gated by the same `canEdit('pricing')` permission the rest of
+the view uses.
+
+## DISP-5 — the offer alert never reached its own channel
+
+**Status:** FIXED + VERIFIED ON DEVICE | **Priority:** P1 | **Category:** Notification
+
+`dumpsys notification` showed every offer on
+`expo_notifications_fallback_notification_channel` at importance 4 — not the
+MAX-importance `ride-offers-v1` channel built for it. No heads-up while the
+driver was in another app, no DND bypass, indistinguishable from a receipt.
+
+Root cause, confirmed against the installed SDK rather than guessed:
+`NotificationContentInput` has **no** `channelId` field. It belongs on the
+trigger, via `ChannelAwareTriggerInput`. The code passed it inside `content`
+with `trigger: null`, so no channel was communicated at all. TypeScript could
+not catch it because the value arrived through a **conditional spread**, and
+spreads skip excess-property checking.
+
+Verified on hardware after rebuild: `channel=ride-offers-v1`, `importance=5`,
+and still exactly one notification held across the ring loop.
+
+## BE-042 — three files claimed to be the lifecycle
+
+**Status:** RESOLVED | **Priority:** P2 | **Category:** Duplicate authority
+
+Importer counts settled it:
+
+- `enhanced-task-state-machine.service.ts` — **12 importers**, authoritative
+- `unified-state-machine.ts` — **0 references anywhere** → deleted
+- `api/state-machine.ts`, `services/task-state-machine.service.ts` — imported
+  only by verify scripts and a unit test → annotated, not deleted
+
+The annotation says the part that matters: a suite asserting against a parallel
+transition table proves nothing about what the server will allow, so those
+suites can pass while production refuses the move. Repointing them at the
+enhanced machine is recorded as follow-up.
+
+## INC-1 — the four-hour hardcode, located
+
+**Status:** OPEN (product decision) | **Category:** Business rule
+
+Found at `src/components/dashboard/marketplace-balance.tsx`:
+
+```ts
+endTime.setHours(endTime.getHours() + 4);
+```
+
+It is in the admin **create form**, not the API — so every campaign an admin
+creates is four hours long and the duration is never offered as a choice. The
+API accepts whatever start/end it is given. Making it configurable is a small
+change to that form; whether four hours is the intended default is a product
+question, so it stays open rather than being changed unilaterally.
