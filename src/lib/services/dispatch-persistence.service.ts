@@ -413,6 +413,12 @@ export class DispatchService {
         dropoffLatitude: task?.dropoffLatitude,
         dropoffLongitude: task?.dropoffLongitude,
         totalAmount: task?.totalAmount,
+        // What the DRIVER is actually paid, which is not the fare. It was
+        // already read for the push text but never put in the broadcast, so the
+        // offer sheet had nothing but totalAmount to show and labelled the
+        // customer's fare "You earn" — quoting UGX 3,000 on a job that pays
+        // 2,550, at the exact moment the driver decides whether to take it.
+        riderEarnings: task?.riderEarnings,
         paymentMethod: task?.paymentMethod,
         status: 'ASSIGNED',
       },

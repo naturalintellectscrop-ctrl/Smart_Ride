@@ -912,7 +912,17 @@ export default function DriverHomeScreen() {
 
             <View style={styles.fareRow}>
               <Text style={styles.fareLabel}>You earn</Text>
-              <Text style={styles.fareValue}>{formatUGX(incomingRequest.task?.totalAmount || 0)}</Text>
+              {/* The driver's cut, not the customer's fare. This showed
+                  totalAmount, so a job paying UGX 2,550 was advertised as
+                  3,000 — an overstatement on the one screen where the driver
+                  decides whether the work is worth taking, and contradicted by
+                  the job screen a tap later. Falls back to the fare only if the
+                  server sent no split at all. */}
+              <Text style={styles.fareValue}>
+                {formatUGX(
+                  incomingRequest.task?.riderEarnings ?? incomingRequest.task?.totalAmount ?? 0,
+                )}
+              </Text>
             </View>
 
             <View style={styles.actionRow}>

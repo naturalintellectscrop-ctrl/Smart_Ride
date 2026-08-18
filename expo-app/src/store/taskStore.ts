@@ -23,6 +23,8 @@ export interface IncomingRequest {
     dropoffLatitude?: number;
     dropoffLongitude?: number;
     totalAmount: number;
+    /** The driver's share. The offer sheet must quote this, never the fare. */
+    riderEarnings?: number;
     paymentMethod: string;
     status: string;
   };
