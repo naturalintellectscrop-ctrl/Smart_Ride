@@ -94,8 +94,13 @@ Notifications.setNotificationHandler({
         const open = useTaskStore.getState().incomingRequest as
           | { task?: { id?: string } }
           | null;
+        // Suppression requires PROOF that this push is the offer already on
+        // screen — a positive taskId match, never merely the absence of a
+        // contradiction. Dispatch always sends taskId; if a malformed payload
+        // ever arrives without one, showing a redundant notification is a far
+        // better failure than silently swallowing a real offer.
         const sameOffer =
-          !!open?.task?.id && (!data?.taskId || String(data.taskId) === String(open.task.id));
+          !!open?.task?.id && !!data?.taskId && String(data.taskId) === String(open.task.id);
         if (sameOffer) {
           // The local offer alert already owns the tray slot and the sound.
           return {
