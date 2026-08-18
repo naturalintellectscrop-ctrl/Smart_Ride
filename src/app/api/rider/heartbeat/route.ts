@@ -23,16 +23,35 @@ const HEARTBEAT_ACTIVE_STATES = [
 ];
 
 // Zod schema for heartbeat POST
+/**
+ * Telemetry beyond the position itself is NULLISH, not merely optional.
+ *
+ * `.optional()` accepts a missing key but rejects an explicit null, and null is
+ * exactly what the platform reports: Android's location provider returns
+ * `heading: null` and `speed: null` whenever the device is not moving. The
+ * driver app forwards `location.coords` straight through, so every heartbeat
+ * from a STATIONARY rider was rejected with
+ *   400 "Invalid input: expected number, received null"
+ * and thrown away by the caller's `.catch(() => {})`.
+ *
+ * Dispatch only offers work to riders whose lastHeartbeatAt is within 90s, so
+ * the effect was that a driver parked at a stage waiting for a job — the normal
+ * case, and the one the keep-alive timer was added to protect — went stale and
+ * disappeared from the eligible pool. A rider in motion heartbeat fine, which
+ * is why this survived: it only bites when the rider is standing still.
+ *
+ * Position stays strictly required; there is no useful heartbeat without it.
+ */
 const heartbeatSchema = z.object({
   latitude: z.number().min(-90).max(90, 'Latitude must be between -90 and 90'),
   longitude: z.number().min(-180).max(180, 'Longitude must be between -180 and 180'),
-  speed: z.number().optional(),
-  battery_level: z.number().optional(),
-  heading: z.number().optional(),
-  accuracy: z.number().optional(),
-  is_charging: z.boolean().optional(),
-  network_type: z.string().optional(),
-  task_id: z.string().optional(),
+  speed: z.number().nullish(),
+  battery_level: z.number().nullish(),
+  heading: z.number().nullish(),
+  accuracy: z.number().nullish(),
+  is_charging: z.boolean().nullish(),
+  network_type: z.string().nullish(),
+  task_id: z.string().nullish(),
 });
 
 export async function POST(request: NextRequest) {
