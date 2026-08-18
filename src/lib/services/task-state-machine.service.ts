@@ -1,4 +1,23 @@
 /**
+ * ⚠️ NOT THE AUTHORITATIVE LIFECYCLE. DO NOT IMPORT FROM PRODUCTION CODE.
+ *
+ * The one state machine the running system obeys is
+ * `src/lib/services/enhanced-task-state-machine.service.ts` — every route that
+ * moves a task goes through it. This file is an older, parallel transition
+ * table that no production code imports; it survives only because verification
+ * scripts and a unit test still assert against it.
+ *
+ * That is precisely what makes it dangerous. A suite that checks a transition
+ * here proves nothing about what the server will actually allow, so the two can
+ * drift apart and the tests will keep passing while production refuses the
+ * move (BE-042). Those suites need repointing at EnhancedTaskStateMachine;
+ * until they are, treat green results from them as evidence about THIS table
+ * only.
+ *
+ * If you are adding or changing a transition, change it in the enhanced state
+ * machine. Do not add production imports of this module.
+ */
+/**
  * Task State Machine Constants and Utilities
  * Exported for use in tests and other modules
  */

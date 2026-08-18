@@ -284,6 +284,24 @@ export async function processTaskCompletion(data: TaskCompletionData): Promise<v
         continue;
       }
 
+      // ── INC-4: one completed task counts once, ever ────────────────────────
+      //
+      // `qualifyingTasks` is the record of which tasks have already been
+      // counted toward this participation, but nothing consulted it before
+      // pushing — so the same task arriving twice incremented ridesCompleted
+      // twice and appeared twice in the list. Completion events are not
+      // guaranteed to be delivered exactly once (a retry, a replayed webhook,
+      // a double-fired hook), so a driver could reach a rides target without
+      // driving the rides, and the campaign would pay for work never done.
+      //
+      // Checked here, against the same array that is about to be appended to.
+      const alreadyCounted: string[] = participation.qualifyingTasks
+        ? JSON.parse(participation.qualifyingTasks)
+        : [];
+      if (alreadyCounted.includes(data.taskId)) {
+        continue;
+      }
+
       // Update progress
       const updateData: {
         ridesCompleted?: { increment: number };
@@ -309,12 +327,9 @@ export async function processTaskCompletion(data: TaskCompletionData): Promise<v
         updateData.ridesInTargetZone = { increment: 1 };
       }
 
-      // Track qualifying tasks
-      const qualifyingTasks = participation.qualifyingTasks 
-        ? JSON.parse(participation.qualifyingTasks) 
-        : [];
-      qualifyingTasks.push(data.taskId);
-      updateData.qualifyingTasks = JSON.stringify(qualifyingTasks);
+      // Track qualifying tasks — `alreadyCounted` was read above and has
+      // already been checked for this task id.
+      updateData.qualifyingTasks = JSON.stringify([...alreadyCounted, data.taskId]);
 
       // Update status to IN_PROGRESS if first ride
       if (participation.status === ParticipationStatus.ENROLLED) {
@@ -504,14 +519,40 @@ export async function completeIncentiveAndReward(participationId: string): Promi
 
     // Start a transaction to update everything atomically
     const result = await db.$transaction(async (tx) => {
-      // 1. Update participation status
-      const updatedParticipation = await tx.incentiveParticipation.update({
-        where: { id: participationId },
+      // 1. Claim the payout, then update participation status.
+      //
+      // ── INC-5: a reward is paid once ─────────────────────────────────────
+      //
+      // This was an unconditional update, so it succeeded no matter what the
+      // participation's status already was. Two concurrent runs — a retry
+      // racing the original, or the same completion processed twice — both
+      // passed it and both went on to credit the wallet, paying the campaign's
+      // reward out twice for one qualification.
+      //
+      // updateMany with a status guard makes the claim atomic: only the caller
+      // that moves the row out of a non-REWARDED state proceeds. Same shape as
+      // the dispatch double-accept guard.
+      const claim = await tx.incentiveParticipation.updateMany({
+        where: {
+          id: participationId,
+          status: { not: ParticipationStatus.REWARDED },
+        },
         data: {
           status: ParticipationStatus.REWARDED,
           rewardEarned: rewardAmount,
           rewardCreditedAt: new Date(),
         },
+      });
+
+      if (claim.count === 0) {
+        // Someone else already paid this one. Throwing rolls back rather than
+        // returning, because a plain return would COMMIT whatever this
+        // transaction had otherwise done.
+        throw new AlreadyRewardedError();
+      }
+
+      const updatedParticipation = await tx.incentiveParticipation.findUniqueOrThrow({
+        where: { id: participationId },
       });
 
       // 2. Credit to rider's actual wallet (using wallet service)
@@ -609,8 +650,26 @@ export async function completeIncentiveAndReward(participationId: string): Promi
 
     return { success: true, rewardAmount };
   } catch (error) {
+    // Losing the payout race is the guard doing its job, not a fault: another
+    // caller already paid this reward. Report it as a no-op so a retry does not
+    // look like a failure, and keep it out of the error log.
+    if (error instanceof AlreadyRewardedError) {
+      return { success: false, error: 'Reward already credited' };
+    }
     console.error('Error completing incentive reward:', error);
     return { success: false, error: 'Failed to process reward' };
+  }
+}
+
+/**
+ * Thrown inside the payout transaction when the participation has already been
+ * rewarded. It exists to force a rollback — returning from a Prisma interactive
+ * transaction commits — and never escapes the function that throws it.
+ */
+class AlreadyRewardedError extends Error {
+  constructor() {
+    super('ALREADY_REWARDED');
+    this.name = 'AlreadyRewardedError';
   }
 }
 
