@@ -15,6 +15,7 @@
 import { db } from '@/lib/db';
 import { TaskType, TransactionType } from '@prisma/client';
 import { toNumber } from '@/lib/decimal-utils';
+import { creditRewardToWallet } from '@/lib/wallet/wallet-service';
 
 // ============================================
 // TASK TYPE → TRANSACTION TYPE MAPPING
@@ -187,6 +188,44 @@ export class FinanceLedgerService {
               ...(isCash ? {} : { walletBalance: { increment: riderEarnings } }),
             },
           });
+
+          // ── BE-040: credit the wallet the driver can actually reach ────────
+          //
+          // `rider.walletBalance` above is not the wallet the platform uses.
+          // The driver's app reads the Wallet model (/wallet, /wallet/balance)
+          // and so does withdrawal, which upserts a Wallet row at balance 0
+          // when none exists. Nothing here ever credited it, so ride earnings
+          // accumulated in a column the driver could neither see nor withdraw:
+          // the app showed UGX 0 after a completed paid trip, and a withdrawal
+          // found nothing to pay out.
+          //
+          // The incentive payout already got this right — it credits the same
+          // USER-owned wallet through creditRewardToWallet and throws if the
+          // credit fails. Ride earnings follow that established path rather
+          // than inventing a second one, and the ledger gets its row.
+          //
+          // Cash is excluded for the same reason as above: the rider was paid
+          // in hand, so there is no platform money to credit.
+          if (!isCash && task.rider?.userId) {
+            const credited = await creditRewardToWallet({
+              ownerId: task.rider.userId,
+              ownerType: 'USER',
+              amount: riderEarnings,
+              referenceId: taskId,
+              referenceType: 'TASK_EARNINGS',
+              description: `Trip earnings: ${task.taskNumber}`,
+              tx,
+            });
+
+            // Read the answer. Earnings recorded as paid but never credited is
+            // exactly the silent failure this defect was made of — throwing
+            // rolls the completion ledger back so it is retried, not lost.
+            if (!credited.success) {
+              throw new Error(
+                `Wallet credit failed for task ${task.taskNumber}: ${credited.error ?? 'unknown'}`,
+              );
+            }
+          }
         }
 
         // Cash settlement: the client has paid in full, and the rider holds the
