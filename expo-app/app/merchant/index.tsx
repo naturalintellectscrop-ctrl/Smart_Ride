@@ -66,13 +66,16 @@ const ORDER_TABS: { key: OrderTab; label: string; icon: keyof typeof Ionicons.gl
 // Status colours come from the shared semantic mapping. This table was the
 // seventh hardcoded copy found during the migration.
 
+// Keyed on real OrderStatus values. The old table was keyed on the same
+// invented names as the tabs, so an order card fell through to showing the raw
+// enum — "PAYMENT_CONFIRMED" in a status pill meant for a human.
 const ORDER_STATUS_LABELS: Record<string, string> = {
-  PENDING: 'Pending',
-  NEW: 'New Order',
-  CONFIRMED: 'Confirmed',
+  ORDER_CREATED: 'Awaiting payment',
+  PAYMENT_CONFIRMED: 'New order',
+  MERCHANT_ACCEPTED: 'Accepted',
   PREPARING: 'Preparing',
-  READY: 'Ready for Pickup',
-  COMPLETED: 'Delivered',
+  READY_FOR_PICKUP: 'Ready for pickup',
+  PICKED_UP: 'With the courier',
   DELIVERED: 'Delivered',
   CANCELLED: 'Cancelled',
   REJECTED: 'Rejected',
@@ -481,7 +484,15 @@ function OrderCard({
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const statusTint = statusColor(order.status, COLORS);
   const statusText = ORDER_STATUS_LABELS[order.status] || order.status;
-  const isNew = ['NEW', 'PENDING'].includes(order.status);
+  // Awaiting the merchant's decision. This tested for 'NEW' and 'PENDING',
+  // neither of which is an OrderStatus, so it was permanently false and the
+  // Accept and Reject buttons never rendered — the merchant could see an order
+  // and had no way to act on it.
+  //
+  // Only PAYMENT_CONFIRMED is offered: the backend refuses accept before the
+  // customer has paid ('Order must be in PAYMENT_CONFIRMED status'), so showing
+  // the button on ORDER_CREATED would promise an action the server rejects.
+  const isNew = order.status === 'PAYMENT_CONFIRMED';
   const itemCount = order.items?.length || 0;
 
   const paymentLabel = (order as any).paymentMethod === 'CASH'
