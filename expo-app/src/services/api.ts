@@ -4,7 +4,7 @@
 // Complete API service with all endpoints
 // ============================================
 
-import { ApiResponse, Task, Order, Merchant, User, Rider, RiderReputation } from '../types';
+import { ApiResponse, Task, Order, Merchant, User, Rider, RiderReputation, TaskPaymentResult } from '../types';
 import { API_CONFIG, STORAGE_KEYS } from '../constants';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
@@ -134,7 +134,16 @@ class ApiService {
       // token persistence, profile loading, and every typed consumer.
       // Extract the inner payload so response.data IS the real data.
       if (data && typeof data === 'object' && 'success' in data && 'data' in data) {
-        return { success: true, data: (data as any).data };
+        // `pagination` is a SIBLING of `data` in paginatedResponse, so
+        // unwrapping to the inner payload threw it away and every paged list
+        // believed it was on page 1 of 1. Carried through separately rather
+        // than folded into `data`, so the shape every existing caller reads is
+        // untouched.
+        return {
+          success: true,
+          data: (data as any).data,
+          pagination: (data as any).pagination,
+        };
       }
 
       // Fallback for endpoints that return a raw (un-wrapped) payload.
@@ -813,12 +822,25 @@ class ApiService {
     return this.request<any>('/merchants/register', 'POST', data);
   }
 
-  async getMerchantOrders(merchantId: string, status?: string, page: number = 1): Promise<ApiResponse<any>> {
+  /**
+   * The merchant's own orders.
+   *
+   * This used to call `/merchants/{id}/orders`, which does not exist — that
+   * directory holds analytics, availability, menu and products and never had an
+   * orders route — so the dashboard answered "Failed to load orders. Network
+   * error." on every refresh while the orders sat there in the database. Same
+   * shape of defect as MERCH-1: a client addressing a URL nobody built.
+   *
+   * GET /orders is the real contract and already scopes a MERCHANT caller to
+   * their own merchant from the token (src/app/api/orders/route.ts), so the id
+   * is not sent — the server decides whose orders these are, which is also the
+   * safer arrangement.
+   */
+  async getMerchantOrders(_merchantId: string, status?: string, page: number = 1): Promise<ApiResponse<any>> {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     params.set('page', String(page));
-    const query = params.toString();
-    return this.request<any>(`/merchants/${merchantId}/orders${query ? `?${query}` : ''}`);
+    return this.request<any>(`/orders?${params.toString()}`);
   }
 
   async getMerchantAnalytics(merchantId: string): Promise<ApiResponse<any>> {
@@ -1185,6 +1207,61 @@ class ApiService {
     return this.request<any>('/wallet/topup', 'POST', data);
   }
 
+  // ==========================================
+  // TASK PAYMENT (settling a completed trip)
+  // ==========================================
+
+  /**
+   * Pay for a task.
+   *
+   * Completing a task does NOT settle it. `FinanceLedgerService` marks
+   * `paymentStatus` COMPLETED only for CASH, where the driver takes the fare by
+   * hand; every gateway method leaves the task PENDING with nothing charged, and
+   * no code moves a task to the PAID status at all. This is the call that
+   * actually collects the money, and until this existed there was no way for a
+   * customer to pay for a non-cash ride from the app.
+   *
+   * `amount` must come from the task's own `totalAmount` — never from anything
+   * the user typed. The endpoint trusts the amount it is given, so passing
+   * anything else would under- or over-charge the trip.
+   */
+  async payForTask(params: {
+    taskId: string;
+    amount: number;
+    paymentMethod: string;
+    phoneNumber?: string;
+  }): Promise<ApiResponse<TaskPaymentResult>> {
+    const res = await this.request<any>('/payments/initiate', 'POST', {
+      taskId: params.taskId,
+      amount: Math.round(params.amount),
+      currency: 'UGX',
+      paymentMethod: params.paymentMethod,
+      phoneNumber: params.phoneNumber,
+      description: `Smart Ride task ${params.taskId}`,
+    });
+
+    // This route answers { success, payment }, not the { success, data }
+    // envelope the wrapper unwraps, so normalise it here rather than making
+    // every screen know that.
+    if (res.success) {
+      const payment = (res.data as any)?.payment ?? res.data;
+      return { success: true, data: payment as TaskPaymentResult };
+    }
+    return res as ApiResponse<TaskPaymentResult>;
+  }
+
+  /** Poll a payment initiated by `payForTask`. */
+  async getTaskPaymentStatus(paymentId: string): Promise<ApiResponse<TaskPaymentResult>> {
+    const res = await this.request<any>(
+      `/payments/initiate?paymentId=${encodeURIComponent(paymentId)}`
+    );
+    if (res.success) {
+      const payment = (res.data as any)?.payment ?? res.data;
+      return { success: true, data: payment as TaskPaymentResult };
+    }
+    return res as ApiResponse<TaskPaymentResult>;
+  }
+
   /**
    * Request a pharmacy provider payout.
    */
@@ -1439,8 +1516,34 @@ class ApiService {
   // RATINGS
   // ==========================================
 
-  async rateTask(taskId: string, rating: number, comment?: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/tasks/${taskId}/rate`, 'POST', { rating, comment });
+  /**
+   * Rate a completed task.
+   *
+   * Both directions are supported by the backend: a client rating goes to the
+   * driver and feeds the reputation engine, a driver rating goes to the
+   * passenger and is stored without feeding anything automated (BE-012). The
+   * server decides the direction from who the caller is on the task, so there
+   * is nothing to pass here.
+   *
+   * The three sub-scores are accepted from CLIENTS only — the server nulls them
+   * on a driver's rating, since a passenger has no vehicle or punctuality
+   * obligation. They were part of the API from the start and simply never sent.
+   */
+  async rateTask(
+    taskId: string,
+    rating: number,
+    comment?: string,
+    subScores?: {
+      punctualityScore?: number;
+      professionalismScore?: number;
+      vehicleConditionScore?: number;
+    }
+  ): Promise<ApiResponse<any>> {
+    return this.request<any>(`/tasks/${taskId}/rate`, 'POST', {
+      rating,
+      comment,
+      ...(subScores ?? {}),
+    });
   }
 
   // ==========================================

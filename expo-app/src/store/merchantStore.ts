@@ -100,7 +100,10 @@ export const useMerchantStore = create<MerchantState>((set, get) => ({
       if (response.success && response.data) {
         const data = response.data as any;
         const orders = Array.isArray(data) ? data : (data.data || []);
-        const pagination = data.pagination || { page: 1, totalPages: 1 };
+        // Pagination rides on the response envelope, beside `data` — not
+        // inside it. Reading it from `data` always missed, so the list silently
+        // claimed to be one page long however many orders there were.
+        const pagination = response.pagination || data.pagination || { page: 1, totalPages: 1 };
         set({
           orders: orders as MerchantOrder[],
           ordersPage: pagination.page,

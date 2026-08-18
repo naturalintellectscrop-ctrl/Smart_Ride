@@ -29,6 +29,7 @@ export type TaskType =
 
 export type TaskStatus =
   | 'CREATED'
+  | 'REQUESTED'
   | 'MATCHING'
   | 'SEARCHING'
   | 'ASSIGNED'
@@ -46,6 +47,11 @@ export type TaskStatus =
   | 'DELIVERING'
   | 'DELIVERED'
   | 'COMPLETED'
+  // Post-completion settlement states. Legal in every transition table but
+  // currently unreachable — nothing in the backend moves COMPLETED -> PAID.
+  // Typed anyway so payment UI can render them if settlement is ever wired.
+  | 'PAID'
+  | 'CLOSED'
   | 'CANCELLED'
   | 'FAILED';
 
@@ -56,25 +62,66 @@ export interface Task {
   status: TaskStatus;
   clientId: string;
   riderId?: string;
-  
+
+  /**
+   * The legal next states for this task's TYPE and current status, computed
+   * server-side by the state machine that the transition endpoint enforces
+   * (GET /api/tasks/[id]).
+   *
+   * The journey UI picks which of these to offer as the primary action. It must
+   * never offer a status absent from this list — the per-task-type graphs
+   * genuinely differ (FOOD_DELIVERY and SHOPPING have no ACCEPTED at all), and
+   * guessing is what made a courier's first tap fail with a 400.
+   */
+  allowedTransitions?: TaskStatus[];
+
   pickupAddress: string;
   pickupLatitude?: number;
   pickupLongitude?: number;
   dropoffAddress: string;
   dropoffLatitude?: number;
   dropoffLongitude?: number;
-  
+
+  distanceKm?: number;
+  estimatedDuration?: number;
+  actualDuration?: number;
+
   baseFare: number;
   distanceFare?: number;
+  timeFare?: number;
+  deliveryFee?: number;
+  serviceFee?: number;
+  discount?: number;
   totalAmount: number;
-  
+  /** Platform's cut. Server-computed — never derive this on the client. */
+  platformCommission?: number;
+  /** What the provider actually earned on this task. Server-computed. */
+  riderEarnings?: number;
+  waitingMinutes?: number;
+  waitingCharge?: number;
+
   paymentMethod: PaymentMethod;
   paymentStatus: PaymentStatus;
-  
+
+  // Proof of delivery (BE-005). Null on rides, and null on deliveries until
+  // the courier captures proof.
+  proofType?: 'CODE' | 'PHOTO' | 'SIGNATURE' | 'LEFT_WITH_NOTE';
+  proofPhotoUrl?: string;
+  proofSignatureUrl?: string;
+  proofRecipientName?: string;
+  proofCapturedAt?: string;
+
   createdAt: string;
+  assignedAt?: string;
   acceptedAt?: string;
+  arrivedAtPickupAt?: string;
+  pickedUpAt?: string;
+  inProgressAt?: string;
+  deliveringAt?: string;
   completedAt?: string;
-  
+  cancelledAt?: string;
+  cancellationReason?: string;
+
   client?: User;
   rider?: Rider;
 }
@@ -151,20 +198,37 @@ export interface MenuItem {
 }
 
 // Payment Types
-export type PaymentMethod = 
-  | 'CASH' 
-  | 'MTN_MOMO' 
-  | 'AIRTEL_MONEY' 
-  | 'VISA' 
-  | 'MASTERCARD' 
-  | 'WALLET';
+export type PaymentMethod =
+  | 'CASH'
+  | 'MTN_MOMO'
+  | 'AIRTEL_MONEY'
+  | 'VISA'
+  | 'MASTERCARD'
+  | 'WALLET'
+  // The platform's own gateway. Present in the Prisma enum and already used by
+  // wallet top-up, but missing here, so a task paid through it did not typecheck.
+  | 'NYLON_PAY';
 
-export type PaymentStatus = 
-  | 'PENDING' 
-  | 'PROCESSING' 
-  | 'COMPLETED' 
-  | 'FAILED' 
+export type PaymentStatus =
+  | 'PENDING'
+  | 'PROCESSING'
+  | 'COMPLETED'
+  | 'FAILED'
   | 'REFUNDED';
+
+/**
+ * What POST/GET /payments/initiate returns for a task payment.
+ *
+ * `status` here is the PAYMENT's state, which is not the task's state and must
+ * never be inferred from it: a task reaches COMPLETED the moment the driver ends
+ * the trip, while a non-cash payment stays PENDING until this call succeeds.
+ */
+export interface TaskPaymentResult {
+  id: string;
+  reference: string;
+  status: PaymentStatus;
+  message?: string;
+}
 
 // Rider Types
 export type RiderRole = 'SMART_BODA_RIDER' | 'SMART_CAR_DRIVER' | 'DELIVERY_PERSONNEL';
@@ -213,6 +277,12 @@ export interface ApiResponse<T> {
    * onboarding form on nothing worse than a dropped connection.
    */
   status?: number;
+  /**
+   * Paging metadata from paginatedResponse. It sits BESIDE `data` in the
+   * backend envelope, so it has to be carried separately rather than found
+   * inside the unwrapped payload.
+   */
+  pagination?: { page: number; limit: number; total: number; totalPages: number };
 }
 
 export interface PaginatedResponse<T> {
