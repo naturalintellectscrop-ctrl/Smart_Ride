@@ -1180,3 +1180,177 @@ feature exists and is wired; it is the address that is wrong. Worth recording
 because the same grep shape would under-report every store-mediated action.
 
 ---
+
+# Session — Ride offer notifications and driver eligibility
+
+The report was "the driver appears to receive too many notifications for a
+single ride request." Counting them on the phone cannot say where they come
+from, so they were counted at the source instead: `verify-offer-lifecycle.ts`
+intercepts every outbound call to the Expo push API and records how many push
+messages one `DispatchMatch` actually produces.
+
+## DISP-1 — one offer stacked about ten notifications
+
+**Status:** FIXED, backend counts VERIFIED | **Priority:** P1 | **Category:** Notification / UX
+
+The duplicates were **local, not server-side**. Dispatch sends exactly one push
+per DispatchMatch — measured, not assumed.
+
+`expo-app/app/driver/index.tsx` kept the offer ringing by posting a fresh local
+notification every 3.5 seconds. It passed no `identifier`, so
+expo-notifications minted a new one each time and Android had no way to know
+the alerts were one event. With `shouldShowList: true` in the global handler,
+each became its own tray entry:
+
+```
+ 1  server push        (dispatch to Expo, once per match)
+ 9  local ring repeats (30s offer / 3.5s)
+---
+~10 notifications for ONE offer
+```
+
+The comment in that code admitted the mechanism — "plays the device's own
+notification sound repeatedly (via a local, immediate notification)" — a
+ringtone implemented as notification spam because no audio asset is bundled.
+
+**Fix.** Every repeat now reuses `OFFER_ALERT_ID`, so Android updates the same
+notification in place. It still re-alerts on each repeat (we never set
+`onlyAlertOnce`), so the ringing behaviour is unchanged — there is one
+notification per offer, and one handle to dismiss when it ends. Clearing the
+offer now dismisses it, instead of leaving a dead offer in the tray inviting a
+tap the server will refuse.
+
+The server's push is additionally suppressed when the offer sheet is already up
+for that same offer — and **only** then. If the sheet is not showing (socket
+dropped, app backgrounded, driver on another screen) the push shows normally.
+Suppressing it unconditionally would hide the very offer the push exists to
+deliver.
+
+## DISP-2 — the cron retry re-pushed offers the driver had already been rung about
+
+**Status:** FIXED + VERIFIED | **Priority:** P2 | **Category:** Dispatch / duplicate delivery
+
+`DispatchMatch.notificationSent` records only whether the **realtime broadcast**
+succeeded. The push is fire-and-forget and its outcome is never stored. So a
+match whose broadcast failed while its push landed fine was recorded as "not
+sent", and `retryFailedNotifications()` called `notifyRider()` again — firing a
+second push for an offer the driver had already heard.
+
+Bounded in practice (the GitHub-Actions cron is ~5-minute granularity against a
+30-second offer window), so this was a smaller contributor than DISP-1, but it
+is a genuine duplicate. Retries now re-attempt the broadcast only.
+
+## DISP-3 — one driver could accept two rides at once
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P0 | **Category:** Dispatch / eligibility
+
+Found by testing the race the brief asked for rather than by reading code.
+
+`acceptMatch` guarded the match row against being taken twice. Nothing stopped
+the same driver taking two **different** matches. The gap is reachable in normal
+use: a PENDING DispatchMatch does not set `rider.currentTaskId`, so a driver
+sitting on an open offer still reads as free and stays in the eligible pool for
+the next task. Two offers, two taps, and both transitions committed:
+
+```
+accept1=true accept2=true -> 2 active tasks held by one rider
+  E2E-OFFER-71:ASSIGNED, E2E-OFFER-72:ASSIGNED
+```
+
+`currentTaskId` named only the second, so the first became a trip nobody was
+dispatched to and nothing would ever release.
+
+**Fix.** Accepting now claims the rider row with a compare-and-set on
+`currentTaskId` — the same field dispatch eligibility already reads — inside the
+existing transaction. The loser throws (a plain `return` would COMMIT, leaving
+the match ACCEPTED with the task unassigned), which rolls the match back to
+PENDING so the offer stays claimable by someone actually free.
+
+This decides only whether an accept is admissible. **The state machine and its
+transition tables are untouched, and LC-1 remains frozen.**
+
+Verified against the deployed API, not just locally — 6/6 on
+`verify-production-dispatch.ts`, reading the production database afterwards to
+confirm the rows, because an API that returns the right JSON while writing the
+wrong rows is the failure worth catching.
+
+## DISP-4 — stale device tokens multiply every offer (latent, NOT the cause here)
+
+**Status:** OPEN | **Priority:** P3 | **Category:** Push / token hygiene
+
+`sendViaExpoPush` sends one message per **active token row**. Demonstrated: with
+3 active rows for one user, a single offer addressed 3 push messages.
+
+Both registration routes upsert on the unique `token`, so the same token never
+duplicates — but a device that rotates its token leaves the old row
+`isActive: true` forever, and `update` never reassigns `userId`, so a shared
+device keeps pushing to whoever registered first.
+
+**This is not what was happening.** Measured on production: `qa.boda` has
+exactly **one** active token, and platform-wide **zero** users carry more than
+one. Recorded as a latent multiplier, not the reported defect.
+
+## Driver eligibility — the invariant, tested state by state
+
+Traced to the actual server-side query: `CapabilityService.getEligibleRiders`
+filters on `currentTaskId: null` (plus APPROVED, isOnline, and a heartbeat
+within 90s). Tested by querying that pool directly, not by watching for
+notifications, with the driver otherwise kept perfectly dispatchable so an
+active task is the only possible reason to exclude them.
+
+| Driver state | Eligible? | Result |
+|---|---|---|
+| no active task | yes | PASS |
+| ASSIGNED | no | PASS |
+| ACCEPTED | no | PASS |
+| ARRIVING | no | PASS |
+| ARRIVED | no | PASS |
+| PICKED_UP | no | PASS |
+| IN_PROGRESS | no | PASS |
+| COMPLETED | yes | PASS |
+
+Delivery personnel, against the delivery lifecycle's own states:
+
+| Courier state | Eligible? | Result |
+|---|---|---|
+| ASSIGNED / ACCEPTED / ARRIVING | no | PASS |
+| PICKED_UP / IN_TRANSIT / DELIVERING | no | PASS |
+| DELIVERED | yes | PASS |
+
+Note there is deliberately **no ARRIVED step** for a delivery —
+`ITEM_DELIVERY_TRANSITIONS` goes ARRIVING to PICKED_UP. The first run of this
+suite asserted a ride's states against a delivery and reported a defect that
+does not exist; the test was wrong, not the product. Worth recording because
+asserting one task type's lifecycle against another is an easy way to invent a
+bug.
+
+## Offer lifecycle — one offer, end to end
+
+All verified in `verify-offer-lifecycle.ts` (37/37):
+
+- dispatch creates exactly **one** DispatchMatch and addresses exactly **one**
+  push, on the MAX-importance `ride-offers-v1` channel
+- **accept** produces match ACCEPTED, task ASSIGNED with the rider attached,
+  `currentTaskId` pinned; a second accept is refused
+- **decline** produces match REJECTED and a new match for a **different**
+  driver; the decliner cannot accept the match they rejected
+- **expiry** refuses a late accept, marks the match EXPIRED rather than leaving
+  it PENDING, and the task is never assigned by it
+- an old notification tapped after the SLA is refused by the server — the
+  notification is not the offer
+
+## Findings carried forward, not closed
+
+- **DEV-7** — the call screen now receives the authoritative `taskId` rather
+  than reconstructing it from `conversationId`. Closed on device.
+- **DEV-10** — `CallSession` stays `status: "ringing"`, `endedAt: null` after
+  Decline, because `api.endCall` only runs when `callInfo?.sessionId` is set.
+  Still OPEN; needs the incoming path's sessionId population traced, not
+  guessed.
+- **LC-1** — still frozen, still a product decision. `ASSIGNED -> SEARCHING`
+  exists in no task-type transition table, so `verify-decline-reroute.ts` sits
+  at 2/7. Confirmed unchanged by this session's work: the same 2/7 with the
+  dispatch changes stashed.
+- **Actor authority derives from the account's global role**, not the caller's
+  relationship to the task, so a user whose role is RIDER cannot cancel a ride
+  they booked as the client. Entangled with LC-1; not touched.
