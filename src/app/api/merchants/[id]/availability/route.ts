@@ -60,7 +60,6 @@ export async function PATCH(
         where: { userId: decoded.userId },
         select: { id: true },
       });
-      await setRLSContext(decoded);
       if (!own || own.id !== id) {
         return NextResponse.json(
           { success: false, error: 'That store belongs to another owner' },
@@ -68,6 +67,14 @@ export async function PATCH(
         );
       }
     }
+
+    // The service-role context set above is deliberately kept for the update.
+    // MerchantOnboardingService re-reads the merchant, and under the owner's own
+    // RLS context that read came back empty — so a legitimate owner toggling
+    // their own store got "Merchant not found" surfaced as a 400. Elevating is
+    // safe here precisely because the block above has already proved this store
+    // belongs to the caller; the finally below resets the context either way.
+    await setServiceRoleContext();
 
     let updatedMerchant;
 
