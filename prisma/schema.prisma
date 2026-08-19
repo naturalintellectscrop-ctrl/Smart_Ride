@@ -480,6 +480,15 @@ model Task {
   createdAt           DateTime              @default(now())
   updatedAt           DateTime              @updatedAt
   healthOrderId       String?               @unique
+  /// The pharmacy order this delivery is carrying.
+  ///
+  /// A pharmacy order lives on ProviderOrder, which had no link to a Task at
+  /// all — so a prepared order reached READY_FOR_PICKUP and no courier was
+  /// ever asked for. `orderId` and `healthOrderId` above are the equivalent
+  /// links for merchant and (unused) HealthOrder deliveries; this is the
+  /// third, and it is unique for the same reason they are: one delivery per
+  /// order.
+  providerOrderId     String?               @unique
   auditLogs           AuditLog[]            @relation("TaskAuditLogs")
   conversation        Conversation?
   dispatchMatches     DispatchMatch[]
@@ -495,6 +504,7 @@ model Task {
   client              User                  @relation(fields: [clientId], references: [id], onDelete: Cascade)
   healthOrder         HealthOrder?          @relation(fields: [healthOrderId], references: [id])
   order               Order?                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  providerOrder       ProviderOrder?        @relation(fields: [providerOrderId], references: [id])
   rider               Rider?                @relation(fields: [riderId], references: [id])
   calls               CallSession[]
 
@@ -1131,6 +1141,8 @@ model ProviderOrder {
   createdAt                  DateTime            @default(now())
   updatedAt                  DateTime            @updatedAt
   provider                   HealthProvider      @relation(fields: [providerId], references: [id])
+  /// The delivery task dispatched for this order, once it is ready.
+  task                       Task?
 
   @@index([providerId])
   @@index([status])

@@ -9,50 +9,72 @@ import { Prisma } from '@prisma/client';
 // GET /api/health-provider/catalog - Get medicine catalog for provider
 
 /**
- * Only the provider that owns a catalogue may change it.
+ * Which provider's catalogue this caller is asking about.
  *
- * GET is left open deliberately — a customer browses medicines before signing
- * in, and the catalogue is the storefront. The writes were open too, which is
- * what this closes: anyone could add, reprice or delete another pharmacy's
- * stock, including changing whether an item requires a prescription.
+ * PHARM-9: every handler here demanded an explicit `providerId`, but the
+ * pharmacist app has never been told its own provider id — it authenticates as
+ * a user and the server resolves the pharmacy from the token everywhere else
+ * (/health-provider/orders, and /health-provider/status since PHARM-7). So the
+ * catalogue screen asked for its own stock and got 400 "providerId is
+ * required", which the screen rendered as an empty catalogue, and adding a
+ * medicine failed validation before it reached the database. The pharmacy
+ * could not list, add, edit or restock anything.
+ *
+ * An admin still names the provider explicitly; nobody else may.
  */
-async function ownsProvider(
+async function resolveProviderId(
   request: NextRequest,
-  providerId: string | null | undefined
-): Promise<NextResponse | null> {
+  requestedId: string | null | undefined
+): Promise<{ providerId: string } | { error: NextResponse }> {
   const auth = requireAuth(request);
   if (!auth.success || !auth.user) {
-    return NextResponse.json(
-      { success: false, error: auth.error || 'Authentication required' },
-      { status: auth.statusCode || 401 }
-    );
+    return {
+      error: NextResponse.json(
+        { success: false, error: auth.error || 'Authentication required' },
+        { status: auth.statusCode || 401 }
+      ),
+    };
   }
-  if (isAdmin(auth.user.role)) return null;
+
+  if (isAdmin(auth.user.role)) {
+    if (!requestedId) {
+      return {
+        error: NextResponse.json(
+          { success: false, error: 'providerId is required' },
+          { status: 400 }
+        ),
+      };
+    }
+    return { providerId: requestedId };
+  }
 
   const own = await db.healthProvider.findUnique({
     where: { userId: auth.user.userId },
     select: { id: true },
   });
   if (!own) {
-    return NextResponse.json(
-      { success: false, error: 'No health provider account for this user' },
-      { status: 403 }
-    );
+    return {
+      error: NextResponse.json(
+        { success: false, error: 'No health provider account for this user' },
+        { status: 403 }
+      ),
+    };
   }
-  if (providerId && providerId !== own.id) {
-    return NextResponse.json(
-      { success: false, error: 'This catalogue belongs to another provider' },
-      { status: 403 }
-    );
+  if (requestedId && requestedId !== own.id) {
+    return {
+      error: NextResponse.json(
+        { success: false, error: 'This catalogue belongs to another provider' },
+        { status: 403 }
+      ),
+    };
   }
-  return null;
+  return { providerId: own.id };
 }
 
 export async function GET(request: NextRequest) {
   await setServiceRoleContext();
   try {
     const { searchParams } = new URL(request.url);
-    const providerId = searchParams.get('providerId');
     const category = searchParams.get('category');
     const search = searchParams.get('search');
     const requiresPrescription = searchParams.get('requiresPrescription');
@@ -60,10 +82,14 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    // A signed-in pharmacy gets its own catalogue without having to know its
+    // provider id; a customer browsing the storefront still names the pharmacy.
+    const requested = searchParams.get('providerId');
+    let providerId = requested;
     if (!providerId) {
-      return NextResponse.json({ success: false, error: 'providerId is required' },
-        { status: 400 }
-      );
+      const resolved = await resolveProviderId(request, null);
+      if ('error' in resolved) return resolved.error;
+      providerId = resolved.providerId;
     }
 
     const where: Prisma.MedicineCatalogWhereInput = { providerId };
@@ -126,21 +152,29 @@ export async function GET(request: NextRequest) {
 
 // POST /api/health-provider/catalog - Add medicine to catalog
 export async function POST(request: NextRequest) {
-  const denied = await ownsProvider(request, new URL(request.url).searchParams.get('providerId'));
-  if (denied) return denied;
+  const preflight = await resolveProviderId(
+    request,
+    new URL(request.url).searchParams.get('providerId')
+  );
+  if ('error' in preflight) return preflight.error;
 
   await setServiceRoleContext();
   try {
     const body = await request.json();
 
     const medicineCatalogSchema = z.object({
-      providerId: z.string().min(1),
+      // Optional: resolved from the caller's own account when absent. The
+      // pharmacist app does not know its provider id and never sent one.
+      providerId: z.string().min(1).optional(),
       name: z.string().min(1).max(200),
       genericName: z.string().max(200).optional(),
       description: z.string().max(1000).optional(),
       // Must be a real MedicineCategory — a free string here reached Prisma
-      // and threw on an unknown value.
-      category: z.enum(MedicineCategory),
+      // and threw on an unknown value. Optional because the field is a
+      // classification, not something a pharmacist must decide before they can
+      // stock an item; unclassified stock lands in OTHER rather than being
+      // refused outright.
+      category: z.enum(MedicineCategory).optional(),
       manufacturer: z.string().max(200).optional(),
       dosageForm: z.string().max(100).optional(),
       strength: z.string().max(100).optional(),
@@ -170,12 +204,14 @@ export async function POST(request: NextRequest) {
     }
 
     // providerId arrives in the BODY here, not the query string, so it has to
-    // be re-checked after parsing — the guard above only saw the URL.
-    const bodyDenied = await ownsProvider(request, parsed.data.providerId);
-    if (bodyDenied) return bodyDenied;
+    // be resolved and re-checked after parsing — the guard above only saw the
+    // URL. resolveProviderId both authorises a named id and supplies the
+    // caller's own when none was sent.
+    const resolvedProvider = await resolveProviderId(request, parsed.data.providerId);
+    if ('error' in resolvedProvider) return resolvedProvider.error;
+    const providerId = resolvedProvider.providerId;
 
     const {
-      providerId,
       name,
       genericName,
       description,
@@ -222,7 +258,7 @@ export async function POST(request: NextRequest) {
         name,
         genericName,
         description,
-        category,
+        category: category ?? 'OTHER',
         manufacturer,
         dosageForm,
         strength,
@@ -279,8 +315,11 @@ export async function POST(request: NextRequest) {
 
 // PATCH /api/health-provider/catalog - Update medicine in catalog
 export async function PATCH(request: NextRequest) {
-  const denied = await ownsProvider(request, new URL(request.url).searchParams.get('providerId'));
-  if (denied) return denied;
+  const resolved = await resolveProviderId(
+    request,
+    new URL(request.url).searchParams.get('providerId')
+  );
+  if ('error' in resolved) return resolved.error;
 
   await setServiceRoleContext();
   try {
@@ -300,6 +339,21 @@ export async function PATCH(request: NextRequest) {
     if (!medicine) {
       return NextResponse.json({ success: false, error: 'Medicine not found' },
         { status: 404 }
+      );
+    }
+
+    // PHARM-11: and it must be YOUR medicine.
+    //
+    // The old guard checked a providerId in the QUERY STRING, which the client
+    // never sends — so it only ever confirmed the caller had some pharmacy
+    // account, then updated whatever medicineId was named. Any signed-in
+    // pharmacist could reprice a competitor's stock, mark it unavailable, or
+    // flip requiresPrescription off a controlled drug in someone else's
+    // catalogue.
+    if (medicine.providerId !== resolved.providerId) {
+      return NextResponse.json(
+        { success: false, error: 'This medicine belongs to another provider' },
+        { status: 403 }
       );
     }
 
@@ -348,8 +402,11 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE /api/health-provider/catalog - Remove medicine from catalog
 export async function DELETE(request: NextRequest) {
-  const denied = await ownsProvider(request, new URL(request.url).searchParams.get('providerId'));
-  if (denied) return denied;
+  const resolved = await resolveProviderId(
+    request,
+    new URL(request.url).searchParams.get('providerId')
+  );
+  if ('error' in resolved) return resolved.error;
 
   await setServiceRoleContext();
   try {
@@ -359,6 +416,22 @@ export async function DELETE(request: NextRequest) {
     if (!medicineId) {
       return NextResponse.json({ success: false, error: 'medicineId is required' },
         { status: 400 }
+      );
+    }
+
+    // PHARM-11: deleting someone else's stock was reachable the same way the
+    // update was — see the note on PATCH above.
+    const target = await db.medicineCatalog.findUnique({
+      where: { id: medicineId },
+      select: { providerId: true },
+    });
+    if (!target) {
+      return NextResponse.json({ success: false, error: 'Medicine not found' }, { status: 404 });
+    }
+    if (target.providerId !== resolved.providerId) {
+      return NextResponse.json(
+        { success: false, error: 'This medicine belongs to another provider' },
+        { status: 403 }
       );
     }
 

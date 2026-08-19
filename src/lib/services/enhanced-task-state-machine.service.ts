@@ -13,6 +13,7 @@ import { db, setServiceRoleContext } from '@/lib/db';
 import { ActorType, TaskStatus, TaskType, RiderRole } from '@prisma/client';
 import { TaskAnalyticsUpdater } from './analytics-updater.service';
 import { FinanceLedgerService } from './finance-ledger.service';
+import { mirrorTaskStatusToProviderOrder } from '@/lib/health/provider-order-delivery';
 import { PlatformIntelligence } from '@/lib/intelligence/platform-events.service';
 import { sendTaskUpdateNotification } from './notification.service';
 import { SocketReliabilityService } from '@/lib/realtime/socket-reliability.service';
@@ -814,6 +815,16 @@ export class EnhancedTaskStateMachine {
     try {
       const taskType = task.taskType as TaskType;
       const riderId = task.riderId || context.riderId;
+
+      // ── PHARM-8: keep the pharmacy's own order in step with its delivery ──
+      //
+      // The pharmacist watches ProviderOrder; the courier moves Task. Nothing
+      // connected the two, so a pharmacy screen would still read
+      // READY_FOR_PICKUP while the medicine was already at the customer's
+      // door. The mirror is forward-only and settles at most once — see
+      // lib/health/provider-order-delivery.ts. It runs for every status, and
+      // no-ops immediately for tasks that are not pharmacy deliveries.
+      await mirrorTaskStatusToProviderOrder(task.id, toStatus);
 
       switch (toStatus) {
         case TaskStatus.ASSIGNED: {

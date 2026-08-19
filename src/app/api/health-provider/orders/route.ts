@@ -17,6 +17,10 @@ import { enumParam, requireEnumParam } from '@/lib/api/enum-params';
 import { ProviderOrderStatus, HealthOrderType } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
+import {
+  dispatchProviderOrder,
+  settleProviderOrderDelivery,
+} from '@/lib/health/provider-order-delivery';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 
@@ -485,11 +489,23 @@ export async function PATCH(request: NextRequest) {
         updateData.pickedUpAt = now;
         break;
 
-      case 'DELIVER':
-        updateData.status = 'DELIVERED';
-        updateData.deliveredAt = now;
-        updateData.paymentStatus = 'COMPLETED';
-        break;
+      case 'DELIVER': {
+        // Settlement lives in one place so the pharmacy cannot be paid twice
+        // for one order — once here and once when the courier's task
+        // completes. settleProviderOrderDelivery claims the row with a
+        // conditional update and only then moves money.
+        const settled = await settleProviderOrderDelivery(orderId, {
+          riderId: riderId ?? order.riderId,
+        });
+        if (!settled.settled) {
+          return NextResponse.json(
+            { success: false, error: 'This order is already DELIVERED' },
+            { status: 409 }
+          );
+        }
+        const delivered = await db.providerOrder.findUnique({ where: { id: orderId } });
+        return NextResponse.json({ success: true, order: delivered });
+      }
 
       case 'CANCEL':
         updateData.status = 'CANCELLED';
@@ -518,16 +534,25 @@ export async function PATCH(request: NextRequest) {
       data: updateData,
     });
 
-    // Update provider stats if order completed
-    if (action === 'DELIVER') {
-      await db.healthProvider.update({
-        where: { id: order.providerId },
-        data: {
-          totalOrders: { increment: 1 },
-          completedOrders: { increment: 1 },
-          totalEarnings: { increment: order.providerEarnings },
-        },
-      });
+    // ── PHARM-8: a ready pharmacy order now asks for a courier ──────────────
+    //
+    // This is the step the pharmacy chain was missing entirely. The merchant
+    // flow has done it since it was written (orders/[id] handleReady), so a
+    // food order that goes READY starts a rider search; a pharmacy order that
+    // went READY simply stopped, and the prepared medicine sat on the counter
+    // with nothing on the platform asking for it to be moved.
+    //
+    // Deliberately not awaited for its result beyond task creation: the
+    // pharmacist's "Mark ready" has already succeeded and must not fail
+    // because no rider happens to be online.
+    let deliveryTask: { taskId?: string; taskNumber?: string } | undefined;
+    if (action === 'READY') {
+      const dispatch = await dispatchProviderOrder(orderId);
+      if (dispatch.taskId) {
+        deliveryTask = { taskId: dispatch.taskId, taskNumber: dispatch.taskNumber };
+      } else if (dispatch.reason && dispatch.reason !== 'Order is not a delivery') {
+        console.error(`[HealthProviderOrders] dispatch for ${orderId}: ${dispatch.reason}`);
+      }
     }
 
     if (action === 'CANCEL' || action === 'REJECT') {
@@ -543,6 +568,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       success: true,
       order: updatedOrder,
+      deliveryTask,
     });
   } catch (error) {
     console.error('Error updating order:', error);
