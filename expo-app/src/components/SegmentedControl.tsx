@@ -43,7 +43,18 @@ export function SegmentedControl<T extends string>({ segments, value, onChange, 
         const active = s.value === value;
         return (
           <TouchableOpacity key={s.value} style={styles.segment} onPress={() => onChange(s.value)} activeOpacity={0.85} accessibilityRole="button" accessibilityState={{ selected: active }} accessibilityLabel={s.label}>
-            <Text style={[styles.label, active && styles.labelActive]} numberOfLines={1}>{s.label}</Text>
+            {/* Shrink rather than clip. Four segments split the track equally, so
+                labels like "Preparing 2" and "Completed" were being cut to
+                "Prepari…" and "Compl…" — which reads as a rendering fault
+                rather than a tab. */}
+            <Text
+              style={[styles.label, active && styles.labelActive]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.8}
+            >
+              {s.label}
+            </Text>
           </TouchableOpacity>
         );
       })}
@@ -61,7 +72,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     position: 'absolute', top: 4, bottom: 4, left: 4, borderRadius: RADIUS.full,
     backgroundColor: COLORS.primary,
   },
-  segment: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: SPACING.xs },
+  segment: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 2 },
   label: { fontSize: 13.5, fontWeight: '600', color: COLORS.onSurfaceVariant },
   labelActive: { color: COLORS.onPrimary },
 });

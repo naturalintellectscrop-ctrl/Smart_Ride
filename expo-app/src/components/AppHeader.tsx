@@ -47,7 +47,9 @@ export function AppHeader({ title, subtitle, variant = 'compact', onBack, rightA
         {variant === 'compact' ? (
           <View style={styles.compactTitleBlock}>
             {subtitle ? <Text style={styles.compactSubtitle} numberOfLines={1}>{subtitle}</Text> : null}
-            <Text style={styles.compactTitle} numberOfLines={1}>{title}</Text>
+            {/* Shrink before clipping: "Merchant Dashboard" beside an OPEN pill and
+                a bell was being cut to "Merchant Dashb…". */}
+            <Text style={styles.compactTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{title}</Text>
           </View>
         ) : (
           <View style={{ flex: 1 }} />
@@ -65,7 +67,7 @@ export function AppHeader({ title, subtitle, variant = 'compact', onBack, rightA
 
       {variant === 'large' ? (
         <View style={styles.largeBlock}>
-          <Text style={styles.largeTitle}>{title}</Text>
+          <Text style={styles.largeTitle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{title}</Text>
           {subtitle ? <Text style={styles.largeSubtitle}>{subtitle}</Text> : null}
         </View>
       ) : null}
