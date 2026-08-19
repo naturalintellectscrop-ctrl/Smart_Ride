@@ -9,6 +9,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { MarketingShell } from '@/components/marketing/MarketingShell';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
+import { MarketingFooter } from '@/components/marketing/MarketingFooter';
+import { Reveal } from '@/components/marketing/Reveal';
 import {
   FileText,
   Calendar,
@@ -106,7 +108,7 @@ export default function TermsPage() {
 
       {/* Hero */}
       <section className="py-16 px-4">
-        <div className="max-w-3xl mx-auto text-center">
+        <Reveal className="max-w-3xl mx-auto text-center">
           <div className="flex justify-center mb-6">
             <Badge
               variant="outline"
@@ -165,7 +167,7 @@ export default function TermsPage() {
               </p>
             </CardContent>
           </Card>
-        </div>
+        </Reveal>
       </section>
 
       {/* Main content */}
@@ -173,11 +175,13 @@ export default function TermsPage() {
         <div className="max-w-3xl mx-auto space-y-12">
           {/* 1. Acceptance of Terms */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={1}
-              title="Acceptance of Terms"
-              Icon={FileText}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={1}
+                title="Acceptance of Terms"
+                Icon={FileText}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 By downloading, installing, accessing, or using the Smart Ride
@@ -207,11 +211,13 @@ export default function TermsPage() {
 
           {/* 2. Description of Service */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={2}
-              title="Description of Service"
-              Icon={Car}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={2}
+                title="Description of Service"
+                Icon={Car}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride is a technology platform that connects customers
@@ -315,11 +321,13 @@ export default function TermsPage() {
 
           {/* 3. User Accounts */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={3}
-              title="User Accounts"
-              Icon={UserCheck}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={3}
+                title="User Accounts"
+                Icon={UserCheck}
+              />
+            </Reveal>
             <div className="mt-4 space-y-2">
               <SubHeading label="Registration" />
               <p className="text-mkt-fg-muted leading-relaxed">
@@ -367,11 +375,13 @@ export default function TermsPage() {
 
           {/* 4. User Conduct */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={4}
-              title="User Conduct"
-              Icon={Ban}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={4}
+                title="User Conduct"
+                Icon={Ban}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 You agree to use Smart Ride only for lawful purposes. The
@@ -402,11 +412,13 @@ export default function TermsPage() {
 
           {/* 5. Payments & Wallet */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={5}
-              title="Payments & Wallet"
-              Icon={CreditCard}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={5}
+                title="Payments & Wallet"
+                Icon={CreditCard}
+              />
+            </Reveal>
             <div className="mt-4 space-y-2">
               <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride supports the following payment methods in Uganda:
@@ -455,11 +467,13 @@ export default function TermsPage() {
 
           {/* 6. Ride & Service Terms */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={6}
-              title="Ride & Service Terms"
-              Icon={Car}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={6}
+                title="Ride & Service Terms"
+                Icon={Car}
+              />
+            </Reveal>
             <div className="mt-4 space-y-2">
               <SubHeading label="Driver-Partner Relationship" />
               <p className="text-mkt-fg-muted leading-relaxed">
@@ -497,11 +511,13 @@ export default function TermsPage() {
 
           {/* 7. Driver/Merchant Terms */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={7}
-              title="Driver & Merchant Terms"
-              Icon={Building2}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={7}
+                title="Driver & Merchant Terms"
+                Icon={Building2}
+              />
+            </Reveal>
             <div className="mt-4 space-y-2">
               <SubHeading label="Partnerships" />
               <p className="text-mkt-fg-muted leading-relaxed">
@@ -539,11 +555,13 @@ export default function TermsPage() {
 
           {/* 8. Intellectual Property */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={8}
-              title="Intellectual Property"
-              Icon={Copyright}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={8}
+                title="Intellectual Property"
+                Icon={Copyright}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 The Smart Ride platform, including its name, logo, software,
@@ -573,11 +591,13 @@ export default function TermsPage() {
 
           {/* 9. Disclaimers & Limitation of Liability */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={9}
-              title="Disclaimers & Limitation of Liability"
-              Icon={AlertTriangle}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={9}
+                title="Disclaimers & Limitation of Liability"
+                Icon={AlertTriangle}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <SubHeading label="Disclaimers" />
               <p className="text-mkt-fg-muted leading-relaxed">
@@ -612,11 +632,13 @@ export default function TermsPage() {
 
           {/* 10. Termination */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={10}
-              title="Termination"
-              Icon={UserX}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={10}
+                title="Termination"
+                Icon={UserX}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 You may delete your account at any time through the app or by
@@ -652,11 +674,13 @@ export default function TermsPage() {
 
           {/* 11. Governing Law */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={11}
-              title="Governing Law"
-              Icon={Scale}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={11}
+                title="Governing Law"
+                Icon={Scale}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 These Terms of Service are governed by and construed in
@@ -682,11 +706,13 @@ export default function TermsPage() {
 
           {/* 12. Changes to Terms */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={12}
-              title="Changes to Terms"
-              Icon={RefreshCw}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={12}
+                title="Changes to Terms"
+                Icon={RefreshCw}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 We may update these Terms of Service from time to time. When we
@@ -708,11 +734,13 @@ export default function TermsPage() {
 
           {/* 13. Contact Us */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={13}
-              title="Contact Us"
-              Icon={Mail}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={13}
+                title="Contact Us"
+                Icon={Mail}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 If you have questions, concerns, or requests regarding these
@@ -757,48 +785,7 @@ export default function TermsPage() {
         </div>
       </main>
 
-      {/* Sticky footer */}
-      <footer className="mt-auto bg-mkt-bg-raised border-t border-mkt-border">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <Link href="/" className="text-lg font-semibold text-mkt-fg">Smart Ride</Link>
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-              <Link
-                href="/privacy"
-                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                href="/terms"
-                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
-              >
-                Terms of Service
-              </Link>
-              <Link
-                href="/delete-account"
-                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
-              >
-                Account Deletion
-              </Link>
-            </div>
-          </div>
-          <div className="flex items-center justify-center gap-2 text-sm text-mkt-fg-muted mb-4">
-            <Mail className="w-4 h-4 text-mkt-accent" />
-            <a
-              href="mailto:support@smartride.ug"
-              className="hover:text-mkt-accent transition-colors"
-            >
-              support@smartride.ug
-            </a>
-          </div>
-          <div className="pt-6 border-t border-mkt-border text-center">
-            <p className="text-mkt-fg-faint text-sm">
-              &copy; 2025 Smart Ride. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </MarketingShell>
   );
 }

@@ -208,12 +208,12 @@ html {
 }
 
 [data-marketing="dark"] {
-  --mkt-bg: #0b0c0e;
-  --mkt-bg-raised: #111214;
+  --mkt-bg: #121317;
+  --mkt-bg-raised: #191b20;
   --mkt-fg: #ffffff;
   --mkt-fg-muted: rgba(255, 255, 255, 0.6);
   --mkt-fg-faint: rgba(255, 255, 255, 0.4);
-  --mkt-border: rgba(255, 255, 255, 0.1);
+  --mkt-border: rgba(255, 255, 255, 0.12);
   --mkt-accent: #00d97e;
   --mkt-accent-fg: #0b0c0e;
 }

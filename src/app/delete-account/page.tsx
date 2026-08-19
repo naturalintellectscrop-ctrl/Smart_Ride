@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MarketingShell } from '@/components/marketing/MarketingShell';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
+import { Reveal } from '@/components/marketing/Reveal';
 import {
   Trash2,
   UserX,
@@ -41,7 +42,7 @@ export default function DeleteAccountPage() {
 
       {/* Hero */}
       <section className="pt-4 pb-12">
-        <div className="text-center px-4">
+        <Reveal className="text-center px-4">
           <div className="inline-flex items-center gap-2 bg-mkt-bg-raised border border-mkt-border rounded-full px-4 py-2 mb-6">
             <Trash2 className="w-4 h-4 text-mkt-accent" />
             <span className="text-mkt-fg-muted text-sm">Legal Document</span>
@@ -52,7 +53,7 @@ export default function DeleteAccountPage() {
           <p className="mt-4 text-mkt-fg-muted text-base max-w-2xl mx-auto">
             Last updated: June 2025 &middot; Smart Ride Uganda Limited
           </p>
-        </div>
+        </Reveal>
       </section>
 
       {/* Main Content */}
@@ -65,32 +66,34 @@ export default function DeleteAccountPage() {
           </Link>
 
           {/* Table of Contents */}
-          <div className="bg-mkt-bg-raised rounded-2xl p-6 border border-mkt-border mb-12">
-            <h2 className="text-lg font-semibold text-mkt-fg mb-4">Table of Contents</h2>
-            <nav className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {tocSections.map((section, index) => (
-                <a
-                  key={section.id}
-                  href={`#${section.id}`}
-                  className="flex items-center gap-2 text-mkt-fg-muted hover:text-mkt-accent text-sm transition-colors duration-200 py-1"
-                >
-                  <span className="text-mkt-accent/60 font-mono text-xs w-5">{index + 1}.</span>
-                  {section.label}
-                </a>
-              ))}
-            </nav>
-          </div>
+          <Reveal>
+            <div className="bg-mkt-bg-raised rounded-2xl p-6 border border-mkt-border mb-12">
+              <h2 className="text-lg font-semibold text-mkt-fg mb-4">Table of Contents</h2>
+              <nav className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {tocSections.map((section, index) => (
+                  <a
+                    key={section.id}
+                    href={`#${section.id}`}
+                    className="flex items-center gap-2 text-mkt-fg-muted hover:text-mkt-accent text-sm transition-colors duration-200 py-1"
+                  >
+                    <span className="text-mkt-accent/60 font-mono text-xs w-5">{index + 1}.</span>
+                    {section.label}
+                  </a>
+                ))}
+              </nav>
+            </div>
+          </Reveal>
 
           {/* Sections */}
           <div className="space-y-12">
             {/* 1. Introduction */}
             <section id="introduction" className="scroll-mt-24">
-              <div className="flex items-center gap-3 mb-4">
+              <Reveal amount={0.15} className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-mkt-accent/10 flex items-center justify-center flex-shrink-0">
                   <FileText className="w-5 h-5 text-mkt-accent" />
                 </div>
                 <h2 className="text-2xl font-bold text-mkt-fg">1. Introduction</h2>
-              </div>
+              </Reveal>
               <div className="text-mkt-fg-muted leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <p>
                   Smart Ride respects your right to control your personal data. This Account Deletion Policy explains what happens when you request to delete your Smart Ride account, what data is removed, what data is retained for legal obligations, and how long the process takes.
@@ -103,12 +106,12 @@ export default function DeleteAccountPage() {
 
             {/* 2. How to Delete */}
             <section id="how-to-delete" className="scroll-mt-24">
-              <div className="flex items-center gap-3 mb-4">
+              <Reveal amount={0.15} className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-mkt-accent/10 flex items-center justify-center flex-shrink-0">
                   <Trash2 className="w-5 h-5 text-mkt-accent" />
                 </div>
                 <h2 className="text-2xl font-bold text-mkt-fg">2. How to Request Account Deletion</h2>
-              </div>
+              </Reveal>
               <div className="text-mkt-fg-muted leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <p>You can request account deletion using any of the following methods:</p>
                 <div className="bg-mkt-bg-raised rounded-xl p-5 border border-mkt-border">
@@ -134,12 +137,12 @@ export default function DeleteAccountPage() {
 
             {/* 3. What Happens */}
             <section id="what-happens" className="scroll-mt-24">
-              <div className="flex items-center gap-3 mb-4">
+              <Reveal amount={0.15} className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-mkt-accent/10 flex items-center justify-center flex-shrink-0">
                   <UserX className="w-5 h-5 text-mkt-accent" />
                 </div>
                 <h2 className="text-2xl font-bold text-mkt-fg">3. What Happens When You Delete Your Account</h2>
-              </div>
+              </Reveal>
               <div className="text-mkt-fg-muted leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <p>When you request account deletion, the following occurs immediately:</p>
                 <ul className="space-y-2 list-disc pl-5">
@@ -161,12 +164,12 @@ export default function DeleteAccountPage() {
 
             {/* 4. Data Retained */}
             <section id="data-retained" className="scroll-mt-24">
-              <div className="flex items-center gap-3 mb-4">
+              <Reveal amount={0.15} className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-mkt-accent/10 flex items-center justify-center flex-shrink-0">
                   <Database className="w-5 h-5 text-mkt-accent" />
                 </div>
                 <h2 className="text-2xl font-bold text-mkt-fg">4. Data Retained for Legal Obligations</h2>
-              </div>
+              </Reveal>
               <div className="text-mkt-fg-muted leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <p>
                   Some data cannot be deleted immediately due to legal and regulatory obligations under Ugandan law. This data is retained in an anonymized or aggregated form and is kept secure:
@@ -185,12 +188,12 @@ export default function DeleteAccountPage() {
 
             {/* 5. Wallet Balance */}
             <section id="wallet-balance" className="scroll-mt-24">
-              <div className="flex items-center gap-3 mb-4">
+              <Reveal amount={0.15} className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-mkt-accent/10 flex items-center justify-center flex-shrink-0">
                   <Wallet className="w-5 h-5 text-mkt-accent" />
                 </div>
                 <h2 className="text-2xl font-bold text-mkt-fg">5. Wallet Balance</h2>
-              </div>
+              </Reveal>
               <div className="text-mkt-fg-muted leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <p>
                   <strong className="text-mkt-fg">Important:</strong> Any remaining Smart Ride wallet balance must be <span className="text-mkt-accent">withdrawn BEFORE</span> you request account deletion.
@@ -209,12 +212,12 @@ export default function DeleteAccountPage() {
 
             {/* 6. Active Orders */}
             <section id="active-orders" className="scroll-mt-24">
-              <div className="flex items-center gap-3 mb-4">
+              <Reveal amount={0.15} className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-mkt-accent/10 flex items-center justify-center flex-shrink-0">
                   <AlertTriangle className="w-5 h-5 text-mkt-accent" />
                 </div>
                 <h2 className="text-2xl font-bold text-mkt-fg">6. Active Rides &amp; Orders</h2>
-              </div>
+              </Reveal>
               <div className="text-mkt-fg-muted leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <p>
                   You <strong className="text-mkt-fg">cannot</strong> delete your account if you have any active rides, pending orders, or in-progress deliveries. You must first:
@@ -233,12 +236,12 @@ export default function DeleteAccountPage() {
 
             {/* 7. Recovery */}
             <section id="recovery" className="scroll-mt-24">
-              <div className="flex items-center gap-3 mb-4">
+              <Reveal amount={0.15} className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-mkt-accent/10 flex items-center justify-center flex-shrink-0">
                   <RotateCcw className="w-5 h-5 text-mkt-accent" />
                 </div>
                 <h2 className="text-2xl font-bold text-mkt-fg">7. Recovery Window</h2>
-              </div>
+              </Reveal>
               <div className="text-mkt-fg-muted leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <p>
                   Account deletion is not immediate. There is a <strong className="text-mkt-fg">30-day recovery window</strong> during which you can cancel the deletion request and restore your account.
@@ -254,12 +257,12 @@ export default function DeleteAccountPage() {
 
             {/* 8. Connected Accounts */}
             <section id="connected-accounts" className="scroll-mt-24">
-              <div className="flex items-center gap-3 mb-4">
+              <Reveal amount={0.15} className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-mkt-accent/10 flex items-center justify-center flex-shrink-0">
                   <Users className="w-5 h-5 text-mkt-accent" />
                 </div>
                 <h2 className="text-2xl font-bold text-mkt-fg">8. Impact on Connected Accounts</h2>
-              </div>
+              </Reveal>
               <div className="text-mkt-fg-muted leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <p>
                   If your phone number is linked to multiple Smart Ride account types (e.g., a rider account and a driver/merchant account), deleting one account type may affect the others:
@@ -274,12 +277,12 @@ export default function DeleteAccountPage() {
 
             {/* 9. Timeline */}
             <section id="timeline" className="scroll-mt-24">
-              <div className="flex items-center gap-3 mb-4">
+              <Reveal amount={0.15} className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-mkt-accent/10 flex items-center justify-center flex-shrink-0">
                   <Clock className="w-5 h-5 text-mkt-accent" />
                 </div>
                 <h2 className="text-2xl font-bold text-mkt-fg">9. Deletion Timeline</h2>
-              </div>
+              </Reveal>
               <div className="text-mkt-fg-muted leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <div className="overflow-hidden rounded-xl border border-mkt-border">
                   <table className="w-full text-sm">
@@ -319,12 +322,12 @@ export default function DeleteAccountPage() {
 
             {/* 10. Contact */}
             <section id="contact" className="scroll-mt-24">
-              <div className="flex items-center gap-3 mb-4">
+              <Reveal amount={0.15} className="flex items-center gap-3 mb-4">
                 <div className="w-10 h-10 rounded-xl bg-mkt-accent/10 flex items-center justify-center flex-shrink-0">
                   <ShieldCheck className="w-5 h-5 text-mkt-accent" />
                 </div>
                 <h2 className="text-2xl font-bold text-mkt-fg">10. Contact Us</h2>
-              </div>
+              </Reveal>
               <div className="text-mkt-fg-muted leading-relaxed space-y-4 pl-0 sm:pl-13">
                 <p>
                   If you have any questions about account deletion, our privacy practices, or need help with the deletion process, our support team is here to help.

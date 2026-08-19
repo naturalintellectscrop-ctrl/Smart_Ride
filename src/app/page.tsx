@@ -22,7 +22,9 @@ import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { Section } from '@/components/marketing/Section';
 import { SectionHeading } from '@/components/marketing/SectionHeading';
 import { Reveal } from '@/components/marketing/Reveal';
+import { Parallax } from '@/components/marketing/Parallax';
 import { HowItWorks } from '@/components/marketing/HowItWorks';
+import { KampalaShowcase } from '@/components/marketing/KampalaShowcase';
 import { FarePreviewCard, TrackingPreviewCard } from '@/components/marketing/ProductPreviewCard';
 import {
   Bike,
@@ -312,7 +314,7 @@ function LandingContent() {
             transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             className="relative"
           >
-            <div className="relative mx-auto aspect-square w-full max-w-md">
+            <Parallax speed={18} className="relative mx-auto aspect-square w-full max-w-md">
               <div className="relative flex h-full w-full items-center justify-center">
                 <div className="relative h-[420px] w-[210px] rounded-[2.5rem] border-4 border-mkt-border bg-mkt-bg-raised">
                   <div className="absolute left-1/2 top-3 h-1.5 w-16 -translate-x-1/2 rounded-full bg-mkt-fg-faint/40" />
@@ -342,7 +344,7 @@ function LandingContent() {
                   </div>
                 </div>
               </div>
-            </div>
+            </Parallax>
           </motion.div>
         </div>
       </section>
@@ -360,7 +362,7 @@ function LandingContent() {
         {/* Flagship spotlight rows */}
         <div className="mt-16 space-y-16">
           <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
-            <Reveal>
+            <Reveal x={-24} y={0}>
               <span className="text-xs font-semibold uppercase tracking-[0.18em] text-mkt-accent">
                 Rides
               </span>
@@ -373,7 +375,7 @@ function LandingContent() {
                 fixed before you request.
               </p>
             </Reveal>
-            <Reveal delay={0.1} className="flex justify-center lg:justify-end">
+            <Reveal delay={0.1} x={24} y={0} className="flex justify-center lg:justify-end">
               <FarePreviewCard
                 from="Bugolobi, Kampala"
                 to="Acacia Mall, Kisementi"
@@ -384,10 +386,10 @@ function LandingContent() {
           </div>
 
           <div className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
-            <Reveal delay={0.1} className="order-2 flex justify-center lg:order-1 lg:justify-start">
+            <Reveal delay={0.1} x={-24} y={0} className="order-2 flex justify-center lg:order-1 lg:justify-start">
               <TrackingPreviewCard status="Order on the way" courier="Courier: David · Boda" step={2} />
             </Reveal>
-            <Reveal className="order-1 lg:order-2">
+            <Reveal x={24} y={0} className="order-1 lg:order-2">
               <span className="text-xs font-semibold uppercase tracking-[0.18em] text-mkt-accent">
                 Delivery
               </span>
@@ -432,6 +434,8 @@ function LandingContent() {
           <HowItWorks />
         </div>
       </Section>
+
+      <KampalaShowcase />
 
       {/* Why Smart Ride */}
       <Section id="why" tone="raised">

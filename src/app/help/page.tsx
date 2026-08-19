@@ -6,6 +6,7 @@ import { MarketingShell } from '@/components/marketing/MarketingShell';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { Section } from '@/components/marketing/Section';
+import { Reveal } from '@/components/marketing/Reveal';
 import {
   Accordion,
   AccordionContent,
@@ -74,91 +75,101 @@ export default function HelpPage() {
       <MarketingHeader />
 
       <Section className="pb-12">
-        <h1 className="text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">Help</h1>
-        <p className="mt-6 max-w-2xl text-lg text-mkt-fg-muted">
-          Answers to the questions we get most. If yours is not here, our
-          support team can pick it up from the app.
-        </p>
+        <Reveal>
+          <h1 className="text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">Help</h1>
+          <p className="mt-6 max-w-2xl text-lg text-mkt-fg-muted">
+            Answers to the questions we get most. If yours is not here, our
+            support team can pick it up from the app.
+          </p>
+        </Reveal>
       </Section>
 
       <Section className="pt-0" containerClassName="[&>*]:max-w-3xl">
-        <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Frequently asked questions</h2>
+        <Reveal>
+          <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Frequently asked questions</h2>
 
-        <Accordion type="single" collapsible defaultValue={faqData[0].question} className="rounded-2xl border border-mkt-border bg-mkt-bg-raised px-6">
-          {faqData.map((item) => (
-            <AccordionItem key={item.question} value={item.question} className="border-mkt-border">
-              <AccordionTrigger className="py-5 text-base font-medium text-mkt-fg hover:no-underline">
-                {item.question}
-              </AccordionTrigger>
-              <AccordionContent className="text-sm leading-relaxed text-mkt-fg-muted">
-                {item.answer}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+          <Accordion type="single" collapsible defaultValue={faqData[0].question} className="rounded-2xl border border-mkt-border bg-mkt-bg-raised px-6">
+            {faqData.map((item) => (
+              <AccordionItem key={item.question} value={item.question} className="border-mkt-border">
+                <AccordionTrigger className="py-5 text-base font-medium text-mkt-fg hover:no-underline">
+                  {item.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-sm leading-relaxed text-mkt-fg-muted">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </Reveal>
       </Section>
 
       <Section tone="raised">
-        <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Staying safe</h2>
+        <Reveal>
+          <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Staying safe</h2>
 
-        <div className="grid grid-cols-1 border-t border-mkt-border md:grid-cols-3">
-          {safetyFeatures.map((feature) => (
-            <div
-              key={feature.title}
-              className="border-b border-mkt-border py-6 md:border-l md:px-8 md:first:border-l-0 md:first:pl-0"
-            >
-              <div className="flex items-center gap-2.5">
-                <feature.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
-                <h3 className="font-semibold text-mkt-fg">{feature.title}</h3>
+          <div className="grid grid-cols-1 border-t border-mkt-border md:grid-cols-3">
+            {safetyFeatures.map((feature) => (
+              <div
+                key={feature.title}
+                className="border-b border-mkt-border py-6 md:border-l md:px-8 md:first:border-l-0 md:first:pl-0"
+              >
+                <div className="flex items-center gap-2.5">
+                  <feature.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
+                  <h3 className="font-semibold text-mkt-fg">{feature.title}</h3>
+                </div>
+                <p className="mt-2 text-sm leading-relaxed text-mkt-fg-muted">{feature.description}</p>
               </div>
-              <p className="mt-2 text-sm leading-relaxed text-mkt-fg-muted">{feature.description}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </Reveal>
       </Section>
 
       <Section>
-        <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Ways to pay</h2>
+        <Reveal>
+          <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Ways to pay</h2>
 
-        <dl className="max-w-3xl divide-y divide-mkt-border border-t border-mkt-border">
-          {paymentOptions.map((option) => (
-            <div key={option.name} className="flex items-center gap-5 py-5">
-              <span
-                className="flex h-11 w-16 shrink-0 items-center justify-center rounded-md text-sm font-bold"
-                style={{ backgroundColor: option.swatch, color: option.text }}
-              >
-                {option.label}
-              </span>
-              <div>
-                <dt className="font-semibold text-mkt-fg">{option.name}</dt>
-                <dd className="text-sm text-mkt-fg-faint">{option.description}</dd>
+          <dl className="max-w-3xl divide-y divide-mkt-border border-t border-mkt-border">
+            {paymentOptions.map((option) => (
+              <div key={option.name} className="flex items-center gap-5 py-5">
+                <span
+                  className="flex h-11 w-16 shrink-0 items-center justify-center rounded-md text-sm font-bold"
+                  style={{ backgroundColor: option.swatch, color: option.text }}
+                >
+                  {option.label}
+                </span>
+                <div>
+                  <dt className="font-semibold text-mkt-fg">{option.name}</dt>
+                  <dd className="text-sm text-mkt-fg-faint">{option.description}</dd>
+                </div>
               </div>
-            </div>
-          ))}
-        </dl>
+            ))}
+          </dl>
+        </Reveal>
       </Section>
 
       <Section tone="raised">
-        <h2 className="mb-4 text-3xl font-bold text-mkt-fg">Still stuck?</h2>
-        <p className="mb-8 max-w-2xl text-mkt-fg-muted">
-          For a problem with a trip that is happening now, use in-app support.
-          It reaches us with your trip details attached.
-        </p>
-        <div className="flex flex-col gap-4 sm:flex-row">
-          <Link
-            href="/contact"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-mkt-accent px-8 py-4 font-semibold text-mkt-accent-fg transition-opacity hover:opacity-90"
-          >
-            Contact support
-            <ArrowRight className="h-5 w-5" />
-          </Link>
-          <a
-            href="mailto:support@smartride.ug"
-            className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-mkt-border px-8 py-4 font-semibold text-mkt-fg transition-colors hover:bg-mkt-bg-raised"
-          >
-            Email us
-          </a>
-        </div>
+        <Reveal>
+          <h2 className="mb-4 text-3xl font-bold text-mkt-fg">Still stuck?</h2>
+          <p className="mb-8 max-w-2xl text-mkt-fg-muted">
+            For a problem with a trip that is happening now, use in-app support.
+            It reaches us with your trip details attached.
+          </p>
+          <div className="flex flex-col gap-4 sm:flex-row">
+            <Link
+              href="/contact"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-mkt-accent px-8 py-4 font-semibold text-mkt-accent-fg transition-opacity hover:opacity-90"
+            >
+              Contact support
+              <ArrowRight className="h-5 w-5" />
+            </Link>
+            <a
+              href="mailto:support@smartride.ug"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-mkt-border px-8 py-4 font-semibold text-mkt-fg transition-colors hover:bg-mkt-bg-raised"
+            >
+              Email us
+            </a>
+          </div>
+        </Reveal>
       </Section>
 
       <MarketingFooter />

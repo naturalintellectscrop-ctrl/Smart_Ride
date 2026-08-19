@@ -9,6 +9,8 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { MarketingShell } from '@/components/marketing/MarketingShell';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
+import { MarketingFooter } from '@/components/marketing/MarketingFooter';
+import { Reveal } from '@/components/marketing/Reveal';
 import {
   Shield,
   Calendar,
@@ -103,7 +105,7 @@ export default function PrivacyPage() {
 
       {/* Hero */}
       <section className="py-16 px-4">
-        <div className="max-w-3xl mx-auto text-center">
+        <Reveal className="max-w-3xl mx-auto text-center">
           <div className="flex justify-center mb-6">
             <Badge
               variant="outline"
@@ -164,7 +166,7 @@ export default function PrivacyPage() {
               </p>
             </CardContent>
           </Card>
-        </div>
+        </Reveal>
       </section>
 
       {/* Main content */}
@@ -172,11 +174,13 @@ export default function PrivacyPage() {
         <div className="max-w-3xl mx-auto space-y-12">
           {/* 1. Introduction */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={1}
-              title="Introduction"
-              Icon={Building2}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={1}
+                title="Introduction"
+                Icon={Building2}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 This Privacy Policy applies to all users of Smart Ride,
@@ -200,11 +204,13 @@ export default function PrivacyPage() {
 
           {/* 2. Information We Collect */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={2}
-              title="Information We Collect"
-              Icon={Eye}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={2}
+                title="Information We Collect"
+                Icon={Eye}
+              />
+            </Reveal>
             <div className="mt-4 space-y-2">
               <p className="text-mkt-fg-muted leading-relaxed">
                 We collect information that you provide directly to us and
@@ -288,11 +294,13 @@ export default function PrivacyPage() {
 
           {/* 3. How We Use Your Information */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={3}
-              title="How We Use Your Information"
-              Icon={BarChart3}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={3}
+                title="How We Use Your Information"
+                Icon={BarChart3}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 We use the information we collect to:
@@ -317,11 +325,13 @@ export default function PrivacyPage() {
 
           {/* 4. Information Sharing */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={4}
-              title="Information Sharing"
-              Icon={Share2}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={4}
+                title="Information Sharing"
+                Icon={Share2}
+              />
+            </Reveal>
             <div className="mt-4 space-y-2">
               <p className="text-mkt-fg-muted leading-relaxed">
                 We do not sell your personal information. We share information
@@ -396,11 +406,13 @@ export default function PrivacyPage() {
 
           {/* 5. Data Security */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={5}
-              title="Data Security"
-              Icon={Lock}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={5}
+                title="Data Security"
+                Icon={Lock}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 We implement industry-standard security measures to protect
@@ -461,11 +473,13 @@ export default function PrivacyPage() {
 
           {/* 6. Data Retention */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={6}
-              title="Data Retention"
-              Icon={Database}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={6}
+                title="Data Retention"
+                Icon={Database}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 We retain your personal information for as long as your account
@@ -498,11 +512,13 @@ export default function PrivacyPage() {
 
           {/* 7. Your Rights */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={7}
-              title="Your Rights"
-              Icon={UserCircle}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={7}
+                title="Your Rights"
+                Icon={UserCircle}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 Under the Uganda Data Protection and Privacy Act, 2019, you
@@ -534,11 +550,13 @@ export default function PrivacyPage() {
 
           {/* 8. Cookies & Tracking */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={8}
-              title="Cookies & Tracking"
-              Icon={Cookie}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={8}
+                title="Cookies & Tracking"
+                Icon={Cookie}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 Smart Ride uses cookies and similar tracking technologies on
@@ -564,11 +582,13 @@ export default function PrivacyPage() {
 
           {/* 9. Children's Privacy */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={9}
-              title="Children's Privacy"
-              Icon={Baby}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={9}
+                title="Children's Privacy"
+                Icon={Baby}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <Card className="bg-mkt-accent/10 border-mkt-accent/20">
                 <CardContent>
@@ -601,11 +621,13 @@ export default function PrivacyPage() {
 
           {/* 10. Changes to This Policy */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={10}
-              title="Changes to This Policy"
-              Icon={RefreshCw}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={10}
+                title="Changes to This Policy"
+                Icon={RefreshCw}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 We may update this Privacy Policy from time to time to reflect
@@ -628,11 +650,13 @@ export default function PrivacyPage() {
 
           {/* 11. Contact Us */}
           <section className="scroll-mt-24">
-            <SectionHeading
-              number={11}
-              title="Contact Us"
-              Icon={Mail}
-            />
+            <Reveal amount={0.15}>
+              <SectionHeading
+                number={11}
+                title="Contact Us"
+                Icon={Mail}
+              />
+            </Reveal>
             <div className="mt-4 space-y-4">
               <p className="text-mkt-fg-muted leading-relaxed">
                 If you have questions, concerns, or requests regarding this
@@ -678,48 +702,7 @@ export default function PrivacyPage() {
         </div>
       </main>
 
-      {/* Sticky footer */}
-      <footer className="mt-auto bg-mkt-bg-raised border-t border-mkt-border">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mb-6">
-            <Link href="/" className="text-lg font-semibold text-mkt-fg">Smart Ride</Link>
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm">
-              <Link
-                href="/privacy"
-                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
-              >
-                Privacy Policy
-              </Link>
-              <Link
-                href="/terms"
-                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
-              >
-                Terms of Service
-              </Link>
-              <Link
-                href="/delete-account"
-                className="text-mkt-fg-muted hover:text-mkt-accent transition-colors"
-              >
-                Account Deletion
-              </Link>
-            </div>
-          </div>
-          <div className="flex items-center justify-center gap-2 text-sm text-mkt-fg-muted mb-4">
-            <Mail className="w-4 h-4 text-mkt-accent" />
-            <a
-              href="mailto:support@smartride.ug"
-              className="hover:text-mkt-accent transition-colors"
-            >
-              support@smartride.ug
-            </a>
-          </div>
-          <div className="pt-6 border-t border-mkt-border text-center">
-            <p className="text-mkt-fg-faint text-sm">
-              &copy; 2025 Smart Ride. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </MarketingShell>
   );
 }

@@ -5,6 +5,7 @@ import { MarketingShell } from '@/components/marketing/MarketingShell';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { Section } from '@/components/marketing/Section';
+import { Reveal } from '@/components/marketing/Reveal';
 import { Mail, Phone, MapPin, MessageCircle, Check } from 'lucide-react';
 
 const contactChannels = [
@@ -86,18 +87,20 @@ export default function ContactPage() {
       <MarketingHeader />
 
       <Section className="pb-12">
-        <h1 className="text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">
-          Get in touch
-        </h1>
-        <p className="mt-6 max-w-2xl text-lg text-mkt-fg-muted">
-          If something went wrong on a trip, in-app support is quickest. For
-          everything else, use whichever of these suits you.
-        </p>
+        <Reveal>
+          <h1 className="text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">
+            Get in touch
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg text-mkt-fg-muted">
+            If something went wrong on a trip, in-app support is quickest. For
+            everything else, use whichever of these suits you.
+          </p>
+        </Reveal>
       </Section>
 
       <Section className="pt-0">
         <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
-          <div className="rounded-3xl border border-mkt-border bg-mkt-bg-raised p-8">
+          <Reveal x={-20} y={0} className="rounded-3xl border border-mkt-border bg-mkt-bg-raised p-8">
             <h2 className="mb-6 text-2xl font-bold text-mkt-fg">Send us a message</h2>
 
             {submitted ? (
@@ -196,28 +199,30 @@ export default function ContactPage() {
                 </button>
               </form>
             )}
-          </div>
+          </Reveal>
 
-          <dl className="divide-y divide-mkt-border border-t border-mkt-border">
-            {contactChannels.map((channel) => (
-              <div key={channel.title} className="py-6">
-                <dt className="flex items-center gap-2.5">
-                  <channel.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
-                  <span className="font-semibold text-mkt-fg">{channel.title}</span>
-                </dt>
-                <dd className="mt-2 pl-[26px]">
-                  <p className="mb-1 text-sm text-mkt-fg-faint">{channel.detail}</p>
-                  {channel.href ? (
-                    <a href={channel.href} className="text-mkt-accent hover:underline">
-                      {channel.value}
-                    </a>
-                  ) : (
-                    <p className="text-mkt-fg-muted">{channel.value}</p>
-                  )}
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <Reveal x={20} y={0} delay={0.08}>
+            <dl className="divide-y divide-mkt-border border-t border-mkt-border">
+              {contactChannels.map((channel) => (
+                <div key={channel.title} className="py-6">
+                  <dt className="flex items-center gap-2.5">
+                    <channel.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
+                    <span className="font-semibold text-mkt-fg">{channel.title}</span>
+                  </dt>
+                  <dd className="mt-2 pl-[26px]">
+                    <p className="mb-1 text-sm text-mkt-fg-faint">{channel.detail}</p>
+                    {channel.href ? (
+                      <a href={channel.href} className="text-mkt-accent hover:underline">
+                        {channel.value}
+                      </a>
+                    ) : (
+                      <p className="text-mkt-fg-muted">{channel.value}</p>
+                    )}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </Reveal>
         </div>
       </Section>
 
