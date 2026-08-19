@@ -13,6 +13,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logSuspiciousActivity } from '@/lib/fraud/log-activity';
 import { enumParam, requireEnumParam } from '@/lib/api/enum-params';
 import { ProviderOrderStatus, HealthOrderType } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
@@ -327,22 +328,20 @@ export async function POST(request: NextRequest) {
     });
 
     // Log to fraud detection
-    await fetch('/api/fraud/activity', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        entityType: 'HEALTH_PROVIDER',
-        entityId: providerId,
-        activityType: 'ORDER_CREATED',
-        activityCategory: 'TRANSACTION',
-        metadata: {
-          orderId: order.id,
-          orderNumber: order.orderNumber,
-          orderType,
-          totalAmount,
-          itemCount: parsedItems.length,
-        },
-      }),
+    await logSuspiciousActivity({
+      entityType: 'HEALTH_PROVIDER',
+      entityId: providerId,
+      activityType: 'ORDER_CREATED',
+      activityCategory: 'TRANSACTION',
+      referenceType: 'PROVIDER_ORDER',
+      referenceId: order.id,
+      metadata: {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        orderType,
+        totalAmount,
+        itemCount: parsedItems.length,
+      },
     });
 
     // Create audit log

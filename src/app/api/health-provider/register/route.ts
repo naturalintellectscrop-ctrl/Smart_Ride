@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logSuspiciousActivity } from '@/lib/fraud/log-activity';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { Prisma } from '@prisma/client';
@@ -188,21 +189,12 @@ export async function POST(request: NextRequest) {
     });
 
     // Log to fraud detection system
-    await fetch('/api/fraud/activity', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        entityType: 'PHARMACY',
-        entityId: provider.id,
-        activityType: 'PROVIDER_REGISTRATION',
-        activityCategory: 'ACCOUNT_ACTIVITY',
-        metadata: {
-          providerType,
-          licenseNumber,
-          city,
-          district,
-        },
-      }),
+    await logSuspiciousActivity({
+      entityType: 'PHARMACY',
+      entityId: provider.id,
+      activityType: 'PROVIDER_REGISTRATION',
+      activityCategory: 'ACCOUNT_ACTIVITY',
+      metadata: { providerType, licenseNumber, city, district },
     });
 
     return NextResponse.json({

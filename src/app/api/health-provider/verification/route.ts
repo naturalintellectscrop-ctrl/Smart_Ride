@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logSuspiciousActivity } from '@/lib/fraud/log-activity';
 import { allAdminsGuard } from '@/lib/auth/admin-guards';
 import { enumParam } from '@/lib/api/enum-params';
 import { VerificationStatus, HealthProviderType } from '@prisma/client';
@@ -154,21 +155,17 @@ export async function PATCH(request: NextRequest) {
 
     // Log to fraud detection system
     if (action === 'REJECT' || action === 'SUSPEND') {
-      await fetch('/api/fraud/activity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entityType: provider.providerType === 'PHARMACY' ? 'PHARMACY' : 'HEALTH_PROVIDER',
-          entityId: providerId,
-          activityType: action === 'REJECT' ? 'VERIFICATION_REJECTED' : 'ACCOUNT_SUSPENDED',
-          activityCategory: 'ACCOUNT_ACTIVITY',
-          metadata: {
-            businessName: provider.businessName,
-            providerType: provider.providerType,
-            licenseNumber: provider.licenseNumber,
-            reason: rejectionReason || notes,
-          },
-        }),
+      await logSuspiciousActivity({
+        entityType: provider.providerType === 'PHARMACY' ? 'PHARMACY' : 'HEALTH_PROVIDER',
+        entityId: providerId,
+        activityType: action === 'REJECT' ? 'VERIFICATION_REJECTED' : 'ACCOUNT_SUSPENDED',
+        activityCategory: 'ACCOUNT_ACTIVITY',
+        metadata: {
+          businessName: provider.businessName,
+          providerType: provider.providerType,
+          licenseNumber: provider.licenseNumber,
+          reason: rejectionReason || notes,
+        },
       });
     }
 

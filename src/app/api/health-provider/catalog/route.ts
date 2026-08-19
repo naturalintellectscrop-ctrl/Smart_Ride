@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logSuspiciousActivity } from '@/lib/fraud/log-activity';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { enumParam, requireEnumParam } from '@/lib/api/enum-params';
 import { MedicineCategory } from '@prisma/client';
@@ -281,21 +282,19 @@ export async function POST(request: NextRequest) {
 
     // Log to fraud detection if controlled substance
     if (isControlled) {
-      await fetch('/api/fraud/activity', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          entityType: provider.providerType === 'PHARMACY' ? 'PHARMACY' : 'HEALTH_PROVIDER',
-          entityId: providerId,
-          activityType: 'CONTROLLED_MEDICINE_ADDED',
-          activityCategory: 'PRESCRIPTION_ACTIVITY',
-          metadata: {
-            medicineId: medicine.id,
-            medicineName: name,
-            controlledLevel,
-            providerType: provider.providerType,
-          },
-        }),
+      await logSuspiciousActivity({
+        entityType: provider.providerType === 'PHARMACY' ? 'PHARMACY' : 'HEALTH_PROVIDER',
+        entityId: providerId,
+        activityType: 'CONTROLLED_MEDICINE_ADDED',
+        activityCategory: 'PRESCRIPTION_ACTIVITY',
+        referenceType: 'MEDICINE_CATALOG',
+        referenceId: medicine.id,
+        metadata: {
+          medicineId: medicine.id,
+          medicineName: name,
+          controlledLevel,
+          providerType: provider.providerType,
+        },
       });
     }
 
