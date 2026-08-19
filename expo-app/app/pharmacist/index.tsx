@@ -13,6 +13,7 @@ import {
   RefreshControl,
   StyleSheet,
 } from 'react-native';
+import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/services';
 import { TYPOGRAPHY, SPACING } from '@/src/constants';
@@ -78,9 +79,14 @@ export default function PharmacistDashboard() {
       }
 
       if (statusRes.status === 'fulfilled' && statusRes.value.success && statusRes.value.data) {
+        // GET /health-provider/status answers { success, provider: {...} },
+        // not the usual { success, data }, so the open state lives at
+        // provider.isOpenNow. Reading data.isOpen found nothing and the pill
+        // rendered CLOSED no matter what the pharmacy had set.
+        const p = statusRes.value.data.provider ?? statusRes.value.data;
         setProviderStatus({
-          isOpen: statusRes.value.data.isOpen ?? statusRes.value.data.status === 'OPEN',
-          name: statusRes.value.data.name,
+          isOpen: p?.isOpenNow ?? p?.isOpen ?? false,
+          name: p?.businessName ?? p?.name,
         });
       }
     } catch (error) {
@@ -107,9 +113,18 @@ export default function PharmacistDashboard() {
       const response = await api.updateHealthProviderStatus({ status: newStatus ? 'OPEN' : 'CLOSED' });
       if (response.success) {
         setProviderStatus(prev => ({ ...prev, isOpen: newStatus }));
+      } else {
+        // Say so. A failed toggle used to leave the pill sitting where it was
+        // with no explanation, which reads as an unresponsive control rather
+        // than a rejected request.
+        Alert.alert(
+          'Could not update',
+          response.error || 'The pharmacy status was not changed. Please try again.',
+        );
       }
     } catch (error) {
       console.error('Failed to toggle status:', error);
+      Alert.alert('Could not update', 'The pharmacy status was not changed. Please try again.');
     } finally {
       setIsToggling(false);
     }
