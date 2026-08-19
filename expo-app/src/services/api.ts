@@ -929,12 +929,12 @@ class ApiService {
   }
 
   async getHealthProviderStatus(): Promise<ApiResponse<any>> {
-    return this.request<any>('/health/status');
+    return this.request<any>('/health-provider/status');
   }
 
   async updateHealthProviderStatus(data: boolean | { status: string }): Promise<ApiResponse<any>> {
     const payload = typeof data === 'boolean' ? { isOpen: data } : data;
-    return this.request<any>('/health/status', 'PATCH', payload);
+    return this.request<any>('/health-provider/status', 'PATCH', payload);
   }
 
   /**
@@ -955,8 +955,30 @@ class ApiService {
     return this.request<any>(`/health-provider/orders${query}`);
   }
 
+  /**
+   * One pharmacy order.
+   *
+   * This called `/health/orders/{id}` — the monitoring namespace again, the
+   * third place the pharmacist client addressed it. The route does not exist,
+   * so opening any order from the list showed "Order not found" even though the
+   * list had just rendered it.
+   *
+   * `/health-provider/orders` has no single-order route, and inventing one for
+   * this would add a second way to read the same data. The list already returns
+   * complete order objects for exactly this provider, so the order is selected
+   * from there — one contract, and the detail screen is guaranteed to show the
+   * same row the list did.
+   */
   async getHealthOrder(orderId: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/health/orders/${orderId}`);
+    const res = await this.request<any>('/health-provider/orders');
+    if (!res.success) return res;
+
+    const list = res.data?.orders ?? res.data?.data ?? res.data ?? [];
+    const order = Array.isArray(list) ? list.find((o: any) => o?.id === orderId) : null;
+
+    return order
+      ? { success: true, data: order }
+      : { success: false, error: 'Order not found', status: 404 };
   }
 
   /**
@@ -995,20 +1017,27 @@ class ApiService {
   }
 
   async getHealthProviderCatalog(): Promise<ApiResponse<any>> {
-    return this.request<any>('/health/catalog');
+    return this.request<any>('/health-provider/catalog');
   }
 
   async addMedicineToCatalog(data: any): Promise<ApiResponse<any>> {
-    return this.request<any>('/health/catalog', 'POST', data);
+    return this.request<any>('/health-provider/catalog', 'POST', data);
   }
 
+  // Catalog edits go to `PATCH /health-provider/catalog`, which identifies the
+  // row by `medicineId` in the body. These used to address
+  // `/health/catalog/{itemId}` and `/health/catalog/{itemId}/availability` —
+  // the monitoring namespace, where neither route exists — so editing a
+  // medicine or toggling its availability silently did nothing.
   async updateMedicineCatalog(itemId: string, data: any): Promise<ApiResponse<any>> {
-    return this.request<any>(`/health/catalog/${itemId}`, 'PATCH', data);
+    return this.request<any>('/health-provider/catalog', 'PATCH', { medicineId: itemId, ...data });
   }
 
   async updateMedicineAvailability(itemId: string, data: { isAvailable: boolean } | boolean): Promise<ApiResponse<any>> {
-    const payload = typeof data === 'boolean' ? { available: data } : data;
-    return this.request<any>(`/health/catalog/${itemId}/availability`, 'PATCH', payload);
+    // The route's whitelist names this field `isAvailable`; a bare boolean was
+    // being sent as `available`, which it would have ignored.
+    const isAvailable = typeof data === 'boolean' ? data : data.isAvailable;
+    return this.request<any>('/health-provider/catalog', 'PATCH', { medicineId: itemId, isAvailable });
   }
 
   // ==========================================
