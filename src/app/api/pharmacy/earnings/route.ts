@@ -157,102 +157,119 @@ async function getEarningsSummary(
   if (startDate) dateFilter.gte = new Date(startDate);
   if (endDate) dateFilter.lte = new Date(endDate);
 
-  // Get health orders with their financial data, scoped to one provider unless
-  // an admin asked for the platform.
-  const healthOrders = await db.healthOrder.findMany({
+  // PHARM-13: read the table the orders are actually in.
+  //
+  // This summed `db.healthOrder`, which has zero rows platform-wide — real
+  // pharmacy orders are ProviderOrder, and have been since the provider API was
+  // written. So a pharmacy that had delivered and been paid for orders opened
+  // its earnings screen and was shown UGX 0 across every figure, with an empty
+  // transaction list underneath. Same wrong-table mistake that made the orders
+  // screen and the catalogue look empty.
+  const orders = await db.providerOrder.findMany({
     where: {
-      createdAt: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
       status: 'DELIVERED',
+      ...(Object.keys(dateFilter).length > 0 ? { deliveredAt: dateFilter } : {}),
       ...(providerId ? { providerId } : {}),
     },
-    include: {
-      provider: true,
-      items: true,
+    select: {
+      id: true,
+      orderNumber: true,
+      orderType: true,
+      totalAmount: true,
+      subtotal: true,
+      deliveryFee: true,
+      serviceFee: true,
+      providerEarnings: true,
+      paymentMethod: true,
+      deliveredAt: true,
+      createdAt: true,
     },
+    orderBy: { deliveredAt: 'desc' },
   });
 
-  // Calculate summary statistics
-  const totalOrders = healthOrders.length;
-  const totalRevenue = healthOrders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
-  const totalDeliveryFees = healthOrders.reduce((sum, order) => sum + toNumber(order.deliveryFee), 0);
-  const totalServiceFees = healthOrders.reduce((sum, order) => sum + toNumber(order.serviceFee), 0);
-  
-  // Calculate provider earnings and platform commission
-  let totalProviderEarnings = 0;
-  let totalPlatformCommission = 0;
-  
-  healthOrders.forEach(order => {
-    const commissionRate = order.provider?.commissionRate || 0.10;
-    // subtotal is a Prisma Decimal — multiplying it raw produces NaN.
-    const subtotal = toNumber(order.subtotal);
-    const providerEarnings = subtotal * (1 - commissionRate);
-    const platformCommission = subtotal * commissionRate;
-    
-    totalProviderEarnings += providerEarnings;
-    totalPlatformCommission += platformCommission;
-  });
+  const totalOrders = orders.length;
+  const totalRevenue = orders.reduce((sum, o) => sum + toNumber(o.totalAmount), 0);
+  const totalDeliveryFees = orders.reduce((sum, o) => sum + toNumber(o.deliveryFee), 0);
+  const totalServiceFees = orders.reduce((sum, o) => sum + toNumber(o.serviceFee), 0);
 
-  // Get active providers count
+  // providerEarnings is stored on the order at the moment it is placed, using
+  // the provider's commission rate as it stood then. Recomputing it from the
+  // rate today would silently restate history every time a rate changed.
+  const totalProviderEarnings = orders.reduce((sum, o) => sum + toNumber(o.providerEarnings), 0);
+  const totalPlatformCommission = totalRevenue - totalProviderEarnings - totalDeliveryFees;
+
   const activeProviders = await db.healthProvider.count({
-    where: {
-      verificationStatus: 'APPROVED',
-      isOpenNow: true,
-    },
+    where: { verificationStatus: 'APPROVED', isOpenNow: true },
   });
-
-  // Get total verified providers
   const totalProviders = await db.healthProvider.count({
-    where: {
-      verificationStatus: 'APPROVED',
-    },
+    where: { verificationStatus: 'APPROVED' },
   });
 
-  // Get pending payouts
+  // Withdrawable balance. This aggregated EVERY pharmacy's pendingPayout with
+  // no provider filter, so each pharmacy was shown the platform's entire
+  // outstanding payout pool as its own available balance — both wrong and a
+  // leak of what other pharmacies are owed.
   const pendingPayouts = await db.healthProvider.aggregate({
-    _sum: {
-      pendingPayout: true,
-    },
-    where: {
-      pendingPayout: { gt: 0 },
-    },
+    _sum: { pendingPayout: true },
+    where: providerId ? { id: providerId } : { pendingPayout: { gt: 0 } },
   });
+  const availableBalance = toNumber(pendingPayouts._sum.pendingPayout);
 
-  // Get today's earnings
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const todayOrders = await db.healthOrder.findMany({
-    where: {
-      createdAt: { gte: today },
-      status: 'DELIVERED',
-    },
-  });
-  
-  const todayEarnings = todayOrders.reduce((sum, order) => sum + toNumber(order.totalAmount), 0);
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const todaysOrders = orders.filter(
+    (o) => o.deliveredAt && new Date(o.deliveredAt) >= startOfToday
+  );
+  // The pharmacy's own take, not the customer's total — this reported
+  // totalAmount, which includes the delivery fee the courier is paid from.
+  const todayEarnings = todaysOrders.reduce((sum, o) => sum + toNumber(o.providerEarnings), 0);
 
-  // Get earnings by order type
-  const prescriptionOrders = healthOrders.filter(o => o.orderType === 'PRESCRIPTION_MEDICINE');
-  const otcOrders = healthOrders.filter(o => o.orderType === 'OVER_THE_COUNTER');
+  const since = (days: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+  const sumSince = (days: number) =>
+    orders
+      .filter((o) => o.deliveredAt && new Date(o.deliveredAt) >= since(days))
+      .reduce((sum, o) => sum + toNumber(o.providerEarnings), 0);
+
+  const prescriptionOrders = orders.filter((o) => o.orderType === 'PRESCRIPTION_MEDICINE');
+  const otcOrders = orders.filter((o) => o.orderType !== 'PRESCRIPTION_MEDICINE');
 
   return NextResponse.json({
+    success: true,
     summary: {
       totalOrders,
       totalRevenue,
       totalDeliveryFees,
       totalServiceFees,
       totalProviderEarnings,
-      totalPlatformCommission,
+      totalPlatformCommission: totalPlatformCommission > 0 ? totalPlatformCommission : 0,
       averageOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
       todayEarnings,
-      todayOrders: todayOrders.length,
+      todayOrders: todaysOrders.length,
+      weekEarnings: sumSince(6),
+      monthEarnings: sumSince(29),
     },
-    providers: {
-      total: totalProviders,
-      active: activeProviders,
-    },
-    // Was `pendingPayouts.toNumber(_sum.pendingPayout)` — a non-existent
-    // method on the aggregate plus an undefined identifier.
-    pendingPayouts: toNumber(pendingPayouts._sum.pendingPayout),
+    // The screen reads these at the top level.
+    totalEarnings: totalProviderEarnings,
+    todayEarnings,
+    weekEarnings: sumSince(6),
+    monthEarnings: sumSince(29),
+    availableBalance,
+    pendingPayouts: availableBalance,
+    providers: { total: totalProviders, active: activeProviders },
+    transactions: orders.slice(0, 30).map((o) => ({
+      id: o.id,
+      orderNumber: o.orderNumber,
+      amount: toNumber(o.providerEarnings),
+      orderTotal: toNumber(o.totalAmount),
+      paymentMethod: o.paymentMethod,
+      date: o.deliveredAt ?? o.createdAt,
+      type: o.orderType,
+    })),
     orderTypes: {
       prescription: {
         count: prescriptionOrders.length,

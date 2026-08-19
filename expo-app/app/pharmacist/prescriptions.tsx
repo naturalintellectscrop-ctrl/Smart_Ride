@@ -23,6 +23,7 @@ import { TYPOGRAPHY, SPACING, RADIUS, OPACITY } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { statusColor } from '@/src/theme/statusColors';
+import { Panel, TonePill, toneColors } from '@/src/components/pharmacy';
 import {
   AppHeader,
   Card,
@@ -191,8 +192,15 @@ export default function PrescriptionsScreen() {
             key={tab.key}
             style={[styles.tab, activeTab === tab.key && styles.activeTab]}
             onPress={() => setActiveTab(tab.key)}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.key }}
           >
-            <Text style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}>
+            <Text
+              style={[styles.tabText, activeTab === tab.key && styles.activeTabText]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -210,13 +218,33 @@ export default function PrescriptionsScreen() {
         >
           {prescriptions.length > 0 ? (
             prescriptions.map((prescription) => (
-              <Card key={prescription.id} style={styles.prescriptionCard}>
+              <Panel key={prescription.id} style={styles.prescriptionCard} padding={16}>
                 <View style={styles.prescriptionHeader}>
                   <Text style={styles.prescriptionId}>#{prescription.id?.slice(-6)}</Text>
-                  <StatusBadge
-                    label={prescription.status || 'UNKNOWN'}
-                    color={statusColor(prescription.status, COLORS)}
-                    size="sm"
+                  <TonePill
+                    label={
+                      prescription.status === 'PENDING'
+                        ? 'Needs checking'
+                        : prescription.status === 'VERIFIED'
+                          ? 'Verified'
+                          : prescription.status === 'REJECTED'
+                            ? 'Rejected'
+                            : String(prescription.status || 'Unknown').replace(/_/g, ' ')
+                    }
+                    tone={
+                      prescription.status === 'PENDING'
+                        ? 'amber'
+                        : prescription.status === 'VERIFIED'
+                          ? 'green'
+                          : 'slate'
+                    }
+                    icon={
+                      prescription.status === 'VERIFIED'
+                        ? 'shield-checkmark'
+                        : prescription.status === 'PENDING'
+                          ? 'alert-circle'
+                          : undefined
+                    }
                   />
                 </View>
 
@@ -297,16 +325,22 @@ export default function PrescriptionsScreen() {
                     />
                   </View>
                 )}
-              </Card>
+              </Panel>
             ))
           ) : (
             <EmptyState
-              icon="clipboard-outline"
-              title="No prescriptions found"
+              icon="document-text-outline"
+              title={
+                activeTab === 'PENDING' ? 'Nothing waiting on you' : 'No prescriptions here'
+              }
               subtitle={
                 activeTab === 'ALL'
-                  ? 'Prescriptions will appear here when patients upload them.'
-                  : `No ${activeTab.toLowerCase()} prescriptions.`
+                  ? 'When a customer uploads a prescription for your pharmacy, it appears here to be checked.'
+                  : activeTab === 'PENDING'
+                    ? 'Prescriptions arrive here to be checked before the medicine is dispensed.'
+                    : activeTab === 'VERIFIED'
+                      ? 'Prescriptions you have approved are kept here.'
+                      : 'Prescriptions you have rejected are kept here.'
               }
             />
           )}

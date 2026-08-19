@@ -997,6 +997,43 @@ class ApiService {
    *
    * The contract takes `orderId` and an ACTION verb in the body.
    */
+  /**
+   * Send a pharmacy order action straight through.
+   *
+   * The server's contract is an ACTION (ACCEPT / START_PREPARING / READY / …),
+   * and it validates that action against the order's current status. Screens
+   * that know which action they are offering should say so rather than naming a
+   * target status and having it translated — the translation is what let three
+   * screens drift onto statuses the server never issues.
+   */
+  /**
+   * Remove a medicine from the pharmacy's catalogue.
+   *
+   * The route exists (DELETE /health-provider/catalog?medicineId=…) and the
+   * screen offered no way to reach it, so a mistyped or discontinued medicine
+   * could only ever be hidden, never removed.
+   */
+  async deleteMedicineFromCatalog(medicineId: string): Promise<ApiResponse<any>> {
+    return this.request<any>(
+      `/health-provider/catalog?medicineId=${encodeURIComponent(medicineId)}`,
+      'DELETE'
+    );
+  }
+
+  async providerOrderAction(
+    orderId: string,
+    action: string,
+    opts?: { notes?: string; rejectionReason?: string; riderId?: string }
+  ): Promise<ApiResponse<any>> {
+    return this.request<any>('/health-provider/orders', 'PATCH', {
+      orderId,
+      action,
+      ...(opts?.notes ? { notes: opts.notes } : {}),
+      ...(opts?.rejectionReason ? { rejectionReason: opts.rejectionReason } : {}),
+      ...(opts?.riderId ? { riderId: opts.riderId } : {}),
+    });
+  }
+
   async updateHealthOrderStatus(
     orderId: string,
     status: string,

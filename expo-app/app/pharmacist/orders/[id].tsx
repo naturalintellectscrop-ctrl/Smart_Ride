@@ -1,72 +1,59 @@
 // ============================================
 // SMART RIDE MOBILE - PHARMACIST ORDER DETAIL
 // ============================================
-// Detailed view of a health order with actions
+// One order, everything about it, and the single action the server will accept
+// from where it currently is.
+//
+// The payment panel is not decoration. A pharmacy handing medicine to a courier
+// needs to know whether the customer has already paid or whether the courier is
+// collecting cash at the door, and that is not derivable from the order's
+// status — it comes from the order's own paymentMethod and paymentStatus, which
+// this screen previously showed as a bare enum in the delivery card, if at all.
 // ============================================
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/services';
+import { SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import { AppHeader, DetailSkeleton, ConfirmDialog } from '@/src/components';
 import {
-  AppHeader,
-  Card,
-  DetailSkeleton,
-  GradientButton,
-} from '@/src/components';
+  Panel,
+  SectionTitle,
+  TonePill,
+  toneColors,
+  statusMeta,
+  paymentMeta,
+  actionsFor,
+  parseItems,
+  ORDER_RAIL,
+} from '@/src/components/pharmacy';
+import { Ionicons } from '@expo/vector-icons';
 import { firstName } from '@/src/utils/formatName';
 
-// Status colours resolve through the shared semantic mapping rather than a
-// local hex table — this was one of several near-identical copies.
-
-// Keyed on real ProviderOrderStatus values. ORDER_RECEIVED was missing, so the
-// progress bar sat at step 0 for every brand-new order — the state a pharmacist
-// sees most often. The legacy keys are kept so an older payload still maps
-// somewhere rather than falling off the timeline.
-const STATUS_TIMELINE: Record<string, number> = {
-  ORDER_RECEIVED: 1,
-  ORDER_CREATED: 1,
-  PENDING: 1,
-  PAYMENT_CONFIRMED: 2,
-  ACCEPTED: 2,
-  PROCESSING: 3,
-  PREPARING: 3,
-  READY_FOR_PICKUP: 4,
-  RIDER_ASSIGNED: 4,
-  OUT_FOR_DELIVERY: 5,
-  PICKED_UP: 5,
-  DELIVERED: 6,
-  COMPLETED: 6,
-  CANCELLED: 0,
-};
-
+const UGX = (n: unknown) => `UGX ${Number(n || 0).toLocaleString()}`;
 
 export default function OrderDetailScreen() {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+
   const [order, setOrder] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<null | 'REJECT' | 'CANCEL'>(null);
 
   const loadOrder = useCallback(async () => {
     if (!id) return;
     try {
       const response = await api.getHealthOrder(id);
       if (response.success && response.data) {
-        setOrder(response.data.order || response.data);
+        setOrder((response.data as any).order || response.data);
       }
     } catch (error) {
       console.error('Failed to load order:', error);
@@ -79,347 +66,490 @@ export default function OrderDetailScreen() {
     loadOrder();
   }, [loadOrder]);
 
-  const updateStatus = async (newStatus: string) => {
-    setIsUpdating(true);
-    try {
-      const response = await api.updateHealthOrderStatus(id, newStatus);
-      if (response.success) {
-        Alert.alert('Success', `Order status updated to ${newStatus}`);
+  /**
+   * Every action goes through here so one place handles the answer.
+   *
+   * The server refuses an illegal move with 409 and says why (PHARM-2). That
+   * sentence is written for a person, so it is shown rather than replaced with
+   * a generic failure — and the order is reloaded either way, because a 409
+   * usually means somebody else already moved it.
+   */
+  const act = useCallback(
+    async (action: string, opts?: { rejectionReason?: string }) => {
+      if (!id) return;
+      setBusy(action);
+      try {
+        const res = await api.providerOrderAction(id, action, opts);
+        if (res.success) {
+          const task = (res.data as any)?.deliveryTask;
+          if (action === 'READY') {
+            Alert.alert(
+              'Ready for pickup',
+              task?.taskNumber
+                ? `We are finding a courier now. Delivery ${task.taskNumber}.`
+                : 'We are looking for a courier to collect this order.'
+            );
+          }
+        } else {
+          Alert.alert('Could not update this order', res.error || 'Please try again.');
+        }
+      } catch {
+        Alert.alert('Could not update this order', 'Please check your connection and try again.');
+      } finally {
+        setBusy(null);
         await loadOrder();
-      } else {
-        Alert.alert('Error', response.error || 'Failed to update order');
       }
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+    },
+    [id, loadOrder]
+  );
 
-  const formatDate = (dateStr: string) => {
-    if (!dateStr) return 'N/A';
+  const formatDate = (dateStr?: string) => {
+    if (!dateStr) return '—';
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+    if (Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
   };
 
-  if (isLoading) {
-    return (
-      <DetailSkeleton />
-    );
-  }
+  if (isLoading) return <DetailSkeleton />;
 
   if (!order) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.emptyText}>Order not found</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.backLink}>Go Back</Text>
-        </TouchableOpacity>
+      <View style={styles.container}>
+        <AppHeader title="Order" onBack={() => router.back()} />
+        <View style={styles.missing}>
+          <Ionicons name="help-circle-outline" size={44} color={COLORS.outline} />
+          <Text style={styles.missingTitle}>We could not find this order</Text>
+          <Text style={styles.missingText}>
+            It may have been removed, or it belongs to a different pharmacy.
+          </Text>
+          <TouchableOpacity style={styles.missingButton} onPress={() => router.back()}>
+            <Text style={styles.missingButtonText}>Back to orders</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
-  const currentStep = STATUS_TIMELINE[order.status] || 0;
-  const items = order.items || order.medicines || [];
-  const timelineSteps = [
-    { label: 'Order Placed', step: 1 },
-    { label: 'Payment Confirmed', step: 2 },
-    { label: 'Processing', step: 3 },
-    { label: 'Ready for Pickup', step: 4 },
-    { label: 'Picked Up', step: 5 },
-    { label: 'Delivered', step: 6 },
-  ];
+  const meta = statusMeta(order.status);
+  const pay = paymentMeta(order.paymentMethod, order.paymentStatus);
+  const acts = actionsFor(order.status);
+  const items = parseItems(order.items);
+  const tone = toneColors(meta.tone, isDark);
+  const isRx = order.orderType === 'PRESCRIPTION_MEDICINE';
+  const rxBlocking = isRx && !order.prescriptionVerified;
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <AppHeader title="Order" onBack={() => router.back()} />
+      <AppHeader
+        title={order.orderNumber || 'Order'}
+        subtitle={meta.label}
+        onBack={() => router.back()}
+      />
 
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        {/* Patient Info */}
-        <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Patient Information</Text>
-          {/* First name only — patient phone/full identity stays admin-only */}
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Name</Text>
-            <Text style={styles.infoValue}>{firstName(order.patientName || order.customerName || order.client?.name, 'Patient')}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Order Date</Text>
-            <Text style={styles.infoValue}>{formatDate(order.createdAt)}</Text>
-          </View>
-          {order.prescriptionId && (
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Prescription</Text>
-              <Text style={[styles.infoValue, { color: COLORS.primary }]}>#{order.prescriptionId?.slice(-6)}</Text>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Where this order is, and what that means */}
+        <View style={[styles.stateCard, { backgroundColor: tone.fill, borderColor: tone.border }]}>
+          <View style={styles.stateTop}>
+            <View style={[styles.stateChip, { backgroundColor: tone.chip }]}>
+              <Ionicons name="pulse" size={17} color={tone.ink} />
             </View>
-          )}
-        </Card>
+            <View style={styles.stateText}>
+              <Text style={[styles.stateLabel, { color: tone.ink }]}>{meta.label}</Text>
+              <Text style={[styles.stateHint, { color: tone.ink }]}>{meta.hint}</Text>
+            </View>
+          </View>
 
-        {/* Medicine Items */}
-        <Card style={styles.card}>
-          <Text style={styles.cardTitle}>Medicines</Text>
-          {Array.isArray(items) && items.length > 0 ? (
+          {meta.step > 0 ? (
+            <View style={styles.rail}>
+              {ORDER_RAIL.map((s, i) => {
+                const done = meta.step >= s.step;
+                return (
+                  <View key={s.step} style={styles.railStep}>
+                    <View style={styles.railRow}>
+                      <View
+                        style={[
+                          styles.railDot,
+                          { borderColor: tone.ink },
+                          done && { backgroundColor: tone.ink },
+                        ]}
+                      />
+                      {i < ORDER_RAIL.length - 1 ? (
+                        <View
+                          style={[
+                            styles.railLine,
+                            { backgroundColor: meta.step > s.step ? tone.ink : tone.chip },
+                          ]}
+                        />
+                      ) : null}
+                    </View>
+                    <Text
+                      style={[styles.railLabel, { color: tone.ink, opacity: done ? 1 : 0.45 }]}
+                      numberOfLines={2}
+                    >
+                      {s.label}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+        </View>
+
+        {/* Money — the thing a pharmacy could not see */}
+        <SectionTitle title="Payment" />
+        <Panel padding={SPACING.md}>
+          <View style={styles.payHeader}>
+            <View style={styles.payTotals}>
+              <Text style={styles.payTotalLabel}>Customer pays</Text>
+              <Text style={styles.payTotal}>{UGX(order.totalAmount)}</Text>
+            </View>
+            <TonePill label={pay.statusLabel} tone={pay.tone} icon="card" />
+          </View>
+
+          <Text style={styles.payNote}>{pay.note}</Text>
+
+          <View style={styles.payDivider} />
+
+          <PayLine label="Method" value={pay.method} />
+          <PayLine
+            label="Collected"
+            value={
+              pay.statusLabel === 'Paid'
+                ? pay.collectedOnDelivery
+                  ? 'Yes — by the courier at handover'
+                  : 'Yes — paid up front'
+                : pay.collectedOnDelivery
+                  ? 'No — the courier collects it at the door'
+                  : 'No — still outstanding'
+            }
+          />
+          <PayLine label="Medicines" value={UGX(order.subtotal)} />
+          <PayLine label="Delivery" value={UGX(order.deliveryFee)} />
+          {Number(order.serviceFee || 0) > 0 ? (
+            <PayLine label="Service fee" value={UGX(order.serviceFee)} />
+          ) : null}
+          <View style={styles.payDivider} />
+          <PayLine label="Your earnings" value={UGX(order.providerEarnings)} strong />
+        </Panel>
+
+        {/* What is in it */}
+        <SectionTitle title={`Medicines (${items.length})`} />
+        <Panel padding={SPACING.md}>
+          {items.length > 0 ? (
             items.map((item: any, index: number) => (
-              <View key={item.id || index} style={styles.medicineItem}>
-                <View style={styles.medicineInfo}>
-                  <Text style={styles.medicineName}>{item.name || item.medicineName || 'Medicine'}</Text>
-                  <Text style={styles.medicineQty}>Qty: {item.quantity || 1}</Text>
+              <View key={index} style={[styles.item, index > 0 && styles.itemBorder]}>
+                <View style={styles.itemText}>
+                  <Text style={styles.itemName}>{item.name || 'Medicine'}</Text>
+                  <Text style={styles.itemQty}>Quantity: {item.quantity || 1}</Text>
                 </View>
-                <Text style={styles.medicinePrice}>{formatCurrency(item.totalPrice || item.price || 0)}</Text>
+                <Text style={styles.itemPrice}>
+                  {UGX((item.price || 0) * (item.quantity || 1))}
+                </Text>
               </View>
             ))
           ) : (
-            <Text style={styles.noItemsText}>No medicine items</Text>
+            <Text style={styles.emptyItems}>
+              No medicines were itemised on this order. Contact the customer before dispensing.
+            </Text>
           )}
-          <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalValue}>{formatCurrency(order.totalAmount || order.amount || 0)}</Text>
-          </View>
-        </Card>
+        </Panel>
 
-        {/* Status Timeline */}
-        {order.status !== 'CANCELLED' && (
-          <Card style={styles.card}>
-            <Text style={styles.cardTitle}>Order Progress</Text>
-            {timelineSteps.map((step, index) => (
-              <View key={step.step} style={styles.timelineItem}>
-                <View style={styles.timelineIndicator}>
-                  <View style={[
-                    styles.timelineDot,
-                    currentStep >= step.step && styles.timelineDotActive,
-                  ]} />
-                  {index < timelineSteps.length - 1 && (
-                    <View style={[
-                      styles.timelineLine,
-                      currentStep > step.step && styles.timelineLineActive,
-                    ]} />
-                  )}
+        {/* Prescription — a gate, not a note */}
+        {isRx ? (
+          <>
+            <SectionTitle title="Prescription" />
+            <Panel padding={SPACING.md}>
+              <View style={styles.rxRow}>
+                <Ionicons
+                  name={order.prescriptionVerified ? 'shield-checkmark' : 'alert-circle'}
+                  size={20}
+                  color={order.prescriptionVerified ? COLORS.success : COLORS.warning}
+                />
+                <View style={styles.rxText}>
+                  <Text style={styles.rxTitle}>
+                    {order.prescriptionVerified ? 'Verified' : 'Not yet verified'}
+                  </Text>
+                  <Text style={styles.rxSub}>
+                    {order.prescriptionVerified
+                      ? `Checked ${formatDate(order.prescriptionVerifiedAt)}`
+                      : 'A prescription must be checked before this medicine is dispensed.'}
+                  </Text>
                 </View>
-                <Text style={[
-                  styles.timelineLabel,
-                  currentStep >= step.step && styles.timelineLabelActive,
-                ]}>
-                  {step.label}
-                </Text>
               </View>
-            ))}
-          </Card>
-        )}
+              {!order.prescriptionVerified ? (
+                <TouchableOpacity
+                  style={styles.rxButton}
+                  onPress={() => act('VERIFY_PRESCRIPTION')}
+                  disabled={busy !== null}
+                  accessibilityRole="button"
+                  accessibilityLabel="Mark this prescription as verified"
+                >
+                  {busy === 'VERIFY_PRESCRIPTION' ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : (
+                    <>
+                      <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.rxButtonText}>Mark prescription verified</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              ) : null}
+            </Panel>
+          </>
+        ) : null}
 
-        {/* Delivery Info */}
-        {order.deliveryAddress && (
-          <Card style={styles.card}>
-            <Text style={styles.cardTitle}>Delivery</Text>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Address</Text>
-              <Text style={styles.infoValue}>{order.deliveryAddress}</Text>
+        {/* Where it goes */}
+        <SectionTitle title="Delivery" />
+        <Panel padding={SPACING.md}>
+          <PayLine
+            label="Customer"
+            value={firstName(order.customerName, 'Customer')}
+          />
+          <PayLine label="Address" value={order.deliveryAddress || '—'} />
+          {order.deliveryInstructions ? (
+            <PayLine label="Instructions" value={order.deliveryInstructions} />
+          ) : null}
+          <PayLine label="Placed" value={formatDate(order.createdAt)} />
+          {order.readyAt ? <PayLine label="Marked ready" value={formatDate(order.readyAt)} /> : null}
+          {order.pickedUpAt ? (
+            <PayLine label="Collected by courier" value={formatDate(order.pickedUpAt)} />
+          ) : null}
+          {order.deliveredAt ? (
+            <PayLine label="Delivered" value={formatDate(order.deliveredAt)} />
+          ) : null}
+          {order.riderId ? (
+            <View style={styles.courierRow}>
+              <Ionicons name="bicycle" size={16} color={COLORS.primary} />
+              <Text style={styles.courierText}>A courier has been assigned to this order.</Text>
             </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Payment</Text>
-              <Text style={styles.infoValue}>{order.paymentMethod || 'N/A'}</Text>
+          ) : order.status === 'READY_FOR_PICKUP' ? (
+            <View style={styles.courierRow}>
+              <ActivityIndicator size="small" color={COLORS.primary} />
+              <Text style={styles.courierText}>Finding a courier to collect this order…</Text>
             </View>
-          </Card>
-        )}
+          ) : null}
+        </Panel>
 
-        {/* Action Buttons */}
-        <View style={styles.actionsContainer}>
-          {/* One button per state, and only where the server will accept it.
-              These branches tested for 'PENDING', 'ORDER_CREATED' and
-              'PROCESSING' — none of which is a ProviderOrderStatus — so on a
-              real ORDER_RECEIVED order no branch matched and the pharmacist got
-              no buttons at all: they could open an order and not act on it.
+        {order.cancellationReason ? (
+          <Panel padding={SPACING.md} style={{ marginTop: SPACING.md }}>
+            <Text style={styles.cancelTitle}>Reason</Text>
+            <Text style={styles.cancelText}>{order.cancellationReason}</Text>
+          </Panel>
+        ) : null}
+      </ScrollView>
 
-              "Complete Order" from READY_FOR_PICKUP is gone. It sent DELIVER,
-              which is only legal once a courier has the order
-              (OUT_FOR_DELIVERY); the pharmacy's part ends at ready. Offering it
-              promised an action the server refuses. */}
-          {order.status === 'ORDER_RECEIVED' ? (
-            <GradientButton
-              title="Accept Order"
-              onPress={() => updateStatus('ACCEPTED')}
-              loading={isUpdating}
-            />
-          ) : order.status === 'ACCEPTED' ? (
-            <GradientButton
-              title="Start Preparing"
-              onPress={() => updateStatus('PREPARING')}
-              loading={isUpdating}
-            />
-          ) : order.status === 'PREPARING' ? (
-            <GradientButton
-              title="Mark Ready for Pickup"
-              onPress={() => updateStatus('READY_FOR_PICKUP')}
-              loading={isUpdating}
-            />
+      {/* The one action the server will accept from here */}
+      {acts.primary || acts.canDecline || acts.canCancel ? (
+        <View style={styles.actionBar}>
+          {rxBlocking && acts.primary?.action === 'ACCEPT' ? (
+            <Text style={styles.actionWarning}>
+              Verify the prescription above before dispensing this order.
+            </Text>
           ) : null}
 
-          {['ORDER_RECEIVED', 'ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP'].includes(order.status) && (
-            <GradientButton
-              title="Cancel Order"
-              variant="danger"
-              onPress={() => {
-                Alert.alert('Cancel Order', 'Are you sure you want to cancel this order?', [
-                  { text: 'No', style: 'cancel' },
-                  { text: 'Yes, Cancel', style: 'destructive', onPress: () => updateStatus('CANCELLED') },
-                ]);
-              }}
-              loading={isUpdating}
-              style={{ marginTop: 8 }}
-            />
-          )}
+          {acts.primary ? (
+            <TouchableOpacity
+              style={[styles.primaryButton, busy !== null && styles.buttonBusy]}
+              onPress={() => act(acts.primary!.action)}
+              disabled={busy !== null}
+              accessibilityRole="button"
+              accessibilityLabel={acts.primary.label}
+            >
+              {busy === acts.primary.action ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name={acts.primary.icon as never} size={18} color="#FFFFFF" />
+                  <Text style={styles.primaryButtonText}>{acts.primary.label}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : null}
+
+          {acts.canDecline ? (
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => setConfirm('REJECT')}
+              disabled={busy !== null}
+              accessibilityRole="button"
+              accessibilityLabel="Decline this order"
+            >
+              <Text style={styles.secondaryButtonText}>Decline order</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {acts.canCancel ? (
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => setConfirm('CANCEL')}
+              disabled={busy !== null}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel this order"
+            >
+              <Text style={styles.secondaryButtonText}>Cancel order</Text>
+            </TouchableOpacity>
+          ) : null}
         </View>
-      </ScrollView>
+      ) : null}
+
+      <ConfirmDialog
+        visible={confirm !== null}
+        title={confirm === 'REJECT' ? 'Decline this order?' : 'Cancel this order?'}
+        message={
+          confirm === 'REJECT'
+            ? 'The customer will be told you cannot fill it. This cannot be undone.'
+            : 'The customer will be told the order will not arrive. This cannot be undone.'
+        }
+        confirmLabel={confirm === 'REJECT' ? 'Decline' : 'Cancel order'}
+        cancelLabel="Keep it"
+        destructive
+        onConfirm={() => {
+          const action = confirm;
+          setConfirm(null);
+          if (action) {
+            act(action, {
+              rejectionReason:
+                action === 'REJECT'
+                  ? 'Declined by the pharmacy'
+                  : 'Cancelled by the pharmacy',
+            });
+          }
+        }}
+        onCancel={() => setConfirm(null)}
+      />
     </View>
   );
 }
 
-const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-  },
-  emptyText: {
-    color: COLORS.outline,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  backLink: {
-    color: COLORS.primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 40,
-  },
-  card: {
-    marginBottom: 12,
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.onSurface,
-    marginBottom: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    paddingVertical: 4,
-  },
-  infoLabel: {
-    fontSize: 13,
-    color: COLORS.outline,
-    flex: 1,
-  },
-  infoValue: {
-    fontSize: 13,
-    color: COLORS.onSurfaceVariant,
-    flex: 2,
-    textAlign: 'right',
-  },
-  medicineItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  medicineInfo: {
-    flex: 1,
-  },
-  medicineName: {
-    fontSize: 14,
-    color: COLORS.onSurface,
-    fontWeight: '500',
-  },
-  medicineQty: {
-    fontSize: 12,
-    color: COLORS.outline,
-    marginTop: 2,
-  },
-  medicinePrice: {
-    fontSize: 14,
-    color: COLORS.primary,
-    fontWeight: '500',
-  },
-  noItemsText: {
-    fontSize: 13,
-    color: COLORS.outline,
-    fontStyle: 'italic',
-  },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    marginTop: 4,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.outlineVariant,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.onSurface,
-  },
-  totalValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  timelineItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    height: 40,
-  },
-  timelineIndicator: {
-    width: 24,
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  timelineDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 2,
-    borderColor: COLORS.outlineVariant,
-  },
-  timelineDotActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  timelineLine: {
-    width: 2,
-    flex: 1,
-    backgroundColor: COLORS.outlineVariant,
-  },
-  timelineLineActive: {
-    backgroundColor: COLORS.primary,
-  },
-  timelineLabel: {
-    fontSize: 13,
-    color: COLORS.outline,
-    marginTop: 0,
-  },
-  timelineLabelActive: {
-    color: COLORS.onSurface,
-    fontWeight: '500',
-  },
-  actionsContainer: {
-    marginTop: 8,
-    marginBottom: 20,
-  },
-});
+function PayLine({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  return (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 16, paddingVertical: 6 }}>
+      <Text style={{ fontSize: 13, color: COLORS.onSurfaceVariant, flexShrink: 0 }}>{label}</Text>
+      <Text
+        style={{
+          fontSize: strong ? 15 : 13,
+          fontWeight: strong ? '800' : '600',
+          color: COLORS.onSurface,
+          flex: 1,
+          textAlign: 'right',
+        }}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+}
+
+const createStyles = (COLORS: ThemedColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.background },
+    scrollView: { flex: 1 },
+    scrollContent: { padding: SPACING.md, paddingBottom: SPACING.xxxl },
+
+    missing: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: SPACING.xl, gap: 8 },
+    missingTitle: { fontSize: 17, fontWeight: '700', color: COLORS.onSurface, marginTop: 8 },
+    missingText: { fontSize: 13, color: COLORS.onSurfaceVariant, textAlign: 'center', lineHeight: 19 },
+    missingButton: {
+      marginTop: SPACING.md,
+      paddingHorizontal: 20,
+      paddingVertical: 11,
+      borderRadius: 999,
+      backgroundColor: COLORS.primary,
+    },
+    missingButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
+
+    stateCard: { borderRadius: RADIUS.xl, borderWidth: 1, padding: SPACING.md },
+    stateTop: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+    stateChip: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+    stateText: { flex: 1, minWidth: 0 },
+    stateLabel: { fontSize: 17, fontWeight: '800', letterSpacing: -0.3 },
+    stateHint: { fontSize: 12.5, marginTop: 2, lineHeight: 17, opacity: 0.85 },
+
+    rail: { flexDirection: 'row', marginTop: SPACING.md },
+    railStep: { flex: 1 },
+    railRow: { flexDirection: 'row', alignItems: 'center' },
+    railDot: { width: 11, height: 11, borderRadius: 6, borderWidth: 2, backgroundColor: 'transparent' },
+    railLine: { flex: 1, height: 2, marginLeft: 2 },
+    railLabel: { fontSize: 9.5, fontWeight: '700', marginTop: 5, paddingRight: 4, lineHeight: 12 },
+
+    payHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.sm },
+    payTotals: { flexShrink: 1, minWidth: 0 },
+    payTotalLabel: { fontSize: 12, color: COLORS.onSurfaceVariant },
+    payTotal: { fontSize: 25, fontWeight: '800', color: COLORS.onSurface, letterSpacing: -0.6 },
+    payNote: { fontSize: 12.5, color: COLORS.onSurfaceVariant, marginTop: 10, lineHeight: 17 },
+    payDivider: { height: 1, backgroundColor: COLORS.outlineVariant, marginVertical: SPACING.gutter },
+
+    item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
+    itemBorder: { borderTopWidth: 1, borderTopColor: COLORS.outlineVariant },
+    itemText: { flex: 1, minWidth: 0 },
+    itemName: { fontSize: 14, fontWeight: '700', color: COLORS.onSurface },
+    itemQty: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 1 },
+    itemPrice: { fontSize: 14, fontWeight: '700', color: COLORS.onSurface },
+    emptyItems: { fontSize: 13, color: COLORS.onSurfaceVariant, lineHeight: 18 },
+
+    rxRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
+    rxText: { flex: 1, minWidth: 0 },
+    rxTitle: { fontSize: 14, fontWeight: '700', color: COLORS.onSurface },
+    rxSub: { fontSize: 12.5, color: COLORS.onSurfaceVariant, marginTop: 2, lineHeight: 17 },
+    rxButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 7,
+      marginTop: SPACING.gutter,
+      paddingVertical: 11,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+    },
+    rxButtonText: { fontSize: 13.5, fontWeight: '700', color: COLORS.primary },
+
+    courierRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      marginTop: SPACING.gutter,
+      paddingTop: SPACING.gutter,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.outlineVariant,
+    },
+    courierText: { flex: 1, fontSize: 12.5, color: COLORS.onSurfaceVariant },
+
+    cancelTitle: { fontSize: 12, color: COLORS.onSurfaceVariant },
+    cancelText: { fontSize: 14, color: COLORS.onSurface, marginTop: 3, lineHeight: 19 },
+
+    actionBar: {
+      padding: SPACING.md,
+      paddingBottom: SPACING.lg,
+      gap: SPACING.sm,
+      backgroundColor: COLORS.backgroundElevated,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.outlineVariant,
+    },
+    actionWarning: { fontSize: 12, color: COLORS.warning, textAlign: 'center' },
+    primaryButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 15,
+      borderRadius: 999,
+      backgroundColor: COLORS.primary,
+    },
+    buttonBusy: { opacity: 0.6 },
+    primaryButtonText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+    secondaryButton: { alignItems: 'center', justifyContent: 'center', paddingVertical: 12 },
+    secondaryButtonText: { fontSize: 13.5, fontWeight: '700', color: COLORS.error },
+  });

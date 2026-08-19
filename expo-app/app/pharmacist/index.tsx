@@ -1,37 +1,37 @@
 // ============================================
 // SMART RIDE MOBILE - PHARMACIST DASHBOARD
 // ============================================
-// Main dashboard for pharmacist/health provider
+// The pharmacy's home screen. Built around the one question a pharmacist opens
+// the app to answer — "what needs me right now?" — so the three counts that
+// answer it come first, and each one is a way through to the work behind it
+// rather than a number you can only look at.
 // ============================================
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, StyleSheet } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING } from '@/src/constants';
+import { SPACING } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import { AppHeader, DetailSkeleton, OnlinePill } from '@/src/components';
 import {
-  AppHeader,
-  Card,
-  DetailSkeleton,
-  OnlinePill,
-  StatusBadge,
-} from '@/src/components';
+  ActionTile,
+  MoneyHero,
+  OverviewRow,
+  Panel,
+  SectionTitle,
+  Sparkline,
+  StatTile,
+  TonePill,
+} from '@/src/components/pharmacy';
 import { Ionicons } from '@expo/vector-icons';
 import { useProviderApprovalGate } from '@/src/hooks/useProviderApprovalGate';
 
 interface OrderSummary {
-  pending: number;
-  processing: number;
+  needsAction: number;
+  inProgress: number;
   completed: number;
   total: number;
 }
@@ -39,19 +39,30 @@ interface OrderSummary {
 interface ProviderStatus {
   isOpen: boolean;
   name?: string;
+  verified?: boolean;
 }
 
+const UGX = (n: number) => `UGX ${Math.round(n).toLocaleString()}`;
+const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export default function PharmacistDashboard() {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
-  // Approval gate: a pharmacist can't use the dashboard until an admin approves.
   const approvalGate = useProviderApprovalGate('PHARMACIST');
-  const [orderSummary, setOrderSummary] = useState<OrderSummary>({ pending: 0, processing: 0, completed: 0, total: 0 });
+
+  const [orderSummary, setOrderSummary] = useState<OrderSummary>({
+    needsAction: 0,
+    inProgress: 0,
+    completed: 0,
+    total: 0,
+  });
   const [pendingPrescriptions, setPendingPrescriptions] = useState(0);
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>({ isOpen: false });
+  const [todayEarnings, setTodayEarnings] = useState(0);
+  const [todayOrders, setTodayOrders] = useState(0);
+  const [week, setWeek] = useState<number[]>([0, 0, 0, 0, 0, 0, 0]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isToggling, setIsToggling] = useState(false);
@@ -65,28 +76,69 @@ export default function PharmacistDashboard() {
       ]);
 
       if (ordersRes.status === 'fulfilled' && ordersRes.value.success && ordersRes.value.data) {
-        const orders = ordersRes.value.data.orders || ordersRes.value.data.data || ordersRes.value.data || [];
-        const orderArray = Array.isArray(orders) ? orders : [];
-        const pending = orderArray.filter((o: any) => o.status === 'PENDING' || o.status === 'ORDER_CREATED').length;
-        const processing = orderArray.filter((o: any) => o.status === 'PROCESSING' || o.status === 'PREPARING').length;
-        const completed = orderArray.filter((o: any) => o.status === 'COMPLETED' || o.status === 'DELIVERED').length;
-        setOrderSummary({ pending, processing, completed, total: orderArray.length });
+        const payload: any = ordersRes.value.data;
+        const orders = payload.orders || payload.data || payload || [];
+        const orderArray: any[] = Array.isArray(orders) ? orders : [];
+
+        // Grouped by what the pharmacist has to DO, using the statuses the
+        // server actually issues. This counted PENDING / PROCESSING /
+        // ORDER_CREATED / COMPLETED — none of which a ProviderOrder is ever set
+        // to — so every tile read zero while real orders sat in the list behind
+        // it. Third screen with the same enum drift.
+        const needsAction = orderArray.filter((o) => o.status === 'ORDER_RECEIVED').length;
+        const inProgress = orderArray.filter((o) =>
+          ['ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'RIDER_ASSIGNED', 'OUT_FOR_DELIVERY'].includes(
+            o.status
+          )
+        ).length;
+        const completed = orderArray.filter((o) => o.status === 'DELIVERED').length;
+        setOrderSummary({ needsAction, inProgress, completed, total: orderArray.length });
+
+        // Today's takings and the week behind them, from the same order list —
+        // the pharmacy's own share, not the customer's total.
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const days = [0, 0, 0, 0, 0, 0, 0];
+        let today = 0;
+        let todayCount = 0;
+
+        for (const o of orderArray) {
+          if (o.status !== 'DELIVERED') continue;
+          const when = new Date(o.deliveredAt || o.updatedAt || o.createdAt).getTime();
+          if (Number.isNaN(when)) continue;
+          const earned = Number(o.providerEarnings ?? 0);
+          if (when >= startOfToday) {
+            today += earned;
+            todayCount += 1;
+          }
+          const daysAgo = Math.floor((startOfToday - when) / 86_400_000);
+          if (daysAgo >= 0 && daysAgo < 7) days[6 - daysAgo] += earned;
+          else if (daysAgo < 0) days[6] += earned;
+        }
+        setTodayEarnings(today);
+        setTodayOrders(todayCount);
+        setWeek(days);
       }
 
-      if (prescriptionsRes.status === 'fulfilled' && prescriptionsRes.value.success && prescriptionsRes.value.data) {
-        const prescriptions = prescriptionsRes.value.data.prescriptions || prescriptionsRes.value.data.data || prescriptionsRes.value.data || [];
+      if (
+        prescriptionsRes.status === 'fulfilled' &&
+        prescriptionsRes.value.success &&
+        prescriptionsRes.value.data
+      ) {
+        const payload: any = prescriptionsRes.value.data;
+        const prescriptions = payload.prescriptions || payload.data || payload || [];
         setPendingPrescriptions(Array.isArray(prescriptions) ? prescriptions.length : 0);
       }
 
       if (statusRes.status === 'fulfilled' && statusRes.value.success && statusRes.value.data) {
-        // GET /health-provider/status answers { success, provider: {...} },
-        // not the usual { success, data }, so the open state lives at
-        // provider.isOpenNow. Reading data.isOpen found nothing and the pill
-        // rendered CLOSED no matter what the pharmacy had set.
-        const p = statusRes.value.data.provider ?? statusRes.value.data;
+        // GET /health-provider/status answers { success, provider: {...} }, not
+        // the usual { success, data }, so the open state lives at
+        // provider.isOpenNow.
+        const p: any = (statusRes.value.data as any).provider ?? statusRes.value.data;
         setProviderStatus({
           isOpen: p?.isOpenNow ?? p?.isOpen ?? false,
           name: p?.businessName ?? p?.name,
+          verified: p?.verificationStatus === 'APPROVED',
         });
       }
     } catch (error) {
@@ -107,19 +159,19 @@ export default function PharmacistDashboard() {
   };
 
   const toggleStatus = async () => {
+    // Never show the new state before the server has agreed to it — a pill that
+    // flips optimistically and silently fails tells a pharmacist they are open
+    // for business when they are not.
     setIsToggling(true);
+    const next = !providerStatus.isOpen;
     try {
-      const newStatus = !providerStatus.isOpen;
-      const response = await api.updateHealthProviderStatus({ status: newStatus ? 'OPEN' : 'CLOSED' });
+      const response = await api.updateHealthProviderStatus({ status: next ? 'OPEN' : 'CLOSED' });
       if (response.success) {
-        setProviderStatus(prev => ({ ...prev, isOpen: newStatus }));
+        setProviderStatus((prev) => ({ ...prev, isOpen: next }));
       } else {
-        // Say so. A failed toggle used to leave the pill sitting where it was
-        // with no explanation, which reads as an unresponsive control rather
-        // than a rejected request.
         Alert.alert(
           'Could not update',
-          response.error || 'The pharmacy status was not changed. Please try again.',
+          response.error || 'The pharmacy status was not changed. Please try again.'
         );
       }
     } catch (error) {
@@ -130,19 +182,13 @@ export default function PharmacistDashboard() {
     }
   };
 
-
-  // Not approved yet → show the approval-status screen instead of the dashboard.
   if (approvalGate) return approvalGate;
+  if (isLoading) return <DetailSkeleton />;
 
-  if (isLoading) {
-    return (
-      <DetailSkeleton />
-    );
-  }
+  const weekTotal = week.reduce((a, b) => a + b, 0);
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <AppHeader
         title="Pharmacist"
         subtitle={providerStatus.name || 'Dashboard'}
@@ -156,221 +202,251 @@ export default function PharmacistDashboard() {
           />
         }
         rightActions={[
-          { icon: 'settings-outline', onPress: () => router.push('/settings' as never), label: 'Settings' },
+          {
+            icon: 'notifications-outline',
+            onPress: () => router.push('/notifications' as never),
+            label: 'Notifications',
+          },
+          {
+            icon: 'settings-outline',
+            onPress: () => router.push('/settings' as never),
+            label: 'Settings',
+          },
         ]}
       />
 
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+        }
       >
-        {/* Order Summary Cards */}
-        <View style={styles.summaryRow}>
-          <Card variant="accent" padding={14} style={styles.summaryCard}>
-            <Text style={styles.summaryNumber}>{orderSummary.pending}</Text>
-            <Text style={styles.summaryLabel}>Pending</Text>
-          </Card>
-          <Card variant="accent" padding={14} style={styles.summaryCard}>
-            <Text style={styles.summaryNumber}>{orderSummary.processing}</Text>
-            <Text style={styles.summaryLabel}>Processing</Text>
-          </Card>
-          <Card padding={14} style={styles.summaryCard}>
-            <Text style={[styles.summaryNumber, { color: COLORS.success }]}>{orderSummary.completed}</Text>
-            <Text style={styles.summaryLabel}>Completed</Text>
-          </Card>
+        {/* Who, and whether the shop is trading */}
+        <View style={styles.greeting}>
+          <Text style={styles.greetingSmall}>Welcome back,</Text>
+          <Text style={styles.greetingName} numberOfLines={2}>
+            {providerStatus.name || 'Your pharmacy'}
+          </Text>
+          <View style={styles.greetingMeta}>
+            {providerStatus.verified ? (
+              <TonePill label="VERIFIED" tone="green" icon="shield-checkmark" />
+            ) : null}
+            <TonePill
+              label={providerStatus.isOpen ? 'OPEN FOR ORDERS' : 'CLOSED'}
+              tone={providerStatus.isOpen ? 'green' : 'amber'}
+              icon={providerStatus.isOpen ? 'ellipse' : 'moon'}
+            />
+          </View>
         </View>
 
-        {/* Pending Prescriptions Alert */}
-        {pendingPrescriptions > 0 && (
-          <Card variant="accent" style={styles.alertCard}>
-            <View style={styles.alertRow}>
-              <Ionicons name="clipboard-outline" size={20} color={COLORS.primary} />
-              <View style={styles.alertContent}>
-                <Text style={styles.alertTitle}>Prescriptions Awaiting Review</Text>
-                <Text style={styles.alertText}>{pendingPrescriptions} prescription(s) need verification</Text>
-              </View>
-              <TouchableOpacity onPress={() => router.push('/pharmacist/prescriptions')}>
-                <Text style={styles.alertAction}>View →</Text>
-              </TouchableOpacity>
-            </View>
-          </Card>
-        )}
+        {/* What needs you, right now */}
+        <View style={styles.statRow}>
+          <StatTile
+            tone="amber"
+            icon="bag-handle"
+            value={orderSummary.needsAction}
+            label="Needs action"
+            actionLabel="Open"
+            onPress={() => router.push('/pharmacist/orders?tab=NEW' as never)}
+          />
+          <StatTile
+            tone="blue"
+            icon="time"
+            value={orderSummary.inProgress}
+            label="In progress"
+            actionLabel="Open"
+            onPress={() => router.push('/pharmacist/orders?tab=ACTIVE' as never)}
+          />
+          <StatTile
+            tone="green"
+            icon="checkmark-circle"
+            value={orderSummary.completed}
+            label="Delivered"
+            actionLabel="Open"
+            onPress={() => router.push('/pharmacist/orders?tab=DELIVERED' as never)}
+          />
+        </View>
 
-        {/* Quick Actions */}
-        <Text style={styles.sectionTitle}>Quick Actions</Text>
-        <View style={styles.actionsGrid}>
-          <QuickActionCard
-            icon="cube-outline"
+        {/* Money, on its own field so it is never read as an ordinary statistic */}
+        <View style={styles.moneyWrap}>
+          <MoneyHero
+            caption="Today's earnings"
+            amount={UGX(todayEarnings)}
+            meta={`${todayOrders} order${todayOrders === 1 ? '' : 's'} today · ${UGX(weekTotal)} this week`}
+            primaryLabel="View earnings"
+            onPrimary={() => router.push('/pharmacist/earnings')}
+            trailing={<Text style={styles.moneyPeriod}>Last 7 days</Text>}
+          />
+          <View style={styles.sparkOverlay} pointerEvents="none">
+            <Sparkline values={week} labels={DAY_LABELS} />
+          </View>
+        </View>
+
+        <SectionTitle title="Quick actions" />
+        <View style={styles.actionGrid}>
+          <ActionTile
+            icon="bag-handle-outline"
+            tone="green"
             title="Orders"
             subtitle={`${orderSummary.total} total`}
+            badge={orderSummary.needsAction}
             onPress={() => router.push('/pharmacist/orders')}
           />
-          <QuickActionCard
-            icon="clipboard-outline"
+          <ActionTile
+            icon="document-text-outline"
+            tone="violet"
             title="Prescriptions"
             subtitle={`${pendingPrescriptions} pending`}
+            badge={pendingPrescriptions}
             onPress={() => router.push('/pharmacist/prescriptions')}
           />
-          <QuickActionCard
+        </View>
+        <View style={styles.actionGrid}>
+          <ActionTile
             icon="medkit-outline"
-            title="Medicine Catalog"
+            tone="blue"
+            title="Catalogue"
             subtitle="Manage stock"
             onPress={() => router.push('/pharmacist/catalog')}
           />
-          <QuickActionCard
+          <ActionTile
             icon="wallet-outline"
+            tone="amber"
             title="Earnings"
-            subtitle="View revenue"
+            subtitle="View and withdraw"
             onPress={() => router.push('/pharmacist/earnings')}
           />
         </View>
 
-        {/* Status Overview */}
-        <Text style={styles.sectionTitle}>Status Overview</Text>
-        <Card>
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Store Status</Text>
-            <StatusBadge
-              label={providerStatus.isOpen ? 'OPEN' : 'CLOSED'}
-              color={providerStatus.isOpen ? COLORS.success : COLORS.error}
-              size="md"
-            />
-          </View>
-          <View style={styles.statusDivider} />
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Pending Orders</Text>
-            <Text style={styles.statusValue}>{orderSummary.pending}</Text>
-          </View>
-          <View style={styles.statusDivider} />
-          <View style={styles.statusRow}>
-            <Text style={styles.statusLabel}>Active Prescriptions</Text>
-            <Text style={styles.statusValue}>{pendingPrescriptions}</Text>
-          </View>
-        </Card>
+        <SectionTitle title="Status overview" />
+        <Panel>
+          <OverviewRow
+            first
+            icon="storefront"
+            tone={providerStatus.isOpen ? 'green' : 'amber'}
+            title="Store status"
+            subtitle={
+              providerStatus.isOpen
+                ? 'Customers can place orders with you now.'
+                : 'You are closed. New orders are being turned away.'
+            }
+            right={
+              <TouchableOpacity
+                onPress={toggleStatus}
+                disabled={isToggling}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  providerStatus.isOpen ? 'Close the pharmacy' : 'Open the pharmacy'
+                }
+              >
+                <TonePill
+                  label={isToggling ? '…' : providerStatus.isOpen ? 'OPEN' : 'CLOSED'}
+                  tone={providerStatus.isOpen ? 'green' : 'amber'}
+                />
+              </TouchableOpacity>
+            }
+          />
+          <OverviewRow
+            icon="cart"
+            tone="amber"
+            title="Orders waiting"
+            subtitle="New orders you have not answered yet"
+            value={orderSummary.needsAction}
+            valueTone="amber"
+            onPress={() => router.push('/pharmacist/orders?tab=NEW' as never)}
+          />
+          <OverviewRow
+            icon="bandage"
+            tone="violet"
+            title="Prescriptions to verify"
+            subtitle="Must be checked before dispensing"
+            value={pendingPrescriptions}
+            valueTone="violet"
+            onPress={() => router.push('/pharmacist/prescriptions')}
+          />
+          <OverviewRow
+            icon="bicycle"
+            tone="blue"
+            title="With a courier"
+            subtitle="Collected or on the way to the customer"
+            value={orderSummary.inProgress}
+            valueTone="blue"
+            onPress={() => router.push('/pharmacist/orders?tab=ACTIVE' as never)}
+          />
+        </Panel>
+
+        {!providerStatus.isOpen ? (
+          <TouchableOpacity
+            style={styles.closedNote}
+            onPress={toggleStatus}
+            disabled={isToggling}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel="Open the pharmacy for orders"
+          >
+            <Ionicons name="moon" size={17} color={COLORS.onSurfaceVariant} />
+            <Text style={styles.closedNoteText}>
+              Your pharmacy is closed. Customers cannot place new orders until you open.
+            </Text>
+            <Text style={styles.closedNoteAction}>Open</Text>
+          </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </View>
   );
 }
 
-function QuickActionCard({ icon, title, subtitle, onPress }: { icon: string; title: string; subtitle: string; onPress: () => void }) {
-  const { isDark } = useTheme();
-  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
-  const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+const createStyles = (COLORS: ThemedColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.background },
+    scrollView: { flex: 1 },
+    scrollContent: { padding: SPACING.md, paddingBottom: SPACING.xxl },
 
-  return (
-    <Card padding={SPACING.md} style={styles.actionCard} onPress={onPress} accessibilityLabel={title}>
-        <Ionicons name={icon as any} size={24} color={COLORS.primary} />
-        <Text style={styles.actionTitle}>{title}</Text>
-        <Text style={styles.actionSubtitle}>{subtitle}</Text>
-      </Card>
-  );
-}
+    greeting: { marginBottom: SPACING.md },
+    greetingSmall: { fontSize: 14, color: COLORS.onSurfaceVariant },
+    greetingName: {
+      fontSize: 26,
+      fontWeight: '800',
+      color: COLORS.onSurface,
+      letterSpacing: -0.7,
+      marginTop: 2,
+      lineHeight: 31,
+    },
+    greetingMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 10 },
 
-const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.md,
-    paddingBottom: 40,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: SPACING.md,
-  },
-  summaryCard: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  summaryNumber: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: COLORS.primary,
-  },
-  summaryLabel: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.outline,
-    marginTop: SPACING.xs,
-  },
-  alertCard: {
-    marginBottom: SPACING.md,
-  },
-  alertRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  alertContent: {
-    flex: 1,
-  },
-  alertTitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.onSurface,
-  },
-  alertText: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.outline,
-    marginTop: SPACING.xs,
-  },
-  alertAction: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.primary,
-  },
-  sectionTitle: {
-    fontSize: TYPOGRAPHY.bodyMd.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.onSurface,
-    marginBottom: SPACING.gutter,
-  },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: SPACING.lg,
-  },
-  actionCard: {
-    // Two tiles plus the row gap overflowed 100%, squeezing the second
-    // tile and wrapping its label. flexBasis reflows instead.
-    flexBasis: '48%',
-    flexGrow: 1,
-    minWidth: 150,
-    alignItems: 'center',
-  },
-  actionTitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.onSurface,
-  },
-  actionSubtitle: {
-    fontSize: 11,
-    color: COLORS.outline,
-    marginTop: SPACING.xs,
-  },
-  statusRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: SPACING.sm,
-  },
-  statusLabel: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.onSurfaceVariant,
-  },
-  statusValue: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.onSurface,
-  },
-  statusDivider: {
-    height: 1,
-    backgroundColor: COLORS.outlineVariant,
-  },
-});
+    statRow: { flexDirection: 'row', gap: SPACING.sm },
+
+    moneyWrap: { marginTop: SPACING.md, position: 'relative' },
+    moneyPeriod: {
+      color: 'rgba(255,255,255,0.72)',
+      fontSize: 11,
+      fontWeight: '700',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.28)',
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      overflow: 'hidden',
+    },
+    // The chart sits in the hero's right half: context for the number, not a
+    // control, so it takes no touches.
+    sparkOverlay: { position: 'absolute', right: SPACING.md, top: 52, width: '50%' },
+
+    actionGrid: { flexDirection: 'row', gap: SPACING.sm, marginBottom: SPACING.sm },
+
+    closedNote: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      marginTop: SPACING.md,
+      padding: 14,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: COLORS.outlineVariant,
+    },
+    closedNoteText: { flex: 1, fontSize: 12.5, lineHeight: 17, color: COLORS.onSurfaceVariant },
+    closedNoteAction: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
+  });

@@ -1,7 +1,14 @@
 // ============================================
-// SMART RIDE MOBILE - PHARMACIST MEDICINE CATALOG
+// SMART RIDE MOBILE - MEDICINE CATALOGUE
 // ============================================
-// Medicine catalog management with stock/availability
+// What the pharmacy stocks, what it costs, and how much is left.
+//
+// Nothing on this screen worked before: the list asked for a catalogue without
+// the provider id the server demanded and got a 400 it rendered as "empty", and
+// adding a medicine failed validation because the category box was free text
+// while the server wanted one of eleven exact values. The server now resolves
+// the pharmacy from the token, and the category is picked from the real list
+// instead of typed — so the form can only produce something the server accepts.
 // ============================================
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
@@ -13,66 +20,100 @@ import {
   TextInput,
   RefreshControl,
   StyleSheet,
+  ActivityIndicator,
+  FlatList,
+  Switch,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
+import { SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import {
   AppHeader,
-  Card,
-  EmptyState,
-  GradientButton,
   ListSkeleton,
+  EmptyState,
+  SearchInput,
   SmartBottomSheet,
-  Toggle,
+  ConfirmDialog,
 } from '@/src/components';
+import { Panel, SectionTitle, TonePill, StatTile, toneColors } from '@/src/components/pharmacy';
+import { Ionicons } from '@expo/vector-icons';
 
-export default function CatalogScreen() {
-  const router = useRouter();
+/**
+ * The server's MedicineCategory enum, exactly. A free text box here is what
+ * made "add medicine" fail — a pharmacist typing "painkillers" produced a value
+ * Prisma rejected, and the screen only said "Failed to add medicine".
+ */
+const CATEGORIES = [
+  { value: 'PAINKILLERS', label: 'Painkillers' },
+  { value: 'ANTIBIOTICS', label: 'Antibiotics' },
+  { value: 'VITAMINS', label: 'Vitamins & supplements' },
+  { value: 'COLD_FLU', label: 'Cold & flu' },
+  { value: 'DIGESTIVE', label: 'Digestive' },
+  { value: 'CARDIOVASCULAR', label: 'Heart & blood pressure' },
+  { value: 'DIABETES', label: 'Diabetes' },
+  { value: 'HYGIENE', label: 'Hygiene' },
+  { value: 'FIRST_AID', label: 'First aid' },
+  { value: 'MOTHER_BABY', label: 'Mother & baby' },
+  { value: 'OTHER', label: 'Other' },
+] as const;
+
+const categoryLabel = (value?: string) =>
+  CATEGORIES.find((c) => c.value === value)?.label ?? 'Uncategorised';
+
+const UGX = (n: unknown) => `UGX ${Number(n || 0).toLocaleString()}`;
+
+const EMPTY_FORM = {
+  name: '',
+  genericName: '',
+  category: 'OTHER' as string,
+  price: '',
+  stockQuantity: '',
+  strength: '',
+  packSize: '',
+  description: '',
+  requiresPrescription: false,
+};
+
+export default function MedicineCatalogScreen() {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
+  const router = useRouter();
+
   const [medicines, setMedicines] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Add medicine modal
-  const [addModalVisible, setAddModalVisible] = useState(false);
-  const [newMedicine, setNewMedicine] = useState({
-    name: '',
-    genericName: '',
-    category: '',
-    price: '',
-    stockQuantity: '',
-    unit: '',
-    description: '',
-    requiresPrescription: false,
-  });
-
-  // Edit stock modal
-  const [editModalVisible, setEditModalVisible] = useState(false);
-  const [editingMedicine, setEditingMedicine] = useState<any>(null);
-  const [editStock, setEditStock] = useState('');
-
+  const [sheet, setSheet] = useState<'add' | 'edit' | null>(null);
+  const [form, setForm] = useState({ ...EMPTY_FORM });
+  const [editing, setEditing] = useState<any>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<any>(null);
 
   const loadCatalog = useCallback(async () => {
     try {
       const response = await api.getHealthProviderCatalog();
       if (response.success && response.data) {
-        const catalogData = response.data.medicines || response.data.catalog || response.data.data || response.data;
+        const payload: any = response.data;
+        const catalogData = payload.medicines || payload.catalog || payload.data || payload;
         setMedicines(Array.isArray(catalogData) ? catalogData : []);
+        setLoadError(null);
       } else {
+        // Say what went wrong rather than showing an empty shelf. An empty
+        // catalogue and a failed request look identical to a pharmacist, and
+        // this screen showed the second as the first for as long as it existed.
         setMedicines([]);
+        setLoadError(response.error || 'We could not load your catalogue.');
       }
     } catch (error) {
       console.error('Failed to load catalog:', error);
       setMedicines([]);
+      setLoadError('We could not reach the server. Check your connection and pull to refresh.');
     } finally {
       setIsLoading(false);
     }
@@ -88,548 +129,579 @@ export default function CatalogScreen() {
     setRefreshing(false);
   };
 
-  const toggleAvailability = async (medicine: any) => {
+  const openAdd = () => {
+    setForm({ ...EMPTY_FORM });
+    setEditing(null);
+    setSheet('add');
+  };
+
+  const openEdit = (medicine: any) => {
+    setEditing(medicine);
+    setForm({
+      name: medicine.name ?? '',
+      genericName: medicine.genericName ?? '',
+      category: medicine.category ?? 'OTHER',
+      price: String(medicine.price ?? ''),
+      stockQuantity: medicine.stockQuantity == null ? '' : String(medicine.stockQuantity),
+      strength: medicine.strength ?? '',
+      packSize: medicine.packSize ?? '',
+      description: medicine.description ?? '',
+      requiresPrescription: !!medicine.requiresPrescription,
+    });
+    setSheet('edit');
+  };
+
+  const submit = async () => {
+    if (!form.name.trim()) {
+      Alert.alert('Name needed', 'Give the medicine a name so your customers can find it.');
+      return;
+    }
+    const price = parseFloat(form.price);
+    if (!Number.isFinite(price) || price <= 0) {
+      Alert.alert('Price needed', 'Enter what one unit of this medicine costs, in UGX.');
+      return;
+    }
+
+    const payload: Record<string, unknown> = {
+      name: form.name.trim(),
+      category: form.category,
+      price,
+      requiresPrescription: form.requiresPrescription,
+      isAvailable: true,
+    };
+    if (form.genericName.trim()) payload.genericName = form.genericName.trim();
+    if (form.strength.trim()) payload.strength = form.strength.trim();
+    if (form.packSize.trim()) payload.packSize = form.packSize.trim();
+    if (form.description.trim()) payload.description = form.description.trim();
+    const stock = parseInt(form.stockQuantity, 10);
+    if (Number.isFinite(stock)) payload.stockQuantity = Math.max(0, stock);
+
+    setIsSubmitting(true);
     try {
-      const response = await api.updateMedicineAvailability(medicine.id, {
-        isAvailable: !medicine.isAvailable,
-      });
+      const response = editing
+        ? await api.updateMedicineCatalog(editing.id, payload)
+        : await api.addMedicineToCatalog(payload);
+
       if (response.success) {
-        setMedicines(prev =>
-          prev.map(m => m.id === medicine.id ? { ...m, isAvailable: !m.isAvailable } : m)
+        setSheet(null);
+        setEditing(null);
+        setForm({ ...EMPTY_FORM });
+        await loadCatalog();
+      } else {
+        Alert.alert(
+          editing ? 'Could not save the change' : 'Could not add this medicine',
+          response.error || 'Please try again.'
         );
-      } else {
-        Alert.alert('Error', response.error || 'Failed to update availability');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update availability');
-    }
-  };
-
-  const handleAddMedicine = async () => {
-    if (!newMedicine.name.trim()) {
-      Alert.alert('Error', 'Medicine name is required');
-      return;
-    }
-    if (!newMedicine.price.trim()) {
-      Alert.alert('Error', 'Price is required');
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      const response = await api.addMedicineToCatalog({
-        name: newMedicine.name,
-        genericName: newMedicine.genericName || undefined,
-        category: newMedicine.category || undefined,
-        price: parseFloat(newMedicine.price),
-        stockQuantity: parseInt(newMedicine.stockQuantity) || 0,
-        unit: newMedicine.unit || undefined,
-        description: newMedicine.description || undefined,
-        isAvailable: true,
-        requiresPrescription: newMedicine.requiresPrescription,
-      });
-      if (response.success) {
-        Alert.alert('Success', 'Medicine added to catalog');
-        setAddModalVisible(false);
-        setNewMedicine({
-          name: '',
-          genericName: '',
-          category: '',
-          price: '',
-          stockQuantity: '',
-          unit: '',
-          description: '',
-          requiresPrescription: false,
-        });
-        await loadCatalog();
-      } else {
-        Alert.alert('Error', response.error || 'Failed to add medicine');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+    } catch {
+      Alert.alert('Something went wrong', 'Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleUpdateStock = async () => {
-    if (!editingMedicine) return;
-    setIsSubmitting(true);
-    try {
-      const response = await api.updateMedicineCatalog(editingMedicine.id, {
-        stockQuantity: parseInt(editStock) || 0,
-      });
-      if (response.success) {
-        Alert.alert('Success', 'Stock updated');
-        setEditModalVisible(false);
-        setEditingMedicine(null);
-        setEditStock('');
-        await loadCatalog();
-      } else {
-        Alert.alert('Error', response.error || 'Failed to update stock');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
-    } finally {
-      setIsSubmitting(false);
+  const toggleAvailability = async (medicine: any) => {
+    const next = !medicine.isAvailable;
+    // Optimistic, then reconciled — a stock toggle that waits on the network
+    // feels broken, but a failure must put it back rather than lie.
+    setMedicines((prev) =>
+      prev.map((m) => (m.id === medicine.id ? { ...m, isAvailable: next } : m))
+    );
+    const response = await api.updateMedicineAvailability(medicine.id, next);
+    if (!response.success) {
+      setMedicines((prev) =>
+        prev.map((m) => (m.id === medicine.id ? { ...m, isAvailable: !next } : m))
+      );
+      Alert.alert('Could not update', response.error || 'The medicine was not changed.');
     }
   };
 
+  const remove = async (medicine: any) => {
+    setConfirmDelete(null);
+    const response = await api.deleteMedicineFromCatalog(medicine.id);
+    if (response.success) {
+      setMedicines((prev) => prev.filter((m) => m.id !== medicine.id));
+    } else {
+      Alert.alert(
+        'Could not remove it',
+        response.error ||
+          'If this medicine is on an active order it cannot be deleted. Mark it unavailable instead.'
+      );
+    }
+  };
 
-  const filteredMedicines = useMemo(() => searchQuery.trim()
-    ? medicines.filter(m =>
-        (m.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.genericName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (m.category || '').toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : medicines, [medicines, searchQuery]);
+  const filtered = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return medicines;
+    return medicines.filter((m) =>
+      [m.name, m.genericName, categoryLabel(m.category), m.strength]
+        .filter(Boolean)
+        .some((f: string) => String(f).toLowerCase().includes(q))
+    );
+  }, [medicines, searchQuery]);
 
-  const availableCount = medicines.filter(m => m.isAvailable).length;
-  const lowStockCount = medicines.filter(m => m.stockQuantity <= 5 && m.stockQuantity > 0).length;
-  const outOfStockCount = medicines.filter(m => m.stockQuantity === 0).length;
+  const lowStock = medicines.filter(
+    (m) => typeof m.stockQuantity === 'number' && m.stockQuantity > 0 && m.stockQuantity <= 5
+  ).length;
+  const outOfStock = medicines.filter((m) => m.stockQuantity === 0).length;
 
   return (
     <View style={styles.container}>
-      {/* Header */}
-      <AppHeader title="Catalogue" onBack={() => router.back()} />
+      <AppHeader
+        title="Catalogue"
+        subtitle={`${medicines.length} medicine${medicines.length === 1 ? '' : 's'}`}
+        onBack={() => router.back()}
+        rightActions={[{ icon: 'add', onPress: openAdd, label: 'Add medicine' }]}
+      />
 
-      {/* Summary Row */}
-      <View style={styles.summaryRow}>
-        <View style={[styles.summaryItem, { borderColor: `${COLORS.primary}20` }]}>
-          <Text style={[styles.summaryNumber, { color: COLORS.primary }]}>{medicines.length}</Text>
-          <Text style={styles.summaryLabel}>Total</Text>
-        </View>
-        <View style={[styles.summaryItem, { borderColor: `${COLORS.success}20` }]}>
-          <Text style={[styles.summaryNumber, { color: COLORS.success }]}>{availableCount}</Text>
-          <Text style={styles.summaryLabel}>Available</Text>
-        </View>
-        <View style={[styles.summaryItem, { borderColor: `${COLORS.warning}20` }]}>
-          <Text style={[styles.summaryNumber, { color: COLORS.warning }]}>{lowStockCount}</Text>
-          <Text style={styles.summaryLabel}>Low Stock</Text>
-        </View>
-        <View style={[styles.summaryItem, { borderColor: `${COLORS.error}20` }]}>
-          <Text style={[styles.summaryNumber, { color: COLORS.error }]}>{outOfStockCount}</Text>
-          <Text style={styles.summaryLabel}>Out</Text>
-        </View>
-      </View>
-
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search medicines..."
-          placeholderTextColor={COLORS.outline}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-      </View>
-
-      {/* Medicine List */}
       {isLoading ? (
-      <ListSkeleton />
+        <ListSkeleton />
       ) : (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
-        >
-          {filteredMedicines.length > 0 ? (
-            filteredMedicines.map((medicine) => (
-              <Card key={medicine.id} style={styles.medicineCard}>
-                <View style={styles.medicineHeader}>
-                  <View style={styles.medicineTitleRow}>
-                    <Text style={styles.medicineName}>{medicine.name || 'Unknown Medicine'}</Text>
-                    {medicine.requiresPrescription && (
-                      <View style={styles.rxBadge}>
-                        <Text style={styles.rxText}>Rx</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Toggle
-                    value={medicine.isAvailable}
-                    onValueChange={() => toggleAvailability(medicine)}
-                    accessibilityLabel={`${medicine.name} available`}
-                    style={styles.availabilitySwitch}
-                  />
-                </View>
-
-                {medicine.genericName ? (
-                  <Text style={styles.medicineGeneric}>{medicine.genericName}</Text>
-                ) : null}
-
-                {medicine.category ? (
-                  <Text style={styles.medicineCategory}>{medicine.category}</Text>
-                ) : null}
-
-                <View style={styles.medicineDetails}>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Price</Text>
-                    <Text style={styles.detailValue}>{formatCurrency(medicine.price)}</Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Stock</Text>
-                    <Text style={[
-                      styles.detailValue,
-                      medicine.stockQuantity <= 5 && medicine.stockQuantity > 0 && { color: COLORS.warning },
-                      medicine.stockQuantity === 0 && { color: COLORS.error },
-                    ]}>
-                      {medicine.stockQuantity || 0} {medicine.unit || 'units'}
-                    </Text>
-                  </View>
-                  <View style={styles.detailItem}>
-                    <Text style={styles.detailLabel}>Status</Text>
-                    <Text style={[
-                      styles.detailValue,
-                      medicine.isAvailable ? { color: COLORS.success } : { color: COLORS.error },
-                    ]}>
-                      {medicine.isAvailable ? 'Available' : 'Unavailable'}
-                    </Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.editStockBtn}
-                  onPress={() => {
-                    setEditingMedicine(medicine);
-                    setEditStock(String(medicine.stockQuantity || 0));
-                    setEditModalVisible(true);
-                  }}
-                >
-                  <Text style={styles.editStockText}>Update Stock</Text>
+        <FlatList
+          data={filtered}
+          keyExtractor={(m) => m.id}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+          }
+          ListHeaderComponent={
+            <View>
+              {loadError ? (
+                <TouchableOpacity style={styles.errorBox} onPress={onRefresh} activeOpacity={0.85}>
+                  <Ionicons name="cloud-offline-outline" size={18} color={COLORS.error} />
+                  <Text style={styles.errorText}>{loadError}</Text>
+                  <Text style={styles.errorRetry}>Retry</Text>
                 </TouchableOpacity>
-              </Card>
-            ))
-          ) : (
+              ) : null}
+
+              <View style={styles.statRow}>
+                <StatTile tone="green" icon="cube" value={medicines.length} label="In catalogue" />
+                <StatTile tone="amber" icon="trending-down" value={lowStock} label="Low stock" />
+                <StatTile tone="slate" icon="close-circle" value={outOfStock} label="Out of stock" />
+              </View>
+
+              <View style={styles.searchWrap}>
+                <SearchInput
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholder="Search your medicines"
+                />
+              </View>
+            </View>
+          }
+          ListEmptyComponent={
             <EmptyState
-              icon="medkit-outline"
-              title="No medicines found"
-              subtitle={"{searchQuery ? 'Try a different search term' : 'Add medicines to your catalog'}"}
+              icon={searchQuery ? 'search-outline' : 'medkit-outline'}
+              title={searchQuery ? 'Nothing matched that' : 'Your catalogue is empty'}
+              subtitle={
+                searchQuery
+                  ? `No medicine matches "${searchQuery.trim()}".`
+                  : 'Add the medicines you stock so customers can order them from you.'
+              }
+              actionLabel={searchQuery ? undefined : 'Add your first medicine'}
+              onAction={searchQuery ? undefined : openAdd}
             />
-          )}
-        </ScrollView>
+          }
+          renderItem={({ item }) => {
+            const stock = typeof item.stockQuantity === 'number' ? item.stockQuantity : null;
+            const stockTone = stock === 0 ? 'slate' : stock !== null && stock <= 5 ? 'amber' : 'green';
+            const t = toneColors(stockTone, isDark);
+
+            return (
+              <Panel style={styles.card} padding={SPACING.md}>
+                <View style={styles.cardTop}>
+                  <View style={[styles.cardChip, { backgroundColor: t.chip }]}>
+                    <Ionicons name="medkit" size={17} color={t.ink} />
+                  </View>
+                  <View style={styles.cardText}>
+                    <Text style={styles.name} numberOfLines={1}>
+                      {item.name}
+                      {item.strength ? ` ${item.strength}` : ''}
+                    </Text>
+                    <Text style={styles.generic} numberOfLines={1}>
+                      {item.genericName ? `${item.genericName} · ` : ''}
+                      {categoryLabel(item.category)}
+                    </Text>
+                  </View>
+                  <Text style={styles.price}>{UGX(item.price)}</Text>
+                </View>
+
+                <View style={styles.cardMeta}>
+                  <TonePill
+                    label={
+                      stock === null
+                        ? 'Stock not tracked'
+                        : stock === 0
+                          ? 'Out of stock'
+                          : `${stock} in stock`
+                    }
+                    tone={stockTone}
+                  />
+                  {item.requiresPrescription ? (
+                    <TonePill label="PRESCRIPTION" tone="violet" icon="document-text" />
+                  ) : null}
+                  {!item.isAvailable ? <TonePill label="HIDDEN" tone="slate" icon="eye-off" /> : null}
+                </View>
+
+                <View style={styles.cardActions}>
+                  <View style={styles.availability}>
+                    <Text style={styles.availabilityLabel}>
+                      {item.isAvailable ? 'Customers can order this' : 'Hidden from customers'}
+                    </Text>
+                    <Switch
+                      value={!!item.isAvailable}
+                      onValueChange={() => toggleAvailability(item)}
+                      trackColor={{ false: COLORS.outlineVariant, true: COLORS.primary }}
+                      thumbColor="#FFFFFF"
+                      accessibilityLabel={`Toggle availability for ${item.name}`}
+                    />
+                  </View>
+                  <View style={styles.cardButtons}>
+                    <TouchableOpacity
+                      style={styles.cardButton}
+                      onPress={() => openEdit(item)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit ${item.name}`}
+                    >
+                      <Ionicons name="create-outline" size={16} color={COLORS.primary} />
+                      <Text style={styles.cardButtonText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.cardButton}
+                      onPress={() => setConfirmDelete(item)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Remove ${item.name}`}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={COLORS.error} />
+                      <Text style={[styles.cardButtonText, { color: COLORS.error }]}>Remove</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Panel>
+            );
+          }}
+        />
       )}
 
-      {/* Add Medicine Modal */}
+      {!isLoading && medicines.length > 0 ? (
+        <TouchableOpacity
+          style={styles.fab}
+          onPress={openAdd}
+          accessibilityRole="button"
+          accessibilityLabel="Add a medicine"
+        >
+          <Ionicons name="add" size={26} color="#FFFFFF" />
+        </TouchableOpacity>
+      ) : null}
+
       <SmartBottomSheet
-        visible={addModalVisible}
-        title="Add medicine"
-        onDismiss={() => setAddModalVisible(false)}
+        visible={sheet !== null}
+        onDismiss={() => {
+          setSheet(null);
+          setEditing(null);
+        }}
+        title={sheet === 'edit' ? 'Edit medicine' : 'Add a medicine'}
       >
-        <View>
-
-              <Text style={styles.fieldLabel}>Name *</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="Medicine name"
-                placeholderTextColor={COLORS.outline}
-                value={newMedicine.name}
-                onChangeText={t => setNewMedicine(p => ({ ...p, name: t }))}
-              />
-
-              <Text style={styles.fieldLabel}>Generic Name</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="Generic name"
-                placeholderTextColor={COLORS.outline}
-                value={newMedicine.genericName}
-                onChangeText={t => setNewMedicine(p => ({ ...p, genericName: t }))}
-              />
-
-              <Text style={styles.fieldLabel}>Category</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="e.g., Pain Relief, Antibiotics"
-                placeholderTextColor={COLORS.outline}
-                value={newMedicine.category}
-                onChangeText={t => setNewMedicine(p => ({ ...p, category: t }))}
-              />
-
-              <Text style={styles.fieldLabel}>Price (UGX) *</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="0"
-                placeholderTextColor={COLORS.outline}
-                value={newMedicine.price}
-                onChangeText={t => setNewMedicine(p => ({ ...p, price: t }))}
-                keyboardType="numeric"
-              />
-
-              <Text style={styles.fieldLabel}>Stock Quantity</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="0"
-                placeholderTextColor={COLORS.outline}
-                value={newMedicine.stockQuantity}
-                onChangeText={t => setNewMedicine(p => ({ ...p, stockQuantity: t }))}
-                keyboardType="numeric"
-              />
-
-              <Text style={styles.fieldLabel}>Unit</Text>
-              <TextInput
-                style={styles.fieldInput}
-                placeholder="e.g., tablets, bottles, strips"
-                placeholderTextColor={COLORS.outline}
-                value={newMedicine.unit}
-                onChangeText={t => setNewMedicine(p => ({ ...p, unit: t }))}
-              />
-
-              <Text style={styles.fieldLabel}>Description</Text>
-              <TextInput
-                style={[styles.fieldInput, { minHeight: 60 }]}
-                placeholder="Medicine description"
-                placeholderTextColor={COLORS.outline}
-                value={newMedicine.description}
-                onChangeText={t => setNewMedicine(p => ({ ...p, description: t }))}
-                multiline
-                textAlignVertical="top"
-              />
-
-              <View style={styles.prescriptionToggle}>
-                <Text style={styles.fieldLabel}>Requires Prescription</Text>
-                <Toggle
-                  value={newMedicine.requiresPrescription}
-                  onValueChange={(v: boolean) => setNewMedicine(p => ({ ...p, requiresPrescription: v }))}
-                  accessibilityLabel="Requires prescription"
-                />
-
-              <View style={styles.modalButtons}>
-                <GradientButton
-                  title="Cancel"
-                  variant="outline"
-                  onPress={() => {
-                    setAddModalVisible(false);
-                    setNewMedicine({
-                      name: '',
-                      genericName: '',
-                      category: '',
-                      price: '',
-                      stockQuantity: '',
-                      unit: '',
-                      description: '',
-                      requiresPrescription: false,
-                    });
-                  }}
-                  size="sm"
-                  style={styles.modalBtn}
-                />
-                <GradientButton
-                  title="Add Medicine"
-                  onPress={handleAddMedicine}
-                  loading={isSubmitting}
-                  size="sm"
-                  style={styles.modalBtn}
-                />
-          </View>
-        </View>
-        </View>
-      </SmartBottomSheet>
-
-      {/* Edit Stock Modal */}
-      <SmartBottomSheet
-        visible={editModalVisible}
-        title="Update stock"
-        onDismiss={() => setEditModalVisible(false)}
-      >
-        <View>
-            <Text style={styles.modalSubtitle}>
-              {editingMedicine?.name || 'Medicine'}
-            </Text>
-            <Text style={styles.fieldLabel}>New Stock Quantity</Text>
+        <ScrollView
+          style={styles.sheetScroll}
+          contentContainerStyle={styles.sheetContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <Field label="Name" required>
             <TextInput
-              style={styles.fieldInput}
-              placeholder="0"
+              style={styles.input}
+              value={form.name}
+              onChangeText={(name) => setForm((f) => ({ ...f, name }))}
+              placeholder="Paracetamol"
               placeholderTextColor={COLORS.outline}
-              value={editStock}
-              onChangeText={setEditStock}
-              keyboardType="numeric"
-              autoFocus
             />
-            <View style={styles.modalButtons}>
-              <GradientButton
-                title="Cancel"
-                variant="outline"
-                onPress={() => {
-                  setEditModalVisible(false);
-                  setEditingMedicine(null);
-                  setEditStock('');
-                }}
-                size="sm"
-                style={styles.modalBtn}
+          </Field>
+
+          <View style={styles.fieldRow}>
+            <Field label="Strength" style={{ flex: 1 }}>
+              <TextInput
+                style={styles.input}
+                value={form.strength}
+                onChangeText={(strength) => setForm((f) => ({ ...f, strength }))}
+                placeholder="500mg"
+                placeholderTextColor={COLORS.outline}
               />
-              <GradientButton
-                title="Update"
-                onPress={handleUpdateStock}
-                loading={isSubmitting}
-                size="sm"
-                style={styles.modalBtn}
+            </Field>
+            <Field label="Pack size" style={{ flex: 1 }}>
+              <TextInput
+                style={styles.input}
+                value={form.packSize}
+                onChangeText={(packSize) => setForm((f) => ({ ...f, packSize }))}
+                placeholder="20 tablets"
+                placeholderTextColor={COLORS.outline}
               />
-        </View>
-        </View>
+            </Field>
+          </View>
+
+          <Field label="Generic name">
+            <TextInput
+              style={styles.input}
+              value={form.genericName}
+              onChangeText={(genericName) => setForm((f) => ({ ...f, genericName }))}
+              placeholder="Acetaminophen"
+              placeholderTextColor={COLORS.outline}
+            />
+          </Field>
+
+          <Field label="Category">
+            <View style={styles.chips}>
+              {CATEGORIES.map((c) => {
+                const active = form.category === c.value;
+                return (
+                  <TouchableOpacity
+                    key={c.value}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => setForm((f) => ({ ...f, category: c.value }))}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: active }}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{c.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </Field>
+
+          <View style={styles.fieldRow}>
+            <Field label="Price (UGX)" required style={{ flex: 1 }}>
+              <TextInput
+                style={styles.input}
+                value={form.price}
+                onChangeText={(price) => setForm((f) => ({ ...f, price }))}
+                placeholder="3500"
+                keyboardType="numeric"
+                placeholderTextColor={COLORS.outline}
+              />
+            </Field>
+            <Field label="Units in stock" style={{ flex: 1 }}>
+              <TextInput
+                style={styles.input}
+                value={form.stockQuantity}
+                onChangeText={(stockQuantity) => setForm((f) => ({ ...f, stockQuantity }))}
+                placeholder="40"
+                keyboardType="numeric"
+                placeholderTextColor={COLORS.outline}
+              />
+            </Field>
+          </View>
+
+          <Field label="Notes for customers">
+            <TextInput
+              style={[styles.input, styles.textarea]}
+              value={form.description}
+              onChangeText={(description) => setForm((f) => ({ ...f, description }))}
+              placeholder="How it is taken, what it treats"
+              multiline
+              placeholderTextColor={COLORS.outline}
+            />
+          </Field>
+
+          <TouchableOpacity
+            style={styles.rxToggle}
+            onPress={() => setForm((f) => ({ ...f, requiresPrescription: !f.requiresPrescription }))}
+            activeOpacity={0.8}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: form.requiresPrescription }}
+          >
+            <View style={styles.rxToggleText}>
+              <Text style={styles.rxToggleTitle}>Requires a prescription</Text>
+              <Text style={styles.rxToggleSub}>
+                Customers must upload a prescription before they can order it.
+              </Text>
+            </View>
+            <Switch
+              value={form.requiresPrescription}
+              onValueChange={(requiresPrescription) =>
+                setForm((f) => ({ ...f, requiresPrescription }))
+              }
+              trackColor={{ false: COLORS.outlineVariant, true: COLORS.primary }}
+              thumbColor="#FFFFFF"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.submit, isSubmitting && { opacity: 0.6 }]}
+            onPress={submit}
+            disabled={isSubmitting}
+            accessibilityRole="button"
+            accessibilityLabel={sheet === 'edit' ? 'Save changes' : 'Add medicine'}
+          >
+            {isSubmitting ? (
+              <ActivityIndicator size="small" color="#FFFFFF" />
+            ) : (
+              <Text style={styles.submitText}>
+                {sheet === 'edit' ? 'Save changes' : 'Add to catalogue'}
+              </Text>
+            )}
+          </TouchableOpacity>
+        </ScrollView>
       </SmartBottomSheet>
+
+      <ConfirmDialog
+        visible={confirmDelete !== null}
+        title={`Remove ${confirmDelete?.name ?? 'this medicine'}?`}
+        message="It will no longer be in your catalogue. If it is on an active order, mark it unavailable instead."
+        confirmLabel="Remove"
+        cancelLabel="Keep it"
+        destructive
+        onConfirm={() => confirmDelete && remove(confirmDelete)}
+        onCancel={() => setConfirmDelete(null)}
+      />
     </View>
   );
 }
 
-const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-  },
-  summaryItem: {
-    flex: 1,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.md,
-    padding: 10,
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  summaryNumber: {
-    fontSize: TYPOGRAPHY.headlineLgMobile.fontSize,
-    fontWeight: 'bold',
-  },
-  summaryLabel: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.outline,
-    marginTop: SPACING.xs,
-  },
-  searchContainer: {
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-  searchInput: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    color: COLORS.onSurface,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-    paddingBottom: 40,
-  },
-  medicineCard: {
-    marginBottom: 10,
-  },
-  medicineHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-  },
-  medicineTitleRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  medicineName: {
-    fontSize: 15,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-    color: COLORS.onSurface,
-  },
-  rxBadge: {
-    backgroundColor: `${COLORS.warning}20`,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: RADIUS.sm,
-  },
-  rxText: {
-    color: COLORS.warning,
-    fontSize: 10,
-    fontWeight: '700',
-  },
-  availabilitySwitch: {
-    marginLeft: 8,
-  },
-  medicineGeneric: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.outline,
-    fontStyle: 'italic',
-    marginTop: SPACING.xs,
-  },
-  medicineCategory: {
-    fontSize: 11,
-    color: COLORS.info,
-    marginTop: SPACING.xs,
-  },
-  medicineDetails: {
-    flexDirection: 'row',
-    marginTop: 10,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.outlineVariant,
-  },
-  detailItem: {
-    flex: 1,
-  },
-  detailLabel: {
-    fontSize: 10,
-    color: COLORS.outline,
-    textTransform: 'uppercase',
-  },
-  detailValue: {
-    fontSize: 13,
-    color: COLORS.onSurface,
-    fontWeight: '500',
-    marginTop: SPACING.xs,
-  },
-  editStockBtn: {
-    marginTop: 10,
-    paddingVertical: SPACING.sm,
-    alignItems: 'center',
-    backgroundColor: `${COLORS.primary}10`,
-    borderRadius: RADIUS.DEFAULT,
-  },
-  editStockText: {
-    color: COLORS.primary,
-    fontSize: 13,
-    fontWeight: TYPOGRAPHY.labelLg.fontWeight,
-  },
-  // Modal styles
-  modalSubtitle: {
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-    color: COLORS.outline,
-    marginBottom: SPACING.md,
-  },
-  fieldLabel: {
-    fontSize: TYPOGRAPHY.labelMd.fontSize,
-    color: COLORS.outline,
-    fontWeight: TYPOGRAPHY.labelMd.fontWeight,
-    textTransform: 'uppercase',
-    marginBottom: SPACING.xs,
-    marginTop: 10,
-  },
-  fieldInput: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.gutter,
-    paddingVertical: 10,
-    color: COLORS.onSurface,
-    fontSize: TYPOGRAPHY.bodySm.fontSize,
-  },
-  prescriptionToggle: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 14,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 20,
-  },
-  modalBtn: {
-    flex: 1,
-  },
-});
+function Field({
+  label,
+  required,
+  children,
+  style,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+  style?: object;
+}) {
+  const { isDark } = useTheme();
+  const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
+  return (
+    <View style={[{ marginBottom: SPACING.gutter }, style]}>
+      <Text style={{ fontSize: 12.5, fontWeight: '700', color: COLORS.onSurfaceVariant, marginBottom: 6 }}>
+        {label}
+        {required ? <Text style={{ color: COLORS.error }}> *</Text> : null}
+      </Text>
+      {children}
+    </View>
+  );
+}
+
+const createStyles = (COLORS: ThemedColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.background },
+
+    list: { flex: 1 },
+    listContent: { padding: SPACING.md, paddingBottom: 96, gap: SPACING.gutter },
+
+    errorBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+      padding: 14,
+      borderRadius: RADIUS.lg,
+      borderWidth: 1,
+      borderColor: COLORS.error,
+      marginBottom: SPACING.md,
+    },
+    errorText: { flex: 1, fontSize: 12.5, color: COLORS.onSurface, lineHeight: 17 },
+    errorRetry: { fontSize: 13, fontWeight: '800', color: COLORS.primary },
+
+    statRow: { flexDirection: 'row', gap: SPACING.sm },
+    searchWrap: { marginTop: SPACING.md, marginBottom: SPACING.xs },
+
+    card: {},
+    cardTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    cardChip: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+    cardText: { flex: 1, minWidth: 0 },
+    name: { fontSize: 15, fontWeight: '700', color: COLORS.onSurface, letterSpacing: -0.2 },
+    generic: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 1 },
+    price: { fontSize: 16, fontWeight: '800', color: COLORS.onSurface },
+
+    cardMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: SPACING.gutter },
+
+    cardActions: {
+      marginTop: SPACING.gutter,
+      paddingTop: SPACING.gutter,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.outlineVariant,
+      gap: SPACING.sm,
+    },
+    availability: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: SPACING.sm },
+    availabilityLabel: { flex: 1, fontSize: 12.5, color: COLORS.onSurfaceVariant },
+    cardButtons: { flexDirection: 'row', gap: SPACING.sm },
+    cardButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 9,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: COLORS.outlineVariant,
+    },
+    cardButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.primary },
+
+    fab: {
+      position: 'absolute',
+      right: SPACING.md,
+      bottom: SPACING.lg,
+      width: 54,
+      height: 54,
+      borderRadius: 27,
+      backgroundColor: COLORS.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      elevation: 6,
+      shadowColor: '#000',
+      shadowOpacity: 0.22,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 4 },
+    },
+
+    sheetScroll: { maxHeight: '100%' },
+    sheetContent: { paddingBottom: SPACING.xl },
+    fieldRow: { flexDirection: 'row', gap: SPACING.sm },
+    input: {
+      borderWidth: 1,
+      borderColor: COLORS.outlineVariant,
+      borderRadius: 12,
+      paddingHorizontal: 13,
+      paddingVertical: 11,
+      fontSize: 14.5,
+      color: COLORS.onSurface,
+      backgroundColor: COLORS.backgroundSurface,
+    },
+    textarea: { minHeight: 74, textAlignVertical: 'top' },
+
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
+    chip: {
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: COLORS.outlineVariant,
+    },
+    chipActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+    chipText: { fontSize: 12.5, fontWeight: '600', color: COLORS.onSurfaceVariant },
+    chipTextActive: { color: '#FFFFFF' },
+
+    rxToggle: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+      padding: 13,
+      borderRadius: RADIUS.lg,
+      borderWidth: 1,
+      borderColor: COLORS.outlineVariant,
+      marginBottom: SPACING.md,
+    },
+    rxToggleText: { flex: 1, minWidth: 0 },
+    rxToggleTitle: { fontSize: 14, fontWeight: '700', color: COLORS.onSurface },
+    rxToggleSub: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 2, lineHeight: 16 },
+
+    submit: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: 15,
+      borderRadius: 999,
+      backgroundColor: COLORS.primary,
+    },
+    submitText: { color: '#FFFFFF', fontSize: 15, fontWeight: '800' },
+  });
