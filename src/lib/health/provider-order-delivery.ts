@@ -329,17 +329,22 @@ export async function settleProviderOrderDelivery(
   // what the courier is holding on other people's behalf, so the existing
   // deposit/reconciliation flow can clear it. Without this the pharmacy's
   // payable balance would be funded by money nobody had recorded receiving.
-  if ((order.paymentMethod || '').toUpperCase() === 'CASH' && opts.riderId) {
+  if ((order.paymentMethod || '').toUpperCase() === 'CASH') {
     const task = await db.task.findUnique({
       where: { providerOrderId },
-      select: { id: true, riderEarnings: true },
+      select: { id: true, riderEarnings: true, riderId: true },
     });
+    // Whoever actually carried it. A pharmacist marking DELIVER by hand does
+    // not name a rider, and the order's own riderId is only set once dispatch
+    // assigned one — so the task is the authoritative answer to "who is
+    // holding the customer's cash".
+    const carrier = opts.riderId ?? task?.riderId ?? null;
     const owed = toNum(order.totalAmount) - toNum(task?.riderEarnings);
-    if (owed > 0) {
+    if (carrier && owed > 0) {
       await db.cashCollection
         .create({
           data: {
-            riderId: opts.riderId,
+            riderId: carrier,
             taskId: task?.id ?? null,
             userId: order.customerId,
             amount: owed,
