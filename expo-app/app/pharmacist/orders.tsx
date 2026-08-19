@@ -29,6 +29,18 @@ import {
 
 type OrderTab = 'ALL' | 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'CANCELLED';
 
+/**
+ * Which real ProviderOrderStatus values each tab covers. `ALL` is undefined —
+ * no narrowing at all — so a new status can never fall out of every tab and
+ * vanish from the pharmacist's view.
+ */
+const TAB_STATUSES: Partial<Record<OrderTab, string[]>> = {
+  PENDING: ['ORDER_RECEIVED'],
+  PROCESSING: ['ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP', 'RIDER_ASSIGNED', 'OUT_FOR_DELIVERY'],
+  COMPLETED: ['DELIVERED'],
+  CANCELLED: ['CANCELLED', 'REJECTED'],
+};
+
 const ORDER_TABS: { key: OrderTab; label: string }[] = [
   { key: 'ALL', label: 'All' },
   { key: 'PENDING', label: 'Pending' },
@@ -54,11 +66,23 @@ export default function PharmacistOrdersScreen() {
 
   const loadOrders = useCallback(async () => {
     try {
-      const statusFilter = activeTab === 'ALL' ? undefined : activeTab;
-      const response = await api.getHealthOrders(statusFilter);
+      // Fetch the provider's orders and narrow to the tab here.
+      //
+      // The tabs used to send 'PENDING', 'PROCESSING' and 'COMPLETED' as the
+      // status filter. None of those is a ProviderOrderStatus — the real values
+      // are ORDER_RECEIVED, ACCEPTED, PREPARING, READY_FOR_PICKUP,
+      // RIDER_ASSIGNED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED and REJECTED.
+      // The server ignores an unrecognised value rather than erroring, so those
+      // tabs quietly showed everything instead of filtering.
+      //
+      // A tab is a phase and covers several statuses, while the endpoint takes
+      // one, so the narrowing happens here rather than changing that contract.
+      const response = await api.getHealthOrders();
       if (response.success && response.data) {
         const orderData = response.data.orders || response.data.data || response.data;
-        setOrders(Array.isArray(orderData) ? orderData : []);
+        const all = Array.isArray(orderData) ? orderData : [];
+        const wanted = TAB_STATUSES[activeTab];
+        setOrders(wanted ? all.filter((o: any) => wanted.includes(o.status)) : all);
       } else {
         setOrders([]);
       }
@@ -155,7 +179,15 @@ export default function PharmacistOrdersScreen() {
             <EmptyState
               icon="cube-outline"
               title="No orders found"
-              subtitle={"{activeTab === 'ALL' ? 'Orders will appear here when patients place them' : `No ${activeTab.toLowerCase()} orders`}"}
+              // This was wrapped in quotes, so the expression itself was the
+              // string and patients-facing staff were shown its source —
+              // "{activeTab === 'ALL' ? ... : `No ${activeTab.toLowerCase()}
+              // orders`}" — rendered verbatim on the screen.
+              subtitle={
+                activeTab === 'ALL'
+                  ? 'Orders will appear here when patients place them.'
+                  : `You have no ${activeTab.toLowerCase()} orders right now.`
+              }
             />
           )}
         </ScrollView>

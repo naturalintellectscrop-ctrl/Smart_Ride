@@ -937,12 +937,22 @@ class ApiService {
     return this.request<any>('/health/status', 'PATCH', payload);
   }
 
-  async getHealthOrders(statusOrPage?: string | number): Promise<ApiResponse<any>> {
-    if (typeof statusOrPage === 'string') {
-      return this.request<any>(`/health-provider/orders?status=${statusOrPage}`);
-    }
-    const page = statusOrPage ?? 1;
-    return this.request<any>(`/health/orders?page=${page}`);
+  /**
+   * The pharmacist's own orders.
+   *
+   * The no-status branch used to fall through to `/health/orders`, which is the
+   * monitoring namespace — that directory holds the healthcheck endpoints and
+   * has never had an orders route. So the "All" tab 404'd and showed an empty
+   * list while the dashboard, which asks correctly, reported orders existed.
+   * This is the original PHARM-1 wrong address surviving in a second code path.
+   *
+   * Both branches now use /health-provider/orders, the contract the pharmacist
+   * dashboard and every action already use, so the list and the actions operate
+   * on the same ProviderOrder rows.
+   */
+  async getHealthOrders(status?: string): Promise<ApiResponse<any>> {
+    const query = status ? `?status=${encodeURIComponent(status)}` : '';
+    return this.request<any>(`/health-provider/orders${query}`);
   }
 
   async getHealthOrder(orderId: string): Promise<ApiResponse<any>> {
