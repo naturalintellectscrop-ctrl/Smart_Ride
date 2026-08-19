@@ -1796,3 +1796,32 @@ The cause was mine: a failed first fixture run had left **two** `qa-rx-*` users,
 and the harness's `findFirst` was logging in as one while acting on the other's
 order. Not a product defect. Recorded because the same shape of mistake could
 easily be reported as an authorization bug.
+
+## PHARM-8 — a ready pharmacy order is never routed to a courier
+
+**Status:** OPEN (blocker for the pharmacy→customer chain) | **Priority:** P0 | **Category:** Missing dispatch
+
+Marking a pharmacy order READY_FOR_PICKUP does nothing beyond setting the
+status. The order stops there.
+
+The merchant flow does the opposite. `src/app/api/orders/[id]/route.ts` on ready:
+
+```
+{ triggeredByType: 'SYSTEM', reason: 'Food/shopping order ready, starting dispatch' }
+DispatchService.findAndAssign({ ... })
+```
+
+`/health-provider/orders` contains no `findAndAssign`, no `DispatchService`, and
+never creates a `Task`. `findAndAssign` is called from rides, tasks and merchant
+orders — never from a provider order. `ProviderOrder` has a `riderId` field
+("the rider carrying this order") and the route has an `ASSIGN_RIDER` action, but
+nothing calls it and no screen offers it: a rider can only be attached by hand
+via the API, with an id chosen by a human.
+
+So the chain pharmacy → courier → customer has no automatic link. The medicine is
+prepared and set aside, and no delivery is ever requested.
+
+Not fixed here: wiring dispatch into the provider-order lifecycle means deciding
+what Task a pharmacy delivery becomes, who pays the courier out of
+`providerEarnings` vs `deliveryFee`, and how `ProviderOrder.status` and
+`Task.status` stay consistent — design decisions, not a contained defect fix.
