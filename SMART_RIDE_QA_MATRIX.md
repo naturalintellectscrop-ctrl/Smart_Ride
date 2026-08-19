@@ -1669,3 +1669,130 @@ Both fixtures were initially refused with "Application under review": `Merchant.
 status` defaults to `PENDING_APPROVAL` and `HealthProvider.verificationStatus`
 to `PENDING`. That is the gate doing its job; the fixtures were approved to
 proceed, not the gate weakened.
+
+# Session — Pharmacy closure and PHARM-2
+
+## PHARM-2 — a pharmacy order could be moved backwards, or delivered twice
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P0 | **Category:** Lifecycle
+
+Reproduced against production: an order at `READY_FOR_PICKUP` accepted `ACCEPT`
+and went back to `ACCEPTED`.
+
+**Root cause.** `PATCH /health-provider/orders` maps an action straight onto a
+new status. It fetches the order — for the ownership check — and then never
+reads `order.status`, so any action applied from any state. `ACCEPT` was only
+the case that surfaced; the same gap allowed a `DELIVERED` order to be
+re-accepted, a `CANCELLED` one to be marched forward, and `DELIVER` to run twice
+on an already-delivered order, re-stamping `deliveredAt` and `paymentStatus`.
+That last one is money.
+
+**Is the transition legitimate? No.** There is no workflow in which a pharmacy
+accepts an order it has already prepared and set aside for collection.
+`acceptedAt` records when the pharmacy took the job; rewriting it afterwards
+loses when that happened.
+
+**Which state machine is authoritative?** None existed.
+`ProviderOrderStatus` is referenced in exactly one file, so the guard added to
+that route is the **first** definition of this lifecycle rather than a second
+authority competing with an existing one. It sits beside the switch it guards —
+the only code that moves a provider order.
+
+**Regression:** `verify-provider-order-lifecycle.ts` **12/12** — the legal path
+`ORDER_RECEIVED → ACCEPTED → PREPARING → READY_FOR_PICKUP → OUT_FOR_DELIVERY →
+DELIVERED` still runs, and every backwards move, terminal move, skipped step and
+double delivery is refused with 409 while the stored status stays put.
+
+**Production:** `ACCEPT` on an `ACCEPTED` order → **409 "Cannot ACCEPT an order
+that is ACCEPTED"**; the legal `START_PREPARING` → 200.
+
+## PHARM-3 — the pharmacist gate reads a different table than the orders do
+
+**Status:** OPEN (product decision) | **Priority:** P2 | **Category:** Data model
+
+An approved pharmacist with a `HealthProvider` and a live `ProviderOrder` was
+sent to "Register Pharmacy". `useProviderApprovalGate` calls
+`api.getMerchantProfile()` for PHARMACIST, so the **gate** wants
+`Merchant(type=PHARMACY)` + `Pharmacy`, while **order fulfilment** — verified
+working — lives on `HealthProvider` + `ProviderOrder`.
+
+So a pharmacist has two half-identities and needs both rows to use the app.
+Deciding which model is authoritative is an architectural call, not a QA fix, so
+this is recorded rather than changed. The QA fixture was given both halves to
+proceed. Worth noting: **`HealthOrder` has 0 rows platform-wide** — that third
+table is entirely unused, while `ProviderOrder` carries the real orders.
+
+## PHARM-4 — the orders screen showed nothing, and printed its own source
+
+**Status:** FIXED + VERIFIED ON DEVICE | **Priority:** P0
+
+The dashboard said "Orders: 1 total"; opening Orders said "No orders found".
+
+- **The All tab asked the wrong service.** With no status filter,
+  `getHealthOrders` fell through to `/health/orders` — the monitoring namespace,
+  which holds the healthcheck endpoints and has never had an orders route.
+- **The tabs filtered on statuses that do not exist.** `PENDING`, `PROCESSING`,
+  `COMPLETED`. `enumParam` ignores an unrecognised value rather than erroring,
+  so those tabs quietly showed everything instead of filtering — the same enum
+  drift as the merchant tabs, failing silently instead of loudly.
+- **The empty state printed code at the user.** The subtitle was wrapped in
+  quotes, so pharmacy staff were shown
+  `{activeTab === 'ALL' ? ... : \`No ${activeTab.toLowerCase()} orders\`}`
+  rendered verbatim.
+
+## PHARM-5 — five pharmacist calls addressed the monitoring namespace
+
+**Status:** FIXED + VERIFIED ON DEVICE | **Priority:** P0
+
+Opening an order said "Order not found" while the list had just rendered it.
+`/api/health/` holds `route.ts`, `ready` and `startup` — never pharmacy data.
+Measured against production, every one returned **404**:
+
+```
+/health/orders   404      /health-provider/orders   200
+/health/status   404      /health-provider/status   400 (exists, needs an id)
+/health/catalog  404      /health-provider/catalog  400 (exists, needs an id)
+```
+
+Affected: `getHealthOrder`, `getHealthProviderStatus`,
+`updateHealthProviderStatus`, `getMedicineCatalog`, `updateMedicineCatalog`,
+`updateMedicineAvailability`. Editing a medicine or toggling its availability
+silently did nothing.
+
+The single-order read has no route of its own, and adding one would create a
+second way to read the same data, so it selects from the provider's own order
+list — the detail screen therefore always shows the row the list showed.
+
+## PHARM-7 — status and catalog need an id the client never sends
+
+**Status:** OPEN | **Priority:** P3
+
+`/health-provider/status` and `/health-provider/catalog` exist but require
+`providerId` (or `userId`), unlike `/health-provider/orders`, which resolves the
+provider from the token. The corrected client calls therefore reach a real route
+and get 400. Not on the pharmacy journey's critical path — the dashboard
+tolerates the failure — so recorded rather than fixed here.
+
+## PHARM-6 — the order screen offered no way to act on the order
+
+**Status:** FIXED | **Priority:** P0
+
+The action buttons branched on `PENDING`, `ORDER_CREATED` and `PROCESSING`, so
+on a real `ORDER_RECEIVED` order no branch matched and the container rendered
+empty: the pharmacist could read an order and do nothing with it. Third screen
+in this app with the same enum drift.
+
+Each state now offers exactly the one action the server accepts. **"Complete
+Order" was removed rather than remapped** — it sent `DELIVER`, legal only once a
+courier is carrying the order, so with the PHARM-2 guard in place it would now
+always fail. The progress timeline was also missing `ORDER_RECEIVED`, so a new
+order showed no progress at all.
+
+## Note — a 403 that did not reproduce
+
+While testing PHARM-2 on production I saw repeated
+`403 "This order belongs to another provider"` for the order's own pharmacist.
+The cause was mine: a failed first fixture run had left **two** `qa-rx-*` users,
+and the harness's `findFirst` was logging in as one while acting on the other's
+order. Not a product defect. Recorded because the same shape of mistake could
+easily be reported as an authorization bug.
