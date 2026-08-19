@@ -82,7 +82,16 @@ export default function OrderDetailScreen() {
         const res = await api.providerOrderAction(id, action, opts);
         if (res.success) {
           const task = (res.data as any)?.deliveryTask;
-          if (action === 'READY') {
+          if (action === 'REDISPATCH') {
+            const searching = (res.data as any)?.searching;
+            Alert.alert(
+              searching ? 'Looking for a courier' : 'No courier available',
+              (res.data as any)?.message ??
+                (searching
+                  ? 'We are asking nearby couriers now.'
+                  : 'Nobody is available right now. Try again shortly.')
+            );
+          } else if (action === 'READY') {
             Alert.alert(
               'Ready for pickup',
               task?.taskNumber
@@ -138,7 +147,7 @@ export default function OrderDetailScreen() {
 
   const meta = statusMeta(order.status);
   const pay = paymentMeta(order.paymentMethod, order.paymentStatus);
-  const acts = actionsFor(order.status);
+  const acts = actionsFor(order.status, !!order.riderId);
   const items = parseItems(order.items);
   const tone = toneColors(meta.tone, isDark);
   const isRx = order.orderType === 'PRESCRIPTION_MEDICINE';
@@ -349,7 +358,7 @@ export default function OrderDetailScreen() {
       </ScrollView>
 
       {/* The one action the server will accept from here */}
-      {acts.primary || acts.canDecline || acts.canCancel ? (
+      {acts.primary || acts.canDecline || acts.canCancel || acts.canRedispatch ? (
         <View style={styles.actionBar}>
           {rxBlocking && acts.primary?.action === 'ACCEPT' ? (
             <Text style={styles.actionWarning}>
@@ -371,6 +380,25 @@ export default function OrderDetailScreen() {
                 <>
                   <Ionicons name={acts.primary.icon as never} size={18} color="#FFFFFF" />
                   <Text style={styles.primaryButtonText}>{acts.primary.label}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : null}
+
+          {acts.canRedispatch ? (
+            <TouchableOpacity
+              style={[styles.primaryButton, busy !== null && styles.buttonBusy]}
+              onPress={() => act('REDISPATCH')}
+              disabled={busy !== null}
+              accessibilityRole="button"
+              accessibilityLabel="Look for a courier again"
+            >
+              {busy === 'REDISPATCH' ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="search" size={18} color="#FFFFFF" />
+                  <Text style={styles.primaryButtonText}>Find a courier</Text>
                 </>
               )}
             </TouchableOpacity>

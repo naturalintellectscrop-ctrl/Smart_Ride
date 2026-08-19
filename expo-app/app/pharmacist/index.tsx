@@ -189,10 +189,10 @@ export default function PharmacistDashboard() {
 
   return (
     <View style={styles.container}>
+      {/* The pharmacy names itself in the greeting below, so the header does
+          not repeat it — it carries only the controls. */}
       <AppHeader
-        title="Pharmacist"
-        subtitle={providerStatus.name || 'Dashboard'}
-        variant="large"
+        title=""
         rightSlot={
           <OnlinePill
             isOnline={providerStatus.isOpen}
@@ -315,7 +315,7 @@ export default function PharmacistDashboard() {
             icon="wallet-outline"
             tone="amber"
             title="Earnings"
-            subtitle="View and withdraw"
+            subtitle="View & withdraw"
             onPress={() => router.push('/pharmacist/earnings')}
           />
         </View>

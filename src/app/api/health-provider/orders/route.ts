@@ -439,6 +439,9 @@ export async function PATCH(request: NextRequest) {
       START_PREPARING: ['ACCEPTED'],
       READY: ['PREPARING'],
       ASSIGN_RIDER: ['READY_FOR_PICKUP'],
+      // Ask for a courier again. Legal only while the order is packed and
+      // waiting — see the handler below for why it exists.
+      REDISPATCH: ['READY_FOR_PICKUP'],
       PICKED_UP: ['READY_FOR_PICKUP', 'RIDER_ASSIGNED'],
       DELIVER: ['OUT_FOR_DELIVERY'],
       // Cancellable right up until the courier has it.
@@ -464,6 +467,39 @@ export async function PATCH(request: NextRequest) {
         { success: false, error: `This order is already ${order.status}` },
         { status: 409 }
       );
+    }
+
+    // ── Ask for a courier again ─────────────────────────────────────────────
+    //
+    // Dispatch runs once, when the order is marked ready, and it is allowed to
+    // find nobody — every courier may be busy, or none online. Until now that
+    // was the end of it: the order sat at READY_FOR_PICKUP with no task and
+    // nothing on the platform would ever ask again, so a packed order could
+    // wait on the counter indefinitely with the pharmacy unable to do anything
+    // about it. Observed on a real order during device testing.
+    //
+    // This does not weaken the PHARM-2 guard: the order does not move, and a
+    // courier who has already been assigned is not displaced.
+    if (action === 'REDISPATCH') {
+      if (order.riderId) {
+        return NextResponse.json(
+          { success: false, error: 'A courier is already assigned to this order' },
+          { status: 409 }
+        );
+      }
+      const retry = await dispatchProviderOrder(orderId);
+      const current = await db.providerOrder.findUnique({ where: { id: orderId } });
+      return NextResponse.json({
+        success: true,
+        order: current,
+        deliveryTask: retry.taskId
+          ? { taskId: retry.taskId, taskNumber: retry.taskNumber }
+          : undefined,
+        searching: !!retry.taskId,
+        message: retry.taskId
+          ? 'Looking for a courier to collect this order.'
+          : retry.reason ?? 'Could not start a courier search for this order.',
+      });
     }
 
     const updateData: Prisma.ProviderOrderUpdateInput = {};

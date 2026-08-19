@@ -153,7 +153,11 @@ async function main() {
 
     // ── 2. Dispatching twice does not create a second task ────────────────
     const again = await dispatchProviderOrder(order.id);
-    check('second dispatch is refused', !again.dispatched && again.reason === 'Already dispatched');
+    check(
+      'dispatching twice reuses the same task',
+      again.taskId === dispatch.taskId,
+      `${dispatch.taskId} vs ${again.taskId}`
+    );
     const taskCount = await db.task.count({ where: { providerOrderId: order.id } });
     check('exactly one task per order', taskCount === 1, `found ${taskCount}`);
 
@@ -256,6 +260,29 @@ async function main() {
       );
     } else {
       console.log('  SKIP  cash collection checks — no approved rider on this database');
+    }
+
+    // ── 6b. An order nobody collected can ask again ───────────────────────
+    const lonely = await newOrder('MTN_MOMO');
+    createdOrderIds.push(lonely.id);
+    const first = await dispatchProviderOrder(lonely.id);
+    if (first.taskId) createdTaskIds.push(first.taskId);
+    const retry = await dispatchProviderOrder(lonely.id);
+    check(
+      're-asking searches the same task, not a new one',
+      retry.taskId === first.taskId,
+      `${first.taskId} vs ${retry.taskId}`
+    );
+    const lonelyTasks = await db.task.count({ where: { providerOrderId: lonely.id } });
+    check('still one task after re-asking', lonelyTasks === 1, `${lonelyTasks}`);
+    if (first.taskId && rider) {
+      await db.task.update({ where: { id: first.taskId }, data: { riderId: rider.id } });
+      const held = await dispatchProviderOrder(lonely.id);
+      check(
+        'an order a courier already holds is not re-offered',
+        !held.dispatched && held.reason === 'Already dispatched',
+        held.reason
+      );
     }
 
     // ── 7. A cancelled courier job hands the order back ───────────────────

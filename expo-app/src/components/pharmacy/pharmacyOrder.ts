@@ -123,34 +123,42 @@ export interface OrderActions {
   primary?: { action: 'ACCEPT' | 'START_PREPARING' | 'READY'; label: string; icon: string };
   canDecline: boolean;
   canCancel: boolean;
+  /** Ask for a courier again — only while packed and waiting with none assigned. */
+  canRedispatch: boolean;
 }
 
-export function actionsFor(status?: string | null): OrderActions {
+export function actionsFor(status?: string | null, hasRider?: boolean): OrderActions {
   switch (status) {
     case 'ORDER_RECEIVED':
       return {
         primary: { action: 'ACCEPT', label: 'Accept order', icon: 'checkmark-circle' },
         canDecline: true,
         canCancel: false,
+        canRedispatch: false,
       };
     case 'ACCEPTED':
       return {
         primary: { action: 'START_PREPARING', label: 'Start preparing', icon: 'flask' },
         canDecline: false,
         canCancel: true,
+        canRedispatch: false,
       };
     case 'PREPARING':
       return {
         primary: { action: 'READY', label: 'Mark ready for pickup', icon: 'cube' },
         canDecline: false,
         canCancel: true,
+        canRedispatch: false,
       };
     case 'READY_FOR_PICKUP':
+      // Packed and waiting. If the search came up empty, the pharmacy must be
+      // able to ask again rather than watch the order sit there.
+      return { canDecline: false, canCancel: true, canRedispatch: !hasRider };
     case 'RIDER_ASSIGNED':
-      return { canDecline: false, canCancel: true };
+      return { canDecline: false, canCancel: true, canRedispatch: false };
     default:
       // OUT_FOR_DELIVERY and the endings: the courier owns it, or it is over.
-      return { canDecline: false, canCancel: false };
+      return { canDecline: false, canCancel: false, canRedispatch: false };
   }
 }
 

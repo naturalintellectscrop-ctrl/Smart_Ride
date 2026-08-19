@@ -17,11 +17,13 @@ import { RADIUS, SHADOWS, MOTION, OPACITY } from '../constants';
 import { useTheme } from '../context/theme-context';
 import { makeThemedColors, ThemedColors } from '../theme/themedColors';
 
-const TRACK_W = 84;
+const TRACK_W = 96;
 const TRACK_H = 34;
 const KNOB = 26;
 const INSET = 4;
 const TRAVEL = TRACK_W - KNOB - INSET * 2;
+/** The half the knob is NOT occupying — where the word can safely sit. */
+const LABEL_W = TRACK_W - KNOB - INSET * 3;
 
 interface OnlinePillProps {
   isOnline: boolean;
@@ -63,7 +65,20 @@ export function OnlinePill({
       style={[styles.pill, isOnline && styles.pillOn, disabled && styles.pillDisabled, style]}
     >
       <Animated.View style={[styles.knob, isOnline && styles.knobOn, knob]} />
-      <Text style={[styles.label, isOnline ? styles.labelOn : styles.labelOff]}>
+      {/* The word sits in the half the knob has vacated, not across the whole
+          track. Centred over the full width it was overrun by the knob as soon
+          as the switch turned on — "OPEN" rendered as "OPE(" on the pharmacy
+          dashboard, which reads as a rendering fault rather than a state. */}
+      <Text
+        style={[
+          styles.label,
+          isOnline ? styles.labelLeft : styles.labelRight,
+          isOnline ? styles.labelOn : styles.labelOff,
+        ]}
+        numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.75}
+      >
         {isOnline ? labels.on : labels.off}
       </Text>
     </TouchableOpacity>
@@ -92,12 +107,15 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   knobOn: { backgroundColor: COLORS.onPrimary },
   label: {
+    position: 'absolute',
+    width: LABEL_W,
     fontSize: 10,
     fontWeight: '800',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
     textAlign: 'center',
-    marginLeft: 8,
   },
+  labelLeft: { left: INSET },
+  labelRight: { right: INSET },
   labelOn: { color: COLORS.onPrimary },
   labelOff: { color: COLORS.onSurfaceVariant },
 });

@@ -69,6 +69,43 @@ function asPaymentMethod(value: string | null | undefined): PaymentMethod {
   return (KNOWN_PAYMENT_METHODS.includes(v) ? v : 'CASH') as PaymentMethod;
 }
 
+/** Task states that mean a courier already holds this delivery. */
+const TAKEN_STATUSES: TaskStatus[] = [
+  TaskStatus.ASSIGNED,
+  TaskStatus.ACCEPTED,
+  TaskStatus.ARRIVED,
+  TaskStatus.PICKED_UP,
+  TaskStatus.IN_TRANSIT,
+  TaskStatus.DELIVERING,
+  TaskStatus.DELIVERED,
+  TaskStatus.COMPLETED,
+];
+
+/**
+ * Run the rider search again for a task that already exists and found nobody.
+ * Returns whether a match was made; the caller decides what to tell the user.
+ */
+async function researchForRider(
+  taskId: string,
+  provider: { latitude: number | null; longitude: number | null }
+): Promise<boolean> {
+  try {
+    const Dispatch = await dispatchService();
+    const result = await Dispatch.findAndAssign({
+      taskId,
+      taskType: TaskType.SMART_HEALTH_DELIVERY,
+      pickupLatitude: provider.latitude ?? FALLBACK_LAT,
+      pickupLongitude: provider.longitude ?? FALLBACK_LNG,
+    });
+    await setServiceRoleContext();
+    return !!(result.success && result.match);
+  } catch (error) {
+    console.error('[PharmacyDelivery] re-dispatch failed:', error);
+    await setServiceRoleContext().catch(() => {});
+    return false;
+  }
+}
+
 export interface DispatchProviderOrderResult {
   dispatched: boolean;
   taskId?: string;
@@ -94,12 +131,26 @@ export async function dispatchProviderOrder(
     });
 
     if (!order) return { dispatched: false, reason: 'Order not found' };
+
     if (order.task) {
+      // A task already exists. If a courier is carrying it, there is nothing to
+      // do. If nobody was found the first time, search again on the SAME task
+      // rather than creating a second one — the order has one delivery, however
+      // many times we have to go looking for someone to make it.
+      if (order.task.riderId || TAKEN_STATUSES.includes(order.task.status)) {
+        return {
+          dispatched: false,
+          taskId: order.task.id,
+          taskNumber: order.task.taskNumber,
+          reason: 'Already dispatched',
+        };
+      }
+      const again = await researchForRider(order.task.id, order.provider);
       return {
-        dispatched: false,
+        dispatched: again,
         taskId: order.task.id,
         taskNumber: order.task.taskNumber,
-        reason: 'Already dispatched',
+        reason: again ? undefined : 'No courier available right now',
       };
     }
 
