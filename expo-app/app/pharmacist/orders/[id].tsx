@@ -28,13 +28,21 @@ import { firstName } from '@/src/utils/formatName';
 // Status colours resolve through the shared semantic mapping rather than a
 // local hex table — this was one of several near-identical copies.
 
+// Keyed on real ProviderOrderStatus values. ORDER_RECEIVED was missing, so the
+// progress bar sat at step 0 for every brand-new order — the state a pharmacist
+// sees most often. The legacy keys are kept so an older payload still maps
+// somewhere rather than falling off the timeline.
 const STATUS_TIMELINE: Record<string, number> = {
+  ORDER_RECEIVED: 1,
   ORDER_CREATED: 1,
   PENDING: 1,
   PAYMENT_CONFIRMED: 2,
+  ACCEPTED: 2,
   PROCESSING: 3,
   PREPARING: 3,
   READY_FOR_PICKUP: 4,
+  RIDER_ASSIGNED: 4,
+  OUT_FOR_DELIVERY: 5,
   PICKED_UP: 5,
   DELIVERED: 6,
   COMPLETED: 6,
@@ -216,27 +224,37 @@ export default function OrderDetailScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionsContainer}>
-          {order.status === 'PENDING' || order.status === 'ORDER_CREATED' ? (
+          {/* One button per state, and only where the server will accept it.
+              These branches tested for 'PENDING', 'ORDER_CREATED' and
+              'PROCESSING' — none of which is a ProviderOrderStatus — so on a
+              real ORDER_RECEIVED order no branch matched and the pharmacist got
+              no buttons at all: they could open an order and not act on it.
+
+              "Complete Order" from READY_FOR_PICKUP is gone. It sent DELIVER,
+              which is only legal once a courier has the order
+              (OUT_FOR_DELIVERY); the pharmacy's part ends at ready. Offering it
+              promised an action the server refuses. */}
+          {order.status === 'ORDER_RECEIVED' ? (
             <GradientButton
-              title="Start Processing"
-              onPress={() => updateStatus('PROCESSING')}
+              title="Accept Order"
+              onPress={() => updateStatus('ACCEPTED')}
               loading={isUpdating}
             />
-          ) : order.status === 'PROCESSING' || order.status === 'PREPARING' ? (
+          ) : order.status === 'ACCEPTED' ? (
+            <GradientButton
+              title="Start Preparing"
+              onPress={() => updateStatus('PREPARING')}
+              loading={isUpdating}
+            />
+          ) : order.status === 'PREPARING' ? (
             <GradientButton
               title="Mark Ready for Pickup"
               onPress={() => updateStatus('READY_FOR_PICKUP')}
               loading={isUpdating}
             />
-          ) : order.status === 'READY_FOR_PICKUP' ? (
-            <GradientButton
-              title="Complete Order"
-              onPress={() => updateStatus('COMPLETED')}
-              loading={isUpdating}
-            />
           ) : null}
 
-          {(order.status === 'PENDING' || order.status === 'ORDER_CREATED' || order.status === 'PROCESSING') && (
+          {['ORDER_RECEIVED', 'ACCEPTED', 'PREPARING', 'READY_FOR_PICKUP'].includes(order.status) && (
             <GradientButton
               title="Cancel Order"
               variant="danger"
