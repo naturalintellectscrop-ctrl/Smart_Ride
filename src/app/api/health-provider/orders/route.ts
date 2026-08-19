@@ -264,6 +264,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // A closed pharmacy does not take orders.
+    //
+    // The OPEN/CLOSED control writes isOpenNow, and until now nothing read it
+    // on the way in: a pharmacist could shut for the night and still wake up to
+    // orders nobody had agreed to fill. Closing is the one thing that control
+    // is for, so it has to mean something. Admins may still place an order on a
+    // closed pharmacy — that is the phone-order path, where a human has already
+    // spoken to the pharmacy.
+    if (!provider.isOpenNow && !isAdmin(caller.role)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `${provider.businessName} is closed right now and is not accepting orders`,
+        },
+        { status: 409 }
+      );
+    }
+
     // Calculate pricing
     const parsedItems = typeof items === 'string' ? JSON.parse(items) : items;
     let subtotal = 0;
