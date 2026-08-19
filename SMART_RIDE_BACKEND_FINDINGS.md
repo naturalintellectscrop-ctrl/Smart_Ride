@@ -2694,3 +2694,169 @@ correct at this state?"** Cancel-on-assigned failed all three, and no amount of
 checking that it rendered would have found it.
 
 ---
+
+# In-journey / post-completion session — 2026-08-18
+
+Scope: the missing interface for the span between *task accepted* and *money
+settled*. Does not replace or reset the main QA roadmap.
+
+Method note: every finding below came from driving all SIX service types through
+the real state machine, rather than the three already known to work. That
+distinction is the whole story — see BE-037.
+
+## BE-037 — Three services could not be started at all from the app
+
+**Status:** FIXED (mobile) + one backend actor gap fixed | **Priority:** P0
+**Category:** Workflow | **Found:** in-journey session, 2026-08-18
+
+**Evidence:**
+`expo-app/app/driver/driver-task.tsx` hardcoded two flow maps. Its `DELIVERY_FLOW`
+ran `ASSIGNED -> ACCEPTED -> ARRIVING -> PICKED_UP -> IN_TRANSIT -> DELIVERING ->
+DELIVERED`, which is `ITEM_DELIVERY`'s graph and no other. In
+`enhanced-task-state-machine.service.ts:263-381`:
+
+- `FOOD_DELIVERY` — no `ACCEPTED`, no `ARRIVING`, no `IN_TRANSIT`, no `DELIVERING`
+- `SHOPPING` — no `ACCEPTED`, no `ARRIVING`
+- `SMART_HEALTH_DELIVERY` — no `ACCEPTED`, no `ARRIVING`
+
+So the courier's first tap returned
+`400 Invalid transition from ASSIGNED to ACCEPTED for task type FOOD_DELIVERY`,
+and the job could never be started. `/tasks/[id]/accept` fails identically — it
+drives the same state machine.
+
+This answers the open question left in **BE-005** ("this session did not verify
+`DELIVERY_FLOW` against the server's expected state transitions for DP tasks").
+It did not match.
+
+**Why the suites were green:** `verify-ui-lifecycle-parity.ts` walked only
+`SMART_BODA_RIDE`, `SMART_CAR_RIDE` and `ITEM_DELIVERY` — exactly the three types
+whose graphs matched the hardcoded maps. Testing the passing subset is how a
+whole role stayed broken behind a green suite.
+
+**Fix applied:**
+- `GET /api/tasks/[id]` now returns `allowedTransitions`, computed by
+  `EnhancedTaskStateMachine.getValidNextStatuses()` — the same state machine the
+  transition endpoint enforces. Additive; no lifecycle change.
+- The mobile shell picks its primary action from that list. The hardcoded flow
+  maps are deleted. The UI can no longer offer a step the server will refuse.
+- `verify-ui-lifecycle-parity.ts` rewritten to walk **all six** types.
+
+**Verification:** VERIFIED — 68/68 checks, all six services reach a terminal
+state (`bun scripts/verify-ui-lifecycle-parity.ts`).
+
+## BE-038 — A shopping courier was stranded mid-job
+
+**Status:** FIXED | **Priority:** P1 | **Category:** Workflow
+**Found:** in-journey session, 2026-08-18
+
+**Evidence:**
+`SHOPPING` runs `ASSIGNED -> IN_PROGRESS` (shopper is in the shop) `-> PICKED_UP`
+(items in hand). The transition table has always allowed
+`IN_PROGRESS -> PICKED_UP`, but `getAllowedActors()` did not list the pair, so
+the transition was refused with "Actor RIDER is not authorized to transition from
+IN_PROGRESS to PICKED_UP".
+
+A shopper who started shopping had **no legal move** — not forward, and not out,
+since `SHOPPING` lists no rider cancel path either.
+
+This is the third instance of the same defect shape, after
+`ARRIVING -> PICKED_UP` and `IN_TRANSIT -> DELIVERING -> DELIVERED`, both
+documented in comments at `enhanced-task-state-machine.service.ts:1433-1453`: the
+per-type table permits a step that the actor list forgets.
+
+**Fix applied:** added `[IN_PROGRESS, PICKED_UP]` to `riderTransitionPairs`. This
+enables nothing new — the per-type table is checked first, so it only stops the
+actor gate contradicting the table.
+
+**Verification:** VERIFIED — Shopping now walks `ASSIGNED -> IN_PROGRESS ->
+PICKED_UP -> DELIVERED -> COMPLETED`.
+
+## BE-039 — A completed non-cash ride is never charged, and the app said it was
+
+**Status:** OPEN (backend) / mitigated in UI | **Priority:** P0
+**Category:** Finance | **Found:** in-journey session, 2026-08-18
+
+**Evidence:**
+1. `FinanceLedgerService.recordTaskCompletion` sets `paymentStatus = COMPLETED`
+   **only when `paymentMethod === 'CASH'`** (`finance-ledger.service.ts:194-198`).
+   Every gateway method leaves the task `PENDING`.
+2. No code in `src/` performs the `COMPLETED -> PAID` transition. It is legal in
+   all five per-type tables and has zero callers, so no task ever reaches `PAID`.
+3. `expo-app/src/services/api.ts` had **no method that pays for a task**.
+   `requestTopUp` is wallet top-up; `confirmOrderPayment` is for merchant Orders.
+4. `app/rider/trip-summary.tsx` printed "Payment: MTN Mobile Money" beneath a
+   green success check — asserting a settlement that had not happened.
+
+So a rider could take a non-cash trip, see "Ride completed" and a payment method,
+and owe the full fare with no way in the app to pay it.
+
+**Mitigated in UI this session:** `TaskPaymentPanel` renders the real
+`task.paymentStatus` and offers a Confirm & Pay action against the existing
+`POST /api/payments/initiate`, using the task's own `totalAmount`. Cash reads as
+settled because for cash it is. `verify-in-journey-experience.ts` asserts the
+non-cash task remains `PENDING` after `COMPLETED`, so the old claim cannot return.
+
+**Still open (backend, needs a product decision):**
+- Nothing collects a non-cash fare automatically, and nothing retries.
+- `COMPLETED -> PAID` has no driver. Either wire it to settlement, or remove it.
+
+**Verification:** VERIFIED for the state assertions (14/14,
+`bun scripts/verify-in-journey-experience.ts`). Gateway payment itself is
+**BLOCKED** — MTN/Airtel/NylonPay return "gateway not configured" in this
+environment. Wallet is the only end-to-end path.
+
+## BE-040 — Provider earnings are credited before the customer has paid
+
+**Status:** OPEN — recorded, not fixed | **Priority:** P2 | **Category:** Finance
+**Found:** in-journey session, 2026-08-18
+
+`recordTaskCompletion` increments `rider.walletBalance` at `COMPLETED` for every
+non-cash method, while the customer's payment is still `PENDING` (BE-039). The
+platform is therefore paying out against money it has not received.
+
+Related and separate: `rider.walletBalance` (a Rider column) and the `Wallet`
+model are **two different stores**, and nothing syncs them. The completion ledger
+credits the column; `GET /riders/earnings` reads the `Wallet` record. The
+settlement screen shows them as distinct figures rather than implying one, but
+the split is real and echoes BE-003's wallet-unification theme.
+
+## BE-041 — `/api/payments/initiate` trusts a client-supplied amount
+
+**Status:** OPEN — recorded, not fixed | **Priority:** P1 | **Category:** Security
+**Found:** in-journey session, 2026-08-18
+
+`src/app/api/payments/initiate/route.ts` takes `amount` from the request body and
+never checks it against `task.totalAmount`, nor that the caller is the task's
+client. A customer could settle a UGX 50,000 trip for UGX 100.
+
+The new mobile `payForTask` always sends the task's authoritative total, but that
+is a client-side convention, not a control. Server-side validation is required.
+
+## BE-042 — Three stale transition tables contradict the live one
+
+**Status:** OPEN — recorded, not fixed | **Priority:** P2 | **Category:** Tech debt
+**Found:** in-journey session, 2026-08-18
+
+Only `enhanced-task-state-machine.service.ts` governs `POST /tasks/[id]/transition`.
+Three others exist and disagree:
+
+- `src/lib/state-machine/unified-state-machine.ts` — its header calls it "a
+  single, authoritative state machine definition for ALL Smart Ride service
+  types". It is not: its only importer never uses its tables, and it has **no
+  `PICKED_UP` for rides** (`ARRIVED -> IN_PROGRESS` instead), contradicting the
+  live graph.
+- `src/lib/api/state-machine.ts` — one verify script only.
+- `TASK_STATE_TRANSITIONS` in `task-state-machine.service.ts` — imported widely
+  for its constants; its transition map disagrees with the live one.
+
+Anyone reading the file labelled "authoritative" will write the wrong client.
+
+## Harness defect fixed in passing
+
+`verify-client-journey.ts` deleted its fixture users without first clearing
+`CashCollection`, which has no cascade. Once the suite completed one cash ride it
+could never run again — `CashCollection_riderId_fkey` blocked both its setup
+cleanup and its teardown. The blocking row was 15 hours old, so this predates the
+session. Fixed in both places; the suite passes 18/18 and is repeatable.
+
+---

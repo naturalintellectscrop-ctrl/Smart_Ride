@@ -1,98 +1,67 @@
 // ============================================
-// SMART RIDE MOBILE - DRIVER TASK SCREEN
+// SMART RIDE MOBILE — DRIVER / PROVIDER IN-JOURNEY SCREEN
 // ============================================
-// Design System primitives — Card, GradientButton, StatusBadge,
-// StatusBadge, and Reanimated animations
+// The provider's single screen for the whole span between "assigned" and
+// "settled", across all six service types.
+//
+// It has no lifecycle of its own. The primary action is whatever the SERVER says
+// is legal next, read from `task.allowedTransitions` (published by
+// GET /api/tasks/[id] from the same state machine POST /transition enforces).
+//
+// This replaces a pair of hardcoded flow maps that assumed every delivery ran
+// ASSIGNED → ACCEPTED → ARRIVING → PICKED_UP → IN_TRANSIT → DELIVERING →
+// DELIVERED. That is ITEM_DELIVERY's graph and no other: FOOD_DELIVERY,
+// SHOPPING and SMART_HEALTH_DELIVERY have no ACCEPTED transition at all, so a
+// food courier's very first tap died on
+//   400 Invalid transition from ASSIGNED to ACCEPTED for task type FOOD_DELIVERY
+// and the job could never be started. Asking the server removes the whole class
+// of bug rather than patching one instance of it.
 // ============================================
 
-import { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ActivityIndicator,
-  ScrollView,
-  Linking,
-  Platform,
-  StyleSheet,
-} from 'react-native';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ActivityIndicator, StyleSheet, Linking, Platform, Share } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Animated, {
-  FadeInUp,
-  FadeInDown,
-  SlideInDown,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-} from 'react-native-reanimated';
-import { statusColor as semanticStatusColor } from '@/src/theme/statusColors';
-import {
-  Card,
-  GradientButton,
-  SmartRideMap,
-  StatusBadge,
-} from '@/src/components';
-import { ProofOfDeliverySheet } from '@/src/components/ProofOfDeliverySheet';
 import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
+
+import {
+  JourneyShell,
+  JourneyProgress,
+  JourneyActions,
+  JourneyBanner,
+  JourneySecondaryAction,
+  JourneyError,
+  pickPrimaryTransition,
+  requiresProof,
+  canCancel,
+  providerCopy,
+  isRideType,
+  isTerminal,
+  translateTaskError,
+} from '@/src/components/journey';
+import { ProofOfDeliverySheet } from '@/src/components/ProofOfDeliverySheet';
 import { useLocationStore } from '@/src/store';
 import { api, socketService } from '@/src/services';
 import { locationService } from '@/src/services/location.service';
-import { TASK_STATUS_LABELS, SPACING, RADIUS } from '@/src/constants';
+import { SPACING, RADIUS, TYPOGRAPHY, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { Task, TaskStatus } from '@/src/types';
 import { firstName } from '@/src/utils/formatName';
 import { isWithinGeofence, ARRIVAL_RADIUS_M } from '@/src/utils/geofence';
-import { Ionicons } from '@expo/vector-icons';
 
-
-// Driver-side task flow MUST match the backend state machine's per-task-type
-// transition graph, or the transition API rejects the tap with a 400.
-//   Rides (SMART_BODA_RIDE / SMART_CAR_RIDE):
-//     ASSIGNED → ACCEPTED → ARRIVING → ARRIVED → PICKED_UP → IN_PROGRESS → COMPLETED
-//   Deliveries (ITEM/FOOD/SHOPPING/HEALTH):
-//     ASSIGNED → ACCEPTED → ARRIVING → PICKED_UP → IN_TRANSIT → DELIVERED → COMPLETED
-// The previous single flat map used ACCEPTED→ARRIVED and PICKED_UP→IN_TRANSIT,
-// which is invalid for rides — the rider could never progress past ACCEPTED.
-const RIDE_FLOW: Partial<Record<TaskStatus, TaskStatus>> = {
-  'ASSIGNED': 'ACCEPTED',
-  'ACCEPTED': 'ARRIVING',
-  'ARRIVING': 'ARRIVED',
-  'ARRIVED': 'PICKED_UP',
-  'PICKED_UP': 'IN_PROGRESS',
-  'IN_PROGRESS': 'COMPLETED',
-};
-const DELIVERY_FLOW: Partial<Record<TaskStatus, TaskStatus>> = {
-  'ASSIGNED': 'ACCEPTED',
-  'ACCEPTED': 'ARRIVING',
-  'ARRIVING': 'PICKED_UP',
-  'PICKED_UP': 'IN_TRANSIT',
-  // The handover step. This used to jump IN_TRANSIT -> DELIVERED, which the
-  // backend now refuses: a delivery cannot complete without proof (BE-005).
-  // Reaching the customer moves to DELIVERING; DELIVERED is reached by
-  // capturing proof, not by tapping a button.
-  'IN_TRANSIT': 'DELIVERING',
-  'DELIVERED': 'COMPLETED',
-};
-
-/**
- * Statuses where the primary action opens the proof sheet instead of firing a
- * transition. DELIVERING is deliberately absent from DELIVERY_FLOW above —
- * there is no tap that advances it, because the server will not accept one.
- */
-const REQUIRES_PROOF: TaskStatus[] = ['DELIVERING' as TaskStatus];
-
-const isRideType = (taskType?: string): boolean =>
-  taskType === 'SMART_BODA_RIDE' || taskType === 'SMART_CAR_RIDE';
-
-const nextStatusFor = (t: { status: TaskStatus; taskType?: string } | null): TaskStatus | null => {
-  if (!t) return null;
-  const flow = isRideType(t.taskType) ? RIDE_FLOW : DELIVERY_FLOW;
-  return flow[t.status] ?? null;
-};
+/** Statuses during which the provider's position should be published. */
+const TRACKED_STATUSES: TaskStatus[] = [
+  'ASSIGNED',
+  'ACCEPTED',
+  'ARRIVING',
+  'ARRIVED',
+  'PICKED_UP',
+  'IN_PROGRESS',
+  'IN_TRANSIT',
+  'DELIVERING',
+];
 
 export default function DriverTaskScreen() {
   const router = useRouter();
@@ -105,78 +74,91 @@ export default function DriverTaskScreen() {
   const [task, setTask] = useState<Task | null>(null);
   // Always-latest task for async callbacks (socket handlers, late refreshes).
   const taskRef = useRef<Task | null>(null);
-  useEffect(() => { taskRef.current = task; }, [task]);
+  useEffect(() => {
+    taskRef.current = task;
+  }, [task]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  // The handover sheet. Opened at DELIVERING; closed only by the courier or
-  // by the server accepting the proof.
   const [showProofSheet, setShowProofSheet] = useState(false);
   const [nearDestination, setNearDestination] = useState(false);
+  /** Translated failure, shown in the panel rather than as a raw alert. */
+  const [journeyError, setJourneyError] = useState<JourneyError | null>(null);
   const arrivalFiredRef = useRef<Set<string>>(new Set());
 
-  // Reanimated shared values
-  const pulseScale = useSharedValue(1);
+  const originLocation = useMemo(
+    () => (latitude != null && longitude != null ? { latitude, longitude } : null),
+    [latitude, longitude]
+  );
 
-  useEffect(() => {
-    // Pulsing animation for active status indicator
-    pulseScale.value = withRepeat(
-      withSequence(
-        withTiming(1.2, { duration: 800 }),
-        withTiming(1, { duration: 800 })
-      ),
-      -1, // infinite
-      false
-    );
-  }, []);
+  // ============================================
+  // LOAD + REALTIME
+  // ============================================
 
-  useEffect(() => {
-    if (params.taskId) {
-      loadTask(params.taskId);
-      // Connect socket before joining the task room
-      socketService.connect().then(() => {
-        socketService.joinTaskRoom(params.taskId);
-      });
-    }
-
-    // Listen for real-time task status changes
-    const unsubscribe = socketService.on('task:status:update', (data: any) => {
-      if (data.taskId === task?.id || data.taskId === params.taskId) {
-        // Update task state immediately for responsive UI
-        setTask(prev => prev ? { ...prev, status: data.status } : prev);
-
-        // If task is completed or cancelled, refresh full task data and alert
-        if (['COMPLETED', 'CANCELLED', 'CLOSED', 'FAILED'].includes(data.status)) {
-          loadTask(params.taskId);
-
-          if (data.status === 'CANCELLED') {
-            Alert.alert(
-              'Task Cancelled',
-              'This task has been cancelled by the client.',
-              [{ text: 'OK', onPress: () => router.replace('/driver') }]
-            );
-          } else if (data.status === 'FAILED') {
-            Alert.alert(
-              'Task Failed',
-              'This task has failed.',
-              [{ text: 'OK', onPress: () => router.replace('/driver') }]
-            );
-          }
+  const loadTask = useCallback(
+    async (taskId: string) => {
+      setIsLoading(true);
+      try {
+        const response = await api.getTask(taskId);
+        if (response.success && response.data) {
+          setTask(response.data);
+          setJourneyError(null);
+        } else if (!taskRef.current) {
+          // Only hard-fail on the INITIAL load. A failed *refresh* — a late
+          // socket event firing after we already navigated away — must not
+          // bounce the provider out of a job they are still on.
+          setJourneyError(translateTaskError(response.error, response.status));
         }
+      } catch {
+        if (!taskRef.current) {
+          setJourneyError(translateTaskError('Network error'));
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (!params.taskId) return;
+
+    loadTask(params.taskId);
+    socketService.connect().then(() => {
+      socketService.joinTaskRoom(params.taskId);
+    });
+
+    const unsubscribe = socketService.on('task:status:update', (data: any) => {
+      if (data.taskId !== params.taskId && data.taskId !== taskRef.current?.id) return;
+
+      // A status arriving over realtime changes what is legal next, and
+      // allowedTransitions only comes from the API. Patch the status for an
+      // instant read, then refetch so the action row is never stale.
+      setTask((prev) => (prev ? { ...prev, status: data.status } : prev));
+      loadTask(params.taskId);
+
+      if (data.status === 'CANCELLED') {
+        Alert.alert('Job cancelled', 'This job was cancelled. You are free for the next offer.', [
+          { text: 'OK', onPress: () => router.replace('/driver') },
+        ]);
+      } else if (data.status === 'FAILED') {
+        Alert.alert(
+          'Job could not be completed',
+          'Support can tell you whether anything is owed on this job.',
+          [{ text: 'OK', onPress: () => router.replace('/driver') }]
+        );
       }
     });
 
     return () => {
       unsubscribe();
-      if (params.taskId) {
-        socketService.leaveTaskRoom(params.taskId);
-      }
+      if (params.taskId) socketService.leaveTaskRoom(params.taskId);
     };
-  }, [params.taskId]);
+  }, [params.taskId, loadTask, router]);
 
-  // Background location tracking: start when task is active, stop when terminal
+  // Publish position while the job is live; stop the moment it is not.
   useEffect(() => {
-    const activeStatuses = ['ASSIGNED', 'ACCEPTED', 'ARRIVING', 'ARRIVED', 'PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT'];
-    if (task && activeStatuses.includes(task.status)) {
+    if (task && TRACKED_STATUSES.includes(task.status)) {
       locationService.startTracking();
     } else {
       locationService.stopTracking();
@@ -186,15 +168,44 @@ export default function DriverTaskScreen() {
     };
   }, [task?.status]);
 
-  // Geofencing: watch the driver's live position and auto-detect arrival at the
-  // pickup (ARRIVING → ARRIVED, rides) and reaching the destination (banner
-  // while IN_PROGRESS/IN_TRANSIT). Foreground watch — pairs with the heartbeat.
+  // ============================================
+  // ACTIONS
+  // ============================================
+
+  const updateStatus = useCallback(
+    async (newStatus: TaskStatus) => {
+      const current = taskRef.current;
+      if (!current) return;
+
+      setIsUpdating(true);
+      setJourneyError(null);
+      try {
+        const result = await api.transitionTask(current.id, newStatus, {
+          latitude,
+          longitude,
+        });
+        if (result.success && result.data?.task) {
+          // The transition response carries the task but not the recomputed
+          // allowedTransitions, so refetch to get the next legal step.
+          await loadTask(current.id);
+        } else {
+          setJourneyError(translateTaskError(result.error, result.status));
+        }
+      } catch {
+        setJourneyError(translateTaskError('Network error'));
+      } finally {
+        setIsUpdating(false);
+      }
+    },
+    [latitude, longitude, loadTask]
+  );
+
+  // Auto-arrival at pickup (rides only), and the near-destination hint.
+  // Deliveries keep a manual pickup confirmation: arriving at a restaurant is
+  // not the same as having the order in hand.
   useEffect(() => {
     if (!task) return;
-    // While ARRIVING → auto-detect arrival at pickup. While the trip is moving
-    // (IN_PROGRESS for rides, IN_TRANSIT for deliveries) → show the near-
-    // destination banner.
-    const watchStatuses = ['ARRIVING', 'IN_PROGRESS', 'IN_TRANSIT'];
+    const watchStatuses: TaskStatus[] = ['ARRIVING', 'IN_PROGRESS', 'IN_TRANSIT'];
     if (!watchStatuses.includes(task.status)) {
       setNearDestination(false);
       return;
@@ -209,36 +220,39 @@ export default function DriverTaskScreen() {
       sub = await Location.watchPositionAsync(
         { accuracy: Location.Accuracy.High, distanceInterval: 15, timeInterval: 5000 },
         (loc) => {
-          if (cancelled || !task) return;
+          const t = taskRef.current;
+          if (cancelled || !t) return;
           const here = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
 
-          // Auto-arrival (rides only): when the driver reaches the pickup while
-          // ARRIVING, advance ARRIVING → ARRIVED (Uber-style). Deliveries keep a
-          // manual "Confirm Pickup" since arriving ≠ having the item in hand.
-          if (task.status === 'ARRIVING' && isRideType(task.taskType) &&
-              task.pickupLatitude != null && task.pickupLongitude != null) {
+          if (
+            t.status === 'ARRIVING' &&
+            isRideType(t.taskType) &&
+            (t.allowedTransitions ?? []).includes('ARRIVED') &&
+            t.pickupLatitude != null &&
+            t.pickupLongitude != null
+          ) {
             const atPickup = isWithinGeofence(
               here,
-              { latitude: task.pickupLatitude, longitude: task.pickupLongitude },
-              ARRIVAL_RADIUS_M,
+              { latitude: t.pickupLatitude, longitude: t.pickupLongitude },
+              ARRIVAL_RADIUS_M
             );
-            if (atPickup && !arrivalFiredRef.current.has(`pickup-${task.id}`)) {
-              arrivalFiredRef.current.add(`pickup-${task.id}`);
-              updateStatus('ARRIVED' as TaskStatus); // auto-arrival like Uber
+            if (atPickup && !arrivalFiredRef.current.has(`pickup-${t.id}`)) {
+              arrivalFiredRef.current.add(`pickup-${t.id}`);
+              updateStatus('ARRIVED');
             }
           }
 
-          const movingStatus = task.status === 'IN_PROGRESS' || task.status === 'IN_TRANSIT';
-          if (movingStatus && task.dropoffLatitude != null && task.dropoffLongitude != null) {
+          const moving = t.status === 'IN_PROGRESS' || t.status === 'IN_TRANSIT';
+          if (moving && t.dropoffLatitude != null && t.dropoffLongitude != null) {
             setNearDestination(
               isWithinGeofence(
                 here,
-                { latitude: task.dropoffLatitude, longitude: task.dropoffLongitude },
-                ARRIVAL_RADIUS_M,
-              ),
+                { latitude: t.dropoffLatitude, longitude: t.dropoffLongitude },
+                ARRIVAL_RADIUS_M
+              )
             );
           }
-        },
+        }
       );
     })();
 
@@ -246,652 +260,448 @@ export default function DriverTaskScreen() {
       cancelled = true;
       sub?.remove();
     };
-  }, [task?.status, task?.id]);
+  }, [task?.status, task?.id, updateStatus]);
 
-  // Animated style for the pulsing dot
-  const pulseAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulseScale.value }],
-  }));
+  // ============================================
+  // DERIVED — all of it from the server's own list
+  // ============================================
 
-  const loadTask = async (taskId: string) => {
-    setIsLoading(true);
-    try {
-      const response = await api.getTask(taskId);
-      if (response.success && response.data) {
-        setTask(response.data);
-      } else if (!taskRef.current) {
-        // Only hard-fail on the INITIAL load (no task yet). A failed *refresh* —
-        // e.g. a late 'task:status:update' socket event firing after the trip
-        // completed and we've already navigated to the dashboard — must not pop
-        // "Failed to load task details" and bounce. Keep what we have.
-        Alert.alert('Error', 'Failed to load task details');
-        router.back();
-      }
-    } catch (error) {
-      if (!taskRef.current) {
-        Alert.alert('Error', 'An unexpected error occurred');
-        router.back();
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const nextStatus = task ? pickPrimaryTransition(task) : null;
+  const proofGated = requiresProof(task?.taskType, nextStatus);
+  const cancellable = task ? canCancel(task) : false;
+  const copy = task ? providerCopy(task.status, task.taskType, nextStatus) : null;
+  const terminal = task ? isTerminal(task.status) : false;
 
-  const transitionTask = async (taskId: string, toStatus: string) => {
-    const result = await api.transitionTask(taskId, toStatus, {
-      latitude,
-      longitude,
-    });
-    return result;
-  };
+  const conversationId = task ? `conv-${task.id}` : undefined;
 
-  const updateStatus = async (newStatus: TaskStatus) => {
+  const handlePrimary = () => {
     if (!task) return;
-
-    setIsUpdating(true);
-    try {
-      const result = await transitionTask(task.id, newStatus);
-      if (result.success && result.data?.task) {
-        setTask(result.data.task);
-      } else {
-        Alert.alert('Error', result.error || 'Failed to update status');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to update status');
-    } finally {
-      setIsUpdating(false);
-    }
-  };
-
-
-  const handleCancelTask = () => {
-    Alert.alert(
-      'Cancel Task',
-      'Are you sure you want to cancel this task?',
-      [
-        { text: 'No', style: 'cancel' },
-        {
-          text: 'Yes, Cancel',
-          style: 'destructive',
-          onPress: async () => {
-            if (!task) return;
-
-            setIsUpdating(true);
-            try {
-              const response = await api.cancelTask(task.id, 'Cancelled by driver');
-              if (response.success) {
-                router.replace('/driver');
-              } else {
-                Alert.alert('Error', response.error || 'Failed to cancel task');
-              }
-            } catch (error) {
-              Alert.alert('Error', 'Failed to cancel task');
-            } finally {
-              setIsUpdating(false);
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const handleCallClient = () => {
-    if (task?.clientId) {
-      router.push(
-        `/call/${task.clientId}?name=${encodeURIComponent(firstName(task.client?.name, 'Customer'))}&taskId=${task.id}`
-      );
-    } else {
-      Alert.alert('Unavailable', 'Customer contact is not available yet.');
-    }
-  };
-
-  const openNavigation = (destLat: number, destLng: number) => {
-    const url = Platform.select({
-      ios: `maps:?daddr=${destLat},${destLng}`,
-      android: `geo:?daddr=${destLat},${destLng}`,
-    });
-    Linking.openURL(url || `https://maps.google.com/?daddr=${destLat},${destLng}`);
-  };
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading task details...</Text>
-      </View>
-    );
-  }
-
-  if (!task) {
-    return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.emptyText}>No task found</Text>
-      </View>
-    );
-  }
-
-  const statusColor = semanticStatusColor(task.status, COLORS);
-  const statusLabel = TASK_STATUS_LABELS[task.status] || task.status;
-  const nextStatus = nextStatusFor(task);
-
-  // Button label based on current status + task type. Labels mirror the
-  // per-type flow above so the primary action always drives the next valid
-  // backend transition.
-  const getButtonLabel = (): string => {
-    const ride = isRideType(task.taskType);
-    switch (task.status) {
-      case 'ASSIGNED':
-        return 'Accept Task';
-      case 'ACCEPTED':
-        return "On My Way";
-      case 'ARRIVING':
-        return "I've Arrived";
-      case 'ARRIVED':
-        return 'Confirm Pickup';
-      case 'PICKED_UP':
-        return ride ? 'Start Trip' : 'Start Delivery';
-      case 'IN_PROGRESS':
-        return 'Complete Trip';
-      case 'IN_TRANSIT':
-        return "I've Arrived at Drop-off";
-      case 'DELIVERING':
-        return 'Confirm Delivery';
-      case 'DELIVERED':
-        return 'Complete Task';
-      default:
-        return 'Update Status';
-    }
-  };
-
-  // Single source of truth: advance to the next valid status for THIS task
-  // type — except at the handover, where the next state is earned by proof
-  // rather than by a tap.
-  const handleButtonPress = () => {
-    if (REQUIRES_PROOF.includes(task.status)) {
+    // At the handover the next state is earned by proof, not by a tap. The
+    // server refuses DELIVERED without evidence, so opening the sheet IS the
+    // action here.
+    if (proofGated) {
       setShowProofSheet(true);
       return;
     }
     if (nextStatus) updateStatus(nextStatus);
   };
 
-  /**
-   * The server accepted the proof. Only now is DELIVERED reachable, and the
-   * transition still goes through the same guarded endpoint — the sheet does
-   * not move the task itself.
-   */
   const handleProofAccepted = async () => {
     setShowProofSheet(false);
-    await updateStatus('DELIVERED' as TaskStatus);
+    await updateStatus('DELIVERED');
   };
 
-  const isTaskTerminal = task.status === 'COMPLETED' || task.status === 'CANCELLED' || task.status === 'FAILED';
+  const handleCancel = () => {
+    if (!task) return;
+    Alert.alert('Cancel this job?', 'Cancelling affects your reliability score.', [
+      { text: 'Keep job', style: 'cancel' },
+      {
+        text: 'Cancel job',
+        style: 'destructive',
+        onPress: async () => {
+          setIsUpdating(true);
+          setJourneyError(null);
+          try {
+            const response = await api.cancelTask(task.id, 'Cancelled by provider');
+            if (response.success) {
+              router.replace('/driver');
+            } else {
+              setJourneyError(translateTaskError(response.error, response.status));
+            }
+          } catch {
+            setJourneyError(translateTaskError('Network error'));
+          } finally {
+            setIsUpdating(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleCall = () => {
+    if (!task?.clientId || !conversationId) {
+      Alert.alert('Not available yet', 'Customer contact is not available for this job.');
+      return;
+    }
+    router.push(
+      `/call/${task.clientId}?name=${encodeURIComponent(
+        firstName(task.client?.name, 'Customer')
+      )}&conversationId=${conversationId}&taskId=${task.id}`
+    );
+  };
+
+  const handleChat = () => {
+    if (!conversationId) return;
+    router.push(`/chat/${conversationId}` as any);
+  };
+
+  const handleSOS = () => {
+    if (!task) return;
+    Alert.alert('SOS emergency', 'This alerts the Smart Ride emergency response team. Continue?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Send SOS',
+        style: 'destructive',
+        onPress: async () => {
+          // Prefer the provider's live position — an emergency needs where they
+          // ARE, not where the job began. Pickup is the fallback.
+          const lat = latitude ?? task.pickupLatitude;
+          const lng = longitude ?? task.pickupLongitude;
+          if (lat == null || lng == null) {
+            Alert.alert(
+              'Location unavailable',
+              'Smart Ride needs your location to send an SOS. Enable location and try again.'
+            );
+            return;
+          }
+          const res = await api.triggerSOS({
+            latitude: lat,
+            longitude: lng,
+            taskId: task.id,
+            emergencyType: 'RIDER_SOS',
+          });
+          if (res.success) {
+            Alert.alert('SOS sent', 'The emergency team has been notified and is responding.');
+          } else {
+            setJourneyError(translateTaskError(res.error, res.status));
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleShareTrip = async () => {
+    if (!task) return;
+    try {
+      await Share.share({
+        message:
+          `Smart Ride job ${task.taskNumber}\n` +
+          `From: ${task.pickupAddress}\n` +
+          `To: ${task.dropoffAddress}\n` +
+          `Status: ${copy?.chip ?? task.status}`,
+      });
+    } catch {
+      // The user dismissing the share sheet is not an error.
+    }
+  };
+
+  const openNavigation = () => {
+    if (!task) return;
+    // Follow the live leg, never a fixed end of the job.
+    const headingToPickup = ['ASSIGNED', 'ACCEPTED', 'ARRIVING', 'ARRIVED'].includes(task.status) ||
+      (task.taskType === 'SHOPPING' && task.status === 'IN_PROGRESS');
+    const destLat = headingToPickup ? task.pickupLatitude : task.dropoffLatitude;
+    const destLng = headingToPickup ? task.pickupLongitude : task.dropoffLongitude;
+    if (destLat == null || destLng == null) {
+      Alert.alert('No coordinates', 'This job has no map location for that stop.');
+      return;
+    }
+    const url = Platform.select({
+      ios: `maps:?daddr=${destLat},${destLng}`,
+      android: `geo:0,0?q=${destLat},${destLng}`,
+    });
+    Linking.openURL(url || `https://maps.google.com/?daddr=${destLat},${destLng}`);
+  };
+
+  const handleErrorAction = () => {
+    if (!journeyError) return;
+    switch (journeyError.action) {
+      case 'REFRESH':
+        if (params.taskId) loadTask(params.taskId);
+        break;
+      case 'LEAVE':
+        router.replace('/driver');
+        break;
+      case 'RETRY':
+        setJourneyError(null);
+        if (proofGated) setShowProofSheet(true);
+        else if (nextStatus) updateStatus(nextStatus);
+        break;
+      case 'SUPPORT':
+        router.push('/help-center' as any);
+        break;
+      default:
+        setJourneyError(null);
+    }
+  };
+
+  // ============================================
+  // RENDER
+  // ============================================
+
+  if (isLoading && !task) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+        <Text style={styles.centeredText}>Loading job…</Text>
+      </View>
+    );
+  }
+
+  if (!task) {
+    return (
+      <View style={styles.centered}>
+        <JourneyBanner
+          error={journeyError}
+          onAction={handleErrorAction}
+          tone="error"
+          title={journeyError ? undefined : 'Job not found'}
+          message={journeyError ? undefined : 'This job could not be loaded.'}
+          style={styles.centeredBanner}
+        />
+        <TouchableOpacity onPress={() => router.replace('/driver')} style={styles.centeredLink}>
+          <Text style={styles.centeredLinkText}>Back to dashboard</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const secondary: JourneySecondaryAction[] = terminal
+    ? []
+    : [
+        { id: 'nav', icon: 'compass-outline', label: 'Navigate', onPress: openNavigation },
+        { id: 'call', icon: 'call-outline', label: 'Call', onPress: handleCall },
+        { id: 'chat', icon: 'chatbubble-outline', label: 'Message', onPress: handleChat },
+        { id: 'share', icon: 'share-outline', label: 'Share', onPress: handleShareTrip },
+        { id: 'sos', icon: 'warning-outline', label: 'SOS', onPress: handleSOS, danger: true },
+      ];
+
+  // The near-destination hint must name the step that is actually next — it used
+  // to say "complete the trip" to couriers whose next state was DELIVERING.
+  const arrivalHint =
+    nearDestination && !terminal
+      ? `You have reached the destination — ${(copy?.actionLabel ?? 'continue').toLowerCase()}.`
+      : null;
+
+  // There is a primary action when the server offers a forward step, when proof
+  // is the step, or when the job is done and earnings are the next thing to see.
+  const hasForwardAction = !!nextStatus || proofGated;
+  const primaryLabel = terminal || hasForwardAction ? copy?.actionLabel : undefined;
+  // A finished delivery lands on the proof-and-handover record; a finished ride
+  // has no proof to show, so it goes straight to settlement.
+  const completionRoute = isRideType(task.taskType)
+    ? `/driver/task-settlement?taskId=${task.id}`
+    : `/delivery/task-complete?taskId=${task.id}`;
+  const onPrimary = terminal
+    ? () => router.replace(completionRoute as any)
+    : hasForwardAction
+      ? handlePrimary
+      : undefined;
+
+  const banner = journeyError ? (
+    <JourneyBanner
+      error={journeyError}
+      onAction={handleErrorAction}
+      onDismiss={journeyError.retrySafe ? () => setJourneyError(null) : undefined}
+    />
+  ) : arrivalHint ? (
+    <JourneyBanner tone="success" title="At the destination" message={arrivalHint} icon="flag" />
+  ) : null;
 
   return (
     <View style={styles.container}>
-      {/* Map */}
-      <SmartRideMap
-        style={styles.map}
-        initialLatitude={task.pickupLatitude || 0.3476}
-        initialLongitude={task.pickupLongitude || 32.5825}
-        pickup={
-          task.pickupLatitude
-            ? { latitude: task.pickupLatitude, longitude: task.pickupLongitude || 32.5825, title: 'Pickup' }
-            : undefined
+      <JourneyShell
+        task={task}
+        chip={copy?.chip ?? task.status}
+        title={copy?.title ?? 'Job in progress'}
+        subtitle={copy?.subtitle}
+        originLocation={originLocation}
+        headerTitle="Current job"
+        onBack={() => router.replace('/driver')}
+        banner={banner}
+        actions={
+          <JourneyActions
+            primaryLabel={primaryLabel}
+            onPrimaryPress={onPrimary}
+            primaryLoading={isUpdating}
+            primaryDisabled={isUpdating}
+            // Only offered when the server lists CANCELLED as legal, so the
+            // button can no longer be one that is guaranteed to fail.
+            onCancelPress={cancellable && !terminal ? handleCancel : undefined}
+            cancelDisabled={isUpdating}
+            secondary={secondary}
+          />
         }
-        dropoff={
-          task.dropoffLatitude && task.dropoffLongitude
-            ? { latitude: task.dropoffLatitude, longitude: task.dropoffLongitude, title: 'Dropoff' }
-            : undefined
-        }
-        showUserLocation
-      />
-
-      {/* Bottom Card */}
-      <Animated.View
-        entering={SlideInDown.duration(400).springify()}
-        style={styles.bottomCardWrapper}
       >
-        <Card variant="elevated" padding={SPACING.lg} radius={RADIUS.xl} style={styles.bottomCard}>
-          <ScrollView
-            showsVerticalScrollIndicator={false}
-            bounces={false}
-          >
-            {/* Status Header */}
-            <Animated.View
-              entering={FadeInDown.duration(300).delay(100)}
-              style={styles.statusHeader}
-            >
-              <View style={styles.statusHeaderLeft}>
-                <View style={styles.statusLabelRow}>
-                  {/* Pulsing status dot */}
-                  {!isTaskTerminal && (
-                    <Animated.View
-                      style={[
-                        styles.statusDot,
-                        { backgroundColor: statusColor },
-                        pulseAnimatedStyle,
-                      ]}
-                    />
-                  )}
-                  <Text style={[styles.statusLabel, { color: statusColor }]}>
-                    {statusLabel}
-                  </Text>
-                </View>
-                <Text style={styles.taskNumber}>{task.taskNumber}</Text>
-              </View>
-              <StatusBadge
-                label={task.taskType.includes('BODA') ? 'Boda' : 'Car'}
-                color={statusColor}
-                size="md"
-              />
-            </Animated.View>
+        {/* Customer */}
+        <View style={styles.partyRow}>
+          <View style={styles.partyAvatar}>
+            <Ionicons name="person" size={ICON.md} color={COLORS.onSurfaceVariant} />
+          </View>
+          <View style={styles.partyInfo}>
+            <Text style={styles.partyName}>{firstName(task.client?.name, 'Customer')}</Text>
+            <Text style={styles.partyMeta}>
+              {isRideType(task.taskType) ? 'Passenger' : 'Recipient'}
+            </Text>
+          </View>
+          <Text style={styles.fareAmount}>UGX {(task.totalAmount ?? 0).toLocaleString()}</Text>
+        </View>
 
-            {/* Client Info */}
-            {task.client && (
-              <Animated.View
-                entering={FadeInUp.duration(300).delay(200)}
-                style={styles.clientCard}
-              >
-                <View style={styles.clientAvatar}>
-                  <Ionicons name="person" size={22} color={COLORS.onSurfaceVariant} />
-                </View>
-                <View style={styles.clientInfo}>
-                  <Text style={styles.clientName}>{firstName(task.client?.name, 'Customer')}</Text>
-                  <Text style={styles.clientPhone}>Tap to call in-app</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.callButton}
-                  onPress={handleCallClient}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="call-outline" size={18} color={COLORS.secondary} />
-                </TouchableOpacity>
-              </Animated.View>
-            )}
+        {/* Progress trail */}
+        <JourneyProgress task={task} />
 
-            {/* Route Info */}
-            <Animated.View
-              entering={FadeInUp.duration(300).delay(300)}
-              style={styles.routeContainer}
-            >
-              <View style={styles.routeRow}>
-                <View style={[styles.routeDot, { backgroundColor: COLORS.secondary }]} />
-                <View style={styles.routeTextContainer}>
-                  <Text style={styles.routeLabel}>Pickup</Text>
-                  <Text style={styles.routeAddress}>{task.pickupAddress}</Text>
-                </View>
-              </View>
+        {/* Route */}
+        <View style={styles.routeBlock}>
+          <View style={styles.routeRow}>
+            <View style={[styles.routeDot, { backgroundColor: COLORS.secondary }]} />
+            <View style={styles.routeText}>
+              <Text style={styles.routeLabel}>Pickup</Text>
+              <Text style={styles.routeAddress}>{task.pickupAddress}</Text>
+            </View>
+          </View>
+          <View style={styles.routeConnector} />
+          <View style={styles.routeRow}>
+            <View style={[styles.routeDot, { backgroundColor: COLORS.primary }]} />
+            <View style={styles.routeText}>
+              <Text style={styles.routeLabel}>Drop-off</Text>
+              <Text style={styles.routeAddress}>{task.dropoffAddress}</Text>
+            </View>
+          </View>
+        </View>
 
-              {/* Connecting line */}
-              <View style={styles.routeConnector}>
-                <View style={[styles.routeConnectorLine, { borderLeftColor: COLORS.outlineVariant }]} />
-              </View>
+        {/* Money. Payment METHOD is not payment STATE — a cash job is settled at
+            handover, a gateway job is not settled by the trip ending. */}
+        <View style={styles.moneyRow}>
+          <Text style={styles.moneyLabel}>
+            {task.paymentMethod === 'CASH' ? 'Collect in cash' : 'Paid via'} ·{' '}
+            {task.paymentMethod}
+          </Text>
+          {task.riderEarnings != null && (
+            <Text style={styles.moneyEarnings}>
+              You earn UGX {Number(task.riderEarnings).toLocaleString()}
+            </Text>
+          )}
+        </View>
+      </JourneyShell>
 
-              <View style={styles.routeRow}>
-                <View style={[styles.routeDot, { backgroundColor: COLORS.primary }]} />
-                <View style={styles.routeTextContainer}>
-                  <Text style={styles.routeLabel}>Dropoff</Text>
-                  <Text style={styles.routeAddress}>{task.dropoffAddress}</Text>
-                </View>
-              </View>
-            </Animated.View>
-
-            {/* Payment Info */}
-            <Animated.View
-              entering={FadeInUp.duration(300).delay(400)}
-              style={styles.paymentRow}
-            >
-              <Text style={styles.paymentMethod}>Payment: {task.paymentMethod}</Text>
-              <Text style={styles.paymentAmount}>
-                UGX {(task.totalAmount ?? 0).toLocaleString()}
-              </Text>
-            </Animated.View>
-
-            {/* Navigation Button (separate from status transition) */}
-            {(task.status === 'ACCEPTED' || task.status === 'ARRIVING' || task.status === 'ARRIVED' || task.status === 'PICKED_UP' || task.status === 'IN_PROGRESS' || task.status === 'IN_TRANSIT') && (
-              <Animated.View entering={FadeInUp.duration(300).delay(400)}>
-                <TouchableOpacity
-                  style={styles.navigateButton}
-                  onPress={() => {
-                    // Heading to pickup until the passenger/item is aboard
-                    // (ACCEPTED/ARRIVING/ARRIVED); after PICKED_UP head to dropoff.
-                    const isHeadingToPickup =
-                      task.status === 'ACCEPTED' || task.status === 'ARRIVING' || task.status === 'ARRIVED';
-                    const destLat = isHeadingToPickup ? task.pickupLatitude : task.dropoffLatitude;
-                    const destLng = isHeadingToPickup ? task.pickupLongitude : task.dropoffLongitude;
-                    if (destLat && destLng) {
-                      openNavigation(destLat, destLng);
-                    }
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <Ionicons name="compass-outline" size={18} color={COLORS.secondary} />
-                  <Text style={styles.navigateButtonText}>Navigate</Text>
-                </TouchableOpacity>
-              </Animated.View>
-            )}
-
-            {/* Geofence: reached destination banner */}
-            {nearDestination && (task.status === 'IN_PROGRESS' || task.status === 'IN_TRANSIT') && (
-              <View style={styles.arrivalBanner}>
-                <Ionicons name="flag" size={16} color={COLORS.primary} />
-                <Text style={styles.arrivalBannerText}>You've reached the destination — complete the trip.</Text>
-              </View>
-            )}
-
-            {/* Actions */}
-            <Animated.View
-              entering={FadeInUp.duration(300).delay(500)}
-              style={styles.actionsRow}
-            >
-              {/* A ride can't be cancelled once in transit (backend returns 409);
-                  hide the driver's Cancel then too — SOS/support is the path. */}
-              {!['PICKED_UP', 'IN_PROGRESS', 'IN_TRANSIT'].includes(task.status) && (
-                <View style={styles.cancelButtonWrapper}>
-                  <GradientButton
-                    title="Cancel"
-                    onPress={handleCancelTask}
-                    variant="outline"
-                    loading={false}
-                    disabled={isUpdating || task.status === 'COMPLETED'}
-                    fullWidth
-                    size="md"
-                  />
-                </View>
-              )}
-              <View style={styles.actionButtonWrapper}>
-                <GradientButton
-                  title={getButtonLabel()}
-                  onPress={handleButtonPress}
-                  variant="primary"
-                  loading={isUpdating}
-                  // A button with nothing to do is worse than no button: the
-                  // courier taps it, nothing happens, and they cannot tell
-                  // whether the app is broken or the tap was missed. Enabled
-                  // only when there is a real next transition, or when this
-                  // state opens the proof sheet.
-                  disabled={
-                    isUpdating ||
-                    isTaskTerminal ||
-                    (!nextStatus && !REQUIRES_PROOF.includes(task.status))
-                  }
-                  fullWidth
-                  size="md"
-                />
-              </View>
-            </Animated.View>
-
-            {/* Completed Message */}
-            {task.status === 'COMPLETED' && (
-              <Animated.View
-                entering={FadeInUp.duration(400)}
-                style={styles.completedCard}
-              >
-                <Text style={styles.completedText}>
-                  Trip Completed Successfully!
-                </Text>
-                <GradientButton
-                  title="Go to Home"
-                  onPress={() => router.replace('/driver')}
-                  variant="secondary"
-                  fullWidth
-                  size="md"
-                />
-              </Animated.View>
-            )}
-          </ScrollView>
-        </Card>
-      </Animated.View>
-
-      {/* Proof of delivery. The task cannot reach DELIVERED without it, so
-          this sheet is the only route from DELIVERING to a finished job. */}
-      {!!task && (
-        <ProofOfDeliverySheet
-          visible={showProofSheet}
-          taskId={task.id}
-          dropoffAddress={task.dropoffAddress}
-          onDismiss={() => setShowProofSheet(false)}
-          onProofAccepted={handleProofAccepted}
-        />
-      )}
+      {/* The only route from the handover to a finished delivery. */}
+      <ProofOfDeliverySheet
+        visible={showProofSheet}
+        taskId={task.id}
+        dropoffAddress={task.dropoffAddress}
+        onDismiss={() => setShowProofSheet(false)}
+        onProofAccepted={handleProofAccepted}
+      />
     </View>
   );
 }
 
-const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
+const createStyles = (COLORS: ThemedColors) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.surface,
+    },
+    centered: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: SPACING.lg,
+      gap: SPACING.md,
+      backgroundColor: COLORS.surface,
+    },
+    centeredText: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.onSurfaceVariant,
+    },
+    centeredBanner: {
+      alignSelf: 'stretch',
+    },
+    centeredLink: {
+      paddingVertical: SPACING.sm,
+    },
+    centeredLinkText: {
+      ...TYPOGRAPHY.labelLg,
+      color: COLORS.primary,
+      fontWeight: '700',
+    },
 
-  // Loading & empty states
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surface,
-  },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: COLORS.outline,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: COLORS.outline,
-  },
+    partyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.gutter,
+      backgroundColor: COLORS.surfaceContainerLow,
+      borderRadius: RADIUS.lg,
+      padding: SPACING.gutter,
+    },
+    partyAvatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: COLORS.surfaceContainerLowest,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    partyInfo: {
+      flex: 1,
+    },
+    partyName: {
+      ...TYPOGRAPHY.labelLg,
+      color: COLORS.onSurface,
+      fontWeight: '700',
+    },
+    partyMeta: {
+      ...TYPOGRAPHY.labelMd,
+      color: COLORS.onSurfaceVariant,
+    },
+    fareAmount: {
+      ...TYPOGRAPHY.headlineMd,
+      color: COLORS.secondary,
+      fontWeight: '700',
+    },
 
-  // Map
-  map: {
-    flex: 1,
-  },
+    routeBlock: {
+      gap: 0,
+    },
+    routeRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: SPACING.gutter,
+    },
+    routeDot: {
+      width: 12,
+      height: 12,
+      borderRadius: 6,
+      marginTop: 4,
+    },
+    routeText: {
+      flex: 1,
+    },
+    routeLabel: {
+      ...TYPOGRAPHY.labelMd,
+      color: COLORS.onSurfaceVariant,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    routeAddress: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.onSurface,
+      fontWeight: '500',
+    },
+    routeConnector: {
+      marginLeft: 5,
+      borderLeftWidth: 1,
+      borderLeftColor: COLORS.outlineVariant,
+      height: SPACING.md,
+    },
 
-  // Bottom card
-  bottomCardWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  bottomCard: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-
-  // Status header
-  statusHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  statusHeaderLeft: {
-    flex: 1,
-  },
-  statusLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusLabel: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  taskNumber: {
-    fontSize: 13,
-    color: COLORS.outline,
-    marginTop: 2,
-  },
-
-  // Client info
-  clientCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 16,
-  },
-  clientAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  clientInfo: {
-    flex: 1,
-  },
-  clientName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.onSurface,
-  },
-  clientPhone: {
-    fontSize: 13,
-    color: COLORS.outline,
-    marginTop: 2,
-  },
-  callButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderWidth: 1,
-    borderColor: `${COLORS.secondary}30`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  // Route info
-  routeContainer: {
-    marginBottom: 16,
-  },
-  routeRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  routeDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    marginTop: 3,
-    marginRight: 12,
-  },
-  routeTextContainer: {
-    flex: 1,
-  },
-  routeLabel: {
-    fontSize: 11,
-    color: COLORS.outline,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  routeAddress: {
-    fontSize: 14,
-    color: COLORS.onSurface,
-    fontWeight: '500',
-    marginTop: 1,
-  },
-  routeConnector: {
-    paddingLeft: 5,
-    height: 16,
-    justifyContent: 'center',
-  },
-  routeConnectorLine: {
-    borderLeftWidth: 1,
-    height: 10,
-    marginLeft: 1,
-  },
-
-  // Payment
-  paymentRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 14,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.outlineVariant,
-    marginBottom: 16,
-  },
-  paymentMethod: {
-    fontSize: 13,
-    color: COLORS.outline,
-  },
-  paymentAmount: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.secondary,
-  },
-
-  // Navigation button
-  navigateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    backgroundColor: `${COLORS.secondary}15`,
-    borderWidth: 1,
-    borderColor: `${COLORS.secondary}30`,
-    borderRadius: 14,
-    paddingVertical: 12,
-    marginBottom: 12,
-  },
-  navigateButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.secondary,
-  },
-
-  // Actions
-  actionsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButtonWrapper: {
-    flex: 1,
-  },
-  actionButtonWrapper: {
-    flex: 1.5,
-  },
-  arrivalBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: `${COLORS.primary}1F`,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginTop: 12,
-  },
-  arrivalBannerText: {
-    flex: 1,
-    color: COLORS.primary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-
-  // Completed
-  completedCard: {
-    marginTop: 16,
-    backgroundColor: COLORS.primaryFixed,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 16,
-    padding: 16,
-    alignItems: 'center',
-  },
-  completedText: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: COLORS.primary,
-    marginBottom: 12,
-  },
-});
+    moneyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: SPACING.sm,
+      paddingTop: SPACING.gutter,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.outlineVariant,
+    },
+    moneyLabel: {
+      ...TYPOGRAPHY.labelMd,
+      color: COLORS.onSurfaceVariant,
+      flex: 1,
+    },
+    moneyEarnings: {
+      ...TYPOGRAPHY.labelLg,
+      color: COLORS.primary,
+      fontWeight: '700',
+    },
+  });

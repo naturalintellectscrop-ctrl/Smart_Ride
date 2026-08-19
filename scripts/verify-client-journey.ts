@@ -84,6 +84,22 @@ async function main() {
   const PW = 'ProbePass@2026';
   const clientEmail = `${TAG.toLowerCase()}-client@smartride.test`;
   const driverEmail = `${TAG.toLowerCase()}-driver@smartride.test`;
+  // Clear any residue from an earlier run before recreating the fixtures.
+  //
+  // Deleting the users alone is not enough: a completed CASH ride writes a
+  // CashCollection against the driver's rider profile, and that row has no
+  // cascade, so the delete failed on CashCollection_riderId_fkey and the suite
+  // could never run a second time after its first cash completion. Clear the
+  // dependent rows first, innermost outwards.
+  const stale = await db.user.findMany({
+    where: { email: { in: [clientEmail, driverEmail] } },
+    select: { id: true, rider: { select: { id: true } } },
+  });
+  const staleRiderIds = stale.map((u) => u.rider?.id).filter(Boolean) as string[];
+  if (staleRiderIds.length > 0) {
+    await db.cashCollection.deleteMany({ where: { riderId: { in: staleRiderIds } } });
+    await db.riderPayout.deleteMany({ where: { riderId: { in: staleRiderIds } } });
+  }
   await db.user.deleteMany({ where: { email: { in: [clientEmail, driverEmail] } } });
 
   const clientToken = await registerAndLogin(
@@ -303,6 +319,10 @@ main()
       where: { reputation: { riderId: { in: made.riderIds } } },
     }).catch(() => {});
     await db.driverReputation.deleteMany({ where: { riderId: { in: made.riderIds } } });
+    // A completed CASH ride books the platform's commission as a CashCollection
+    // against the rider. It has no cascade, so it must go before the rider does.
+    await db.cashCollection.deleteMany({ where: { riderId: { in: made.riderIds } } });
+    await db.riderPayout.deleteMany({ where: { riderId: { in: made.riderIds } } });
     await db.rider.deleteMany({ where: { id: { in: made.riderIds } } });
     await db.user.deleteMany({ where: { id: { in: made.userIds } } });
     console.log(`\n=== ${checks - failures}/${checks} passed ===\n`);

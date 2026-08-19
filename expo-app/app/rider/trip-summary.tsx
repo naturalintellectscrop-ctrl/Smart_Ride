@@ -1,11 +1,16 @@
 // ============================================
 // SMART RIDE MOBILE - TRIP SUMMARY SCREEN
 // ============================================
-// Shown after ride COMPLETED.
-// Displays fare breakdown, route info, and star rating.
+// Shown after a ride reaches COMPLETED: completion confirmation, route summary,
+// the real payment state (and the way to settle it), rating, and the receipt.
+//
+// It fetches the task rather than trusting the params it was navigated with.
+// The params are a snapshot taken the instant the trip ended; payment state
+// changes AFTER that moment, and this screen's job is to tell the truth about
+// it. Completing a trip does not pay for it — see TaskPaymentPanel.
 // ============================================
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -27,6 +32,8 @@ import {
   SectionHeader,
   SuccessCheck,
 } from '@/src/components';
+import { TaskPaymentPanel } from '@/src/components/journey';
+import type { Task } from '@/src/types';
 
 export default function TripSummaryScreen() {
   const { isDark } = useTheme();
@@ -52,6 +59,13 @@ export default function TripSummaryScreen() {
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [comment, setComment] = useState('');
   const [ratingError, setRatingError] = useState<string | null>(null);
+  // Optional detail. The rate endpoint has always accepted these three from a
+  // client and stores them for the reputation engine; nothing ever sent them.
+  const [subScores, setSubScores] = useState<{
+    punctualityScore?: number;
+    professionalismScore?: number;
+    vehicleConditionScore?: number;
+  }>({});
 
   const totalAmount  = parseInt(params.totalAmount  || '0', 10);
   const distanceKm   = parseFloat(params.distanceKm  || '0');
@@ -60,16 +74,19 @@ export default function TripSummaryScreen() {
   const waitingMinutes = parseInt(params.waitingMinutes || '0', 10);
   const paymentMethod = params.paymentMethod || 'CASH';
 
-  const paymentLabel: Record<string, string> = {
-    CASH: 'Cash',
-    MTN_MOMO: 'MTN Mobile Money',
-    AIRTEL_MONEY: 'Airtel Money',
-    WALLET: 'Wallet',
-    // NylonPay is an internal gateway — never surface its brand to users.
-    NYLON_PAY: 'Mobile Money',
-  };
+  // The live task. Payment state moves after the trip ends, so the params
+  // this screen was navigated with cannot be trusted to describe it.
+  const [task, setTask] = useState<Task | null>(null);
 
-  const isCash = paymentMethod === 'CASH';
+  const loadTask = useCallback(async () => {
+    if (!params.taskId) return;
+    const res = await api.getTask(params.taskId);
+    if (res.success && res.data) setTask(res.data);
+  }, [params.taskId]);
+
+  useEffect(() => {
+    loadTask();
+  }, [loadTask]);
 
   const handleRating = (stars: number) => {
     if (ratingSubmitted) return;
@@ -81,7 +98,12 @@ export default function TripSummaryScreen() {
     setIsSubmitting(true);
     setRatingError(null);
     try {
-      const res = await api.rateTask(params.taskId, selectedRating, comment.trim() || undefined);
+      const res = await api.rateTask(
+        params.taskId,
+        selectedRating,
+        comment.trim() || undefined,
+        Object.keys(subScores).length > 0 ? subScores : undefined
+      );
       if (res?.success === false) throw new Error(res.error || 'Could not submit');
       setRatingSubmitted(true);
     } catch {
@@ -109,33 +131,36 @@ export default function TripSummaryScreen() {
           style={styles.success}
         />
 
-        {/* Fare */}
+        {/* Fare and payment.
+            Payment STATE comes from the task, not from the fact that the trip
+            finished. Until the task loads we show the fare only — never a
+            payment status we have not actually read. */}
         <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
-          <View style={styles.fareRow}>
-            <Text style={styles.fareLabel}>Total fare</Text>
-            <Text style={styles.fareAmount}>UGX {totalAmount.toLocaleString()}</Text>
-          </View>
-          {waitingCharge > 0 && (
-            <View style={styles.waitingRow}>
-              <View style={styles.waitingLabelWrap}>
-                <Ionicons name="time-outline" size={ICON.xs} color={COLORS.onSurfaceVariant} />
-                <Text style={styles.waitingLabel}>
-                  Includes waiting{waitingMinutes > 0 ? ` (${waitingMinutes} min)` : ''}
-                </Text>
+          {task ? (
+            <TaskPaymentPanel task={task} onSettled={loadTask} />
+          ) : (
+            <>
+              <View style={styles.fareRow}>
+                <Text style={styles.fareLabel}>Total fare</Text>
+                <Text style={styles.fareAmount}>UGX {totalAmount.toLocaleString()}</Text>
               </View>
-              <Text style={styles.waitingValue}>UGX {waitingCharge.toLocaleString()}</Text>
-            </View>
-          )}
-          <View style={styles.divider} />
-          <View style={styles.metaRow}>
-            <Ionicons name="card-outline" size={ICON.sm} color={COLORS.onSurfaceVariant} />
-            <Text style={styles.metaText}>{paymentLabel[paymentMethod] ?? paymentMethod}</Text>
-          </View>
-          {isCash && (
-            <View style={styles.metaRowSpaced}>
-              <Ionicons name="information-circle-outline" size={ICON.sm} color={COLORS.primary} />
-              <Text style={[styles.metaText, styles.metaTextAccent]}>Please pay the driver in cash</Text>
-            </View>
+              {waitingCharge > 0 && (
+                <View style={styles.waitingRow}>
+                  <View style={styles.waitingLabelWrap}>
+                    <Ionicons name="time-outline" size={ICON.xs} color={COLORS.onSurfaceVariant} />
+                    <Text style={styles.waitingLabel}>
+                      Includes waiting{waitingMinutes > 0 ? ` (${waitingMinutes} min)` : ''}
+                    </Text>
+                  </View>
+                  <Text style={styles.waitingValue}>UGX {waitingCharge.toLocaleString()}</Text>
+                </View>
+              )}
+              <View style={styles.divider} />
+              <View style={styles.metaRow}>
+                <Ionicons name="hourglass-outline" size={ICON.sm} color={COLORS.onSurfaceVariant} />
+                <Text style={styles.metaText}>Checking payment status…</Text>
+              </View>
+            </>
           )}
         </Card>
 
@@ -213,6 +238,38 @@ export default function TripSummaryScreen() {
               chosen — an empty box above an unrated trip is just noise. */}
           {selectedRating > 0 && !ratingSubmitted && (
             <>
+              {/* Optional detail, in the three dimensions the reputation
+                  engine actually scores on. */}
+              <View style={styles.subScoreBlock}>
+                {([
+                  ['punctualityScore', 'Punctuality'],
+                  ['professionalismScore', 'Professionalism'],
+                  ['vehicleConditionScore', 'Vehicle'],
+                ] as const).map(([key, label]) => (
+                  <View key={key} style={styles.subScoreRow}>
+                    <Text style={styles.subScoreLabel}>{label}</Text>
+                    <View style={styles.subScoreStars}>
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <TouchableOpacity
+                          key={star}
+                          onPress={() => setSubScores((prev) => ({ ...prev, [key]: star }))}
+                          disabled={isSubmitting}
+                          hitSlop={{ top: 6, bottom: 6, left: 4, right: 4 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${label}: ${star} star${star > 1 ? 's' : ''}`}
+                        >
+                          <Ionicons
+                            name={star <= (subScores[key] ?? 0) ? 'star' : 'star-outline'}
+                            size={ICON.md}
+                            color={star <= (subScores[key] ?? 0) ? COLORS.warning : COLORS.outlineVariant}
+                          />
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                ))}
+              </View>
+
               <TextInput
                 style={styles.commentInput}
                 value={comment}
@@ -266,15 +323,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   success: {
     marginBottom: SPACING.lg,
   },
-  metaRowSpaced: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    marginTop: SPACING.xs,
-  },
-  metaTextAccent: {
-    color: COLORS.primary,
-  },
   commentInput: {
     ...TYPOGRAPHY.bodyMd,
     color: COLORS.onSurface,
@@ -286,6 +334,25 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginTop: SPACING.md,
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  subScoreBlock: {
+    gap: SPACING.sm,
+    marginTop: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  subScoreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: SPACING.sm,
+  },
+  subScoreLabel: {
+    ...TYPOGRAPHY.labelMd,
+    color: COLORS.onSurfaceVariant,
+  },
+  subScoreStars: {
+    flexDirection: 'row',
+    gap: SPACING.xs,
   },
   ratingSubmit: {
     marginTop: SPACING.md,
