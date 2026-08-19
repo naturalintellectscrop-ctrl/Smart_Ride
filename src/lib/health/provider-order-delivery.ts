@@ -383,14 +383,21 @@ export async function settleProviderOrderDelivery(
   if ((order.paymentMethod || '').toUpperCase() === 'CASH') {
     const task = await db.task.findUnique({
       where: { providerOrderId },
-      select: { id: true, riderEarnings: true, riderId: true },
+      select: { id: true, riderEarnings: true, riderId: true, platformCommission: true },
     });
     // Whoever actually carried it. A pharmacist marking DELIVER by hand does
     // not name a rider, and the order's own riderId is only set once dispatch
     // assigned one — so the task is the authoritative answer to "who is
     // holding the customer's cash".
     const carrier = opts.riderId ?? task?.riderId ?? null;
-    const owed = toNum(order.totalAmount) - toNum(task?.riderEarnings);
+    // Everything the courier must hand back: what they collected, less what
+    // they keep, less the fare commission FinanceLedger records as its own
+    // receivable when the task completes. Without that last subtraction the
+    // same UGX is counted twice and the courier is shown owing more than they
+    // are physically holding — measured on a real delivery: 6,530 + 450
+    // recorded against 6,530 actually collected.
+    const owed =
+      toNum(order.totalAmount) - toNum(task?.riderEarnings) - toNum(task?.platformCommission);
     if (carrier && owed > 0) {
       await db.cashCollection
         .create({
@@ -406,7 +413,8 @@ export async function settleProviderOrderDelivery(
             notes:
               `Pharmacy order ${order.orderNumber} paid in cash: courier collected UGX ` +
               `${toNum(order.totalAmount)}, keeps UGX ${toNum(task?.riderEarnings)} delivery ` +
-              `earnings, owes UGX ${owed} (pharmacy share + platform commission)`,
+              `earnings, owes UGX ${owed} on the order (pharmacy share + order fees); the ` +
+              `delivery commission is recorded separately against the task`,
           },
         })
         .catch((e) => console.error('[PharmacyDelivery] cash collection record failed:', e));

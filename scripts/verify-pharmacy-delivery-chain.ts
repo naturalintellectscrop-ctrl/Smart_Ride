@@ -245,11 +245,21 @@ async function main() {
         where: { taskId: cashDispatch.taskId },
       });
       check('cash delivery records a collection', collections.length === 1, `found ${collections.length}`);
-      const owed = TOTAL - num(cashTask?.riderEarnings);
+      const owed = TOTAL - num(cashTask?.riderEarnings) - num(cashTask?.platformCommission);
       check(
-        'courier owes total minus their delivery earnings',
+        'courier owes what they hold, counted once',
         Math.abs(num(collections[0]?.amount) - owed) < 1,
         `recorded=${num(collections[0]?.amount)} expected=${owed}`
+      );
+      // The fare commission is FinanceLedger's receivable, not this one — the
+      // two together must equal what the courier is physically holding.
+      check(
+        'order cash + fare commission = cash in hand',
+        Math.abs(
+          num(collections[0]?.amount) +
+            num(cashTask?.platformCommission) -
+            (TOTAL - num(cashTask?.riderEarnings))
+        ) < 1
       );
 
       const cashProvider = await db.healthProvider.findUnique({ where: { id: provider.id } });

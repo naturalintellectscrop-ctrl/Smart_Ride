@@ -288,6 +288,13 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     // dragging taller would leave empty surface below the content. An
     // auto-height sheet needs the opposite, so the flex is applied per mode.
     flexGrow: 0,
+    // …but it must also be allowed to become SHORTER than its content, or the
+    // 80% cap on the sheet clips whatever does not fit and the scroll view
+    // never scrolls, because it believes it is already tall enough. That is
+    // what put the proof-of-delivery sheet's confirm button below the bottom of
+    // the screen with no way to reach it: a courier at the customer's door
+    // could enter the handover code and then had no button to submit it.
+    flexShrink: 1,
   },
   scrollFill: {
     flex: 1,
