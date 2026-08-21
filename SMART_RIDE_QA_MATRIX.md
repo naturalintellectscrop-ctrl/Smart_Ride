@@ -1825,3 +1825,245 @@ Not fixed here: wiring dispatch into the provider-order lifecycle means deciding
 what Task a pharmacy delivery becomes, who pays the courier out of
 `providerEarnings` vs `deliveryFee`, and how `ProviderOrder.status` and
 `Task.status` stay consistent — design decisions, not a contained defect fix.
+
+---
+
+# Session — the pharmacy chain closed, and the merchant app rebuilt
+
+## PHARM-8 — a ready pharmacy order is never routed to a courier
+
+**Status:** FIXED + VERIFIED IN PRODUCTION AND ON DEVICE | **Priority:** P0
+
+`READY` now creates a `SMART_HEALTH_DELIVERY` task and calls the same
+`DispatchService.findAndAssign` the merchant flow uses. Nothing new was
+modelled: that TaskType already existed, was already in `DELIVERY_TASK_TYPES`
+(so proof of delivery is required), was already priced in `lib/api/pricing.ts`,
+and was already mapped to `DELIVERY_PERSONNEL` by `CapabilityService`. The
+courier drives the task through the same `EnhancedTaskStateMachine` as every
+other delivery; `lib/health/provider-order-delivery.ts` only mirrors the result
+back onto the order the pharmacist is watching — forward-only, so PHARM-2 cannot
+return through a side door.
+
+The link is a new `Task.providerOrderId` (unique, nullable), the third of its
+kind beside `orderId` and `healthOrderId`. Schema pushed; the diff was
+`ADD COLUMN` + unique index + FK, nothing else.
+
+**Verified end to end on hardware:** order `HPO-1787139420369-HJEC` →
+`TASK-2026-000074` → offer on the courier's phone → accept → pickup → transit →
+proof by handover code → delivered. Task `ASSIGNED` mirrored to order
+`RIDER_ASSIGNED` 250 ms later; `PICKED_UP` → `OUT_FOR_DELIVERY` 470 ms later.
+
+## PHARM-9 — the medicine catalogue could not be used at all
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P0
+
+Reported from the device: *"why can't I add my catalog in the medicine
+catalog?"* Every handler demanded an explicit `providerId`, which the pharmacist
+app has never been told — it authenticates as a user and the server resolves the
+pharmacy from the token everywhere else. So the catalogue screen asked for its
+own stock, got `400 providerId is required`, and rendered it as an empty shelf;
+and `category` was a required strict enum behind a free text box, so a
+pharmacist typing "painkillers" was refused. A pharmacy could not list, add,
+edit, restock or remove anything.
+
+## PHARM-10 — a pharmacy could earn but never be paid
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P0 | **Category:** Money
+
+`pendingPayout` is the balance `/api/pharmacy/payout` treats as withdrawable and
+the only figure it decrements. **Nothing in the codebase ever credited it.**
+`DELIVER` incremented `totalEarnings` alone, so a pharmacy could deliver a
+hundred orders and withdraw nothing. Both now move together from one place,
+claimed by a conditional `updateMany` so the courier's completion and a manual
+`DELIVER` cannot both pay. Verified: `0 → 27,000` on delivery, withdrawal of
+27,000 accepted, balance drawn to 0, second `DELIVER` refused 409 with no
+second payment.
+
+## PHARM-11 — any pharmacist could edit or delete another pharmacy's stock
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P0 | **Category:** Authorization
+
+`PATCH` and `DELETE` on the catalogue checked a `providerId` in the QUERY
+STRING, which no client sends. The guard therefore only confirmed the caller had
+*some* pharmacy account, then acted on whatever `medicineId` was named. A
+signed-in pharmacist could reprice a competitor's stock, mark it unavailable,
+delete it, or turn `requiresPrescription` off a controlled drug in someone
+else's catalogue. Both now verify the medicine belongs to the caller — 403 in
+production, rival's price untouched.
+
+## PHARM-12 — no customer could place a pharmacy order at all
+
+**Status:** FIXED | **Priority:** P0
+
+`POST /health-provider/orders` answered 500 on every request. Four
+health-provider routes logged fraud telemetry with
+`await fetch('/api/fraud/activity', …)` — a **relative** URL, from Node. There
+is no origin to resolve it against on the server, so it throws every time, and
+awaited inside the route's try block that throw became the route's own failure.
+Registration and controlled-medicine additions failed the same way *after*
+writing their rows, so the app reported failure for records that existed and a
+retry produced duplicates. An absolute URL would not have helped either: that
+endpoint is admin-guarded and these callers are a customer or a pharmacist.
+Written directly now, and the events that are not fraud signals (an order being
+placed) go to the audit log, where the enum actually has a member for them.
+
+## PHARM-13 — the earnings screen read a table with no rows in it
+
+**Status:** FIXED | **Priority:** P0 | **Category:** Money
+
+`/pharmacy/earnings?action=summary` aggregated `db.healthOrder`, which has zero
+rows platform-wide — real pharmacy orders are `ProviderOrder`. Every pharmacy
+saw UGX 0 lifetime. Its `pendingPayout` aggregate also had **no provider
+filter**, so each pharmacy was shown the sum of what the platform owes *every*
+pharmacy as its own available balance.
+
+## PHARM-14 — an order no courier took could never ask again
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P1
+
+Dispatch runs once, at READY, and is allowed to find nobody. That was the end of
+it: the order sat at `READY_FOR_PICKUP` with no courier and nothing would ever
+ask again. `REDISPATCH` is legal only from `READY_FOR_PICKUP` with no courier
+assigned, and searches the SAME task rather than creating a second one. Surfaced
+as "Find a courier" — a backend action no screen exposes is the same as not
+having one.
+
+## PHARM-3 — the two halves of a pharmacy identity
+
+**Status:** FIXED (was recorded as a P2 product decision; it was a P0 functional
+failure) | **Priority:** P0
+
+**What represents a pharmacy:** two things. `Merchant(type=PHARMACY)` +
+`Pharmacy` carry the approval gate (`useProviderApprovalGate` calls
+`getMerchantProfile`). `HealthProvider` carries everything the pharmacy actually
+does — orders, catalogue, open/closed, earnings, payout — and every one of those
+routes resolves it by `userId` from the token.
+
+**What was broken:** app registration (`/merchants/register?type=PHARMACY`)
+created only the first pair. A pharmacist who signed up through the app passed
+the gate and then met "No health provider account for this user" on every
+screen — an account that looked approved and could do nothing.
+
+**Fix:** both halves are created together in the same transaction from the same
+details, and an admin's approval is recorded on both, because it is one
+decision. The models are **not** merged: that is an architectural call and
+merging them reaches into the customer-facing health storefront. `HealthOrder`
+remains entirely unused (0 rows).
+
+## DEL-1 — the courier could not submit proof of delivery
+
+**Status:** FIXED | **Priority:** P0 | **Category:** Delivery
+
+Found by driving a real delivery to a customer's door. The proof sheet's confirm
+button sat below the bottom of the screen with no way to reach it: the sheet
+caps at 80% of the screen and puts content in a ScrollView, but that scroll view
+could only grow, never shrink, so content taller than the cap was clipped rather
+than scrolled — and never scrolled, because it believed it was already tall
+enough. A courier at the door could enter the handover code and had no button to
+send it. One `flexShrink`; it affects every sheet with a form in it.
+
+## DEL-2 — the courier was recorded owing money they were never given
+
+**Status:** FIXED | **Priority:** P0 | **Category:** Money
+
+`FinanceLedger` records the fare commission as a receivable from the courier
+when the task completes; the pharmacy settlement separately recorded the whole
+order remainder, which already contained that same commission. Measured on the
+real delivery: **UGX 6,530 + 450 recorded against UGX 6,530 actually
+collected.** The order-level figure now excludes the fare commission, and the
+suite asserts the two receivables sum to exactly what the courier holds.
+
+## DEL-3 — pickup showed an address, not a place
+
+**Status:** FIXED | **Priority:** P2
+
+The courier's offer and job screens showed `pickupAddress` — "Plot 1, Kampala".
+A courier recognises "Kyebando Pharmacy" and does not know Plot 1. Both flows
+already stored the business name in `pickupContactName`; nothing displayed it.
+
+## DEL-4 — the courier could reach only one of the two parties
+
+**Status:** FIXED | **Priority:** P1
+
+The call action went to the customer, always. A courier stuck outside a closed
+pharmacy had no way to ask anyone about it. The action now offers the pickup
+shop or the customer, ordered by which the job stage makes likely. The pharmacy
+can call back: provider orders now carry the courier's name and number, which
+the pharmacist could previously see existed and never contact.
+
+## RT-1 — nothing a shop did reached the people it affected
+
+**Status:** FIXED + VERIFIED IN PRODUCTION (6/6) | **Priority:** P1
+
+A shop opens, closes, runs out, reprices — and none of it reached the customer's
+app until they pulled to refresh. A customer could sit on a pharmacy that shut
+ten minutes ago, build a basket, and be refused by a server that knew better
+than the screen. One low-volume `storefront` channel now carries availability,
+catalogue and profile changes. Verified by subscribing with the **mobile app's
+own credentials** and driving the pharmacy from the production API: closing,
+opening, adding stock, going out of stock and removal all arrived, with the new
+state in the payload.
+
+## PHARM-15 — a closed pharmacy still received orders
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P1
+
+The OPEN/CLOSED control wrote `isOpenNow` and nothing read it on the way in. A
+pharmacist could shut for the night and still wake up to orders nobody had
+agreed to fill. Order creation now refuses a closed pharmacy with 409 and names
+it. Admins are exempt — that is the phone-order path. An order already placed is
+**not** cancelled by closing.
+
+## MERCH-5 — merchant order tabs were single statuses
+
+**Status:** FIXED | **Priority:** P2
+
+One status per tab, so an order that got accepted vanished from "New" and
+appeared in "Accepted", then vanished again at "Preparing". A merchant chasing
+an order had to guess which tab it had moved to. Tabs are phases now, shared
+with the dashboard so the two cannot disagree.
+
+## BE-043 — /merchants/[id]/products forwarded no route params
+
+**Status:** FIXED | **Priority:** P2
+
+The alias delegates to the menu handler, which reads `{ params }` to know which
+merchant. It was called with the request alone, so every request through that
+alias threw before reaching the database.
+
+## UI-1 — the OPEN/ONLINE pill was overrun by its own knob
+
+**Status:** FIXED | **Priority:** P2
+
+The word was centred across the whole track, so as soon as the switch turned on
+the knob slid over it — "OPEN" rendered as "OPE(" on the pharmacy dashboard and
+"ONLINE" as "ONLI(" on the courier's, which reads as a rendering fault rather
+than a state. The word now sits in the half the knob has vacated.
+
+---
+
+# Money flow, as measured on a real cash delivery
+
+Customer paid **UGX 9,080** in cash at the door for pharmacy order
+`HPO-1787139420369-HJEC` (medicines 4,000 · delivery 5,000 · service fee 80).
+
+| Party | Gets | Recorded as |
+|---|---|---|
+| Courier | 2,550 kept in hand | `Task.riderEarnings`, `rider.totalEarnings` |
+| Courier owes back | 6,080 + 450 = 6,530 | two `CashCollection` rows (order share, fare commission) |
+| Pharmacy | 3,600 | `HealthProvider.pendingPayout` — withdrawable |
+| Smart Ride | 480 order + 450 fare + 2,000 fee difference | `FinanceLog` PLATFORM_COMMISSION + HEALTH_ORDER_PAYMENT |
+
+Ledger rows written: `HEALTH_ORDER_PAYMENT` 9,080 (pharmacy 3,600, delivery
+5,000, platform 480), `HEALTH_ORDER_PAYMENT` 3,000 for the fare (rider 2,550,
+commission 450), `PLATFORM_COMMISSION` 450.
+
+**Wallet is correctly NOT credited on cash** — the courier was paid in hand;
+crediting a withdrawable balance too would pay them twice.
+
+**Open contract, reported not invented:** the customer is charged a flat
+`deliveryFee` of 5,000 on the order while the courier's task is priced from
+distance (3,000 here). The 2,000 difference is the platform's by elimination,
+and no rule anywhere states that. It is inside the courier's recorded 6,080
+receivable, so no shilling is unaccounted — but the *rule* is undefined and
+should be written down before the fee or the fare rates change.
