@@ -27,11 +27,12 @@
  */
 
 import { db } from '@/lib/db';
+import type { RiskEntityType, SuspiciousActivityType } from '@prisma/client';
 
 export interface SuspiciousActivityInput {
-  entityType: string;
+  entityType: RiskEntityType;
   entityId: string;
-  activityType: string;
+  activityType: SuspiciousActivityType;
   activityCategory: string;
   referenceType?: string | null;
   referenceId?: string | null;

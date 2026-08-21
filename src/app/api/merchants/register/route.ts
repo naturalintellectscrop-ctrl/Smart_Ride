@@ -127,6 +127,49 @@ export async function POST(request: NextRequest) {
             create: { merchantId: m.id, ...pharmacyData },
             update: pharmacyData,
           });
+
+          // ── PHARM-3: give the pharmacy the identity its own features read ──
+          //
+          // A pharmacy is represented twice. The APPROVAL GATE reads
+          // Merchant(type=PHARMACY) + Pharmacy, which this route creates. But
+          // every pharmacy FEATURE — orders, catalogue, open/closed, earnings,
+          // payout — resolves HealthProvider by userId, and nothing here ever
+          // created one. So a pharmacist who registered through the app got
+          // past the gate and then met "No health provider account for this
+          // user" on every screen: an account that looks approved and can do
+          // nothing.
+          //
+          // The two models are not merged here — that is an architectural
+          // decision, and merging them would touch the customer-facing health
+          // storefront. What this does is make the halves arrive together, from
+          // the same details, so the identity is whole from the moment it
+          // exists. Left unverified until an admin approves the merchant, and
+          // approval carries across (see merchant-onboarding.service).
+          const providerData = {
+            businessName: name,
+            licenseNumber: pharmacyLicense || `PENDING-${m.id.slice(-8)}`,
+            ownerFullName: pharmacistInCharge || name,
+            ownerPhone: phone,
+            ownerEmail: email || null,
+            address,
+            city: city || null,
+            latitude: latitude ? parseFloat(latitude) : null,
+            longitude: longitude ? parseFloat(longitude) : null,
+            operatingHours:
+              operatingHours || (openingTime && closingTime ? `${openingTime} - ${closingTime}` : null),
+            providerType: 'PHARMACY' as const,
+            verificationStatus: 'PENDING' as const,
+            licenseDocumentUrl: documents?.businessLicense || null,
+            bankName: bankName || null,
+            bankAccountName: bankAccountName || null,
+            bankAccountNumber: bankAccountNumber || null,
+            isOpenNow: false,
+          };
+          await tx.healthProvider.upsert({
+            where: { userId: authedUserId },
+            create: { userId: authedUserId, ...providerData },
+            update: providerData,
+          });
         }
         return m;
       });

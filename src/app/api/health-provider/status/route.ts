@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
+import { announceProviderAvailability } from '@/lib/realtime/storefront';
 
 export async function GET(request: NextRequest) {
   await setServiceRoleContext();
@@ -203,6 +204,15 @@ export async function PATCH(request: NextRequest) {
       where: { id: providerId },
       data: { isOpenNow: isOpen },
       select: { id: true, isOpenNow: true, businessName: true },
+    });
+
+    // Tell anyone browsing. A customer sitting on a pharmacy that has just shut
+    // would otherwise keep seeing OPEN until they pulled to refresh, and find
+    // out only when their order was refused.
+    announceProviderAvailability({
+      providerId: updated.id,
+      isOpen: updated.isOpenNow,
+      businessName: updated.businessName,
     });
 
     return NextResponse.json({

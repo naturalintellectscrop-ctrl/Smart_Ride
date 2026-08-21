@@ -1492,6 +1492,11 @@ class ApiService {
     taskType: string;
     pickupLatitude: number;
     pickupLongitude: number;
+    /** The shop, restaurant or pharmacy the courier collects from. */
+    pickupContactName?: string | null;
+    pickupContactPhone?: string | null;
+    dropoffContactName?: string | null;
+    dropoffContactPhone?: string | null;
     excludeRiderIds?: string[];
     priority?: number;
   }): Promise<ApiResponse<any>> {

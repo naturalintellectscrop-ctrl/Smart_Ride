@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { logSuspiciousActivity } from '@/lib/fraud/log-activity';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { enumParam, requireEnumParam } from '@/lib/api/enum-params';
 import { MedicineCategory } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
+import { announceProviderCatalog } from '@/lib/realtime/storefront';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 
@@ -282,21 +282,34 @@ export async function POST(request: NextRequest) {
 
     // Log to fraud detection if controlled substance
     if (isControlled) {
-      await logSuspiciousActivity({
-        entityType: provider.providerType === 'PHARMACY' ? 'PHARMACY' : 'HEALTH_PROVIDER',
-        entityId: providerId,
-        activityType: 'CONTROLLED_MEDICINE_ADDED',
-        activityCategory: 'PRESCRIPTION_ACTIVITY',
-        referenceType: 'MEDICINE_CATALOG',
-        referenceId: medicine.id,
-        metadata: {
-          medicineId: medicine.id,
-          medicineName: name,
-          controlledLevel,
-          providerType: provider.providerType,
-        },
-      });
+      // A controlled substance entering a catalogue is a compliance event, not
+      // a fraud score — SuspiciousActivityType has no member for it, so it is
+      // recorded where events of record belong.
+      await db.auditLog
+        .create({
+          data: {
+            actorType: 'USER',
+            action: 'CONTROLLED_MEDICINE_ADDED',
+            entityType: 'MEDICINE_CATALOG',
+            entityId: medicine.id,
+            description:
+              `Controlled medicine "${name}"${controlledLevel ? ` (${controlledLevel})` : ''} ` +
+              `added to ${provider.businessName}'s catalogue`,
+            newValues: JSON.stringify({ medicineId: medicine.id, name, controlledLevel, providerId }),
+          },
+        })
+        .catch((e) => console.error('[catalog] controlled-medicine audit failed:', e));
     }
+
+    // A new medicine appears in the customer's storefront immediately.
+    announceProviderCatalog({
+      providerId,
+      change: 'ADDED',
+      medicineId: medicine.id,
+      name: medicine.name,
+      isAvailable: medicine.isAvailable,
+      price: Number(medicine.price),
+    });
 
     return NextResponse.json({
       success: true,
@@ -385,6 +398,17 @@ export async function PATCH(request: NextRequest) {
       data,
     });
 
+    // Price and availability are the two things a customer must never see
+    // stale — an item shown in stock at yesterday's price is a broken order.
+    announceProviderCatalog({
+      providerId: resolved.providerId,
+      change: 'UPDATED',
+      medicineId: updatedMedicine.id,
+      name: updatedMedicine.name,
+      isAvailable: updatedMedicine.isAvailable,
+      price: Number(updatedMedicine.price),
+    });
+
     return NextResponse.json({
       success: true,
       medicine: updatedMedicine,
@@ -452,6 +476,12 @@ export async function DELETE(request: NextRequest) {
 
     await db.medicineCatalog.delete({
       where: { id: medicineId },
+    });
+
+    announceProviderCatalog({
+      providerId: resolved.providerId,
+      change: 'REMOVED',
+      medicineId,
     });
 
     return NextResponse.json({

@@ -13,7 +13,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { logSuspiciousActivity } from '@/lib/fraud/log-activity';
 import { enumParam, requireEnumParam } from '@/lib/api/enum-params';
 import { ProviderOrderStatus, HealthOrderType } from '@prisma/client';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
@@ -123,6 +122,38 @@ export async function GET(request: NextRequest) {
       skip: offset,
     });
 
+    // Who is carrying each order, so the pharmacy can reach them.
+    //
+    // ProviderOrder.riderId is only an id; the pharmacist could see that a
+    // courier existed and had no way to contact them — no name, no number — so
+    // "where is my order" had no answer on either side. Rider is a separate
+    // model with no relation from ProviderOrder, so it is joined here rather
+    // than by adding one.
+    const riderIds = Array.from(
+      new Set(orders.map((o) => o.riderId).filter((id): id is string => !!id))
+    );
+    const riders = riderIds.length
+      ? await db.rider.findMany({
+          where: { id: { in: riderIds } },
+          select: { id: true, fullName: true, phone: true, vehicleType: true, rating: true },
+        })
+      : [];
+    const riderById = new Map(riders.map((r) => [r.id, r]));
+
+    const tasks = orders.length
+      ? await db.task.findMany({
+          where: { providerOrderId: { in: orders.map((o) => o.id) } },
+          select: { id: true, providerOrderId: true, taskNumber: true, status: true },
+        })
+      : [];
+    const taskByOrder = new Map(tasks.map((t) => [t.providerOrderId!, t]));
+
+    const ordersWithCourier = orders.map((o) => ({
+      ...o,
+      courier: o.riderId ? (riderById.get(o.riderId) ?? null) : null,
+      deliveryTask: taskByOrder.get(o.id) ?? null,
+    }));
+
     const total = await db.providerOrder.count({ where });
 
     // Get order statistics
@@ -152,7 +183,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
-      orders,
+      orders: ordersWithCourier,
       pagination: {
         total,
         limit,
@@ -328,21 +359,9 @@ export async function POST(request: NextRequest) {
     });
 
     // Log to fraud detection
-    await logSuspiciousActivity({
-      entityType: 'HEALTH_PROVIDER',
-      entityId: providerId,
-      activityType: 'ORDER_CREATED',
-      activityCategory: 'TRANSACTION',
-      referenceType: 'PROVIDER_ORDER',
-      referenceId: order.id,
-      metadata: {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        orderType,
-        totalAmount,
-        itemCount: parsedItems.length,
-      },
-    });
+    // (An order being placed is not a fraud signal, and SuspiciousActivityType
+    // has no member for it — the removed call could never have been stored even
+    // with a working URL. The audit log below already records the event.)
 
     // Create audit log
     await db.auditLog.create({

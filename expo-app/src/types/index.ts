@@ -78,9 +78,15 @@ export interface Task {
   pickupAddress: string;
   pickupLatitude?: number;
   pickupLongitude?: number;
+  /** The shop, restaurant or pharmacy the courier is collecting from. */
+  pickupContactName?: string | null;
+  pickupContactPhone?: string | null;
   dropoffAddress: string;
   dropoffLatitude?: number;
   dropoffLongitude?: number;
+  /** Who is receiving it. */
+  dropoffContactName?: string | null;
+  dropoffContactPhone?: string | null;
 
   distanceKm?: number;
   estimatedDuration?: number;

@@ -28,6 +28,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
+import { useStorefrontLive } from '@/src/hooks/useStorefrontLive';
 import { GRADIENTS, SPACING, RADIUS, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
@@ -123,6 +124,51 @@ export default function PharmacyDetailScreen() {
     await loadPharmacy();
     setRefreshing(false);
   };
+
+  /**
+   * The shop the customer is standing in, kept true underneath them.
+   *
+   * This is the screen where it matters most: a customer here is choosing what
+   * to buy. If the pharmacy shuts, or an item goes out of stock or changes
+   * price while they are deciding, the basket they build is already invalid —
+   * and they would only discover it at checkout. Availability is patched in
+   * place; a catalogue change reloads the products, because a price or a new
+   * item cannot be inferred from the event alone.
+   */
+  useStorefrontLive({
+    onMerchantAvailability: ({ merchantId, isOpen }) => {
+      if (merchantId !== id) return;
+      setPharmacy((prev: any) => (prev ? { ...prev, isOpen } : prev));
+    },
+    onProviderAvailability: ({ providerId, isOpen }) => {
+      if (providerId !== id) return;
+      setPharmacy((prev: any) => (prev ? { ...prev, isOpen } : prev));
+    },
+    onProviderCatalog: (e) => {
+      if (e.providerId !== id) return;
+      // A price or availability change is enough to patch; anything else needs
+      // the real record.
+      if (e.change === 'UPDATED' && e.medicineId) {
+        setProducts((prev: any[]) =>
+          prev.map((p) =>
+            p.id === e.medicineId
+              ? {
+                  ...p,
+                  ...(e.price != null ? { price: e.price } : {}),
+                  ...(e.isAvailable != null ? { isAvailable: e.isAvailable } : {}),
+                }
+              : p
+          )
+        );
+        return;
+      }
+      loadPharmacy();
+    },
+    onMerchantMenu: (e) => {
+      if (e.merchantId !== id) return;
+      loadPharmacy();
+    },
+  });
 
   const addToCart = (product: Product) => {
     const cartItem: CartItem = {

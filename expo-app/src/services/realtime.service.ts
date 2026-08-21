@@ -30,6 +30,11 @@ interface IncomingRequest {
     dropoffAddress: string;
     pickupLatitude: number;
     pickupLongitude: number;
+    /** The shop, restaurant or pharmacy the courier collects from. */
+    pickupContactName?: string | null;
+    pickupContactPhone?: string | null;
+    dropoffContactName?: string | null;
+    dropoffContactPhone?: string | null;
     dropoffLatitude?: number;
     dropoffLongitude?: number;
     totalAmount: number;
@@ -646,6 +651,44 @@ class RealtimeService {
   // ==========================================
   // EVENT LISTENERS (same API as before)
   // ==========================================
+
+  /**
+   * The storefront channel: what every shop on the platform is doing right now.
+   *
+   * A customer browsing has no single store to subscribe to, so availability
+   * and catalogue changes ride one low-volume global channel. Joined once and
+   * kept — the events are a handful an hour per shop, and the alternative is a
+   * customer ordering from a pharmacy that shut ten minutes ago.
+   */
+  joinStorefront(): void {
+    const channelName = 'storefront';
+    if (this.channels.has(channelName)) return;
+    if (!this._connected) return;
+
+    const channel = this.createChannel(channelName);
+    for (const event of [
+      'provider:availability',
+      'merchant:availability',
+      'provider:catalog',
+      'merchant:menu',
+      'provider:profile',
+    ]) {
+      channel.on('broadcast', { event }, (payload: { payload: unknown }) => {
+        this.emitLocal(event, payload.payload);
+        // A single event any screen can listen to when it does not care which
+        // kind of shop changed, only that its list is now out of date.
+        this.emitLocal('storefront:changed', { event, data: payload.payload });
+      });
+    }
+    console.log('[Realtime] Joined storefront channel');
+  }
+
+  leaveStorefront(): void {
+    const channel = this.channels.get('storefront');
+    if (!channel) return;
+    this.supabase?.removeChannel(channel);
+    this.channels.delete('storefront');
+  }
 
   on(event: string, callback: Function): () => void {
     if (!this.listeners.has(event)) {

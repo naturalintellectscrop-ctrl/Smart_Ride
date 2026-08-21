@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { logSuspiciousActivity } from '@/lib/fraud/log-activity';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { Prisma } from '@prisma/client';
@@ -189,13 +188,18 @@ export async function POST(request: NextRequest) {
     });
 
     // Log to fraud detection system
-    await logSuspiciousActivity({
-      entityType: 'PHARMACY',
-      entityId: provider.id,
-      activityType: 'PROVIDER_REGISTRATION',
-      activityCategory: 'ACCOUNT_ACTIVITY',
-      metadata: { providerType, licenseNumber, city, district },
-    });
+    await db.auditLog
+      .create({
+        data: {
+          actorType: 'USER',
+          action: 'PROVIDER_REGISTERED',
+          entityType: 'HEALTH_PROVIDER',
+          entityId: provider.id,
+          description: `Health provider registered: ${provider.businessName} (${providerType})`,
+          newValues: JSON.stringify({ providerType, licenseNumber, city, district }),
+        },
+      })
+      .catch((e) => console.error('[health-provider] registration audit failed:', e));
 
     return NextResponse.json({
       success: true,

@@ -7,7 +7,12 @@
 import { NextRequest } from 'next/server';
 import { GET as menuGET } from '../menu/route';
 
-export async function GET(request: NextRequest) {
-  // Delegate to the menu handler
-  return menuGET(request);
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  // Delegate to the menu handler — including the route params, which were not
+  // being forwarded. The handler reads `{ params }` to know WHICH merchant, so
+  // every request through this alias threw before it reached the database.
+  return menuGET(request, context);
 }

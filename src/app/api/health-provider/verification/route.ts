@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { logSuspiciousActivity } from '@/lib/fraud/log-activity';
 import { allAdminsGuard } from '@/lib/auth/admin-guards';
 import { enumParam } from '@/lib/api/enum-params';
 import { VerificationStatus, HealthProviderType } from '@prisma/client';
@@ -155,18 +154,24 @@ export async function PATCH(request: NextRequest) {
 
     // Log to fraud detection system
     if (action === 'REJECT' || action === 'SUSPEND') {
-      await logSuspiciousActivity({
-        entityType: provider.providerType === 'PHARMACY' ? 'PHARMACY' : 'HEALTH_PROVIDER',
-        entityId: providerId,
-        activityType: action === 'REJECT' ? 'VERIFICATION_REJECTED' : 'ACCOUNT_SUSPENDED',
-        activityCategory: 'ACCOUNT_ACTIVITY',
-        metadata: {
-          businessName: provider.businessName,
-          providerType: provider.providerType,
-          licenseNumber: provider.licenseNumber,
-          reason: rejectionReason || notes,
-        },
-      });
+      await db.auditLog
+        .create({
+          data: {
+            actorType: 'ADMIN',
+            action: action === 'REJECT' ? 'PROVIDER_REJECTED' : 'PROVIDER_SUSPENDED',
+            entityType: 'HEALTH_PROVIDER',
+            entityId: providerId,
+            description:
+              `${provider.businessName} ${action === 'REJECT' ? 'rejected' : 'suspended'}` +
+              `${rejectionReason || notes ? ` — ${rejectionReason || notes}` : ''}`,
+            newValues: JSON.stringify({
+              providerType: provider.providerType,
+              licenseNumber: provider.licenseNumber,
+              reason: rejectionReason || notes,
+            }),
+          },
+        })
+        .catch((e) => console.error('[health-provider] verification audit failed:', e));
     }
 
     // Send notification to provider

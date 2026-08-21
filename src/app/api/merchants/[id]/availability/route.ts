@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { MerchantOnboardingService } from '@/lib/merchant/merchant-onboarding.service';
 import { verifyAccessToken } from '@/lib/auth/jwt';
 import { db, setRLSContext, resetRLSContext, setServiceRoleContext } from '@/lib/db';
+import { announceMerchantAvailability } from '@/lib/realtime/storefront';
 
 export async function PATCH(
   request: NextRequest,
@@ -95,6 +96,15 @@ export async function PATCH(
         { status: 400 }
       );
     }
+
+    // Same reason as the pharmacy pill: a shop that closes has to disappear
+    // from the customer's list without them doing anything.
+    announceMerchantAvailability({
+      merchantId: updatedMerchant.id,
+      isOpen: updatedMerchant.isOpen,
+      name: updatedMerchant.name,
+      status: updatedMerchant.status,
+    });
 
     return NextResponse.json({
       success: true,

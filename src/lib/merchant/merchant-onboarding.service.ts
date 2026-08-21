@@ -317,6 +317,37 @@ export class MerchantOnboardingService {
       });
     }
 
+    // ── PHARM-3: approval has to reach BOTH halves of a pharmacy ────────────
+    //
+    // A pharmacy is a Merchant(type=PHARMACY) + Pharmacy for the approval gate,
+    // and a HealthProvider for everything it actually does. Approving the
+    // merchant alone left the provider PENDING, and the order and catalogue
+    // routes refuse an unapproved provider — so an admin could approve a
+    // pharmacy, the pharmacist would be let into the dashboard, and every
+    // pharmacy feature would still turn them away. The decision is one
+    // decision; it is recorded on both rows.
+    if (merchant.type === 'PHARMACY' && merchant.userId) {
+      const providerStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
+      await db.healthProvider
+        .updateMany({
+          where: { userId: merchant.userId },
+          data: {
+            verificationStatus: providerStatus,
+            ...(action === 'APPROVE'
+              ? { verifiedAt: new Date(), verifiedBy: adminId }
+              : { rejectionReason: reason || notes || 'Rejected during merchant verification' }),
+          },
+        })
+        .catch((e) => console.error('[Merchant] pharmacy provider approval mirror failed:', e));
+
+      await db.pharmacy
+        .updateMany({
+          where: { merchantId },
+          data: { status: action === 'APPROVE' ? 'APPROVED' : 'REJECTED' },
+        })
+        .catch((e) => console.error('[Merchant] pharmacy status mirror failed:', e));
+    }
+
     // Create audit log
     await createAuditLog({
       action: action === 'APPROVE' ? AuditActions.MERCHANT_APPROVED : AuditActions.MERCHANT_REJECTED,

@@ -318,7 +318,8 @@ export default function DriverTaskScreen() {
     ]);
   };
 
-  const handleCall = () => {
+  /** In-app voice call to the customer. */
+  const callCustomer = () => {
     if (!task?.clientId || !conversationId) {
       Alert.alert('Not available yet', 'Customer contact is not available for this job.');
       return;
@@ -327,6 +328,50 @@ export default function DriverTaskScreen() {
       `/call/${task.clientId}?name=${encodeURIComponent(
         firstName(task.client?.name, 'Customer')
       )}&conversationId=${conversationId}&taskId=${task.id}`
+    );
+  };
+
+  /** Dial the shop, restaurant or pharmacy being collected from. */
+  const callPickup = () => {
+    const phone = task?.pickupContactPhone;
+    if (!phone) {
+      Alert.alert(
+        'No number on file',
+        `${task?.pickupContactName || 'The pickup point'} has not given a contact number.`
+      );
+      return;
+    }
+    Linking.openURL(`tel:${phone}`).catch(() =>
+      Alert.alert('Could not start the call', `Dial ${phone} from your phone instead.`)
+    );
+  };
+
+  /**
+   * Who the courier needs to reach depends on where they are in the job.
+   *
+   * Before pickup it is almost always the shop — the parcel is not ready, the
+   * shutter is down, the courier cannot find the door. After pickup it is the
+   * customer. Both were unreachable except the customer, so a courier stuck
+   * outside a closed pharmacy had no way to ask anyone about it.
+   */
+  const handleCall = () => {
+    const beforePickup = !!task && !['PICKED_UP', 'IN_TRANSIT', 'DELIVERING', 'DELIVERED', 'COMPLETED'].includes(task.status);
+    const pickupLabel = task?.pickupContactName
+      ? `Call ${task.pickupContactName}`
+      : 'Call the pickup point';
+
+    const options = [
+      { text: pickupLabel, onPress: callPickup },
+      { text: 'Call the customer', onPress: callCustomer },
+      { text: 'Cancel', style: 'cancel' as const },
+    ];
+    // The likely party first, rather than making the courier read both.
+    Alert.alert(
+      'Who do you need?',
+      beforePickup
+        ? 'You have not collected this order yet.'
+        : 'The order is with you.',
+      beforePickup ? options : [options[1], options[0], options[2]]
     );
   };
 
@@ -540,12 +585,22 @@ export default function DriverTaskScreen() {
         {/* Progress trail */}
         <JourneyProgress task={task} />
 
-        {/* Route */}
+        {/* Route.
+            The PLACE first, then the address. A courier arriving at a parade of
+            shops needs "Kyebando Pharmacy", not "Plot 1, Kampala" — the name is
+            what is written above the door, and the address only narrows down
+            which street to be on. Both flows already store the business name in
+            pickupContactName; nothing was showing it. */}
         <View style={styles.routeBlock}>
           <View style={styles.routeRow}>
             <View style={[styles.routeDot, { backgroundColor: COLORS.secondary }]} />
             <View style={styles.routeText}>
               <Text style={styles.routeLabel}>Pickup</Text>
+              {task.pickupContactName ? (
+                <Text style={styles.routePlace} numberOfLines={1}>
+                  {task.pickupContactName}
+                </Text>
+              ) : null}
               <Text style={styles.routeAddress}>{task.pickupAddress}</Text>
             </View>
           </View>
@@ -554,6 +609,11 @@ export default function DriverTaskScreen() {
             <View style={[styles.routeDot, { backgroundColor: COLORS.primary }]} />
             <View style={styles.routeText}>
               <Text style={styles.routeLabel}>Drop-off</Text>
+              {task.dropoffContactName ? (
+                <Text style={styles.routePlace} numberOfLines={1}>
+                  {task.dropoffContactName}
+                </Text>
+              ) : null}
               <Text style={styles.routeAddress}>{task.dropoffAddress}</Text>
             </View>
           </View>
@@ -677,6 +737,12 @@ const createStyles = (COLORS: ThemedColors) =>
       ...TYPOGRAPHY.bodySm,
       color: COLORS.onSurface,
       fontWeight: '500',
+    },
+    routePlace: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: COLORS.onSurface,
+      marginBottom: 1,
     },
     routeConnector: {
       marginLeft: 5,

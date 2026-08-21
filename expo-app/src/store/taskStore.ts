@@ -22,6 +22,13 @@ export interface IncomingRequest {
     pickupLongitude: number;
     dropoffLatitude?: number;
     dropoffLongitude?: number;
+    /** The shop, restaurant or pharmacy being collected from, and who receives
+     *  it. A courier weighing up an offer recognises a NAME; an address only
+     *  tells them which street to be on. */
+    pickupContactName?: string | null;
+    pickupContactPhone?: string | null;
+    dropoffContactName?: string | null;
+    dropoffContactPhone?: string | null;
     totalAmount: number;
     /** The driver's share. The offer sheet must quote this, never the fare. */
     riderEarnings?: number;

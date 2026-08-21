@@ -897,6 +897,14 @@ export default function DriverHomeScreen() {
                 <View style={styles.pickupDot} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.routeLabel}>Pickup</Text>
+                  {/* The shop's name before its address — a courier deciding
+                      whether to take a job knows "Kyebando Pharmacy" and does
+                      not know "Plot 1". */}
+                  {incomingRequest.task?.pickupContactName ? (
+                    <Text style={styles.routePlace} numberOfLines={1}>
+                      {incomingRequest.task.pickupContactName}
+                    </Text>
+                  ) : null}
                   <Text style={styles.routeAddr} numberOfLines={1}>{incomingRequest.pickup?.address || 'Pickup location'}</Text>
                 </View>
               </View>
@@ -905,6 +913,11 @@ export default function DriverHomeScreen() {
                 <View style={styles.dropoffDot} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.routeLabel}>Dropoff</Text>
+                  {incomingRequest.task?.dropoffContactName ? (
+                    <Text style={styles.routePlace} numberOfLines={1}>
+                      {incomingRequest.task.dropoffContactName}
+                    </Text>
+                  ) : null}
                   <Text style={styles.routeAddr} numberOfLines={1}>{incomingRequest.task?.dropoffAddress || 'Dropoff location'}</Text>
                 </View>
               </View>
@@ -1108,6 +1121,11 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   routeConnector: { width: 2, height: 18, backgroundColor: COLORS.outlineVariant, marginLeft: 5, marginVertical: 2 },
   routeLabel: { ...TYPOGRAPHY.labelMd, color: COLORS.onSurfaceVariant, fontWeight: '600' },
   routeAddr: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurface, fontWeight: '600' },
+    routePlace: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: COLORS.onSurface,
+    },
 
   fareRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: SPACING.md },
   fareLabel: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant },

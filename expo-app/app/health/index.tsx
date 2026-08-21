@@ -25,6 +25,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
+import { useStorefrontLive } from '@/src/hooks/useStorefrontLive';
 import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, MOTION, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
@@ -120,6 +121,29 @@ export default function HealthScreen() {
     await loadData();
     setRefreshing(false);
   };
+
+  /**
+   * Keep this list true while the customer is reading it.
+   *
+   * A pharmacy that closes stops taking orders the moment it does, but the
+   * card in front of the customer went on saying OPEN until they pulled to
+   * refresh — so they would tap through, build an order and be refused by a
+   * server that knew better than the screen. The open state is patched in
+   * place rather than refetched: nothing else about the shop has changed, and
+   * a list that reshuffles under someone's thumb is its own problem.
+   */
+  useStorefrontLive({
+    onMerchantAvailability: ({ merchantId, isOpen }) => {
+      setPharmacies((prev) =>
+        prev.map((p) => (p.id === merchantId ? { ...p, isOpen } : p))
+      );
+    },
+    onProviderAvailability: ({ providerId, isOpen }) => {
+      setPharmacies((prev) =>
+        prev.map((p) => (p.id === providerId ? { ...p, isOpen } : p))
+      );
+    },
+  });
 
   // Filter pharmacies by search query
   const searchFiltered = searchQuery.trim().length > 0

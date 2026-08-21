@@ -29,6 +29,11 @@ interface IncomingRequest {
     dropoffAddress: string;
     pickupLatitude: number;
     pickupLongitude: number;
+    /** The shop, restaurant or pharmacy the courier collects from. */
+    pickupContactName?: string | null;
+    pickupContactPhone?: string | null;
+    dropoffContactName?: string | null;
+    dropoffContactPhone?: string | null;
     dropoffLatitude?: number;
     dropoffLongitude?: number;
     totalAmount: number;

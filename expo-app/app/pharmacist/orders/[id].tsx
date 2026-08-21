@@ -12,7 +12,15 @@
 // ============================================
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Linking,
+} from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/services';
@@ -337,9 +345,44 @@ export default function OrderDetailScreen() {
             <PayLine label="Delivered" value={formatDate(order.deliveredAt)} />
           ) : null}
           {order.riderId ? (
-            <View style={styles.courierRow}>
-              <Ionicons name="bicycle" size={16} color={COLORS.primary} />
-              <Text style={styles.courierText}>A courier has been assigned to this order.</Text>
+            /* Who is carrying it, and a way to reach them. The pharmacist could
+               see that a courier existed and had no name or number for them, so
+               "where is my order" had no answer on either side. */
+            <View style={styles.courierBlock}>
+              <View style={styles.courierRow}>
+                <View style={styles.courierChip}>
+                  <Ionicons name="bicycle" size={17} color={COLORS.primary} />
+                </View>
+                <View style={styles.courierInfo}>
+                  <Text style={styles.courierName} numberOfLines={1}>
+                    {order.courier?.fullName || 'Courier assigned'}
+                  </Text>
+                  <Text style={styles.courierMeta} numberOfLines={1}>
+                    {order.deliveryTask?.taskNumber
+                      ? `${order.deliveryTask.taskNumber}`
+                      : 'On the way to collect this order'}
+                    {order.courier?.vehicleType ? ` · ${order.courier.vehicleType}` : ''}
+                  </Text>
+                </View>
+              </View>
+              {order.courier?.phone ? (
+                <TouchableOpacity
+                  style={styles.courierCall}
+                  onPress={() =>
+                    Linking.openURL(`tel:${order.courier.phone}`).catch(() =>
+                      Alert.alert(
+                        'Could not start the call',
+                        `Dial ${order.courier.phone} from your phone instead.`
+                      )
+                    )
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel={`Call ${order.courier?.fullName || 'the courier'}`}
+                >
+                  <Ionicons name="call" size={16} color="#FFFFFF" />
+                  <Text style={styles.courierCallText}>Call the courier</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
           ) : order.status === 'READY_FOR_PICKUP' ? (
             <View style={styles.courierRow}>
@@ -544,15 +587,43 @@ const createStyles = (COLORS: ThemedColors) =>
     },
     rxButtonText: { fontSize: 13.5, fontWeight: '700', color: COLORS.primary },
 
+    courierBlock: {
+      marginTop: SPACING.gutter,
+      paddingTop: SPACING.gutter,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.outlineVariant,
+      gap: SPACING.gutter,
+    },
     courierRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 8,
+      gap: 10,
       marginTop: SPACING.gutter,
       paddingTop: SPACING.gutter,
       borderTopWidth: 1,
       borderTopColor: COLORS.outlineVariant,
     },
+    courierChip: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: `${COLORS.primary}22`,
+    },
+    courierInfo: { flex: 1, minWidth: 0 },
+    courierName: { fontSize: 14, fontWeight: '700', color: COLORS.onSurface },
+    courierMeta: { fontSize: 12, color: COLORS.onSurfaceVariant, marginTop: 1 },
+    courierCall: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 7,
+      paddingVertical: 11,
+      borderRadius: 999,
+      backgroundColor: COLORS.primary,
+    },
+    courierCallText: { color: '#FFFFFF', fontSize: 13.5, fontWeight: '700' },
     courierText: { flex: 1, fontSize: 12.5, color: COLORS.onSurfaceVariant },
 
     cancelTitle: { fontSize: 12, color: COLORS.onSurfaceVariant },
