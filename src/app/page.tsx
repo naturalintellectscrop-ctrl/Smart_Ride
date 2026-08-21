@@ -25,6 +25,7 @@ import { Reveal } from '@/components/marketing/Reveal';
 import { Parallax } from '@/components/marketing/Parallax';
 import { HowItWorks } from '@/components/marketing/HowItWorks';
 import { KampalaShowcase } from '@/components/marketing/KampalaShowcase';
+import { JourneyRail } from '@/components/marketing/JourneyRail';
 import { FarePreviewCard, TrackingPreviewCard } from '@/components/marketing/ProductPreviewCard';
 import {
   Bike,
@@ -184,6 +185,18 @@ const faqs = [
   },
 ];
 
+const journeyWaypoints = [
+  { id: 'hero', label: 'Start' },
+  { id: 'services', label: 'Services' },
+  { id: 'how-it-works', label: 'How it works' },
+  { id: 'kampala', label: 'See it in 3D' },
+  { id: 'why', label: 'Why us' },
+  { id: 'coverage', label: 'Coverage' },
+  { id: 'download', label: 'Download' },
+  { id: 'faq', label: 'FAQ' },
+  { id: 'contact', label: 'Contact' },
+];
+
 function LandingContent() {
   const { toast } = useToast();
   const reduceMotion = useReducedMotion();
@@ -247,6 +260,7 @@ function LandingContent() {
   return (
     <>
       <MarketingHeader />
+      <JourneyRail waypoints={journeyWaypoints} />
 
       {/* Hero */}
       <section id="hero" className="px-4 pb-20 pt-16 sm:px-6 sm:pt-24 lg:px-8 lg:pb-24">
@@ -449,19 +463,21 @@ function LandingContent() {
             </Reveal>
           </div>
 
-          <dl className="divide-y divide-mkt-border border-t border-mkt-border">
-            {benefits.map((b, i) => (
-              <Reveal key={b.title} delay={(i % 3) * 0.06}>
-                <div className="grid gap-2 py-6 sm:grid-cols-[1fr_1.4fr] sm:gap-8">
-                  <dt className="flex items-start gap-2.5">
-                    <b.icon className="mt-0.5 size-4 shrink-0 text-mkt-accent" />
-                    <span className="font-semibold text-mkt-fg">{b.title}</span>
-                  </dt>
-                  <dd className="text-sm leading-relaxed text-mkt-fg-muted">{b.description}</dd>
-                </div>
-              </Reveal>
-            ))}
-          </dl>
+          <Parallax speed={14}>
+            <dl className="divide-y divide-mkt-border border-t border-mkt-border">
+              {benefits.map((b, i) => (
+                <Reveal key={b.title} delay={(i % 3) * 0.06}>
+                  <div className="grid gap-2 py-6 sm:grid-cols-[1fr_1.4fr] sm:gap-8">
+                    <dt className="flex items-start gap-2.5">
+                      <b.icon className="mt-0.5 size-4 shrink-0 text-mkt-accent" />
+                      <span className="font-semibold text-mkt-fg">{b.title}</span>
+                    </dt>
+                    <dd className="text-sm leading-relaxed text-mkt-fg-muted">{b.description}</dd>
+                  </div>
+                </Reveal>
+              ))}
+            </dl>
+          </Parallax>
         </div>
       </Section>
 
@@ -477,6 +493,7 @@ function LandingContent() {
             </Reveal>
           </div>
 
+          <Parallax speed={14}>
           <ol className="divide-y divide-mkt-border border-t border-mkt-border">
             {verificationSteps.map((step, i) => (
               <Reveal key={step.title} delay={i * 0.08}>
@@ -492,6 +509,7 @@ function LandingContent() {
               </Reveal>
             ))}
           </ol>
+          </Parallax>
         </div>
       </Section>
 

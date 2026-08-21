@@ -29,7 +29,7 @@ const points = [
  */
 export function KampalaShowcase() {
   return (
-    <section className="relative overflow-hidden bg-[#0b0c0e] py-20 sm:py-24">
+    <section id="kampala" className="relative overflow-hidden bg-[#0b0c0e] py-20 sm:py-24">
       <Parallax speed={50} className="absolute inset-0">
         <div className="absolute inset-0 -top-16 opacity-40 sm:opacity-55">
           <Image

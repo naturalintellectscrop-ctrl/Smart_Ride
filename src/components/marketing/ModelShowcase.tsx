@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
 import { Bike, Car, Loader2, RotateCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -19,24 +20,45 @@ function ensureModelViewer() {
   return modelViewerRegistered;
 }
 
+const ORBIT_START = -60;
+const ORBIT_RANGE = 120;
+
 /**
  * Opt-in 3D preview. Neither the model-viewer library nor either .glb
  * (20-33MB) is fetched until the visitor explicitly taps to load one,
  * so the page's default weight is unaffected. See project findings on
  * Uganda's variable mobile-data conditions for why this stays opt-in.
+ *
+ * Once loaded, the model doesn't auto-spin: scrolling past this card
+ * turns it, so the same scroll that carries you through the journey
+ * is what moves the boda/car — movement illustrated by navigating,
+ * not a decorative constant rotation.
  */
 export function ModelShowcase() {
   const [active, setActive] = useState<ModelKey>('boda');
   const [loaded, setLoaded] = useState<Partial<Record<ModelKey, boolean>>>({});
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const rootRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const elementsRef = useRef<Partial<Record<ModelKey, HTMLElement>>>({});
+  const activeElRef = useRef<HTMLElement | null>(null);
+  const reduceMotion = useReducedMotion();
+
+  const { scrollYProgress } = useScroll({ target: rootRef, offset: ['start end', 'end start'] });
+  useMotionValueEvent(scrollYProgress, 'change', (v) => {
+    if (reduceMotion) return;
+    const el = activeElRef.current;
+    if (!el) return;
+    const angle = ORBIT_START + v * ORBIT_RANGE;
+    el.setAttribute('camera-orbit', `${angle.toFixed(1)}deg 70deg 105%`);
+  });
 
   useEffect(() => {
     const el = elementsRef.current[active];
     if (!el || !containerRef.current) return;
     containerRef.current.replaceChildren(el);
+    activeElRef.current = el;
   }, [active]);
 
   const handleLoad = async (key: ModelKey) => {
@@ -48,7 +70,7 @@ export function ModelShowcase() {
     el.setAttribute('src', MODELS[key].src);
     el.setAttribute('alt', `Smart Ride ${MODELS[key].label} 3D model`);
     el.setAttribute('camera-controls', '');
-    el.setAttribute('auto-rotate', '');
+    el.setAttribute('camera-orbit', `${ORBIT_START}deg 70deg 105%`);
     el.setAttribute('shadow-intensity', '1');
     el.setAttribute('exposure', '0.9');
     el.style.width = '100%';
@@ -66,13 +88,14 @@ export function ModelShowcase() {
     el.addEventListener('error', () => setStatus('error'));
 
     elementsRef.current[key] = el;
+    activeElRef.current = el;
     containerRef.current?.replaceChildren(el);
   };
 
   const activeLoaded = loaded[active];
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03]">
+    <div ref={rootRef} className="rounded-2xl border border-white/10 bg-white/[0.03]">
       <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3">
         <div className="flex gap-1.5">
           {(Object.keys(MODELS) as ModelKey[]).map((key) => {
@@ -98,7 +121,7 @@ export function ModelShowcase() {
         </div>
         <span className="flex items-center gap-1.5 text-[11px] text-white/40">
           <RotateCw className="size-3" />
-          Drag to rotate
+          Scroll or drag to turn
         </span>
       </div>
 
