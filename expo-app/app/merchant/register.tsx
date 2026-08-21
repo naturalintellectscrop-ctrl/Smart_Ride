@@ -16,24 +16,23 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
-  ScrollView,
   TouchableOpacity,
   ActivityIndicator,
   StyleSheet,
-  Image,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import {
-  AppHeader,
-  IconInput,
+  GradientButton,
+  UploadField,
 } from '@/src/components';
+import { AuthScreen, FieldCard } from '@/src/components/auth';
 import { Ionicons } from '@expo/vector-icons';
-import { pickImage } from '@/src/utils/imagePicker';
+import type { ImagePickerResult } from '@/src/utils/imagePicker';
 import { useAuthStore } from '@/src/store/authStore';
 
 const MERCHANT_TYPES = [
@@ -99,9 +98,15 @@ export default function MerchantRegisterScreen() {
     return () => { active = false; };
   }, []);
 
-  const uploadDoc = useCallback(async (key: DocKey) => {
-    const img = await pickImage({ aspect: [4, 3] });
-    if (!img) return;
+  // Driven by UploadField, which is what the rider wizard already uses. This
+  // screen used to call pickImage directly, so a merchant could only pick from
+  // the library while a rider could also use the camera. `null` means the user
+  // cleared the tile.
+  const handleDocChange = useCallback(async (key: DocKey, img: ImagePickerResult | null) => {
+    if (!img) {
+      setDocs(prev => ({ ...prev, [key]: null }));
+      return;
+    }
     setUploading(key);
     setError(null);
     try {
@@ -173,37 +178,16 @@ export default function MerchantRegisterScreen() {
     }
   };
 
-  const renderDocTile = (key: DocKey, label: string) => {
-    const url = docs[key];
-    const busy = uploading === key;
-    return (
-      <TouchableOpacity
-        style={[styles.docTile, url && styles.docTileDone]}
-        onPress={() => uploadDoc(key)}
-        disabled={busy}
-        activeOpacity={0.8}
-      >
-        {url ? (
-          <Image source={{ uri: url }} style={styles.docThumb} resizeMode="cover" />
-        ) : (
-          <View style={styles.docThumbPlaceholder}>
-            {busy ? (
-              <ActivityIndicator color={COLORS.primary} />
-            ) : (
-              <Ionicons name="cloud-upload-outline" size={22} color={COLORS.onSurfaceVariant} />
-            )}
-          </View>
-        )}
-        <View style={styles.docTileInfo}>
-          <Text style={styles.docTileLabel}>{label}</Text>
-          <Text style={[styles.docTileStatus, url && { color: COLORS.primary }]}>
-            {busy ? 'Uploading…' : url ? 'Uploaded — tap to replace' : 'Tap to upload'}
-          </Text>
-        </View>
-        {url ? <Ionicons name="checkmark-circle" size={20} color={COLORS.primary} /> : null}
-      </TouchableOpacity>
-    );
-  };
+  const renderDocTile = (key: DocKey, label: string) => (
+    <UploadField
+      key={key}
+      label={label}
+      value={docs[key]}
+      onChange={(file) => handleDocChange(key, file)}
+      uploading={uploading === key}
+      style={styles.field}
+    />
+  );
 
   if (checking) {
     return (
@@ -214,32 +198,32 @@ export default function MerchantRegisterScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <AppHeader
-        title={isPharmacy ? 'Register Pharmacy' : 'Become a Merchant'}
-        subtitle={
-          isPharmacy
-            ? 'Fulfil medicine orders on Smart Ride'
-            : 'Start receiving orders on Smart Ride'
-        }
-        onBack={() => router.back()}
-      />
-
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+    <AuthScreen
+      onBack={() => router.back()}
+      lead="Register your"
+      accent={isPharmacy ? 'pharmacy' : 'business'}
+      subtitle={
+        isPharmacy
+          ? 'Fulfil medicine orders on Smart Ride.'
+          : 'Start receiving orders on Smart Ride.'
+      }
+      showLockup={false}
+    >
         {/* Business Name */}
-        <IconInput
+        <FieldCard
           label={isPharmacy ? 'Pharmacy Name *' : 'Business Name *'}
           placeholder={isPharmacy ? 'Enter your pharmacy name' : 'Enter your business name'}
           value={businessName}
           onChangeText={setBusinessName}
-          icon="create-outline"
+          icon={isPharmacy ? 'medkit-outline' : 'storefront-outline'}
+          autoCapitalize="words"
+          style={styles.field}
         />
 
         {/* Business Type — locked to Pharmacy in pharmacy mode */}
         {!isPharmacy && (
           <>
-            <Text style={styles.formLabel}>Business Type *</Text>
+            <Text style={styles.groupLabel}>Business Type *</Text>
             <View style={styles.typeGrid}>
               {MERCHANT_TYPES.filter(t => t.key !== 'PHARMACY').map(type => (
                 <TouchableOpacity
@@ -258,66 +242,75 @@ export default function MerchantRegisterScreen() {
           </>
         )}
 
-        {/* Description */}
-        <IconInput
+        {/* Description. Every field on this screen used to pass
+            icon="create-outline", so a pencil sat next to the phone number and
+            the address alike. */}
+        <FieldCard
           label="Description"
           placeholder={isPharmacy ? 'Brief description of your pharmacy' : 'Brief description of your business'}
           value={description}
           onChangeText={setDescription}
-          icon="create-outline"
+          icon="document-text-outline"
           multiline
+          style={styles.field}
         />
 
         {/* Phone */}
-        <IconInput
+        <FieldCard
           label={isPharmacy ? 'Pharmacy Phone *' : 'Business Phone *'}
           placeholder="+256 700 000 000"
           value={phone}
           onChangeText={setPhone}
-          icon="create-outline"
+          icon="call-outline"
           keyboardType="phone-pad"
+          style={styles.field}
         />
 
         {/* Address */}
-        <IconInput
+        <FieldCard
           label={isPharmacy ? 'Pharmacy Address *' : 'Business Address *'}
           placeholder="Enter your address"
           value={address}
           onChangeText={setAddress}
-          icon="create-outline"
+          icon="location-outline"
+          style={styles.field}
         />
 
         {/* Pharmacy-specific licensing */}
         {isPharmacy && (
           <>
-            <IconInput
-          label="Pharmacy Licence Number *"
-          placeholder="e.g. NDA/PH/2024/0123"
-          value={pharmacyLicense}
-          onChangeText={setPharmacyLicense}
-          icon="create-outline"
-          autoCapitalize="characters"
-        />
-            <IconInput
-          label="Pharmacist In Charge *"
-          placeholder="Full name of the supervising pharmacist"
-          value={pharmacistInCharge}
-          onChangeText={setPharmacistInCharge}
-          icon="create-outline"
-        />
-            <IconInput
-          label="Pharmacist Licence Number *"
-          placeholder="Pharmacist's professional licence number"
-          value={pharmacistLicense}
-          onChangeText={setPharmacistLicense}
-          icon="create-outline"
-          autoCapitalize="characters"
-        />
+            <FieldCard
+              label="Pharmacy Licence Number *"
+              placeholder="e.g. NDA/PH/2024/0123"
+              value={pharmacyLicense}
+              onChangeText={setPharmacyLicense}
+              icon="ribbon-outline"
+              autoCapitalize="characters"
+              style={styles.field}
+            />
+            <FieldCard
+              label="Pharmacist In Charge *"
+              placeholder="Full name of the supervising pharmacist"
+              value={pharmacistInCharge}
+              onChangeText={setPharmacistInCharge}
+              icon="person-outline"
+              autoCapitalize="words"
+              style={styles.field}
+            />
+            <FieldCard
+              label="Pharmacist Licence Number *"
+              placeholder="Professional licence number"
+              value={pharmacistLicense}
+              onChangeText={setPharmacistLicense}
+              icon="card-outline"
+              autoCapitalize="characters"
+              style={styles.field}
+            />
           </>
         )}
 
         {/* Documents */}
-        <Text style={[styles.formLabel, { marginTop: SPACING.lg }]}>Documents *</Text>
+        <Text style={[styles.groupLabel, { marginTop: SPACING.lg }]}>Documents *</Text>
         <Text style={styles.docsHint}>
           Upload clear photos. These are reviewed by our team before approval.
         </Text>
@@ -334,17 +327,17 @@ export default function MerchantRegisterScreen() {
         )}
 
         {/* Submit Button */}
-        <TouchableOpacity
-          style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
+        <GradientButton
+          title="Submit Application"
           onPress={handleSubmit}
+          loading={isSubmitting}
           disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={COLORS.onPrimary} />
-          ) : (
-            <Text style={styles.submitButtonText}>Submit Application</Text>
-          )}
-        </TouchableOpacity>
+          size="lg"
+          shape="pill"
+          iconPosition="right"
+          icon={<Ionicons name="arrow-forward" size={ICON.md} color="#FFFFFF" />}
+          style={styles.cta}
+        />
 
         {/* Info Note */}
         <View style={styles.infoCard}>
@@ -355,9 +348,7 @@ export default function MerchantRegisterScreen() {
           </Text>
         </View>
 
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </View>
+    </AuthScreen>
   );
 }
 
@@ -368,23 +359,23 @@ export default function MerchantRegisterScreen() {
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background,
   },
   center: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scrollView: {
-    flex: 1,
+  // No marginBottom: AuthScreen already puts a gutter gap between its children.
+  field: {
+    width: '100%',
   },
-  scrollContent: {
-    padding: SPACING.md + 4,
-  },
-  formLabel: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '600',
+  groupLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
     marginBottom: SPACING.sm,
+    marginTop: SPACING.xs,
+  },
+  cta: {
     marginTop: SPACING.md,
   },
   typeGrid: {
@@ -423,48 +414,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     marginBottom: SPACING.sm,
     lineHeight: 18,
   },
-  docTile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm + 2,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.sm + 2,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    marginBottom: SPACING.sm,
-  },
-  docTileDone: {
-    borderColor: COLORS.primary,
-    backgroundColor: `${COLORS.primary}08`,
-  },
-  docThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceContainerHigh,
-  },
-  docThumbPlaceholder: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceContainerHigh,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  docTileInfo: {
-    flex: 1,
-  },
-  docTileLabel: {
-    color: COLORS.onSurface,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  docTileStatus: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.bodySm,
-    marginTop: 2,
-  },
   errorCard: {
     backgroundColor: `${COLORS.error}15`,
     borderRadius: RADIUS.md,
@@ -480,21 +429,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.error,
     ...TYPOGRAPHY.bodySm,
     flex: 1,
-  },
-  submitButton: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.lg,
-    alignItems: 'center',
-    marginTop: SPACING.lg + 4,
-  },
-  submitButtonDisabled: {
-    opacity: 0.6,
-  },
-  submitButtonText: {
-    color: COLORS.onPrimary,
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: '600',
   },
   infoCard: {
     backgroundColor: `${COLORS.tertiary}08`,

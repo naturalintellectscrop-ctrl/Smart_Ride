@@ -1,53 +1,58 @@
 // ============================================
 // SMART RIDE MOBILE - REGISTER SCREEN
 // ============================================
-// Premium, progressive-disclosure sign-up (Uber / Bolt / Material 3 feel):
-//   Step 1 — account details (name, email, phone, password) + Google / Phone
-//   Step 2 — "I want to join as": one elegant grouped selector
-//            (Client · Rider ▸ Boda/Car/Delivery · Business ▸ Merchant/Pharmacist)
+// Progressive-disclosure sign-up on the shared auth design language:
+//   Step 1 "Details" — account details (name, email, phone, password) + Google / Phone
+//   Step 2 "Role"    — "I want to join as": one grouped selector
+//            (Client / Rider > Boda/Car/Delivery / Business > Merchant/Pharmacist)
 //            + Terms + Create Account
 // Step 3 (extra info per account type) is the existing onboarding flow the
 // user is routed into after registration (/rider/onboarding, /merchant/register).
 //
-// Android-cursor safety: text fields are a self-contained memoized <Field/> that
-// keeps its own focus state, so typing in one field never re-renders/!jumps the
-// others. No Animated transforms wrap inputs.
+// Android-cursor safety: the text fields are FieldCard, a memoised leaf with
+// no focus state (see src/components/auth/FieldCard.tsx). The `trailing`
+// adornments are memoised too, otherwise a fresh JSX object every render
+// would defeat React.memo and put us back where we started. No Animated
+// transforms wrap the inputs.
 // ============================================
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
-  TextInput,
   TouchableOpacity,
-  KeyboardAvoidingView,
   Platform,
-  ScrollView,
   StyleSheet,
-  Image,
   Linking,
-  ActivityIndicator,
   LayoutAnimation,
   UIManager,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes, GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
 import { registerUser, isAuthenticated, loginWithGoogle, getAccessToken, getUserData } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
-import { SPACING, RADIUS, TYPOGRAPHY, SHADOWS, OPACITY, BORDER } from '../../src/constants';
+import { SPACING, RADIUS, TYPOGRAPHY, OPACITY, BORDER, ICON } from '../../src/constants';
 import { useTheme } from '../../src/context/theme-context';
-import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
-import SmartRideLogoImage from '../../assets/images/brand-mark.png';
+import { makeThemedColors, ThemedColors, withAlpha } from '../../src/theme/themedColors';
 import { navigateToRoleHome } from '../../src/utils/roleRouting';
+import { normalizePhone } from '../../src/utils/phone';
+import { validatePassword } from '../../src/utils/password';
+import { GradientButton } from '../../src/components/GradientButton';
+import {
+  AuthScreen,
+  FieldCard,
+  PhoneFieldCard,
+  PasswordStrength,
+  AuthDivider,
+  SocialButtons,
+} from '../../src/components/auth';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-// ── Account type model ────────────────────────────
-// Six backend roles grouped into three human-friendly choices.
+// Account type model: six backend roles grouped into three human-friendly choices.
 type RoleId = 'CLIENT' | 'RIDER' | 'DRIVER' | 'DELIVERY' | 'MERCHANT' | 'PHARMACIST';
 type GroupId = 'rider' | 'business';
 
@@ -63,72 +68,13 @@ const BUSINESS_OPTIONS: { id: RoleId; label: string; desc: string; icon: string 
 const RIDER_IDS: RoleId[] = ['RIDER', 'DRIVER', 'DELIVERY'];
 const BUSINESS_IDS: RoleId[] = ['MERCHANT', 'PHARMACIST'];
 
-// ============================================================
-// Self-contained text field (own focus state → no cursor jump)
-// ============================================================
-interface FieldProps {
-  label: string;
-  value: string;
-  onChangeText: (t: string) => void;
-  placeholder?: string;
-  icon: string;
-  COLORS: ThemedColors;
-  styles: ReturnType<typeof createStyles>;
-  keyboardType?: 'default' | 'email-address' | 'phone-pad';
-  autoCapitalize?: 'none' | 'words' | 'sentences';
-  secure?: boolean;
-  onToggleSecure?: () => void;
-  secureVisible?: boolean;
-  prefix?: string;
-  hint?: string;
-  editable?: boolean;
-  returnKeyType?: 'next' | 'done' | 'go';
-  onSubmitEditing?: () => void;
-}
-
-const Field = React.memo(function Field(props: FieldProps) {
-  const { label, value, onChangeText, placeholder, icon, COLORS, styles, keyboardType = 'default', autoCapitalize = 'none', secure, onToggleSecure, secureVisible, prefix, hint, editable = true, returnKeyType, onSubmitEditing } = props;
-  const [focused, setFocused] = useState(false);
-  return (
-    <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label}</Text>
-      <View style={[styles.inputWrap, focused && styles.inputWrapFocused]}>
-        <Ionicons name={icon as any} size={20} color={focused ? COLORS.primary : COLORS.onSurfaceVariant} style={styles.inputIcon} />
-        {prefix ? <Text style={styles.inputPrefix}>{prefix}</Text> : null}
-        <TextInput
-          style={styles.input}
-          value={value}
-          onChangeText={onChangeText}
-          placeholder={placeholder}
-          placeholderTextColor={COLORS.outline}
-          keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
-          autoCorrect={false}
-          secureTextEntry={secure && !secureVisible}
-          editable={editable}
-          returnKeyType={returnKeyType}
-          onSubmitEditing={onSubmitEditing}
-          onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
-          maxFontSizeMultiplier={1.3}
-        />
-        {secure ? (
-          <TouchableOpacity onPress={onToggleSecure} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Ionicons name={secureVisible ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.onSurfaceVariant} />
-          </TouchableOpacity>
-        ) : null}
-      </View>
-      {hint ? <Text style={styles.fieldHint}>{hint}</Text> : null}
-    </View>
-  );
-});
+const STEP_LABELS = ['Details', 'Role'];
 
 export default function RegisterScreen() {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
   const [step, setStep] = useState<1 | 2>(1);
 
@@ -174,16 +120,15 @@ export default function RegisterScreen() {
     }
   };
 
-  // ── Validation ───────────────────────────────
+  // Validation. The password rules come from src/utils/password.ts, which
+  // mirrors the server's validatePasswordStrength.
   const validateStep1 = (): boolean => {
     if (!name.trim()) { setError('Please enter your full name'); return false; }
     if (!email.trim()) { setError('Please enter your email'); return false; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Please enter a valid email'); return false; }
     if (!phone.trim()) { setError('Please enter your phone number'); return false; }
-    if (password.length < 8) { setError('Password must be at least 8 characters'); return false; }
-    if (!/[A-Z]/.test(password)) { setError('Password must contain at least one uppercase letter'); return false; }
-    if (!/[a-z]/.test(password)) { setError('Password must contain at least one lowercase letter'); return false; }
-    if (!/[0-9]/.test(password)) { setError('Password must contain at least one number'); return false; }
+    const passwordError = validatePassword(password);
+    if (passwordError) { setError(passwordError); return false; }
     if (password !== confirmPassword) { setError('Passwords do not match'); return false; }
     return true;
   };
@@ -205,7 +150,7 @@ export default function RegisterScreen() {
     }
   };
 
-  // ── Role selection ───────────────────────────
+  // Role selection
   const selectRole = useCallback((role: RoleId) => {
     setError(null);
     setSelectedRole(role);
@@ -216,7 +161,7 @@ export default function RegisterScreen() {
     setOpenGroup((cur) => (cur === group ? null : group));
   }, []);
 
-  // ── Submit (email/password registration) ─────
+  // Submit (email/password registration)
   const handleRegister = async () => {
     if (!validateStep1()) { setStep(1); return; }
     if (!agreedToTerms) { setError('Please agree to the Terms of Service and Privacy Policy'); return; }
@@ -224,7 +169,7 @@ export default function RegisterScreen() {
     setIsLoading(true);
     setError(null);
     try {
-      const formattedPhone = phone.startsWith('+') ? phone : `+256${phone.replace(/^0+/, '')}`;
+      const formattedPhone = phone.startsWith('+') ? phone : normalizePhone(phone);
       const result = await registerUser({
         name: name.trim(),
         email: email.trim().toLowerCase(),
@@ -256,7 +201,7 @@ export default function RegisterScreen() {
     }
   };
 
-  // ── Google ───────────────────────────────────
+  // Google
   const handleGoogleSignIn = async () => {
     if (!GoogleSignin) {
       setError('Google Sign-In is not available on this build. Please use phone or email registration.');
@@ -302,13 +247,48 @@ export default function RegisterScreen() {
     }
   };
 
-  const handlePhoneRegister = () => {
+  const handlePhoneRegister = useCallback(() => {
     router.push({ pathname: '/auth/phone-login', params: { purpose: 'register' } });
-  };
+  }, [router]);
 
   const busy = isLoading || googleLoading;
 
-  // ── Grouped selector row helpers ─────────────
+  // Memoised so FieldCard's React.memo actually holds. A fresh JSX object on
+  // every keystroke would re-render the field and reintroduce the caret jump.
+  const passwordToggle = useMemo(
+    () => (
+      <TouchableOpacity
+        onPress={() => setShowPassword((s) => !s)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+      >
+        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={ICON.md} color={COLORS.textMuted} />
+      </TouchableOpacity>
+    ),
+    [showPassword, COLORS.textMuted]
+  );
+
+  const confirmToggle = useMemo(
+    () => (
+      <TouchableOpacity
+        onPress={() => setShowConfirmPassword((s) => !s)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel={showConfirmPassword ? 'Hide password' : 'Show password'}
+      >
+        <Ionicons name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'} size={ICON.md} color={COLORS.textMuted} />
+      </TouchableOpacity>
+    ),
+    [showConfirmPassword, COLORS.textMuted]
+  );
+
+  const strengthFooter = useMemo(
+    () => <PasswordStrength password={password} />,
+    [password]
+  );
+
+  // Grouped selector row helpers
   const Radio = ({ on }: { on: boolean }) => (
     <View style={[styles.radio, on && styles.radioOn]}>{on ? <View style={styles.radioDot} /> : null}</View>
   );
@@ -353,460 +333,345 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
-      {/* App bar with 2-step progress */}
-      <View style={[styles.appBar, { paddingTop: Math.max(insets.top, 12) }]}>
-        <TouchableOpacity onPress={goBack} style={styles.backButton} activeOpacity={0.7} accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={22} color={COLORS.onSurface} />
-        </TouchableOpacity>
-        <View style={styles.progressTrack}>
-          <View style={styles.progressFill} />
-          <View style={[styles.progressFill, step === 2 ? styles.progressFillOn : styles.progressFillOff]} />
-        </View>
-        <Text style={styles.stepText}>{step} / 2</Text>
+    <AuthScreen
+      onBack={goBack}
+      step={{ current: step, labels: STEP_LABELS }}
+      lead={step === 1 ? 'Create your' : 'Choose your'}
+      accent={step === 1 ? 'account' : 'role'}
+      subtitle={
+        step === 1
+          ? 'Join Smart Ride and enjoy safe, reliable rides, deliveries and more.'
+          : 'Pick how you will use Smart Ride. You can change this later.'
+      }
+      showHero={step === 1}
+    >
+      {/* Always mounted so revealing an error never re-lays-out a live field. */}
+      <View style={[styles.errorBanner, !error && styles.hidden]}>
+        <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+        <Text style={styles.errorText}>{error || ''}</Text>
       </View>
 
-      <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: Math.max(insets.bottom + 24, 40) }]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Brand */}
-        <View style={styles.brandRow}>
-          <Image source={SmartRideLogoImage} style={styles.logo} resizeMode="contain" />
-          <View>
-            <Text style={styles.brandName}>Smart Ride</Text>
-            <Text style={styles.brandTag}>Drive. Deliver. Earn.</Text>
+      {step === 1 ? (
+        <>
+          <FieldCard
+            label="Full Name"
+            icon="person-outline"
+            placeholder="Enter your full name"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            autoComplete="name"
+            textContentType="name"
+            editable={!busy}
+            maxFontSizeMultiplier={1.3}
+          />
+
+          <FieldCard
+            label="Email"
+            icon="mail-outline"
+            placeholder="you@example.com"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            textContentType="emailAddress"
+            editable={!busy}
+            maxFontSizeMultiplier={1.3}
+          />
+
+          <PhoneFieldCard
+            value={phone}
+            onChangeText={setPhone}
+            editable={!busy}
+          />
+
+          <FieldCard
+            label="Password"
+            icon="lock-closed-outline"
+            placeholder="Create a password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="newPassword"
+            editable={!busy}
+            maxFontSizeMultiplier={1.3}
+            trailing={passwordToggle}
+            footer={strengthFooter}
+          />
+
+          <FieldCard
+            label="Confirm Password"
+            icon="lock-closed-outline"
+            placeholder="Re-enter your password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!showConfirmPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            textContentType="newPassword"
+            editable={!busy}
+            returnKeyType="done"
+            onSubmitEditing={goToStep2}
+            maxFontSizeMultiplier={1.3}
+            trailing={confirmToggle}
+          />
+
+          <GradientButton
+            title="Continue"
+            onPress={goToStep2}
+            disabled={busy}
+            size="lg"
+            shape="pill"
+            iconPosition="right"
+            icon={<Ionicons name="arrow-forward" size={ICON.md} color="#FFFFFF" />}
+            style={styles.cta}
+          />
+
+          <AuthDivider style={styles.divider} />
+
+          <SocialButtons
+            onGoogle={handleGoogleSignIn}
+            googleLoading={googleLoading}
+            onPhone={handlePhoneRegister}
+            disabled={busy}
+          />
+
+          <View style={styles.signInRow}>
+            <Text style={styles.signInText}>Already have an account? </Text>
+            <TouchableOpacity onPress={() => router.push('/auth/login')} disabled={busy} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}>
+              <Text style={styles.signInLink}>Sign In</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        </>
+      ) : (
+        <>
+          {/* Client, a direct choice */}
+          <TouchableOpacity style={[styles.groupCard, styles.clientCard, selectedRole === 'CLIENT' && styles.groupCardOn]} onPress={() => selectRole('CLIENT')} activeOpacity={0.85} accessibilityRole="radio" accessibilityState={{ selected: selectedRole === 'CLIENT' }}>
+            <View style={[styles.groupIconWrap, selectedRole === 'CLIENT' && styles.groupIconWrapOn]}>
+              <Ionicons name="person" size={20} color={selectedRole === 'CLIENT' ? COLORS.onPrimary : COLORS.primary} />
+            </View>
+            <View style={styles.optionText}>
+              <Text style={styles.groupLabel}>Client</Text>
+              <Text style={styles.optionDesc}>Ride, food, shopping & deliveries</Text>
+            </View>
+            <Radio on={selectedRole === 'CLIENT'} />
+          </TouchableOpacity>
 
-        {error ? (
-          <View style={styles.errorBanner}>
-            <Ionicons name="alert-circle" size={16} color={COLORS.error} />
-            <Text style={styles.errorText}>{error}</Text>
+          <GroupCard group="rider" icon="bicycle" label="Rider" desc="Earn on the road" options={RIDER_OPTIONS} />
+          <GroupCard group="business" icon="storefront" label="Business" desc="Sell & manage on Smart Ride" options={BUSINESS_OPTIONS} />
+
+          {/* Terms */}
+          <TouchableOpacity style={styles.termsRow} onPress={() => setAgreedToTerms((v) => !v)} activeOpacity={0.8}>
+            <View style={[styles.checkbox, agreedToTerms && styles.checkboxOn]}>
+              {agreedToTerms ? <Ionicons name="checkmark" size={15} color={COLORS.onPrimary} /> : null}
+            </View>
+            <Text style={styles.termsText}>
+              By creating an account you agree to our{' '}
+              <Text style={styles.termsLink} onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}>Terms of Service</Text>
+              {' '}and{' '}
+              <Text style={styles.termsLink} onPress={() => Linking.openURL('https://smartrideug.vercel.app/privacy')}>Privacy Policy</Text>.
+            </Text>
+          </TouchableOpacity>
+
+          <GradientButton
+            title="Create Account"
+            onPress={handleRegister}
+            loading={isLoading}
+            disabled={!agreedToTerms || busy}
+            size="lg"
+            shape="pill"
+            iconPosition="right"
+            icon={<Ionicons name="arrow-forward" size={ICON.md} color="#FFFFFF" />}
+            style={styles.cta}
+          />
+
+          <View style={styles.safeNote}>
+            <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.primary} />
+            <Text style={styles.safeNoteText}>Safe. Secure. Always. Your data is protected and never shared.</Text>
           </View>
-        ) : null}
-
-        {step === 1 ? (
-          <>
-            <Text style={styles.title}>Create your account</Text>
-            <Text style={styles.subtitle}>Join Smart Ride and enjoy safe, reliable rides, deliveries and more.</Text>
-
-            <Field label="Full Name" value={name} onChangeText={setName} placeholder="Enter your full name" icon="person-outline" autoCapitalize="words" COLORS={COLORS} styles={styles} editable={!busy} />
-            <Field label="Email" value={email} onChangeText={setEmail} placeholder="you@example.com" icon="mail-outline" keyboardType="email-address" COLORS={COLORS} styles={styles} editable={!busy} />
-            <Field label="Phone Number" value={phone} onChangeText={setPhone} placeholder="700 000 000" icon="call-outline" keyboardType="phone-pad" prefix="+256" COLORS={COLORS} styles={styles} editable={!busy} />
-            <Field label="Password" value={password} onChangeText={setPassword} placeholder="Create a password" icon="lock-closed-outline" secure secureVisible={showPassword} onToggleSecure={() => setShowPassword((s) => !s)} hint="Min 8 characters, with uppercase & a number" COLORS={COLORS} styles={styles} editable={!busy} />
-            <Field label="Confirm Password" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="Re-enter your password" icon="lock-closed-outline" secure secureVisible={showConfirmPassword} onToggleSecure={() => setShowConfirmPassword((s) => !s)} COLORS={COLORS} styles={styles} editable={!busy} returnKeyType="done" onSubmitEditing={goToStep2} />
-
-            <TouchableOpacity style={styles.cta} onPress={goToStep2} activeOpacity={0.9} disabled={busy}>
-              <Text style={styles.ctaText}>Continue</Text>
-              <Ionicons name="arrow-forward" size={20} color={COLORS.onPrimary} />
-            </TouchableOpacity>
-
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            <TouchableOpacity style={[styles.socialButton, styles.googleButton]} onPress={handleGoogleSignIn} disabled={busy} activeOpacity={0.85}>
-              {googleLoading ? <ActivityIndicator color={COLORS.googleBlue} /> : (<><Ionicons name="logo-google" size={20} color={COLORS.googleBlue} /><Text style={styles.googleText}>Continue with Google</Text></>)}
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.socialButton, styles.phoneButton]} onPress={handlePhoneRegister} disabled={busy} activeOpacity={0.85}>
-              <Ionicons name="call" size={19} color={COLORS.inverseOnSurface} />
-              <Text style={styles.phoneText}>Continue with Phone</Text>
-            </TouchableOpacity>
-
-            <View style={styles.signInRow}>
-              <Text style={styles.signInText}>Already have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/auth/login')} disabled={busy} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}>
-                <Text style={styles.signInLink}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
-          </>
-        ) : (
-          <>
-            <Text style={styles.title}>I want to join as</Text>
-            <Text style={styles.subtitle}>Choose how you&apos;ll use Smart Ride. You can change this later.</Text>
-
-            {/* Client — direct choice */}
-            <TouchableOpacity style={[styles.groupCard, styles.clientCard, selectedRole === 'CLIENT' && styles.groupCardOn]} onPress={() => selectRole('CLIENT')} activeOpacity={0.85} accessibilityRole="radio" accessibilityState={{ selected: selectedRole === 'CLIENT' }}>
-              <View style={[styles.groupIconWrap, selectedRole === 'CLIENT' && styles.groupIconWrapOn]}>
-                <Ionicons name="person" size={20} color={selectedRole === 'CLIENT' ? COLORS.onPrimary : COLORS.primary} />
-              </View>
-              <View style={styles.optionText}>
-                <Text style={styles.groupLabel}>Client</Text>
-                <Text style={styles.optionDesc}>Ride, food, shopping & deliveries</Text>
-              </View>
-              <Radio on={selectedRole === 'CLIENT'} />
-            </TouchableOpacity>
-
-            <GroupCard group="rider" icon="bicycle" label="Rider" desc="Earn on the road" options={RIDER_OPTIONS} />
-            <GroupCard group="business" icon="storefront" label="Business" desc="Sell & manage on Smart Ride" options={BUSINESS_OPTIONS} />
-
-            {/* Terms */}
-            <TouchableOpacity style={styles.termsRow} onPress={() => setAgreedToTerms((v) => !v)} activeOpacity={0.8}>
-              <View style={[styles.checkbox, agreedToTerms && styles.checkboxOn]}>
-                {agreedToTerms ? <Ionicons name="checkmark" size={15} color={COLORS.onPrimary} /> : null}
-              </View>
-              <Text style={styles.termsText}>
-                By creating an account you agree to our{' '}
-                <Text style={styles.termsLink} onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}>Terms of Service</Text>
-                {' '}and{' '}
-                <Text style={styles.termsLink} onPress={() => Linking.openURL('https://smartrideug.vercel.app/privacy')}>Privacy Policy</Text>.
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={[styles.cta, (!agreedToTerms || busy) && styles.ctaDisabled]} onPress={handleRegister} activeOpacity={0.9} disabled={!agreedToTerms || busy}>
-              {isLoading ? <ActivityIndicator color={COLORS.onPrimary} /> : (<><Text style={styles.ctaText}>Create Account</Text><Ionicons name="arrow-forward" size={20} color={COLORS.onPrimary} /></>)}
-            </TouchableOpacity>
-
-            <View style={styles.safeNote}>
-              <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.safeNoteText}>Safe. Secure. Always. Your data is protected and never shared.</Text>
-            </View>
-          </>
-        )}
-      </ScrollView>
-    </KeyboardAvoidingView>
+        </>
+      )}
+    </AuthScreen>
   );
 }
 
-const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.surface },
+const createStyles = (COLORS: ThemedColors) =>
+  StyleSheet.create({
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+      padding: SPACING.gutter,
+      borderRadius: RADIUS.lg,
+      borderWidth: BORDER.hairline,
+      borderColor: withAlpha(COLORS.error, 0.35),
+      backgroundColor: withAlpha(COLORS.error, 0.08),
+    },
+    hidden: {
+      display: 'none',
+    },
+    errorText: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.error,
+      flex: 1,
+    },
+    cta: {
+      marginTop: SPACING.sm,
+    },
+    divider: {
+      marginVertical: SPACING.sm,
+    },
 
-  // App bar + progress
-  appBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm, gap: SPACING.md },
-  backButton: { width: 40, height: 40, borderRadius: RADIUS.full, alignItems: 'center', justifyContent: 'center' },
-  progressTrack: { flex: 1, flexDirection: 'row', gap: 6 },
-  progressFill: { flex: 1, height: 4, borderRadius: 2, backgroundColor: COLORS.primary },
-  progressFillOn: { backgroundColor: COLORS.primary },
-  progressFillOff: { backgroundColor: COLORS.borderLight },
-  stepText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-  },
+    // Role selector
+    groupCard: {
+      borderRadius: RADIUS.lg,
+      borderWidth: BORDER.hairline,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.authCard,
+      overflow: 'hidden',
+    },
+    groupCardOn: {
+      borderColor: COLORS.primary,
+      backgroundColor: COLORS.authGutter,
+    },
+    clientCard: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.gutter,
+      padding: SPACING.md,
+    },
+    groupHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.gutter,
+      padding: SPACING.md,
+    },
+    groupIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: RADIUS.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: COLORS.authGutter,
+    },
+    groupIconWrapOn: {
+      backgroundColor: COLORS.primary,
+    },
+    groupLabel: {
+      ...TYPOGRAPHY.labelLg,
+      color: COLORS.onSurface,
+    },
+    groupBody: {
+      borderTopWidth: BORDER.hairline,
+      borderTopColor: COLORS.authHairline,
+    },
+    optionRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.gutter,
+      paddingVertical: SPACING.gutter,
+      paddingHorizontal: SPACING.md,
+    },
+    optionRowOn: {
+      backgroundColor: COLORS.authGutter,
+    },
+    optionText: {
+      flex: 1,
+    },
+    optionLabel: {
+      ...TYPOGRAPHY.bodyMd,
+      color: COLORS.onSurface,
+      fontWeight: '600',
+    },
+    optionLabelOn: {
+      color: COLORS.primary,
+    },
+    optionDesc: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.onSurfaceVariant,
+    },
+    radio: {
+      width: 22,
+      height: 22,
+      borderRadius: RADIUS.full,
+      borderWidth: BORDER.emphasis,
+      borderColor: COLORS.outlineVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    radioOn: {
+      borderColor: COLORS.primary,
+    },
+    radioDot: {
+      width: 10,
+      height: 10,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
 
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.sm,
-  },
+    // Terms
+    termsRow: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: SPACING.gutter,
+      marginTop: SPACING.sm,
+    },
+    checkbox: {
+      width: 22,
+      height: 22,
+      borderRadius: RADIUS.sm + 2,
+      borderWidth: BORDER.emphasis,
+      borderColor: COLORS.outlineVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: 1,
+    },
+    checkboxOn: {
+      backgroundColor: COLORS.primary,
+      borderColor: COLORS.primary,
+    },
+    termsText: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.onSurfaceVariant,
+      flex: 1,
+      lineHeight: 20,
+    },
+    termsLink: {
+      color: COLORS.primary,
+      fontWeight: '600',
+    },
 
-  brandRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-  logo: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.md,
-  },
-  brandName: {
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  brandTag: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.xs,
-  },
-
-  title: {
-    ...TYPOGRAPHY.displayLg,
-    color: COLORS.onSurface,
-  },
-  subtitle: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.errorContainer,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    marginBottom: SPACING.md,
-  },
-  errorText: {
-    flex: 1,
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.error,
-  },
-
-  // Fields
-  field: {
-    marginBottom: SPACING.md,
-  },
-  fieldLabel: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurface,
-    marginBottom: SPACING.sm,
-  },
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.lg,
-    borderWidth: BORDER.hairline,
-    borderColor: COLORS.borderLight,
-    paddingHorizontal: SPACING.md,
-    minHeight: 48,
-    justifyContent: 'center',
-  },
-  inputWrapFocused: {
-    borderColor: COLORS.primary,
-    borderWidth: BORDER.emphasis,
-    backgroundColor: COLORS.backgroundElevated,
-  },
-  inputIcon: {
-    marginRight: SPACING.sm,
-  },
-  inputPrefix: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurface,
-    marginRight: SPACING.sm,
-  },
-  input: {
-    flex: 1,
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurface,
-    paddingVertical: SPACING.sm,
-  },
-  fieldHint: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.xs,
-    marginLeft: SPACING.xs,
-  },
-
-  // Primary CTA
-  cta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    minHeight: 56,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.primary,
-    marginTop: SPACING.lg,
-    ...SHADOWS.button,
-  },
-  ctaDisabled: {
-    opacity: OPACITY.disabled,
-  },
-  ctaText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onPrimary,
-  },
-
-  // Divider + social
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    marginVertical: SPACING.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: BORDER.hairline,
-    backgroundColor: COLORS.borderLight,
-  },
-  dividerText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    letterSpacing: 1,
-  },
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    minHeight: 48,
-    borderRadius: RADIUS.xl,
-    marginBottom: SPACING.sm,
-  },
-  googleButton: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderWidth: BORDER.emphasis,
-    borderColor: COLORS.border,
-  },
-  googleText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurface,
-  },
-  phoneButton: {
-    backgroundColor: COLORS.inverseSurface,
-  },
-  phoneText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.inverseOnSurface,
-  },
-
-  signInRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.md,
-  },
-  signInText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-  },
-  signInLink: {
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-
-  // Grouped account selector
-  clientCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    paddingVertical: SPACING.md,
-  },
-  groupCard: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.lg,
-    borderWidth: BORDER.hairline,
-    borderColor: COLORS.borderLight,
-    paddingHorizontal: SPACING.md,
-    marginBottom: SPACING.sm,
-    overflow: 'hidden',
-  },
-  groupCardOn: {
-    borderColor: COLORS.primary,
-    borderWidth: BORDER.emphasis,
-    backgroundColor: COLORS.primaryContainer + '14',
-  },
-  groupHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    paddingVertical: SPACING.md,
-  },
-  groupIconWrap: {
-    width: 40,
-    height: 40,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surfaceContainerHigh,
-  },
-  groupIconWrapOn: {
-    backgroundColor: COLORS.primary,
-  },
-  groupLabel: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurface,
-  },
-  optionText: {
-    flex: 1,
-  },
-  optionDesc: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    marginTop: SPACING.xs,
-  },
-
-  groupBody: {
-    paddingBottom: SPACING.sm,
-    gap: SPACING.sm,
-  },
-  optionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.backgroundElevated,
-    borderWidth: BORDER.hairline,
-    borderColor: 'transparent',
-  },
-  optionRowOn: {
-    borderColor: COLORS.primary,
-    borderWidth: BORDER.emphasis,
-    backgroundColor: COLORS.primaryContainer + '10',
-  },
-  optionLabel: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurface,
-  },
-  optionLabelOn: {
-    color: COLORS.primary,
-  },
-
-  radio: {
-    width: 20,
-    height: 20,
-    borderRadius: RADIUS.full,
-    borderWidth: BORDER.emphasis,
-    borderColor: COLORS.outline,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioOn: {
-    borderColor: COLORS.primary,
-  },
-  radioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-
-  // Terms
-  termsRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: SPACING.md,
-    marginTop: SPACING.md,
-    marginBottom: SPACING.xs,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: RADIUS.sm,
-    borderWidth: BORDER.emphasis,
-    borderColor: COLORS.outline,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.xs,
-  },
-  checkboxOn: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  termsText: {
-    flex: 1,
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-  },
-  termsLink: {
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
-
-  safeNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    marginTop: SPACING.md,
-  },
-  safeNoteText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-  },
-});
+    // Footer bits
+    signInRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: SPACING.md,
+    },
+    signInText: {
+      ...TYPOGRAPHY.bodyMd,
+      color: COLORS.onSurfaceVariant,
+    },
+    signInLink: {
+      ...TYPOGRAPHY.bodyMd,
+      color: COLORS.primary,
+      fontWeight: '700',
+    },
+    safeNote: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+      marginTop: SPACING.md,
+      paddingHorizontal: SPACING.sm,
+      opacity: OPACITY.pressed,
+    },
+    safeNoteText: {
+      ...TYPOGRAPHY.labelMd,
+      color: COLORS.textMuted,
+      flex: 1,
+    },
+  });

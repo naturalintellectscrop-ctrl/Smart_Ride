@@ -1,46 +1,29 @@
 // ============================================
 // SMART RIDE MOBILE - RESET PASSWORD SCREEN
 // ============================================
-// Premium futuristic design matching login page
-// Glassmorphism + animated background + neon accents
-// Validates token from deep link / URL query param
-// Password strength indicator matching web admin
+// Validates the token from the deep link / URL query param, then sets a new
+// password. Three render states: success, invalid token, and the form.
+//
+// The password rules used to be a local 5-entry array here and a different
+// 4-entry array in change-password.tsx, so the same password could read
+// "Strong" on one screen and "Medium" on the other. Both now read from
+// src/utils/password.ts, which mirrors the server's validatePasswordStrength.
+//
+// The duplicated `animationDone ? <View> : <Animated.View>` card branches are
+// gone: AuthScreen animates the header only and never wraps the inputs.
 // ============================================
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  TouchableOpacity, 
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Animated,
-  Dimensions,
-  Easing,
-  Image,
-} from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { resetPassword } from '@/src/services/auth';
 import { useTheme } from '../../src/context/theme-context';
 import { ThemedColors, makeThemedColors, withAlpha } from '../../src/theme/themedColors';
-import SmartRideLogoImage from '../../assets/images/brand-mark.png';
-import { Ionicons } from '@expo/vector-icons';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, BORDER } from '../../src/constants';
-
-const { height } = Dimensions.get('window');
-
-// Password strength requirements (matching web admin)
-const PASSWORD_REQUIREMENTS = [
-  { key: 'length', label: 'At least 8 characters', test: (p: string) => p.length >= 8 },
-  { key: 'uppercase', label: 'One uppercase letter', test: (p: string) => /[A-Z]/.test(p) },
-  { key: 'lowercase', label: 'One lowercase letter', test: (p: string) => /[a-z]/.test(p) },
-  { key: 'number', label: 'One number', test: (p: string) => /[0-9]/.test(p) },
-  { key: 'match', label: 'Passwords match', test: (_p: string, confirm: string) => confirm.length > 0 && _p === confirm },
-];
+import { TYPOGRAPHY, SPACING, RADIUS, BORDER, ICON } from '../../src/constants';
+import { requirementsFor } from '../../src/utils/password';
+import { GradientButton } from '../../src/components';
+import { AuthScreen, FieldCard, PasswordStrength } from '../../src/components/auth';
 
 export default function ResetPasswordScreen() {
   const { isDark } = useTheme();
@@ -58,17 +41,6 @@ export default function ResetPasswordScreen() {
   const [success, setSuccess] = useState(false);
   const [tokenValid, setTokenValid] = useState<boolean | null>(null);
 
-  // Animation swap state — switches form wrapper to plain View after entrance
-  // animation completes to prevent Animated.View transforms from interfering
-  // with TextInput cursor on Android (pattern proven in register.tsx).
-  const [animationDone, setAnimationDone] = useState(false);
-
-  // Animation values
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
-  const logoFloat = useRef(new Animated.Value(0)).current;
-  const glowPulse = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     // Validate token on mount
     if (!token) {
@@ -77,74 +49,17 @@ export default function ResetPasswordScreen() {
     } else {
       setTokenValid(true);
     }
-
-    // Start entrance animations
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      // After entrance animation completes, swap form wrapper to plain View
-      // to prevent Animated.View transforms from causing cursor jitter on Android.
-      setAnimationDone(true);
-    });
-
-    // Logo floating animation
-    const logoLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(logoFloat, {
-          toValue: -8,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoFloat, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    logoLoop.start();
-
-    // Glow pulse animation
-    const glowLoop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(glowPulse, {
-          toValue: 1,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-        Animated.timing(glowPulse, {
-          toValue: 0,
-          duration: 2000,
-          easing: Easing.inOut(Easing.sin),
-          useNativeDriver: true,
-        }),
-      ])
-    );
-    glowLoop.start();
-
-    return () => {
-      logoLoop.stop();
-      glowLoop.stop();
-    };
   }, [token]);
 
-  const glowOpacity = glowPulse.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.8],
-  });
+  const handlePasswordChange = useCallback((text: string) => {
+    setNewPassword(text);
+    setError((current) => (current ? null : current));
+  }, []);
+
+  const handleConfirmChange = useCallback((text: string) => {
+    setConfirmPassword(text);
+    setError((current) => (current ? null : current));
+  }, []);
 
   const handleSubmit = async () => {
     setError(null);
@@ -159,7 +74,7 @@ export default function ResetPasswordScreen() {
     }
 
     // Validate password requirements
-    const failedReq = PASSWORD_REQUIREMENTS.find(r => !r.test(newPassword, confirmPassword));
+    const failedReq = requirementsFor(true).find((r) => !r.test(newPassword, confirmPassword));
     if (failedReq) {
       if (failedReq.key === 'match') {
         setError('Passwords do not match');
@@ -190,635 +105,224 @@ export default function ResetPasswordScreen() {
     }
   };
 
-  // Calculate overall password strength
-  const getPasswordStrength = () => {
-    const metCount = PASSWORD_REQUIREMENTS.filter(r => r.test(newPassword, confirmPassword)).length;
-    if (metCount <= 1) return { label: 'Weak', color: COLORS.error, percent: 20 };
-    if (metCount === 2) return { label: 'Fair', color: COLORS.warning, percent: 40 };
-    if (metCount === 3) return { label: 'Good', color: COLORS.tertiary, percent: 60 };
-    if (metCount === 4) return { label: 'Strong', color: COLORS.secondary, percent: 80 };
-    return { label: 'Very Strong', color: COLORS.success, percent: 100 };
-  };
+  const passwordToggle = useMemo(
+    () => (
+      <TouchableOpacity
+        onPress={() => setShowPassword((s) => !s)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+      >
+        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={ICON.md} color={COLORS.textMuted} />
+      </TouchableOpacity>
+    ),
+    [showPassword, COLORS.textMuted]
+  );
 
-  const strength = getPasswordStrength();
+  const confirmToggle = useMemo(
+    () => (
+      <TouchableOpacity
+        onPress={() => setShowConfirm((s) => !s)}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        accessibilityRole="button"
+        accessibilityLabel={showConfirm ? 'Hide password' : 'Show password'}
+      >
+        <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={ICON.md} color={COLORS.textMuted} />
+      </TouchableOpacity>
+    ),
+    [showConfirm, COLORS.textMuted]
+  );
 
-  const renderContent = () => {
-    if (success) {
-      return (
-        <View style={styles.successContainer}>
-          <View style={styles.successIconContainer}>
-            <Text style={styles.successIcon}>✓</Text>
-          </View>
-          <Text style={styles.successTitle}>Password Reset!</Text>
-          <Text style={styles.successMessage}>
-            Your password has been reset successfully. Redirecting to login...
-          </Text>
-          <TouchableOpacity 
-            style={styles.backToLoginButton}
-            onPress={() => router.replace('/auth/login')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.backToLoginButtonText}>Go to Login</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
+  const strengthFooter = useMemo(
+    () => <PasswordStrength password={newPassword} confirm={confirmPassword} />,
+    [newPassword, confirmPassword]
+  );
 
-    if (tokenValid === false) {
-      return (
-        <View style={styles.invalidTokenContainer}>
-          <View style={styles.invalidIconContainer}>
-            <Text style={styles.invalidIcon}>✕</Text>
-          </View>
-          <Text style={styles.invalidTitle}>Invalid Link</Text>
-          <Text style={styles.invalidMessage}>{error}</Text>
-          <TouchableOpacity 
-            style={styles.requestNewLinkButton}
-            onPress={() => router.replace('/auth/forgot-password')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.requestNewLinkButtonText}>Request New Link</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    // Reset form
+  // Success state
+  if (success) {
     return (
-      <>
-        <View style={styles.shieldContainer}>
-          <Ionicons name="shield-checkmark-outline" size={24} color={COLORS.primary} />
-        </View>
-        <Text style={styles.formTitle}>New Password</Text>
-        <Text style={styles.formSubtitle}>
-          Create a strong password for your account
-        </Text>
-
-        <View style={[styles.errorContainer, !error && styles.errorHidden]}>
-          <Ionicons name="alert-circle-outline" size={14} color={COLORS.error} />
-          <Text style={styles.errorText}>{error || ''}</Text>
-        </View>
-
-        {/* New Password Input */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>New Password</Text>
-          <View style={styles.inputWrapper}>
-            <Ionicons name="lock-closed-outline" size={14} color={COLORS.outlineVariant} style={{ paddingLeft: 14 }} />
-            <TextInput
-              style={styles.input}
-              placeholder="Min 8 chars, 1 uppercase, 1 number"
-              placeholderTextColor={COLORS.outlineVariant}
-              value={newPassword}
-              onChangeText={(text) => {
-                setNewPassword(text);
-                if (error) setError(null);
-              }}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              maxFontSizeMultiplier={1}
-              editable={!isLoading}
-            />
-            <TouchableOpacity 
-              onPress={() => setShowPassword(!showPassword)}
-              style={styles.eyeButton}
-            >
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={16} color={COLORS.outlineVariant} style={{ paddingHorizontal: 14, paddingVertical: 12 }} />
-            </TouchableOpacity>
+      <AuthScreen lead="Password" accent="reset" subtitle="Your password has been reset successfully. Redirecting to login.">
+        <View style={styles.stateCard}>
+          <View style={styles.stateIcon}>
+            <Ionicons name="checkmark-circle" size={36} color={COLORS.success} />
           </View>
+          <Text style={styles.stateTitle}>All set</Text>
+          <Text style={styles.stateBody}>You can now sign in with your new password.</Text>
         </View>
 
-        {/* Password Strength Bar */}
-        {newPassword.length > 0 && (
-          <View style={styles.strengthContainer}>
-            <View style={styles.strengthBarBackground}>
-              <View 
-                style={[
-                  styles.strengthBarFill, 
-                  { width: `${strength.percent}%`, backgroundColor: strength.color }
-                ]} 
-              />
-            </View>
-            <Text style={[styles.strengthLabel, { color: strength.color }]}>
-              {strength.label}
-            </Text>
-          </View>
-        )}
-
-        {/* Confirm Password Input */}
-        <View style={styles.inputGroup}>
-          <Text style={styles.label}>Confirm Password</Text>
-          <View style={styles.inputWrapper}>
-            <Ionicons name="lock-closed-outline" size={14} color={COLORS.outlineVariant} style={{ paddingLeft: 14 }} />
-            <TextInput
-              style={styles.input}
-              placeholder="Re-enter your new password"
-              placeholderTextColor={COLORS.outlineVariant}
-              value={confirmPassword}
-              onChangeText={(text) => {
-                setConfirmPassword(text);
-                if (error) setError(null);
-              }}
-              secureTextEntry={!showConfirm}
-              autoCapitalize="none"
-              autoCorrect={false}
-              maxFontSizeMultiplier={1}
-              editable={!isLoading}
-            />
-            <TouchableOpacity 
-              onPress={() => setShowConfirm(!showConfirm)}
-              style={styles.eyeButton}
-            >
-              <Ionicons name={showConfirm ? 'eye-off-outline' : 'eye-outline'} size={16} color={COLORS.outlineVariant} style={{ paddingHorizontal: 14, paddingVertical: 12 }} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Password Requirements Checklist */}
-        <View style={styles.requirementsContainer}>
-          <Text style={styles.requirementsTitle}>Password requirements:</Text>
-          {PASSWORD_REQUIREMENTS.map((req) => {
-            const met = req.test(newPassword, confirmPassword);
-            return (
-              <View key={req.key} style={styles.requirementRow}>
-                <View style={[styles.requirementDot, { backgroundColor: met ? COLORS.success : COLORS.outlineVariant }]} />
-                <Text style={[styles.requirementText, { color: met ? COLORS.secondary : COLORS.outline }]}>
-                  {req.label}
-                </Text>
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Submit Button */}
-        <TouchableOpacity 
-          style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
-          onPress={handleSubmit}
-          disabled={isLoading}
-          activeOpacity={0.8}
-        >
-          {isLoading ? (
-            <ActivityIndicator color={COLORS.onPrimary} size="small" />
-          ) : (
-            <Text style={styles.submitButtonText}>Reset Password</Text>
-          )}
-        </TouchableOpacity>
-      </>
+        <GradientButton
+          title="Go to Login"
+          onPress={() => router.replace('/auth/login')}
+          size="lg"
+          shape="pill"
+          style={styles.cta}
+        />
+      </AuthScreen>
     );
-  };
+  }
 
+  // Invalid token state
+  if (tokenValid === false) {
+    return (
+      <AuthScreen
+        onBack={() => router.back()}
+        lead="Invalid"
+        accent="link"
+        subtitle={error || 'This reset link is no longer valid.'}
+      >
+        <View style={styles.stateCard}>
+          <View style={[styles.stateIcon, styles.stateIconError]}>
+            <Ionicons name="close-circle" size={36} color={COLORS.error} />
+          </View>
+          <Text style={styles.stateTitle}>Link expired or already used</Text>
+          <Text style={styles.stateBody}>Request a fresh reset link and try again.</Text>
+        </View>
+
+        <GradientButton
+          title="Request New Link"
+          onPress={() => router.replace('/auth/forgot-password')}
+          size="lg"
+          shape="pill"
+          iconPosition="right"
+          icon={<Ionicons name="arrow-forward" size={ICON.md} color="#FFFFFF" />}
+          style={styles.cta}
+        />
+      </AuthScreen>
+    );
+  }
+
+  // Form state
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
+    <AuthScreen
+      onBack={() => router.back()}
+      lead="Set a new"
+      accent="password"
+      subtitle="Create a strong password for your Smart Ride account."
     >
-      {/* Animated Background */}
-      <View style={styles.backgroundGradient}>
-        <View style={styles.ambientGreen} />
-        <View style={styles.ambientCyan} />
-        <View style={styles.ambientPurple} />
+      {/* Always mounted so revealing an error never re-lays-out a live field. */}
+      <View style={[styles.errorBanner, !error && styles.hidden]}>
+        <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+        <Text style={styles.errorText}>{error || ''}</Text>
       </View>
 
-      <ScrollView 
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header with Logo */}
-        <Animated.View 
-          style={[
-            styles.header,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }
-          ]}
-        >
-          {/* Floating Logo */}
-          <Animated.View style={{ transform: [{ translateY: logoFloat }] }}>
-            <View style={styles.logoContainer}>
-              <Animated.View style={[styles.logoGlow, { opacity: glowOpacity }]} />
-              <Image
-                source={SmartRideLogoImage}
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
-            </View>
-          </Animated.View>
+      <FieldCard
+        label="New Password"
+        icon="lock-closed-outline"
+        placeholder="Create a password"
+        value={newPassword}
+        onChangeText={handlePasswordChange}
+        secureTextEntry={!showPassword}
+        autoCapitalize="none"
+        autoCorrect={false}
+        textContentType="newPassword"
+        editable={!isLoading}
+        maxFontSizeMultiplier={1.3}
+        trailing={passwordToggle}
+        footer={strengthFooter}
+      />
 
-          <Text style={styles.headerTitle}>Reset Password</Text>
-          <Text style={styles.headerSubtitle}>
-            Create a new secure password
-          </Text>
-        </Animated.View>
+      <FieldCard
+        label="Confirm Password"
+        icon="lock-closed-outline"
+        placeholder="Re-enter your password"
+        value={confirmPassword}
+        onChangeText={handleConfirmChange}
+        secureTextEntry={!showConfirm}
+        autoCapitalize="none"
+        autoCorrect={false}
+        textContentType="newPassword"
+        editable={!isLoading}
+        returnKeyType="done"
+        onSubmitEditing={handleSubmit}
+        maxFontSizeMultiplier={1.3}
+        trailing={confirmToggle}
+      />
 
-        {/* Form Card — Animated.View swapped to plain View after entrance animation
-            completes to prevent transforms from interfering with TextInput cursor on Android. */}
-        {animationDone ? (
-          <View style={styles.formCard}>
-            {renderContent()}
-          </View>
-        ) : (
-          <Animated.View 
-            style={[
-              styles.formCard,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              }
-            ]}
-          >
-            {renderContent()}
-          </Animated.View>
-        )}
+      <GradientButton
+        title="Reset Password"
+        onPress={handleSubmit}
+        loading={isLoading}
+        disabled={isLoading}
+        size="lg"
+        shape="pill"
+        iconPosition="right"
+        icon={<Ionicons name="arrow-forward" size={ICON.md} color="#FFFFFF" />}
+        style={styles.cta}
+      />
 
-        {/* Back to Login Link */}
-        {!success && (
-          <Animated.View 
-            style={[
-              styles.backContainer,
-              { opacity: fadeAnim }
-            ]}
-          >
-            <TouchableOpacity 
-              onPress={() => router.replace('/auth/login')}
-              disabled={isLoading}
-            >
-              <Text style={styles.backLink}>← Back to Login</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
-        {/* Security Notice */}
-        <Animated.View style={[styles.securityNotice, { opacity: fadeAnim }]}>
-          <Text style={styles.securityText}>
-            Secure reset • Smart Ride
-          </Text>
-        </Animated.View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <View style={styles.infoRow}>
+        <Ionicons name="shield-checkmark-outline" size={16} color={COLORS.primary} />
+        <Text style={styles.infoText}>
+          Your password is encrypted and never shared.
+        </Text>
+      </View>
+    </AuthScreen>
   );
 }
 
-const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
-  backgroundGradient: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  ambientGreen: {
-    position: 'absolute',
-    top: -80,
-    left: -60,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: withAlpha(COLORS.primary, 0.08),
-  },
-  ambientCyan: {
-    position: 'absolute',
-    bottom: -40,
-    right: -80,
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: COLORS.surfaceContainer,
-  },
-  ambientPurple: {
-    position: 'absolute',
-    top: height * 0.35,
-    right: -100,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: withAlpha(COLORS.tertiary, 0.05),
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: SPACING.lg,
-  },
-  header: {
-    alignItems: 'center',
-    paddingTop: SPACING.xl * 1.2,
-    paddingBottom: SPACING.lg,
-    paddingHorizontal: SPACING.md,
-  },
-  logoContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderWidth: BORDER.hairline,
-    borderColor: COLORS.outlineVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.lg,
-    overflow: 'hidden',
-  },
-  logoGlow: {
-    position: 'absolute',
-    top: -16,
-    left: -16,
-    right: -16,
-    bottom: -16,
-    borderRadius: RADIUS.xl,
-    backgroundColor: withAlpha(COLORS.primary, 0.12),
-  },
-  headerTitle: {
-    ...TYPOGRAPHY.displaySm,
-    color: COLORS.onSurface,
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.outline,
-    marginTop: SPACING.sm,
-  },
-  formCard: {
-    marginHorizontal: SPACING.lg,
-    marginTop: -SPACING.sm,
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.lg,
-    borderWidth: BORDER.hairline,
-    borderColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
-  },
-  shieldContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.md,
-    backgroundColor: withAlpha(COLORS.primary, 0.1),
-    alignItems: 'center',
-    justifyContent: 'center',
-    alignSelf: 'center',
-    marginBottom: SPACING.md,
-  },
-  formTitle: {
-    ...TYPOGRAPHY.headlineMd,
-    color: COLORS.onSurface,
-    letterSpacing: -0.5,
-    textAlign: 'center',
-    marginBottom: SPACING.xs,
-  },
-  formSubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.outlineVariant,
-    textAlign: 'center',
-    marginBottom: SPACING.lg,
-  },
-  logoImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-  },
-  errorContainer: {
-    backgroundColor: withAlpha(COLORS.error, 0.1),
-    borderColor: withAlpha(COLORS.error, 0.2),
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  // Always-rendered error container — zeroed-out style applied when no error
-  // so the container occupies no height, preventing layout shift on keystroke
-  // (which would cause Android cursor jitter).
-  errorHidden: {
-    opacity: 0,
-    height: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    marginTop: 0,
-    marginBottom: 0,
-    borderWidth: 0,
-    overflow: 'hidden',
-  },
-  errorText: {
-    color: COLORS.error,
-    fontSize: 13,
-    flex: 1,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    color: COLORS.onSurfaceVariant,
-    marginBottom: 8,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    overflow: 'hidden',
-  },
-  input: {
-    flex: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 15,
-    fontSize: 15,
-    color: COLORS.onSurface,
-  },
-  eyeButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  strengthContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 10,
-  },
-  strengthBarBackground: {
-    flex: 1,
-    height: 4,
-    backgroundColor: COLORS.surfaceContainerHigh,
-    borderRadius: 2,
-    overflow: 'hidden',
-  },
-  strengthBarFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  strengthLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    width: 75,
-    textAlign: 'right',
-  },
-  requirementsContainer: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: 12,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    marginBottom: 20,
-  },
-  requirementsTitle: {
-    color: COLORS.outline,
-    fontSize: 11,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  requirementRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  requirementDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  requirementText: {
-    fontSize: 12,
-  },
-  submitButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  submitButtonDisabled: {
-    backgroundColor: COLORS.primaryContainer,
-    opacity: 0.7,
-  },
-  submitButtonText: {
-    color: COLORS.onPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  successContainer: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  successIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: withAlpha(COLORS.primary, 0.12),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  successIcon: {
-    fontSize: 28,
-    color: COLORS.success,
-    fontWeight: 'bold',
-  },
-  successTitle: {
-    color: COLORS.onSurface,
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  successMessage: {
-    color: COLORS.onSurfaceVariant,
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
-    paddingHorizontal: 8,
-  },
-  backToLoginButton: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    shadowColor: COLORS.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  backToLoginButtonText: {
-    color: COLORS.onPrimary,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  invalidTokenContainer: {
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  invalidIconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: withAlpha(COLORS.error, 0.15),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  invalidIcon: {
-    fontSize: 28,
-    color: COLORS.error,
-    fontWeight: 'bold',
-  },
-  invalidTitle: {
-    color: COLORS.onSurface,
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 12,
-  },
-  invalidMessage: {
-    color: COLORS.outline,
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 24,
-    paddingHorizontal: 8,
-  },
-  requestNewLinkButton: {
-    backgroundColor: withAlpha(COLORS.primary, 0.1),
-    borderColor: withAlpha(COLORS.primary, 0.2),
-    borderWidth: 1,
-    borderRadius: 14,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-  },
-  requestNewLinkButtonText: {
-    color: COLORS.primary,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  backContainer: {
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  backLink: {
-    color: COLORS.primary,
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  securityNotice: {
-    alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  securityText: {
-    color: COLORS.outlineVariant,
-    fontSize: 11,
-  },
-});
+const createStyles = (COLORS: ThemedColors) =>
+  StyleSheet.create({
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+      padding: SPACING.gutter,
+      borderRadius: RADIUS.lg,
+      borderWidth: BORDER.hairline,
+      borderColor: withAlpha(COLORS.error, 0.35),
+      backgroundColor: withAlpha(COLORS.error, 0.08),
+    },
+    hidden: {
+      display: 'none',
+    },
+    errorText: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.error,
+      flex: 1,
+    },
+    cta: {
+      marginTop: SPACING.sm,
+    },
+    infoRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+      paddingHorizontal: SPACING.xs,
+      marginTop: SPACING.sm,
+    },
+    infoText: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.textMuted,
+      flex: 1,
+    },
+    stateCard: {
+      alignItems: 'center',
+      gap: SPACING.sm,
+      padding: SPACING.lg,
+      borderRadius: RADIUS.lg,
+      borderWidth: BORDER.hairline,
+      borderColor: COLORS.authHairline,
+      backgroundColor: COLORS.authGutter,
+    },
+    stateIcon: {
+      width: 64,
+      height: 64,
+      borderRadius: RADIUS.full,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: COLORS.authCard,
+    },
+    stateIconError: {
+      backgroundColor: withAlpha(COLORS.error, 0.1),
+    },
+    stateTitle: {
+      ...TYPOGRAPHY.headlineMd,
+      color: COLORS.onSurface,
+      textAlign: 'center',
+    },
+    stateBody: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.onSurfaceVariant,
+      textAlign: 'center',
+    },
+  });

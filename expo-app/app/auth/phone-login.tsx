@@ -1,75 +1,36 @@
 // ============================================
 // SMART RIDE MOBILE - PHONE LOGIN SCREEN
 // ============================================
-// Stitch Design System — Material Design 3 Green Theme
-// Light mode surface background, MD3 components
-// Flow: Phone Input → Send OTP → Verify OTP → Login
+// Step 1 of the phone flow: Phone Input -> Send OTP -> Verify OTP -> Login.
+// Built on the shared auth design language (src/components/auth).
+//
+// The phone normalisation and validation helpers used to live in this file.
+// They now live in src/utils/phone.ts so register, the rider wizard and
+// merchant registration validate a number the same way this screen does.
 // ============================================
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
-  Linking,
 } from 'react-native';
 import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, BORDER } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, BORDER, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { navigateToRoleHome } from '@/src/utils/roleRouting';
+import { validateUgandanPhone, normalizePhone } from '@/src/utils/phone';
+import { GradientButton } from '@/src/components/GradientButton';
+import { AuthScreen, PhoneFieldCard, AuthDivider } from '@/src/components/auth';
 
-// Uganda phone validation. The UI shows a fixed "+256" prefix, so the user
-// normally types just the 9-digit subscriber number (e.g. 752255676). We also
-// accept a pasted 0-prefixed (0752255676) or full +256/256 number and reduce
-// them all to the same 9-digit local part before validating.
-const UG_SUBSCRIBER_REGEX = /^(7\d|4\d)\d{7}$/; // 9 digits, mobile prefixes 7x / 4x
-
-// Strip spaces/dashes and any +256 / 256 / leading-0 prefix → 9-digit local part.
-function toLocalSubscriber(phone: string): string {
-  let s = phone.replace(/[\s\-]/g, '');
-  if (s.startsWith('+256')) s = s.slice(4);
-  else if (s.startsWith('256')) s = s.slice(3);
-  else if (s.startsWith('0')) s = s.slice(1);
-  return s;
-}
-
-function validateUgandanPhone(phone: string): { valid: boolean; error?: string } {
-  if (!phone.replace(/[\s\-]/g, '')) {
-    return { valid: false, error: 'Phone number is required' };
-  }
-
-  const local = toLocalSubscriber(phone);
-
-  if (local.length < 9) {
-    return { valid: false, error: 'Phone number is too short' };
-  }
-
-  if (local.length > 9) {
-    return { valid: false, error: 'Phone number is too long' };
-  }
-
-  if (!UG_SUBSCRIBER_REGEX.test(local)) {
-    return { valid: false, error: 'Please enter a valid Ugandan phone number' };
-  }
-
-  return { valid: true };
-}
-
-function normalizePhone(phone: string): string {
-  return '+256' + toLocalSubscriber(phone);
-}
+const STEP_LABELS = ['Number', 'Verify'];
 
 export default function PhoneLoginScreen() {
   const router = useRouter();
@@ -77,13 +38,11 @@ export default function PhoneLoginScreen() {
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const params = useLocalSearchParams<{ purpose?: string }>();
-  const insets = useSafeAreaInsets();
   const { isAuthenticated } = useAuthStore();
 
   const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isFocused, setIsFocused] = useState(false);
 
   const inputRef = useRef<TextInput>(null);
 
@@ -91,10 +50,9 @@ export default function PhoneLoginScreen() {
   const purpose = (params.purpose as 'login' | 'register') || 'login';
 
   const isLogin = purpose === 'login';
-  const title = isLogin ? 'Sign In' : 'Create Account';
   const subtitle = isLogin
-    ? 'Enter your phone number to receive a verification code'
-    : 'Enter your phone number to create an account';
+    ? 'Enter your phone number and we will text you a verification code.'
+    : 'Enter your phone number to create an account.';
 
   // Redirect if already authenticated (auto-login)
   useEffect(() => {
@@ -149,425 +107,127 @@ export default function PhoneLoginScreen() {
     }
   };
 
-  const handlePhoneChange = (text: string) => {
-    const filtered = text.replace(/[^\d\s\-\+]/g, '');
-    setPhone(filtered);
-    // Never validate mid-typing — just clear any stale error so the user can
+  const handlePhoneChange = useCallback((text: string) => {
+    setPhone(text);
+    // Never validate mid-typing - just clear any stale error so the user can
     // finish entering their number in peace. Validation happens on blur/submit.
-    if (error) {
-      setError(null);
-    }
-  };
+    setError((current) => (current ? null : current));
+  }, []);
 
   // Validate when the field loses focus (only if the user actually typed
   // something) so they get friendly feedback without being interrupted while
   // typing. Matches the "validate on blur OR submit" rule.
-  const handlePhoneBlur = () => {
-    setIsFocused(false);
+  const handlePhoneBlur = useCallback(() => {
     if (phone.trim().length === 0) return;
     const validation = validateUgandanPhone(phone);
     setError(validation.valid ? null : validation.error || 'Invalid phone number');
-  };
+  }, [phone]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
+    <AuthScreen
+      onBack={() => router.back()}
+      step={{ current: 1, labels: STEP_LABELS }}
+      lead={isLogin ? 'Sign in with' : 'Sign up with'}
+      accent="your phone"
+      subtitle={subtitle}
+      showHero
     >
-      <ScrollView
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom + SPACING.lg, 40) },
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* Top App Bar */}
-        <View style={[styles.topBar, { paddingTop: Math.max(insets.top, SPACING.sm) }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityLabel="Go back"
-          >
-            <Ionicons name="arrow-back" size={24} color={COLORS.onSurface} />
-          </TouchableOpacity>
-          <View style={styles.stepIndicator}>
-            <Text style={styles.stepText}>Step 1 of 2</Text>
-          </View>
-          <View style={{ width: 40 }} />
-        </View>
+      <PhoneFieldCard
+        value={phone}
+        onChangeText={handlePhoneChange}
+        onBlur={handlePhoneBlur}
+        error={error}
+        editable={!isLoading}
+        inputRef={inputRef}
+        returnKeyType="send"
+        onSubmitEditing={handleSendOTP}
+      />
 
-        {/* Title Section */}
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>{title}</Text>
-          <Text style={styles.subtitle}>{subtitle}</Text>
-        </View>
+      <View style={styles.helperRow}>
+        <Ionicons name="chatbubble-ellipses-outline" size={16} color={COLORS.textMuted} />
+        <Text style={styles.helperText}>
+          We will send you a 6-digit verification code via SMS.
+        </Text>
+      </View>
 
-        {/* Phone Input Card */}
-        <View style={styles.inputSection}>
-          {/* Error Message — always rendered to prevent layout shift (cursor jump) */}
-          <View style={[styles.errorContainer, !error && styles.errorHidden]}>
-            <Ionicons name="alert-circle" size={18} color={COLORS.error} />
-            <Text style={styles.errorText}>{error || ''}</Text>
-          </View>
+      <GradientButton
+        title="Send Verification Code"
+        onPress={handleSendOTP}
+        loading={isLoading}
+        disabled={isLoading || !phone.trim()}
+        size="lg"
+        shape="pill"
+        iconPosition="right"
+        icon={<Ionicons name="arrow-forward" size={ICON.md} color="#FFFFFF" />}
+        style={styles.cta}
+      />
 
-          {/* Phone Input Container */}
-          <View
-            style={[
-              styles.phoneInputContainer,
-              isFocused && styles.phoneInputContainerFocused,
-              error && styles.phoneInputContainerError,
-            ]}
-          >
-            {/* Country Code */}
-            <View style={styles.countryCode}>
-              <Text style={styles.flagEmoji}>UG</Text>
-              <Text style={styles.countryCodeText}>+256</Text>
-            </View>
+      <AuthDivider style={styles.divider} />
 
-            {/* Divider */}
-            <View style={styles.countryDivider} />
+      <View style={styles.alternativeRow}>
+        <TouchableOpacity
+          style={styles.alternativeButton}
+          onPress={() => router.push('/auth/login')}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Continue with email"
+        >
+          <Ionicons name="mail-outline" size={ICON.md} color={COLORS.primary} />
+          <Text style={styles.alternativeText}>Email</Text>
+        </TouchableOpacity>
 
-            {/* Phone Input */}
-            <TextInput
-              ref={inputRef}
-              style={styles.phoneInput}
-              placeholder="700 000 000"
-              placeholderTextColor={COLORS.outlineVariant}
-              value={phone}
-              onChangeText={handlePhoneChange}
-              onFocus={() => setIsFocused(true)}
-              onBlur={handlePhoneBlur}
-              keyboardType="phone-pad"
-              autoComplete="tel"
-              textContentType="telephoneNumber"
-              maxLength={13}
-              maxFontSizeMultiplier={1}
-              editable={!isLoading}
-            />
-          </View>
-
-          {/* Helper Text */}
-          <Text style={styles.helperText}>
-            We'll send you a 6-digit verification code via SMS
-          </Text>
-
-          {/* Send Verification Code Button */}
-          <TouchableOpacity
-            style={[
-              styles.primaryButton,
-              (!phone.trim() || isLoading) && styles.primaryButtonDisabled,
-            ]}
-            onPress={handleSendOTP}
-            disabled={isLoading || !phone.trim()}
-            activeOpacity={0.8}
-            accessibilityLabel="Send verification code"
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color={COLORS.onPrimary} />
-            ) : (
-              <Text style={styles.primaryButtonText}>Send Verification Code</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.dividerSection}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        {/* Alternative Buttons */}
-        <View style={styles.alternativeSection}>
-          {/* Email Login Button */}
-          <TouchableOpacity
-            style={styles.alternativeButton}
-            onPress={() => router.push('/auth/login')}
-            activeOpacity={0.7}
-            accessibilityLabel="Continue with email"
-          >
-            <Ionicons name="mail-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.alternativeButtonText}>Email</Text>
-          </TouchableOpacity>
-
-          {/* Register Button */}
-          <TouchableOpacity
-            style={styles.alternativeButton}
-            onPress={() => router.push('/auth/register')}
-            activeOpacity={0.7}
-            accessibilityLabel="Create an account"
-          >
-            <Ionicons name="person-add-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.alternativeButtonText}>Register</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Footer Terms */}
-        <View style={styles.termsSection}>
-          <Text style={styles.termsText}>
-            By continuing, you agree to our{' '}
-            <Text
-              style={styles.termsLink}
-              onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}
-            >
-              Terms of Service
-            </Text>{' '}
-            and{' '}
-            <Text
-              style={styles.termsLink}
-              onPress={() => Linking.openURL('https://smartrideug.vercel.app/privacy')}
-            >
-              Privacy Policy
-            </Text>
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+        <TouchableOpacity
+          style={styles.alternativeButton}
+          onPress={() => router.push('/auth/register')}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Create an account"
+        >
+          <Ionicons name="person-add-outline" size={ICON.md} color={COLORS.primary} />
+          <Text style={styles.alternativeText}>Register</Text>
+        </TouchableOpacity>
+      </View>
+    </AuthScreen>
   );
 }
 
-const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
-
-  scrollContent: {
-    flexGrow: 1,
-  },
-
-  // ── Top App Bar ──
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.sm,
-  },
-
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: RADIUS.full,
-  },
-
-  stepIndicator: {
-    backgroundColor: COLORS.surfaceContainerHigh,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.full,
-  },
-
-  stepText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-  },
-
-  // ── Title Section ──
-  titleSection: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-    paddingBottom: SPACING.lg,
-  },
-
-  title: {
-    ...TYPOGRAPHY.headlineLg,
-    color: COLORS.onSurface,
-    marginBottom: SPACING.xs,
-  },
-
-  subtitle: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurfaceVariant,
-    lineHeight: 22,
-  },
-
-  // ── Input Section ──
-  inputSection: {
-    paddingHorizontal: SPACING.lg,
-  },
-
-  errorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.errorContainer,
-    borderLeftWidth: 3,
-    borderLeftColor: COLORS.error,
-    borderRadius: RADIUS.md,
-    padding: SPACING.md,
-    marginBottom: SPACING.md,
-    gap: SPACING.sm,
-  },
-  // Always-rendered error container — zeroed-out style applied when no error
-  // so the container occupies no height, preventing layout shift on keystroke
-  // (which would cause Android cursor jitter).
-  errorHidden: {
-    opacity: 0,
-    height: 0,
-    paddingTop: 0,
-    paddingBottom: 0,
-    marginTop: 0,
-    marginBottom: 0,
-    borderLeftWidth: 0,
-    overflow: 'hidden',
-  },
-
-  errorText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onErrorContainer,
-    flex: 1,
-  },
-
-  // ── Phone Input Container ──
-  phoneInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.xl,
-    borderWidth: 1.5,
-    borderColor: COLORS.outlineVariant,
-    overflow: 'hidden',
-    ...SHADOWS.card,
-  },
-
-  phoneInputContainerFocused: {
-    borderColor: COLORS.primary,
-    // borderWidth stays 1.5 — changing it causes layout shift → cursor jump
-  },
-
-  phoneInputContainerError: {
-    borderColor: COLORS.error,
-  },
-
-  countryCode: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingLeft: SPACING.md,
-    paddingRight: SPACING.sm,
-    paddingVertical: SPACING.md,
-    gap: SPACING.xs,
-  },
-
-  flagEmoji: {
-    ...TYPOGRAPHY.headlineMd,
-    fontSize: 24,
-  },
-
-  countryCodeText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurface,
-  },
-
-  countryDivider: {
-    width: BORDER.hairline,
-    height: 24,
-    backgroundColor: COLORS.outlineVariant,
-    marginRight: SPACING.sm,
-  },
-
-  phoneInput: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    paddingRight: SPACING.md,
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurface,
-    letterSpacing: 0.5,
-  },
-
-  helperText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.outline,
-    marginTop: SPACING.sm,
-    marginBottom: SPACING.lg,
-  },
-
-  // ── Primary Button ──
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-    height: 56,
-    borderRadius: RADIUS.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...SHADOWS.button,
-  },
-
-  primaryButtonDisabled: {
-    backgroundColor: COLORS.surfaceContainerHigh,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-
-  primaryButtonText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onPrimary,
-    fontWeight: '600',
-  },
-
-  // ── Divider ──
-  dividerSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.lg,
-    gap: SPACING.md,
-  },
-
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.outlineVariant,
-  },
-
-  dividerText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.outline,
-    letterSpacing: 1,
-  },
-
-  // ── Alternative Buttons ──
-  alternativeSection: {
-    flexDirection: 'row',
-    paddingHorizontal: SPACING.lg,
-    gap: SPACING.md,
-  },
-
-  alternativeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    paddingVertical: SPACING.md,
-    borderRadius: RADIUS.xl,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    gap: SPACING.sm,
-  },
-
-  alternativeButtonText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-
-  // ── Terms ──
-  termsSection: {
-    paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl,
-  },
-
-  termsText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.outline,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-
-  termsLink: {
-    color: COLORS.primary,
-    fontWeight: '500',
-  },
-});
+const createStyles = (COLORS: ThemedColors) =>
+  StyleSheet.create({
+    helperRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+      paddingHorizontal: SPACING.xs,
+    },
+    helperText: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.textMuted,
+      flex: 1,
+    },
+    cta: {
+      marginTop: SPACING.sm,
+    },
+    divider: {
+      marginVertical: SPACING.sm,
+    },
+    alternativeRow: {
+      flexDirection: 'row',
+      gap: SPACING.gutter,
+    },
+    alternativeButton: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: SPACING.sm,
+      minHeight: 52,
+      borderRadius: RADIUS.full,
+      borderWidth: BORDER.hairline,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.authCard,
+    },
+    alternativeText: {
+      ...TYPOGRAPHY.labelLg,
+      color: COLORS.onSurface,
+    },
+  });

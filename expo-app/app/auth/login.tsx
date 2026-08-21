@@ -1,43 +1,49 @@
 // ============================================
 // SMART RIDE MOBILE - LOGIN SCREEN
 // ============================================
-// Premium card login (matches the Smart Ride design mockup):
-//   Official logo → "Smart Ride" → "Email or Phone Number" + Password →
-//   Login → Continue with Google → Continue with Phone (OTP) → Sign Up.
+// Built on the shared auth design language (src/components/auth): brand
+// lockup and two-tone headline, then the icon-gutter field cards, pill CTA,
+// and the OR row.
+//
+// No hero plate here, deliberately. The reference design is the SIGN-UP
+// screen, where the reader is already committed to scrolling a five-field
+// form. Login has two fields, and adding a 168pt illustration on top of the
+// lockup and headline pushes the Login button below the fold on a 360x800
+// handset. Returning users should not have to scroll to sign in.
+//
 // The mockup's "Continue with Apple" slot is intentionally the existing
 // phone/OTP method instead of Apple.
-// Theme-aware via makeThemedColors (light/dark).
 // ============================================
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   StyleSheet,
-  TextInput,
   StatusBar,
-  Image,
   Linking,
-  ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { statusCodes, GoogleSignin, configureGoogleSignIn } from '../../src/config/google';
 import { loginWithEmail, isAuthenticated, getAccessToken, getUserData, loginWithGoogle } from '../../src/services/auth';
 import { useAuthStore } from '../../src/store/authStore';
-import { SPACING, RADIUS, TYPOGRAPHY, SHADOWS, OPACITY, BORDER } from '../../src/constants';
+import { SPACING, TYPOGRAPHY, RADIUS, BORDER, ICON } from '../../src/constants';
 import { useTheme } from '../../src/context/theme-context';
-import { makeThemedColors, ThemedColors } from '../../src/theme/themedColors';
-import SmartRideLogoImage from '../../assets/images/brand-mark.png';
+import { makeThemedColors, ThemedColors, withAlpha } from '../../src/theme/themedColors';
 import { navigateToRoleHome } from '../../src/utils/roleRouting';
+import { GradientButton } from '../../src/components/GradientButton';
+import {
+  AuthScreen,
+  FieldCard,
+  AuthDivider,
+  SocialButtons,
+} from '../../src/components/auth';
 
 // An "Email or Phone Number" entry that is all digits (optionally +/spaces,
-// ≥7 long, no @) is treated as a phone → routed to the OTP flow on Login.
+// at least 7 long, no @) is treated as a phone and routed to the OTP flow.
 function looksLikePhone(value: string): boolean {
   const v = value.trim();
   if (!v || v.includes('@')) return false;
@@ -46,7 +52,6 @@ function looksLikePhone(value: string): boolean {
 
 export default function LoginScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
@@ -76,21 +81,12 @@ export default function LoginScreen() {
     router.replace('/auth/role-selection' as any);
   };
 
-  // ─── Phone / OTP ───────────────────────────────
-  const handlePhoneContinue = () => {
+  // Phone / OTP
+  const handlePhoneContinue = useCallback(() => {
     router.push('/auth/phone-login');
-  };
+  }, [router]);
 
-  // ─── Primary Login (email/password, or route phone → OTP) ──
-  const handleLogin = () => {
-    if (looksLikePhone(identifier)) {
-      handlePhoneContinue();
-      return;
-    }
-    handleEmailLogin();
-  };
-
-  // ─── Email/Password Login ──────────────────────
+  // Email/Password Login
   const handleEmailLogin = async () => {
     if (!identifier.trim()) {
       setError('Please enter your email or phone number');
@@ -134,7 +130,16 @@ export default function LoginScreen() {
     }
   };
 
-  // ─── Google Sign-In ────────────────────────────
+  // Primary Login (email/password, or route phone to OTP)
+  const handleLogin = () => {
+    if (looksLikePhone(identifier)) {
+      handlePhoneContinue();
+      return;
+    }
+    handleEmailLogin();
+  };
+
+  // Google Sign-In
   const handleGoogleSignIn = async () => {
     if (!GoogleSignin) {
       setError('Google Sign-In is not available on this build. Please use phone or email login.');
@@ -199,328 +204,179 @@ export default function LoginScreen() {
   const busy = emailLoading || googleLoading;
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
-    >
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={COLORS.surface} />
-
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top, 16) + 8, paddingBottom: Math.max(insets.bottom + 24, 40) }]}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
+    <>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={COLORS.background} />
+      <AuthScreen
+        onBack={() => router.back()}
+        lead="Welcome"
+        accent="back"
+        subtitle="Sign in to keep moving with Smart Ride."
       >
-        {/* Back */}
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Go back">
-          <Ionicons name="arrow-back" size={22} color={COLORS.onSurfaceVariant} />
-        </TouchableOpacity>
-
-        {/* ─── Card ─────────────────────────────── */}
-        <View style={styles.card}>
-          {/* Official logo + brand */}
-          <View style={styles.logoBadge}>
-            <Image source={SmartRideLogoImage} style={styles.logoImage} resizeMode="contain" />
-          </View>
-          <Text style={styles.brandTitle}>Smart Ride</Text>
-          <Text style={styles.brandSubtitle}>Premium mobility for the modern urbanite</Text>
-
-          {/* Error banner — always mounted to avoid layout shift */}
-          <View style={[styles.errorBanner, !error && styles.hidden]}>
-            <Ionicons name="alert-circle" size={16} color={COLORS.error} />
-            <Text style={styles.errorText}>{error || ''}</Text>
-          </View>
-
-          {/* Email or Phone */}
-          <Text style={styles.fieldLabel}>Email or Phone Number</Text>
-          <View style={styles.inputWrap}>
-            <Ionicons name="person-outline" size={20} color={COLORS.onSurfaceVariant} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your email or phone"
-              placeholderTextColor={COLORS.outline}
-              value={identifier}
-              onChangeText={setIdentifier}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              editable={!busy}
-              returnKeyType="next"
-              maxFontSizeMultiplier={1.3}
-            />
-          </View>
-
-          {/* Password label + Forgot */}
-          <View style={styles.labelRow}>
-            <Text style={styles.fieldLabel}>Password</Text>
-            <TouchableOpacity onPress={() => router.push('/auth/forgot-password')} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Text style={styles.forgotText}>Forgot Password?</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.inputWrap}>
-            <Ionicons name="lock-closed-outline" size={20} color={COLORS.onSurfaceVariant} style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your password"
-              placeholderTextColor={COLORS.outline}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              editable={!busy}
-              returnKeyType="go"
-              onSubmitEditing={handleLogin}
-              maxFontSizeMultiplier={1.3}
-            />
-            <TouchableOpacity onPress={() => setShowPassword((s) => !s)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={20} color={COLORS.onSurfaceVariant} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Login */}
-          <TouchableOpacity style={[styles.loginButton, busy && styles.buttonDisabled]} onPress={handleLogin} disabled={busy} activeOpacity={0.85}>
-            {emailLoading ? (
-              <ActivityIndicator color={COLORS.onPrimary} />
-            ) : (
-              <Text style={styles.loginButtonText}>Login</Text>
-            )}
-          </TouchableOpacity>
-
-          {/* Divider */}
-          <View style={styles.dividerRow}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>OR CONTINUE WITH</Text>
-            <View style={styles.dividerLine} />
-          </View>
-
-          {/* Continue with Google */}
-          <TouchableOpacity style={[styles.socialButton, styles.googleButton]} onPress={handleGoogleSignIn} disabled={busy} activeOpacity={0.85}>
-            {googleLoading ? (
-              <ActivityIndicator color={COLORS.googleBlue} />
-            ) : (
-              <>
-                <Ionicons name="logo-google" size={20} color={COLORS.googleBlue} />
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </>
-            )}
-          </TouchableOpacity>
-
-          {/* Continue with Phone (OTP) — replaces the mockup's Apple slot */}
-          <TouchableOpacity style={[styles.socialButton, styles.phoneButton]} onPress={handlePhoneContinue} disabled={busy} activeOpacity={0.85}>
-            <Ionicons name="call" size={19} color={COLORS.inverseOnSurface} />
-            <Text style={styles.phoneButtonText}>Continue with Phone</Text>
-          </TouchableOpacity>
-
-          {/* Sign Up */}
-          <View style={styles.signUpRow}>
-            <Text style={styles.signUpText}>Don&apos;t have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/auth/register')} disabled={busy} activeOpacity={0.7} hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}>
-              <Text style={styles.signUpLink}>Sign Up</Text>
-            </TouchableOpacity>
-          </View>
+        {/* Error banner is always mounted so revealing it never re-lays-out a
+            field the user is typing in. */}
+        <View style={[styles.errorBanner, !error && styles.hidden]}>
+          <Ionicons name="alert-circle" size={16} color={COLORS.error} />
+          <Text style={styles.errorText}>{error || ''}</Text>
         </View>
 
-        {/* Footer */}
+        <FieldCard
+          label="Email or Phone Number"
+          icon="person-outline"
+          placeholder="Enter your email or phone"
+          value={identifier}
+          onChangeText={setIdentifier}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="email-address"
+          textContentType="username"
+          editable={!busy}
+          returnKeyType="next"
+          maxFontSizeMultiplier={1.3}
+        />
+
+        <FieldCard
+          label="Password"
+          icon="lock-closed-outline"
+          placeholder="Enter your password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          autoCapitalize="none"
+          autoCorrect={false}
+          textContentType="password"
+          editable={!busy}
+          returnKeyType="go"
+          onSubmitEditing={handleLogin}
+          maxFontSizeMultiplier={1.3}
+          trailing={
+            <TouchableOpacity
+              onPress={() => setShowPassword((s) => !s)}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+            >
+              <Ionicons
+                name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                size={ICON.md}
+                color={COLORS.textMuted}
+              />
+            </TouchableOpacity>
+          }
+        />
+
+        <TouchableOpacity
+          onPress={() => router.push('/auth/forgot-password')}
+          activeOpacity={0.7}
+          style={styles.forgotRow}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Text style={styles.forgotText}>Forgot Password?</Text>
+        </TouchableOpacity>
+
+        <GradientButton
+          title="Login"
+          onPress={handleLogin}
+          loading={emailLoading}
+          disabled={busy}
+          size="lg"
+          shape="pill"
+          iconPosition="right"
+          icon={<Ionicons name="arrow-forward" size={ICON.md} color="#FFFFFF" />}
+          style={styles.cta}
+        />
+
+        <AuthDivider style={styles.divider} />
+
+        <SocialButtons
+          onGoogle={handleGoogleSignIn}
+          googleLoading={googleLoading}
+          onPhone={handlePhoneContinue}
+          disabled={busy}
+        />
+
+        <View style={styles.signUpRow}>
+          <Text style={styles.signUpText}>Don&apos;t have an account? </Text>
+          <TouchableOpacity
+            onPress={() => router.push('/auth/register')}
+            disabled={busy}
+            activeOpacity={0.7}
+            hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
+          >
+            <Text style={styles.signUpLink}>Sign Up</Text>
+          </TouchableOpacity>
+        </View>
+
         <Text style={styles.footerText}>
-          © {new Date().getFullYear()} Smart Ride Technologies.{' '}
-          <Text style={styles.footerLink} onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}>Secure Transaction.</Text>
+          {new Date().getFullYear()} Smart Ride Technologies.{' '}
+          <Text
+            style={styles.footerLink}
+            onPress={() => Linking.openURL('https://smartrideug.vercel.app/terms')}
+          >
+            Secure Transaction.
+          </Text>
         </Text>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </AuthScreen>
+    </>
   );
 }
 
-const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.surface },
-  scrollContent: { flexGrow: 1, paddingHorizontal: SPACING.md },
-
-  backButton: {
-    width: 40, height: 40, borderRadius: RADIUS.full,
-    alignItems: 'center', justifyContent: 'center',
-    marginBottom: SPACING.xs,
-  },
-
-  // ─── Card ───────────────────────────────
-  card: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderRadius: 28,
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.lg,
-    paddingBottom: SPACING.lg + 4,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.06,
-    shadowRadius: 24,
-    elevation: 4,
-  },
-
-  logoBadge: {
-    alignSelf: 'center',
-    width: 76, height: 76, borderRadius: 20,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: COLORS.borderLight,
-    marginBottom: SPACING.sm,
-  },
-  logoImage: { width: 62, height: 62, borderRadius: 14 },
-
-  brandTitle: {
-    ...TYPOGRAPHY.headlineMd,
-    fontWeight: '700',
-    color: COLORS.primary,
-    textAlign: 'center',
-  },
-  brandSubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    marginTop: 4,
-    marginBottom: SPACING.md,
-  },
-
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm,
-    backgroundColor: COLORS.errorContainer,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    marginBottom: SPACING.sm,
-  },
-  errorText: {
-    flex: 1,
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.error,
-  },
-  hidden: { height: 0, paddingVertical: 0, marginBottom: 0, opacity: 0, overflow: 'hidden' },
-
-  fieldLabel: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurface,
-    marginBottom: SPACING.sm,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: SPACING.md,
-    marginBottom: SPACING.sm,
-  },
-  forgotText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-
-  inputWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.lg,
-    borderWidth: 1,
-    borderColor: COLORS.borderLight,
-    paddingHorizontal: SPACING.md,
-    minHeight: 48,
-    justifyContent: 'center',
-  },
-  inputIcon: {
-    marginRight: SPACING.sm,
-  },
-  input: {
-    flex: 1,
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurface,
-    paddingVertical: SPACING.sm,
-  },
-
-  loginButton: {
-    backgroundColor: COLORS.primary,
-    minHeight: 56,
-    borderRadius: RADIUS.xl,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.lg,
-    ...SHADOWS.button,
-  },
-  loginButtonText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onPrimary,
-  },
-  buttonDisabled: {
-    opacity: OPACITY.disabled,
-  },
-
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.md,
-    marginVertical: SPACING.lg,
-  },
-  dividerLine: {
-    flex: 1,
-    height: BORDER.hairline,
-    backgroundColor: COLORS.borderLight,
-  },
-  dividerText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    letterSpacing: 1,
-  },
-
-  socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.sm,
-    minHeight: 48,
-    borderRadius: RADIUS.xl,
-    marginBottom: SPACING.sm,
-  },
-  googleButton: {
-    backgroundColor: COLORS.backgroundElevated,
-    borderWidth: BORDER.emphasis,
-    borderColor: COLORS.border,
-  },
-  googleButtonText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.onSurface,
-  },
-  phoneButton: {
-    backgroundColor: COLORS.inverseSurface,
-  },
-  phoneButtonText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.inverseOnSurface,
-  },
-
-  signUpRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: SPACING.md,
-  },
-  signUpText: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-  },
-  signUpLink: {
-    ...TYPOGRAPHY.bodySm,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-
-  footerText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    marginTop: SPACING.lg,
-    opacity: OPACITY.disabled,
-  },
-  footerLink: {
-    color: COLORS.primary,
-    fontWeight: '600',
-  },
-});
+const createStyles = (COLORS: ThemedColors) =>
+  StyleSheet.create({
+    errorBanner: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.sm,
+      padding: SPACING.gutter,
+      borderRadius: RADIUS.lg,
+      borderWidth: BORDER.hairline,
+      borderColor: withAlpha(COLORS.error, 0.35),
+      backgroundColor: withAlpha(COLORS.error, 0.08),
+    },
+    hidden: {
+      display: 'none',
+    },
+    errorText: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.error,
+      flex: 1,
+    },
+    forgotRow: {
+      alignSelf: 'flex-end',
+      paddingVertical: SPACING.xs,
+    },
+    forgotText: {
+      ...TYPOGRAPHY.labelLg,
+      color: COLORS.primary,
+    },
+    cta: {
+      marginTop: SPACING.sm,
+    },
+    divider: {
+      marginVertical: SPACING.sm,
+    },
+    signUpRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginTop: SPACING.md,
+    },
+    signUpText: {
+      ...TYPOGRAPHY.bodyMd,
+      color: COLORS.onSurfaceVariant,
+    },
+    signUpLink: {
+      ...TYPOGRAPHY.bodyMd,
+      color: COLORS.primary,
+      fontWeight: '700',
+    },
+    footerText: {
+      ...TYPOGRAPHY.labelMd,
+      color: COLORS.textMuted,
+      textAlign: 'center',
+      marginTop: SPACING.lg,
+    },
+    footerLink: {
+      color: COLORS.primary,
+      fontWeight: '600',
+    },
+  });

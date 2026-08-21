@@ -86,17 +86,47 @@ const DARK: Record<string, string> = {
   accent: '#7cd9a4',
 };
 
-export type ThemedColors = typeof COLORS;
+/**
+ * Tokens that only the auth / onboarding surface needs. They are derived from
+ * the active palette rather than declared as literals so they follow the theme.
+ */
+export interface AuthColors {
+  /** Tinted icon column on the left of a field card. */
+  authGutter: string;
+  /** Hairline between the icon column and the input column. */
+  authHairline: string;
+  /** Field / content card fill. */
+  authCard: string;
+  /** Backing panel for the hero illustration. Deliberately light in BOTH modes:
+   *  the artwork is drawn for a light ground, so the plate travels with it. */
+  authPlate: string;
+  /** Soft circle behind the hero art, sitting on authPlate. */
+  authPlateGlow: string;
+}
+
+export type ThemedColors = typeof COLORS & AuthColors;
+
+function authColors(base: typeof COLORS, isDark: boolean): AuthColors {
+  return {
+    authGutter: withAlpha(base.primary, isDark ? 0.14 : 0.06),
+    authHairline: base.borderLight,
+    authCard: base.surfaceContainerLowest,
+    // Fixed light mint in both modes — see the interface note above.
+    authPlate: '#eef6f1',
+    authPlateGlow: withAlpha(COLORS.primary, 0.1),
+  };
+}
 
 /**
  * Resolve the full Stitch color set for the given mode.
  * Light = identical to the static COLORS. Dark = COLORS with dark overrides.
  */
 export function makeThemedColors(isDark: boolean): ThemedColors {
-  if (!isDark) return COLORS;
+  if (!isDark) return { ...COLORS, ...authColors(COLORS, false) } as ThemedColors;
   // Spread resolves COLORS getters to light values, then DARK overrides the
   // tokens (including the derived aliases) with their dark equivalents.
-  return { ...COLORS, ...DARK } as ThemedColors;
+  const dark = { ...COLORS, ...DARK } as typeof COLORS;
+  return { ...dark, ...authColors(dark, true) } as ThemedColors;
 }
 
 /**

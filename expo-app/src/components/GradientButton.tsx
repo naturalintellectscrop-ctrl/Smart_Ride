@@ -28,8 +28,14 @@ interface GradientButtonProps {
   disabled?: boolean;
   style?: ViewStyle;
   icon?: React.ReactNode;
+  /** Where `icon` sits relative to the label. The auth CTAs read "Create
+   *  Account →", so they need the icon trailing. Defaults to leading. */
+  iconPosition?: 'left' | 'right';
   fullWidth?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  /** 'pill' fully rounds the button. The auth surface uses pill for every CTA
+   *  and social button; cards and fields stay at RADIUS.lg. */
+  shape?: 'rounded' | 'pill';
 }
 
 export function GradientButton({
@@ -40,14 +46,26 @@ export function GradientButton({
   disabled = false,
   style,
   icon,
+  iconPosition = 'left',
   fullWidth = true,
   size = 'md',
+  shape = 'rounded',
 }: GradientButtonProps) {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const sizeStyle = getSizeStyle(size);
+  const shapeStyle = shape === 'pill' ? { borderRadius: RADIUS.full } : null;
   const isDisabled = disabled || loading;
+
+  // One label renderer for all four variants so icon placement stays consistent.
+  const renderContent = (textStyle: object) => (
+    <>
+      {iconPosition === 'left' && icon}
+      <Text style={textStyle} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text>
+      {iconPosition === 'right' && icon}
+    </>
+  );
 
   // Shared press-scale so buttons animate like Cards do.
   const scale = useSharedValue(1);
@@ -60,7 +78,7 @@ export function GradientButton({
   if (variant === 'outline') {
     return (
       <AnimatedTouchable
-        style={[styles.outlineButton, sizeStyle, isDisabled && styles.disabled, pressStyle, style]}
+        style={[styles.outlineButton, sizeStyle, shapeStyle, isDisabled && styles.disabled, pressStyle, style]}
         onPress={onPress}
         disabled={isDisabled}
         activeOpacity={0.85}
@@ -72,10 +90,7 @@ export function GradientButton({
         {loading ? (
           <ActivityIndicator color={COLORS.primary} size="small" />
         ) : (
-          <>
-            {icon}
-            <Text style={styles.outlineText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text>
-          </>
+          renderContent(styles.outlineText)
         )}
       </AnimatedTouchable>
     );
@@ -84,7 +99,7 @@ export function GradientButton({
   if (variant === 'secondary') {
     return (
       <AnimatedTouchable
-        style={[styles.secondaryButton, sizeStyle, isDisabled && styles.disabled, pressStyle, style]}
+        style={[styles.secondaryButton, sizeStyle, shapeStyle, isDisabled && styles.disabled, pressStyle, style]}
         onPress={onPress}
         disabled={isDisabled}
         activeOpacity={0.85}
@@ -96,10 +111,7 @@ export function GradientButton({
         {loading ? (
           <ActivityIndicator color={COLORS.onSurface} size="small" />
         ) : (
-          <>
-            {icon}
-            <Text style={styles.secondaryText} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text>
-          </>
+          renderContent(styles.secondaryText)
         )}
       </AnimatedTouchable>
     );
@@ -110,7 +122,7 @@ export function GradientButton({
 
   return (
     <AnimatedTouchable
-      style={[styles.buttonWrapper, fullWidth && styles.fullWidth, isDisabled && styles.disabled, pressStyle, style]}
+      style={[styles.buttonWrapper, shapeStyle, fullWidth && styles.fullWidth, isDisabled && styles.disabled, pressStyle, style]}
       onPress={onPress}
       disabled={isDisabled}
       activeOpacity={0.9}
@@ -123,15 +135,12 @@ export function GradientButton({
         colors={colors as unknown as [string, string]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={[styles.gradient, sizeStyle]}
+        style={[styles.gradient, sizeStyle, shapeStyle]}
       >
         {loading ? (
           <ActivityIndicator color="#FFFFFF" size="small" />
         ) : (
-          <>
-            {icon}
-            <Text style={styles.text} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.85}>{title}</Text>
-          </>
+          renderContent(styles.text)
         )}
       </LinearGradient>
     </AnimatedTouchable>

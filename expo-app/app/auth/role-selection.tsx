@@ -1,40 +1,45 @@
 // ============================================
 // SMART RIDE MOBILE - ROLE SELECTION SCREEN
 // ============================================
-// Stitch Design System — Material Design 3 Green Theme
-// Shown after registration/login when user has no role
-// Allows switching between Client, Rider, Merchant
+// Shown after registration/login so the user picks (or confirms) what kind of
+// account they are. The hub every auth route lands on: email login, Google
+// login on both screens, and OTP verification all replace into here.
+//
+// On the shared auth design language. The eight hardcoded gradient hexes each
+// role card used to carry are gone: the cards read from the palette, so the
+// screen follows the theme instead of pinning a light-mode wash. The two
+// decorative mesh orbs are gone with them.
 // ============================================
 
 import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StyleSheet,
-  StatusBar,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/authStore';
 import { api } from '../../src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, BORDER } from '../../src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, BORDER, ICON } from '../../src/constants';
 import { useTheme } from '../../src/context/theme-context';
-import { ThemedColors, makeThemedColors, withAlpha } from '../../src/theme/themedColors';
+import { ThemedColors, makeThemedColors } from '../../src/theme/themedColors';
 import { GradientButton } from '../../src/components/GradientButton';
 import { navigateToRoleHome } from '@/src/utils/roleRouting';
+import { AuthScreen } from '../../src/components/auth';
 
-// Role definitions with icons, colors, and descriptions
-const ROLES = [
+// Role definitions. `tags` were inlined as five near-identical JSX blocks.
+const ROLES: {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  tags: string[];
+}[] = [
   {
     id: 'CLIENT',
     title: 'Client',
     subtitle: 'Book rides & order',
     description: 'Request rides, order food, shop, and more',
     icon: 'car-outline',
-    gradient: ['#005f3a', '#0e7a4d'] as const,
+    tags: ['Rides', 'Food', 'Shopping'],
   },
   {
     id: 'RIDER',
@@ -42,7 +47,7 @@ const ROLES = [
     subtitle: 'Earn on the road',
     description: 'Accept ride requests and earn money as a boda or car driver',
     icon: 'bicycle-outline',
-    gradient: ['#0e7a4d', '#006e2f'] as const,
+    tags: ['Boda', 'Car', 'Earnings'],
   },
   {
     id: 'DRIVER',
@@ -50,7 +55,7 @@ const ROLES = [
     subtitle: 'Professional driver',
     description: 'Drive cars, delivery vehicles, or provide specialized transport services',
     icon: 'bus-outline',
-    gradient: ['#1a6b3c', '#0e7a4d'] as const,
+    tags: ['Car', 'Delivery', 'Earnings'],
   },
   {
     id: 'MERCHANT',
@@ -58,7 +63,7 @@ const ROLES = [
     subtitle: 'Sell & deliver',
     description: 'List your restaurant, shop or pharmacy on Smart Ride',
     icon: 'storefront-outline',
-    gradient: ['#4b5264', '#636a7c'] as const,
+    tags: ['Restaurant', 'Shop', 'Pharmacy'],
   },
   {
     id: 'PHARMACIST',
@@ -66,7 +71,7 @@ const ROLES = [
     subtitle: 'Medicine & healthcare',
     description: 'Manage medicine catalog, prescriptions, and healthcare services',
     icon: 'medkit-outline',
-    gradient: ['#2e7d32', '#388e3c'] as const,
+    tags: ['Medicine', 'Prescriptions', 'Healthcare'],
   },
 ];
 
@@ -75,7 +80,6 @@ export default function RoleSelectionScreen() {
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { user, setUser } = useAuthStore();
   const [selectedRole, setSelectedRole] = useState<string | null>(user?.role || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,364 +116,181 @@ export default function RoleSelectionScreen() {
     navigateToRoleHome('CLIENT');
   };
 
+  const firstName = user?.name?.split(' ')[0];
+
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={COLORS.surface} />
-
-      {/* Subtle mesh background */}
-      <View style={styles.meshBackground}>
-        <View style={styles.meshOrb1} />
-        <View style={styles.meshOrb2} />
-      </View>
-
-      {/* Fixed top bar */}
-      <View style={[styles.appBar, { paddingTop: insets.top }]}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
-        </TouchableOpacity>
-        <Text style={styles.appBarTitle}>Choose Your Role</Text>
-        <TouchableOpacity
-          style={styles.skipButton}
-          onPress={handleSkip}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.skipText}>Skip</Text>
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingBottom: Math.max(insets.bottom + 24, 40) }]}
-        showsVerticalScrollIndicator={false}
+    <>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={COLORS.background} />
+      <AuthScreen
+        onBack={() => router.back()}
+        lead="How will you"
+        accent="use Smart Ride?"
+        subtitle={
+          firstName
+            ? `Welcome, ${firstName}. Pick one to get started. You can change this later in your profile.`
+            : 'Pick one to get started. You can change this later in your profile.'
+        }
+        showLockup={false}
+        headerRight={
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={handleSkip}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Skip role selection and continue as a client"
+          >
+            <Text style={styles.skipText}>Skip</Text>
+          </TouchableOpacity>
+        }
       >
-        {/* Hero Section */}
-        <View style={styles.heroSection}>
-          <View style={styles.heroIconContainer}>
-            <Ionicons name="hand-left-outline" size={32} color={COLORS.primary} />
-          </View>
-          <Text style={styles.heroTitle}>Welcome, {user?.name?.split(' ')[0] || 'there'}!</Text>
-          <Text style={styles.heroSubtitle}>
-            How would you like to use Smart Ride? You can always change this later in your profile settings.
-          </Text>
-        </View>
-
-        {/* Role Cards */}
-        <View style={styles.rolesContainer}>
-          {ROLES.map((role) => {
-            const isSelected = selectedRole === role.id;
-            return (
-              <TouchableOpacity
-                key={role.id}
-                style={[
-                  styles.roleCard,
-                  isSelected && styles.roleCardSelected,
-                  { borderColor: isSelected ? COLORS.primary : withAlpha(role.gradient[0], 0.15) },
-                ]}
-                onPress={() => setSelectedRole(role.id)}
-                activeOpacity={0.7}
-              >
-                {/* Selection indicator */}
-                <View style={styles.roleCardHeader}>
-                  <View style={[styles.roleIconContainer, { backgroundColor: withAlpha(role.gradient[0], 0.08) }]}>
-                    <Ionicons name={role.icon as any} size={28} color={COLORS.primary} />
-                  </View>
-                  <View style={styles.roleInfo}>
-                    <Text style={styles.roleTitle}>{role.title}</Text>
-                    <Text style={styles.roleSubtitle}>{role.subtitle}</Text>
-                  </View>
-                  {/* Radio/Check indicator */}
-                  <View style={[
-                    styles.radioOuter,
-                    isSelected && styles.radioOuterSelected,
-                  ]}>
-                    {isSelected && <View style={styles.radioInner} />}
-                  </View>
+        {ROLES.map((role) => {
+          const isSelected = selectedRole === role.id;
+          return (
+            <TouchableOpacity
+              key={role.id}
+              style={[styles.roleCard, isSelected && styles.roleCardSelected]}
+              onPress={() => setSelectedRole(role.id)}
+              activeOpacity={0.8}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: isSelected }}
+            >
+              <View style={styles.roleHeader}>
+                <View style={[styles.roleIcon, isSelected && styles.roleIconSelected]}>
+                  <Ionicons
+                    name={role.icon}
+                    size={26}
+                    color={isSelected ? COLORS.onPrimary : COLORS.primary}
+                  />
                 </View>
-                <Text style={styles.roleDescription}>{role.description}</Text>
-
-                {/* Feature tags */}
-                <View style={styles.featureTags}>
-                  {role.id === 'CLIENT' && (
-                    <>
-                      <View style={styles.tag}><Text style={styles.tagText}>Rides</Text></View>
-                      <View style={styles.tag}><Text style={styles.tagText}>Food</Text></View>
-                      <View style={styles.tag}><Text style={styles.tagText}>Shopping</Text></View>
-                    </>
-                  )}
-                  {role.id === 'RIDER' && (
-                    <>
-                      <View style={styles.tag}><Text style={styles.tagText}>Boda</Text></View>
-                      <View style={styles.tag}><Text style={styles.tagText}>Car</Text></View>
-                      <View style={styles.tag}><Text style={styles.tagText}>Earnings</Text></View>
-                    </>
-                  )}
-                  {role.id === 'DRIVER' && (
-                    <>
-                      <View style={styles.tag}><Text style={styles.tagText}>Car</Text></View>
-                      <View style={styles.tag}><Text style={styles.tagText}>Delivery</Text></View>
-                      <View style={styles.tag}><Text style={styles.tagText}>Earnings</Text></View>
-                    </>
-                  )}
-                  {role.id === 'MERCHANT' && (
-                    <>
-                      <View style={styles.tag}><Text style={styles.tagText}>Restaurant</Text></View>
-                      <View style={styles.tag}><Text style={styles.tagText}>Shop</Text></View>
-                      <View style={styles.tag}><Text style={styles.tagText}>Pharmacy</Text></View>
-                    </>
-                  )}
-                  {role.id === 'PHARMACIST' && (
-                    <>
-                      <View style={styles.tag}><Text style={styles.tagText}>Medicine</Text></View>
-                      <View style={styles.tag}><Text style={styles.tagText}>Prescriptions</Text></View>
-                      <View style={styles.tag}><Text style={styles.tagText}>Healthcare</Text></View>
-                    </>
-                  )}
+                <View style={styles.roleInfo}>
+                  <Text style={styles.roleTitle}>{role.title}</Text>
+                  <Text style={styles.roleSubtitle}>{role.subtitle}</Text>
                 </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                <View style={[styles.radioOuter, isSelected && styles.radioOuterSelected]}>
+                  {isSelected ? <View style={styles.radioInner} /> : null}
+                </View>
+              </View>
 
-        {/* Continue Button */}
-        <View style={styles.buttonContainer}>
-          <GradientButton
-            title="Continue"
-            onPress={handleContinue}
-            variant="primary"
-            size="lg"
-            disabled={!selectedRole || isSubmitting}
-            loading={isSubmitting}
-            icon={
-              !isSubmitting ? (
-                <Ionicons name="arrow-forward" size={20} color={COLORS.onPrimary} />
-              ) : undefined
-            }
-          />
-        </View>
+              <Text style={styles.roleDescription}>{role.description}</Text>
 
-        {/* Info note */}
-        <View style={styles.infoNote}>
-          <Ionicons name="information-circle-outline" size={16} color={COLORS.outline} />
-          <Text style={styles.infoNoteText}>
-            You can switch roles anytime from your Profile settings
-          </Text>
-        </View>
-      </ScrollView>
-    </View>
+              <View style={styles.tagRow}>
+                {role.tags.map((tag) => (
+                  <View key={tag} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+
+        <GradientButton
+          title="Continue"
+          onPress={handleContinue}
+          loading={isSubmitting}
+          disabled={!selectedRole || isSubmitting}
+          size="lg"
+          shape="pill"
+          iconPosition="right"
+          icon={<Ionicons name="arrow-forward" size={ICON.md} color="#FFFFFF" />}
+          style={styles.cta}
+        />
+      </AuthScreen>
+    </>
   );
 }
 
-const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
-  // Subtle mesh gradient background
-  meshBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    overflow: 'hidden',
-  },
-  meshOrb1: {
-    position: 'absolute',
-    top: -100,
-    right: -80,
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    backgroundColor: 'rgba(107, 255, 143, 0.05)',
-  },
-  meshOrb2: {
-    position: 'absolute',
-    bottom: 100,
-    left: -100,
-    width: 250,
-    height: 250,
-    borderRadius: 125,
-    backgroundColor: withAlpha(COLORS.primary, 0.04),
-  },
-  // Top bar
-  appBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: COLORS.surface,
-    height: 56,
-    paddingHorizontal: SPACING.md,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-    zIndex: 10,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: RADIUS.DEFAULT,
-    marginLeft: -SPACING.xs,
-  },
-  appBarTitle: {
-    flex: 1,
-    ...TYPOGRAPHY.headlineMd,
-    color: COLORS.onSurface,
-    textAlign: 'center',
-  },
-  skipButton: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-  },
-  skipText: {
-    ...TYPOGRAPHY.labelLg,
-    color: COLORS.primary,
-  },
-  // Scroll content
-  scrollContent: {
-    flexGrow: 1,
-  },
-  // Hero section
-  heroSection: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.md,
-    alignItems: 'center',
-  },
-  heroIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surfaceContainerLow,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.md,
-    borderWidth: BORDER.hairline,
-    borderColor: COLORS.outlineVariant,
-  },
-  heroTitle: {
-    ...TYPOGRAPHY.headlineLgMobile,
-    color: COLORS.primary,
-    textAlign: 'center',
-  },
-  heroSubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    textAlign: 'center',
-    marginTop: SPACING.sm,
-    lineHeight: 20,
-    paddingHorizontal: SPACING.md,
-  },
-  // Roles container
-  rolesContainer: {
-    paddingHorizontal: SPACING.lg,
-    gap: SPACING.md,
-  },
-  // Role card
-  roleCard: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: BORDER.hairline,
-    borderColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
-  },
-  roleCardSelected: {
-    backgroundColor: withAlpha(COLORS.primary, 0.03),
-    borderWidth: BORDER.emphasis,
-    borderColor: COLORS.primary,
-    ...SHADOWS.active,
-  },
-  roleCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  roleIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: RADIUS.lg,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: SPACING.md,
-  },
-  roleInfo: {
-    flex: 1,
-  },
-  roleTitle: {
-    ...TYPOGRAPHY.bodyLg,
-    color: COLORS.onSurface,
-    fontWeight: '700',
-  },
-  roleSubtitle: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    marginTop: 2,
-  },
-  // Radio button
-  radioOuter: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.outline,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioOuterSelected: {
-    borderColor: COLORS.primary,
-  },
-  radioInner: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: COLORS.primary,
-  },
-  // Role description
-  roleDescription: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    lineHeight: 20,
-    marginBottom: SPACING.sm,
-  },
-  // Feature tags
-  featureTags: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.xs,
-  },
-  tag: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.xs,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
-  tagText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-  },
-  // Button
-  buttonContainer: {
-    paddingHorizontal: SPACING.lg,
-    marginTop: SPACING.xl,
-  },
-  // Info note
-  infoNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACING.xs,
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-    marginBottom: SPACING.lg,
-  },
-  infoNoteText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.outline,
-    textAlign: 'center',
-  },
-});
+const createStyles = (COLORS: ThemedColors) =>
+  StyleSheet.create({
+    skipButton: {
+      minHeight: 40,
+      paddingHorizontal: SPACING.gutter,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderRadius: RADIUS.full,
+    },
+    skipText: {
+      ...TYPOGRAPHY.labelLg,
+      color: COLORS.primary,
+    },
+    roleCard: {
+      padding: SPACING.md,
+      borderRadius: RADIUS.lg,
+      borderWidth: BORDER.hairline,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.authCard,
+      gap: SPACING.sm,
+    },
+    roleCardSelected: {
+      borderColor: COLORS.primary,
+      borderWidth: BORDER.emphasis,
+      backgroundColor: COLORS.authGutter,
+    },
+    roleHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: SPACING.gutter,
+    },
+    roleIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: RADIUS.md,
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: COLORS.authGutter,
+    },
+    roleIconSelected: {
+      backgroundColor: COLORS.primary,
+    },
+    roleInfo: {
+      flex: 1,
+    },
+    roleTitle: {
+      ...TYPOGRAPHY.headlineMd,
+      color: COLORS.onSurface,
+    },
+    roleSubtitle: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.primary,
+    },
+    radioOuter: {
+      width: 24,
+      height: 24,
+      borderRadius: RADIUS.full,
+      borderWidth: BORDER.emphasis,
+      borderColor: COLORS.outlineVariant,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    radioOuterSelected: {
+      borderColor: COLORS.primary,
+    },
+    radioInner: {
+      width: 12,
+      height: 12,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    roleDescription: {
+      ...TYPOGRAPHY.bodySm,
+      color: COLORS.onSurfaceVariant,
+    },
+    tagRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: SPACING.sm,
+    },
+    tag: {
+      paddingHorizontal: SPACING.gutter,
+      paddingVertical: SPACING.xs + 2,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surfaceContainer,
+    },
+    tagText: {
+      ...TYPOGRAPHY.labelMd,
+      color: COLORS.onSurfaceVariant,
+    },
+    cta: {
+      marginTop: SPACING.md,
+    },
+  });

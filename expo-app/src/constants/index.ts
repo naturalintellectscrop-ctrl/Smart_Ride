@@ -124,6 +124,10 @@ export const COLORS = {
 // TYPOGRAPHY (Stitch Design System)
 // ============================================
 export const TYPOGRAPHY = {
+  // The two-tone auth headline ("Create your" / "account"). Heavier and tighter
+  // than displayLg so it carries the top of an auth screen on its own. The
+  // lineHeight leaves descender room for the `y`/`g` in "your"/"Sign in".
+  displayXl: { fontSize: 32, fontWeight: '800' as const, lineHeight: 38, letterSpacing: -0.5 },
   displayLg: { fontSize: 32, fontWeight: '700' as const, lineHeight: 40, letterSpacing: -0.02 * 16 },
   // Auth headers (reset-password, change-password, role-selection) reference
   // displaySm; it was missing from the scale, so those styles resolved to
@@ -164,6 +168,28 @@ export const RADIUS = {
   lg: 16,
   xl: 24,
   full: 9999,
+};
+
+// ============================================
+// AUTH SURFACE (sizing for the login / onboarding design language)
+// ============================================
+// The auth + onboarding screens share one composition: a step rail, a brand
+// lockup, a two-tone display headline, a hero art plate, and a stack of field
+// cards with a tinted left icon gutter. These are the sizes that composition
+// depends on — keep them here so a screen never hardcodes them.
+//
+// SHAPE RULE for this surface: field cards and containers use RADIUS.lg (16);
+// CTAs, social buttons and chips use RADIUS.full; the logo tile uses 14. The
+// icon gutter inherits the card radius on its left edge.
+export const AUTH = {
+  gutterWidth: 60,      // tinted icon column on the left of a field card
+  fieldMinHeight: 76,   // label row + input row + vertical padding
+  ctaHeight: 56,        // primary pill button
+  logoTile: 52,
+  logoTileRadius: 14,
+  heroHeight: 168,
+  accentRule: { width: 28, height: 4 },
+  stepDot: 26,          // numbered circle in the step rail
 };
 
 // ============================================
