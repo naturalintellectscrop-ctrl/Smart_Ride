@@ -23,7 +23,7 @@ import { TYPOGRAPHY, SPACING, RADIUS, OPACITY } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { statusColor } from '@/src/theme/statusColors';
-import { Panel, TonePill, toneColors } from '@/src/components/pharmacy';
+import { Panel, TonePill, toneColors } from '@/src/components/storefront';
 import {
   AppHeader,
   Card,

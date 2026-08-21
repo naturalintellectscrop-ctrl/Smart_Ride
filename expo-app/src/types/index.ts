@@ -191,6 +191,11 @@ export interface Merchant {
   rating: number;
   logoUrl?: string;
   coverImageUrl?: string;
+  /** Onboarding state: PENDING_APPROVAL, APPROVED, REJECTED, SUSPENDED. */
+  status?: string;
+  /** Free-text hours the shop publishes, shown to customers. */
+  openingTime?: string | null;
+  closingTime?: string | null;
 }
 
 export interface MenuItem {

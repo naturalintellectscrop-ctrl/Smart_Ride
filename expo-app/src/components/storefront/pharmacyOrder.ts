@@ -14,7 +14,7 @@
 //   with CANCELLED / REJECTED as the other endings.
 // ============================================
 
-import type { Tone } from './pharmacyKit';
+import type { Tone } from './storefrontKit';
 
 export type ProviderOrderStatus =
   | 'ORDER_RECEIVED'

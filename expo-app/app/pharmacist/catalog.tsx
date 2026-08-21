@@ -38,7 +38,7 @@ import {
   SmartBottomSheet,
   ConfirmDialog,
 } from '@/src/components';
-import { Panel, SectionTitle, TonePill, StatTile, toneColors } from '@/src/components/pharmacy';
+import { Panel, SectionTitle, TonePill, StatTile, toneColors } from '@/src/components/storefront';
 import { Ionicons } from '@expo/vector-icons';
 
 /**

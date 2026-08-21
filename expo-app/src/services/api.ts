@@ -883,6 +883,34 @@ class ApiService {
    * what the screens render, so the translation lives here rather than forcing
    * every call site to learn the server's verbs.
    */
+  /**
+   * Send a merchant order action straight through.
+   *
+   * The server's contract is an ACTION (accept / reject / preparing / ready),
+   * and it validates that action against the order's current status. Screens
+   * that know which action they are offering should say so rather than naming a
+   * target status and having it translated — the translation is also why the
+   * dashboard wrote 'CONFIRMED' into local state, a value OrderStatus does not
+   * contain, so the card then showed the raw word to the merchant.
+   */
+  async merchantOrderAction(
+    orderId: string,
+    action: 'accept' | 'reject' | 'preparing' | 'ready' | 'cancel',
+    opts?: { merchantId?: string; reason?: string }
+  ): Promise<ApiResponse<any>> {
+    const body: Record<string, unknown> = {};
+    if (opts?.merchantId) body.merchantId = opts.merchantId;
+    if (action === 'reject' || action === 'cancel') {
+      body.reason =
+        opts?.reason && opts.reason.length >= 5 ? opts.reason : 'Declined by the merchant';
+    }
+    return this.request<any>(
+      `/orders/${orderId}?action=${encodeURIComponent(action)}`,
+      'PATCH',
+      body
+    );
+  }
+
   async updateOrderStatus(
     orderId: string,
     status: string,

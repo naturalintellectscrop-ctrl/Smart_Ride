@@ -6,7 +6,7 @@
 // pharmacy most needs and could not see anywhere — has it been paid for.
 //
 // Statuses, tab groupings, payment wording and the legal action from each state
-// all come from src/components/pharmacy/pharmacyOrder.ts, so this screen and
+// all come from src/components/storefront/pharmacyOrder.ts, so this screen and
 // the detail screen can no longer disagree about what an order is doing.
 // ============================================
 
@@ -35,7 +35,7 @@ import {
   parseItems,
   TAB_STATUSES,
   TAB_LABELS,
-} from '@/src/components/pharmacy';
+} from '@/src/components/storefront';
 import { Ionicons } from '@expo/vector-icons';
 
 const TAB_ORDER = ['ALL', 'NEW', 'ACTIVE', 'DELIVERED', 'CLOSED'] as const;

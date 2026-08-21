@@ -27,7 +27,7 @@ import { SPACING, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { AppHeader, ListSkeleton, EmptyState, ConfirmDialog } from '@/src/components';
-import { MoneyHero, Panel, SectionTitle, StatTile, TonePill } from '@/src/components/pharmacy';
+import { MoneyHero, Panel, SectionTitle, StatTile, TonePill } from '@/src/components/storefront';
 import { Ionicons } from '@expo/vector-icons';
 
 type PeriodFilter = 'daily' | 'weekly' | 'monthly';

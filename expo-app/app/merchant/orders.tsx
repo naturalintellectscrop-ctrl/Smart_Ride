@@ -1,7 +1,17 @@
 // ============================================
-// SMART RIDE MOBILE - MERCHANT ORDERS SCREEN
+// SMART RIDE MOBILE - MERCHANT ORDERS
 // ============================================
-// Order management with tab filters and actions
+// The order book, on the same storefront kit as the pharmacy's. Each card
+// answers, without being opened: what state is this in, who is it for, what is
+// it worth, and — the thing a shop most needs and could not see — has it been
+// paid for.
+//
+// Tabs are PHASES, not single statuses. They were one-status-per-tab, so an
+// order that had been accepted vanished from "New" and appeared in "Accepted",
+// then vanished again at "Preparing" — a merchant chasing an order had to guess
+// which tab it had moved to. Statuses, groupings and the legal action from each
+// state come from src/components/storefront/merchantOrder.ts, shared with the
+// dashboard so the two cannot disagree.
 // ============================================
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
@@ -10,363 +20,353 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
   RefreshControl,
   StyleSheet,
+  FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useMerchantStore } from '@/src/store';
-import { ORDER_STATUS_LABELS, TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
-import { statusColor as semanticStatusColor } from '@/src/theme/statusColors';
-import {
-  AppHeader,
-  Chip,
-  EmptyState,
-  ErrorState,
-  ListSkeleton,
-  StatusBadge,
-} from '@/src/components';
+import { SPACING, RADIUS } from '@/src/constants';
+import { AppHeader, EmptyState, ErrorState, ListSkeleton, SearchInput } from '@/src/components';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
-import { MerchantOrder } from '@/src/types';
+import {
+  Panel,
+  TonePill,
+  toneColors,
+  merchantStatusMeta,
+  paymentMeta,
+  MERCHANT_TAB_STATUSES,
+  MERCHANT_TAB_LABELS,
+} from '@/src/components/storefront';
 import { Ionicons } from '@expo/vector-icons';
 
+const TAB_ORDER = ['ALL', 'NEW', 'ACTIVE', 'DELIVERED', 'CLOSED'] as const;
+type OrderTab = (typeof TAB_ORDER)[number];
 
-const TABS = [
-  { key: 'ALL', label: 'All' },
-  { key: 'ORDER_CREATED', label: 'New' },
-  { key: 'MERCHANT_ACCEPTED', label: 'Accepted' },
-  { key: 'PREPARING', label: 'Preparing' },
-  { key: 'READY_FOR_PICKUP', label: 'Ready' },
-  { key: 'DELIVERED', label: 'Done' },
-  { key: 'CANCELLED', label: 'Cancelled' },
-];
+const UGX = (n: unknown) => `UGX ${Number(n || 0).toLocaleString()}`;
 
 export default function MerchantOrdersScreen() {
   const router = useRouter();
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
-  const params = useLocalSearchParams();
-  const merchantId = params.merchantId as string;
+  const params = useLocalSearchParams<{ merchantId?: string; tab?: string }>();
 
-  const orders = useMerchantStore(s => s.orders);
-  const isLoadingOrders = useMerchantStore(s => s.isLoadingOrders);
-  const ordersError = useMerchantStore(s => s.ordersError);
-  const fetchOrders = useMerchantStore(s => s.fetchOrders);
-  const updateOrderStatus = useMerchantStore(s => s.updateOrderStatus);
+  const merchant = useMerchantStore((s) => s.merchant);
+  const orders = useMerchantStore((s) => s.orders);
+  const isLoadingOrders = useMerchantStore((s) => s.isLoadingOrders);
+  const ordersError = useMerchantStore((s) => s.ordersError);
+  const fetchOrders = useMerchantStore((s) => s.fetchOrders);
 
-  const [activeTab, setActiveTab] = useState('ALL');
+  const merchantId = params.merchantId || merchant?.id;
+
+  // The dashboard tiles deep-link straight into the group they count.
+  const initialTab = (TAB_ORDER as readonly string[]).includes(params.tab ?? '')
+    ? (params.tab as OrderTab)
+    : 'ALL';
+
+  const [activeTab, setActiveTab] = useState<OrderTab>(initialTab);
+  const [query, setQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    if (merchantId) fetchOrders(merchantId, undefined, 1);
+  }, [merchantId, fetchOrders]);
 
   useEffect(() => {
-    if (merchantId) {
-      fetchOrders(merchantId, activeTab === 'ALL' ? undefined : activeTab);
-    }
-  }, [merchantId, activeTab]);
+    load();
+  }, [load]);
 
-  const onRefresh = useCallback(async () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    if (merchantId) {
-      await fetchOrders(merchantId, activeTab === 'ALL' ? undefined : activeTab);
-    }
+    await load();
     setRefreshing(false);
-  }, [merchantId, activeTab]);
-
-  const handleOrderPress = (order: MerchantOrder) => {
-    router.push(`/merchant/orders/${order.id}?merchantId=${merchantId}`);
   };
 
-  const handleUpdateStatus = async (orderId: string, status: string, e?: any) => {
-    if (e) e.stopPropagation();
-    setUpdatingOrderId(orderId);
-    await updateOrderStatus(orderId, status);
-    setUpdatingOrderId(null);
-    // Refresh orders
-    if (merchantId) {
-      fetchOrders(merchantId, activeTab === 'ALL' ? undefined : activeTab);
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { ALL: orders.length };
+    for (const tab of TAB_ORDER) {
+      if (tab === 'ALL') continue;
+      const wanted = MERCHANT_TAB_STATUSES[tab];
+      c[tab] = wanted ? orders.filter((o) => wanted.includes(o.status)).length : 0;
     }
-  };
+    return c;
+  }, [orders]);
 
-  const formatCurrency = (amount: number) => `UGX ${(amount || 0).toLocaleString()}`;
+  const visible = useMemo(() => {
+    const wanted = MERCHANT_TAB_STATUSES[activeTab];
+    let list = wanted ? orders.filter((o) => wanted.includes(o.status)) : orders;
+    const q = query.trim().toLowerCase();
+    if (q) {
+      list = list.filter((o) =>
+        [
+          o.orderNumber,
+          (o as any).client?.name,
+          (o as any).recipientName,
+          (o as any).deliveryAddress,
+        ]
+          .filter(Boolean)
+          .some((f: string) => String(f).toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [orders, activeTab, query]);
 
-  const formatTime = (dateStr: string) => {
+  const formatDate = (dateStr?: string) => {
     if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const d = new Date(dateStr);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
   };
 
-  const getStatusColor = (status: string) => {
-    return semanticStatusColor(status, COLORS);
-  };
-
-  const getAvailableActions = (status: string): { label: string; status: string; variant: 'primary' | 'secondary' | 'danger' }[] => {
-    switch (status) {
-      case 'ORDER_CREATED':
-      case 'PAYMENT_CONFIRMED':
-        return [
-          { label: 'Accept', status: 'MERCHANT_ACCEPTED', variant: 'primary' },
-          { label: 'Reject', status: 'CANCELLED', variant: 'danger' },
-        ];
-      case 'MERCHANT_ACCEPTED':
-        return [
-          { label: 'Start Preparing', status: 'PREPARING', variant: 'primary' },
-        ];
-      case 'PREPARING':
-        return [
-          { label: 'Mark Ready', status: 'READY_FOR_PICKUP', variant: 'primary' },
-        ];
-      case 'READY_FOR_PICKUP':
-        return [];
-      default:
-        return [];
-    }
+  const emptyCopy: Record<OrderTab, { title: string; subtitle: string }> = {
+    ALL: {
+      title: 'No orders yet',
+      subtitle: 'Orders appear here as soon as a customer places one with your shop.',
+    },
+    NEW: {
+      title: 'Nothing waiting on you',
+      subtitle: 'New orders land here first, so you can accept or decline them.',
+    },
+    ACTIVE: {
+      title: 'Nothing in progress',
+      subtitle: 'Orders you have accepted show here until the courier delivers them.',
+    },
+    DELIVERED: {
+      title: 'No completed orders yet',
+      subtitle: 'Once a courier hands an order to the customer, it moves here.',
+    },
+    CLOSED: {
+      title: 'Nothing cancelled',
+      subtitle: 'Orders you decline, or that get cancelled, are kept here.',
+    },
   };
 
   return (
     <View style={styles.container}>
-      {/* Back was the text glyph '←'. */}
-      <AppHeader title="Orders" onBack={() => router.back()} />
+      <AppHeader title="Orders" subtitle={`${orders.length} total`} onBack={() => router.back()} />
 
-      {/* Tab Filter */}
+      <View style={styles.searchWrap}>
+        <SearchInput
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search by order, customer or address"
+        />
+      </View>
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.tabContainer}
-        contentContainerStyle={styles.tabContent}
+        style={styles.tabsContainer}
+        contentContainerStyle={styles.tabsContent}
       >
-        {TABS.map((tab) => (
-          <Chip
-            key={tab.key}
-            label={tab.label}
-            active={activeTab === tab.key}
-            onPress={() => setActiveTab(tab.key)}
-          />
-        ))}
+        {TAB_ORDER.map((tab) => {
+          const active = activeTab === tab;
+          return (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.tab, active && styles.activeTab]}
+              onPress={() => setActiveTab(tab)}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
+              accessibilityLabel={`${MERCHANT_TAB_LABELS[tab]}, ${counts[tab] ?? 0} orders`}
+            >
+              <Text
+                style={[styles.tabText, active && styles.activeTabText]}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
+                {MERCHANT_TAB_LABELS[tab]}
+              </Text>
+              {(counts[tab] ?? 0) > 0 ? (
+                <View style={[styles.tabCount, active && styles.activeTabCount]}>
+                  <Text style={[styles.tabCountText, active && styles.activeTabCountText]}>
+                    {counts[tab]}
+                  </Text>
+                </View>
+              ) : null}
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
 
-      {/* Orders List */}
-      <ScrollView
-        style={styles.listContainer}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
-        contentContainerStyle={styles.listContent}
-      >
-        {isLoadingOrders && !refreshing ? (
-          <ListSkeleton rows={4} />
-        ) : ordersError ? (
-          <ErrorState
-            title="Couldn't load orders"
-            subtitle={ordersError}
-            onRetry={() => merchantId && fetchOrders(merchantId, activeTab === 'ALL' ? undefined : activeTab)}
-          />
-        ) : orders.length === 0 ? (
-          <EmptyState
-            icon="clipboard-outline"
-            title="No orders"
-            subtitle={
-              activeTab === 'ALL'
-                ? 'Orders will appear here when customers place them.'
-                : `No ${ORDER_STATUS_LABELS[activeTab]?.toLowerCase() || activeTab.toLowerCase()} orders.`
-            }
-          />
-        ) : (
-          orders.map(order => {
-            const actions = getAvailableActions(order.status);
-            const statusColor = getStatusColor(order.status);
-            const isUpdating = updatingOrderId === order.id;
+      {isLoadingOrders && orders.length === 0 ? (
+        <ListSkeleton />
+      ) : ordersError && orders.length === 0 ? (
+        <ErrorState title="We could not load your orders" subtitle={ordersError} onRetry={load} />
+      ) : (
+        <FlatList
+          data={visible}
+          keyExtractor={(o) => o.id}
+          style={styles.list}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+          }
+          ListEmptyComponent={
+            <EmptyState
+              icon={query ? 'search-outline' : 'bag-handle-outline'}
+              title={query ? 'Nothing matched that' : emptyCopy[activeTab].title}
+              subtitle={
+                query
+                  ? `No order matches "${query.trim()}". Try an order number, a customer or an address.`
+                  : emptyCopy[activeTab].subtitle
+              }
+            />
+          }
+          renderItem={({ item: order }) => {
+            const meta = merchantStatusMeta(order.status);
+            const pay = paymentMeta((order as any).paymentMethod, (order as any).paymentStatus);
+            const tone = toneColors(meta.tone, isDark);
+            const itemCount = (order as any).items?.length ?? 0;
 
             return (
               <TouchableOpacity
-                key={order.id}
-                style={styles.orderCard}
-                onPress={() => handleOrderPress(order)}
-                activeOpacity={0.7}
+                onPress={() =>
+                  merchantId
+                    ? router.push(`/merchant/orders/${order.id}?merchantId=${merchantId}` as never)
+                    : undefined
+                }
+                activeOpacity={0.85}
+                accessibilityRole="button"
+                accessibilityLabel={`Order ${order.orderNumber}, ${meta.label}, ${UGX(
+                  order.totalAmount
+                )}`}
               >
-                {/* Order Header */}
-                <View style={styles.orderHeader}>
-                  <View style={styles.orderInfo}>
-                    <Text style={styles.orderNumber}>#{order.orderNumber || order.id.slice(-6)}</Text>
-                    <Text style={styles.orderTime}>{formatTime(order.createdAt)}</Text>
-                  </View>
-                  <StatusBadge
-                    label={ORDER_STATUS_LABELS[order.status] || order.status}
-                    color={statusColor}
-                    size="sm"
-                  />
-                </View>
+                <Panel style={styles.orderCard} padding={0}>
+                  {/* A colour rail rather than another badge — the state stays
+                      readable while scrolling. */}
+                  <View style={[styles.rail, { backgroundColor: tone.ink }]} />
+                  <View style={styles.orderBody}>
+                    <View style={styles.orderTop}>
+                      <Text style={styles.orderNumber} numberOfLines={1}>
+                        {order.orderNumber || `#${order.id?.slice(-6)}`}
+                      </Text>
+                      <TonePill label={meta.label} tone={meta.tone} />
+                    </View>
 
-                {/* Order Details */}
-                <View style={styles.orderDetails}>
-                  <View style={styles.orderMeta}>
-                    <Ionicons name="person-outline" size={14} color={COLORS.onSurfaceVariant} />
-                    <Text style={styles.metaText}>{(order as any).customerName || 'Customer'}</Text>
-                  </View>
-                  <View style={styles.orderMeta}>
-                    <Ionicons name="cube-outline" size={14} color={COLORS.onSurfaceVariant} />
-                    <Text style={styles.metaText}>{order.items?.length || 0} item(s)</Text>
-                  </View>
-                  <Text style={styles.orderTotal}>{formatCurrency(order.totalAmount)}</Text>
-                </View>
+                    <Text style={styles.customer} numberOfLines={1}>
+                      {(order as any).client?.name || (order as any).recipientName || 'Customer'}
+                      {itemCount ? ` · ${itemCount} item${itemCount === 1 ? '' : 's'}` : ''}
+                    </Text>
+                    {(order as any).deliveryAddress ? (
+                      <Text style={styles.address} numberOfLines={1}>
+                        {(order as any).deliveryAddress}
+                      </Text>
+                    ) : null}
 
-                {/* Action Buttons */}
-                {actions.length > 0 && (
-                  <View style={styles.actionRow}>
-                    {actions.map(action => (
-                      <TouchableOpacity
-                        key={action.status}
-                        style={[
-                          styles.actionButton,
-                          action.variant === 'primary' && styles.actionPrimary,
-                          action.variant === 'danger' && styles.actionDanger,
-                          action.variant === 'secondary' && styles.actionSecondary,
-                          isUpdating && styles.actionDisabled,
-                        ]}
-                        onPress={(e) => handleUpdateStatus(order.id, action.status, e)}
-                        disabled={isUpdating}
-                      >
-                        {isUpdating ? (
-                          <ActivityIndicator size="small" color={action.variant === 'primary' ? COLORS.surface : COLORS.onSurface} />
-                        ) : (
-                          <Text style={[
-                            styles.actionButtonText,
-                            action.variant === 'primary' && styles.actionPrimaryText,
-                            action.variant === 'danger' && styles.actionDangerText,
-                            action.variant === 'secondary' && styles.actionSecondaryText,
-                          ]}>
-                            {action.label}
-                          </Text>
-                        )}
-                      </TouchableOpacity>
-                    ))}
+                    <View style={styles.orderFooter}>
+                      <View style={styles.moneyBlock}>
+                        <Text style={styles.amount}>{UGX(order.totalAmount)}</Text>
+                        <Text style={styles.hint} numberOfLines={1}>
+                          {meta.hint}
+                        </Text>
+                      </View>
+                      <View style={styles.payBlock}>
+                        <TonePill label={pay.statusLabel} tone={pay.tone} icon="card" />
+                        <Text style={styles.payMethod} numberOfLines={1}>
+                          {pay.method}
+                        </Text>
+                      </View>
+                    </View>
+
+                    <Text style={styles.date}>{formatDate(order.createdAt)}</Text>
                   </View>
-                )}
+                </Panel>
               </TouchableOpacity>
             );
-          })
-        )}
-      </ScrollView>
+          }}
+        />
+      )}
     </View>
   );
 }
 
-// ============================================
-// STYLES
-// ============================================
+const createStyles = (COLORS: ThemedColors) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.background },
 
-const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.surface,
-  },
-  tabContainer: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    maxHeight: 52,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.outlineVariant,
-  },
-  tabContent: {
-    paddingHorizontal: SPACING.md - 4,
-    paddingVertical: SPACING.sm,
-    gap: SPACING.sm,
-  },
-  listContainer: {
-    flex: 1,
-  },
-  listContent: {
-    padding: SPACING.md,
-    gap: SPACING.md - 4,
-  },
-  orderCard: {
-    backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.lg,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-    ...SHADOWS.card,
-  },
-  orderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: SPACING.md - 4,
-  },
-  orderInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.sm + 2,
-  },
-  orderNumber: {
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: 'bold',
-  },
-  orderTime: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.labelMd,
-  },
-  orderDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.xs,
-  },
-  orderMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  metaText: {
-    color: COLORS.onSurfaceVariant,
-    ...TYPOGRAPHY.labelMd,
-  },
-  orderTotal: {
-    color: COLORS.primary,
-    ...TYPOGRAPHY.bodyMd,
-    fontWeight: 'bold',
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-    marginTop: SPACING.md - 4,
-    paddingTop: SPACING.md - 4,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.outlineVariant,
-  },
-  actionButton: {
-    flex: 1,
-    paddingVertical: SPACING.sm + 2,
-    borderRadius: RADIUS.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  actionPrimary: {
-    backgroundColor: COLORS.primary,
-  },
-  actionDanger: {
-    backgroundColor: `${COLORS.error}15`,
-    borderWidth: 1,
-    borderColor: `${COLORS.error}30`,
-  },
-  actionSecondary: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
-  },
-  actionDisabled: {
-    opacity: 0.5,
-  },
-  actionButtonText: {
-    ...TYPOGRAPHY.labelMd,
-    fontWeight: '600',
-  },
-  actionPrimaryText: {
-    color: COLORS.onPrimary,
-  },
-  actionDangerText: {
-    color: COLORS.error,
-  },
-  actionSecondaryText: {
-    color: COLORS.onSurface,
-  },
-});
+    searchWrap: { paddingHorizontal: SPACING.md, paddingTop: SPACING.sm },
+
+    tabsContainer: { flexGrow: 0, maxHeight: 56 },
+    tabsContent: {
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+      gap: SPACING.sm,
+      alignItems: 'center',
+    },
+    tab: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 999,
+      borderWidth: 1,
+      borderColor: COLORS.outlineVariant,
+      backgroundColor: COLORS.backgroundElevated,
+    },
+    activeTab: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+    tabText: { fontSize: 13, fontWeight: '600', color: COLORS.onSurfaceVariant },
+    activeTabText: { color: '#FFFFFF' },
+    tabCount: {
+      minWidth: 20,
+      paddingHorizontal: 5,
+      paddingVertical: 1,
+      borderRadius: 999,
+      backgroundColor: COLORS.surfaceContainerHigh,
+      alignItems: 'center',
+    },
+    activeTabCount: { backgroundColor: 'rgba(255,255,255,0.28)' },
+    tabCountText: { fontSize: 11, fontWeight: '800', color: COLORS.onSurfaceVariant },
+    activeTabCountText: { color: '#FFFFFF' },
+
+    list: { flex: 1 },
+    listContent: {
+      padding: SPACING.md,
+      paddingTop: SPACING.xs,
+      paddingBottom: SPACING.xxl,
+      gap: SPACING.gutter,
+    },
+
+    orderCard: { flexDirection: 'row', overflow: 'hidden' },
+    rail: { width: 4 },
+    orderBody: { flex: 1, padding: SPACING.md, minWidth: 0 },
+
+    orderTop: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: SPACING.sm,
+    },
+    orderNumber: { flex: 1, fontSize: 14, fontWeight: '800', color: COLORS.onSurface },
+
+    customer: { fontSize: 13, color: COLORS.onSurface, marginTop: 8, fontWeight: '600' },
+    address: { fontSize: 12.5, color: COLORS.onSurfaceVariant, marginTop: 3 },
+
+    orderFooter: {
+      flexDirection: 'row',
+      alignItems: 'flex-end',
+      justifyContent: 'space-between',
+      gap: SPACING.sm,
+      marginTop: SPACING.gutter,
+      paddingTop: SPACING.gutter,
+      borderTopWidth: 1,
+      borderTopColor: COLORS.outlineVariant,
+    },
+    moneyBlock: { flexShrink: 1, minWidth: 0 },
+    amount: { fontSize: 18, fontWeight: '800', color: COLORS.onSurface, letterSpacing: -0.4 },
+    hint: { fontSize: 11.5, color: COLORS.onSurfaceVariant, marginTop: 1 },
+    payBlock: { alignItems: 'flex-end', flexShrink: 1, minWidth: 0, gap: 4 },
+    payMethod: { fontSize: 11, color: COLORS.onSurfaceVariant, textAlign: 'right' },
+
+    date: { fontSize: 11, color: COLORS.outline, marginTop: 8 },
+  });

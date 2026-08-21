@@ -38,7 +38,7 @@ import {
   actionsFor,
   parseItems,
   ORDER_RAIL,
-} from '@/src/components/pharmacy';
+} from '@/src/components/storefront';
 import { Ionicons } from '@expo/vector-icons';
 import { firstName } from '@/src/utils/formatName';
 

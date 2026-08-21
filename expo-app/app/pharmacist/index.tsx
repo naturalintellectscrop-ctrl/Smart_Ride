@@ -25,7 +25,7 @@ import {
   Sparkline,
   StatTile,
   TonePill,
-} from '@/src/components/pharmacy';
+} from '@/src/components/storefront';
 import { Ionicons } from '@expo/vector-icons';
 import { useProviderApprovalGate } from '@/src/hooks/useProviderApprovalGate';
 
