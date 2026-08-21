@@ -207,7 +207,12 @@ export default function LoginScreen() {
     <>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={COLORS.background} />
       <AuthScreen
-        onBack={() => router.back()}
+        // Back goes to the welcome screen, not "wherever you came from".
+        // router.back() only lands there when login was pushed from it — after
+        // a sign-out, from a deep link, or coming across from Sign Up, it
+        // popped somewhere else or nowhere at all. replace() rather than push()
+        // so the two do not stack up on each other.
+        onBack={() => router.replace('/')}
         lead="Welcome"
         accent="back"
         subtitle="Sign in to keep moving with Smart Ride."
