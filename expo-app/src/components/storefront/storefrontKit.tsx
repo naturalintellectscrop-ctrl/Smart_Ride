@@ -140,7 +140,14 @@ export function StatTile({
       <Text style={[kit.statValue, { color: t.ink }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
         {value}
       </Text>
-      <Text style={[kit.statLabel, { color: t.ink }]} numberOfLines={1}>
+      {/* Two lines, because "Needs action" does not fit on one at a large font
+          scale and a label clipped to "Needs acti…" says nothing. */}
+      <Text
+        style={[kit.statLabel, { color: t.ink }]}
+        numberOfLines={2}
+        adjustsFontSizeToFit
+        minimumFontScale={0.8}
+      >
         {label}
       </Text>
       {onPress ? (
@@ -238,9 +245,12 @@ export function Sparkline({
       </View>
       {labels ? (
         <View style={kit.sparkLabels}>
+          {/* Seven labels across half a card is one character each. "Mon" was
+              arriving as "M…", which is a truncated word rather than an
+              initial — worse than the initial it was trying to be. */}
           {labels.map((l, i) => (
             <Text key={i} style={kit.sparkLabel} numberOfLines={1}>
-              {l}
+              {l.length > 2 ? l.charAt(0) : l}
             </Text>
           ))}
         </View>
@@ -288,15 +298,28 @@ export function ActionTile({
           </View>
         ) : null}
       </View>
+      {/* No chevron. The whole tile is the target, and on a 2-across grid the
+          arrow was taking the room the words needed — "Prescriptions" arrived
+          as "Prescr…" and "Manage stock" as "Manage…". An affordance that costs
+          you the label is not worth having. */}
       <View style={kit.actionText}>
-        <Text style={[kit.actionTitle, { color: COLORS.onSurface }]} numberOfLines={1}>
+        <Text
+          style={[kit.actionTitle, { color: COLORS.onSurface }]}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+        >
           {title}
         </Text>
-        <Text style={[kit.actionSubtitle, { color: COLORS.onSurfaceVariant }]} numberOfLines={1}>
+        <Text
+          style={[kit.actionSubtitle, { color: COLORS.onSurfaceVariant }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.8}
+        >
           {subtitle}
         </Text>
       </View>
-      <Ionicons name="chevron-forward" size={17} color={COLORS.outline} />
     </TouchableOpacity>
   );
 }
@@ -423,7 +446,7 @@ export const kit = StyleSheet.create({
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     padding: 12,
-    minHeight: 132,
+    minHeight: 140,
     justifyContent: 'flex-start',
   },
   statChip: {
@@ -435,7 +458,7 @@ export const kit = StyleSheet.create({
     marginBottom: 10,
   },
   statValue: { fontSize: 26, fontWeight: '800', letterSpacing: -0.5 },
-  statLabel: { fontSize: 12, fontWeight: '600', marginTop: 1, opacity: 0.85 },
+  statLabel: { fontSize: 11.5, fontWeight: '600', marginTop: 1, opacity: 0.85, lineHeight: 14 },
   statAction: { flexDirection: 'row', alignItems: 'center', gap: 1, marginTop: 8 },
   statActionText: { fontSize: 11, fontWeight: '700', flexShrink: 1 },
 
@@ -479,14 +502,14 @@ export const kit = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 9,
     borderRadius: RADIUS.lg,
     borderWidth: 1,
     paddingVertical: 14,
     paddingHorizontal: 12,
     minHeight: 72,
   },
-  actionChip: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  actionChip: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   actionBadge: {
     position: 'absolute',
     top: -3,
@@ -501,7 +524,7 @@ export const kit = StyleSheet.create({
   },
   actionBadgeText: { color: '#FFFFFF', fontSize: 10, fontWeight: '800' },
   actionText: { flex: 1, minWidth: 0 },
-  actionTitle: { fontSize: 14, fontWeight: '700', letterSpacing: -0.2 },
+  actionTitle: { fontSize: 13.5, fontWeight: '700', letterSpacing: -0.2 },
   actionSubtitle: { fontSize: 12, marginTop: 1 },
 
   panel: { borderRadius: RADIUS.xl, borderWidth: 1, overflow: 'hidden' },

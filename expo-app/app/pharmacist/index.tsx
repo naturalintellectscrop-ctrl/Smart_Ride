@@ -43,7 +43,7 @@ interface ProviderStatus {
 }
 
 const UGX = (n: number) => `UGX ${Math.round(n).toLocaleString()}`;
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function PharmacistDashboard() {
   const { isDark } = useTheme();

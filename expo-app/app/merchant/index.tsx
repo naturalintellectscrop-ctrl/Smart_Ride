@@ -38,7 +38,7 @@ import {
 } from '@/src/components/storefront';
 
 const UGX = (n: unknown) => `UGX ${Number(n || 0).toLocaleString()}`;
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAY_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function MerchantDashboardScreen() {
   const { isDark } = useTheme();
