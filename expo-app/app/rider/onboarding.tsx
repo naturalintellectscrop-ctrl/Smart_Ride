@@ -11,7 +11,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
@@ -19,12 +18,12 @@ import { Alert } from '@/src/components/feedback';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api } from '@/src/services';
-import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS } from '@/src/constants';
+import { TYPOGRAPHY, SPACING, RADIUS, SHADOWS, ICON } from '@/src/constants';
+import { AuthHeadline, StepRail, FieldCard } from '@/src/components/auth';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import type { RiderRole } from '@/src/types';
 import {
-  AppHeader,
   Card,
   GradientButton,
   UploadField,
@@ -34,6 +33,8 @@ import { ImagePickerResult } from '@/src/utils/imagePicker';
 
 
 const TOTAL_STEPS = 4;
+// Short labels for the step rail. Order matches the wizard's steps.
+const STEP_LABELS = ['Personal', 'Docs', 'Vehicle', 'Review'];
 
 const VEHICLE_TYPES = [
   { id: 'MOTORCYCLE', label: 'Motorcycle', icon: 'bicycle-outline', description: 'Boda boda rider' },
@@ -207,17 +208,37 @@ export default function RiderOnboardingScreen() {
       if (response.success && response.data) {
         const data = response.data.onboarding || response.data;
 
+        // DEV-3: an approved driver who lands here must leave FORWARDS.
+        //
+        // Both of these dismissed with router.back(), which returns to whatever
+        // pushed the form — and what pushes the form is the "Become a Rider"
+        // entry, so the driver bounced straight back onto a four-step
+        // application for an account that is already approved. The only
+        // prominent escape on that screen offers to switch them to Client, i.e.
+        // to demote an approved driver, and Android back leaves the app.
+        // Recovering meant knowing to force-quit.
+        //
+        // replace() rather than push() so the form is not left on the stack
+        // behind them to be found again with a back gesture.
         if (data?.status === 'APPROVED') {
-          Alert.alert('Already Approved', 'Your rider account is already approved!', [
-            { text: 'OK', onPress: () => router.back() },
-          ]);
+          Alert.alert(
+            'You are already approved',
+            'Taking you to your dashboard.',
+            [{ text: 'OK', onPress: () => router.replace('/driver') }],
+            // Not dismissible: OK is the only way out, and OK goes forwards.
+            // A tap outside the dialog used to leave them on the form.
+            { cancelable: false }
+          );
           return;
         }
 
         if (data?.status === 'SUBMITTED' || data?.status === 'PENDING_APPROVAL') {
-          Alert.alert('Application Submitted', 'Your application is being reviewed. We\'ll notify you when it\'s approved.', [
-            { text: 'OK', onPress: () => router.back() },
-          ]);
+          Alert.alert(
+            'Application submitted',
+            'We are reviewing it, and will let you know as soon as it is approved.',
+            [{ text: 'OK', onPress: () => router.replace('/') }],
+            { cancelable: false }
+          );
           return;
         }
 
@@ -454,66 +475,80 @@ export default function RiderOnboardingScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Both back controls were the text glyph "←" rather than an icon. */}
-      <AppHeader
-        title="Become a Rider"
-        subtitle={`Step ${currentStep} of ${TOTAL_STEPS}`}
-        onBack={currentStep > 1 ? handleBack : handleSwitchRole}
-        rightActions={[
-          { icon: 'swap-horizontal-outline', onPress: handleSwitchRole, label: 'Not a rider?' },
-        ]}
-      />
+      {/* Step rail replaces the AppHeader subtitle + percentage bar, so the
+          wizard reads the same as the auth flow that leads into it. The
+          "Not a rider?" escape hatch keeps its place on the right. */}
+      <View style={[styles.topBar, { paddingTop: Math.max(insets.top, SPACING.sm) }]}>
+        <TouchableOpacity
+          style={styles.topBarButton}
+          onPress={currentStep > 1 ? handleBack : handleSwitchRole}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
+          <Ionicons name="arrow-back" size={ICON.lg} color={COLORS.onSurface} />
+        </TouchableOpacity>
 
-      <View style={styles.progressContainer}>
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${(currentStep / TOTAL_STEPS) * 100}%` }]} />
-        </View>
+        <StepRail current={currentStep} labels={STEP_LABELS} style={styles.stepRail} />
+
+        <TouchableOpacity
+          style={styles.topBarButton}
+          onPress={handleSwitchRole}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Not a rider? Switch role"
+        >
+          <Ionicons name="swap-horizontal-outline" size={ICON.lg} color={COLORS.onSurfaceVariant} />
+        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {/* Step 1: Personal Info */}
         {currentStep === 1 && (
           <View>
-            <Text style={styles.stepTitle}>Personal Information</Text>
-            <Text style={styles.stepSubtitle}>Tell us about yourself</Text>
+            <AuthHeadline lead="Personal" accent="information" subtitle="Tell us about yourself." style={styles.stepHeadline} />
 
-            <Text style={styles.fieldLabel}>Full Name *</Text>
-            <TextInput
-              style={styles.fieldInput}
+            <FieldCard
+              label="Full Name *"
+              icon="person-outline"
               placeholder="Enter your full name"
-              placeholderTextColor={COLORS.onSurfaceVariant}
               value={personalInfo.fullName}
               onChangeText={t => setPersonalInfo(p => ({ ...p, fullName: t }))}
+              autoCapitalize="words"
+              style={styles.field}
             />
 
-            <Text style={styles.fieldLabel}>Phone Number *</Text>
-            <TextInput
-              style={styles.fieldInput}
+            {/* Free-text phone rather than PhoneFieldCard: this value is sent
+                to updateRiderOnboarding as typed, and the picker's +256 split
+                would change what the backend receives. */}
+            <FieldCard
+              label="Phone Number *"
+              icon="call-outline"
               placeholder="e.g., +256 700 000 000"
-              placeholderTextColor={COLORS.onSurfaceVariant}
               value={personalInfo.phone}
               onChangeText={t => setPersonalInfo(p => ({ ...p, phone: t }))}
               keyboardType="phone-pad"
+              style={styles.field}
             />
 
-            <Text style={styles.fieldLabel}>Email</Text>
-            <TextInput
-              style={styles.fieldInput}
+            <FieldCard
+              label="Email"
+              icon="mail-outline"
               placeholder="your@email.com"
-              placeholderTextColor={COLORS.onSurfaceVariant}
               value={personalInfo.email}
               onChangeText={t => setPersonalInfo(p => ({ ...p, email: t }))}
               keyboardType="email-address"
               autoCapitalize="none"
+              style={styles.field}
             />
 
-            <Text style={styles.fieldLabel}>Address *</Text>
-            <TextInput
-              style={styles.fieldInput}
+            <FieldCard
+              label="Address *"
+              icon="location-outline"
               placeholder="Your residential address"
-              placeholderTextColor={COLORS.onSurfaceVariant}
               value={personalInfo.address}
               onChangeText={t => setPersonalInfo(p => ({ ...p, address: t }))}
+              style={styles.field}
             />
           </View>
         )}
@@ -521,8 +556,7 @@ export default function RiderOnboardingScreen() {
         {/* Step 2: Documents */}
         {currentStep === 2 && (
           <View>
-            <Text style={styles.stepTitle}>Documents</Text>
-            <Text style={styles.stepSubtitle}>Upload clear photos of your documents</Text>
+            <AuthHeadline lead="Your" accent="documents" subtitle="Upload clear photos of your documents." style={styles.stepHeadline} />
 
             {/* Rider Selfie */}
             <DocumentUploadCard
@@ -555,23 +589,23 @@ export default function RiderOnboardingScreen() {
               uploading={uploadingField === 'nationalIdBack'}
             />
 
-            {/* License Number (text) */}
-            <Text style={styles.fieldLabel}>Driving License Number</Text>
-            <TextInput
-              style={styles.fieldInput}
-              placeholder="Driving license number (if applicable)"
-              placeholderTextColor={COLORS.onSurfaceVariant}
+            <FieldCard
+              label="Driving License Number"
+              icon="card-outline"
+              placeholder="License number (if applicable)"
               value={documents.licenseNumber}
               onChangeText={t => setDocuments(p => ({ ...p, licenseNumber: t }))}
+              autoCapitalize="characters"
+              style={styles.field}
             />
 
-            <Text style={styles.fieldLabel}>License Expiry Date</Text>
-            <TextInput
-              style={styles.fieldInput}
+            <FieldCard
+              label="License Expiry Date"
+              icon="calendar-outline"
               placeholder="YYYY-MM-DD"
-              placeholderTextColor={COLORS.onSurfaceVariant}
               value={documents.licenseExpiry}
               onChangeText={t => setDocuments(p => ({ ...p, licenseExpiry: t }))}
+              style={styles.field}
             />
 
             {/* Driving License Photo — required for drivers */}
@@ -608,10 +642,9 @@ export default function RiderOnboardingScreen() {
         {/* Step 3: Vehicle Info */}
         {currentStep === 3 && (
           <View>
-            <Text style={styles.stepTitle}>Vehicle Information</Text>
-            <Text style={styles.stepSubtitle}>Tell us about your vehicle</Text>
+            <AuthHeadline lead="Vehicle" accent="information" subtitle="Tell us about your vehicle." style={styles.stepHeadline} />
 
-            <Text style={styles.fieldLabel}>Vehicle Type *</Text>
+            <Text style={styles.groupLabel}>Vehicle Type *</Text>
             <View style={styles.vehicleTypeGrid}>
               {VEHICLE_TYPES.map(vt => (
                 <TouchableOpacity
@@ -635,61 +668,58 @@ export default function RiderOnboardingScreen() {
               ))}
             </View>
 
-            <View style={styles.vehicleFormRow}>
-              <View style={styles.halfField}>
-                <Text style={styles.fieldLabel}>Make</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="e.g., Honda"
-                  placeholderTextColor={COLORS.onSurfaceVariant}
-                  value={vehicleInfo.make}
-                  onChangeText={t => setVehicleInfo(p => ({ ...p, make: t }))}
-                />
-              </View>
-              <View style={styles.halfField}>
-                <Text style={styles.fieldLabel}>Model</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="e.g., Boxer"
-                  placeholderTextColor={COLORS.onSurfaceVariant}
-                  value={vehicleInfo.model}
-                  onChangeText={t => setVehicleInfo(p => ({ ...p, model: t }))}
-                />
-              </View>
-            </View>
+            {/* Make/Model and Year/Colour used to sit two-up. A field card
+                carries a 60pt icon gutter, which leaves too little room for a
+                label and a value at half width, so they stack. */}
+            <FieldCard
+              label="Make"
+              icon="car-outline"
+              placeholder="e.g., Honda"
+              value={vehicleInfo.make}
+              onChangeText={t => setVehicleInfo(p => ({ ...p, make: t }))}
+              autoCapitalize="words"
+              style={styles.field}
+            />
 
-            <View style={styles.vehicleFormRow}>
-              <View style={styles.halfField}>
-                <Text style={styles.fieldLabel}>Year</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="2024"
-                  placeholderTextColor={COLORS.onSurfaceVariant}
-                  value={vehicleInfo.year}
-                  onChangeText={t => setVehicleInfo(p => ({ ...p, year: t }))}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={styles.halfField}>
-                <Text style={styles.fieldLabel}>Color</Text>
-                <TextInput
-                  style={styles.fieldInput}
-                  placeholder="e.g., Red"
-                  placeholderTextColor={COLORS.onSurfaceVariant}
-                  value={vehicleInfo.color}
-                  onChangeText={t => setVehicleInfo(p => ({ ...p, color: t }))}
-                />
-              </View>
-            </View>
+            <FieldCard
+              label="Model"
+              icon="car-sport-outline"
+              placeholder="e.g., Boxer"
+              value={vehicleInfo.model}
+              onChangeText={t => setVehicleInfo(p => ({ ...p, model: t }))}
+              autoCapitalize="words"
+              style={styles.field}
+            />
 
-            <Text style={styles.fieldLabel}>Plate Number *</Text>
-            <TextInput
-              style={styles.fieldInput}
+            <FieldCard
+              label="Year"
+              icon="calendar-outline"
+              placeholder="2024"
+              value={vehicleInfo.year}
+              onChangeText={t => setVehicleInfo(p => ({ ...p, year: t }))}
+              keyboardType="numeric"
+              maxLength={4}
+              style={styles.field}
+            />
+
+            <FieldCard
+              label="Color"
+              icon="color-palette-outline"
+              placeholder="e.g., Red"
+              value={vehicleInfo.color}
+              onChangeText={t => setVehicleInfo(p => ({ ...p, color: t }))}
+              autoCapitalize="words"
+              style={styles.field}
+            />
+
+            <FieldCard
+              label="Plate Number *"
+              icon="reader-outline"
               placeholder="e.g., UAX 123A"
-              placeholderTextColor={COLORS.onSurfaceVariant}
               value={vehicleInfo.plateNumber}
               onChangeText={t => setVehicleInfo(p => ({ ...p, plateNumber: t }))}
               autoCapitalize="characters"
+              style={styles.field}
             />
           </View>
         )}
@@ -697,8 +727,7 @@ export default function RiderOnboardingScreen() {
         {/* Step 4: Review & Submit */}
         {currentStep === 4 && (
           <View>
-            <Text style={styles.stepTitle}>Review & Submit</Text>
-            <Text style={styles.stepSubtitle}>Please review your information before submitting</Text>
+            <AuthHeadline lead="Review and" accent="submit" subtitle="Check your details before sending your application." style={styles.stepHeadline} />
 
             {/* Personal Info Review */}
             <Card style={styles.reviewCard}>
@@ -815,7 +844,37 @@ const createReviewStyles = (COLORS: ThemedColors) => StyleSheet.create({
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background,
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.md,
+  },
+  topBarButton: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: RADIUS.full,
+  },
+  stepRail: {
+    flex: 1,
+    marginTop: SPACING.sm,
+  },
+  stepHeadline: {
+    marginBottom: SPACING.lg,
+  },
+  field: {
+    marginBottom: SPACING.gutter,
+  },
+  groupLabel: {
+    ...TYPOGRAPHY.labelLg,
+    color: COLORS.onSurface,
+    marginBottom: SPACING.sm,
+    marginTop: SPACING.xs,
   },
   loadingContainer: {
     flex: 1,
@@ -828,20 +887,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     marginTop: SPACING.md,
   },
-  progressContainer: {
-    marginTop: SPACING.xs,
-  },
-  progressTrack: {
-    height: 4,
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.full,
-    overflow: 'hidden',
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.full,
-  },
   scrollView: {
     flex: 1,
   },
@@ -849,34 +894,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.lg,
     paddingBottom: 120,
-  },
-  stepTitle: {
-    ...TYPOGRAPHY.headlineLgMobile,
-    color: COLORS.onSurface,
-    marginBottom: SPACING.xs,
-  },
-  stepSubtitle: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-    marginBottom: SPACING.lg,
-  },
-  fieldLabel: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    marginBottom: SPACING.xs,
-    marginTop: 14,
-  },
-  fieldInput: {
-    backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: RADIUS.md,
-    paddingHorizontal: 14,
-    paddingVertical: SPACING.md,
-    color: COLORS.onSurface,
-    ...TYPOGRAPHY.bodySm,
-    borderWidth: 1,
-    borderColor: COLORS.outlineVariant,
   },
   infoCard: {
     marginTop: SPACING.md,
@@ -929,13 +946,6 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     color: COLORS.onSurfaceVariant,
     marginTop: 2,
     textAlign: 'center',
-  },
-  vehicleFormRow: {
-    flexDirection: 'row',
-    gap: SPACING.sm,
-  },
-  halfField: {
-    flex: 1,
   },
   // Review styles
   reviewCard: {

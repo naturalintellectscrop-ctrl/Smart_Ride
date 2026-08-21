@@ -39,6 +39,12 @@ interface JourneyActionsProps {
    */
   onCancelPress?: () => void;
   cancelDisabled?: boolean;
+  /**
+   * What the quiet button says. Giving back a job you have not started is
+   * DECLINING it, and calling that "Cancel" both misdescribes it and invites
+   * the transition the server will refuse (DEV-6).
+   */
+  cancelLabel?: string;
   secondary?: JourneySecondaryAction[];
   style?: ViewStyle;
 }
@@ -50,6 +56,7 @@ export function JourneyActions({
   primaryDisabled = false,
   onCancelPress,
   cancelDisabled = false,
+  cancelLabel = 'Cancel',
   secondary = [],
   style,
 }: JourneyActionsProps) {
@@ -107,7 +114,7 @@ export function JourneyActions({
           {!!onCancelPress && (
             <View style={styles.cancelWrap}>
               <GradientButton
-                title="Cancel"
+                title={cancelLabel}
                 onPress={onCancelPress}
                 variant="outline"
                 size="md"

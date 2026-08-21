@@ -291,31 +291,58 @@ export default function DriverTaskScreen() {
     await updateStatus('DELIVERED');
   };
 
+  /**
+   * DEV-6: giving back a job you have not started is DECLINING it, not
+   * cancelling it.
+   *
+   * This always called the CANCELLED transition, which the state machine only
+   * lets a driver make from IN_PROGRESS on a ride — deliberately, so a driver
+   * cannot take an assignment and strand the customer with it. So the button
+   * was guaranteed to fail from ASSIGNED, and it failed by showing a courier
+   * the state machine's own vocabulary: "Actor 'RIDER' is not authorized to
+   * transition from ASSIGNED to CANCELLED".
+   *
+   * The decline path already existed and had no caller. Before the job starts
+   * it hands the task back to dispatch, which is what the driver meant; once
+   * they are carrying it, cancelling is the honest word and the server decides
+   * whether they may.
+   */
   const handleCancel = () => {
     if (!task) return;
-    Alert.alert('Cancel this job?', 'Cancelling affects your reliability score.', [
-      { text: 'Keep job', style: 'cancel' },
-      {
-        text: 'Cancel job',
-        style: 'destructive',
-        onPress: async () => {
-          setIsUpdating(true);
-          setJourneyError(null);
-          try {
-            const response = await api.cancelTask(task.id, 'Cancelled by provider');
-            if (response.success) {
-              router.replace('/driver');
-            } else {
-              setJourneyError(translateTaskError(response.error, response.status));
+
+    const started = ['PICKED_UP', 'IN_TRANSIT', 'IN_PROGRESS', 'DELIVERING'].includes(task.status);
+
+    Alert.alert(
+      started ? 'Cancel this job?' : 'Give this job back?',
+      started
+        ? 'Cancelling a job you have started affects your reliability score.'
+        : 'It goes back to dispatch for another courier. Declining too often affects your acceptance rate.',
+      [
+        { text: started ? 'Keep job' : 'Keep it', style: 'cancel' },
+        {
+          text: started ? 'Cancel job' : 'Give it back',
+          style: 'destructive',
+          onPress: async () => {
+            setIsUpdating(true);
+            setJourneyError(null);
+            try {
+              const response = started
+                ? await api.cancelTask(task.id, 'Cancelled by provider')
+                : await api.declineTask(task.id);
+              if (response.success) {
+                router.replace('/driver');
+              } else {
+                setJourneyError(translateTaskError(response.error, response.status));
+              }
+            } catch {
+              setJourneyError(translateTaskError('Network error'));
+            } finally {
+              setIsUpdating(false);
             }
-          } catch {
-            setJourneyError(translateTaskError('Network error'));
-          } finally {
-            setIsUpdating(false);
-          }
+          },
         },
-      },
-    ]);
+      ]
+    );
   };
 
   /** In-app voice call to the customer. */
@@ -563,6 +590,11 @@ export default function DriverTaskScreen() {
             // Only offered when the server lists CANCELLED as legal, so the
             // button can no longer be one that is guaranteed to fail.
             onCancelPress={cancellable && !terminal ? handleCancel : undefined}
+            cancelLabel={
+              ['PICKED_UP', 'IN_TRANSIT', 'IN_PROGRESS', 'DELIVERING'].includes(task?.status ?? '')
+                ? 'Cancel'
+                : 'Give back'
+            }
             cancelDisabled={isUpdating}
             secondary={secondary}
           />
