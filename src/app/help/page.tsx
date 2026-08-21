@@ -7,6 +7,8 @@ import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { Section } from '@/components/marketing/Section';
 import { Reveal } from '@/components/marketing/Reveal';
+import { Parallax } from '@/components/marketing/Parallax';
+import { JourneyRail } from '@/components/marketing/JourneyRail';
 import {
   Accordion,
   AccordionContent,
@@ -69,12 +71,21 @@ const paymentOptions = [
   { label: 'UGX', name: 'Cash', description: 'Pay the rider in cash at the end of your trip', swatch: '#00A862', text: '#FFFFFF' },
 ];
 
+const journeyWaypoints = [
+  { id: 'hero', label: 'Help' },
+  { id: 'faq', label: 'FAQ' },
+  { id: 'safety', label: 'Staying safe' },
+  { id: 'payments', label: 'Ways to pay' },
+  { id: 'support', label: 'Still stuck?' },
+];
+
 export default function HelpPage() {
   return (
     <MarketingShell>
       <MarketingHeader />
+      <JourneyRail waypoints={journeyWaypoints} />
 
-      <Section className="pb-12">
+      <Section id="hero" className="pb-12">
         <Reveal>
           <h1 className="text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">Help</h1>
           <p className="mt-6 max-w-2xl text-lg text-mkt-fg-muted">
@@ -84,7 +95,7 @@ export default function HelpPage() {
         </Reveal>
       </Section>
 
-      <Section className="pt-0" containerClassName="[&>*]:max-w-3xl">
+      <Section id="faq" className="pt-0" containerClassName="[&>*]:max-w-3xl">
         <Reveal>
           <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Frequently asked questions</h2>
 
@@ -103,28 +114,30 @@ export default function HelpPage() {
         </Reveal>
       </Section>
 
-      <Section tone="raised">
+      <Section id="safety" tone="raised">
         <Reveal>
           <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Staying safe</h2>
 
-          <div className="grid grid-cols-1 border-t border-mkt-border md:grid-cols-3">
-            {safetyFeatures.map((feature) => (
-              <div
-                key={feature.title}
-                className="border-b border-mkt-border py-6 md:border-l md:px-8 md:first:border-l-0 md:first:pl-0"
-              >
-                <div className="flex items-center gap-2.5">
-                  <feature.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
-                  <h3 className="font-semibold text-mkt-fg">{feature.title}</h3>
+          <Parallax speed={12}>
+            <div className="grid grid-cols-1 border-t border-mkt-border md:grid-cols-3">
+              {safetyFeatures.map((feature) => (
+                <div
+                  key={feature.title}
+                  className="border-b border-mkt-border py-6 md:border-l md:px-8 md:first:border-l-0 md:first:pl-0"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <feature.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
+                    <h3 className="font-semibold text-mkt-fg">{feature.title}</h3>
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-mkt-fg-muted">{feature.description}</p>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-mkt-fg-muted">{feature.description}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </Parallax>
         </Reveal>
       </Section>
 
-      <Section>
+      <Section id="payments">
         <Reveal>
           <h2 className="mb-8 text-3xl font-bold text-mkt-fg">Ways to pay</h2>
 
@@ -147,7 +160,7 @@ export default function HelpPage() {
         </Reveal>
       </Section>
 
-      <Section tone="raised">
+      <Section id="support" tone="raised">
         <Reveal>
           <h2 className="mb-4 text-3xl font-bold text-mkt-fg">Still stuck?</h2>
           <p className="mb-8 max-w-2xl text-mkt-fg-muted">

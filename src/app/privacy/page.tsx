@@ -11,6 +11,7 @@ import { MarketingShell } from '@/components/marketing/MarketingShell';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { Reveal } from '@/components/marketing/Reveal';
+import { PageToc } from '@/components/marketing/PageToc';
 import {
   Shield,
   Calendar,
@@ -97,6 +98,20 @@ function SubHeading({ label }: { label: string }) {
   );
 }
 
+const tocSections = [
+  { id: 'section-1', label: 'Introduction' },
+  { id: 'section-2', label: 'Information We Collect' },
+  { id: 'section-3', label: 'How We Use Your Information' },
+  { id: 'section-4', label: 'Information Sharing' },
+  { id: 'section-5', label: 'Data Security' },
+  { id: 'section-6', label: 'Data Retention' },
+  { id: 'section-7', label: 'Your Rights' },
+  { id: 'section-8', label: 'Cookies & Tracking' },
+  { id: 'section-9', label: "Children's Privacy" },
+  { id: 'section-10', label: 'Changes to This Policy' },
+  { id: 'section-11', label: 'Contact Us' },
+];
+
 // Page
 export default function PrivacyPage() {
   return (
@@ -171,7 +186,12 @@ export default function PrivacyPage() {
 
       {/* Main content */}
       <main className="flex-1 px-4 pb-20">
-        <div className="max-w-3xl mx-auto space-y-12">
+        <div className="max-w-3xl mx-auto">
+          <Reveal>
+            <PageToc sections={tocSections} />
+          </Reveal>
+
+          <div className="space-y-12">
           {/* 1. Introduction */}
           <section className="scroll-mt-24">
             <Reveal amount={0.15}>
@@ -699,6 +719,7 @@ export default function PrivacyPage() {
               </Card>
             </div>
           </section>
+          </div>
         </div>
       </main>
 

@@ -6,6 +6,7 @@ import { MarketingShell } from '@/components/marketing/MarketingShell';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { Reveal } from '@/components/marketing/Reveal';
+import { PageToc } from '@/components/marketing/PageToc';
 import {
   Trash2,
   UserX,
@@ -67,21 +68,7 @@ export default function DeleteAccountPage() {
 
           {/* Table of Contents */}
           <Reveal>
-            <div className="bg-mkt-bg-raised rounded-2xl p-6 border border-mkt-border mb-12">
-              <h2 className="text-lg font-semibold text-mkt-fg mb-4">Table of Contents</h2>
-              <nav className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {tocSections.map((section, index) => (
-                  <a
-                    key={section.id}
-                    href={`#${section.id}`}
-                    className="flex items-center gap-2 text-mkt-fg-muted hover:text-mkt-accent text-sm transition-colors duration-200 py-1"
-                  >
-                    <span className="text-mkt-accent/60 font-mono text-xs w-5">{index + 1}.</span>
-                    {section.label}
-                  </a>
-                ))}
-              </nav>
-            </div>
+            <PageToc sections={tocSections} />
           </Reveal>
 
           {/* Sections */}

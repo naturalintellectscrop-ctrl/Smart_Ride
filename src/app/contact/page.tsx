@@ -6,6 +6,7 @@ import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { Section } from '@/components/marketing/Section';
 import { Reveal } from '@/components/marketing/Reveal';
+import { Parallax } from '@/components/marketing/Parallax';
 import { Mail, Phone, MapPin, MessageCircle, Check } from 'lucide-react';
 
 const contactChannels = [
@@ -201,28 +202,30 @@ export default function ContactPage() {
             )}
           </Reveal>
 
-          <Reveal x={20} y={0} delay={0.08}>
-            <dl className="divide-y divide-mkt-border border-t border-mkt-border">
-              {contactChannels.map((channel) => (
-                <div key={channel.title} className="py-6">
-                  <dt className="flex items-center gap-2.5">
-                    <channel.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
-                    <span className="font-semibold text-mkt-fg">{channel.title}</span>
-                  </dt>
-                  <dd className="mt-2 pl-[26px]">
-                    <p className="mb-1 text-sm text-mkt-fg-faint">{channel.detail}</p>
-                    {channel.href ? (
-                      <a href={channel.href} className="text-mkt-accent hover:underline">
-                        {channel.value}
-                      </a>
-                    ) : (
-                      <p className="text-mkt-fg-muted">{channel.value}</p>
-                    )}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          </Reveal>
+          <Parallax speed={12}>
+            <Reveal x={20} y={0} delay={0.08}>
+              <dl className="divide-y divide-mkt-border border-t border-mkt-border">
+                {contactChannels.map((channel) => (
+                  <div key={channel.title} className="py-6">
+                    <dt className="flex items-center gap-2.5">
+                      <channel.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
+                      <span className="font-semibold text-mkt-fg">{channel.title}</span>
+                    </dt>
+                    <dd className="mt-2 pl-[26px]">
+                      <p className="mb-1 text-sm text-mkt-fg-faint">{channel.detail}</p>
+                      {channel.href ? (
+                        <a href={channel.href} className="text-mkt-accent hover:underline">
+                          {channel.value}
+                        </a>
+                      ) : (
+                        <p className="text-mkt-fg-muted">{channel.value}</p>
+                      )}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </Reveal>
+          </Parallax>
         </div>
       </Section>
 

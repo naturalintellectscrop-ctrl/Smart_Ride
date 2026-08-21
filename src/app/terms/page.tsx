@@ -11,6 +11,7 @@ import { MarketingShell } from '@/components/marketing/MarketingShell';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { Reveal } from '@/components/marketing/Reveal';
+import { PageToc } from '@/components/marketing/PageToc';
 import {
   FileText,
   Calendar,
@@ -100,6 +101,22 @@ function SubHeading({ label }: { label: string }) {
   );
 }
 
+const tocSections = [
+  { id: 'section-1', label: 'Acceptance of Terms' },
+  { id: 'section-2', label: 'Description of Service' },
+  { id: 'section-3', label: 'User Accounts' },
+  { id: 'section-4', label: 'User Conduct' },
+  { id: 'section-5', label: 'Payments & Wallet' },
+  { id: 'section-6', label: 'Ride & Service Terms' },
+  { id: 'section-7', label: 'Driver & Merchant Terms' },
+  { id: 'section-8', label: 'Intellectual Property' },
+  { id: 'section-9', label: 'Disclaimers & Limitation of Liability' },
+  { id: 'section-10', label: 'Termination' },
+  { id: 'section-11', label: 'Governing Law' },
+  { id: 'section-12', label: 'Changes to Terms' },
+  { id: 'section-13', label: 'Contact Us' },
+];
+
 // Page
 export default function TermsPage() {
   return (
@@ -172,7 +189,12 @@ export default function TermsPage() {
 
       {/* Main content */}
       <main className="flex-1 px-4 pb-20">
-        <div className="max-w-3xl mx-auto space-y-12">
+        <div className="max-w-3xl mx-auto">
+          <Reveal>
+            <PageToc sections={tocSections} />
+          </Reveal>
+
+          <div className="space-y-12">
           {/* 1. Acceptance of Terms */}
           <section className="scroll-mt-24">
             <Reveal amount={0.15}>
@@ -782,6 +804,7 @@ export default function TermsPage() {
               </Card>
             </div>
           </section>
+          </div>
         </div>
       </main>
 

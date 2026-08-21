@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useActiveSection } from '@/hooks/use-active-section';
 
 export interface JourneyWaypoint {
   id: string;
@@ -14,45 +15,15 @@ interface JourneyRailProps {
 }
 
 /**
- * Persistent left-edge wayfinding rail: tracks which homepage section is
- * currently in view and lets you jump to any of them. Distinct from the
- * top ScrollProgressBar (raw scroll %) and HowItWorks' internal rail
- * (scoped to its own 4 steps) — this one spans the whole page.
+ * Persistent left-edge wayfinding rail: tracks which section is currently
+ * in view and lets you jump to any of them. Distinct from the top
+ * ScrollProgressBar (raw scroll %) and HowItWorks' internal rail (scoped
+ * to its own 4 steps): this one spans the whole page.
  */
 export function JourneyRail({ waypoints }: JourneyRailProps) {
-  const [activeIndex, setActiveIndex] = useState(0);
   const reduceMotion = useReducedMotion();
-  const observerRef = useRef<IntersectionObserver | null>(null);
-
-  useEffect(() => {
-    const elements = waypoints
-      .map((w) => ({ id: w.id, el: document.getElementById(w.id) }))
-      .filter((entry): entry is { id: string; el: HTMLElement } => entry.el !== null);
-
-    if (elements.length === 0) return;
-
-    const indexById = new Map(waypoints.map((w, i) => [w.id, i]));
-    const visible = new Set<string>();
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const id = entry.target.id;
-          if (entry.isIntersecting) visible.add(id);
-          else visible.delete(id);
-        }
-        if (visible.size === 0) return;
-        const lowestIndex = Math.min(...Array.from(visible).map((id) => indexById.get(id) ?? 0));
-        setActiveIndex(lowestIndex);
-      },
-      { rootMargin: '-45% 0px -45% 0px', threshold: 0 },
-    );
-
-    elements.forEach(({ el }) => observer.observe(el));
-    observerRef.current = observer;
-
-    return () => observer.disconnect();
-  }, [waypoints]);
+  const activeId = useActiveSection(waypoints.map((w) => w.id));
+  const activeIndex = Math.max(0, waypoints.findIndex((w) => w.id === activeId));
 
   return (
     <nav

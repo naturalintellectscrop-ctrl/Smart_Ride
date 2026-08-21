@@ -7,6 +7,8 @@ import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { MarketingFooter } from '@/components/marketing/MarketingFooter';
 import { Section } from '@/components/marketing/Section';
 import { Reveal } from '@/components/marketing/Reveal';
+import { Parallax } from '@/components/marketing/Parallax';
+import { JourneyRail } from '@/components/marketing/JourneyRail';
 import {
   Bike,
   UtensilsCrossed,
@@ -57,12 +59,20 @@ const riderBenefits = [
   'Support reachable from inside the app',
 ];
 
+const journeyWaypoints = [
+  { id: 'hero', label: 'About' },
+  { id: 'why', label: 'Why we built it' },
+  { id: 'services', label: 'What we offer' },
+  { id: 'drivers', label: 'Ride with us' },
+];
+
 export default function AboutPage() {
   return (
     <MarketingShell>
       <MarketingHeader />
+      <JourneyRail waypoints={journeyWaypoints} />
 
-      <Section className="pb-16">
+      <Section id="hero" className="pb-16">
         <Reveal>
           <h1 className="max-w-3xl text-4xl font-bold leading-tight text-mkt-fg sm:text-5xl">
             About Smart Ride
@@ -74,7 +84,7 @@ export default function AboutPage() {
         </Reveal>
       </Section>
 
-      <Section containerClassName="[&>*]:max-w-3xl">
+      <Section id="why" containerClassName="[&>*]:max-w-3xl">
         <Reveal>
           <h2 className="mb-6 text-3xl font-bold text-mkt-fg">Why we built it</h2>
           <p className="mb-6 text-lg leading-relaxed text-mkt-fg-muted">
@@ -94,7 +104,7 @@ export default function AboutPage() {
         </Reveal>
       </Section>
 
-      <Section tone="raised">
+      <Section id="services" tone="raised">
         <Reveal>
           <div className="mb-12 max-w-xl">
             <h2 className="mb-4 text-3xl font-bold text-mkt-fg">What we offer</h2>
@@ -104,19 +114,21 @@ export default function AboutPage() {
           </div>
         </Reveal>
 
-        <div className="grid grid-cols-1 border-t border-mkt-border sm:grid-cols-2 lg:grid-cols-3">
-          {services.map((service, i) => (
-            <Reveal key={service.title} delay={(i % 3) * 0.06}>
-              <div className="border-b border-mkt-border py-6 sm:even:border-l sm:even:pl-8 sm:odd:pr-8 lg:border-l lg:px-8 lg:[&:nth-child(3n+1)]:border-l-0 lg:[&:nth-child(3n+1)]:pl-0">
-                <div className="flex items-center gap-2.5">
-                  <service.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
-                  <h3 className="font-semibold text-mkt-fg">{service.title}</h3>
+        <Parallax speed={12}>
+          <div className="grid grid-cols-1 border-t border-mkt-border sm:grid-cols-2 lg:grid-cols-3">
+            {services.map((service, i) => (
+              <Reveal key={service.title} delay={(i % 3) * 0.06}>
+                <div className="border-b border-mkt-border py-6 sm:even:border-l sm:even:pl-8 sm:odd:pr-8 lg:border-l lg:px-8 lg:[&:nth-child(3n+1)]:border-l-0 lg:[&:nth-child(3n+1)]:pl-0">
+                  <div className="flex items-center gap-2.5">
+                    <service.icon className="h-4 w-4 shrink-0 text-mkt-accent" />
+                    <h3 className="font-semibold text-mkt-fg">{service.title}</h3>
+                  </div>
+                  <p className="mt-2 text-sm leading-relaxed text-mkt-fg-muted">{service.description}</p>
                 </div>
-                <p className="mt-2 text-sm leading-relaxed text-mkt-fg-muted">{service.description}</p>
-              </div>
-            </Reveal>
-          ))}
-        </div>
+              </Reveal>
+            ))}
+          </div>
+        </Parallax>
       </Section>
 
       <Section id="drivers">
