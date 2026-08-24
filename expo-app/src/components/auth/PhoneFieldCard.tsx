@@ -118,6 +118,8 @@ const createStyles = (COLORS: ThemedColors) =>
     prefix: {
       flexDirection: 'row',
       alignItems: 'center',
+      // The dial code is fixed-size chrome: the number field shrinks, not this.
+      flexShrink: 0,
     },
     countryChip: {
       flexDirection: 'row',

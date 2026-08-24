@@ -105,6 +105,9 @@ const createStyles = (COLORS: ThemedColors) =>
     },
     box: {
       flex: 1,
+      // Without a zero minimum the six inputs refuse to shrink below their
+      // intrinsic width, so the first box eats the row and the rest overflow.
+      minWidth: 0,
       height: 64,
       borderRadius: RADIUS.lg,
       borderWidth: BORDER.hairline,

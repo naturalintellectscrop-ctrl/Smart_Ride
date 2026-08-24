@@ -135,6 +135,8 @@ const createStyles = (COLORS: ThemedColors) =>
     },
     gutter: {
       width: AUTH.gutterWidth,
+      // Never let a long value or a prefix chip squeeze the icon column.
+      flexShrink: 0,
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: COLORS.authGutter,
@@ -150,6 +152,7 @@ const createStyles = (COLORS: ThemedColors) =>
     },
     fields: {
       flex: 1,
+      minWidth: 0,
     },
     label: {
       ...TYPOGRAPHY.labelLg,
@@ -162,6 +165,10 @@ const createStyles = (COLORS: ThemedColors) =>
     },
     input: {
       flex: 1,
+      // A flex child holding a text input needs an explicit zero minimum or it
+      // refuses to shrink below its intrinsic content width and pushes the
+      // icon gutter and trailing adornment out of the card.
+      minWidth: 0,
       ...TYPOGRAPHY.bodyMd,
       color: COLORS.onSurface,
       // Zero out the platform's own padding so the label/input rhythm is ours.

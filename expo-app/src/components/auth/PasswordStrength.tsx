@@ -12,7 +12,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { TYPOGRAPHY, SPACING, RADIUS, BORDER } from '../../constants';
+import { TYPOGRAPHY, SPACING, RADIUS } from '../../constants';
 import { useTheme } from '../../context/theme-context';
 import { makeThemedColors, ThemedColors } from '../../theme/themedColors';
 import { getPasswordStrength, requirementsFor } from '../../utils/password';
@@ -70,23 +70,24 @@ export function PasswordStrength({ password, confirm, style }: PasswordStrengthP
         ))}
       </View>
 
+      {/* No separator rules between the chips. The reference fits all of them
+          on one line on a wide artboard; at 390pt they wrap, and a wrapped
+          row would start a line with a dangling divider. Spacing separates
+          them instead. */}
       <View style={styles.chips}>
-        {requirements.map((req, index) => {
+        {requirements.map((req) => {
           const met = strength.results[req.key];
           return (
-            <React.Fragment key={req.key}>
-              {index > 0 ? <View style={styles.chipDivider} /> : null}
-              <View style={styles.chip}>
-                <Ionicons
-                  name={met ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={14}
-                  color={met ? COLORS.primary : COLORS.outlineVariant}
-                />
-                <Text style={[styles.chipText, met && styles.chipTextMet]}>
-                  {req.shortLabel}
-                </Text>
-              </View>
-            </React.Fragment>
+            <View key={req.key} style={styles.chip}>
+              <Ionicons
+                name={met ? 'checkmark-circle' : 'ellipse-outline'}
+                size={14}
+                color={met ? COLORS.primary : COLORS.outlineVariant}
+              />
+              <Text style={[styles.chipText, met && styles.chipTextMet]}>
+                {req.shortLabel}
+              </Text>
+            </View>
           );
         })}
       </View>
@@ -111,17 +112,12 @@ const createStyles = (COLORS: ThemedColors) =>
       alignItems: 'center',
       marginTop: SPACING.sm + 2,
       rowGap: SPACING.xs + 2,
+      columnGap: SPACING.gutter,
     },
     chip: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: SPACING.xs + 1,
-    },
-    chipDivider: {
-      width: BORDER.hairline,
-      height: 12,
-      backgroundColor: COLORS.outlineVariant,
-      marginHorizontal: SPACING.sm,
     },
     chipText: {
       ...TYPOGRAPHY.labelMd,
