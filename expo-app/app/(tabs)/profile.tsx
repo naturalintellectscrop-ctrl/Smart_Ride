@@ -28,7 +28,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { useTheme, ThemeColors } from '@/src/context/theme-context';
+import { useTheme } from '@/src/context/theme-context';
+import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import { TYPOGRAPHY, SPACING, RADIUS, MOTION, ICON, OPACITY } from '@/src/constants';
 import {
   AppHeader,
@@ -46,7 +47,13 @@ import { API_CONFIG } from '@/src/constants';
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, logout, setUser } = useAuthStore();
-  const { isDark, toggleTheme, colors } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
+  // Reads makeThemedColors like every other screen. This was the last
+  // client screen still on theme-context's palette, which disagrees with it
+  // on `border` and the elevated dark surface — so the Profile tab's cards
+  // sat a shade off every other tab's. Every key used here exists on both,
+  // so the swap is a drop-in.
+  const colors = React.useMemo(() => makeThemedColors(isDark), [isDark]);
   
   const [isLoading, setIsLoading] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
@@ -273,7 +280,7 @@ export default function ProfileScreen() {
           entering={FadeInUp.duration(400).delay(200).springify()}
           style={styles.statsWrapper}
         >
-          <Card variant="elevated" padding={SPACING.md} radius={RADIUS.xl} style={styles.statsCard}>
+          <Card variant="elevated" padding={SPACING.md} radius={RADIUS.lg} style={styles.statsCard}>
             <View style={styles.statsRow}>
               <StatItem label="Total Rides" value={String(stats.totalRides)} delay={300} colors={colors} />
               <View style={styles.statDivider} />
@@ -295,7 +302,7 @@ export default function ProfileScreen() {
             style={styles.section}
           >
             <SectionHeader title={section.section} />
-            <Card variant="raised" padding={SPACING.sm} radius={RADIUS.xl} style={styles.menuCard}>
+            <Card variant="raised" padding={SPACING.sm} radius={RADIUS.lg} style={styles.menuCard}>
               {section.items.map((item, itemIndex) => (
                 <Animated.View
                   key={itemIndex}
@@ -338,7 +345,7 @@ export default function ProfileScreen() {
 }
 
 // Animated Stat Item
-function StatItem({ label, value, delay, colors }: { label: string; value: string; delay: number; colors: ThemeColors }) {
+function StatItem({ label, value, delay, colors }: { label: string; value: string; delay: number; colors: ThemedColors }) {
   const statStyles = useMemo(() => ({
     statItem: {
       flex: 1,
@@ -369,7 +376,7 @@ function StatItem({ label, value, delay, colors }: { label: string; value: strin
 }
 
 // Menu Item Component
-function MenuItem({ item, isLast, colors }: { item: any; isLast: boolean; colors: ThemeColors }) {
+function MenuItem({ item, isLast, colors }: { item: any; isLast: boolean; colors: ThemedColors }) {
   const itemStyles = useMemo(() => ({
     menuItem: {
       flexDirection: 'row' as const,
@@ -443,7 +450,7 @@ function MenuItem({ item, isLast, colors }: { item: any; isLast: boolean; colors
 }
 
 // Dynamic style factory — recreates when colors change
-function createStyles(colors: ThemeColors) {
+function createStyles(colors: ThemedColors) {
   return StyleSheet.create({
     screenContainer: {
       flex: 1,
@@ -474,7 +481,7 @@ function createStyles(colors: ThemeColors) {
     avatarLoading: {
       width: 64,
       height: 64,
-      borderRadius: 32,
+      borderRadius: RADIUS.full,
       backgroundColor: colors.backgroundSurface,
       alignItems: 'center',
       justifyContent: 'center',

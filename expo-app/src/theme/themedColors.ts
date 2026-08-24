@@ -87,15 +87,27 @@ const DARK: Record<string, string> = {
 };
 
 /**
- * Tokens that only the auth / onboarding surface needs. They are derived from
- * the active palette rather than declared as literals so they follow the theme.
+ * Derived surface tokens shared by the auth flow and the client tabs. They are
+ * computed from the active palette rather than declared as literals so they
+ * follow the theme.
+ *
+ * The `auth*` names came first and are kept as aliases so the auth screens keep
+ * reading the way they were written; the generic names are what new client
+ * surfaces should use.
  */
-export interface AuthColors {
-  /** Tinted icon column on the left of a field card. */
+export interface SurfaceColors {
+  /** Brand-tinted fill: icon tiles, gutters, selected states. */
+  tintSurface: string;
+  /** Card / field fill that sits on the page background. */
+  cardSurface: string;
+  /** Soft hairline for dividers inside a card. */
+  hairlineSoft: string;
+
+  /** Alias of tintSurface — the icon column on the left of a field card. */
   authGutter: string;
-  /** Hairline between the icon column and the input column. */
+  /** Alias of hairlineSoft. */
   authHairline: string;
-  /** Field / content card fill. */
+  /** Alias of cardSurface. */
   authCard: string;
   /** Backing panel for the hero illustration. Deliberately light in BOTH modes:
    *  the artwork is drawn for a light ground, so the plate travels with it. */
@@ -104,13 +116,22 @@ export interface AuthColors {
   authPlateGlow: string;
 }
 
-export type ThemedColors = typeof COLORS & AuthColors;
+/** @deprecated Use SurfaceColors. Kept so existing imports keep resolving. */
+export type AuthColors = SurfaceColors;
 
-function authColors(base: typeof COLORS, isDark: boolean): AuthColors {
+export type ThemedColors = typeof COLORS & SurfaceColors;
+
+function surfaceColors(base: typeof COLORS, isDark: boolean): SurfaceColors {
+  const tintSurface = withAlpha(base.primary, isDark ? 0.14 : 0.06);
+  const cardSurface = base.surfaceContainerLowest;
+  const hairlineSoft = base.borderLight;
   return {
-    authGutter: withAlpha(base.primary, isDark ? 0.14 : 0.06),
-    authHairline: base.borderLight,
-    authCard: base.surfaceContainerLowest,
+    tintSurface,
+    cardSurface,
+    hairlineSoft,
+    authGutter: tintSurface,
+    authHairline: hairlineSoft,
+    authCard: cardSurface,
     // Fixed light mint in both modes — see the interface note above.
     authPlate: '#eef6f1',
     authPlateGlow: withAlpha(COLORS.primary, 0.1),
@@ -122,11 +143,11 @@ function authColors(base: typeof COLORS, isDark: boolean): AuthColors {
  * Light = identical to the static COLORS. Dark = COLORS with dark overrides.
  */
 export function makeThemedColors(isDark: boolean): ThemedColors {
-  if (!isDark) return { ...COLORS, ...authColors(COLORS, false) } as ThemedColors;
+  if (!isDark) return { ...COLORS, ...surfaceColors(COLORS, false) } as ThemedColors;
   // Spread resolves COLORS getters to light values, then DARK overrides the
   // tokens (including the derived aliases) with their dark equivalents.
   const dark = { ...COLORS, ...DARK } as typeof COLORS;
-  return { ...dark, ...authColors(dark, true) } as ThemedColors;
+  return { ...dark, ...surfaceColors(dark, true) } as ThemedColors;
 }
 
 /**

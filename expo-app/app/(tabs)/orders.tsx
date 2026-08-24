@@ -288,7 +288,7 @@ function QuickServiceAction({
     <Card
       variant="flat"
       padding={SPACING.sm}
-      radius={RADIUS.xl}
+      radius={RADIUS.lg}
       style={styles.quickActionItem}
       onPress={onPress}
       accessibilityLabel={label}
@@ -318,7 +318,7 @@ function OrderCard({ item, onPress, getStatusColor, formatDate, COLORS, styles }
     <Card
       variant="raised"
       padding={SPACING.md}
-      radius={RADIUS.xl}
+      radius={RADIUS.lg}
       onPress={onPress}
       accessibilityLabel={`Order ${item.orderNumber}`}
     >
@@ -417,7 +417,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   quickActionIconCircle: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -462,7 +462,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   orderTypeIconCircle: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
   },

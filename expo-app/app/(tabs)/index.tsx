@@ -1,16 +1,15 @@
 // ============================================
 // SMART RIDE — CLIENT HOME
 // ============================================
-// Golden Screen #7 · Archetype AR-3 (content-first variant).
+// Built on the client design surface (src/components/client):
 //
-//   AppHeader (greeting + location + notifications) → wallet preview →
-//   "Where to?" → services → map preview → quick ride → support
+//   greeting + notifications → location pill → wallet card → destination
+//   search → map preview → services rail → quick ride → support
 //
-// Every surface is a Design-System primitive. The promo banner that used to sit
-// above Support advertised "50% off your first 3 rides" with no promotions API
-// behind it; the Design Language forbids fabricated content, so it is gone
-// rather than restyled. Quick-ride prices now read from RIDE_TYPES instead of
-// being typed into the markup.
+// The promo banner that used to sit above Support advertised "50% off your
+// first 3 rides" with no promotions API behind it; the Design Language forbids
+// fabricated content, so it stays gone. Quick-ride prices read from RIDE_TYPES
+// rather than being typed into the markup.
 // ============================================
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
@@ -24,15 +23,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn, FadeInUp, ZoomIn } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { useAuthStore, useLocationStore } from '@/src/store';
 import {
-  SERVICES,
   RIDE_TYPES,
   TYPOGRAPHY,
   SPACING,
   RADIUS,
-  SHADOWS,
   MOTION,
   ICON,
   BORDER,
@@ -40,32 +38,31 @@ import {
 } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
+import { SmartRideMap } from '@/src/components';
 import {
-  AppHeader,
-  Card,
-  GradientButton,
-  SearchInput,
-  SectionHeader,
-  ServiceIcon,
-  Skeleton,
-  SmartRideMap,
-} from '@/src/components';
+  GreetingHeader,
+  LocationPill,
+  WalletCard,
+  HomeSearchRow,
+  SectionHeading,
+  ServiceTile,
+  QuickRideCard,
+} from '@/src/components/client';
 import { Ionicons } from '@expo/vector-icons';
 import { api } from '@/src/services';
 
-// Service grid items
+// Services rail. `description` is the one-line "what this does" under each name.
 const HOME_SERVICES: {
   id: string;
   name: string;
-  serviceKey: keyof typeof SERVICES | 'custom';
-  iconName?: string;
-  customColor?: string;
+  description: string;
+  icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { id: 'ride', name: 'Ride', serviceKey: 'custom', iconName: 'bicycle', customColor: '#005f3a' },
-  { id: 'food', name: 'Food', serviceKey: 'FOOD' },
-  { id: 'shopping', name: 'Shop', serviceKey: 'SHOPPING' },
-  { id: 'delivery', name: 'Parcel', serviceKey: 'DELIVERY' },
-  { id: 'health', name: 'Health', serviceKey: 'HEALTH' },
+  { id: 'ride', name: 'Ride', description: 'Get a ride', icon: 'bicycle' },
+  { id: 'food', name: 'Food', description: 'Order food', icon: 'restaurant' },
+  { id: 'shopping', name: 'Shop', description: 'Groceries', icon: 'bag-handle' },
+  { id: 'delivery', name: 'Parcel', description: 'Send parcels', icon: 'cube' },
+  { id: 'health', name: 'Health', description: 'Book care', icon: 'heart' },
 ];
 
 // Quick-ride tiles. Fares come from the shared RIDE_TYPES config so home can
@@ -80,6 +77,7 @@ export default function HomeScreen() {
   const { isDark } = useTheme();
   const COLORS = useMemo(() => makeThemedColors(isDark), [isDark]);
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
+  const insets = useSafeAreaInsets();
   const user = useAuthStore(s => s.user);
   const address = useLocationStore(s => s.address);
   const latitude = useLocationStore(s => s.latitude);
@@ -138,7 +136,7 @@ export default function HomeScreen() {
         setWalletBalance(res.data.wallet?.balance ?? 0);
       }
     } catch {
-      // silently fail — wallet widget shows dash
+      // silently fail — wallet widget shows a skeleton
     }
   };
 
@@ -184,113 +182,69 @@ export default function HomeScreen() {
     }
   };
 
-  const formatBalance = (bal: number) => {
-    return `UGX ${bal.toLocaleString()}`;
-  };
+  const formatCurrency = (amount: number) => `UGX ${amount.toLocaleString()}`;
 
   return (
     <View style={styles.screen}>
       <ScrollView
         style={styles.container}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={[styles.content, { paddingTop: insets.top + SPACING.sm }]}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
         }
-        stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Sticky header: greeting + location + notifications ── */}
-        <View style={styles.stickyHeader}>
-          <AppHeader
-            title={firstName}
-            subtitle={`${getGreeting()},`}
-            rightActions={[
-              { icon: 'notifications-outline', onPress: () => router.push('/notifications'), label: 'Notifications' },
-            ]}
-          />
-          <Animated.View entering={FadeIn.duration(MOTION.duration.slower)} style={styles.locationRow}>
-            <TouchableOpacity
-              style={styles.locationButton}
-              onPress={() => getCurrentLocation().catch(() => {})}
-              activeOpacity={OPACITY.pressed}
-              accessibilityRole="button"
-              accessibilityLabel="Refresh location"
-            >
-              <Ionicons name="location-outline" size={ICON.xs} color={COLORS.primary} />
-              {isLocating ? (
-                <ActivityIndicator color={COLORS.primary} size="small" style={styles.locationSpinner} />
-              ) : (
-                <Text style={styles.locationText} numberOfLines={1}>
-                  {address || 'Tap to set location'}
-                </Text>
-              )}
-              <Ionicons name="chevron-down" size={ICON.xs} color={COLORS.outline} />
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
+        {/* Greeting + notifications */}
+        <GreetingHeader
+          greeting={`${getGreeting()},`}
+          name={firstName}
+          actions={[
+            {
+              icon: 'notifications-outline',
+              onPress: () => router.push('/notifications'),
+              label: 'Notifications',
+              badge: true,
+            },
+          ]}
+          style={styles.block}
+        />
 
-        {/* ── Wallet preview ── */}
-        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(150)} style={styles.section}>
-          <Card
-            variant="accent"
-            padding={SPACING.md}
-            radius={RADIUS.xl}
+        {/* Location */}
+        <LocationPill
+          address={address}
+          loading={isLocating}
+          onPress={() => getCurrentLocation().catch(() => {})}
+          style={styles.block}
+        />
+
+        {/* Wallet */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(120)} style={styles.block}>
+          <WalletCard
+            balance={walletBalance}
             onPress={() => router.push('/wallet')}
-            accessibilityLabel="Open wallet"
-          >
-            <View style={styles.walletRow}>
-              <View style={styles.walletLeft}>
-                <Text style={styles.walletLabel}>Wallet Balance</Text>
-                {walletBalance !== null ? (
-                  <Text style={styles.walletBalance}>{formatBalance(walletBalance)}</Text>
-                ) : (
-                  <Skeleton width={140} height={28} borderRadius={RADIUS.sm} style={styles.walletSkeleton} />
-                )}
-              </View>
-              <GradientButton
-                title="Top Up"
-                onPress={() => router.push('/wallet')}
-                variant="primary"
-                size="sm"
-                fullWidth={false}
-                icon={<Ionicons name="add" size={ICON.sm} color={COLORS.onPrimary} />}
-              />
-            </View>
-          </Card>
+            onTopUp={() => router.push('/wallet')}
+          />
         </Animated.View>
 
-        {/* ── "Where to?" — opens the booking flow ── */}
-        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(200)} style={styles.section}>
-          <TouchableOpacity
+        {/* Destination search */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(180)} style={styles.block}>
+          <HomeSearchRow
             onPress={() => router.push('/rider/ride-request?type=BODA')}
-            activeOpacity={OPACITY.pressed}
-            accessibilityRole="button"
-            accessibilityLabel="Where do you want to go?"
-          >
-            {/* Non-editable: this is the entry point to destination search, not a
-                field. Same affordance as the real SearchInput it hands off to. */}
-            <View pointerEvents="none">
-              <SearchInput
-                value=""
-                onChangeText={() => {}}
-                placeholder="Where do you want to go?"
-                editable={false}
-              />
-            </View>
-          </TouchableOpacity>
+            onRecents={() => router.push('/rides')}
+          />
         </Animated.View>
 
-        {/* ── Map preview ── */}
-        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(250)} style={styles.section}>
+        {/* Map preview */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(240)} style={styles.block}>
           <TouchableOpacity
             activeOpacity={0.9}
             onPress={() => router.push('/rider/ride-request?type=BODA')}
-            style={styles.mapPreviewCard}
+            style={styles.mapCard}
             accessibilityRole="button"
             accessibilityLabel="Book a ride — tap to set destination"
           >
             <SmartRideMap
-              style={styles.mapPreview}
+              style={styles.map}
               initialLatitude={latitude}
               initialLongitude={longitude}
               showUserLocation
@@ -298,302 +252,202 @@ export default function HomeScreen() {
             />
             <View style={styles.mapBadgeRow}>
               <View style={styles.mapBadge}>
-                <Ionicons name="location" size={ICON.xs} color={COLORS.onPrimary} />
+                <Ionicons name="location" size={ICON.sm} color={COLORS.primary} />
                 <Text style={styles.mapBadgeText} numberOfLines={1}>
                   {address || 'Current location'}
                 </Text>
               </View>
-              {isLocating && (
+              {isLocating ? (
                 <View style={styles.mapBadge}>
-                  <ActivityIndicator size="small" color={COLORS.onPrimary} />
-                  <Text style={styles.mapBadgeText}>Locating…</Text>
+                  <ActivityIndicator size="small" color={COLORS.primary} />
                 </View>
-              )}
+              ) : null}
             </View>
-            <View style={styles.mapCtaPill}>
-              <Ionicons name="navigate-outline" size={ICON.xs} color={COLORS.onPrimary} />
-              <Text style={styles.mapCtaText}>Set destination</Text>
-              <Ionicons name="arrow-forward" size={ICON.xs} color={COLORS.onPrimary} />
+            <View style={styles.mapCtaRow}>
+              <View style={styles.mapCta}>
+                <Ionicons name="navigate" size={ICON.md} color={COLORS.onPrimary} />
+                <Text style={styles.mapCtaText}>Set destination</Text>
+              </View>
             </View>
           </TouchableOpacity>
         </Animated.View>
 
-        {/* ── Services ── */}
-        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(300)} style={styles.section}>
-          <SectionHeader title="Services" />
-          <View style={styles.servicesGrid}>
-            {HOME_SERVICES.map((service, index) => (
-              <Animated.View
+        {/* Services */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(300)} style={styles.block}>
+          {/* No "View all" action: there is no services index route, and the
+              rail already shows every service the app offers, so the link
+              would either 404 or reveal nothing. */}
+          <SectionHeading title="Services" />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.servicesRail}
+          >
+            {HOME_SERVICES.map((service) => (
+              <ServiceTile
                 key={service.id}
-                entering={ZoomIn.duration(MOTION.duration.base).delay(300 + index * 70)}
-                style={styles.serviceCardWrapper}
-              >
-                <TouchableOpacity
-                  style={styles.serviceCard}
-                  onPress={() => handleServicePress(service.id)}
-                  activeOpacity={OPACITY.pressed}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${service.name} service`}
-                >
-                  <ServiceIcon
-                    service={service.serviceKey}
-                    size="lg"
-                    customIcon={service.iconName as any}
-                    customColor={service.customColor}
-                  />
-                  <Text style={styles.serviceName}>{service.name}</Text>
-                </TouchableOpacity>
-              </Animated.View>
+                name={service.name}
+                description={service.description}
+                icon={service.icon}
+                onPress={() => handleServicePress(service.id)}
+              />
             ))}
-          </View>
+          </ScrollView>
         </Animated.View>
 
-        {/* ── Quick Ride ── */}
-        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(450)} style={styles.section}>
-          <SectionHeader title="Quick Ride" />
-          <View style={styles.rideRow}>
+        {/* Quick Ride */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(380)} style={styles.block}>
+          <SectionHeading title="Quick Ride" subtitle="Book a ride in just a few taps" />
+          <View style={styles.quickRideRow}>
             {QUICK_RIDES.map((ride) => (
-              <Card
+              <QuickRideCard
                 key={ride.type}
-                variant="raised"
-                padding={SPACING.md}
-                radius={RADIUS.xl}
-                style={styles.rideCard}
+                name={ride.name}
+                fromFare={formatCurrency(ride.baseFare)}
+                icon={ride.icon}
                 onPress={() => router.push(`/rider/ride-request?type=${ride.type}`)}
-                accessibilityLabel={`Book ${ride.name}`}
-              >
-                <View style={styles.rideIconCircle}>
-                  <Ionicons name={ride.icon} size={ICON.lg} color={COLORS.primary} />
-                </View>
-                <Text style={styles.rideCardName}>{ride.name}</Text>
-                <Text style={styles.rideCardPrice}>From {formatBalance(ride.baseFare)}</Text>
-              </Card>
+              />
             ))}
           </View>
         </Animated.View>
 
-        {/* ── Support ── */}
-        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(550)} style={styles.section}>
-          <Card
-            variant="flat"
-            padding={SPACING.md}
-            radius={RADIUS.xl}
+        {/* Support */}
+        <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(440)} style={styles.block}>
+          <TouchableOpacity
+            style={styles.supportCard}
             onPress={() => router.push('/chat')}
+            activeOpacity={OPACITY.pressed}
+            accessibilityRole="button"
             accessibilityLabel="Contact in-app support"
           >
-            <View style={styles.supportRow}>
+            <View style={styles.supportPlate}>
               <Ionicons name="headset-outline" size={ICON.md} color={COLORS.primary} />
-              <Text style={styles.supportText}>Need assistance?</Text>
-              <Text style={styles.supportCta}>In-app Support</Text>
-              <Ionicons name="chevron-forward" size={ICON.sm} color={COLORS.primary} />
             </View>
-          </Card>
+            <Text style={styles.supportText}>Need assistance?</Text>
+            <Text style={styles.supportCta}>In-app Support</Text>
+            <Ionicons name="chevron-forward" size={ICON.sm} color={COLORS.primary} />
+          </TouchableOpacity>
         </Animated.View>
 
-        <View style={styles.bottomNavSpacer} />
+        <View style={styles.bottomSpacer} />
       </ScrollView>
     </View>
   );
 }
 
-// ============================================
-// STYLES — layout + domain content only.
-// ============================================
-
 const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: COLORS.surface,
+    backgroundColor: COLORS.background,
   },
   container: {
     flex: 1,
-    backgroundColor: COLORS.surface,
   },
   content: {
+    paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.lg,
   },
-
-  // Sticky header
-  stickyHeader: {
-    backgroundColor: COLORS.surface,
-    paddingBottom: SPACING.sm,
-  },
-  locationRow: {
-    paddingHorizontal: SPACING.md,
-  },
-  locationButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: SPACING.xs,
-    minHeight: 36,
-    paddingHorizontal: SPACING.gutter,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceContainerLow,
-    maxWidth: '100%',
-  },
-  locationSpinner: {
-    marginLeft: SPACING.xs,
-  },
-  locationText: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurface,
-    fontWeight: '600',
-    flexShrink: 1,
-  },
-
-  section: {
-    paddingHorizontal: SPACING.md,
-    marginTop: SPACING.md,
-  },
-
-  // Wallet
-  walletRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: SPACING.md,
-  },
-  walletLeft: {
-    flex: 1,
-    minWidth: 0,
-  },
-  walletLabel: {
-    ...TYPOGRAPHY.bodySm,
-    color: COLORS.onSurfaceVariant,
-  },
-  walletBalance: {
-    ...TYPOGRAPHY.displayLg,
-    color: COLORS.onSurface,
-    marginTop: 2,
-  },
-  walletSkeleton: {
-    marginTop: SPACING.xs,
+  block: {
+    marginBottom: SPACING.md,
   },
 
   // Map preview
-  mapPreviewCard: {
-    height: 180,
-    borderRadius: RADIUS.xl,
+  mapCard: {
+    height: 260,
+    borderRadius: RADIUS.lg,
     overflow: 'hidden',
-    backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: BORDER.hairline,
     borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceContainerLow,
   },
-  mapPreview: {
+  map: {
     ...StyleSheet.absoluteFillObject,
   },
   mapBadgeRow: {
-    position: 'absolute',
-    top: SPACING.sm,
-    left: SPACING.sm,
-    right: SPACING.sm,
     flexDirection: 'row',
+    alignItems: 'center',
     gap: SPACING.sm,
+    padding: SPACING.gutter,
   },
   mapBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.xs,
-    backgroundColor: COLORS.primary,
+    gap: SPACING.xs + 2,
+    maxWidth: '100%',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.gutter,
     borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.sm + 2,
-    paddingVertical: 5,
-    flexShrink: 1,
+    backgroundColor: COLORS.cardSurface,
   },
   mapBadgeText: {
     ...TYPOGRAPHY.labelMd,
-    color: COLORS.onPrimary,
-    fontWeight: '600',
+    color: COLORS.onSurface,
     flexShrink: 1,
   },
-  mapCtaPill: {
+  mapCtaRow: {
     position: 'absolute',
-    bottom: SPACING.sm,
-    alignSelf: 'center',
+    left: 0,
+    right: 0,
+    bottom: SPACING.md,
+    alignItems: 'center',
+  },
+  mapCta: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: SPACING.sm,
-    backgroundColor: COLORS.primary,
+    minHeight: 52,
+    paddingHorizontal: SPACING.xl,
     borderRadius: RADIUS.full,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    ...SHADOWS.button,
+    backgroundColor: COLORS.primary,
   },
   mapCtaText: {
     ...TYPOGRAPHY.labelLg,
     color: COLORS.onPrimary,
-    fontWeight: '700',
   },
 
-  // Services
-  servicesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  serviceCardWrapper: {
-    width: '19%',
-  },
-  serviceCard: {
-    alignItems: 'center',
-    gap: SPACING.xs + 2,
-    minHeight: 44,
-  },
-  serviceName: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-    fontWeight: '600',
-    textAlign: 'center',
+  // Services rail
+  servicesRail: {
+    gap: SPACING.gutter,
+    paddingRight: SPACING.xs,
   },
 
   // Quick ride
-  rideRow: {
+  quickRideRow: {
     flexDirection: 'row',
     gap: SPACING.gutter,
   },
-  rideCard: {
-    flex: 1,
-    alignItems: 'flex-start',
-    gap: SPACING.sm,
-  },
-  rideIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primaryFixed,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  rideCardName: {
-    ...TYPOGRAPHY.bodyMd,
-    color: COLORS.onSurface,
-    fontWeight: '700',
-  },
-  rideCardPrice: {
-    ...TYPOGRAPHY.labelMd,
-    color: COLORS.onSurfaceVariant,
-  },
 
   // Support
-  supportRow: {
+  supportCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: SPACING.sm,
+    gap: SPACING.gutter,
+    padding: SPACING.gutter,
+    borderRadius: RADIUS.lg,
+    borderWidth: BORDER.hairline,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.cardSurface,
+  },
+  supportPlate: {
+    width: 40,
+    height: 40,
+    borderRadius: RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.tintSurface,
   },
   supportText: {
-    ...TYPOGRAPHY.bodySm,
+    ...TYPOGRAPHY.bodyMd,
     color: COLORS.onSurface,
-    fontWeight: '600',
     flex: 1,
   },
   supportCta: {
     ...TYPOGRAPHY.labelLg,
     color: COLORS.primary,
-    fontWeight: '700',
   },
 
-  bottomNavSpacer: {
-    height: 110,
+  bottomSpacer: {
+    height: SPACING.xxl,
   },
 });

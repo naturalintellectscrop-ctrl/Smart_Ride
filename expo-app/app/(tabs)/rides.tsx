@@ -276,7 +276,7 @@ function RideCard({ item, statusColor, onPress, COLORS, styles }: { item: Task; 
     <Card
       variant="raised"
       padding={SPACING.md}
-      radius={RADIUS.xl}
+      radius={RADIUS.lg}
       onPress={onPress}
       accessibilityLabel={`${rideLabel} ${item.taskNumber || ''}`.trim()}
     >
@@ -394,7 +394,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   rideTypeIconCircle: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
   },
