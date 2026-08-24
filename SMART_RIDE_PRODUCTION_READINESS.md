@@ -1,7 +1,9 @@
 # Smart Ride — production readiness
 
 **Date:** 2026-08-24, autonomous closure pass.
-**Deployment SHA:** `d7740d1` · **`origin/main`:** `d7740d1` · **local `HEAD`:** `d7740d1`
+**Last verified code SHA:** `d7740d1` — deployed, READY, aliased to `smartrideug.vercel.app`,
+and the SHA every suite result below was measured against.
+**Branch tip:** `2fce731` — this report. Documentation only; no code differs from `d7740d1`.
 **Database:** `Payment.providerOrderId` pushed and verified in production.
 
 ---
