@@ -3090,3 +3090,45 @@ the food/shopping exclusion may be an oversight rather than a rule.
 `RiderCapability` table exists precisely so it can be made without a deploy:
 insert rows for the roles that should be allowed. Flagged so it is decided
 rather than discovered on launch day.
+
+---
+
+## BE-049 — Any courier could act on a task assigned to nobody
+
+**Status:** FIXED | **Priority:** P1 | **Category:** Security / Authorization
+
+`POST /api/tasks/[id]/decline` guarded ownership with:
+
+```ts
+if (task.riderId && task.riderId !== rider.id) { /* 403 */ }
+```
+
+That refuses a task belonging to somebody else and silently **permits** one
+belonging to nobody — the `&&` short-circuits on a null `riderId`. So any
+signed-in rider could act on a task that had never been assigned to them, and
+for a task sitting in `ASSIGNED` with no rider that meant pushing a stranger's
+job back into dispatch.
+
+Caught by `scripts/verify-authorization.ts` driving it as the attack it is: a
+courier posted a decline against a task belonging to another customer and got
+HTTP 200, and the task moved to `SEARCHING`.
+
+**Fix:** `task.riderId !== rider.id` refuses. Giving something back requires
+holding it; no rider means nothing to give back, whoever is asking.
+
+The exploitable window was narrow — a task in `ASSIGNED`/`ACCEPTED` with a null
+`riderId` is not a state the normal flow produces — but the check was wrong as
+written, and "narrow" is not a property to rely on.
+
+---
+
+# Verification suites added this pass
+
+| Suite | Covers |
+|---|---|
+| `scripts/verify-financial-integrity.ts` | PRICING-1, BE-039/040, BE-044, cash policy, wallet collection, held/released earnings, duplicate protection |
+| `scripts/verify-dispatch-integrity.ts` | BE-047 (merchant + ride dispatch reaches a courier), BE-048/LC-1 (give-back, re-offer, release) |
+| `scripts/verify-authorization.ts` | ownership, role, merchant isolation, provider isolation, task ownership, payment ownership, amount derivation |
+
+All three run against the deployed API and read the production database for the
+truth, and all three assert that their own fixtures are gone at the end.

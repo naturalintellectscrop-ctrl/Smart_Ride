@@ -83,7 +83,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // A rider may only decline a task that is actually theirs. Checked after
     // the lookup, against the stored row — never against a body-supplied id.
-    if (task.riderId && task.riderId !== rider.id) {
+    //
+    // BE-049: this read `if (task.riderId && task.riderId !== rider.id)`, which
+    // refuses a task belonging to somebody else but silently PERMITS one
+    // belonging to nobody — the `&&` short-circuits on a null riderId. Any
+    // signed-in rider could therefore act on a task that was never assigned to
+    // them, and for a task sitting in ASSIGNED without a rider that meant
+    // pushing a stranger's job back into dispatch. Caught by the authorization
+    // suite driving it as an attack: HTTP 200, and the task moved.
+    //
+    // Giving something back requires holding it. No rider, nothing to give
+    // back — whoever is asking, the answer is no.
+    if (task.riderId !== rider.id) {
       return NextResponse.json(
         { success: false, error: 'This task is not assigned to you' },
         { status: 403 }
