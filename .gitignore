@@ -102,3 +102,7 @@ verify-home-logo.png
 # Local production env (real secrets)
 .env.production
 .qa-screens/
+
+# Disposable QA probes. Named with a leading dot so they never ship;
+# the durable suites are scripts/verify-*.ts.
+scripts/.qa-*
