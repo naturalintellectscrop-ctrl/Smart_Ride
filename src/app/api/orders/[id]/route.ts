@@ -137,15 +137,20 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       let isMerchant = false;
       let isRider = false;
 
-      // Check if user is the merchant (only relevant for MERCHANT/PHARMACIST roles).
-      // NOTE: The Merchant model does not have a userId column; merchant staff
-      // linkage is handled via separate MerchantStaff/User tables. For now,
-      // clients and riders are authorised via isClient / isRider below; the
-      // isMerchant branch is a no-op until merchant-staff linkage is wired up.
+      // MERCH-6: a merchant could not read their own order.
+      //
+      // This branch was hard-coded to false, on a comment asserting that
+      // `Merchant` has no `userId` column. It does — `userId String? @unique`
+      // with a relation to User, and the availability and registration routes
+      // both resolve a merchant by it. So the assertion was simply wrong, and
+      // the effect was that a merchant opening one of their own orders fell
+      // through every branch to "Access denied".
       if (order.merchantId && (user.role === 'MERCHANT' || user.role === 'PHARMACIST')) {
-        // Intentionally no-op: merchant.userId does not exist on the schema.
-        // When merchant-staff linkage is added, look up the staff row here.
-        isMerchant = false;
+        const own = await db.merchant.findFirst({
+          where: { userId: user.userId },
+          select: { id: true },
+        });
+        isMerchant = !!own && own.id === order.merchantId;
       }
 
       // Check if user is the assigned rider

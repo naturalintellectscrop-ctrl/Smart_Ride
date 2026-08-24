@@ -816,8 +816,19 @@ class ApiService {
     return this.request<any>(endpoint);
   }
 
+  /**
+   * One order, for the merchant looking at it.
+   *
+   * This addressed `/merchants/orders/{id}`, which does not exist — there is no
+   * `merchants/orders` directory at all — so opening an order from the merchant
+   * list answered "Order not found. Network error." while the list behind it
+   * showed the order perfectly. Same shape as MERCH-2 and PHARM-5: a client
+   * addressing a URL nobody built.
+   *
+   * `GET /orders/{id}` is the real contract and scopes the caller itself.
+   */
   async getMerchantOrder(orderId: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/merchants/orders/${orderId}`);
+    return this.request<any>(`/orders/${orderId}`);
   }
 
   async registerMerchant(data: {
