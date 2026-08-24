@@ -2067,3 +2067,118 @@ distance (3,000 here). The 2,000 difference is the platform's by elimination,
 and no rule anywhere states that. It is inside the courier's recorded 6,080
 receivable, so no shilling is unaccounted — but the *rule* is undefined and
 should be written down before the fee or the fare rates change.
+
+---
+
+# Reconciliation — every finding still marked OPEN, re-checked against the code
+
+Everything the register still carried as OPEN was re-read against the current
+tree rather than trusted. Four were already closed by later work and the entry
+had not been updated; two were still real and are now fixed; one is a product
+decision that stays.
+
+| Finding | Was | Now | Evidence |
+|---|---|---|---|
+| DEV-3 | OPEN P1 | **FIXED** | dialog dismissed with `router.back()`; still reproduced |
+| DEV-4 | OPEN P0 (deployment) | **RESOLVED** | `git rev-list origin/main..HEAD` = 0; `riderId` optional in the deployed schema |
+| DEV-6 | OPEN P1 | **FIXED** | `api.cancelTask` still the only call; still reproduced |
+| DEV-7 | OPEN P1 | **ALREADY RESOLVED** | see below |
+| DISP-4 | OPEN P3 | **ALREADY RESOLVED** | see below |
+| MERCH-1 | OPEN P0 | **CLOSED earlier** | superseded by MERCH-2/3/4, actions verified 7/7 |
+| PHARM-1 | OPEN P0 | **CLOSED earlier** | superseded by PHARM-4/5/6, verified on device |
+| PHARM-7 | OPEN P3 | **CLOSED by PHARM-9** | provider now resolved from the token |
+| PHARM-3 | OPEN P2 | **CLOSED** | and it was a P0, not a P2 — see its entry |
+| PHARM-8 | OPEN P0 | **CLOSED** | see its entry |
+| INC-1 | OPEN (product) | **STAYS OPEN** | a business rule, not a defect |
+
+## DEV-7 — does not reproduce; the entry described a narrower thing than it looked
+
+The two `sessionId: ''` fallbacks in `call/[id].tsx` are on the **failure**
+branches of initiate. When initiate fails there is no `CallSession`, so having
+nothing to end is correct, and all four end-call sites guard on
+`if (callInfo?.sessionId)`.
+
+The leak the entry feared — a session left `ringing` because the client never
+learned its id — would need initiate to answer 2xx *without* a sessionId.
+`/api/calls/initiate` returns `sessionId: callSession.id` on both of its success
+paths, so that state is unreachable.
+
+The other half of DEV-7 (deriving the task) is also closed: `taskId` is passed
+as an explicit param and `conversationId.replace('conv-','')` survives only as a
+documented fallback behind `params.taskId ??`.
+
+## DISP-4 — closed by the push service's own error handling
+
+`push-notification.service.ts` retires a token on `DeviceNotRegistered` and
+deliberately does **not** on `InvalidCredentials`, with the reasoning written
+into the code: the second means OUR FCM key is wrong, and disabling live tokens
+for a server misconfiguration outlives the fix.
+
+## DEV-4 — the deployment lag it described is gone
+
+The entry's real finding was that the branch was 20 commits ahead of
+`origin/main` while the phone pointed at production, so every backend fix was
+invisible to the device. That gap is closed: the working tree is level with
+`origin/main`, and the specific fix it named (`riderId` optional, rider derived
+from the token) is in the deployed code.
+
+---
+
+# INC-3 — a driver can leave a bonus they joined
+
+**Status:** FIXED + VERIFIED IN PRODUCTION (11/11) | **Priority:** P2
+
+The last item on the incentive chain, and the same shape as PHARM-14 and the
+catalogue delete: `DELETE /marketplace/incentives/participate` had always
+existed and had no caller. A driver who joined a campaign was in it until it
+expired — including one whose targets they had realised they could not hit,
+which then sits on their dashboard counting toward nothing.
+
+Verified end to end against production with a disposable campaign and rider:
+join → participation `ENROLLED` → campaign count 0→1 → leave → `CANCELLED` →
+count 1→0. Another driver's enrolment was refused with 400 and left untouched.
+Both fixtures and the campaign deleted afterwards.
+
+## DEV-3 — an approved rider can be trapped in the onboarding form
+
+**Status:** FIXED | **Priority:** P1
+
+Still reproduced exactly as recorded: the "Already Approved" dialog dismissed
+with `router.back()`, and what pushes the form is the "Become a Rider" entry
+they had just come from, so they bounced onto a four-step application for an
+account that is already approved. The prominent escape offered to switch them
+to Client — demoting an approved driver — and Android back left the app.
+
+Both approved and pending-review now leave forwards, with `replace()` so the
+form is not left on the stack, and the dialog is not dismissible: OK is the only
+way out and OK goes somewhere useful.
+
+## DEV-6 — the driver's Cancel button can never succeed on an assigned ride
+
+**Status:** FIXED | **Priority:** P1
+
+Still reproduced. The fix is the one the entry recommended: giving back a job
+you have not started is **declining** it, and that path already existed with no
+caller. Before pickup the button declines and reads "Give back"; from
+`PICKED_UP` onwards it cancels, and the server decides whether the driver may.
+The raw transition error is no longer the thing a courier reads.
+
+---
+
+# Roadmap position after this pass
+
+Every item on the MVP roadmap that was still outstanding is now closed:
+
+- BE-040, BE-041, BE-042, BE-043 — closed in earlier sessions
+- DISP-1 … DISP-5 — closed
+- INC-1 — **open by decision** (business rule, not a defect)
+- INC-2, INC-4, INC-5 — closed
+- **INC-3 — closed this pass**
+- Device journeys: client, merchant, pharmacy, delivery personnel — all driven
+  on hardware
+- **DEV-3, DEV-6 — closed this pass**
+- DEV-4, DEV-7, DISP-4 — reconciled as already resolved
+
+What remains is not roadmap work but verification debt, listed in the closure
+report: two mobile changes that are committed and typechecked but have not been
+run on hardware.
