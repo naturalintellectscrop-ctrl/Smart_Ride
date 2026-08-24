@@ -527,6 +527,14 @@ model Payment {
   paymentReference  String        @unique
   taskId            String?       @unique
   orderId           String?
+  /// The pharmacy/health order this payment settles.
+  ///
+  /// `orderId` is FK-constrained to `Order`, so before this there was NO way
+  /// to record that a customer had paid for a `ProviderOrder` — the pharmacy
+  /// order simply carried a `paymentStatus` string that delivery flipped to
+  /// COMPLETED with nothing behind it. Collecting pharmacy money up front
+  /// requires somewhere to record the collection, which is this column.
+  providerOrderId   String?
   userId            String
   amount Decimal
   currency          String        @default("UGX")
@@ -544,11 +552,13 @@ model Payment {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   order             Order?        @relation(fields: [orderId], references: [id])
+  providerOrder     ProviderOrder? @relation(fields: [providerOrderId], references: [id])
   task              Task?         @relation(fields: [taskId], references: [id], onDelete: SetNull)
   user              User          @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([userId])
   @@index([orderId])
+  @@index([providerOrderId])
   @@index([status])
   @@index([paymentMethod])
   @@index([createdAt])
@@ -1143,6 +1153,9 @@ model ProviderOrder {
   provider                   HealthProvider      @relation(fields: [providerId], references: [id])
   /// The delivery task dispatched for this order, once it is ready.
   task                       Task?
+  /// Customer payments raised against this order. A retried collection makes
+  /// another row, so this is a list — the COMPLETED one is the collection.
+  payments                   Payment[]
 
   @@index([providerId])
   @@index([status])

@@ -17,7 +17,7 @@ import { Alert } from '@/src/components/feedback';
 import { useRouter } from 'expo-router';
 import { useLocationStore, useCartStore, useAuthStore } from '@/src/store';
 import { api } from '@/src/services';
-import { PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
+import { ORDER_PAYMENT_METHODS, PAYMENT_METHOD_MAP, TYPOGRAPHY, SPACING, RADIUS } from '@/src/constants';
 import {
   AppHeader,
   Card,
@@ -40,7 +40,11 @@ export default function CartScreen() {
   const { items, removeItem, updateQuantity, clearCart, totalPrice, merchantId, merchantName } = useCartStore();
   const { user } = useAuthStore();
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('CASH');
+  // Cash is not offered on merchant orders — Smart Ride collects the whole
+  // amount up front, pays the restaurant, and settles the courier after
+  // delivery. Defaulting to it would put the customer on a method the server
+  // refuses.
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('MTN_MOMO');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [deliveryInstructions, setDeliveryInstructions] = useState('');
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -136,13 +140,43 @@ export default function CartScreen() {
       });
 
       if (response.success && response.data) {
-        try {
-          await api.confirmOrderPayment(response.data.id);
-        } catch {
-          // Non-blocking - order is already created, task auto-created by server
+        const orderId = response.data.id;
+
+        // Collect BEFORE the order is confirmed. This used to fire
+        // `confirmOrderPayment` with an invented reference and swallow any
+        // failure — the order went through as paid whether or not a shilling
+        // had moved. The server no longer accepts that, and neither should the
+        // customer: if the payment does not go through, they need to know
+        // while they are still on this screen.
+        const paid = await api.payForOrder({
+          orderId,
+          paymentMethod: PAYMENT_METHOD_MAP[paymentMethod] || paymentMethod,
+          phoneNumber: phoneNumber || undefined,
+        });
+
+        if (!paid.success) {
+          Alert.alert(
+            'Payment not completed',
+            paid.error ||
+              'We could not take the payment for this order. Your order is saved — try paying again from Orders.'
+          );
+          clearCart();
+          router.replace(`/orders/order-tracking?orderId=${orderId}`);
+          return;
+        }
+
+        const confirmed = await api.confirmOrderPayment(orderId);
+        if (!confirmed.success) {
+          // Mobile money is approved on the customer's handset, so the
+          // collection may still be in flight. The order is placed and the
+          // tracking screen shows where it has got to.
+          Alert.alert(
+            'Waiting for payment',
+            'Approve the payment prompt on your phone. Your order starts as soon as it clears.'
+          );
         }
         clearCart();
-        router.replace(`/orders/order-tracking?orderId=${response.data.id}`);
+        router.replace(`/orders/order-tracking?orderId=${orderId}`);
       } else {
         Alert.alert('Error', response.error || 'Failed to place order');
       }
@@ -280,7 +314,7 @@ export default function CartScreen() {
           <SectionHeader title="Payment method" />
           
           <View style={styles.paymentMethodsRow}>
-            {PAYMENT_METHODS.slice(0, 3).map((method) => (
+            {ORDER_PAYMENT_METHODS.map((method) => (
               <TouchableOpacity
                 key={method.id}
                 style={[

@@ -23,6 +23,15 @@ import {
 } from '@/lib/health/provider-order-delivery';
 import { z } from 'zod';
 import { Prisma } from '@prisma/client';
+import { calculatePricingAsync } from '@/lib/api/pricing';
+import { calculateDistance } from '@/lib/mapbox/mapbox-service';
+
+/**
+ * Distance assumed when the pharmacy or the delivery address has no
+ * coordinates. Deliberately non-zero — a missing coordinate must not make
+ * delivery free. Matches the equivalent fallback in order-pricing.
+ */
+const HEALTH_FALLBACK_DISTANCE_KM = 3;
 
 /**
  * Resolve which provider this caller may act for.
@@ -247,7 +256,20 @@ export async function POST(request: NextRequest) {
       deliveryLatitude: z.number().min(-90).max(90).optional(),
       deliveryLongitude: z.number().min(-180).max(180).optional(),
       deliveryInstructions: z.string().max(500).optional(),
-      paymentMethod: z.string().min(1),
+      // Was `z.string().min(1)` — an unvalidated free string cast straight
+      // into a PaymentMethod enum column. CASH is excluded here for the same
+      // reason it is excluded from merchant orders: a pharmacy order is
+      // three-sided, and cash at the door puts the pharmacy's money and the
+      // platform's cut in the courier's pocket with nothing collecting it.
+      // The business decision names pharmacy explicitly, so there is no
+      // second exception for it.
+      paymentMethod: z.enum(
+        ['MTN_MOMO', 'AIRTEL_MONEY', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD', 'WALLET'],
+        {
+          message:
+            'Cash on delivery is not available for pharmacy orders. Pay with mobile money, card or wallet.',
+        }
+      ),
       customerNotes: z.string().max(500).optional(),
     });
 
@@ -322,7 +344,37 @@ export async function POST(request: NextRequest) {
       subtotal += item.price * item.quantity;
     }
 
-    const deliveryFee = provider.supportsDelivery ? 5000 : 0; // Base delivery fee
+    // ── PRICING-1 (pharmacy half): charge what the courier leg costs ────────
+    //
+    // The delivery line was a flat `supportsDelivery ? 5000 : 0` hardcode. It
+    // was not a business rule and nothing else in the system agreed with it:
+    // the courier's task for the same trip is priced by the pricing engine at
+    // the SMART_HEALTH_DELIVERY rates, which come out between 3,000 and 3,600
+    // over normal Kampala distances. So the platform quietly retained
+    // 1,400–2,000 per pharmacy order — by accident of a constant, in the
+    // opposite direction to the loss food deliveries were making.
+    //
+    // The delivery charge now comes from the same engine that pays the
+    // courier, so the two sides of the trip are the same number and the
+    // platform's margin on it is the declared commission, nothing else.
+    let deliveryFee = 0;
+    if (provider.supportsDelivery) {
+      const km =
+        provider.latitude != null && provider.longitude != null &&
+        deliveryLatitude != null && deliveryLongitude != null
+          ? calculateDistance(
+              { latitude: provider.latitude, longitude: provider.longitude },
+              { latitude: deliveryLatitude, longitude: deliveryLongitude }
+            )
+          : HEALTH_FALLBACK_DISTANCE_KM;
+      const leg = await calculatePricingAsync({
+        taskType: 'SMART_HEALTH_DELIVERY',
+        distanceKm: Math.round(km * 100) / 100,
+        pickupLatitude: provider.latitude,
+        pickupLongitude: provider.longitude,
+      });
+      deliveryFee = Math.round(leg.totalAmount);
+    }
     const serviceFee = subtotal * 0.02; // 2% service fee
     const totalAmount = subtotal + deliveryFee + serviceFee;
     const providerEarnings = subtotal * (1 - provider.commissionRate);
@@ -486,6 +538,36 @@ export async function PATCH(request: NextRequest) {
         { success: false, error: `This order is already ${order.status}` },
         { status: 409 }
       );
+    }
+
+    // ── A pharmacy does not dispense against unpaid money ───────────────────
+    //
+    // Business decision, 2026-08-24: pharmacy orders are collected up front by
+    // Smart Ride, and the pharmacy is paid from money the platform is holding.
+    // Accepting is the moment the pharmacy commits stock and a pharmacist's
+    // time, so it is the moment the money has to already be in — the merchant
+    // side has the same gate at PAYMENT_CONFIRMED.
+    //
+    // The authority is a COMPLETED Payment row for this order, not the order's
+    // own `paymentStatus` string, which nothing used to back.
+    if (action === 'ACCEPT') {
+      const paid = await db.payment.findFirst({
+        where: { providerOrderId: orderId, status: 'COMPLETED' },
+        select: { id: true, amount: true },
+      });
+      const due = Math.round(Number(order.totalAmount));
+      if (!paid || Math.round(Number(paid.amount)) < due) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: paid
+              ? `Payment of UGX ${due.toLocaleString()} has not been collected in full.`
+              : 'This order has not been paid for yet.',
+            code: 'PAYMENT_NOT_COLLECTED',
+          },
+          { status: 402 }
+        );
+      }
     }
 
     // ── Ask for a courier again ─────────────────────────────────────────────

@@ -9,7 +9,8 @@ import {
 } from '@/lib/services/enhanced-task-state-machine.service';
 import { sendOrderUpdateNotification } from '@/lib/services/notification.service';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
-import { calculatePricing } from '@/lib/api/pricing';
+import { splitChargedFare } from '@/lib/api/pricing';
+import { toNumber } from '@/lib/decimal-utils';
 import { redactPerson, redactBusiness } from '@/lib/privacy/public-contact';
 import { ensureReceiptForTask } from '@/lib/receipts/receipt-service';
 import { sendReceiptEmail } from '@/lib/receipts/send-receipt-email';
@@ -386,7 +387,9 @@ async function assertOrderOwnership(
  * Handle payment confirmation - creates KOT, notifies merchant and client
  */
 async function handleConfirmPayment(orderId: string, body: Record<string, unknown>, decoded: { userId: string; role: string }) {
-  const validatedData = confirmPaymentSchema.parse(body);
+  // Shape check only. The reference the caller sends is no longer written
+  // anywhere — see the payment-collection gate below.
+  confirmPaymentSchema.parse(body);
 
   const order = await db.order.findUnique({
     where: { id: orderId },
@@ -401,6 +404,61 @@ async function handleConfirmPayment(orderId: string, body: Record<string, unknow
     return errorResponse('Order must be in ORDER_CREATED status');
   }
 
+  // ── BE-044: the customer cannot declare their own order paid ─────────────
+  //
+  // This handler is reachable by the CLIENT role, and it wrote
+  // `paymentStatus: 'COMPLETED'` unconditionally. The only payment evidence it
+  // took was an optional free-text `paymentReference` that nothing looked up.
+  // Verified against production: an order was placed, `confirm-payment` was
+  // called with the reference "QA-NO-SUCH-PAYMENT", and the order came back
+  // PAYMENT_CONFIRMED / COMPLETED with no Payment row existing anywhere. Every
+  // merchant order in the system was marked paid on the customer's say-so, and
+  // the merchant then cooked against that.
+  //
+  // Confirmation is now a READ of what was collected, not an assertion. The
+  // authority is a COMPLETED Payment row belonging to this customer for this
+  // order, for at least the amount due. Nothing else — not the client, not the
+  // reference string, not the fact that the task finished — can move an order
+  // to paid.
+  const collected = await db.payment.findFirst({
+    where: {
+      orderId,
+      userId: order.clientId,
+      status: 'COMPLETED',
+    },
+    select: { id: true, amount: true, paymentReference: true, paymentMethod: true },
+  });
+
+  const due = Math.round(Number(order.totalAmount));
+  if (!collected || Math.round(Number(collected.amount)) < due) {
+    await createAuditLog({
+      action: AuditActions.ORDER_CREATED,
+      entityType: EntityTypes.ORDER,
+      entityId: orderId,
+      actorType: 'USER',
+      actorId: decoded.userId,
+      userId: decoded.userId,
+      orderId,
+      description:
+        `PAYMENT NOT COLLECTED: confirm-payment refused for order ${order.orderNumber} — ` +
+        (collected
+          ? `collected UGX ${Math.round(Number(collected.amount))} of UGX ${due}`
+          : 'no completed payment exists'),
+      source: 'API',
+    }).catch(() => {});
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: collected
+          ? `Payment of UGX ${due.toLocaleString()} has not been collected in full.`
+          : 'Payment has not been collected for this order yet.',
+        code: 'PAYMENT_NOT_COLLECTED',
+      },
+      { status: 402 }
+    );
+  }
+
   // Update order and create KOT
   const [updatedOrder, kot] = await db.$transaction([
     db.order.update({
@@ -408,7 +466,9 @@ async function handleConfirmPayment(orderId: string, body: Record<string, unknow
       data: {
         status: 'PAYMENT_CONFIRMED',
         paymentStatus: 'COMPLETED',
-        paymentReference: validatedData.paymentReference || null,
+        // The reference of the payment that was actually collected — not
+        // whatever the caller typed.
+        paymentReference: collected.paymentReference,
         confirmedAt: new Date(),
       },
     }),
@@ -743,11 +803,24 @@ async function handleReady(orderId: string, body: Record<string, unknown>, decod
     // Use the order's type to determine task type
     const taskType = order.orderType === 'SHOPPING' ? 'SHOPPING' as const : 'FOOD_DELIVERY' as const;
 
-    // Calculate pricing for delivery
-    const pricing = calculatePricing({
-      taskType,
-      distanceKm,
-    });
+    // ── PRICING-1: the courier is paid out of what the customer paid ────────
+    //
+    // This used to run a SECOND, independent fare calculation here —
+    // `calculatePricing`, the synchronous one, with hardcoded rates and no
+    // surge — while the customer had been quoted and charged by
+    // `calculatePricingAsync` inside `quoteOrder`, which applies admin rate
+    // overrides and zone surge. The two answers agree only when neither of
+    // those is in play, and the platform silently absorbed the difference in
+    // whichever direction it fell.
+    //
+    // The order already records what the customer paid for delivery
+    // (`deliveryFee + serviceFee`, which `quoteOrder` guarantees is exactly one
+    // courier fare). Splitting THAT figure means commission + rider earnings
+    // reconcile against collected money by construction, with no second
+    // calculation to drift.
+    const chargedForDelivery =
+      toNumber(order.deliveryFee) + toNumber(order.serviceFee);
+    const pricing = await splitChargedFare(taskType, chargedForDelivery);
 
     // Create the delivery task
     task = await db.task.create({
@@ -772,10 +845,11 @@ async function handleReady(orderId: string, body: Record<string, unknown>, decod
 
         distanceKm,
 
-        baseFare: pricing.baseFare,
-        distanceFare: pricing.distanceFare,
-        deliveryFee: pricing.deliveryFee,
-        serviceFee: pricing.serviceFee,
+        // The order's own fee lines, mirrored so the task carries the same
+        // breakdown the customer saw. `baseFare` is required by the schema.
+        baseFare: toNumber(order.deliveryFee),
+        deliveryFee: toNumber(order.deliveryFee),
+        serviceFee: toNumber(order.serviceFee),
         totalAmount: pricing.totalAmount,
         platformCommission: pricing.platformCommission,
         riderEarnings: pricing.riderEarnings,

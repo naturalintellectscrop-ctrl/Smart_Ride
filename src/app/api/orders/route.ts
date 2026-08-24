@@ -155,7 +155,24 @@ const createOrderSchema = z.object({
   serviceFee: z.number().min(0).optional(),
   discount: z.number().min(0).optional(),
   totalAmount: z.number().min(0).optional(),
-  paymentMethod: z.enum(['CASH', 'MTN_MOMO', 'AIRTEL_MONEY', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD', 'WALLET']),
+  // ── CASH is not a payment method for a merchant order ────────────────────
+  //
+  // A merchant order is three-sided: the customer owes for the goods AND the
+  // delivery, the merchant is owed for the goods, and the courier is owed for
+  // the trip. Cash puts the whole sum in the courier's hand at the door and
+  // leaves the platform to chase them for the merchant's share — on the live
+  // code that reconciliation did not exist, so a courier could collect the
+  // customer's food money and nothing recorded that they were holding it.
+  //
+  // Business decision, 2026-08-24: merchant, food, retail and pharmacy orders
+  // are collected up front by Smart Ride. The merchant is paid from money the
+  // platform holds, and the courier is settled after delivery from that same
+  // collected money. Rides are unaffected and keep cash — a ride is two-sided
+  // and the existing cash settlement for it is verified.
+  paymentMethod: z.enum(['MTN_MOMO', 'AIRTEL_MONEY', 'VISA', 'MASTERCARD', 'CREDIT_CARD', 'DEBIT_CARD', 'WALLET'], {
+    message:
+      'Cash on delivery is not available for merchant orders. Pay with mobile money, card or wallet.',
+  }),
   deliveryAddress: z.string(),
   deliveryLatitude: z.number().optional(),
   deliveryLongitude: z.number().optional(),
@@ -269,7 +286,27 @@ export async function POST(request: NextRequest) {
       discount: validatedData.discount,
     });
 
-    // Create order + items + task atomically in a transaction
+    // Create order + items atomically in a transaction.
+    //
+    // MERCH-7: this transaction also used to create the delivery Task and put
+    // it straight into MATCHING. Three things were wrong with that, and the
+    // third was fatal:
+    //
+    //  1. It dispatched before the merchant had accepted, so a courier could be
+    //     offered a job for food nobody had agreed to cook.
+    //  2. The task carried the WHOLE order total as its fare and no
+    //     commission/earnings split at all, so the courier was owed nothing and
+    //     the merchant's payout absorbed the customer's delivery and service
+    //     fees.
+    //  3. `handleReady` — the path that prices the courier leg and actually
+    //     calls dispatch — is guarded by `if (!existingTask)`. A task already
+    //     existing meant that block never ran, so no merchant order was EVER
+    //     dispatched to a courier. Confirmed end to end against production:
+    //     order placed, paid, accepted, prepared, marked ready — zero
+    //     DispatchMatch rows, task still MATCHING, no rider.
+    //
+    // The task is created when the merchant marks the order ready, which is
+    // the only point at which there is something to collect.
     const result = await db.$transaction(async (tx) => {
       const order = await tx.order.create({
         data: {
@@ -313,44 +350,10 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Create task linked to the order
-      const task = await tx.task.create({
-        data: {
-          taskNumber: `TSK-${Date.now().toString(36).toUpperCase()}`,
-          // Use the orderType from the request so SHOPPING orders use the
-          // SHOPPING_TRANSITIONS state machine (not FOOD_DELIVERY).
-          taskType: validatedData.orderType,
-          clientId: effectiveClientId,
-          orderId: order.id,
-          status: 'CREATED',
-          pickupAddress: merchant.address || merchant.name,
-          pickupLatitude: merchant.latitude,
-          pickupLongitude: merchant.longitude,
-          dropoffAddress: validatedData.deliveryAddress,
-          dropoffLatitude: validatedData.deliveryLatitude || null,
-          dropoffLongitude: validatedData.deliveryLongitude || null,
-          // Task.baseFare is a required Decimal field (no default). The
-          // authoritative fare breakdown lives on the Order; mirror the
-          // subtotal here so the Task row satisfies the schema.
-          baseFare: pricing.subtotal,
-          deliveryFee: pricing.deliveryFee,
-          serviceFee: pricing.serviceFee,
-          totalAmount: pricing.totalAmount,
-          paymentMethod: validatedData.paymentMethod,
-          itemDescription: `Order ${order.orderNumber} - ${validatedData.items.length} item(s)`,
-        },
-      });
-
-      // Transition task to MATCHING status for dispatch
-      await tx.task.update({
-        where: { id: task.id },
-        data: { status: 'MATCHING' },
-      });
-
-      return { order, task };
+      return { order };
     });
 
-    const { order, task } = result;
+    const { order } = result;
 
     // Create audit log (outside transaction — non-critical)
     await createAuditLog({
@@ -362,8 +365,6 @@ export async function POST(request: NextRequest) {
       orderId: order.id,
       description: `Order ${order.orderNumber} created for ${merchant.name}`,
     });
-
-    console.log(`[ORDER] Auto-created task ${task.taskNumber} for order ${order.orderNumber}`);
 
     return successResponse(order, 'Order created successfully', 201);
   } catch (error) {

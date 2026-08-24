@@ -42,6 +42,13 @@ export interface OrderQuote {
   totalAmount: number;
   distanceKm: number;
   currency: 'UGX';
+  /**
+   * What the courier leg costs the platform, and therefore what the courier's
+   * task is worth. Always equals `deliveryFee + serviceFee` — see the note in
+   * `quoteOrder`. Exposed so the route that creates the delivery task prices it
+   * from the money the customer was charged rather than recalculating.
+   */
+  courierFare: number;
 }
 
 /**
@@ -81,19 +88,39 @@ export async function quoteOrder(input: OrderQuoteInput): Promise<OrderQuote> {
     isPeakHours: isPeakHours(),
   });
 
-  // For an order, the courier leg is what the customer sees as "delivery" —
-  // base + distance plus any night/peak surcharge. The engine's own
-  // `deliveryFee` field is a per-kilogram surcharge that only applies to parcel
-  // tasks, so it is not the right number here.
-  const deliveryFee = Math.round(
-    breakdown.baseFare + breakdown.distanceFare + breakdown.nightSurcharge + breakdown.peakSurcharge,
-  );
-  const serviceFee = Math.round(breakdown.serviceFee);
+  // --- the courier leg: charge what the leg costs ---------------------------
+  //
+  // PRICING-1. This used to reassemble a delivery fee from a SUBSET of the
+  // engine's components — base + distance + surcharges — and hand the rest of
+  // the engine's answer back. Two things live in the part that was dropped:
+  // `minimumFare`, and the rounding to a payable figure. Both apply to
+  // `totalAmount` and only to `totalAmount`.
+  //
+  // The courier's task is priced by the same engine and DOES take
+  // `totalAmount`, floor included. So on every short delivery the platform
+  // charged the customer the unfloored component sum and owed the courier the
+  // floored one, and paid the difference itself. Measured on the live engine
+  // at the moment this was written: 1 km cost the platform 1,800 UGX, 3 km
+  // 1,400, 5.5 km 900. Most food deliveries in Kampala are inside that range,
+  // so the platform lost money on most of its orders.
+  //
+  // The engine's authoritative answer for "what does this leg cost" is
+  // `totalAmount`. That is now what the customer is charged, split for display
+  // into the platform's service fee and the delivery line, so the two still add
+  // back up to exactly the fare the courier's task will carry. The rates are
+  // untouched — this changes which of the engine's own numbers is used, not
+  // what any of them are.
+  const courierFare = Math.round(breakdown.totalAmount);
+  const serviceFee = Math.min(Math.round(breakdown.serviceFee), courierFare);
+  const deliveryFee = courierFare - serviceFee;
   const discount = Math.max(0, Math.round(input.discount ?? 0));
 
   const totalAmount = Math.max(0, subtotal + deliveryFee + serviceFee - discount);
 
-  return { subtotal, deliveryFee, serviceFee, discount, totalAmount, distanceKm, currency: 'UGX' };
+  return {
+    subtotal, deliveryFee, serviceFee, discount, totalAmount, distanceKm,
+    currency: 'UGX', courierFare,
+  };
 }
 
 /** Night window matches the ride pricing engine's definition. */

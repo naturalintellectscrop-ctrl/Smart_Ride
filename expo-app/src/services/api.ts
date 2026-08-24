@@ -772,10 +772,45 @@ class ApiService {
     return this.request('/orders/quote', 'POST', data);
   }
 
-  async confirmOrderPayment(orderId: string, paymentReference?: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/orders/${orderId}?action=confirm-payment`, 'PATCH', {
-      paymentReference: paymentReference || `PAY-${Date.now()}`,
+  /**
+   * Pay for an order or a pharmacy order.
+   *
+   * The amount is deliberately not sent — the server derives what is owed from
+   * the order itself and refuses a request that disagrees with it. This has to
+   * succeed before `confirmOrderPayment`, which now reads what was collected
+   * rather than taking the client's word for it.
+   */
+  async payForOrder(params: {
+    orderId?: string;
+    providerOrderId?: string;
+    paymentMethod: string;
+    phoneNumber?: string;
+  }): Promise<ApiResponse<TaskPaymentResult>> {
+    const res = await this.request<any>('/payments/initiate', 'POST', {
+      ...(params.orderId ? { orderId: params.orderId } : {}),
+      ...(params.providerOrderId ? { providerOrderId: params.providerOrderId } : {}),
+      currency: 'UGX',
+      paymentMethod: params.paymentMethod,
+      phoneNumber: params.phoneNumber,
+      description: 'Smart Ride order',
     });
+    if (res.success) {
+      const payment = (res.data as any)?.payment ?? res.data;
+      return { success: true, data: payment as TaskPaymentResult };
+    }
+    return res as ApiResponse<TaskPaymentResult>;
+  }
+
+  /**
+   * Confirm that an order has been paid for.
+   *
+   * The reference argument used to default to `PAY-${Date.now()}` — a string
+   * this client invented, which the server wrote down and treated as proof of
+   * payment. It is gone: the server now looks up the collected payment itself,
+   * and this call fails with 402 if there isn't one.
+   */
+  async confirmOrderPayment(orderId: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/orders/${orderId}?action=confirm-payment`, 'PATCH', {});
   }
 
   /**

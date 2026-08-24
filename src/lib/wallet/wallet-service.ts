@@ -79,6 +79,23 @@ export interface RewardInput {
    * driver's wallet stayed empty.
    */
   tx?: Prisma.TransactionClient;
+  /**
+   * Credit `pendingBalance` instead of `balance` — the money is owed and
+   * recorded, but not yet spendable or withdrawable.
+   *
+   * Used when work has been completed but the customer's payment has not been
+   * confirmed collected. The courier's earnings exist as an obligation from the
+   * moment they finish the job; they become the courier's money when the
+   * platform actually holds the customer's. `releaseHeldEarnings` moves the
+   * figure across once the payment confirms.
+   */
+  holdForSettlement?: boolean;
+  /**
+   * Exactly-once key for this credit, namespaced by wallet before storage.
+   * A retry with the same key is refused by the database's unique index rather
+   * than by a check-then-act read, so a replayed completion cannot pay twice.
+   */
+  idempotencyKey?: string;
 }
 
 export interface WalletBalance {
@@ -506,8 +523,12 @@ export async function creditRewardToWallet(input: RewardInput): Promise<{
         throw new Error('Wallet not found');
       }
 
+      const hold = input.holdForSettlement === true;
       const balanceBefore = toNumber(walletRecord.balance);
-      const balanceAfter = balanceBefore + input.amount;
+      // A held credit does not move the spendable balance at all — it lands in
+      // pendingBalance, so the before/after pair on the ledger row records the
+      // spendable balance correctly as unchanged.
+      const balanceAfter = hold ? balanceBefore : balanceBefore + input.amount;
 
       // Create transaction record
       const transaction = await tx.walletTransaction.create({
@@ -520,18 +541,25 @@ export async function creditRewardToWallet(input: RewardInput): Promise<{
           referenceId: input.referenceId || null,
           referenceType: input.referenceType || null,
           description: input.description || 'Reward credited',
-          status: 'COMPLETED',
+          // PENDING says, in the ledger itself, that this money is recorded
+          // but not yet released.
+          status: hold ? 'PENDING' : 'COMPLETED',
+          ...(input.idempotencyKey
+            ? { idempotencyKey: `${wallet.walletId}:${input.idempotencyKey}` }
+            : {}),
         },
       });
 
       // Update wallet
       await tx.wallet.update({
         where: { id: wallet.walletId },
-        data: {
-          balance: balanceAfter,
-          totalReceived: { increment: input.amount },
-          lastTransactionAt: new Date(),
-        },
+        data: hold
+          ? { pendingBalance: { increment: input.amount }, lastTransactionAt: new Date() }
+          : {
+              balance: balanceAfter,
+              totalReceived: { increment: input.amount },
+              lastTransactionAt: new Date(),
+            },
       });
 
       return { transactionId: transaction.id, newBalance: balanceAfter };
@@ -547,6 +575,80 @@ export async function creditRewardToWallet(input: RewardInput): Promise<{
   } catch (error) {
     console.error('Reward credit error:', error);
     return { success: false, error: 'Failed to credit reward' };
+  }
+}
+
+/**
+ * Release earnings that were held pending customer payment.
+ *
+ * The other half of `holdForSettlement`. When a completion could not be paid
+ * out because the customer's payment had not been confirmed collected, the
+ * amount was credited to `pendingBalance` against a PENDING WalletTransaction.
+ * Once the payment confirms, that obligation becomes the courier's money: the
+ * held transaction is marked COMPLETED and the figure moves from
+ * `pendingBalance` to the spendable `balance`.
+ *
+ * Idempotent by the ledger row's own status — a second call finds nothing
+ * PENDING to release and moves no money.
+ */
+export async function releaseHeldEarnings(input: {
+  referenceId: string;
+  referenceType?: string;
+  tx?: Prisma.TransactionClient;
+}): Promise<{ success: boolean; released: number; error?: string }> {
+  const run = async (tx: Prisma.TransactionClient) => {
+    const held = await tx.walletTransaction.findMany({
+      where: {
+        referenceId: input.referenceId,
+        ...(input.referenceType ? { referenceType: input.referenceType } : {}),
+        status: 'PENDING',
+      },
+      select: { id: true, walletId: true, amount: true },
+    });
+
+    let released = 0;
+    for (const row of held) {
+      // Guard on the status so two concurrent releases cannot both pay out:
+      // the second updateMany matches zero rows and skips the balance move.
+      const claimed = await tx.walletTransaction.updateMany({
+        where: { id: row.id, status: 'PENDING' },
+        data: { status: 'COMPLETED' },
+      });
+      if (claimed.count !== 1) continue;
+
+      const amount = toNumber(row.amount);
+      const wallet = await tx.wallet.findUnique({
+        where: { id: row.walletId },
+        select: { balance: true, pendingBalance: true },
+      });
+      if (!wallet) continue;
+
+      const balanceBefore = toNumber(wallet.balance);
+      await tx.wallet.update({
+        where: { id: row.walletId },
+        data: {
+          balance: { increment: amount },
+          // Never below zero, even if the held row was cleared by hand.
+          pendingBalance: Math.max(0, toNumber(wallet.pendingBalance) - amount),
+          totalReceived: { increment: amount },
+          lastTransactionAt: new Date(),
+        },
+      });
+      await tx.walletTransaction.update({
+        where: { id: row.id },
+        data: { balanceBefore, balanceAfter: balanceBefore + amount },
+      });
+      released += amount;
+    }
+    return released;
+  };
+
+  try {
+    const released = input.tx ? await run(input.tx) : await db.$transaction(run);
+    return { success: true, released };
+  } catch (error) {
+    console.error('Release held earnings error:', error);
+    return { success: false, released: 0, error: 'Failed to release held earnings' };
   }
 }
 

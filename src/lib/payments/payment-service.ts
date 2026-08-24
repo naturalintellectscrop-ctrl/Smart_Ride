@@ -15,6 +15,8 @@ import {
 } from './nylonpay';
 import { paymentLogger } from '@/lib/logging/logger';
 import { toNumber } from '@/lib/decimal-utils';
+import { payFromWallet, releaseHeldEarnings } from '@/lib/wallet/wallet-service';
+import { releaseProviderPayout } from '@/lib/health/provider-order-delivery';
 
 // ==========================================
 // Types
@@ -30,6 +32,8 @@ export interface InitiatePaymentParams {
   phoneNumber?: string;
   taskId?: string;
   orderId?: string;
+  /** Pharmacy/health order being settled. See Payment.providerOrderId. */
+  providerOrderId?: string;
   description?: string;
   metadata?: Record<string, unknown>;
 }
@@ -69,6 +73,7 @@ export async function initiatePayment(params: InitiatePaymentParams): Promise<Pa
     phoneNumber,
     taskId,
     orderId,
+    providerOrderId,
     description,
     metadata,
   } = params;
@@ -89,6 +94,7 @@ export async function initiatePayment(params: InitiatePaymentParams): Promise<Pa
         phoneNumber: phoneNumber ? formatPhone(paymentMethod, phoneNumber) : null,
         taskId: taskId || null,
         orderId: orderId || null,
+        providerOrderId: providerOrderId || null,
       },
     });
 
@@ -405,34 +411,36 @@ async function processWalletPayment(
   userId: string,
   amount: number
 ): Promise<PaymentResult> {
-  // Check user wallet balance (assuming wallet balance is stored)
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    include: { rider: true },
+  // ── This path could never succeed for a customer ─────────────────────────
+  //
+  // It read `user.rider.walletBalance` — the RIDER's denormalised earnings
+  // column — to decide whether a CUSTOMER could pay. A customer has no Rider
+  // row, so the balance resolved to 0 and every wallet payment was refused
+  // with "Insufficient wallet balance", no matter what the customer actually
+  // held. And when a rider did pay, it debited that same column rather than
+  // the `Wallet` the rest of the platform transacts against, so the money came
+  // out of a figure nothing else reads.
+  //
+  // It now debits the real Wallet through the service that owns it, which
+  // writes the WalletTransaction ledger row with the debit in one transaction.
+  const paid = await payFromWallet({
+    ownerId: userId,
+    ownerType: 'USER',
+    amount,
+    referenceId: paymentId,
+    referenceType: 'ORDER_PAYMENT',
+    description: `Smart Ride payment ${reference}`,
   });
 
-  const walletBalance = toNumber(user?.rider?.walletBalance) || 0;
-
-  if (walletBalance < amount) {
-    await updatePaymentStatus(paymentId, 'FAILED', 'Insufficient wallet balance');
-    
+  if (!paid.success) {
+    await updatePaymentStatus(paymentId, 'FAILED', paid.error || 'Insufficient wallet balance');
     return {
       success: false,
       paymentId,
       reference,
       status: 'FAILED',
-      message: 'Insufficient wallet balance',
+      message: paid.error || 'Insufficient wallet balance',
     };
-  }
-
-  // Deduct from wallet
-  if (user?.rider) {
-    await db.rider.update({
-      where: { userId },
-      data: {
-        walletBalance: { decrement: amount },
-      },
-    });
   }
 
   // Update payment as successful
@@ -443,6 +451,13 @@ async function processWalletPayment(
       processedAt: new Date(),
     },
   });
+
+  // The money is in. Everything that waits on collection — the order's payment
+  // status, any courier earnings held against it — runs from the one place
+  // that decides a payment has been collected.
+  await handleSuccessfulPayment(paymentId).catch((e) =>
+    paymentLogger.error('wallet payment post-processing failed', { error: String(e) })
+  );
 
   return {
     success: true,
@@ -700,12 +715,63 @@ export async function handleSuccessfulPayment(paymentId: string): Promise<void> 
 
   if (!payment) return;
 
+  // ── The order side of a collected payment ────────────────────────────────
+  //
+  // This function only ever looked at `payment.task`. Merchant and pharmacy
+  // payments are raised against the ORDER — the delivery task does not exist
+  // until the merchant marks it ready — so a gateway callback confirming a real
+  // customer payment left `Order.paymentStatus` on PENDING forever, and the
+  // only thing that ever moved it was the client asserting it had paid
+  // (BE-044). The collection is recorded where it belongs now.
+  if (payment.orderId) {
+    await db.order.updateMany({
+      where: { id: payment.orderId, paymentStatus: { not: 'COMPLETED' } },
+      data: { paymentStatus: 'COMPLETED', paymentReference: payment.paymentReference },
+    }).catch((e) => console.error('[Payment] order paymentStatus update failed:', e));
+
+    // Earnings held because this order had not been paid for become the
+    // courier's money now. Idempotent — a second callback finds nothing held.
+    const orderTask = await db.task.findUnique({
+      where: { orderId: payment.orderId },
+      select: { id: true },
+    }).catch(() => null);
+    if (orderTask) {
+      await releaseHeldEarnings({ referenceId: orderTask.id, referenceType: 'TASK_EARNINGS' });
+    }
+  }
+
+  // Pharmacy orders live in their own model and carry their own payment state.
+  if (payment.providerOrderId) {
+    await db.providerOrder.updateMany({
+      where: { id: payment.providerOrderId, paymentStatus: { not: 'COMPLETED' } },
+      data: { paymentStatus: 'COMPLETED' },
+    }).catch((e) => console.error('[Payment] provider order paymentStatus update failed:', e));
+
+    const providerTask = await db.task.findUnique({
+      where: { providerOrderId: payment.providerOrderId },
+      select: { id: true },
+    }).catch(() => null);
+    if (providerTask) {
+      await releaseHeldEarnings({ referenceId: providerTask.id, referenceType: 'TASK_EARNINGS' });
+    }
+
+    // A pharmacy order delivered before its payment cleared left the
+    // pharmacy's share out of the withdrawable balance, with a PENDING
+    // ledger row saying so. The money is in now, so release both.
+    await releaseProviderPayout(payment.providerOrderId).catch((e) =>
+      console.error('[Payment] provider payout release failed:', e)
+    );
+  }
+
   // Update task payment status
   if (payment.task) {
     await db.task.update({
       where: { id: payment.taskId! },
       data: { paymentStatus: 'COMPLETED' },
     });
+
+    // Same release for a payment raised directly against the task (rides).
+    await releaseHeldEarnings({ referenceId: payment.taskId!, referenceType: 'TASK_EARNINGS' });
 
     // Map task type to the appropriate transaction type
     const TRANSACTION_TYPE_MAP: Record<TaskType, TransactionType> = {
@@ -718,11 +784,20 @@ export async function handleSuccessfulPayment(paymentId: string): Promise<void> 
     };
     const transactionType = TRANSACTION_TYPE_MAP[payment.task.taskType] || 'RIDE_PAYMENT';
 
-    // Create finance log
+    // Create finance log.
+    //
+    // The referenceId used to be the bare taskId — the SAME (referenceId,
+    // transactionType) pair that FinanceLedgerService.recordTaskCompletion
+    // uses as its idempotency key. A payment that confirmed BEFORE the task
+    // completed therefore wrote a row that made the completion ledger look
+    // already-recorded, and the completion silently skipped everything:
+    // no commission entry, no merchant payout figure, and no earnings for the
+    // courier at all. Collection and completion are two events and now have
+    // two keys.
     await db.financeLog.create({
       data: {
         transactionType,
-        referenceId: payment.taskId!,
+        referenceId: `payment-${payment.id}`,
         amount: toNumber(payment.amount),
         currency: payment.currency,
         clientId: payment.userId,
@@ -850,7 +925,12 @@ function mapPaymentMethod(method: PaymentProvider): PaymentMethod {
     VISA: 'VISA',
     MASTERCARD: 'MASTERCARD',
     CASH: 'CASH',
-    WALLET: 'CASH', // Wallet uses CASH type in DB
+    // Was `WALLET: 'CASH'` on a comment claiming the DB has no wallet type.
+    // PaymentMethod has had a WALLET member all along, and recording a wallet
+    // payment as CASH made it indistinguishable from money handed to a courier
+    // at the door — which is exactly the distinction the settlement logic
+    // branches on. A wallet payment would have taken the cash settlement path.
+    WALLET: 'WALLET',
     NYLON_PAY: 'NYLON_PAY',
   };
   return mapping[method];

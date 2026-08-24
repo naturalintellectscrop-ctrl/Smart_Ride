@@ -44,6 +44,7 @@ export async function POST(request: NextRequest) {
       phoneNumber,
       taskId,
       orderId,
+      providerOrderId,
       description,
       currency,
     } = body;
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
     // The amount is now DERIVED from the task or order being settled, and the
     // caller must own it. The client's number is treated as a claim to check,
     // never as an instruction to follow.
-    if (!taskId && !orderId) {
+    if (!taskId && !orderId && !providerOrderId) {
       // Nothing to derive an amount from. A wallet top-up is the one case
       // where a user-chosen amount is legitimate, and it has its own route.
       return NextResponse.json(
@@ -92,8 +93,10 @@ export async function POST(request: NextRequest) {
     // depend on which policies happen to exist for each model.
     await setServiceRoleContext();
 
-    let derivedAmount: number;
-    let settledLabel: string;
+    // Initialised so the compiler can see that every path either assigns them
+    // or has already returned; the guard below catches an unassigned amount.
+    let derivedAmount = 0;
+    let settledLabel = '';
 
     if (taskId) {
       const task = await db.task.findUnique({
@@ -122,7 +125,7 @@ export async function POST(request: NextRequest) {
       }
       derivedAmount = Number(task.totalAmount);
       settledLabel = `task ${task.taskNumber}`;
-    } else {
+    } else if (orderId) {
       const order = await db.order.findUnique({
         where: { id: String(orderId) },
         select: { clientId: true, totalAmount: true, paymentStatus: true, orderNumber: true },
@@ -148,6 +151,40 @@ export async function POST(request: NextRequest) {
       }
       derivedAmount = Number(order.totalAmount);
       settledLabel = `order ${order.orderNumber}`;
+    }
+
+    // Pharmacy/health orders. They live in their own model, and until the
+    // `Payment.providerOrderId` column existed there was nowhere to record
+    // that one had been paid for — so this branch could not be written and the
+    // pharmacy's payment state was a string nothing backed. Same rules as the
+    // two above: the customer must own it, the amount is the server's, and an
+    // already-paid order is refused rather than charged twice.
+    else if (providerOrderId) {
+      const po = await db.providerOrder.findUnique({
+        where: { id: String(providerOrderId) },
+        select: { customerId: true, totalAmount: true, paymentStatus: true, orderNumber: true },
+      });
+      if (!po) {
+        return NextResponse.json({ success: false, error: 'Order not found' }, { status: 404 });
+      }
+      if (po.customerId !== decoded.userId) {
+        paymentLogger.error('Payment initiate refused: caller does not own the pharmacy order', {
+          userId: decoded.userId,
+          providerOrderId: String(providerOrderId),
+        });
+        return NextResponse.json(
+          { success: false, error: 'You cannot pay for an order that is not yours' },
+          { status: 403 }
+        );
+      }
+      if (po.paymentStatus === 'COMPLETED') {
+        return NextResponse.json(
+          { success: false, error: 'This order has already been paid' },
+          { status: 409 }
+        );
+      }
+      derivedAmount = Number(po.totalAmount);
+      settledLabel = `pharmacy order ${po.orderNumber}`;
     }
 
     if (!Number.isFinite(derivedAmount) || derivedAmount <= 0) {
@@ -223,6 +260,7 @@ export async function POST(request: NextRequest) {
       phoneNumber,
       taskId,
       orderId,
+      providerOrderId,
       description,
     });
 

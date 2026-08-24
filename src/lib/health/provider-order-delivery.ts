@@ -28,7 +28,7 @@ import { db, setServiceRoleContext } from '@/lib/db';
 import { TaskStatus, TaskType, ProviderOrderStatus, PaymentMethod } from '@prisma/client';
 import { nextTaskNumber } from '@/lib/tasks/task-number';
 import { generateDeliveryCode } from '@/lib/delivery/delivery-service';
-import { calculatePricing } from '@/lib/api/pricing';
+import { splitChargedFare } from '@/lib/api/pricing';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 // The task state machine calls mirrorTaskStatusToProviderOrder below, and this
@@ -167,7 +167,17 @@ export async function dispatchProviderOrder(
     const dropLng = order.deliveryLongitude ?? FALLBACK_LNG;
 
     const km = distanceKm(pickupLat, pickupLng, dropLat, dropLng);
-    const pricing = calculatePricing({ taskType: 'SMART_HEALTH_DELIVERY', distanceKm: km });
+
+    // PRICING-1: the courier's fare IS the delivery money the customer was
+    // charged, split by the declared commission. Recalculating it here would
+    // be a second, independent answer — the order was priced by
+    // `calculatePricingAsync` (admin rate overrides, zone surge) at the moment
+    // it was placed, and this synchronous call knows about neither. Whatever
+    // the difference, the platform absorbed it silently.
+    const pricing = await splitChargedFare(
+      'SMART_HEALTH_DELIVERY',
+      toNum(order.deliveryFee)
+    );
 
     const task = await db.task.create({
       data: {
@@ -195,10 +205,10 @@ export async function dispatchProviderOrder(
 
         distanceKm: km,
 
-        baseFare: pricing.baseFare,
-        distanceFare: pricing.distanceFare,
-        deliveryFee: pricing.deliveryFee,
-        serviceFee: pricing.serviceFee,
+        // The delivery line the customer was charged, mirrored onto the task.
+        // `baseFare` is required by the schema.
+        baseFare: toNum(order.deliveryFee),
+        deliveryFee: toNum(order.deliveryFee),
         totalAmount: pricing.totalAmount,
         platformCommission: pricing.platformCommission,
         riderEarnings: pricing.riderEarnings,
@@ -311,12 +321,32 @@ export async function settleProviderOrderDelivery(
   if (!order || order.status === ProviderOrderStatus.DELIVERED) return { settled: false };
 
   const now = new Date();
+  const isCash = (order.paymentMethod || '').toUpperCase() === 'CASH';
+
+  // ── BE-039/BE-040, pharmacy side: delivering is not being paid ───────────
+  //
+  // This used to stamp `paymentStatus: 'COMPLETED'` and increment the
+  // pharmacy's withdrawable `pendingPayout` on delivery alone. For a cash
+  // order that is true — the courier took the money at the door, and the
+  // receivable below records who is holding it. For every other method
+  // nothing had been collected, so the pharmacy's balance was funded by money
+  // the platform did not have.
+  //
+  // Collection is a COMPLETED Payment row for this order, and nothing else.
+  const collected = isCash
+    ? null
+    : await db.payment.findFirst({
+        where: { orderId: providerOrderId, status: 'COMPLETED' },
+        select: { id: true, paymentReference: true },
+      });
+  const paymentCollected = isCash || !!collected;
+
   const claimed = await db.providerOrder.updateMany({
     where: { id: providerOrderId, status: { not: ProviderOrderStatus.DELIVERED } },
     data: {
       status: ProviderOrderStatus.DELIVERED,
       deliveredAt: now,
-      paymentStatus: 'COMPLETED',
+      ...(paymentCollected ? { paymentStatus: 'COMPLETED' as const } : {}),
       ...(opts.riderId ? { riderId: opts.riderId } : {}),
     },
   });
@@ -327,11 +357,43 @@ export async function settleProviderOrderDelivery(
     data: {
       totalOrders: { increment: 1 },
       completedOrders: { increment: 1 },
+      // Lifetime figure — the pharmacy earned this by filling the order.
       totalEarnings: { increment: order.providerEarnings },
-      // What the pharmacy can actually withdraw.
-      pendingPayout: { increment: order.providerEarnings },
+      // What the pharmacy can actually withdraw. Only moves once the customer's
+      // money is in; an unpaid order leaves the obligation recorded in the
+      // ledger below and out of the withdrawable balance.
+      ...(paymentCollected ? { pendingPayout: { increment: order.providerEarnings } } : {}),
     },
   });
+
+  if (!paymentCollected) {
+    await db.financeLog
+      .create({
+        data: {
+          transactionType: 'ADJUSTMENT',
+          referenceId: `unpaid-provider-order-${providerOrderId}`,
+          amount: toNum(order.totalAmount),
+          currency: 'UGX',
+          clientId: order.customerId,
+          riderId: opts.riderId ?? null,
+          merchantEarnings: toNum(order.providerEarnings),
+          status: 'PENDING',
+          description:
+            `UNPAID DELIVERY: pharmacy order ${order.orderNumber} (${order.paymentMethod}) ` +
+            `was delivered with no collected payment. Customer owes UGX ` +
+            `${toNum(order.totalAmount)}. Pharmacy payout of UGX ` +
+            `${toNum(order.providerEarnings)} is NOT withdrawable.`,
+          metadata: JSON.stringify({
+            event: 'UNPAID_PROVIDER_DELIVERY',
+            providerOrderId,
+            orderNumber: order.orderNumber,
+            paymentMethod: order.paymentMethod,
+            heldProviderEarnings: toNum(order.providerEarnings),
+          }),
+        },
+      })
+      .catch((e) => console.error('[PharmacyDelivery] unpaid-delivery log failed:', e));
+  }
 
   // The order's own money, in the immutable ledger.
   //
@@ -380,7 +442,7 @@ export async function settleProviderOrderDelivery(
   // what the courier is holding on other people's behalf, so the existing
   // deposit/reconciliation flow can clear it. Without this the pharmacy's
   // payable balance would be funded by money nobody had recorded receiving.
-  if ((order.paymentMethod || '').toUpperCase() === 'CASH') {
+  if (isCash) {
     const task = await db.task.findUnique({
       where: { providerOrderId },
       select: { id: true, riderEarnings: true, riderId: true, platformCommission: true },
@@ -422,6 +484,60 @@ export async function settleProviderOrderDelivery(
   }
 
   return { settled: true };
+}
+
+/**
+ * Release a pharmacy payout that was held because the order was delivered
+ * before its payment cleared.
+ *
+ * The counterpart to the unpaid-delivery branch in
+ * `settleProviderOrderDelivery`: the provider's share was recorded as earned
+ * but deliberately kept out of the withdrawable `pendingPayout`, against a
+ * PENDING ledger row. Once a COMPLETED Payment exists for the order the money
+ * is the pharmacy's, so the balance moves and the exception closes.
+ *
+ * Idempotent: the guard is the PENDING ledger row itself, so a second call
+ * finds nothing to release and moves nothing.
+ */
+export async function releaseProviderPayout(providerOrderId: string): Promise<{ released: number }> {
+  const open = await db.financeLog.findFirst({
+    where: {
+      referenceId: `unpaid-provider-order-${providerOrderId}`,
+      transactionType: 'ADJUSTMENT',
+      status: 'PENDING',
+    },
+    select: { id: true },
+  });
+  if (!open) return { released: 0 };
+
+  const order = await db.providerOrder.findUnique({
+    where: { id: providerOrderId },
+    select: { providerId: true, providerEarnings: true, orderNumber: true },
+  });
+  if (!order) return { released: 0 };
+
+  // Claim the exception before moving money, so two concurrent releases
+  // cannot both pay the pharmacy.
+  const claimed = await db.financeLog.updateMany({
+    where: { id: open.id, status: 'PENDING' },
+    data: { status: 'COMPLETED' },
+  });
+  if (claimed.count !== 1) return { released: 0 };
+
+  const amount = toNum(order.providerEarnings);
+  await db.providerOrder.updateMany({
+    where: { id: providerOrderId, paymentStatus: { not: 'COMPLETED' } },
+    data: { paymentStatus: 'COMPLETED' },
+  });
+  await db.healthProvider.update({
+    where: { id: order.providerId },
+    data: { pendingPayout: { increment: amount } },
+  });
+
+  console.log(
+    `[PharmacyDelivery] released held payout for ${order.orderNumber}: UGX ${amount}`
+  );
+  return { released: amount };
 }
 
 /**

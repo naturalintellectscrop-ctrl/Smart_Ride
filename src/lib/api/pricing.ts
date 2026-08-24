@@ -209,6 +209,35 @@ export function invalidatePricingCache(): void {
 }
 
 /**
+ * Split a fare that has ALREADY been charged into the platform's cut and the
+ * courier's pay, using the same commission rate `computePricing` would apply.
+ *
+ * This exists so an order's courier task can be priced from the delivery money
+ * the customer was actually charged, rather than from a second, independent
+ * fare calculation. Two calculations drift for reasons that have nothing to do
+ * with the trip: `quoteOrder` runs through `calculatePricingAsync` (admin rate
+ * overrides + zone surge), while the order route's task creation ran the
+ * synchronous `calculatePricing` (hardcoded defaults, no surge). The customer
+ * could therefore be quoted one number at checkout and the courier paid off
+ * another, with the difference falling on the platform silently and in either
+ * direction.
+ *
+ * Deriving the split from the charged amount makes the reconciliation exact by
+ * construction: commission + riderEarnings === what the customer paid for
+ * delivery, always.
+ */
+export async function splitChargedFare(
+  taskType: TaskType,
+  chargedAmount: number
+): Promise<{ totalAmount: number; platformCommission: number; riderEarnings: number }> {
+  const dbMap = await loadDbPricing();
+  const config = mergeConfig(taskType, dbMap);
+  const totalAmount = Math.max(0, Math.round(chargedAmount));
+  const platformCommission = Math.round(totalAmount * config.platformCommissionPercent);
+  return { totalAmount, platformCommission, riderEarnings: totalAmount - platformCommission };
+}
+
+/**
  * Admin-aware pricing: uses DB PricingConfig (cached) merged over defaults.
  * Prefer this in API routes so admin fare settings take effect.
  */

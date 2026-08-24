@@ -127,12 +127,70 @@ export class FinanceLedgerService {
       // deposit flow (recordCashDeposit) clears.
       const isCash = task.paymentMethod === 'CASH';
 
-      // Calculate merchant earnings if applicable (for food/shopping orders)
+      // ── BE-039 / BE-040: completing the job is not being paid for it ──────
+      //
+      // Everything below used to treat a non-cash completion as settled money:
+      // it credited the courier's wallet in full, on the strength of the task
+      // reaching COMPLETED. Nothing had collected anything. `paymentStatus` was
+      // set to COMPLETED only on the CASH branch, no gateway charge was ever
+      // raised at completion, nothing retried a failed one, and the
+      // COMPLETED → PAID transition has no caller anywhere in the codebase. So
+      // a non-cash trip paid the courier and never charged the customer, every
+      // time.
+      //
+      // The invariant is now explicit: NO SPENDABLE BALANCE IS CREATED FROM A
+      // NON-CASH JOB UNTIL THE CUSTOMER'S PAYMENT IS CONFIRMED COLLECTED.
+      //
+      // "Confirmed collected" means a COMPLETED Payment row — the record a
+      // gateway callback or a wallet debit actually writes. It deliberately
+      // does NOT mean `task.paymentStatus`, which is a mirror that several
+      // paths set optimistically, nor the task's own status, which says only
+      // that the physical work is done.
+      //
+      // When payment has not been collected the earnings are still recorded —
+      // the courier did the work and is owed — but they are HELD:
+      // `Wallet.pendingBalance` against a PENDING ledger row, released by
+      // `releaseHeldEarnings` when the payment confirms. The exception is
+      // written to the finance log so it appears in reconciliation rather than
+      // disappearing.
+      const collectedPayment = isCash
+        ? null
+        : await db.payment.findFirst({
+            where: {
+              status: 'COMPLETED',
+              OR: [
+                { taskId },
+                ...(task.orderId ? [{ orderId: task.orderId }] : []),
+              ],
+            },
+            select: { id: true, amount: true, paymentReference: true, paymentMethod: true },
+          });
+      const paymentCollected = isCash || !!collectedPayment;
+      const holdEarnings = !isCash && !paymentCollected;
+
+      // ── What the merchant is owed ────────────────────────────────────────
+      //
+      // This was `task.totalAmount - platformCommission - riderEarnings`, which
+      // only reads as "the merchant gets the rest" while the delivery task
+      // carries the WHOLE order total. It did, and that was MERCH-7's other
+      // half: the residual handed the merchant the customer's delivery and
+      // service fees as well as the food.
+      //
+      // The task now carries the courier leg alone, so the residual would be
+      // zero. The merchant's money was never the task's to begin with — it is
+      // the ORDER's line items, less the platform's cut at the merchant's own
+      // agreed `commissionRate`. That is the same rule the pharmacy side
+      // already applies (`providerEarnings = subtotal × (1 − commissionRate)`),
+      // so both sides of the business are now paid on one stated basis.
       let merchantEarnings: number | null = null;
       if (merchantId && (task.taskType === 'FOOD_DELIVERY' || task.taskType === 'SHOPPING')) {
-        // Merchant receives totalAmount minus platformCommission minus riderEarnings
-        merchantEarnings = totalAmount - platformCommission - riderEarnings;
-        if (merchantEarnings < 0) merchantEarnings = 0;
+        const merchant = await db.merchant.findUnique({
+          where: { id: merchantId },
+          select: { commissionRate: true },
+        });
+        const goods = toNumber(task.order?.subtotal);
+        const rate = merchant?.commissionRate ?? 0.15;
+        merchantEarnings = Math.max(0, Math.round(goods * (1 - rate)));
       }
 
       // Execute all finance operations atomically
@@ -185,7 +243,10 @@ export class FinanceLedgerService {
             where: { id: task.riderId },
             data: {
               totalEarnings: { increment: riderEarnings },
-              ...(isCash ? {} : { walletBalance: { increment: riderEarnings } }),
+              // Spendable only when the money exists: cash is in the rider's
+              // hand already, and an uncollected non-cash job has nothing
+              // behind it yet.
+              ...(isCash || holdEarnings ? {} : { walletBalance: { increment: riderEarnings } }),
             },
           });
 
@@ -213,7 +274,16 @@ export class FinanceLedgerService {
               amount: riderEarnings,
               referenceId: taskId,
               referenceType: 'TASK_EARNINGS',
-              description: `Trip earnings: ${task.taskNumber}`,
+              description: holdEarnings
+                ? `Trip earnings held pending customer payment: ${task.taskNumber}`
+                : `Trip earnings: ${task.taskNumber}`,
+              // Held when the customer has not paid — recorded and owed, not
+              // spendable. Released by releaseHeldEarnings on confirmation.
+              holdForSettlement: holdEarnings,
+              // Exactly-once at the database, so a replayed completion cannot
+              // credit the same trip twice even if the FinanceLog guard above
+              // is raced.
+              idempotencyKey: `task-earnings:${taskId}`,
               tx,
             });
 
@@ -228,13 +298,57 @@ export class FinanceLedgerService {
           }
         }
 
-        // Cash settlement: the client has paid in full, and the rider holds the
-        // platform's commission until they deposit it.
-        if (isCash) {
+        // The job is done and the customer has not paid. Write it down.
+        //
+        // Silence is what made this dangerous: the courier was credited, the
+        // task read COMPLETED, and nothing anywhere said the money had never
+        // arrived. A PENDING ledger row means the shortfall shows up in
+        // reconciliation as an open obligation, with the amount held against
+        // it, until a payment closes it or an operator writes it off.
+        if (holdEarnings) {
+          await tx.financeLog.create({
+            data: {
+              transactionType: 'ADJUSTMENT',
+              referenceId: `unpaid-completion-${taskId}`,
+              amount: totalAmount,
+              currency: 'UGX',
+              clientId: task.clientId,
+              riderId: task.riderId || null,
+              merchantId,
+              platformCommission,
+              riderEarnings,
+              status: 'PENDING',
+              description:
+                `UNPAID COMPLETION: task ${task.taskNumber} (${task.paymentMethod}) finished ` +
+                `with no collected payment. Customer owes UGX ${totalAmount}. ` +
+                `Courier earnings of UGX ${riderEarnings} are HELD, not withdrawable.`,
+              metadata: JSON.stringify({
+                event: 'UNPAID_COMPLETION',
+                taskNumber: task.taskNumber,
+                taskType: task.taskType,
+                paymentMethod: task.paymentMethod,
+                taskPaymentStatus: task.paymentStatus,
+                orderId: task.orderId,
+                heldRiderEarnings: riderEarnings,
+                platformCommission,
+              }),
+            },
+          });
+        }
+
+        // The task's own paymentStatus mirrors what was actually collected —
+        // cash in the rider's hand, or a COMPLETED Payment row. It is never set
+        // from the fact that the task finished.
+        if (isCash || collectedPayment) {
           await tx.task.update({
             where: { id: taskId },
             data: { paymentStatus: 'COMPLETED' },
           });
+        }
+
+        // Cash settlement: the client has paid in full, and the rider holds the
+        // platform's commission until they deposit it.
+        if (isCash) {
 
           if (task.riderId && platformCommission > 0) {
             await tx.cashCollection.create({
@@ -276,8 +390,11 @@ export class FinanceLedgerService {
               merchantEarnings,
               riderTotalEarnings: toNumber(task.rider?.totalEarnings) + riderEarnings,
               riderWalletBalance:
-                toNumber(task.rider?.walletBalance) + (isCash ? 0 : riderEarnings),
+                toNumber(task.rider?.walletBalance) + (isCash || holdEarnings ? 0 : riderEarnings),
               paymentMethod: task.paymentMethod,
+              paymentCollected,
+              collectedPaymentId: collectedPayment?.id ?? null,
+              earningsHeldPendingPayment: holdEarnings ? riderEarnings : 0,
               cashSettlement: isCash
                 ? {
                     collectedByRider: totalAmount,

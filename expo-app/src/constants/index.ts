@@ -519,6 +519,22 @@ export const PAYMENT_METHODS = [
   { id: 'VISA', name: 'VISA', icon: 'card', color: '#1A1F71' },
 ];
 
+/**
+ * What a customer may pay with for a MERCHANT or PHARMACY order — food,
+ * retail, shopping, medicine.
+ *
+ * Cash is absent on purpose. Those orders are three-sided: the customer owes
+ * for goods and for delivery, the shop is owed for the goods, and the courier
+ * is owed for the trip. Paying cash at the door hands the whole sum to the
+ * courier and leaves the platform chasing them for everyone else's share.
+ * Smart Ride collects the full amount up front instead, pays the shop, and
+ * settles the courier once the delivery is done.
+ *
+ * Rides keep `PAYMENT_METHODS` — a ride is two-sided and its cash settlement
+ * is verified end to end.
+ */
+export const ORDER_PAYMENT_METHODS = PAYMENT_METHODS.filter((m) => m.id !== 'CASH');
+
 // Ride Types
 export const RIDE_TYPES = {
   BODA: {
