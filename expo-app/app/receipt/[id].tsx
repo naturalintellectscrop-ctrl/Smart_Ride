@@ -17,7 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { api } from '@/src/services';
-import { COLORS as BRAND, TYPOGRAPHY, SPACING, ICON } from '@/src/constants';
+import { COLORS as BRAND, TYPOGRAPHY, SPACING, RADIUS, ICON } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 import {
@@ -391,7 +391,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   proofCard: {
     marginTop: SPACING.md,
     padding: SPACING.md,
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     backgroundColor: COLORS.surfaceContainer,
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
@@ -413,7 +413,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     // whatever aspect the phone camera produced, and a fixed height either
     // letterboxes them or crops the doorway out of the frame.
     aspectRatio: 4 / 3,
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
     backgroundColor: COLORS.surfaceVariant,
   },
   proofPhotoFallback: {

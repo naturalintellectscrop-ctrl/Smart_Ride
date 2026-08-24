@@ -346,7 +346,7 @@ export default function OrderTrackingScreen() {
           {/* Progress. This was a hand-rolled six-step stepper with its own
               line, icon-circle and label styles — the same thing RideTimeline
               already renders for the ride flow. One stepper, two flows. */}
-          <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.progressCard}>
+          <Card variant="raised" padding={SPACING.md} radius={RADIUS.lg} style={styles.progressCard}>
             <RideTimeline
               steps={ORDER_STATUS_FLOW.map((step, index) => ({
                 id: step.status,

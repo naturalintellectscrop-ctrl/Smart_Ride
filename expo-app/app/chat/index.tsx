@@ -132,7 +132,7 @@ export default function MessagesTabScreen() {
         <Card
           variant="raised"
           padding={SPACING.md}
-          radius={RADIUS.xl}
+          radius={RADIUS.lg}
           style={styles.conversationCard}
           onPress={() => handleConversationPress(item)}
           accessibilityLabel={`Conversation with ${item.otherUser.name}`}
@@ -283,7 +283,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     backgroundColor: COLORS.surfaceContainerLow,
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
-    borderRadius: 16,
+    borderRadius: RADIUS.lg,
     padding: 14,
     marginBottom: 10,
   },

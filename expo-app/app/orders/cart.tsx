@@ -317,7 +317,7 @@ export default function CartScreen() {
         {/* Order Summary. Amounts are the server's quote — while it is in
             flight the rows show a skeleton rather than a stale or invented
             number, and a failed quote blocks checkout instead of guessing. */}
-        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.lg} style={styles.card}>
           <SectionHeader title="Order summary" />
 
           <View style={styles.summaryRow}>

@@ -15,13 +15,28 @@
 //   <Card variant="flat">…</Card>        // grouped rows, no shadow
 //   <Card variant="elevated">…</Card>    // floating / modal surfaces
 //   <Card onPress={go}>…</Card>          // tappable, animated press
+//
+// Two things were quietly off-system here and are now fixed:
+//
+//   1. Colour source. This read `useTheme().colors`, the palette in
+//      theme-context.tsx, while every screen around it reads
+//      makeThemedColors(). Those two disagree — `border` is #bec9bf in one and
+//      the outlineVariant in the other, and the dark elevated surface is
+//      #2e3132 vs #242827 — so every card sat a shade off the surface it was
+//      placed on. Both now come from makeThemedColors.
+//
+//   2. Default radius. RADIUS.xl (24) predates the shape rule, which puts
+//      cards at RADIUS.lg (16); xl is the sheet/pill radius. Callers that
+//      passed RADIUS.xl explicitly have been normalised, so the default now
+//      matches what the rule says a card is.
 // ============================================
 
 import React from 'react';
 import { View, Pressable, StyleProp, ViewStyle } from 'react-native';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { SPACING, RADIUS, SHADOWS, MOTION } from '../constants';
+import { SPACING, RADIUS, SHADOWS, MOTION, BORDER } from '../constants';
 import { useTheme } from '../context/theme-context';
+import { makeThemedColors } from '../theme/themedColors';
 
 export type CardVariant = 'flat' | 'raised' | 'elevated' | 'accent';
 
@@ -43,15 +58,18 @@ export function Card({
   style,
   variant = 'raised',
   padding = SPACING.md,
-  radius = RADIUS.xl,
+  radius = RADIUS.lg,
   noBorder = false,
   onPress,
   disabled,
   accessibilityLabel,
 }: CardProps) {
-  const { colors } = useTheme();
+  const { isDark } = useTheme();
+  const COLORS = React.useMemo(() => makeThemedColors(isDark), [isDark]);
 
-  const backgroundColor = variant === 'accent' ? colors.backgroundSecondary : colors.backgroundElevated;
+  // `accent` is the brand-tinted card (wallet strip, highlighted notices);
+  // everything else is the plain card surface.
+  const backgroundColor = variant === 'accent' ? COLORS.tintSurface : COLORS.cardSurface;
   const shadow = variant === 'elevated' ? SHADOWS.active : variant === 'flat' ? null : SHADOWS.card;
 
   const surface: StyleProp<ViewStyle> = [
@@ -60,8 +78,8 @@ export function Card({
       backgroundColor,
       padding,
       borderRadius: radius,
-      borderWidth: noBorder ? 0 : 1,
-      borderColor: colors.border,
+      borderWidth: noBorder ? 0 : BORDER.hairline,
+      borderColor: variant === 'accent' ? COLORS.hairlineSoft : COLORS.border,
     },
     style,
   ];

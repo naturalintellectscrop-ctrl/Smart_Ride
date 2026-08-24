@@ -232,7 +232,7 @@ export default function WalletScreen() {
         <Animated.View entering={FadeInUp.duration(MOTION.duration.slow).delay(80)} style={styles.section}>
           <SectionHeader title="Payment methods" />
           {methods.length > 0 ? (
-            <Card variant="raised" padding={SPACING.sm} radius={RADIUS.xl}>
+            <Card variant="raised" padding={SPACING.sm} radius={RADIUS.lg}>
               {methods.map((m, i) => (
                 <ListRow
                   key={m.id}
@@ -245,7 +245,7 @@ export default function WalletScreen() {
               ))}
             </Card>
           ) : (
-            <Card variant="flat" padding={SPACING.md} radius={RADIUS.xl}>
+            <Card variant="flat" padding={SPACING.md} radius={RADIUS.lg}>
               <Text style={styles.emptyInline}>
                 No payment methods linked yet. Top up with mobile money to add one.
               </Text>
@@ -261,7 +261,7 @@ export default function WalletScreen() {
             onAction={transactions.length > recentTransactions.length ? () => router.push('/wallet/transactions') : undefined}
           />
           {recentTransactions.length > 0 ? (
-            <Card variant="raised" padding={SPACING.sm} radius={RADIUS.xl}>
+            <Card variant="raised" padding={SPACING.sm} radius={RADIUS.lg}>
               {recentTransactions.map((tx, index) => (
                 <ListRow
                   key={tx.id}
@@ -333,7 +333,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   section: { paddingHorizontal: SPACING.md, marginBottom: SPACING.lg },
 
   // Balance hero
-  balanceCard: { borderRadius: RADIUS.xl, padding: SPACING.lg, overflow: 'hidden' },
+  balanceCard: { borderRadius: RADIUS.lg, padding: SPACING.lg, overflow: 'hidden' },
   balanceLabel: { ...TYPOGRAPHY.bodySm, color: `${COLORS.onPrimary}D9`, fontWeight: '500' },
   balanceAmount: { fontSize: 36, fontWeight: '800', color: COLORS.onPrimary, marginTop: SPACING.xs, letterSpacing: -0.5 },
   pendingRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 },

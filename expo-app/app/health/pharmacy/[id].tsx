@@ -561,7 +561,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     left: 16,
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceContainerLowest,
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
@@ -573,7 +573,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   infoCard: {
     marginHorizontal: 16,
     marginTop: -24,
-    borderRadius: 20,
+    borderRadius: RADIUS.lg,
     backgroundColor: COLORS.surfaceContainerLowest,
     borderWidth: 1,
     borderColor: COLORS.outlineVariant,
@@ -594,7 +594,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   pharmacyIcon: {
     width: 56,
     height: 56,
-    borderRadius: 14,
+    borderRadius: RADIUS.md,
   },
   infoTextContainer: {
     flex: 1,
@@ -644,7 +644,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   infoPill: {
     backgroundColor: COLORS.surfaceContainerLow,
-    borderRadius: 20,
+    borderRadius: RADIUS.full,
     paddingHorizontal: 12,
     paddingVertical: 5,
     borderWidth: 1,
@@ -698,7 +698,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   productImage: {
     width: 48,
     height: 48,
-    borderRadius: 12,
+    borderRadius: RADIUS.md,
   },
   productInfo: {
     flex: 1,
@@ -762,7 +762,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderRadius: 16,
+    borderRadius: RADIUS.full,
     paddingVertical: 14,
     paddingHorizontal: 18,
   },

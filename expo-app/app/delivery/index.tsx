@@ -642,7 +642,7 @@ function StepType({
       </View>
 
       {/* Price Estimate Card */}
-      <Card variant="elevated" radius={RADIUS.xl} style={styles.priceEstimateCard}>
+      <Card variant="elevated" radius={RADIUS.lg} style={styles.priceEstimateCard}>
         <View style={styles.priceEstimateHeader}>
           <Ionicons name="calculator" size={20} color={COLORS.primary} />
           <Text style={styles.priceEstimateTitle}>Price Estimate</Text>
@@ -729,7 +729,7 @@ function StepLocations({
   return (
     <View style={styles.stepContainer}>
       {/* Route Summary Card */}
-      <Card variant="elevated" radius={RADIUS.xl} style={styles.routeCard}>
+      <Card variant="elevated" radius={RADIUS.lg} style={styles.routeCard}>
         {/* Pickup */}
         <View style={styles.routeRow}>
           <View style={styles.routeDotGreen} />
@@ -807,7 +807,7 @@ function StepLocations({
 
       {/* Package Description */}
       <Text style={styles.sectionTitle}>Package Description</Text>
-      <Card variant="raised" radius={RADIUS.xl} style={styles.descriptionCard}>
+      <Card variant="raised" radius={RADIUS.lg} style={styles.descriptionCard}>
         <TextInput
           style={styles.descriptionInput}
           placeholder="Describe what you are sending (e.g. documents, small box, electronics)"
@@ -873,7 +873,7 @@ function StepConfirm({
   return (
     <View style={styles.stepContainer}>
       {/* Route Summary (compact) */}
-      <Card variant="elevated" radius={RADIUS.xl} style={styles.summaryRouteCard}>
+      <Card variant="elevated" radius={RADIUS.lg} style={styles.summaryRouteCard}>
         <View style={styles.summaryRouteRow}>
           <View style={styles.summaryRouteDots}>
             <View style={styles.summaryDotGreen} />
@@ -894,7 +894,7 @@ function StepConfirm({
       </Card>
 
       {/* Delivery Details Card */}
-      <Card variant="raised" radius={RADIUS.xl} style={styles.detailsCard}>
+      <Card variant="raised" radius={RADIUS.lg} style={styles.detailsCard}>
         {/* Service type row */}
         <View style={styles.detailRow}>
           <View style={styles.detailIconCircle}>
@@ -945,7 +945,7 @@ function StepConfirm({
       </Card>
 
       {/* Price Estimate Card */}
-      <Card variant="elevated" radius={RADIUS.xl} style={styles.priceCard}>
+      <Card variant="elevated" radius={RADIUS.lg} style={styles.priceCard}>
         <View style={styles.priceHeader}>
           <Ionicons name="wallet" size={20} color={COLORS.primary} />
           <Text style={styles.priceTitle}>Price Estimate</Text>
@@ -1071,7 +1071,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: RADIUS.xl,
+    borderRadius: RADIUS.lg,
     borderWidth: 1.5,
     borderColor: COLORS.outlineVariant,
     padding: SPACING.md,

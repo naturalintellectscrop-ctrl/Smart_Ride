@@ -28,7 +28,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SmartRideMap } from '@/src/components/SmartRideMap';
 import { useLocationStore } from '@/src/store';
 import { api } from '@/src/services';
-import { DEFAULT_LOCATION } from '@/src/constants';
+import { DEFAULT_LOCATION, GRADIENTS, RADIUS } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
 import { makeThemedColors, ThemedColors } from '@/src/theme/themedColors';
 
@@ -278,7 +278,11 @@ export default function LocationPickerScreen() {
           activeOpacity={0.85}
         >
           <LinearGradient
-            colors={!isMoving && address ? [COLORS.primary, '#00CC6A'] : [COLORS.onSurfaceDim, COLORS.onSurfaceDim]}
+            colors={
+              !isMoving && address
+                ? (GRADIENTS.primary as [string, string])
+                : [COLORS.onSurfaceDim, COLORS.onSurfaceDim]
+            }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.confirmGradient}
@@ -303,16 +307,16 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   searchBar: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: COLORS.surfaceContainerLowest,
-    borderRadius: 16, borderWidth: 1, borderColor: COLORS.outlineVariant,
+    borderRadius: RADIUS.lg, borderWidth: 1, borderColor: COLORS.outlineVariant,
     paddingLeft: 8, paddingRight: 12, elevation: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8,
   },
-  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 20 },
+  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: RADIUS.full },
   searchInputContainer: { flex: 1, flexDirection: 'row', alignItems: 'center', height: 48 },
   searchIcon: { marginRight: 8 },
   searchInput: { flex: 1, color: COLORS.onSurface, fontSize: 15, paddingVertical: 0 },
   searchResultsContainer: {
-    backgroundColor: COLORS.surfaceContainerLowest, borderRadius: 16, marginTop: 8, maxHeight: 300,
+    backgroundColor: COLORS.surfaceContainerLowest, borderRadius: RADIUS.lg, marginTop: 8, maxHeight: 300,
     borderWidth: 1, borderColor: COLORS.outlineVariant, elevation: 8,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, overflow: 'hidden',
   },
@@ -323,7 +327,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: COLORS.outlineVariant,
   },
   searchResultIcon: {
-    width: 36, height: 36, borderRadius: 18, backgroundColor: COLORS.primaryFixedDim,
+    width: 36, height: 36, borderRadius: RADIUS.full, backgroundColor: COLORS.primaryFixedDim,
     alignItems: 'center', justifyContent: 'center', marginRight: 12,
   },
   searchResultText: { flex: 1 },
@@ -344,7 +348,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   movingRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   movingText: { color: COLORS.onSurfaceVariant, fontSize: 14 },
   selectedAddress: { color: COLORS.onSurface, fontSize: 16, fontWeight: '600', lineHeight: 22 },
-  confirmButton: { borderRadius: 16, overflow: 'hidden' },
+  confirmButton: { borderRadius: RADIUS.full, overflow: 'hidden' },
   confirmButtonDisabled: { opacity: 0.6 },
   confirmGradient: { paddingVertical: 18, alignItems: 'center', justifyContent: 'center' },
   confirmText: { color: COLORS.onPrimary, fontSize: 17, fontWeight: '700' },

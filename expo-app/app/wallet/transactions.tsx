@@ -145,7 +145,7 @@ export default function TransactionHistoryScreen() {
     const credit = item.type === 'CREDIT';
     return (
       <Animated.View entering={FadeInUp.duration(MOTION.duration.base).delay(Math.min(index * 40, 240))}>
-        <Card variant="raised" padding={SPACING.sm} radius={RADIUS.xl} style={styles.rowCard}>
+        <Card variant="raised" padding={SPACING.sm} radius={RADIUS.lg} style={styles.rowCard}>
           <ListRow
             title={item.description || (credit ? 'Money in' : 'Money out')}
             subtitle={formatDate(item.createdAt)}

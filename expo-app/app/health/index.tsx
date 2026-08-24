@@ -244,7 +244,7 @@ export default function HealthScreen() {
                 <Card
                   variant={activeCategory === cat.key ? 'accent' : 'raised'}
                   padding={SPACING.md}
-                  radius={RADIUS.xl}
+                  radius={RADIUS.lg}
                   style={styles.categoryCard}
                 >
                   {/* Icon Circle */}
@@ -554,7 +554,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: COLORS.error,
-    borderRadius: RADIUS.xl,
+    borderRadius: RADIUS.full,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.md,
     ...SHADOWS.active,

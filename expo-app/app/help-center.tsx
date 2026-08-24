@@ -153,7 +153,7 @@ export default function HelpCenterScreen() {
             onAction={() => setQuery('')}
           />
         ) : (
-          <Card variant="raised" padding={SPACING.sm} radius={RADIUS.xl} style={styles.articleCard}>
+          <Card variant="raised" padding={SPACING.sm} radius={RADIUS.lg} style={styles.articleCard}>
             {filteredArticles.map((a, i) => (
               <ListRow
                 key={a.topic}
@@ -168,7 +168,7 @@ export default function HelpCenterScreen() {
         <Card
           variant="accent"
           padding={SPACING.md}
-          radius={RADIUS.xl}
+          radius={RADIUS.lg}
           onPress={chatSupport}
           accessibilityLabel="Contact support"
         >

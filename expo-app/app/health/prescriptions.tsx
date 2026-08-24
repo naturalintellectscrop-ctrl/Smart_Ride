@@ -709,7 +709,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     zIndex: 10,
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: RADIUS.full,
     backgroundColor: `${COLORS.onPrimary}2E`,
     alignItems: 'center',
     justifyContent: 'center',

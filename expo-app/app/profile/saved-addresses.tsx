@@ -652,7 +652,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
     height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 20,
+    borderRadius: RADIUS.full,
   },
   headerTitle: {
     ...TYPOGRAPHY.headlineLgMobile,
@@ -701,7 +701,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   emptyBtn: {
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.xl,
+    borderRadius: RADIUS.full,
     paddingVertical: SPACING.md,
     flexDirection: 'row',
     alignItems: 'center',
@@ -845,7 +845,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   closeBtn: {
     width: 36,
     height: 36,
-    borderRadius: 18,
+    borderRadius: RADIUS.full,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: COLORS.surfaceContainerLow,
@@ -998,7 +998,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   actionBtn: {
     flex: 1,
-    borderRadius: RADIUS.xl,
+    borderRadius: RADIUS.full,
     paddingVertical: SPACING.md,
     alignItems: 'center',
     justifyContent: 'center',

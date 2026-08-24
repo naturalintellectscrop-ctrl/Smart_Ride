@@ -63,7 +63,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   iconCircle: {
     width: 88,
     height: 88,
-    borderRadius: 44,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.primaryFixed,
     alignItems: 'center',
     justifyContent: 'center',
@@ -84,7 +84,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   },
   button: {
     backgroundColor: COLORS.primary,
-    borderRadius: RADIUS.xl,
+    borderRadius: RADIUS.full,
     paddingVertical: SPACING.md,
     paddingHorizontal: SPACING.xl,
   },

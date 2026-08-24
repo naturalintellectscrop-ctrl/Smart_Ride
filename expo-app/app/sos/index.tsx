@@ -481,7 +481,7 @@ export default function SosScreen() {
             </View>
 
             {/* Location Info */}
-            <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.tripCard}>
+            <Card variant="raised" padding={SPACING.md} radius={RADIUS.lg} style={styles.tripCard}>
               <View style={styles.tripHeaderRow}>
                 <View style={styles.locationIconCircle}>
                   <Ionicons name="locate" size={18} color={COLORS.primary} />
@@ -503,7 +503,7 @@ export default function SosScreen() {
             </Card>
 
             {/* Trip Details Card (if ride active) */}
-            <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.tripCard}>
+            <Card variant="raised" padding={SPACING.md} radius={RADIUS.lg} style={styles.tripCard}>
               <View style={styles.tripHeaderRow}>
                 <View style={styles.tripIconCircle}>
                   <Ionicons name="car" size={18} color={COLORS.primary} />
@@ -516,7 +516,7 @@ export default function SosScreen() {
             </Card>
 
             {/* Info Card */}
-            <Card variant="accent" padding={SPACING.md} radius={RADIUS.xl} style={styles.infoCard}>
+            <Card variant="accent" padding={SPACING.md} radius={RADIUS.lg} style={styles.infoCard}>
               <View style={styles.infoRow}>
                 <View style={styles.infoIconCircle}>
                   <Ionicons name="information-circle-outline" size={18} color={COLORS.primary} />
@@ -556,7 +556,7 @@ export default function SosScreen() {
               )}
 
               {/* Location card with REAL GPS data */}
-              <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.locationCard}>
+              <Card variant="raised" padding={SPACING.md} radius={RADIUS.lg} style={styles.locationCard}>
                 <View style={styles.locationRow}>
                   <View style={styles.locationIconContainer}>
                     <Ionicons name="location" size={18} color={COLORS.error} />
@@ -580,7 +580,7 @@ export default function SosScreen() {
               </Card>
 
               {/* Share Live Location Toggle */}
-              <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.toggleCard}>
+              <Card variant="raised" padding={SPACING.md} radius={RADIUS.lg} style={styles.toggleCard}>
                 <View style={styles.toggleRow}>
                   <View style={styles.toggleIconCircle}>
                     <Ionicons name="locate-outline" size={20} color={COLORS.primary} />
@@ -675,7 +675,7 @@ export default function SosScreen() {
                   key={contact.id}
                   entering={FadeInUp.duration(350).delay(500 + index * 60).springify()}
                 >
-                  <Card variant="raised" padding={SPACING.sm} radius={RADIUS.xl} style={styles.contactCard}>
+                  <Card variant="raised" padding={SPACING.sm} radius={RADIUS.lg} style={styles.contactCard}>
                     <ListRow
                       title={contact.name}
                       subtitle={`${contact.relationship} • ${contact.phone}`}

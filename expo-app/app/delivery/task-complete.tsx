@@ -175,7 +175,7 @@ export default function DeliveryCompleteScreen() {
         {!!error && <JourneyBanner error={error} onAction={load} style={styles.card} />}
 
         {/* Proof — exactly what the backend recorded */}
-        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.lg} style={styles.card}>
           <SectionHeader title="Proof of delivery" />
 
           {proofCopy ? (
@@ -226,7 +226,7 @@ export default function DeliveryCompleteScreen() {
         </Card>
 
         {/* Earnings */}
-        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.lg} style={styles.card}>
           <SectionHeader title="Earnings" />
           <View style={styles.row}>
             <Text style={styles.rowLabel}>Delivery fare</Text>
@@ -256,7 +256,7 @@ export default function DeliveryCompleteScreen() {
         </Card>
 
         {/* Reference */}
-        <Card variant="raised" padding={SPACING.md} radius={RADIUS.xl} style={styles.card}>
+        <Card variant="raised" padding={SPACING.md} radius={RADIUS.lg} style={styles.card}>
           <View style={styles.row}>
             <Text style={styles.rowLabelMuted}>Reference</Text>
             <Text style={styles.rowValueMuted}>{task.taskNumber}</Text>

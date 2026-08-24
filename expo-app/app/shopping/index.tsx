@@ -373,7 +373,7 @@ function StoreCard({ merchant, onPress }: { merchant: Merchant; onPress: () => v
   const styles = useMemo(() => createStyles(COLORS), [COLORS]);
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.7}>
-      <Card variant="elevated" padding={SPACING.md} radius={RADIUS.xl} style={styles.storeCard}>
+      <Card variant="elevated" padding={SPACING.md} radius={RADIUS.lg} style={styles.storeCard}>
         {/* Image area */}
         <View style={styles.storeImageArea}>
           {merchant.image ? (

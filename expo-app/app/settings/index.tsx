@@ -148,7 +148,7 @@ const createStyles = (COLORS: ThemedColors) => StyleSheet.create({
   appbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: SPACING.md, paddingBottom: SPACING.sm, borderBottomWidth: 1, borderBottomColor: COLORS.outlineVariant },
   appbarTitle: { ...TYPOGRAPHY.headlineMd, color: COLORS.onSurface },
   profileCard: { flexDirection: 'row', alignItems: 'center', gap: SPACING.md, backgroundColor: COLORS.surfaceContainerLow, borderRadius: RADIUS.lg, padding: SPACING.md, borderWidth: 1, borderColor: COLORS.outlineVariant, marginBottom: SPACING.lg },
-  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: COLORS.surfaceContainerHigh, alignItems: 'center', justifyContent: 'center' },
+  avatar: { width: 48, height: 48, borderRadius: RADIUS.full, backgroundColor: COLORS.surfaceContainerHigh, alignItems: 'center', justifyContent: 'center' },
   name: { ...TYPOGRAPHY.bodyLg, color: COLORS.onSurface, fontWeight: '700' },
   role: { ...TYPOGRAPHY.bodySm, color: COLORS.onSurfaceVariant, marginTop: 2, textTransform: 'capitalize' },
   section: { marginBottom: SPACING.lg },
