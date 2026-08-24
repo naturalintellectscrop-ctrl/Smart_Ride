@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-022**.
+**ID allocation:** next free ID is **BE-047**.
 
 ---
 
@@ -2860,3 +2860,125 @@ cleanup and its teardown. The blocking row was 15 hours old, so this predates th
 session. Fixed in both places; the suite passes 18/18 and is repeatable.
 
 ---
+
+# Financial closure pass — 2026-08-24
+
+Four findings on one money path, all reproduced against production before being
+touched, all fixed in `ab3fe4d`. IDs continue from BE-042.
+
+---
+
+## BE-043 — No merchant order was ever dispatched to a courier
+
+**Status:** FIXED | **Priority:** P0 | **Category:** Workflow / Financial
+
+`POST /api/orders` created the delivery `Task` inside the order-creation
+transaction and moved it to `MATCHING`. `handleReady` — the handler that prices
+the courier leg and calls `DispatchService.findAndAssign` — wraps all of that in
+`if (!existingTask)`. A task already existing meant the block never ran.
+
+Reproduced end to end on production: order placed, paid, accepted, prepared,
+marked ready. Zero `DispatchMatch` rows, no rider, task still `MATCHING`. The
+stuck-task sweep in the dispatch cron could not rescue it either — its filter is
+`matchingStartedAt: { lt: … }`, and the early task was created by a bare
+`tx.task.update` that never set `matchingStartedAt`, so a NULL excluded it from
+the query.
+
+The same early task carried `totalAmount` = the whole order (food + delivery +
+service) with `riderEarnings` and `platformCommission` both NULL. Had it ever
+completed, the courier would have been owed nothing and the merchant's residual
+payout — `total − commission − riderEarnings` — would have handed them the
+customer's delivery and service fees as well as the food.
+
+**Fix:** the task is created when the merchant marks the order ready. The
+merchant's payout is no longer a residual of the task; it is the order's
+subtotal less the merchant's own `commissionRate`, the same rule the pharmacy
+side already used.
+
+---
+
+## BE-044 — The customer declared their own order paid
+
+**Status:** FIXED | **Priority:** P0 | **Category:** Financial / Security
+
+`PATCH /api/orders/{id}?action=confirm-payment` is permitted to the `CLIENT`
+role and wrote `paymentStatus: 'COMPLETED'` unconditionally. The only evidence
+it accepted was an optional free-text `paymentReference` that nothing looked up
+— and the mobile client filled it in with `PAY-${Date.now()}`.
+
+Reproduced on production: an order was placed and confirmed with the reference
+`QA-NO-SUCH-PAYMENT`. It came back `PAYMENT_CONFIRMED` / `COMPLETED` with no
+`Payment` row existing anywhere in the database. Every merchant order in the
+system was marked paid on the customer's word, and the merchant then cooked
+against it.
+
+**Fix:** confirmation is a read, not an assertion. The authority is a
+`COMPLETED` `Payment` row belonging to this customer for this order, for at
+least the amount due; anything else is refused with 402 and audited. The
+reference written to the order is the collected payment's, not the caller's.
+The same gate is applied to `ACCEPT` on pharmacy orders, which is where a
+pharmacy commits stock.
+
+---
+
+## BE-045 — The wallet payment path could never succeed, and lied about itself
+
+**Status:** FIXED | **Priority:** P0 | **Category:** Financial
+
+`processWalletPayment` read `user.rider.walletBalance` — the *rider's*
+denormalised earnings column — to decide whether a *customer* could pay. A
+customer has no `Rider` row, so the balance resolved to 0 and every wallet
+payment was refused with "Insufficient wallet balance" regardless of what the
+customer actually held. When a rider did pay, it debited that same column rather
+than the `Wallet` model the rest of the platform transacts against.
+
+Separately, `mapPaymentMethod` recorded `WALLET` as `CASH` in the database, on a
+comment claiming the enum had no wallet member. `PaymentMethod.WALLET` has
+existed all along. A wallet payment was therefore indistinguishable from money
+handed to a courier at the door — and that is exactly the distinction the
+settlement logic branches on, so it took the cash path.
+
+This mattered beyond wallet: with every gateway unconfigured in this
+environment, wallet was the only non-cash method that could have worked, so
+"non-cash is unverified" was partly this defect.
+
+**Fix:** debits the real `Wallet` through `payFromWallet`, which writes the
+ledger row in the same transaction; records the method as `WALLET`; and runs
+`handleSuccessfulPayment` so collection has the same downstream effect
+regardless of which method produced it.
+
+---
+
+## BE-046 — A confirmed payment suppressed the completion ledger
+
+**Status:** FIXED | **Priority:** P0 | **Category:** Financial
+
+`handleSuccessfulPayment` wrote a `FinanceLog` keyed
+`(referenceId: taskId, transactionType: <task type>)` — the exact pair
+`FinanceLedgerService.recordTaskCompletion` uses as its idempotency guard. A
+payment confirming *before* the task completed therefore made the completion
+ledger look already-recorded, and the completion silently skipped everything it
+does: no commission entry, no merchant payout figure, and no earnings for the
+courier at all.
+
+It also only ever looked at `payment.task`. Merchant and pharmacy payments are
+raised against the order — the delivery task does not exist until the merchant
+is ready — so a genuine gateway callback left `Order.paymentStatus` on `PENDING`
+forever, which is part of why BE-044's client-side assertion was the only thing
+moving it.
+
+**Fix:** collection and completion are two events with two ledger keys.
+Collection now also updates the order (and provider order), and releases any
+earnings held against it.
+
+---
+
+## Schema change
+
+`Payment.providerOrderId String?` + index + FK to `ProviderOrder`.
+
+`Payment.orderId` is FK-constrained to `Order`, so before this there was **no
+way to record that a customer had paid for a pharmacy order** — the
+`ProviderOrder.paymentStatus` string was set by delivery with nothing behind it.
+Collecting pharmacy money up front requires somewhere to record the collection.
+Additive only: one nullable column, one index, one FK, no data migration.
