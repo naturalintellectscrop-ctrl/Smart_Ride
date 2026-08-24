@@ -232,6 +232,30 @@ export async function POST(request: NextRequest) {
       return errorResponse('Merchant is not active');
     }
 
+    // ── the service is the merchant's type, not the client's claim ─────────
+    //
+    // The mobile cart posts `orderType: 'FOOD_DELIVERY'` as a literal for every
+    // order, including groceries reached through the Shopping tab — it has the
+    // merchant's id and name but never its type. So a supermarket run was
+    // created as a food delivery: priced at the food commission (15% rather
+    // than SHOPPING's 12%), driven through FOOD_DELIVERY_TRANSITIONS instead of
+    // the shopping lifecycle that has the "shopper is in the shop" step, and
+    // counted as restaurant revenue.
+    //
+    // The merchant already says what it is, and the server already has the row.
+    // Deriving it here fixes every existing client at once and keeps the same
+    // rule as every other value on this route: the client's version is a claim,
+    // the server's is the answer. A client that sends the right type sees no
+    // change.
+    const orderType: OrderType =
+      merchant.type === 'RESTAURANT' ? 'FOOD_DELIVERY' : 'SHOPPING';
+    if (orderType !== validatedData.orderType) {
+      console.log(
+        `[ORDER] orderType corrected ${validatedData.orderType} -> ${orderType} ` +
+        `for ${merchant.type} merchant ${merchant.id}`
+      );
+    }
+
     // Price every LINE from the merchant's catalogue before pricing the order.
     // The request's `unitPrice` is advisory only — it is used to detect a stale
     // cart, never to decide what is charged (BE-002).
@@ -276,7 +300,7 @@ export async function POST(request: NextRequest) {
     // ignored: this route used to write whatever the client sent, so a
     // modified client could zero its own delivery fee.
     const pricing = await quoteOrder({
-      orderType: validatedData.orderType,
+      orderType,
       items: priced.items.map((i) => ({ quantity: i.quantity, unitPrice: i.unitPrice })),
       merchant: { latitude: (merchant as any).latitude, longitude: (merchant as any).longitude },
       delivery: {
@@ -311,7 +335,7 @@ export async function POST(request: NextRequest) {
       const order = await tx.order.create({
         data: {
           orderNumber: generateOrderNumber(),
-          orderType: validatedData.orderType as OrderType,
+          orderType,
           clientId: effectiveClientId,
           merchantId: validatedData.merchantId,
           status: 'ORDER_CREATED',

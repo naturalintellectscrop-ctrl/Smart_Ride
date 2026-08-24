@@ -15,7 +15,8 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
-const API = process.env.QA_API ?? 'https://smartrideug.vercel.app/api';
+import { API, qaLogin, qaCall } from './qa-http';
+
 const db = new PrismaClient();
 const PW = 'QaAuthz#2026';
 const SHOP = { lat: 0.3476, lng: 32.5825 };
@@ -30,42 +31,8 @@ const ok = (name: string, cond: boolean, detail = '') => {
 /** A refusal is anything that is not a success. 401/403/404/409 are all fine. */
 const refused = (status: number) => status >= 400;
 
-/**
- * Sign in, waiting out the limiter rather than failing on it.
- *
- * Login allows 5 attempts per 15 minutes per IP. This suite needs seven signed-in
- * parties, so on a machine that has been running suites it WILL be limited part
- * way through. That is the control working, and the right response is to wait
- * rather than to weaken it or to sign tokens locally — a locally minted token
- * is signed with the dev fallback secret and production rightly rejects it.
- *
- * So the suite is slow on a cold limiter and correct either way.
- */
-async function login(email: string): Promise<string> {
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const r = await fetch(`${API}/auth/login`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: PW }),
-    });
-    if (r.status === 429) {
-      const waitMs = 3 * 60 * 1000;
-      console.log(`    (login limited; waiting ${waitMs / 60000}m — 5 per 15min per IP)`);
-      await new Promise((res) => setTimeout(res, waitMs));
-      continue;
-    }
-    const j = await r.json();
-    if (!j?.data?.accessToken) throw new Error(`login ${email}: HTTP ${r.status}`);
-    return j.data.accessToken as string;
-  }
-  throw new Error(`login ${email}: still rate limited after 8 attempts`);
-}
-
-const call = (t?: string) => (p: string, m = 'GET', b?: unknown) =>
-  fetch(`${API}${p}`, {
-    method: m,
-    headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) },
-    ...(b ? { body: JSON.stringify(b) } : {}),
-  });
+const login = (email: string) => qaLogin(email, PW);
+const call = qaCall;
 
 async function main() {
   const rand = Math.random().toString(36).slice(2, 8);

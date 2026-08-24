@@ -17,7 +17,8 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
-const API = process.env.QA_API ?? 'https://smartrideug.vercel.app/api';
+import { API, qaLogin, qaCall } from './qa-http';
+
 const db = new PrismaClient();
 const PW = 'QaDispatch#2026';
 
@@ -33,20 +34,8 @@ const ok = (name: string, cond: boolean, detail = '') => {
 const num = (v: unknown) => (v == null ? 0 : Number(v));
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function login(email: string): Promise<string> {
-  const r = await fetch(`${API}/auth/login`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password: PW }),
-  });
-  const j = await r.json();
-  if (!j?.data?.accessToken) throw new Error(`login ${email}: HTTP ${r.status}`);
-  return j.data.accessToken as string;
-}
-const call = (t: string) => (p: string, m = 'GET', b?: unknown) =>
-  fetch(`${API}${p}`, {
-    method: m, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
-    ...(b ? { body: JSON.stringify(b) } : {}),
-  });
+const login = (email: string) => qaLogin(email, PW);
+const call = qaCall;
 
 /** Couriers go stale after 90s; a real app beats every 5-10s. */
 async function beat(ids: string[]) {

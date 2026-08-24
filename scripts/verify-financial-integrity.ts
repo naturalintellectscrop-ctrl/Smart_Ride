@@ -20,7 +20,8 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
-const API = process.env.QA_API ?? 'https://smartrideug.vercel.app/api';
+import { API, qaLogin, qaCall } from './qa-http';
+
 const db = new PrismaClient();
 const PW = 'QaFinVerify#2026';
 
@@ -40,24 +41,8 @@ const ok = (name: string, cond: boolean, detail = '') => {
 };
 const num = (v: unknown) => (v == null ? 0 : Number(v));
 
-async function login(email: string): Promise<string> {
-  const r = await fetch(`${API}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password: PW }),
-  });
-  const j = await r.json();
-  const t = j?.data?.accessToken;
-  if (!t) throw new Error(`login failed for ${email}: HTTP ${r.status}`);
-  return t;
-}
-
-const call = (token: string) => (path: string, method = 'GET', body?: unknown) =>
-  fetch(`${API}${path}`, {
-    method,
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    ...(body ? { body: JSON.stringify(body) } : {}),
-  });
+const login = (email: string) => qaLogin(email, PW);
+const call = qaCall;
 
 async function main() {
   const rand = Math.random().toString(36).slice(2, 8);
