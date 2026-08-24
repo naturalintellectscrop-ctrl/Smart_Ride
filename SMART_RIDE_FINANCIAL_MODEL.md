@@ -29,7 +29,7 @@ Everything below follows from that one sentence.
 | Number | Source | Rule |
 |---|---|---|
 | Goods subtotal | merchant's own catalogue (`priceItemsFromCatalogue`) | line quantity × the menu's price. The client's `unitPrice` is used only to detect a stale cart. |
-| Delivery leg | `calculatePricingAsync(taskType, distanceKm)` → `totalAmount` | base + distance + surcharges, floored at `minimumFare`, rounded to UGX 100. |
+| Delivery leg | `calculatePricingAsync(taskType, distanceKm)` → `totalAmount` | base + distance + surcharges, floored at `minimumFare`, rounded to UGX 100. Rates come from the admin `PricingConfig` row for the service, merged over the code defaults. |
 | Customer's delivery line | `courierFare − serviceFee` | a display split; the two lines always re-add to the leg's cost. |
 | Customer's service fee | `breakdown.serviceFee` | the service's `serviceFeePercent` of the leg. |
 | Order total | `subtotal + deliveryFee + serviceFee − discount` | |
@@ -67,20 +67,43 @@ than it charged, on the majority of real Kampala orders.
 
 ### Pharmacy delivery
 
-| km | Customer paid (before) | Customer pays (now) | Courier fare | Margin before | Margin now |
-|---|---|---|---|---|---|
-| 1 | 5,000 (flat) | 3,000 | 3,000 | +2,450 | +450 |
-| 3 | 5,000 (flat) | 3,000 | 3,000 | +2,450 | +450 |
-| 5.5 | 5,000 (flat) | 3,000 | 3,000 | +2,450 | +450 |
-| 10 | 5,000 (flat) | 3,600 | 3,600 | +1,940 | +540 |
+Decision, 2026-08-24: the customer's pharmacy delivery charge stays at UGX
+5,000, and that figure is now owned by the admin `PricingConfig` table rather
+than by a constant in the order route. `SMART_HEALTH_DELIVERY` was the one
+service type with no `PricingConfig` row — the other five all had one — which is
+why the route had been carrying `deliveryFee = supportsDelivery ? 5000 : 0`
+instead. `scripts/seed-pricing-config.ts` creates the missing row (create-only;
+it never overwrites an admin edit) with `minimumFare: 5000`.
 
-**Note this direction explicitly: pharmacy customers now pay less.** The old
-5,000 was a hardcode (`supportsDelivery ? 5000 : 0`), not a stated rule, and the
-retention above the courier's fare was not represented anywhere in the ledger.
-Applying the engine removes an undocumented margin. If the intended pharmacy
-delivery price really is a flat 5,000, that is a rate decision to make
-deliberately — set it in `PricingConfig` for `SMART_HEALTH_DELIVERY`, where the
-admin surface already reads it, rather than restoring the constant.
+| km | Customer pays | Courier gets | Platform keeps | Before: courier / platform |
+|---|---|---|---|---|
+| 1 | 5,000 | 4,250 | 750 | 2,550 / 2,450 |
+| 3 | 5,000 | 4,250 | 750 | 2,550 / 2,450 |
+| 5.5 | 5,000 | 4,250 | 750 | 2,550 / 2,450 |
+| 10 | 5,000 | 4,250 | 750 | 3,060 / 1,940 |
+| 15 | 5,000 | 4,250 | 750 | 3,655 / 1,345 |
+
+**The customer's charge is unchanged. What changed is the allocation, and it is
+worth looking at directly.** Before, the 5,000 the customer paid and the fare
+the courier's task was priced at were two unrelated numbers: the task priced
+itself independently at the 3,000-floor rates, the courier took 85% of *that*,
+and the platform silently kept the gap — 2,450 on a short run, about 49% of the
+charge. That gap was not a commission anybody had declared; it was the distance
+between two calculations.
+
+Now one number is charged and the declared commission allocates it: courier
+4,250, platform 750. Nothing here treats the 5,000 as platform revenue — it is
+the customer's charge, and `platformCommissionPercent` is what decides Smart
+Ride's share of it.
+
+**A knob, not a blocker.** If 15% is not the intended platform share on a
+medicine run, it is the `platformCommissionPercent` on that same
+`PricingConfig` row, editable from the admin dashboard with no deploy. Worth a
+deliberate look: a 1 km pharmacy run now pays the courier 4,250 while a 1 km
+boda ride pays 2,550, because the 5,000 floor is high relative to the distance.
+That is the honest consequence of charging 5,000 for the leg and splitting it at
+the declared rate — but it is a rate decision, so it is left to be made rather
+than assumed.
 
 ### The invariant now enforced
 
@@ -145,7 +168,9 @@ different from the delivery personnel or the courier's". Those two readings
 disagree, and removing cash here would break a flow that is currently verified
 and financially sound.
 
-**Decision required.** Left as-is pending it. No code assumes either answer.
+**Decided, 2026-08-24: parcel cash stays.** A parcel job settles through the
+same verified `CashCollection` receivable a ride does, and removing cash would
+break a flow that is currently sound for no financial gain.
 
 ---
 
@@ -234,9 +259,12 @@ Nothing is silently created. Nothing is silently lost.
 1. **`npm run db:push:prod`** — `Payment.providerOrderId` must exist before this
    code is deployed, or every payment read fails. Additive; the diff is one
    column, one index, one FK.
-2. **Parcel/item-delivery cash** — the scope ambiguity in §4. Needs a decision.
-3. **Pharmacy delivery price** — §3 lowers it. Confirm that is intended, or set
-   a `PricingConfig` row for `SMART_HEALTH_DELIVERY`.
+2. ~~Parcel/item-delivery cash~~ — **decided 2026-08-24: cash stays.** It is
+   two-sided like a ride and settles through the verified `CashCollection`
+   path. §4 records the reasoning.
+3. **Pharmacy commission share** — settled at the customer end (5,000, in
+   config). What is *not* settled is whether 15% is the right platform share of
+   it; see §3. Editable from the admin dashboard, no deploy needed.
 4. **`PaymentStatus` cancelled/expired** — §5. Reporting gap, not a correctness
    one.
 5. **Gateways** — MTN, Airtel, card and NylonPay remain unconfigured in this
