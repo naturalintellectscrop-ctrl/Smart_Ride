@@ -237,6 +237,20 @@ const RIDE_TRANSITIONS: TransitionConfig[] = [
     to: TaskStatus.ASSIGNED,
     requiredFields: ['riderId'],
   },
+  // ── LC-1: a courier may give back a job they have not started ────────────
+  //
+  // The give-back control is shipped (the driver's button reads "Give back"
+  // before pickup and calls /tasks/[id]/decline), the route is written to move
+  // the task to SEARCHING, and the state machine ALREADY releases the rider on
+  // exactly this edge — `activeStatuses -> dispatchStatuses` clears
+  // currentTaskId. The only thing missing was the edge itself, so every decline
+  // of an assigned job died on 400 "Invalid transition" and the driver was
+  // stuck holding a job they had told us they could not do.
+  //
+  // ACCEPTED is included for the tables that have it, for the same reason.
+  // Both are forward into dispatch, not backwards into a finished state: the
+  // job returns to the pool and is offered to somebody else.
+  { from: [TaskStatus.ASSIGNED, TaskStatus.ACCEPTED], to: TaskStatus.SEARCHING },
   { from: TaskStatus.ASSIGNED, to: TaskStatus.ACCEPTED },
   { from: TaskStatus.ACCEPTED, to: TaskStatus.ARRIVING },
   { from: TaskStatus.ARRIVING, to: TaskStatus.ARRIVED },
@@ -276,6 +290,20 @@ const FOOD_DELIVERY_TRANSITIONS: TransitionConfig[] = [
     requiredFields: ['riderId'],
   },
   { from: TaskStatus.MATCHING, to: TaskStatus.ASSIGNED, requiredFields: ['riderId'] },
+  // ── LC-1: a courier may give back a job they have not started ────────────
+  //
+  // The give-back control is shipped (the driver's button reads "Give back"
+  // before pickup and calls /tasks/[id]/decline), the route is written to move
+  // the task to SEARCHING, and the state machine ALREADY releases the rider on
+  // exactly this edge — `activeStatuses -> dispatchStatuses` clears
+  // currentTaskId. The only thing missing was the edge itself, so every decline
+  // of an assigned job died on 400 "Invalid transition" and the driver was
+  // stuck holding a job they had told us they could not do.
+  //
+  // ACCEPTED is included for the tables that have it, for the same reason.
+  // Both are forward into dispatch, not backwards into a finished state: the
+  // job returns to the pool and is offered to somebody else.
+  { from: TaskStatus.ASSIGNED, to: TaskStatus.SEARCHING },
   { from: TaskStatus.ASSIGNED, to: TaskStatus.PICKED_UP },
   { from: TaskStatus.PICKED_UP, to: TaskStatus.DELIVERED },
   { from: TaskStatus.DELIVERED, to: TaskStatus.COMPLETED },
@@ -306,6 +334,20 @@ const SHOPPING_TRANSITIONS: TransitionConfig[] = [
     requiredFields: ['riderId'],
   },
   { from: TaskStatus.MATCHING, to: TaskStatus.ASSIGNED, requiredFields: ['riderId'] },
+  // ── LC-1: a courier may give back a job they have not started ────────────
+  //
+  // The give-back control is shipped (the driver's button reads "Give back"
+  // before pickup and calls /tasks/[id]/decline), the route is written to move
+  // the task to SEARCHING, and the state machine ALREADY releases the rider on
+  // exactly this edge — `activeStatuses -> dispatchStatuses` clears
+  // currentTaskId. The only thing missing was the edge itself, so every decline
+  // of an assigned job died on 400 "Invalid transition" and the driver was
+  // stuck holding a job they had told us they could not do.
+  //
+  // ACCEPTED is included for the tables that have it, for the same reason.
+  // Both are forward into dispatch, not backwards into a finished state: the
+  // job returns to the pool and is offered to somebody else.
+  { from: TaskStatus.ASSIGNED, to: TaskStatus.SEARCHING },
   { from: TaskStatus.ASSIGNED, to: TaskStatus.IN_PROGRESS }, // Shopping in progress
   { from: TaskStatus.IN_PROGRESS, to: TaskStatus.PICKED_UP }, // Items picked up
   { from: TaskStatus.PICKED_UP, to: TaskStatus.DELIVERED },
@@ -330,6 +372,20 @@ const ITEM_DELIVERY_TRANSITIONS: TransitionConfig[] = [
     to: TaskStatus.ASSIGNED,
     requiredFields: ['riderId'],
   },
+  // ── LC-1: a courier may give back a job they have not started ────────────
+  //
+  // The give-back control is shipped (the driver's button reads "Give back"
+  // before pickup and calls /tasks/[id]/decline), the route is written to move
+  // the task to SEARCHING, and the state machine ALREADY releases the rider on
+  // exactly this edge — `activeStatuses -> dispatchStatuses` clears
+  // currentTaskId. The only thing missing was the edge itself, so every decline
+  // of an assigned job died on 400 "Invalid transition" and the driver was
+  // stuck holding a job they had told us they could not do.
+  //
+  // ACCEPTED is included for the tables that have it, for the same reason.
+  // Both are forward into dispatch, not backwards into a finished state: the
+  // job returns to the pool and is offered to somebody else.
+  { from: [TaskStatus.ASSIGNED, TaskStatus.ACCEPTED], to: TaskStatus.SEARCHING },
   { from: TaskStatus.ASSIGNED, to: TaskStatus.ACCEPTED },
   { from: TaskStatus.ACCEPTED, to: TaskStatus.ARRIVING },
   { from: TaskStatus.ARRIVING, to: TaskStatus.PICKED_UP },
@@ -364,6 +420,20 @@ const HEALTH_DELIVERY_TRANSITIONS: TransitionConfig[] = [
     to: TaskStatus.ASSIGNED,
     requiredFields: ['riderId'],
   },
+  // ── LC-1: a courier may give back a job they have not started ────────────
+  //
+  // The give-back control is shipped (the driver's button reads "Give back"
+  // before pickup and calls /tasks/[id]/decline), the route is written to move
+  // the task to SEARCHING, and the state machine ALREADY releases the rider on
+  // exactly this edge — `activeStatuses -> dispatchStatuses` clears
+  // currentTaskId. The only thing missing was the edge itself, so every decline
+  // of an assigned job died on 400 "Invalid transition" and the driver was
+  // stuck holding a job they had told us they could not do.
+  //
+  // ACCEPTED is included for the tables that have it, for the same reason.
+  // Both are forward into dispatch, not backwards into a finished state: the
+  // job returns to the pool and is offered to somebody else.
+  { from: TaskStatus.ASSIGNED, to: TaskStatus.SEARCHING },
   { from: TaskStatus.ASSIGNED, to: TaskStatus.PICKED_UP },
   { from: TaskStatus.PICKED_UP, to: TaskStatus.IN_TRANSIT },
   { from: TaskStatus.IN_TRANSIT, to: TaskStatus.DELIVERING },

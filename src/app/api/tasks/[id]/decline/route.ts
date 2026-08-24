@@ -11,6 +11,8 @@ import { EnhancedTaskStateMachine } from '@/lib/services/enhanced-task-state-mac
 import { requireAuthWithRLS } from '@/lib/auth/guards';
 import { db, setServiceRoleContext, resetRLSContext } from '@/lib/db';
 import { isProvider } from '@/lib/auth/jwt';
+import { DispatchService } from '@/lib/services/dispatch-persistence.service';
+import { runAfterResponse } from '@/lib/api/after-response';
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -137,6 +139,36 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         where: { id: taskId },
         data: { riderId: null },
       });
+
+      // LC-1: the offer this driver just gave back is still PENDING.
+      //
+      // Detaching the task was only half of "offer it onward". The
+      // DispatchMatch that put the job in this driver's hands stayed PENDING,
+      // and that has two costs. The rotation in findAndAssign excludes riders
+      // whose match is REJECTED or EXPIRED — a PENDING one excludes nobody, so
+      // the job could come straight back to the driver who just refused it.
+      // And the cron's stuck-task sweep only re-dispatches when a task has no
+      // PENDING match at all, so nothing re-offered the job until the original
+      // offer timed out: 30s of TTL plus up to a minute of cron, with the
+      // customer watching a screen that says a driver is on the way.
+      //
+      // `rejectMatch` already does exactly what is wanted here — marks the
+      // match REJECTED, counts the retry, and re-runs the search with this
+      // rider excluded, or cancels once the attempts are spent. It simply had
+      // no caller on this path.
+      const pending = await db.dispatchMatch.findFirst({
+        where: { taskId, riderId: rider.id, status: 'PENDING' },
+        select: { id: true },
+      });
+      if (pending) {
+        const matchId = pending.id;
+        const riderId = rider.id;
+        // After the response: the search must outlive this request, and it
+        // must not inherit the RLS context the `finally` below resets.
+        runAfterResponse(`decline re-dispatch ${taskId}`, () =>
+          DispatchService.rejectMatch(matchId, riderId, reason || 'Rider gave the job back')
+        );
+      }
     }
 
     return NextResponse.json({
