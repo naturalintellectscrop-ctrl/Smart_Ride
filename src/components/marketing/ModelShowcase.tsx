@@ -1,98 +1,91 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useScroll, useMotionValueEvent, useReducedMotion } from 'framer-motion';
-import { Bike, Car, Loader2, RotateCw } from 'lucide-react';
+import { Bike, Car, Move } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type ModelKey = 'boda' | 'car';
 
-const MODELS: Record<ModelKey, { label: string; src: string; sizeLabel: string; icon: typeof Bike }> = {
-  boda: { label: 'Boda', src: '/models/3d-boda.glb', sizeLabel: '33MB', icon: Bike },
-  car: { label: 'Car', src: '/models/3d-car-icon.glb', sizeLabel: '20MB', icon: Car },
-};
-
-let modelViewerRegistered: Promise<unknown> | null = null;
-function ensureModelViewer() {
-  if (!modelViewerRegistered) {
-    modelViewerRegistered = import('@google/model-viewer');
-  }
-  return modelViewerRegistered;
-}
-
-const ORBIT_START = -60;
-const ORBIT_RANGE = 120;
+const DRAG_PX_PER_TURN = 320;
 
 /**
- * Opt-in 3D preview. Neither the model-viewer library nor either .glb
- * (20-33MB) is fetched until the visitor explicitly taps to load one,
- * so the page's default weight is unaffected. See project findings on
- * Uganda's variable mobile-data conditions for why this stays opt-in.
- *
- * Once loaded, the model doesn't auto-spin: scrolling past this card
- * turns it, so the same scroll that carries you through the journey
- * is what moves the boda/car — movement illustrated by navigating,
- * not a decorative constant rotation.
+ * frameCount/wrap vary per vehicle: boda has a clean full 360 render, but
+ * the car source model's livery texture is broken outside roughly a
+ * 70-280deg arc (a mirrored decal reads as garbled text), so its unsafe
+ * frames were deleted rather than shipped - see scripts/render-model-frames.js.
+ * wrap:false clamps at both ends instead of jumping across the gap.
+ */
+const MODELS: Record<ModelKey, { label: string; icon: typeof Bike; frameCount: number; wrap: boolean }> = {
+  boda: { label: 'Boda', icon: Bike, frameCount: 36, wrap: true },
+  car: { label: 'Car', icon: Car, frameCount: 22, wrap: false },
+};
+
+function framePath(key: ModelKey, index: number) {
+  return `/turntable/${key}/frame-${String(index).padStart(2, '0')}.webp`;
+}
+
+/**
+ * Lightweight turntable: pre-rendered WebP stills per vehicle (~10-18KB
+ * each, generated offline by scripts/render-model-frames.js from the
+ * source .glb files in assets/3d-source/, which are not shipped to the
+ * browser) swapped by scroll position or drag, instead of loading a live
+ * 20-33MB 3D model. See project history for why the earlier gated-download
+ * version was replaced: even opt-in, that cost is real on Uganda data.
  */
 export function ModelShowcase() {
   const [active, setActive] = useState<ModelKey>('boda');
-  const [loaded, setLoaded] = useState<Partial<Record<ModelKey, boolean>>>({});
-  const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle');
+  const [frameIndex, setFrameIndex] = useState(() => Math.floor(MODELS.boda.frameCount / 2));
   const rootRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const elementsRef = useRef<Partial<Record<ModelKey, HTMLElement>>>({});
-  const activeElRef = useRef<HTMLElement | null>(null);
+  const dragState = useRef<{ startX: number; startFrame: number } | null>(null);
   const reduceMotion = useReducedMotion();
+  const frameCount = MODELS[active].frameCount;
+
+  useEffect(() => {
+    (Object.keys(MODELS) as ModelKey[]).forEach((key) => {
+      for (let i = 0; i < MODELS[key].frameCount; i++) {
+        const img = new window.Image();
+        img.src = framePath(key, i);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    setFrameIndex(Math.floor(MODELS[active].frameCount / 2));
+  }, [active]);
 
   const { scrollYProgress } = useScroll({ target: rootRef, offset: ['start end', 'end start'] });
   useMotionValueEvent(scrollYProgress, 'change', (v) => {
-    if (reduceMotion) return;
-    const el = activeElRef.current;
-    if (!el) return;
-    const angle = ORBIT_START + v * ORBIT_RANGE;
-    el.setAttribute('camera-orbit', `${angle.toFixed(1)}deg 70deg 105%`);
+    if (reduceMotion || dragState.current) return;
+    const clamped = Math.min(1, Math.max(0, v));
+    setFrameIndex(Math.round(clamped * (frameCount - 1)));
   });
 
-  useEffect(() => {
-    const el = elementsRef.current[active];
-    if (!el || !containerRef.current) return;
-    containerRef.current.replaceChildren(el);
-    activeElRef.current = el;
-  }, [active]);
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.currentTarget.setPointerCapture(e.pointerId);
+      dragState.current = { startX: e.clientX, startFrame: frameIndex };
+    },
+    [frameIndex],
+  );
 
-  const handleLoad = async (key: ModelKey) => {
-    setStatus('loading');
-    setProgress(0);
-    await ensureModelViewer();
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!dragState.current) return;
+      const { wrap } = MODELS[active];
+      const delta = e.clientX - dragState.current.startX;
+      const framesPerPixel = frameCount / DRAG_PX_PER_TURN;
+      const next = Math.round(dragState.current.startFrame + delta * framesPerPixel);
+      setFrameIndex(
+        wrap ? ((next % frameCount) + frameCount) % frameCount : Math.min(frameCount - 1, Math.max(0, next)),
+      );
+    },
+    [active, frameCount],
+  );
 
-    const el = document.createElement('model-viewer') as HTMLElement;
-    el.setAttribute('src', MODELS[key].src);
-    el.setAttribute('alt', `Smart Ride ${MODELS[key].label} 3D model`);
-    el.setAttribute('camera-controls', '');
-    el.setAttribute('camera-orbit', `${ORBIT_START}deg 70deg 105%`);
-    el.setAttribute('shadow-intensity', '1');
-    el.setAttribute('exposure', '0.9');
-    el.style.width = '100%';
-    el.style.height = '100%';
-    el.style.setProperty('--poster-color', 'transparent');
-
-    el.addEventListener('progress', (e) => {
-      const detail = (e as unknown as CustomEvent<{ totalProgress: number }>).detail;
-      setProgress(Math.round(detail.totalProgress * 100));
-    });
-    el.addEventListener('load', () => {
-      setStatus('ready');
-      setLoaded((prev) => ({ ...prev, [key]: true }));
-    });
-    el.addEventListener('error', () => setStatus('error'));
-
-    elementsRef.current[key] = el;
-    activeElRef.current = el;
-    containerRef.current?.replaceChildren(el);
-  };
-
-  const activeLoaded = loaded[active];
+  const handlePointerUp = useCallback(() => {
+    dragState.current = null;
+  }, []);
 
   return (
     <div ref={rootRef} className="rounded-2xl border border-white/10 bg-white/[0.03]">
@@ -104,10 +97,7 @@ export function ModelShowcase() {
               <button
                 key={key}
                 type="button"
-                onClick={() => {
-                  setActive(key);
-                  setStatus(loaded[key] ? 'ready' : 'idle');
-                }}
+                onClick={() => setActive(key)}
                 className={cn(
                   'flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors',
                   active === key ? 'bg-white/10 text-white' : 'text-white/50 hover:text-white/80',
@@ -120,42 +110,24 @@ export function ModelShowcase() {
           })}
         </div>
         <span className="flex items-center gap-1.5 text-[11px] text-white/40">
-          <RotateCw className="size-3" />
+          <Move className="size-3" />
           Scroll or drag to turn
         </span>
       </div>
 
-      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-b-2xl sm:aspect-video">
-        {!activeLoaded && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-b from-white/[0.02] to-transparent px-6 text-center">
-            {status === 'loading' ? (
-              <>
-                <Loader2 className="size-6 animate-spin text-[#00d97e]" />
-                <p className="text-sm text-white/70">Loading model... {progress}%</p>
-              </>
-            ) : status === 'error' ? (
-              <p className="text-sm text-white/60">Could not load the model. Check your connection and try again.</p>
-            ) : (
-              <>
-                {(() => {
-                  const Icon = MODELS[active].icon;
-                  return <Icon className="size-8 text-white/30" />;
-                })()}
-                <button
-                  type="button"
-                  onClick={() => handleLoad(active)}
-                  className="rounded-xl bg-[#00d97e] px-5 py-2.5 text-sm font-semibold text-[#0b0c0e] transition-opacity hover:opacity-90"
-                >
-                  Load 3D model &middot; {MODELS[active].sizeLabel}
-                </button>
-                <p className="max-w-xs text-xs text-white/40">
-                  Optional, and best on Wi-Fi. Nothing downloads until you tap this.
-                </p>
-              </>
-            )}
-          </div>
-        )}
-        <div ref={containerRef} className="h-full w-full" />
+      <div
+        className="relative aspect-[4/3] w-full touch-none select-none overflow-hidden rounded-b-2xl sm:aspect-video"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+      >
+        <img
+          src={framePath(active, Math.min(frameIndex, frameCount - 1))}
+          alt={`Smart Ride ${MODELS[active].label}`}
+          className="h-full w-full cursor-grab object-contain active:cursor-grabbing"
+          draggable={false}
+        />
       </div>
     </div>
   );
