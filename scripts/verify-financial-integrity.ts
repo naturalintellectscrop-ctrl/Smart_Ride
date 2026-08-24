@@ -21,8 +21,15 @@ import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 import { API, qaLogin, qaCall } from './qa-http';
+import { qaCleanupByTag, qaNothingLeft } from './qa-cleanup';
 
 const db = new PrismaClient();
+
+/**
+ * One tag on every fixture this run creates, so the sweep at the bottom can
+ * find them all whether or not the suite got far enough to remember their ids.
+ */
+const TAG = Math.random().toString(36).slice(2, 8);
 const PW = 'QaFinVerify#2026';
 
 const MERCH = { lat: 0.3476, lng: 32.5825 };
@@ -44,8 +51,8 @@ const num = (v: unknown) => (v == null ? 0 : Number(v));
 const login = (email: string) => qaLogin(email, PW);
 const call = qaCall;
 
-async function main() {
-  const rand = Math.random().toString(36).slice(2, 8);
+async function run() {
+  const rand = TAG;
   const hash = await bcrypt.hash(PW, 10);
   const ph = () => `+2567${Math.floor(Math.random() * 90000000 + 10000000)}`;
 
@@ -467,8 +474,32 @@ async function main() {
   process.exit(fail === 0 ? 0 : 1);
 }
 
-main().catch(async (e) => {
-  console.error(e);
-  await db.$disconnect();
-  process.exit(1);
-});
+
+
+/**
+ * The last word on cleanup.
+ *
+ * Each suite builds its fixtures BEFORE the `try` that removes them, so a
+ * failure part way through creation used to leave the ones already made with
+ * nothing to clean them — five crashed runs of the authorization suite left 35
+ * users and 10 merchants behind while still reporting "no QA users left",
+ * because each run only knew about its own ids.
+ *
+ * Every fixture carries the same random tag, so this sweeps by tag and catches
+ * whatever the suite did not get far enough to remember.
+ */
+async function main() {
+  const tag = TAG;
+  try {
+    await run();
+  } finally {
+    await qaCleanupByTag(db, tag);
+    if (!(await qaNothingLeft(db, tag))) {
+      console.log(`  WARN  fixtures tagged ${tag} survived cleanup — check manually`);
+    }
+  }
+}
+
+main()
+  .catch((e) => { console.error(e); process.exitCode = 1; })
+  .finally(() => db.$disconnect());
