@@ -12,7 +12,7 @@ trail survives.
 **Owner of the fixes:** Backend / Production Engineering session, unless a
 finding is explicitly marked as already fixed locally.
 
-**ID allocation:** next free ID is **BE-047**.
+**ID allocation:** next free ID is **BE-049**.
 
 ---
 
@@ -2982,3 +2982,111 @@ way to record that a customer had paid for a pharmacy order** — the
 `ProviderOrder.paymentStatus` string was set by delivery with nothing behind it.
 Collecting pharmacy money up front requires somewhere to record the collection.
 Additive only: one nullable column, one index, one FK, no data migration.
+
+---
+
+# Dispatch closure pass — 2026-08-24 (later)
+
+Found by making the financial suite assert that a `DispatchMatch` exists rather
+than that a `Task` does. IDs continue from BE-046.
+
+---
+
+## BE-047 — No order was ever offered to a courier, on any service
+
+**Status:** FIXED + VERIFIED IN PRODUCTION | **Priority:** P0 | **Category:** Dispatch
+
+Probed against production with one eligible `DELIVERY_PERSONNEL` online and
+heartbeating at the moment of the request: marking a merchant order READY
+created the delivery task, priced it correctly and moved it to `MATCHING` with
+`matchingStartedAt` set — then produced nothing. No `DispatchMatch`, no
+`SEARCHING` transition, no dispatch audit entry, for the full 25 seconds it was
+watched.
+
+The dispatch call was a bare floating promise started just before the response,
+on a comment reading "don't block the response". It did not block it; it did not
+run either. Two things kill it:
+
+1. The runtime freezes the invocation the moment it answers, so the `.then()`
+   never fires — silently, because nothing is left to catch anything.
+2. The route's own `finally { await resetRLSContext() }` lands on the same
+   pooled connection the search is using (`connection_limit=1`), so even a
+   surviving invocation dies on 42704.
+
+Three call sites, covering every service the platform runs:
+
+| Site | Journey |
+|---|---|
+| `src/app/api/rides/route.ts` | client ride booking |
+| `src/app/api/orders/[id]/route.ts` | merchant food and shopping |
+| `src/lib/health/provider-order-delivery.ts` | pharmacy |
+
+**Fix:** `runAfterResponse` (`src/lib/api/after-response.ts`), which wraps
+`next/server`'s `after()` and establishes its own service-role context. The
+state machine already had a private copy of exactly this, with the reasoning
+written out; the dispatch paths just never used it. That copy now delegates to
+the shared one.
+
+**Why pharmacy appeared to work earlier:** it did, when the invocation happened
+to stay warm long enough. Intermittent by construction — the most dangerous
+shape a defect can have.
+
+---
+
+## BE-048 — A courier could not give back a job they had accepted (LC-1)
+
+**Status:** FIXED | **Priority:** P1 | **Category:** Dispatch / Lifecycle
+
+Two independent gates both refused it, and the shipped "Give back" button could
+never succeed.
+
+**First:** `ASSIGNED → SEARCHING` was in none of the five transition tables,
+though `/tasks/[id]/decline` is written entirely around it. Two things say the
+edge was intended and simply never written: the state machine already releases
+the rider on exactly this transition (`activeStatuses → dispatchStatuses` clears
+`currentTaskId`, and that code has no other caller), and the control is shipped
+(`d51e478`).
+
+**Second:** the actor gate then answered
+`Actor 'RIDER' is not authorized to transition from ASSIGNED to SEARCHING`.
+This is the **fourth** instance of the same omission in that one list — the file
+already carries three written-out cases where the transition table allowed a
+move and the rider actor list did not, each found by driving the real route
+rather than testing the table.
+
+**Third, and separately:** the decline route left the refused offer `PENDING`.
+That excluded nobody (`findAndAssign`'s rotation skips only REJECTED and
+EXPIRED), so the job could be handed straight back to the driver who refused it;
+and it blocked the cron's stuck-task sweep, which only re-dispatches a task with
+no PENDING match. Nothing re-offered the job until the original offer timed out:
+30s of TTL plus up to a minute of cron. `DispatchService.rejectMatch` already
+did the right thing and had no caller on this path.
+
+Authorization is unchanged: the route resolves the rider from the token and
+refuses with 403 unless the task is theirs, before the state machine is reached.
+
+---
+
+## OPS-1 — Food and shopping have a fleet of one
+
+**Status:** OPEN — operational, not a code defect | **Priority:** P2
+
+`RiderCapability` has **zero rows** in production, so
+`CapabilityService.getEligibleRiders` falls through to
+`getDefaultRolesForTaskType`. That maps `FOOD_DELIVERY`, `SHOPPING` and
+`SMART_HEALTH_DELIVERY` to `DELIVERY_PERSONNEL` alone.
+
+Production currently holds **1 approved `DELIVERY_PERSONNEL`** against 3
+`SMART_BODA_RIDER` and 1 `SMART_CAR_DRIVER`. So every food, shopping and
+pharmacy order in the country depends on that one person being online and free.
+If they are not, dispatch correctly finds nobody and the order is auto-cancelled
+at the 120s SLA.
+
+Worth noting that `ITEM_DELIVERY` already allows **both** `SMART_BODA_RIDER` and
+`DELIVERY_PERSONNEL` — so boda riders are already trusted to carry goods, and
+the food/shopping exclusion may be an oversight rather than a rule.
+
+**Not changed here.** Which roles may carry food is a business decision, and the
+`RiderCapability` table exists precisely so it can be made without a deploy:
+insert rows for the roles that should be allowed. Flagged so it is decided
+rather than discovered on launch day.

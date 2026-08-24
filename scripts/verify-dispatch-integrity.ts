@@ -91,6 +91,11 @@ async function main() {
   }
   const riderIds = riders.map((r) => r.riderId);
 
+  // A boda rider too — rides dispatch to SMART_BODA_RIDER, not to the
+  // DELIVERY_PERSONNEL that food and pharmacy go to.
+  const bUser = await db.user.create({ data: { email: `qa-dp-b-${rand}@qa.invalid`, phone: ph(), name: 'QA DP Boda', passwordHash: hash, role: 'RIDER', status: 'ACTIVE' } });
+  const boda = await db.rider.create({ data: { userId: bUser.id, fullName: 'QA DP Boda', phone: bUser.phone, email: bUser.email!, physicalAddress: 'Kampala', riderRole: 'SMART_BODA_RIDER', status: 'APPROVED', isOnline: true, currentLatitude: SHOP.lat, currentLongitude: SHOP.lng, lastHeartbeatAt: new Date() } });
+
   const orderIds: string[] = [];
   const taskIds: string[] = [];
 
@@ -209,6 +214,32 @@ async function main() {
     ok('and not back to the one who refused it',
       !reoffer || reoffer.riderId === other.riderId, reoffer?.riderId);
 
+    // ── a client booking a ride must also reach a rider ───────────────────────
+    console.log('\n-- a client ride reaches a boda rider --');
+    await beat([...riderIds, boda.id]);
+    const rideRes = await c('/rides', 'POST', {
+      taskType: 'SMART_BODA_RIDE',
+      pickupAddress: 'Kira Road, Kampala',
+      pickupLatitude: SHOP.lat, pickupLongitude: SHOP.lng,
+      dropoffAddress: 'Ntinda, Kampala',
+      dropoffLatitude: DROP.lat, dropoffLongitude: DROP.lng,
+      distanceKm: 3.6, paymentMethod: 'CASH',
+    });
+    const rideBody = await rideRes.json().catch(() => ({}));
+    const rideId = rideBody?.data?.id;
+    ok('a client can book a ride', rideRes.status === 201 && !!rideId,
+      `HTTP ${rideRes.status} ${rideId ?? JSON.stringify(rideBody).slice(0, 140)}`);
+    if (rideId) {
+      taskIds.push(rideId);
+      const rideMatch = await waitFor('the ride offer', 25_000, async () =>
+        db.dispatchMatch.findFirst({ where: { taskId: rideId, status: 'PENDING' }, select: { id: true, riderId: true } })
+      );
+      ok('the ride is actually OFFERED to a rider', !!rideMatch,
+        rideMatch ? `match ${rideMatch.id} -> rider ${rideMatch.riderId}` : 'no DispatchMatch created');
+      ok('and it went to a boda rider, not a courier',
+        !rideMatch || rideMatch.riderId === boda.id, rideMatch?.riderId);
+    }
+
     // ── the app must never attempt ASSIGNED -> CANCELLED ────────────────────
     console.log('\n-- the lifecycle is not driven backwards --');
     const transitions = await db.taskStateTransition.findMany({
@@ -225,7 +256,7 @@ async function main() {
     const orders = await db.order.findMany({ where: { merchantId: merchant.id }, select: { id: true } });
     const oids = Array.from(new Set([...orderIds, ...orders.map((o) => o.id)]));
     const tasks = await db.task.findMany({
-      where: { OR: [{ orderId: { in: oids } }, { riderId: { in: riderIds } }, { clientId: cUser.id }] },
+      where: { OR: [{ orderId: { in: oids } }, { riderId: { in: [...riderIds, boda.id] } }, { clientId: cUser.id }] },
       select: { id: true },
     });
     const tids = Array.from(new Set([...taskIds, ...tasks.map((t) => t.id)]));
@@ -238,9 +269,9 @@ async function main() {
       await db.conversation.deleteMany({ where: { taskId: t } }).catch(() => {});
       await db.receipt.deleteMany({ where: { taskId: t } }).catch(() => {});
     }
-    await db.rider.updateMany({ where: { id: { in: riderIds } }, data: { currentTaskId: null, isOnline: false } }).catch(() => {});
+    await db.rider.updateMany({ where: { id: { in: [...riderIds, boda.id] } }, data: { currentTaskId: null, isOnline: false } }).catch(() => {});
     await db.task.deleteMany({ where: { id: { in: tids } } }).catch((e) => console.log('task:', e.message.slice(0, 80)));
-    await db.financeLog.deleteMany({ where: { OR: [{ clientId: cUser.id }, { riderId: { in: riderIds } }] } }).catch(() => {});
+    await db.financeLog.deleteMany({ where: { OR: [{ clientId: cUser.id }, { riderId: { in: [...riderIds, boda.id] } }] } }).catch(() => {});
     await db.orderItem.deleteMany({ where: { orderId: { in: oids } } }).catch(() => {});
     await db.payment.deleteMany({ where: { orderId: { in: oids } } }).catch(() => {});
     await db.kOT.deleteMany({ where: { orderId: { in: oids } } }).catch(() => {});
@@ -250,12 +281,12 @@ async function main() {
     await db.menuItem.deleteMany({ where: { merchantId: merchant.id } }).catch(() => {});
     await db.auditLog.deleteMany({ where: { merchantId: merchant.id } }).catch(() => {});
     await db.merchant.delete({ where: { id: merchant.id } }).catch((e) => console.log('merchant:', e.message.slice(0, 80)));
-    const allUsers = [mUser.id, cUser.id, ...riders.map((r) => r.userId)];
+    const allUsers = [mUser.id, cUser.id, bUser.id, ...riders.map((r) => r.userId)];
     await db.walletTransaction.deleteMany({ where: { wallet: { ownerId: { in: allUsers } } } }).catch(() => {});
     await db.wallet.deleteMany({ where: { ownerId: { in: allUsers } } }).catch(() => {});
-    await db.cashCollection.deleteMany({ where: { riderId: { in: riderIds } } }).catch(() => {});
-    await db.driverReputation.deleteMany({ where: { riderId: { in: riderIds } } }).catch(() => {});
-    await db.rider.deleteMany({ where: { id: { in: riderIds } } }).catch((e) => console.log('rider:', e.message.slice(0, 80)));
+    await db.cashCollection.deleteMany({ where: { riderId: { in: [...riderIds, boda.id] } } }).catch(() => {});
+    await db.driverReputation.deleteMany({ where: { riderId: { in: [...riderIds, boda.id] } } }).catch(() => {});
+    await db.rider.deleteMany({ where: { id: { in: [...riderIds, boda.id] } } }).catch((e) => console.log('rider:', e.message.slice(0, 80)));
     for (const uid of allUsers) {
       await db.auditLog.deleteMany({ where: { userId: uid } }).catch(() => {});
       await db.notification.deleteMany({ where: { userId: uid } }).catch(() => {});
@@ -268,7 +299,7 @@ async function main() {
     ok('no QA orders left', (await db.order.count({ where: { id: { in: oids } } })) === 0);
     ok('no pending offers left', (await db.dispatchMatch.count({ where: { taskId: { in: tids } } })) === 0);
     ok('no riders left online from this suite',
-      (await db.rider.count({ where: { id: { in: riderIds } } })) === 0);
+      (await db.rider.count({ where: { id: { in: [...riderIds, boda.id] } } })) === 0);
   }
 
   console.log(`\n=== ${pass}/${pass + fail} passed ===\n`);

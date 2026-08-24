@@ -156,9 +156,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       // match REJECTED, counts the retry, and re-runs the search with this
       // rider excluded, or cancels once the attempts are spent. It simply had
       // no caller on this path.
+      // PENDING *or* ACCEPTED. A courier who taps "Give back" has usually
+      // accepted the offer first — that is the whole point of the control, and
+      // it makes the match ACCEPTED, not PENDING. Looking only for PENDING
+      // found nothing on the path the button actually takes, so the offer
+      // stayed ACCEPTED against a task that had moved on, and nothing
+      // re-dispatched.
       const pending = await db.dispatchMatch.findFirst({
-        where: { taskId, riderId: rider.id, status: 'PENDING' },
+        where: { taskId, riderId: rider.id, status: { in: ['PENDING', 'ACCEPTED'] } },
         select: { id: true },
+        orderBy: { createdAt: 'desc' },
       });
       if (pending) {
         const matchId = pending.id;
