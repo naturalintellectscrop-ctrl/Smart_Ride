@@ -101,3 +101,4 @@ verify-home-logo.png
 .env.sentry-build-plugin
 # Local production env (real secrets)
 .env.production
+.qa-screens/
