@@ -8,7 +8,7 @@
 // - Business logic hooks
 // ============================================
 
-import { after } from 'next/server';
+import { runAfterResponse } from '@/lib/api/after-response';
 import { db, setServiceRoleContext } from '@/lib/db';
 import { ActorType, TaskStatus, TaskType, RiderRole } from '@prisma/client';
 import { TaskAnalyticsUpdater } from './analytics-updater.service';
@@ -1506,22 +1506,10 @@ export class EnhancedTaskStateMachine {
    * `after()` throws, so fall back to running inline.
    */
   private static runAfterResponse(label: string, job: () => Promise<unknown>): void {
-    const run = async () => {
-      try {
-        await setServiceRoleContext();
-        await job();
-      } catch (err) {
-        console.error(`[StateMachine] ${label} failed:`, err);
-      }
-    };
-
-    try {
-      after(run);
-    } catch {
-      // No request scope available — run inline and let the caller's await
-      // (or lack of one) decide. Errors are already swallowed above.
-      void run();
-    }
+    // One implementation, in lib/api/after-response. This used to be a private
+    // copy; the dispatch paths needed the same behaviour and a second copy is
+    // how the three stale transition tables happened.
+    runAfterResponse(`StateMachine ${label}`, job);
   }
 
   /**

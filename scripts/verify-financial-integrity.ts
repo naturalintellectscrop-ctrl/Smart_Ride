@@ -101,7 +101,12 @@ async function main() {
   const rider = await db.rider.create({
     data: {
       userId: rUser.id, fullName: 'QA FV Courier', phone: rUser.phone, email: rUser.email!,
-      physicalAddress: 'Kampala', riderRole: 'SMART_BODA_RIDER', status: 'APPROVED',
+      physicalAddress: 'Kampala',
+      // FOOD_DELIVERY and SHOPPING are dispatched to DELIVERY_PERSONNEL — see
+      // CapabilityService.getDefaultRolesForTaskType. A boda rider is not
+      // eligible for a food order, so a fixture with the wrong role looks
+      // exactly like broken dispatch.
+      riderRole: 'DELIVERY_PERSONNEL', status: 'APPROVED',
       isOnline: true, currentLatitude: MERCH.lat, currentLongitude: MERCH.lng,
       lastHeartbeatAt: new Date(),
     },
@@ -235,6 +240,15 @@ async function main() {
     const confirm = await c(`/orders/${orderId}?action=confirm-payment`, 'PATCH', {});
     ok('confirm-payment succeeds once payment is collected', confirm.status === 200,
       `HTTP ${confirm.status}`);
+
+    // Eligibility requires a heartbeat inside RIDER_HEARTBEAT_STALE_MS (90s),
+    // and this suite has spent longer than that talking to production by the
+    // time it gets here. A real courier's app beats every 5-10s; do the same
+    // so the fixture is genuinely online at the moment dispatch runs.
+    await db.rider.update({
+      where: { id: rider.id },
+      data: { isOnline: true, currentTaskId: null, lastHeartbeatAt: new Date() },
+    });
 
     for (const [act, body] of [
       ['accept', { merchantId: merchant.id, estimatedPrepTime: 10 }],

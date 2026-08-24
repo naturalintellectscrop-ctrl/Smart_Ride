@@ -303,11 +303,18 @@ export function ActionTile({
           as "Prescr…" and "Manage stock" as "Manage…". An affordance that costs
           you the label is not worth having. */}
       <View style={kit.actionText}>
+        {/* UI-2: a single word must shrink, not break.
+            With numberOfLines={2}, Android breaks an unbreakable word across
+            the two lines rather than engaging adjustsFontSizeToFit — so
+            "Performance" rendered as "Performanc / e", which reads as a typo
+            rather than a tight fit. A word with no space in it cannot use a
+            second line for anything, so it gets one line and is allowed to
+            shrink further. Titles that DO have a space keep both lines. */}
         <Text
           style={[kit.actionTitle, { color: COLORS.onSurface }]}
-          numberOfLines={2}
+          numberOfLines={title.trim().includes(' ') ? 2 : 1}
           adjustsFontSizeToFit
-          minimumFontScale={0.8}
+          minimumFontScale={title.trim().includes(' ') ? 0.8 : 0.6}
         >
           {title}
         </Text>

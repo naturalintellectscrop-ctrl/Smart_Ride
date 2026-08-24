@@ -152,11 +152,15 @@ export default function MerchantOrdersScreen() {
     <View style={styles.container}>
       <AppHeader title="Orders" subtitle={`${orders.length} total`} onBack={() => router.back()} />
 
+      {/* UI-3: the placeholder used to run off the field and arrive as
+          "Search by order, customer or". A hint cut mid-phrase reads as a bug,
+          and it is worse than a shorter hint. The empty state below still
+          spells out all three things you can search by. */}
       <View style={styles.searchWrap}>
         <SearchInput
           value={query}
           onChangeText={setQuery}
-          placeholder="Search by order, customer or address"
+          placeholder="Order, customer or address"
         />
       </View>
 
@@ -273,7 +277,7 @@ export default function MerchantOrdersScreen() {
                       <View style={styles.payBlock}>
                         <TonePill label={pay.statusLabel} tone={pay.tone} icon="card" />
                         <Text style={styles.payMethod} numberOfLines={1}>
-                          {pay.method}
+                          {pay.methodShort}
                         </Text>
                       </View>
                     </View>

@@ -29,6 +29,7 @@ import { TaskStatus, TaskType, ProviderOrderStatus, PaymentMethod } from '@prism
 import { nextTaskNumber } from '@/lib/tasks/task-number';
 import { generateDeliveryCode } from '@/lib/delivery/delivery-service';
 import { splitChargedFare } from '@/lib/api/pricing';
+import { runAfterResponse } from '@/lib/api/after-response';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
 // The task state machine calls mirrorTaskStatusToProviderOrder below, and this
@@ -241,15 +242,22 @@ export async function dispatchProviderOrder(
       );
     }
 
-    // Non-blocking, exactly as the merchant flow dispatches — the pharmacist's
-    // response must not wait on the rider search.
+    // After the pharmacist's response, but not lost with it. A bare floating
+    // promise here was the same defect the merchant flow had: the invocation is
+    // frozen when the response returns, and the calling route's `finally`
+    // resets the RLS context on the one pooled connection the search is using.
+    // It worked when the invocation happened to stay warm long enough, which is
+    // exactly the kind of intermittent that must not ship.
     const Dispatch = await dispatchService();
-    Dispatch.findAndAssign({
-      taskId: task.id,
-      taskType: TaskType.SMART_HEALTH_DELIVERY,
-      pickupLatitude: pickupLat,
-      pickupLongitude: pickupLng,
-    })
+    const dispatchTaskId = task.id;
+    const dispatchTaskNumber = task.taskNumber;
+    runAfterResponse(`dispatch ${dispatchTaskNumber}`, () =>
+      Dispatch.findAndAssign({
+        taskId: dispatchTaskId,
+        taskType: TaskType.SMART_HEALTH_DELIVERY,
+        pickupLatitude: pickupLat,
+        pickupLongitude: pickupLng,
+      })
       .then(async (result) => {
         if (result.success && result.match) {
           await createAuditLog({
@@ -267,7 +275,7 @@ export async function dispatchProviderOrder(
           }).catch(() => {});
         }
       })
-      .catch((err) => console.error('[PharmacyDelivery] dispatch error (non-blocking):', err));
+    );
 
     // Re-assert the caller's elevated context before handing back.
     // DispatchService.findAndAssign calls resetRLSContext() in its own finally,

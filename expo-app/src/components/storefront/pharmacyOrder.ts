@@ -169,6 +169,15 @@ export function actionsFor(status?: string | null, hasRider?: boolean): OrderAct
 
 export interface PaymentMeta {
   method: string;
+  /**
+   * The same method in the fewest words that still name it.
+   *
+   * UI-3: the long form is right on a detail screen and too long for the
+   * footer of an order card, where it arrived as "Cash on d…" — a label cut
+   * mid-word tells the reader less than a shorter label would have. Anywhere
+   * the room is fixed and narrow, use this.
+   */
+  methodShort: string;
   /** True when the courier collects it from the customer at handover. */
   collectedOnDelivery: boolean;
   statusLabel: string;
@@ -187,18 +196,31 @@ const METHOD_LABEL: Record<string, string> = {
   WALLET: 'Smart Ride wallet',
 };
 
+const METHOD_LABEL_SHORT: Record<string, string> = {
+  CASH: 'Cash',
+  MTN_MOMO: 'MTN MoMo',
+  AIRTEL_MONEY: 'Airtel',
+  VISA: 'Visa',
+  MASTERCARD: 'Mastercard',
+  CREDIT_CARD: 'Card',
+  DEBIT_CARD: 'Card',
+  WALLET: 'Wallet',
+};
+
 export function paymentMeta(
   paymentMethod?: string | null,
   paymentStatus?: string | null
 ): PaymentMeta {
   const raw = (paymentMethod || '').toUpperCase();
   const method = METHOD_LABEL[raw] ?? (raw ? raw.replace(/_/g, ' ') : 'Not recorded');
+  const methodShort = METHOD_LABEL_SHORT[raw] ?? method;
   const isCash = raw === 'CASH';
   const status = (paymentStatus || 'PENDING').toUpperCase();
 
   if (status === 'COMPLETED' || status === 'PAID') {
     return {
       method,
+      methodShort,
       collectedOnDelivery: isCash,
       statusLabel: 'Paid',
       tone: 'green',
@@ -210,6 +232,7 @@ export function paymentMeta(
   if (status === 'FAILED') {
     return {
       method,
+      methodShort,
       collectedOnDelivery: isCash,
       statusLabel: 'Payment failed',
       tone: 'amber',
@@ -217,10 +240,11 @@ export function paymentMeta(
     };
   }
   if (status === 'REFUNDED') {
-    return { method, collectedOnDelivery: isCash, statusLabel: 'Refunded', tone: 'slate', note: 'This order was refunded.' };
+    return { method, methodShort, collectedOnDelivery: isCash, statusLabel: 'Refunded', tone: 'slate', note: 'This order was refunded.' };
   }
   return {
     method,
+    methodShort,
     collectedOnDelivery: isCash,
     statusLabel: isCash ? 'Due on delivery' : 'Awaiting payment',
     tone: 'amber',

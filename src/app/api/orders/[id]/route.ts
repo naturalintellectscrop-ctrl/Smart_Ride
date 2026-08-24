@@ -11,6 +11,7 @@ import { sendOrderUpdateNotification } from '@/lib/services/notification.service
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { splitChargedFare } from '@/lib/api/pricing';
 import { toNumber } from '@/lib/decimal-utils';
+import { runAfterResponse } from '@/lib/api/after-response';
 import { redactPerson, redactBusiness } from '@/lib/privacy/public-contact';
 import { ensureReceiptForTask } from '@/lib/receipts/receipt-service';
 import { sendReceiptEmail } from '@/lib/receipts/send-receipt-email';
@@ -881,34 +882,45 @@ async function handleReady(orderId: string, body: Record<string, unknown>, decod
       console.error(`[Order] Failed to transition task ${task.id} to MATCHING:`, matchResult.error);
     }
 
-    // Dispatch rider asynchronously - don't block the response
+    // Dispatch the rider after the response, but do not LOSE it.
+    //
+    // This was a bare floating promise on a comment saying "don't block the
+    // response". It did not block it; it did not run either. The invocation is
+    // frozen when the response returns, and this route's own
+    // `finally { resetRLSContext() }` strips the connection's context besides.
+    // Measured against production with an eligible courier online: task
+    // created, priced, moved to MATCHING — and zero DispatchMatch rows, no
+    // SEARCHING transition, no audit entry, for the full 25s it was watched.
+    // No merchant order was ever offered to anybody.
     const dispatchTaskType = order.orderType === 'SHOPPING' ? 'SHOPPING' as const : 'FOOD_DELIVERY' as const;
-    DispatchService.findAndAssign({
-      taskId: task.id,
-      taskType: dispatchTaskType,
-      pickupLatitude: merchantLat,
-      pickupLongitude: merchantLng,
-    }).then(async (result) => {
+    const dispatchTaskId = task.id;
+    const dispatchTaskNumber = task.taskNumber;
+    runAfterResponse(`dispatch ${dispatchTaskNumber}`, () =>
+      DispatchService.findAndAssign({
+        taskId: dispatchTaskId,
+        taskType: dispatchTaskType,
+        pickupLatitude: merchantLat,
+        pickupLongitude: merchantLng,
+      }).then(async (result) => {
       if (result.success && result.match) {
         await createAuditLog({
           action: AuditActions.DISPATCH_ASSIGNED,
           entityType: EntityTypes.DISPATCH,
           entityId: result.match.id,
           actorType: 'SYSTEM',
-          taskId: task!.id,
-          description: `Dispatch match created for ${dispatchTaskType.toLowerCase()} task ${task!.taskNumber}, awaiting rider acceptance`,
+          taskId: dispatchTaskId,
+          description: `Dispatch match created for ${dispatchTaskType.toLowerCase()} task ${dispatchTaskNumber}, awaiting rider acceptance`,
         });
       } else if (result.noRidersAvailable) {
         // Transition to SEARCHING via state machine
-        EnhancedTaskStateMachine.transition(
-          task!.id,
+        await EnhancedTaskStateMachine.transition(
+          dispatchTaskId,
           TaskStatus.SEARCHING,
           { triggeredByType: 'SYSTEM', reason: 'No riders available for order delivery' }
         ).catch(err => console.error('[Order] Failed to transition to SEARCHING:', err));
       }
-    }).catch((error) => {
-      console.error('[Order] Auto-dispatch error (non-blocking):', error);
-    });
+      })
+    );
   }
 
   // Notify client that order is ready for pickup

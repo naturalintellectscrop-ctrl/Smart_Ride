@@ -7,6 +7,7 @@ import {
   EnhancedTaskStateMachine,
 } from '@/lib/services/enhanced-task-state-machine.service';
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
+import { runAfterResponse } from '@/lib/api/after-response';
 import { sendTaskUpdateNotification } from '@/lib/services/notification.service';
 import { createAuditLog, AuditActions, EntityTypes } from '@/lib/api/audit';
 
@@ -189,15 +190,23 @@ export async function POST(req: NextRequest) {
       console.error('[Rides] MATCHING notification failed (non-blocking):', notifErr);
     }
 
-    // Auto-dispatch: find and offer ride to nearest rider (async, non-blocking).
-    // The match starts as PENDING; rider must explicitly accept via
-    // /api/dispatch/[id]/accept — only then does the task transition to ASSIGNED.
-    DispatchService.findAndAssign({
-      taskId: ride.id,
-      taskType,
-      pickupLatitude: pickupLatitude || 0,
-      pickupLongitude: pickupLongitude || 0,
-    }).then(async (result) => {
+    // Auto-dispatch: find and offer the ride to the nearest rider, after the
+    // response but not lost with it. The match starts as PENDING; the rider must
+    // explicitly accept via /api/dispatch/[id]/accept — only then does the task
+    // transition to ASSIGNED.
+    //
+    // This was a bare floating promise. The invocation is frozen once the
+    // response returns, and the `finally` below resets the RLS context on the
+    // single pooled connection the dispatch is still using — so the search
+    // either never started or died on 42704. Same defect, same shape, as the
+    // merchant and pharmacy dispatch paths.
+    runAfterResponse(`dispatch ${ride.taskNumber}`, () =>
+      DispatchService.findAndAssign({
+        taskId: ride.id,
+        taskType,
+        pickupLatitude: pickupLatitude || 0,
+        pickupLongitude: pickupLongitude || 0,
+      }).then(async (result) => {
       if (result.success && result.match) {
         try {
           await createAuditLog({
@@ -219,9 +228,8 @@ export async function POST(req: NextRequest) {
           );
         } catch {}
       }
-    }).catch((error) => {
-      console.error('[Rides] Auto-dispatch error (non-blocking):', error);
-    });
+      })
+    );
 
     return NextResponse.json({ success: true, data: matchingRide }, { status: 201 });
   } catch (error) {
