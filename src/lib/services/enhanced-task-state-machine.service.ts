@@ -1545,6 +1545,19 @@ export class EnhancedTaskStateMachine {
       [TaskStatus.DELIVERED, TaskStatus.COMPLETED],
       [TaskStatus.ASSIGNED, TaskStatus.PICKED_UP],
       [TaskStatus.ASSIGNED, TaskStatus.IN_PROGRESS],
+      // LC-1, and the fourth instance of exactly the omission described above.
+      // Giving back a job you have not started is the one move a courier makes
+      // that is not forward, and the transition table now allows it — but the
+      // actor gate did not, so the decline route answered 400 "Actor 'RIDER'
+      // is not authorized to transition from ASSIGNED to SEARCHING" and the
+      // driver stayed pinned to work they had told us they could not do.
+      //
+      // This does not weaken authorization. /tasks/[id]/decline resolves the
+      // rider from the token and refuses with 403 unless the task is actually
+      // theirs, before it ever reaches here; the actor gate was only
+      // contradicting a table entry that had already been checked.
+      [TaskStatus.ASSIGNED, TaskStatus.SEARCHING],
+      [TaskStatus.ACCEPTED, TaskStatus.SEARCHING],
     ];
     if (riderTransitionPairs.some(([from, to]) => from === fromStatus && to === toStatus)) {
       actors.push('RIDER');

@@ -187,25 +187,80 @@ async function main() {
 
     check('order is DELIVERED', settledOrder?.status === 'DELIVERED', settledOrder?.status);
     check('delivery time recorded', !!settledOrder?.deliveredAt);
-    check('order payment marked COMPLETED', settledOrder?.paymentStatus === 'COMPLETED');
+
+    // ── BE-039/BE-040: delivering is not being paid ────────────────────────
+    //
+    // This order is MTN_MOMO and no payment was ever collected for it, so the
+    // two checks below used to assert the defect: that delivery alone marked
+    // the order paid and moved the pharmacy's money into the balance the
+    // payout endpoint will hand out. It does not any more.
+    //
+    // The pharmacy still EARNED it — they filled the order — so the lifetime
+    // figure moves. What waits is the withdrawable balance.
     check(
-      'lifetime earnings credited',
+      'an unpaid order is not marked paid by delivering it',
+      settledOrder?.paymentStatus !== 'COMPLETED',
+      settledOrder?.paymentStatus
+    );
+    check(
+      'lifetime earnings still credited — the pharmacy did the work',
       Math.abs(num(afterFirst?.totalEarnings) - num(before?.totalEarnings) - PROVIDER_EARNINGS) < 1,
       `${num(before?.totalEarnings)} → ${num(afterFirst?.totalEarnings)}`
     );
     check(
-      'withdrawable balance credited (PHARM-10)',
-      Math.abs(num(afterFirst?.pendingPayout) - num(before?.pendingPayout) - PROVIDER_EARNINGS) < 1,
+      'withdrawable balance is NOT credited while the customer has not paid',
+      num(afterFirst?.pendingPayout) === num(before?.pendingPayout),
       `${num(before?.pendingPayout)} → ${num(afterFirst?.pendingPayout)}`
     );
+    const unpaidException = await db.financeLog.findFirst({
+      where: { referenceId: `unpaid-provider-order-${order.id}`, status: 'PENDING' },
+      select: { id: true },
+    });
+    check('and the shortfall is recorded for reconciliation', !!unpaidException);
+
+    // ── and it releases when the money actually arrives ────────────────────
+    const collected = await db.payment.create({
+      data: {
+        paymentReference: `QA-PHARM-${Date.now().toString(36).toUpperCase()}`,
+        providerOrderId: order.id,
+        userId: order.customerId,
+        amount: order.totalAmount,
+        paymentMethod: 'MTN_MOMO',
+        status: 'COMPLETED',
+        processedAt: new Date(),
+      },
+      select: { id: true },
+    });
+    const { releaseProviderPayout } = await import('../src/lib/health/provider-order-delivery');
+    await releaseProviderPayout(order.id);
+    const afterRelease = await db.healthProvider.findUnique({ where: { id: provider.id } });
+    const releasedOrder = await db.providerOrder.findUnique({ where: { id: order.id } });
+    check(
+      'the payout is released once the payment is collected (PHARM-10)',
+      Math.abs(num(afterRelease?.pendingPayout) - num(before?.pendingPayout) - PROVIDER_EARNINGS) < 1,
+      `${num(afterFirst?.pendingPayout)} → ${num(afterRelease?.pendingPayout)}`
+    );
+    check('and the order reads as paid', releasedOrder?.paymentStatus === 'COMPLETED', releasedOrder?.paymentStatus);
+
+    await releaseProviderPayout(order.id);
+    const afterReleaseReplay = await db.healthProvider.findUnique({ where: { id: provider.id } });
+    check(
+      'a replayed release does not pay twice',
+      num(afterReleaseReplay?.pendingPayout) === num(afterRelease?.pendingPayout),
+      `${num(afterRelease?.pendingPayout)} → ${num(afterReleaseReplay?.pendingPayout)}`
+    );
+    await db.payment.delete({ where: { id: collected.id } }).catch(() => {});
 
     // Replay: a second completion event must not pay twice.
     if (task) await mirrorTaskStatusToProviderOrder(task.id, 'COMPLETED');
     const afterSecond = await db.healthProvider.findUnique({ where: { id: provider.id } });
+    // Compared against the balance AFTER the release above, not before it —
+    // the release legitimately moved the figure, and the question here is
+    // whether replaying the completion moves it again.
     check(
       'a replayed completion does not pay twice',
-      num(afterSecond?.pendingPayout) === num(afterFirst?.pendingPayout),
-      `${num(afterFirst?.pendingPayout)} → ${num(afterSecond?.pendingPayout)}`
+      num(afterSecond?.pendingPayout) === num(afterRelease?.pendingPayout),
+      `${num(afterRelease?.pendingPayout)} → ${num(afterSecond?.pendingPayout)}`
     );
 
     const direct = await settleProviderOrderDelivery(order.id, {});

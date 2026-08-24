@@ -179,7 +179,9 @@ async function main() {
 
     await beat(riderIds);
     const declined = await r1(`/tasks/${task.id}/decline`, 'POST', { reason: 'QA: giving the job back' });
-    ok('the courier can give it back before pickup', declined.status === 200, `HTTP ${declined.status}`);
+    const declinedBody = await declined.json().catch(() => ({}));
+    ok('the courier can give it back before pickup', declined.status === 200,
+      `HTTP ${declined.status} ${JSON.stringify(declinedBody).slice(0, 200)}`);
 
     const afterDecline = await db.task.findUnique({ where: { id: task.id }, select: { status: true, riderId: true } });
     ok('the task goes back to searching', afterDecline?.status === 'SEARCHING', String(afterDecline?.status));
