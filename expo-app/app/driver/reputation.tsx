@@ -21,12 +21,14 @@ import {
   RefreshControl,
   ActivityIndicator,
   Pressable,
+  TouchableOpacity,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { api } from '@/src/services';
+import { Alert } from '@/src/components/feedback';
 import { AppHeader, Card, EmptyState, ErrorState } from '@/src/components';
 import { SPACING, RADIUS, TYPOGRAPHY, BORDER } from '@/src/constants';
 import { useTheme } from '@/src/context/theme-context';
@@ -91,6 +93,7 @@ export default function DriverReputationScreen() {
    */
   const [openIncentives, setOpenIncentives] = useState<OpenIncentive[]>([]);
   const [joining, setJoining] = useState<string | null>(null);
+  const [leaving, setLeaving] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setError(null);
@@ -123,6 +126,44 @@ export default function DriverReputationScreen() {
       setRefreshing(false);
     }
   }, []);
+
+  /**
+   * Leave a bonus. Takes the PARTICIPATION id — `inc.id` on an active bonus is
+   * the IncentiveParticipation row, which is what the server scopes the delete
+   * to. It refuses one already REWARDED, and that refusal is shown as written
+   * rather than replaced with a generic failure.
+   */
+  const leave = useCallback(
+    (participationId: string, name: string) => {
+      Alert.alert(
+        `Leave "${name}"?`,
+        'Your progress on it is lost, and you will not be paid the bonus. You can join again if it is still open.',
+        [
+          { text: 'Stay in it', style: 'cancel' },
+          {
+            text: 'Leave',
+            style: 'destructive',
+            onPress: async () => {
+              setLeaving(participationId);
+              try {
+                const res = await api.leaveIncentive(participationId);
+                if (res?.success) {
+                  await load();
+                } else {
+                  setError(res?.error || 'Could not leave that bonus. Try again.');
+                }
+              } catch {
+                setError('Could not leave that bonus. Try again.');
+              } finally {
+                setLeaving(null);
+              }
+            },
+          },
+        ]
+      );
+    },
+    [load]
+  );
 
   const join = useCallback(async (incentiveId: string) => {
     setJoining(incentiveId);
@@ -388,13 +429,28 @@ export default function DriverReputationScreen() {
                   <View style={styles.progressTrackSm}>
                     <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: COLORS.primary }]} />
                   </View>
-                  <Text style={styles.incentiveProgress}>
-                    {inc.ridesRequired
-                      ? `${inc.ridesCompleted} of ${inc.ridesRequired} rides`
-                      : `${inc.ridesCompleted} rides`}
-                    {'  ·  '}
-                    {pct.toFixed(0)}%
-                  </Text>
+                  <View style={styles.rowBetween}>
+                    <Text style={styles.incentiveProgress}>
+                      {inc.ridesRequired
+                        ? `${inc.ridesCompleted} of ${inc.ridesRequired} rides`
+                        : `${inc.ridesCompleted} rides`}
+                      {'  ·  '}
+                      {pct.toFixed(0)}%
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => leave(inc.id, inc.name)}
+                      disabled={leaving === inc.id}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Leave the ${inc.name} bonus`}
+                    >
+                      {leaving === inc.id ? (
+                        <ActivityIndicator size="small" color={COLORS.outline} />
+                      ) : (
+                        <Text style={styles.leaveLink}>Leave</Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
                 </Card>
               );
             })}
@@ -556,6 +612,11 @@ const createStyles = (COLORS: ThemedColors) =>
     incentiveName: { ...TYPOGRAPHY.labelLg, color: COLORS.onSurface, flex: 1, flexShrink: 1, marginRight: SPACING.sm },
     incentiveReward: { ...TYPOGRAPHY.labelLg, color: COLORS.primary, flexShrink: 0 },
     incentiveProgress: { ...TYPOGRAPHY.labelMd, color: COLORS.outline, marginTop: SPACING.xs },
+  leaveLink: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: COLORS.outline,
+  },
     joinButton: {
       marginTop: SPACING.sm,
       paddingVertical: SPACING.sm,

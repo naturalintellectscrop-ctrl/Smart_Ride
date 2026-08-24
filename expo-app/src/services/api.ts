@@ -594,6 +594,25 @@ class ApiService {
     return this.request<any>('/marketplace/incentives?status=ACTIVE');
   }
 
+  /**
+   * Leave a campaign this driver has joined.
+   *
+   * INC-3: `DELETE /marketplace/incentives/participate` has always existed and
+   * had no caller, so a driver who joined a bonus was in it until it expired —
+   * including one whose targets they had realised they could not hit, which
+   * goes on counting against nothing while they carry it.
+   *
+   * Takes the PARTICIPATION id, not the campaign id: the server scopes the
+   * delete to the caller's own participation row, and refuses one already
+   * REWARDED.
+   */
+  async leaveIncentive(participationId: string): Promise<ApiResponse<any>> {
+    return this.request<any>(
+      `/marketplace/incentives/participate?participationId=${encodeURIComponent(participationId)}`,
+      'DELETE'
+    );
+  }
+
   /** Enrol this driver in an incentive campaign. */
   async joinIncentive(incentiveId: string): Promise<ApiResponse<any>> {
     return this.request<any>('/marketplace/incentives/participate', 'POST', { incentiveId });
