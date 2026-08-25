@@ -22,6 +22,13 @@ import { secureStorage } from '../utils/secureStorage';
 const ORDER_STATUS_TO_ACTION: Record<string, string> = {
   CONFIRMED: 'accept',
   ACCEPTED: 'accept',
+  // The value the server's OrderStatus enum actually uses. Its absence meant
+  // every merchant action from the ORDER DETAIL screen failed — that screen
+  // names the real status, while the map only knew the two short aliases the
+  // dashboard happened to pass. Caught on a device: the button did nothing at
+  // all, and logcat carried the only evidence,
+  // "No order action corresponds to status 'MERCHANT_ACCEPTED'".
+  MERCHANT_ACCEPTED: 'accept',
   REJECTED: 'reject',
   PREPARING: 'preparing',
   READY_FOR_PICKUP: 'ready',

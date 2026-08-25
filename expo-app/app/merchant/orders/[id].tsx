@@ -50,7 +50,7 @@ export default function MerchantOrderDetailScreen() {
   const params = useLocalSearchParams();
   const orderId = params.id as string;
 
-  const { updateOrderStatus, isUpdatingOrder } = useMerchantStore();
+  const { updateOrderStatus, isUpdatingOrder, ordersError } = useMerchantStore();
 
   const [order, setOrder] = useState<MerchantOrder | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -82,6 +82,21 @@ export default function MerchantOrderDetailScreen() {
     setUpdatingAction(newStatus);
     await updateOrderStatus(orderId, newStatus);
     setUpdatingAction(null);
+
+    // Say so when it did not work.
+    //
+    // The store records the failure and stops itself patching local state, but
+    // this screen never read that — so a refused action looked exactly like a
+    // tap that had not registered. On a device the Accept button simply did
+    // nothing: no error, no spinner, no change, and the only evidence anywhere
+    // was a line in logcat. A merchant would have tapped it again and again.
+    const failure = useMerchantStore.getState().ordersError;
+    if (failure) {
+      Alert.alert('Could not update the order', failure);
+      useMerchantStore.setState({ ordersError: null });
+      return;
+    }
+
     // Reload order to get updated data
     await loadOrder();
   };

@@ -106,3 +106,11 @@ verify-home-logo.png
 # Disposable QA probes. Named with a leading dot so they never ship;
 # the durable suites are scripts/verify-*.ts.
 scripts/.qa-*
+
+# Android upload keystore. The signing credential for Play Store uploads —
+# it belongs on the build machine and in a password manager, never in a repo.
+# gradle.properties (which holds its passwords) is already untracked.
+expo-app/keystores/
+*.keystore
+!expo-app/android/app/debug.keystore
+*.jks
