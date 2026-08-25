@@ -524,6 +524,26 @@ export class RiderOnboardingService {
       throw new Error(`Rider role ${rider.riderRole} does not support capability ${capabilityType}`);
     }
 
+    // ── OPS-1: this table is role-wide, not per-rider ──────────────────────
+    //
+    // `RiderCapability` is keyed on (riderRole, taskType). Adding a capability
+    // "for a rider" therefore adds it for EVERY rider of that role, which is
+    // fine while it is only re-asserting a default — and not fine when an admin
+    // has deliberately turned that capability off. The guard above passes in
+    // that case (the task type is still in the role's defaults), so a
+    // rider-level call would have quietly re-enabled a service the platform had
+    // switched off, for the whole role.
+    //
+    // An explicit disablement is an administrative decision and outranks a
+    // per-rider request. Turning it back on is an admin action on the
+    // capability, not a side effect of onboarding one person.
+    if (existingCap && !existingCap.isAllowed) {
+      throw new Error(
+        `Capability ${capabilityType} is disabled for role ${rider.riderRole}. ` +
+        `Re-enable it for the role before assigning it to a rider.`
+      );
+    }
+
     // Check if capability already exists
     const alreadyExists = await db.riderCapability.findUnique({
       where: {

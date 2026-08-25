@@ -68,6 +68,16 @@ export interface CapabilityCheckResult {
   warnings?: string[];
 }
 
+/**
+ * Every rider role, so eligibility can be resolved role by role rather than
+ * from whatever rows happen to exist.
+ */
+const ALL_RIDER_ROLES: RiderRole[] = [
+  RiderRole.SMART_BODA_RIDER,
+  RiderRole.SMART_CAR_DRIVER,
+  RiderRole.DELIVERY_PERSONNEL,
+];
+
 export class CapabilityService {
   /**
    * Check if a rider can handle a specific task type
@@ -153,18 +163,24 @@ export class CapabilityService {
    * Get all task types a rider role can handle
    */
   static async getAllowedTaskTypes(riderRole: RiderRole): Promise<TaskType[]> {
-    const capabilities = await db.riderCapability.findMany({
-      where: {
-        riderRole,
-        isAllowed: true,
-      },
-    });
+    // ── OPS-1: "all disabled" is not the same as "unconfigured" ────────────
+    //
+    // This queried `isAllowed: true` and then fell back to the hardcoded
+    // defaults when the result was empty. Those two cases are not the same
+    // thing, and collapsing them means an explicit decision is read as an
+    // absence of one: an admin who disables every task type for a role gets an
+    // empty result, which the fallback then answers with the full default set.
+    // The disablement is not just ignored, it is inverted.
+    //
+    // Read every row for the role, and only fall back when there genuinely are
+    // none. Rows that exist and are all disabled correctly yield nothing.
+    const capabilities = await db.riderCapability.findMany({ where: { riderRole } });
 
     if (capabilities.length > 0) {
-      return capabilities.map((c) => c.taskType);
+      return capabilities.filter((c) => c.isAllowed).map((c) => c.taskType);
     }
 
-    // Fall back to defaults
+    // No configuration at all for this role — the code defaults are the model.
     return DEFAULT_CAPABILITIES[riderRole] || [];
   }
 
@@ -182,17 +198,39 @@ export class CapabilityService {
   ): Promise<Rider[]> {
     const { latitude, longitude, radiusKm = 10, limit = 20 } = options;
 
-    // Find rider roles that can handle this task type
-    const capabilities = await db.riderCapability.findMany({
-      where: {
-        taskType,
-        isAllowed: true,
-      },
-    });
+    // Find rider roles that can handle this task type.
+    //
+    // ── OPS-1 ─────────────────────────────────────────────────────────────
+    // Resolved per ROLE, exactly as `canHandleTaskType` resolves it per rider:
+    // a row decides, and only the absence of a row falls back to the default.
+    // The two paths used to disagree, and the disagreement was dangerous in
+    // both directions.
+    //
+    // It read `findMany({ taskType, isAllowed: true })` and fell back whenever
+    // the result was empty, which produced two wrong answers:
+    //
+    //   Disabling a service for every role emptied the list, the fallback read
+    //   that as "nobody has configured this", and the riders just excluded were
+    //   offered the work anyway. An explicit decision inverted into its
+    //   opposite.
+    //
+    //   And a PARTIAL configuration silently narrowed the pool. Onboarding
+    //   upserts rows for the onboarding rider's role only, so the first courier
+    //   to sign up would create DELIVERY_PERSONNEL rows for ITEM_DELIVERY —
+    //   after which any row existing for that task type replaced the defaults
+    //   wholesale and boda riders stopped being offered parcels, though the
+    //   model says both may carry them. Nothing would have reported this; the
+    //   pool would just have been quietly smaller.
+    //
+    // Resolving per role removes both, and means a half-configured table
+    // behaves the same as an empty one for the roles it does not mention.
+    const capabilities = await db.riderCapability.findMany({ where: { taskType } });
+    const configured = new Map(capabilities.map((c) => [c.riderRole, c.isAllowed]));
+    const defaultRoles = this.getDefaultRolesForTaskType(taskType);
 
-    const eligibleRoles = capabilities.length > 0
-      ? capabilities.map((c) => c.riderRole)
-      : this.getDefaultRolesForTaskType(taskType);
+    const eligibleRoles = ALL_RIDER_ROLES.filter((role) =>
+      configured.has(role) ? configured.get(role)! : defaultRoles.includes(role)
+    );
 
     if (eligibleRoles.length === 0) {
       return [];
