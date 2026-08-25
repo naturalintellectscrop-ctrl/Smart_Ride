@@ -11,11 +11,12 @@ import { sendOrderUpdateNotification } from '@/lib/services/notification.service
 import { DispatchService } from '@/lib/services/dispatch-persistence.service';
 import { splitChargedFare } from '@/lib/api/pricing';
 import { toNumber } from '@/lib/decimal-utils';
+import { canCompleteDelivery, generateDeliveryCode } from '@/lib/delivery/delivery-service';
 import { runAfterResponse } from '@/lib/api/after-response';
 import { redactPerson, redactBusiness } from '@/lib/privacy/public-contact';
 import { ensureReceiptForTask } from '@/lib/receipts/receipt-service';
 import { sendReceiptEmail } from '@/lib/receipts/send-receipt-email';
-import { TaskStatus } from '@prisma/client';
+import { TaskStatus, type UserRole } from '@prisma/client';
 import { z } from 'zod';
 import { broadcastEvent, broadcastToUser } from '@/lib/realtime-server';
 import { requireAuth, isAdmin } from '@/lib/auth/guards';
@@ -846,6 +847,17 @@ async function handleReady(orderId: string, body: Record<string, unknown>, decod
 
         distanceKm,
 
+        // Handover code, issued to the CUSTOMER and withheld from the courier.
+        //
+        // Every other path that creates a delivery task issues one — POST
+        // /tasks does it via `isDeliveryTask`, and the pharmacy flow does it
+        // explicitly — but this one never did. FOOD_DELIVERY and SHOPPING are
+        // both in DELIVERY_TASK_TYPES, so proof IS required of them; without a
+        // code the only proof a courier could offer was a photo or a signature,
+        // and the customer had no code to read out at the door. The strongest
+        // form of proof was unavailable on the busiest service.
+        deliveryCode: generateDeliveryCode(),
+
         // The order's own fee lines, mirrored so the task carries the same
         // breakdown the customer saw. `baseFare` is required by the schema.
         baseFare: toNumber(order.deliveryFee),
@@ -1042,6 +1054,32 @@ async function handleDeliver(orderId: string, body: Record<string, unknown>, dec
 
   if (order.status !== 'PICKED_UP') {
     return errorResponse('Order must be picked up before delivery');
+  }
+
+  // ── proof is required here too (BE-005) ─────────────────────────────────
+  //
+  // `PATCH /tasks/[id]/status` refuses to move a delivery task to DELIVERED
+  // without captured proof, with the reasoning that if completion were still
+  // possible without it, capturing it would be optional in practice — and the
+  // deliveries missing proof would be exactly the disputed ones.
+  //
+  // This route moved the same task to the same status and never asked. So the
+  // requirement was enforced on one path and skipped on the other, and this is
+  // the path a courier delivering a FOOD order actually takes. Verified end to
+  // end: with no proof captured at all, `?action=deliver` answered 200 and the
+  // task went to DELIVERED.
+  //
+  // Admins keep the override for the same reason the task route gives them
+  // one: a genuine delivery whose photo upload failed still has to be closable
+  // by a human.
+  if (order.task && !isAdmin(decoded.role as UserRole)) {
+    const gate = await canCompleteDelivery(order.task.id);
+    if (!gate.allowed) {
+      return NextResponse.json(
+        { success: false, error: gate.reason, code: 'PROOF_REQUIRED' },
+        { status: 409 }
+      );
+    }
   }
 
   // Update order status
