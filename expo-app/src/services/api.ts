@@ -866,7 +866,31 @@ class ApiService {
     const items = Array.isArray(payload)
       ? payload
       : (payload?.menuItems ?? payload?.items ?? []);
-    return { success: true, data: items as any[] };
+
+    // Each item, in the shape the screens read.
+    //
+    // The route sends the MenuItem row as the database holds it: `isAvailable`,
+    // `imageUrl`, and `price` as a Decimal serialised to a string. The screens
+    // read `inStock`, `image` and a numeric `price`. Nothing translated, so
+    // `inStock` was undefined on every item — and the storefront disables and
+    // greys out its Add button on `!product.inStock`. A customer could open a
+    // shop, see the food, and not add any of it to a basket. The button was
+    // grey, and that was the only clue.
+    //
+    // An item is in stock when the merchant has it switched on and either keeps
+    // no stock count or has some left — the same rule `priceItemsFromCatalogue`
+    // applies on the server when it decides what may be ordered.
+    const normalised = (items as any[]).map((i) => ({
+      ...i,
+      price: typeof i?.price === 'number' ? i.price : Number(i?.price ?? 0),
+      image: i?.image ?? i?.imageUrl ?? undefined,
+      inStock:
+        i?.inStock ??
+        (i?.isAvailable !== false &&
+          (i?.stockQuantity == null || Number(i.stockQuantity) > 0)),
+    }));
+
+    return { success: true, data: normalised };
   }
 
   async getMerchantProducts(merchantId: string): Promise<ApiResponse<any[]>> {
