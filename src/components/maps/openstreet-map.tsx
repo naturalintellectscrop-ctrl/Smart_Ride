@@ -47,6 +47,13 @@ const MARKER_ICONS = {
   driver: createIcon('#3B82F6'),
   pickup: createIcon('#00FF88'),
   dropoff: createIcon('#F97316'),
+  // Marketplace zone balance states. Additive: existing marker types are
+  // untouched, so the connection-monitoring map is unaffected.
+  zoneBalanced: createIcon('#10B981'),
+  zoneHighDemand: createIcon('#F59E0B'),
+  zoneOversupplied: createIcon('#3B82F6'),
+  zoneSurge: createIcon('#F97316'),
+  zoneCritical: createIcon('#EF4444'),
 };
 
 // ==========================================
@@ -58,10 +65,23 @@ export interface MapLocation {
   longitude: number;
 }
 
+export type MapMarkerType =
+  | 'active'
+  | 'unstable'
+  | 'disconnected'
+  | 'driver'
+  | 'pickup'
+  | 'dropoff'
+  | 'zoneBalanced'
+  | 'zoneHighDemand'
+  | 'zoneOversupplied'
+  | 'zoneSurge'
+  | 'zoneCritical';
+
 export interface MapMarker {
   id: string;
   coordinates: MapLocation;
-  type: 'active' | 'unstable' | 'disconnected' | 'driver' | 'pickup' | 'dropoff';
+  type: MapMarkerType;
   label?: string;
 }
 

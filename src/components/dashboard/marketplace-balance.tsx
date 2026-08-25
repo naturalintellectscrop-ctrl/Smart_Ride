@@ -31,7 +31,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import dynamic from 'next/dynamic';
+import { ResponsiveContainer, AreaChart, Area, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 import { canView, canEdit } from '@/lib/permissions';
+import type { MapMarker, MapMarkerType } from '@/components/maps/openstreet-map';
 import { NotificationSender } from '@/components/notifications/notification-sender';
 import { 
 
@@ -57,8 +60,44 @@ import {
   Sparkles,
   Bell,
   Send,
-  Gift
+  Gift,
+  Search,
+  ShoppingCart,
+  ArrowRight
 } from 'lucide-react';
+
+/**
+ * Leaflet touches `window` on import, so the zone map is loaded client-side
+ * only. Same pattern the connection-monitoring dashboard uses.
+ */
+const ZoneMap = dynamic(
+  () => import('@/components/maps/openstreet-map').then((mod) => mod.OpenStreetMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full flex items-center justify-center bg-gray-50">
+        <RefreshCw className="h-5 w-5 animate-spin text-gray-400" />
+      </div>
+    ),
+  }
+);
+
+/** Zone balance status -> map pin colour, and the legend that explains them. */
+const ZONE_MARKER_TYPE: Record<string, MapMarkerType> = {
+  OVERSUPPLIED: 'zoneOversupplied',
+  BALANCED: 'zoneBalanced',
+  HIGH_DEMAND: 'zoneHighDemand',
+  SURGE: 'zoneSurge',
+  CRITICAL: 'zoneCritical',
+};
+
+const ZONE_LEGEND: { status: string; label: string; dot: string }[] = [
+  { status: 'HIGH_DEMAND', label: 'High Demand', dot: 'bg-amber-500' },
+  { status: 'BALANCED', label: 'Balanced', dot: 'bg-emerald-500' },
+  { status: 'OVERSUPPLIED', label: 'Oversupplied', dot: 'bg-blue-500' },
+  { status: 'SURGE', label: 'Surge Zone', dot: 'bg-orange-500' },
+  { status: 'CRITICAL', label: 'Critical', dot: 'bg-red-500' },
+];
 
 /**
  * Admin requests carry the admin token.
@@ -111,6 +150,10 @@ interface MarketplaceOverview {
   activeSurges: number;
   activeIncentives: number;
   zones: ZoneStats[];
+  /** Overall demand-supply ratio per hourly bucket, oldest first. May be empty
+   *  when the metrics collector has not run — the sparkline hides rather than
+   *  drawing an invented flat line. */
+  ratioTrend: { t: string; ratio: number }[];
   recordedAt: string;
 }
 
@@ -154,6 +197,12 @@ export function MarketplaceBalance() {
     minRides: '5',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Zone table filters. Each one is driven by a control on screen: the search
+  // box, the type select, and the five distribution tiles above the tabs.
+  const [zoneSearch, setZoneSearch] = useState('');
+  const [zoneTypeFilter, setZoneTypeFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -345,6 +394,52 @@ export function MarketplaceBalance() {
     return 'bg-red-500';
   };
 
+  // Zone types actually present in the data, so the select can never offer a
+  // filter that matches nothing.
+  const zoneTypes = Array.from(
+    new Set((overview?.zones ?? []).map((z) => z.zoneType))
+  ).sort();
+
+  const filteredZones = (overview?.zones ?? []).filter((zone) => {
+    if (statusFilter && zone.status !== statusFilter) return false;
+    if (zoneTypeFilter !== 'ALL' && zone.zoneType !== zoneTypeFilter) return false;
+    const q = zoneSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      zone.name.toLowerCase().includes(q) || zone.code.toLowerCase().includes(q)
+    );
+  });
+
+  const filtersActive =
+    !!statusFilter || zoneTypeFilter !== 'ALL' || zoneSearch.trim().length > 0;
+
+  const clearZoneFilters = () => {
+    setStatusFilter(null);
+    setZoneTypeFilter('ALL');
+    setZoneSearch('');
+  };
+
+  /** Distribution tiles double as status filters for the table below. */
+  const toggleStatusFilter = (status: string) => {
+    setStatusFilter((current) => (current === status ? null : status));
+    setActiveTab('overview');
+  };
+
+  // Only zones with real coordinates get a pin. A zone missing its centre is
+  // left off the map rather than dropped at 0,0 in the Gulf of Guinea.
+  const zoneMarkers: MapMarker[] = filteredZones
+    .filter((z) => typeof z.centerLatitude === 'number' && typeof z.centerLongitude === 'number')
+    .map((z) => ({
+      id: z.id,
+      coordinates: { latitude: z.centerLatitude, longitude: z.centerLongitude },
+      type: ZONE_MARKER_TYPE[z.status] ?? 'zoneBalanced',
+      label: `${z.name} — ratio ${z.ratio.toFixed(2)}`,
+    }));
+
+  const mapCenter = zoneMarkers.length
+    ? zoneMarkers[0].coordinates
+    : { latitude: 0.3476, longitude: 32.5825 };
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-UG', {
       style: 'currency',
@@ -382,9 +477,14 @@ export function MarketplaceBalance() {
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Marketplace Balance</h1>
-          <p className="text-gray-500 mt-1">Real-time demand-supply equilibrium monitoring</p>
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#00D97E]/10">
+            <ShoppingCart className="h-7 w-7 text-[#00D97E]" />
+          </div>
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">Marketplace Balance</h1>
+            <p className="text-muted-foreground mt-1">Real-time demand-supply equilibrium monitoring</p>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <Badge variant="outline" className="bg-[#00D97E]/10 text-[#00D97E] border-[#00D97E]/30">
@@ -401,7 +501,14 @@ export function MarketplaceBalance() {
             Refresh
           </Button>
           {canEditMarketplace && (
-            <Button onClick={() => setIncentiveDialogOpen(true)}>
+            <Button
+              onClick={() => {
+                // Starts a fresh campaign: clear any zone carried over from a
+                // previous critical-zone click so "All Zones" really means it.
+                setNewIncentive((prev) => ({ ...prev, zoneId: '' }));
+                setIncentiveDialogOpen(true);
+              }}
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Incentive
             </Button>
@@ -414,24 +521,56 @@ export function MarketplaceBalance() {
         {/* Overall Ratio */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Demand-Supply Ratio</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Demand-Supply Ratio</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-end gap-4">
-              <div className="text-4xl font-bold text-gray-900">
-                {overview?.overallRatio.toFixed(2) || '0.00'}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-end gap-4">
+                <div className="text-4xl font-bold text-foreground">
+                  {overview?.overallRatio.toFixed(2) || '0.00'}
+                </div>
+                <Badge className={getStatusColor(overview?.overallStatus || 'BALANCED')}>
+                  {overview?.overallStatusLabel || 'Balanced'}
+                </Badge>
               </div>
-              <Badge className={getStatusColor(overview?.overallStatus || 'BALANCED')}>
-                {overview?.overallStatusLabel || 'Balanced'}
-              </Badge>
+
+              {/* Ratio over the last 24 hourly buckets, from ZoneMetric. Hidden
+                  when there is no history rather than drawn as a flat line. */}
+              {overview?.ratioTrend && overview.ratioTrend.length > 1 && (
+                <div className="h-14 w-32 sm:w-44" aria-hidden="true">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={overview.ratioTrend} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+                      <defs>
+                        <linearGradient id="ratioTrendFill" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#00D97E" stopOpacity={0.35} />
+                          <stop offset="100%" stopColor="#00D97E" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <YAxis hide domain={['dataMin', 'dataMax']} />
+                      <RechartsTooltip
+                        contentStyle={{ fontSize: 12, borderRadius: 8 }}
+                        labelFormatter={(v) => new Date(v as string).toLocaleString()}
+                        formatter={(v) => [Number(v).toFixed(2), 'Ratio']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="ratio"
+                        stroke="#00D97E"
+                        strokeWidth={2}
+                        fill="url(#ratioTrendFill)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
             <div className="mt-3">
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <div className="flex justify-between text-xs text-muted-foreground mb-1">
                 <span>Oversupplied</span>
                 <span>Balanced</span>
                 <span>High Demand</span>
               </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
                 <div 
                   className={`h-full transition-all duration-500 ${getBalanceBarColor(overview?.overallRatio || 1)}`}
                   style={{ width: `${Math.min(100, ((overview?.overallRatio || 1) / 3) * 100)}%` }}
@@ -444,10 +583,10 @@ export function MarketplaceBalance() {
         {/* Ride Requests */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Ride Requests</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Ride Requests</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-3xl font-bold text-foreground">
               {overview?.totalRideRequests.toLocaleString() || 0}
             </div>
             <div className="flex items-center gap-1 mt-1 text-sm text-[#00D97E]">
@@ -460,10 +599,10 @@ export function MarketplaceBalance() {
         {/* Active Drivers */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Available Drivers</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Available Drivers</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-3xl font-bold text-foreground">
               {overview?.totalAvailableDrivers.toLocaleString() || 0}
             </div>
             <div className="flex items-center gap-1 mt-1 text-sm text-blue-600">
@@ -476,10 +615,10 @@ export function MarketplaceBalance() {
         {/* Active Surges */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">Active Surges</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Active Surges</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-3xl font-bold text-foreground">
               {overview?.activeSurges || 0}
             </div>
             <div className="flex items-center gap-1 mt-1 text-sm text-orange-600">
@@ -490,38 +629,42 @@ export function MarketplaceBalance() {
         </Card>
       </div>
 
-      {/* Zone Distribution */}
+      {/* Zone Distribution — each tile filters the zone table below it.
+          The reference draws an arrow on these; an arrow that goes nowhere is
+          worse than no arrow, so the tiles are real buttons: click to filter,
+          click the active one again to clear. */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <Card className="bg-blue-50 border-blue-100">
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-blue-700">{overview?.oversuppliedZones || 0}</div>
-            <div className="text-xs text-blue-600">Oversupplied</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-[#00D97E]/10 border-[#00D97E]/30">
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-[#00D97E]">{overview?.balancedZones || 0}</div>
-            <div className="text-xs text-[#00D97E]">Balanced</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-amber-50 border-amber-100">
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-amber-700">{overview?.highDemandZones || 0}</div>
-            <div className="text-xs text-amber-600">High Demand</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-orange-50 border-orange-100">
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-orange-700">{overview?.surgeZones || 0}</div>
-            <div className="text-xs text-orange-600">Surge</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-red-50 border-red-100">
-          <CardContent className="pt-4 pb-3 text-center">
-            <div className="text-2xl font-bold text-red-700">{overview?.criticalZones || 0}</div>
-            <div className="text-xs text-red-600">Critical</div>
-          </CardContent>
-        </Card>
+        {([
+          { status: 'OVERSUPPLIED', label: 'Oversupplied', count: overview?.oversuppliedZones || 0, icon: Users, card: 'bg-blue-50 border-blue-100 hover:border-blue-300', num: 'text-blue-700', text: 'text-blue-600', ring: 'ring-blue-500' },
+          { status: 'BALANCED', label: 'Balanced', count: overview?.balancedZones || 0, icon: CheckCircle, card: 'bg-[#00D97E]/10 border-[#00D97E]/30 hover:border-[#00D97E]/60', num: 'text-[#00D97E]', text: 'text-[#00D97E]', ring: 'ring-[#00D97E]' },
+          { status: 'HIGH_DEMAND', label: 'High Demand', count: overview?.highDemandZones || 0, icon: Flame, card: 'bg-amber-50 border-amber-100 hover:border-amber-300', num: 'text-amber-700', text: 'text-amber-600', ring: 'ring-amber-500' },
+          { status: 'SURGE', label: 'Surge', count: overview?.surgeZones || 0, icon: Zap, card: 'bg-orange-50 border-orange-100 hover:border-orange-300', num: 'text-orange-700', text: 'text-orange-600', ring: 'ring-orange-500' },
+          { status: 'CRITICAL', label: 'Critical', count: overview?.criticalZones || 0, icon: AlertTriangle, card: 'bg-red-50 border-red-100 hover:border-red-300', num: 'text-red-700', text: 'text-red-600', ring: 'ring-red-500' },
+        ] as const).map((tile) => {
+          const Icon = tile.icon;
+          const active = statusFilter === tile.status;
+          return (
+            <button
+              key={tile.status}
+              type="button"
+              onClick={() => toggleStatusFilter(tile.status)}
+              aria-pressed={active}
+              aria-label={`${tile.count} ${tile.label} zones. ${active ? 'Clear this filter' : 'Filter the zone table to these'}`}
+              className={`rounded-xl border text-left transition-all ${tile.card} ${active ? `ring-2 ring-offset-1 ${tile.ring}` : ''}`}
+            >
+              <div className="flex items-center gap-2 px-3 py-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-background/60">
+                  <Icon className={`h-4 w-4 ${tile.text}`} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className={`block text-2xl font-bold leading-none ${tile.num}`}>{tile.count}</span>
+                  <span className={`block text-xs mt-1 leading-tight ${tile.text}`}>{tile.label}</span>
+                </span>
+                <ArrowRight className={`h-3.5 w-3.5 shrink-0 ${tile.text} ${active ? 'opacity-100' : 'opacity-40'}`} />
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {/* Tabs */}
@@ -538,10 +681,50 @@ export function MarketplaceBalance() {
 
         {/* Zone Overview Tab */}
         <TabsContent value="overview" className="mt-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Zones Status</CardTitle>
-              <CardDescription>Real-time balance status across all service zones</CardDescription>
+          <div className="grid gap-4 lg:grid-cols-5">
+          <Card className="lg:col-span-3">
+            <CardHeader className="gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                <div>
+                  <CardTitle>All Zones Status</CardTitle>
+                  <CardDescription>Real-time balance status across all service zones</CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      value={zoneSearch}
+                      onChange={(e) => setZoneSearch(e.target.value)}
+                      placeholder="Search zones..."
+                      aria-label="Search zones by name or code"
+                      className="h-9 w-40 pl-8 sm:w-48"
+                    />
+                  </div>
+                  <Select value={zoneTypeFilter} onValueChange={setZoneTypeFilter}>
+                    <SelectTrigger className="h-9 w-32" aria-label="Filter by zone type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ALL">All Types</SelectItem>
+                      {zoneTypes.map((t) => (
+                        <SelectItem key={t} value={t}>{t.replace(/_/g, ' ')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {filtersActive && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>
+                    Showing {filteredZones.length} of {overview?.zones.length ?? 0} zones
+                  </span>
+                  <Button variant="ghost" size="sm" className="h-7 px-2" onClick={clearZoneFilters}>
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Clear filters
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               <div className="overflow-x-auto">
@@ -559,7 +742,7 @@ export function MarketplaceBalance() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {overview?.zones.map((zone) => (
+                    {filteredZones.map((zone) => (
                       <TableRow key={zone.id} className={zone.status === 'CRITICAL' ? 'bg-red-50' : ''}>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -626,9 +809,112 @@ export function MarketplaceBalance() {
                     ))}
                   </TableBody>
                 </Table>
+
+                {/* Two different empty states: nothing collected yet, versus a
+                    filter that excluded everything. The second one has to offer
+                    a way back or it is a dead end. */}
+                {filteredZones.length === 0 && (
+                  <div className="py-12 text-center">
+                    <MapPin className="mx-auto h-10 w-10 text-muted-foreground/40" />
+                    {overview?.zones.length ? (
+                      <>
+                        <p className="mt-3 font-medium text-foreground">No zones match these filters</p>
+                        <Button variant="outline" size="sm" className="mt-3" onClick={clearZoneFilters}>
+                          Clear filters
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <p className="mt-3 font-medium text-foreground">No zone data available</p>
+                        <p className="mt-1 text-sm text-muted-foreground">Zone data will appear here in real-time</p>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
+
+          {/* Live Zone Map — the same filtered zones, placed by their real
+              recorded centre coordinates. */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <MapPin className="h-4 w-4 text-[#00D97E]" />
+                  Live Zone Map
+                </CardTitle>
+                <Badge variant="outline" className="bg-[#00D97E]/10 text-[#00D97E] border-[#00D97E]/30">
+                  <Activity className="h-3 w-3 mr-1" />
+                  Live
+                </Badge>
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1">
+                {ZONE_LEGEND.map((l) => (
+                  <span key={l.status} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className={`h-2 w-2 rounded-full ${l.dot}`} />
+                    {l.label}
+                  </span>
+                ))}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[320px] w-full overflow-hidden rounded-lg border border-border lg:h-[420px]">
+                {zoneMarkers.length > 0 ? (
+                  <ZoneMap
+                    className="h-full w-full"
+                    center={mapCenter}
+                    zoom={11}
+                    markers={zoneMarkers}
+                    onMarkerClick={(marker) => {
+                      // Selecting a pin narrows the table to that zone, so the
+                      // map and the list stay one view of the same thing.
+                      const zone = overview?.zones.find((z) => z.id === marker.id);
+                      if (zone) {
+                        setStatusFilter(null);
+                        setZoneTypeFilter('ALL');
+                        setZoneSearch(zone.name);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-full flex-col items-center justify-center px-6 text-center">
+                    <MapPin className="h-10 w-10 text-muted-foreground/40" />
+                    <p className="mt-3 font-medium text-foreground">
+                      {overview?.zones.length ? 'No zones match these filters' : 'No mapped zones yet'}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {overview?.zones.length
+                        ? 'Adjust the filters to see zones on the map.'
+                        : 'Zones appear here once they have recorded centre coordinates.'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+                  <Car className="h-4 w-4 text-blue-500" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-foreground">
+                      {overview?.totalAvailableDrivers ?? 0}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">Drivers online</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2">
+                  <Users className="h-4 w-4 text-[#00D97E]" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-foreground">
+                      {overview?.totalRideRequests ?? 0}
+                    </div>
+                    <div className="truncate text-xs text-muted-foreground">Ride requests</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          </div>
         </TabsContent>
 
         {/* Critical Zones Tab */}
@@ -688,7 +974,13 @@ export function MarketplaceBalance() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
+                                // Carry the zone into the form, not just into
+                                // `selectedZone` — the incentive dialog reads
+                                // newIncentive.zoneId, so setting only the
+                                // former dropped the admin's choice and created
+                                // an all-zones campaign instead.
                                 setSelectedZone(zone);
+                                setNewIncentive((prev) => ({ ...prev, zoneId: zone.id }));
                                 setIncentiveDialogOpen(true);
                               }}
                             >
@@ -727,7 +1019,13 @@ export function MarketplaceBalance() {
                   <CardDescription>Driver incentives currently running</CardDescription>
                 </div>
                 {canEditMarketplace && (
-                  <Button size="sm" onClick={() => setIncentiveDialogOpen(true)}>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setNewIncentive((prev) => ({ ...prev, zoneId: '' }));
+                      setIncentiveDialogOpen(true);
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     New Incentive
                   </Button>

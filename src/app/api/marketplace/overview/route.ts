@@ -106,6 +106,39 @@ export async function GET(request: NextRequest) {
       where: { status: 'ACTIVE' },
     });
 
+    // Recent demand-supply history, for the ratio sparkline on the dashboard.
+    //
+    // ZoneMetric already records demandSupplyRatio against a timeBucket, so the
+    // trend is real data that was being thrown away — the query above takes
+    // only the newest row per zone. This averages every zone's ratio within
+    // each bucket to get the marketplace-wide ratio over time. Read-only: it
+    // adds a field to the response and changes nothing about how the numbers
+    // are produced.
+    const TREND_BUCKETS = 24;
+    const trendRows = await db.zoneMetric.findMany({
+      where: {
+        timeBucket: { gte: new Date(Date.now() - TREND_BUCKETS * 60 * 60 * 1000) },
+      },
+      select: { timeBucket: true, demandSupplyRatio: true },
+      orderBy: { timeBucket: 'asc' },
+    });
+
+    const bucketTotals = new Map<string, { sum: number; count: number }>();
+    for (const row of trendRows) {
+      const key = row.timeBucket.toISOString();
+      const entry = bucketTotals.get(key) || { sum: 0, count: 0 };
+      entry.sum += row.demandSupplyRatio;
+      entry.count += 1;
+      bucketTotals.set(key, entry);
+    }
+
+    const ratioTrend = Array.from(bucketTotals.entries())
+      .map(([t, { sum, count }]) => ({
+        t,
+        ratio: Math.round((sum / count) * 100) / 100,
+      }))
+      .slice(-TREND_BUCKETS);
+
     // Calculate overall ratio
     const overallRatio = calculateDemandSupplyRatio(totalRideRequests, totalAvailableDrivers);
 
@@ -132,6 +165,11 @@ export async function GET(request: NextRequest) {
       
       // Zone Details
       zones: zoneStats,
+
+      // Demand-supply ratio over the last 24 hourly buckets. Empty when the
+      // metrics collector has not run yet; the dashboard hides the sparkline
+      // rather than drawing a flat invented line.
+      ratioTrend,
       
       // Timestamp
       recordedAt: new Date(),

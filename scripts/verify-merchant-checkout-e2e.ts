@@ -75,6 +75,23 @@ async function run() {
   const browse = await c(`/merchants?category=RESTAURANT`);
   ok('the customer can browse merchants', browse.status === 200, `HTTP ${browse.status}`);
 
+  // Opening one. This route did not exist — the directory held only
+  // subdirectories — so every card in the list led to "Merchant not found" and
+  // no customer could order anything. The list passing told us nothing about
+  // it, which is why the assertion is here now.
+  const shopRes = await c(`/merchants/${merchant.id}`);
+  const shopBody = await shopRes.json().catch(() => ({}));
+  ok('the customer can OPEN a merchant', shopRes.status === 200 && shopBody?.data?.id === merchant.id,
+    `HTTP ${shopRes.status}`);
+  ok('and the response is JSON, not an HTML 404',
+    typeof shopBody?.data?.name === 'string', String(shopBody?.data?.name));
+  ok('the storefront does not leak business contact details',
+    !shopBody?.data?.phone && !shopBody?.data?.email,
+    `phone=${shopBody?.data?.phone ?? 'none'} email=${shopBody?.data?.email ?? 'none'}`);
+
+  const menuRes = await c(`/merchants/${merchant.id}/menu`);
+  ok('and its menu loads', menuRes.status === 200, `HTTP ${menuRes.status}`);
+
   const qr = await c('/orders/quote', 'POST', {
     merchantId: merchant.id, orderType: 'FOOD_DELIVERY',
     items: [{ menuItemId: item.id, quantity: 1, unitPrice: 18000 }],
