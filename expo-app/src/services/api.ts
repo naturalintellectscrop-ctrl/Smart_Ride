@@ -845,8 +845,28 @@ class ApiService {
     return this.request<Merchant>(`/merchants/${merchantId}`);
   }
 
+  /**
+   * A merchant's menu, always as an array.
+   *
+   * The route answers `{ merchant, menuItems }` — the storefront and the items
+   * together, which is sensible for one screen fetching both. Every caller in
+   * this app, though, treats `data` as the array itself, and two of them guard
+   * with `Array.isArray(...) ? ... : []`, so an object arrived and they quietly
+   * showed an empty menu. On a device that read "No products available. This
+   * merchant hasn't listed anything yet" for a merchant with items listed, and
+   * nothing anywhere reported an error.
+   *
+   * Normalised here rather than at each call site, and rather than changing the
+   * route, whose shape other consumers may depend on.
+   */
   async getMerchantMenu(merchantId: string): Promise<ApiResponse<any[]>> {
-    return this.request<any[]>(`/merchants/${merchantId}/menu`);
+    const res = await this.request<any>(`/merchants/${merchantId}/menu`);
+    if (!res.success) return res as ApiResponse<any[]>;
+    const payload: any = res.data;
+    const items = Array.isArray(payload)
+      ? payload
+      : (payload?.menuItems ?? payload?.items ?? []);
+    return { success: true, data: items as any[] };
   }
 
   async getMerchantProducts(merchantId: string): Promise<ApiResponse<any[]>> {

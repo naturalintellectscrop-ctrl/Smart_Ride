@@ -90,7 +90,17 @@ async function run() {
     `phone=${shopBody?.data?.phone ?? 'none'} email=${shopBody?.data?.email ?? 'none'}`);
 
   const menuRes = await c(`/merchants/${merchant.id}/menu`);
+  const menuBody = await menuRes.json().catch(() => ({}));
+  const menuItems = Array.isArray(menuBody?.data)
+    ? menuBody.data
+    : (menuBody?.data?.menuItems ?? []);
   ok('and its menu loads', menuRes.status === 200, `HTTP ${menuRes.status}`);
+  // The menu must actually CONTAIN the item. An empty list here is what the
+  // client showed as "this merchant hasn't listed anything yet" while the
+  // merchant had items listed.
+  ok('the menu contains the merchant's item',
+    menuItems.some((i: { id: string }) => i.id === item.id),
+    `${menuItems.length} item(s)`);
 
   const qr = await c('/orders/quote', 'POST', {
     merchantId: merchant.id, orderType: 'FOOD_DELIVERY',
