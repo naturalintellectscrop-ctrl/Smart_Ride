@@ -75,8 +75,8 @@ const ZoneMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-full w-full flex items-center justify-center bg-gray-50">
-        <RefreshCw className="h-5 w-5 animate-spin text-gray-400" />
+      <div className="h-full w-full flex items-center justify-center bg-muted/40">
+        <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     ),
   }
@@ -455,7 +455,7 @@ export function MarketplaceBalance() {
           <CardContent className="pt-6 text-center">
             <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto mb-4" />
             <h3 className="text-lg font-semibold">Access Restricted</h3>
-            <p className="text-gray-500 mt-2">You don't have permission to view marketplace balance data.</p>
+            <p className="text-muted-foreground mt-2">You don't have permission to view marketplace balance data.</p>
           </CardContent>
         </Card>
       </div>
@@ -467,7 +467,7 @@ export function MarketplaceBalance() {
       <div className="p-6 flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <RefreshCw className="h-8 w-8 animate-spin text-[#00D97E] mx-auto mb-4" />
-          <p className="text-gray-500">Loading marketplace data...</p>
+          <p className="text-muted-foreground">Loading marketplace data...</p>
         </div>
       </div>
     );
@@ -746,10 +746,10 @@ export function MarketplaceBalance() {
                       <TableRow key={zone.id} className={zone.status === 'CRITICAL' ? 'bg-red-50' : ''}>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-gray-400" />
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
                             <div>
                               <div className="font-medium">{zone.name}</div>
-                              <div className="text-xs text-gray-500">{zone.code}</div>
+                              <div className="text-xs text-muted-foreground">{zone.code}</div>
                             </div>
                           </div>
                         </TableCell>
@@ -765,7 +765,7 @@ export function MarketplaceBalance() {
                           <div className="flex items-center justify-center gap-1">
                             <Car className="h-4 w-4 text-blue-500" />
                             <span className="font-medium">{zone.availableDrivers}</span>
-                            <span className="text-xs text-gray-400">/ {zone.activeDrivers}</span>
+                            <span className="text-xs text-muted-foreground">/ {zone.activeDrivers}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
@@ -785,7 +785,7 @@ export function MarketplaceBalance() {
                               <span className="font-bold text-orange-600">{zone.surgeMultiplier}x</span>
                             </div>
                           ) : (
-                            <span className="text-gray-400 text-sm">None</span>
+                            <span className="text-muted-foreground text-sm">None</span>
                           )}
                         </TableCell>
                         {canEditMarketplace && (
@@ -925,7 +925,7 @@ export function MarketplaceBalance() {
                 <CardContent className="pt-6 text-center">
                   <CheckCircle className="h-12 w-12 text-emerald-500 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold">All Zones Balanced</h3>
-                  <p className="text-gray-500 mt-2">No critical zones detected at this time.</p>
+                  <p className="text-muted-foreground mt-2">No critical zones detected at this time.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1035,20 +1035,20 @@ export function MarketplaceBalance() {
             <CardContent>
               {incentives.length === 0 ? (
                 <div className="text-center py-8">
-                  <Sparkles className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No active incentives</p>
+                  <Sparkles className="h-12 w-12 text-muted-foreground/40 mx-auto mb-4" />
+                  <p className="text-muted-foreground">No active incentives</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {incentives.map((incentive) => (
-                    <div key={incentive.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div key={incentive.id} className="flex items-center justify-between p-4 bg-muted/40 rounded-lg">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 bg-[#00D97E]/20 rounded-full flex items-center justify-center">
                           <Target className="h-5 w-5 text-[#00D97E]" />
                         </div>
                         <div>
                           <div className="font-medium">{incentive.name}</div>
-                          <div className="text-sm text-gray-500">
+                          <div className="text-sm text-muted-foreground">
                             {incentive.zoneName || 'All Zones'} • {incentive.type.replace('_', ' ')}
                           </div>
                         </div>
@@ -1058,7 +1058,7 @@ export function MarketplaceBalance() {
                           <div className="font-bold text-[#00D97E]">
                             {formatCurrency(incentive.rewardAmount)}
                           </div>
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             {incentive.status === 'PAUSED'
                               ? 'Paused'
                               : `Ends ${new Date(incentive.endTime).toLocaleTimeString()}`}
@@ -1117,7 +1117,7 @@ export function MarketplaceBalance() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold">--</div>
-                      <div className="text-xs text-gray-500">Total Sent</div>
+                      <div className="text-xs text-muted-foreground">Total Sent</div>
                     </div>
                   </div>
                 </CardContent>
@@ -1130,7 +1130,7 @@ export function MarketplaceBalance() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold">--</div>
-                      <div className="text-xs text-gray-500">Delivered</div>
+                      <div className="text-xs text-muted-foreground">Delivered</div>
                     </div>
                   </div>
                 </CardContent>
@@ -1143,7 +1143,7 @@ export function MarketplaceBalance() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold">--</div>
-                      <div className="text-xs text-gray-500">Read</div>
+                      <div className="text-xs text-muted-foreground">Read</div>
                     </div>
                   </div>
                 </CardContent>
@@ -1156,7 +1156,7 @@ export function MarketplaceBalance() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold">--</div>
-                      <div className="text-xs text-gray-500">Recipients</div>
+                      <div className="text-xs text-muted-foreground">Recipients</div>
                     </div>
                   </div>
                 </CardContent>
@@ -1180,8 +1180,8 @@ export function MarketplaceBalance() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <Bell className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                <div className="text-center py-8 text-muted-foreground">
+                  <Bell className="h-12 w-12 mx-auto mb-4 text-muted-foreground/40" />
                   <p className="font-medium">Broadcast Notifications</p>
                   <p className="text-sm mt-1">
                     Send surge alerts, incentive notifications, and demand alerts to drivers and clients
@@ -1297,7 +1297,7 @@ export function MarketplaceBalance() {
               />
             </div>
             {selectedZone && (
-              <div className="bg-gray-50 p-3 rounded-lg">
+              <div className="bg-muted/40 p-3 rounded-lg">
                 <div className="text-sm text-gray-600">
                   <div>Current ratio: <span className={`font-medium ${getRatioColor(selectedZone.ratio)}`}>{selectedZone.ratio.toFixed(2)}</span></div>
                   <div>Ride requests: <span className="font-medium">{selectedZone.rideRequests}</span></div>
